@@ -74,9 +74,19 @@ class ModelFileChecker:
         if not model_path or not os.path.exists(model_path):
             return False, []
 
-        # For GGUF files, check for companion files in the parent directory
+        # For single-file models (GGUF, safetensors, etc.), check for companion files in the parent directory
         model_dir = Path(model_path)
-        if model_path.lower().endswith(".gguf") and model_dir.is_file():
+        single_file_extensions = (
+            ".gguf",
+            ".safetensors",
+            ".ckpt",
+            ".pt",
+            ".pth",
+        )
+        if (
+            model_path.lower().endswith(single_file_extensions)
+            and model_dir.is_file()
+        ):
             model_dir = model_dir.parent
 
         # For art models, use version; for others use model_id

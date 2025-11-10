@@ -20,10 +20,8 @@ def test_image_response_to_dict():
     ir = ImageResponse(
         images=None,
         data={"a": 1},
-        nsfw_content_detected=False,
         active_rect=rect,
         is_outpaint=False,
     )
     d = ir.to_dict()
-    assert d["nsfw_content_detected"] is False
     assert d["active_rect"]["x"] == 1

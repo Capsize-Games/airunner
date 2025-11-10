@@ -125,33 +125,11 @@ class ModelRegistry:
             self._models[model.huggingface_id] = model
 
     def _register_stable_diffusion_models(self) -> None:
-        """Register Stable Diffusion models."""
-        models = [
-            ModelMetadata(
-                name="Stable Diffusion XL 1.0",
-                provider=ModelProvider.STABLE_DIFFUSION,
-                model_type=ModelType.TEXT_TO_IMAGE,
-                size_gb=6.9,
-                min_vram_gb=6.0,
-                min_ram_gb=8.0,
-                recommended_vram_gb=8.0,
-                recommended_ram_gb=16.0,
-                supports_quantization=False,
-                huggingface_id="stabilityai/stable-diffusion-xl-base-1.0",
-            ),
-            ModelMetadata(
-                name="Stable Diffusion 1.5",
-                provider=ModelProvider.STABLE_DIFFUSION,
-                model_type=ModelType.TEXT_TO_IMAGE,
-                size_gb=4.0,
-                min_vram_gb=4.0,
-                min_ram_gb=8.0,
-                recommended_vram_gb=6.0,
-                recommended_ram_gb=16.0,
-                supports_quantization=False,
-                huggingface_id="runwayml/stable-diffusion-v1-5",
-            ),
-        ]
+        """Register Stable Diffusion models.
+
+        Note: SD 1.5 and SDXL support has been deprecated. Only FLUX models are supported.
+        """
+        models = []
 
         for model in models:
             self._models[model.huggingface_id] = model

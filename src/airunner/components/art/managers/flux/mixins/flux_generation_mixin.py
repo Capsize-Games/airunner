@@ -2,6 +2,10 @@
 
 from typing import Dict, Any
 import torch
+from airunner.components.application.exceptions import (
+    InterruptedException,
+)
+from airunner.utils.memory import clear_memory
 
 
 class FluxGenerationMixin:
@@ -12,8 +16,6 @@ class FluxGenerationMixin:
         data = super()._prepare_pipe_data()
 
         data["torch_dtype"] = torch.bfloat16
-        data.pop("safety_checker", None)
-        data.pop("feature_extractor", None)
 
         is_gguf = self.model_path and str(self.model_path).lower().endswith(
             ".gguf"
@@ -81,4 +83,101 @@ class FluxGenerationMixin:
 
     def _load_deep_cache(self):
         """Deep cache not supported for FLUX."""
-        pass
+
+    def _unload_pipe(self):
+        """
+        FLUX-specific pipeline unload.
+
+        CRITICAL: FLUX uses 'transformer' not 'unet', so we must explicitly
+        delete it. The base class only deletes unet/vae/text_encoder.
+        """
+        print("*" * 100)
+        print("FLUX _unload_pipe CALLED!")
+        print("*" * 100)
+        self.logger.info("=== FLUX _unload_pipe CALLED ===")
+        self.logger.debug("Unloading FLUX pipe")
+        if self._pipe is not None:
+            import gc
+
+            # CRITICAL: Remove Accelerate hooks first to prevent CPU cache retention
+            try:
+                if hasattr(self._pipe, "_all_hooks"):
+                    self.logger.debug("Removing Accelerate hooks")
+                    for hook in self._pipe._all_hooks:
+                        hook.remove()
+                    self._pipe._all_hooks.clear()
+
+                # Also check for model cpu offload hooks
+                for component_name in [
+                    "transformer",
+                    "vae",
+                    "text_encoder",
+                    "text_encoder_2",
+                    "scheduler",
+                ]:
+                    component = getattr(self._pipe, component_name, None)
+                    if component is not None and hasattr(
+                        component, "_hf_hook"
+                    ):
+                        self.logger.debug(
+                            f"Removing hook from {component_name}"
+                        )
+                        if hasattr(component._hf_hook, "offload"):
+                            component._hf_hook.offload(component)
+                        delattr(component, "_hf_hook")
+
+                    if component is not None and hasattr(
+                        self._pipe, component_name
+                    ):
+                        print("Deleting component:", component_name)
+                        delattr(self._pipe, component_name)
+                        setattr(self._pipe, component_name, None)
+            except Exception as e:
+                self.logger.debug(f"Error removing Accelerate hooks: {e}")
+
+            # Delete the pipeline itself
+            del self._pipe
+            self._pipe = None
+
+            clear_memory()
+
+            self.logger.info("✓ FLUX pipeline unloaded and memory freed")
+
+    def _generate(self):
+        """
+        Override to add aggressive cleanup after FLUX generation completes.
+
+        CRITICAL: FLUX decode buffers (~8-10GB) stay in memory after generation.
+        We must explicitly free them after all image processing is done.
+        """
+        try:
+            # Call parent implementation
+            super()._generate()
+        finally:
+            # CRITICAL: Clean up after ALL image processing is complete
+            # This happens after images are sent to canvas and export worker
+            clear_memory()
+
+            self.logger.debug("[FLUX CLEANUP] Memory freed")
+
+    def _get_results(self, data):
+        """
+        Run pipeline inference with cleanup between generations.
+
+        CRITICAL: FLUX GGUF models accumulate memory without cleanup.
+        After each generation, we must explicitly free VAE decode buffers.
+        """
+        with torch.no_grad(), torch.amp.autocast(
+            "cuda", dtype=torch.bfloat16, enabled=True
+        ):
+            total = 0
+            while total < self.image_request.n_samples:
+                if self.do_interrupt_image_generation:
+                    raise InterruptedException()
+
+                # Generate
+                results = self._pipe(**data)
+                yield results
+
+                if not self.image_request.generate_infinite_images:
+                    total += 1

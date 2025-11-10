@@ -447,18 +447,6 @@ class SDPropertiesMixin:
         return torch.float16 if torch.cuda.is_available() else torch.float32
 
     @property
-    def use_safety_checker(self) -> bool:
-        """Check if NSFW safety checker should be used.
-
-        Returns:
-            True if safety checker is enabled.
-        """
-        nsfw_filter = self.image_request.nsfw_filter
-        if nsfw_filter is None:
-            nsfw_filter = self.application_settings.nsfw_filter
-        return nsfw_filter
-
-    @property
     def is_txt2img(self) -> bool:
         """Check if operation is text-to-image.
 
@@ -493,17 +481,6 @@ class SDPropertiesMixin:
             True if inpaint mode.
         """
         return self.section is GeneratorSection.INPAINT
-
-    @property
-    def safety_checker_is_loading(self) -> bool:
-        """Check if safety checker model is currently loading.
-
-        Returns:
-            True if safety checker is being loaded.
-        """
-        return (
-            self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
-        )
 
     @property
     def sd_is_loading(self) -> bool:
@@ -620,7 +597,6 @@ class SDPropertiesMixin:
         """
         prompt = prompt_utils.format_prompt(
             self.image_request.prompt,
-            prompt_utils.get_prompt_preset(self.image_request.image_preset),
             (
                 self.image_request.additional_prompts
                 if self.do_join_prompts
@@ -637,10 +613,7 @@ class SDPropertiesMixin:
             Formatted negative prompt string.
         """
         return prompt_utils.format_negative_prompt(
-            self.image_request.negative_prompt,
-            prompt_utils.get_negative_prompt_preset(
-                self.image_request.image_preset
-            ),
+            self.image_request.negative_prompt
         )
 
     @property

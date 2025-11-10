@@ -11,7 +11,6 @@ Usage:
 
 import subprocess
 import sys
-import signal
 
 
 def kill_zombie_processes():

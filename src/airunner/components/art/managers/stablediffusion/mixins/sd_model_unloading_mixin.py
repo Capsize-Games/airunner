@@ -16,47 +16,6 @@ from airunner.utils.memory import clear_memory
 
 class SDModelUnloadingMixin:
     """Mixin providing model unloading operations for Stable Diffusion."""
-
-    def _unload_safety_checker(self):
-        """
-        Unload NSFW safety checker and feature extractor.
-
-        Updates model status during unload process.
-        """
-        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
-        self._unload_safety_checker_model()
-        self._unload_feature_extractor_model()
-        self.change_model_status(
-            ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED
-        )
-
-    def _unload_safety_checker_model(self):
-        """
-        Unload safety checker model and free memory.
-
-        Removes from both pipeline and instance variables.
-        """
-        self.logger.debug("Unloading safety checker model")
-        if self._pipe is not None and hasattr(self._pipe, "safety_checker"):
-            del self._pipe.safety_checker
-            self._pipe.safety_checker = None
-        if self._safety_checker is not None:
-            del self._safety_checker
-        self._safety_checker = None
-
-    def _unload_feature_extractor_model(self):
-        """
-        Unload CLIP feature extractor model.
-
-        Removes from both pipeline and instance variables.
-        """
-        self.logger.debug("Unloading feature extractor")
-        if self._pipe is not None:
-            del self._pipe.feature_extractor
-            self._pipe.feature_extractor = None
-        del self._feature_extractor
-        self._feature_extractor = None
-
     def _unload_scheduler(self):
         """
         Unload noise scheduler.

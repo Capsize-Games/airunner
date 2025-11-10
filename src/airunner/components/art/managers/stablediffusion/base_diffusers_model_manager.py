@@ -10,9 +10,6 @@ from airunner.components.art.data.lora import Lora
 from airunner.components.art.utils.model_file_checker import (
     ModelFileChecker,
 )
-from airunner.components.art.workers.image_export_worker import (
-    ImageExportWorker,
-)
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
@@ -23,7 +20,6 @@ from airunner.enums import (
     ModelAction,
     SignalCode,
 )
-from airunner.utils.application.create_worker import create_worker
 from airunner.utils.memory import clear_memory
 
 from airunner.components.art.managers.stablediffusion import (
@@ -39,6 +35,7 @@ from airunner.components.art.managers.stablediffusion.mixins import (
     SDGenerationPreparationMixin,
     SDImageGenerationMixin,
 )
+from airunner.components.model_management import ModelResourceManager
 
 
 class BaseDiffusersModelManager(
@@ -70,7 +67,6 @@ class BaseDiffusersModelManager(
 
     model_type: ModelType = ModelType.SD
     _model_status = {
-        ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
         ModelType.CONTROLNET: ModelStatus.UNLOADED,
         ModelType.LORA: ModelStatus.UNLOADED,
         ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
@@ -89,8 +85,6 @@ class BaseDiffusersModelManager(
         self._controlnet_model = None
         self._controlnet: Optional = None
         self._controlnet_processor: Any = None
-        self._safety_checker: Optional = None
-        self._feature_extractor: Optional = None
         self._memory_settings_flags: dict = {
             "torch_compile_applied": False,
             "vae_slicing_applied": None,
@@ -119,12 +113,12 @@ class BaseDiffusersModelManager(
         self._textual_inversion_manager: Optional[
             DiffusersTextualInversionManager
         ] = None
-        self._compel_proc: Optional = None
+        self._compel_proc: Optional[Any] = None
         self._loaded_lora: Dict = {}
         self._disabled_lora: List = []
         self._loaded_embeddings: List = []
         self._current_state: HandlerState = HandlerState.UNINITIALIZED
-        self._deep_cache_helper: Optional = None
+        self._deep_cache_helper: Optional[Any] = None
         self.do_interrupt_image_generation: bool = False
 
         # Cached properties from database
@@ -136,8 +130,6 @@ class BaseDiffusersModelManager(
         self._outpaint_settings = None
         self._path_settings = None
         self._current_memory_settings = None
-
-        self.image_export_worker = create_worker(ImageExportWorker)
 
     def _initialize_model_status(self):
         """Initialize model status for this manager's model type."""
@@ -239,9 +231,6 @@ class BaseDiffusersModelManager(
             # Download in progress, will retry load after completion
             return
 
-        # Integrate with ModelResourceManager
-        from airunner.components.model_management import ModelResourceManager
-
         resource_manager = ModelResourceManager()
         prepare_result = resource_manager.prepare_model_loading(
             model_id=self.model_path,
@@ -254,8 +243,6 @@ class BaseDiffusersModelManager(
             )
             self.change_model_status(self.model_type, ModelStatus.FAILED)
             return
-
-        self._load_safety_checker()
 
         if (
             self.controlnet_enabled
@@ -331,7 +318,6 @@ class BaseDiffusersModelManager(
         # Unload heavier GPU components
         self._unload_loras()
         self._unload_controlnet()
-        self._unload_safety_checker()
 
         # Clear memory after unloading auxiliary models
         clear_memory(self._device_index)
@@ -352,12 +338,6 @@ class BaseDiffusersModelManager(
         clear_memory(self._device_index)
 
         self.change_model_status(self.model_type, ModelStatus.UNLOADED)
-
-        # Cleanup via ModelResourceManager
-        from airunner.components.model_management import ModelResourceManager
-
-        resource_manager = ModelResourceManager()
-        resource_manager.model_unloaded(self.model_path)
 
     def reload_lora(self):
         """Reload LoRA weights without reloading the entire model."""
@@ -402,20 +382,6 @@ class BaseDiffusersModelManager(
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
-
-    def _check_and_mark_nsfw_images(self, images):
-        """
-        Check images for NSFW content using safety checker.
-
-        Args:
-            images: List of PIL images to check
-
-        Returns:
-            Tuple of (processed_images, nsfw_detected_flags)
-        """
-        return image_generation.check_and_mark_nsfw_images(
-            images, self._feature_extractor, self._safety_checker, self._device
-        )
 
     def _resize_image(self, image, max_width, max_height):
         """
@@ -470,11 +436,6 @@ class BaseDiffusersModelManager(
             self._set_pipe(self.config_path, data)
             self.change_model_status(self.model_type, ModelStatus.LOADED)
 
-            # Notify ModelResourceManager that model loaded successfully
-            from airunner.components.model_management import (
-                ModelResourceManager,
-            )
-
             resource_manager = ModelResourceManager()
             resource_manager.model_loaded(self.model_path)
         except Exception as e:
@@ -510,13 +471,7 @@ class BaseDiffusersModelManager(
         Verifies all required components are loaded and sets handler state
         to READY. Attaches ControlNet processor to pipeline if enabled.
         """
-        safety_checker_ready = True
-        if self.use_safety_checker:
-            safety_checker_ready = (
-                self._safety_checker is not None
-                and self._feature_extractor is not None
-            )
-        if self._pipe is not None and safety_checker_ready:
+        if self._pipe is not None:
             self._current_state = HandlerState.READY
         else:
             self.logger.error(

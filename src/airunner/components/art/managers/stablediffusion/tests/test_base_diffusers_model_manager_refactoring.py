@@ -74,7 +74,6 @@ def test_properties_accessible():
     assert hasattr(BaseDiffusersModelManager, "is_img2img")
     assert hasattr(BaseDiffusersModelManager, "is_inpaint")
     assert hasattr(BaseDiffusersModelManager, "is_outpaint")
-    assert hasattr(BaseDiffusersModelManager, "use_safety_checker")
     assert hasattr(BaseDiffusersModelManager, "use_compel")
     assert hasattr(BaseDiffusersModelManager, "generator")
     assert hasattr(BaseDiffusersModelManager, "lora_scale")
@@ -100,7 +99,6 @@ def test_loading_methods_accessible():
         BaseDiffusersModelManager,
     )
 
-    assert hasattr(BaseDiffusersModelManager, "_load_safety_checker")
     assert hasattr(BaseDiffusersModelManager, "_load_controlnet_model")
     assert hasattr(BaseDiffusersModelManager, "_load_lora")
     assert hasattr(BaseDiffusersModelManager, "_load_embeddings")
@@ -121,7 +119,6 @@ def test_unloading_methods_accessible():
         BaseDiffusersModelManager,
     )
 
-    assert hasattr(BaseDiffusersModelManager, "_unload_safety_checker")
     assert hasattr(BaseDiffusersModelManager, "_unload_controlnet")
     assert hasattr(BaseDiffusersModelManager, "_unload_loras")
     assert hasattr(BaseDiffusersModelManager, "_unload_lora")

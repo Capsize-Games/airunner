@@ -58,25 +58,7 @@ class HuggingFaceDownloader:
             "vae/config.json",
         ],
         "art": [
-            # Generic art model files (SD/SDXL/Flux)
-            "model_index.json",
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "tokenizer/tokenizer_config.json",
-            "vae/config.json",
-        ],
-        "sdxl": [
-            # SDXL specific files
-            "model_index.json",
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder_2/config.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer_2/tokenizer_config.json",
-            "vae/config.json",
-        ],
-        "sd": [
-            # SD 1.5 specific files
+            # Generic art model files (FLUX)
             "model_index.json",
             "scheduler/scheduler_config.json",
             "text_encoder/config.json",

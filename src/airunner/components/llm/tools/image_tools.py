@@ -9,7 +9,6 @@ from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.llm.config.model_capabilities import ModelCapability
-from airunner.enums import ImagePreset
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -107,10 +106,6 @@ def generate_image(
         str,
         "Description of background, colors, mood, and atmosphere",
     ],
-    preset: Annotated[
-        str,
-        f"Style preset. Options: {[p.value for p in ImagePreset]}",
-    ],
     width: Annotated[
         int,
         "Width in pixels. Min: 64, max: 2048. Must be multiple of 64.",
@@ -129,11 +124,6 @@ def generate_image(
     # Clamp to valid range
     width = max(64, min(2048, width))
     height = max(64, min(2048, height))
-
-    # Validate preset
-    valid_presets = [p.value for p in ImagePreset]
-    if preset not in valid_presets:
-        preset = ImagePreset.ILLUSTRATION.value
 
     # Enhance prompts using specialized model
     logger.info(f"Enhancing prompts for image generation")

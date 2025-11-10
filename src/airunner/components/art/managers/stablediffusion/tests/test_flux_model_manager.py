@@ -230,8 +230,6 @@ class TestFluxModelManager:
 
         assert "torch_dtype" in data
         assert data["torch_dtype"] == torch.bfloat16
-        assert "safety_checker" not in data
-        assert "feature_extractor" not in data
 
     @pytest.mark.skip(
         reason="Test needs refactoring - properties don't have setters"

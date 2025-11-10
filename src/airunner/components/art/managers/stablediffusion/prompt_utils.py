@@ -10,14 +10,7 @@ from airunner.components.art.managers.stablediffusion.prompt_weight_bridge impor
 )
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
-    AIRUNNER_PHOTO_REALISTIC_PROMPT,
-    AIRUNNER_ILLUSTRATION_PROMPT,
-    AIRUNNER_PAINTING_PROMPT,
-    AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
-    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
-    AIRUNNER_PAINTING_NEGATIVE_PROMPT,
 )
-from airunner.enums import ImagePreset
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -25,13 +18,11 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 def format_prompt(
     prompt: str,
-    preset: str = "",
     additional_prompts: Optional[list] = None,
     second_prompt: bool = False,
 ) -> str:
     """Format the main prompt with preset and additional prompts. Default preset to empty string for test compatibility."""
     prompt = PromptWeightBridge.convert(prompt)
-    preset = PromptWeightBridge.convert(preset)
     if additional_prompts:
         prompts = [f'"{prompt}"']
         for add_settings in additional_prompts:
@@ -40,37 +31,12 @@ def format_prompt(
             else:
                 add_prompt = add_settings["prompt"]
             prompts.append(f'"{add_prompt}"')
-        return f'({", ".join(prompts)}, "{preset}").and()'
-    if preset:
-        return f'("{prompt}", "{preset}").and(0.5, 0.75)'
+        return f'{", ".join(prompts)}'
     return prompt
 
 
-def get_prompt_preset(image_preset: ImagePreset) -> str:
-    if image_preset is ImagePreset.PHOTOGRAPH:
-        return AIRUNNER_PHOTO_REALISTIC_PROMPT
-    elif image_preset is ImagePreset.ILLUSTRATION:
-        return AIRUNNER_ILLUSTRATION_PROMPT
-    elif image_preset is ImagePreset.PAINTING:
-        return AIRUNNER_PAINTING_PROMPT
-    return ""
-
-
-def get_negative_prompt_preset(image_preset: ImagePreset) -> str:
-    if image_preset is ImagePreset.PHOTOGRAPH:
-        return AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT
-    elif image_preset is ImagePreset.ILLUSTRATION:
-        return AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT
-    elif image_preset is ImagePreset.PAINTING:
-        return AIRUNNER_PAINTING_NEGATIVE_PROMPT
-    return ""
-
-
-def format_negative_prompt(prompt: str, preset: str) -> str:
+def format_negative_prompt(prompt: str) -> str:
     prompt = PromptWeightBridge.convert(prompt)
-    preset = PromptWeightBridge.convert(preset)
-    if preset:
-        return f'("{prompt}", "{preset}").and()'
     return prompt
 
 

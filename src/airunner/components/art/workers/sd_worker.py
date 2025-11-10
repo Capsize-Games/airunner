@@ -2,12 +2,6 @@ import os
 from typing import Dict, Optional
 
 import torch
-from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
-    StableDiffusionModelManager,
-)
-from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
-    SDXLModelManager,
-)
 from airunner.components.art.managers.flux.flux_model_manager import (
     FluxModelManager,
 )
@@ -25,9 +19,6 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
-from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
-    X4UpscaleManager,
-)
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -36,12 +27,9 @@ torch.backends.cuda.matmul.allow_tf32 = True
 class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
-    def __init__(self):
-        self._sd: Optional[StableDiffusionModelManager] = None
-        self._sdxl: Optional[SDXLModelManager] = None
+    def __init__(self, image_export_worker):
+        self.image_export_worker = image_export_worker
         self._flux: Optional[FluxModelManager] = None
-        self._x4_upscaler: Optional[X4UpscaleManager] = None
-        self._safety_checker = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
         self._current_model = None
@@ -73,22 +61,11 @@ class SDWorker(Worker):
         if self._model_manager is None:
             version = StableDiffusionVersion(self.generator_settings.version)
 
-            if version is StableDiffusionVersion.SD1_5:
-                self._model_manager = self.sd
-            elif version in (
-                StableDiffusionVersion.SDXL1_0,
-                StableDiffusionVersion.SDXL_TURBO,
-                StableDiffusionVersion.SDXL_LIGHTNING,
-                StableDiffusionVersion.SDXL_HYPER,
-            ):
-                self._model_manager = self.sdxl
-            elif version in (
+            if version in (
                 StableDiffusionVersion.FLUX_DEV,
                 StableDiffusionVersion.FLUX_SCHNELL,
             ):
                 self._model_manager = self.flux
-            elif version is StableDiffusionVersion.X4_UPSCALER:
-                self._model_manager = self.x4_upscaler
             else:
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
@@ -100,36 +77,11 @@ class SDWorker(Worker):
         self._model_manager = value
 
     @property
-    def sd(self):
-        if self._sd is None:
-            self._sd = StableDiffusionModelManager()
-        return self._sd
-
-    @property
-    def sdxl(self):
-        if self._sdxl is None:
-            self._sdxl = SDXLModelManager()
-        return self._sdxl
-
-    @property
     def flux(self):
         if self._flux is None:
             self._flux = FluxModelManager()
+            self._flux.image_export_worker = self.image_export_worker
         return self._flux
-
-    @property
-    def x4_upscaler(self):
-        if self._x4_upscaler is None:
-            self._x4_upscaler = X4UpscaleManager(mediator=self.mediator)
-        return self._x4_upscaler
-
-    def on_load_safety_checker(self):
-        if self.model_manager:
-            self._load_safety_checker()
-
-    def on_unload_safety_checker(self):
-        if self.model_manager:
-            self._unload_safety_checker()
 
     def scan_for_embeddings(self):
         if self.model_manager:
@@ -323,13 +275,26 @@ class SDWorker(Worker):
             # Clear the specific manager reference to allow garbage collection
             # Without this, the manager stays in memory even after unload()
             if manager_ref is self._flux:
+                self.logger.info(">>> Unloading FLUX model manager")
+                self._flux.image_export_worker.stop()
+                del self._flux.image_export_worker
+                self._flux.image_export_worker = None
+                del self._flux
                 self._flux = None
             elif manager_ref is self._sd:
+                self.logger.info(">>> Unloading SD model manager")
+                self._sd.image_export_worker.stop()
+                del self._sd.image_export_worker
+                self._sd.image_export_worker = None
+                del self._sd
                 self._sd = None
             elif manager_ref is self._sdxl:
+                self.logger.info(">>> Unloading SDXL model manager")
+                self._sdxl.image_export_worker.stop()
+                del self._sdxl.image_export_worker
+                self._sdxl.image_export_worker = None
+                del self._sdxl
                 self._sdxl = None
-            elif manager_ref is self._x4_upscaler:
-                self._x4_upscaler = None
 
         if data:
             callback = data.get("callback", None)
@@ -343,14 +308,6 @@ class SDWorker(Worker):
     def _unload_controlnet(self):
         if self.model_manager:
             self.model_manager.unload_controlnet()
-
-    def _load_safety_checker(self):
-        if self.model_manager:
-            self.model_manager.load_safety_checker()
-
-    def _unload_safety_checker(self):
-        if self.model_manager:
-            self.model_manager.unload_safety_checker()
 
     def on_tokenizer_load_signal(self, data: Dict = None):
         if self.model_manager:

@@ -24,10 +24,6 @@ from airunner.components.art.gui.widgets.stablediffusion.templates.stable_diffus
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
-from airunner.utils.application.create_worker import create_worker
-from airunner.components.application.workers.model_scanner_worker import (
-    ModelScannerWorker,
-)
 from airunner.settings import AIRUNNER_ART_ENABLED
 from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.utils.model_utils.model_utils import (
@@ -54,12 +50,10 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.custom_model.setText(self.generator_settings.custom_path)
         self.ui.custom_model.blockSignals(False)
         PipelineMixin.__init__(self)
-        self.model_scanner_worker = create_worker(ModelScannerWorker)
 
         self._load_versions_combobox()
         self._load_pipelines_combobox()
         self._load_models_combobox()
-        self._load_schedulers_combobox()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -91,7 +85,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 "generator_section", self.generator_settings.pipeline_action
             )
             self.ui.seed_widget.setProperty(
-                "generator_name", ImageGenerator.STABLEDIFFUSION.value
+                "generator_name", ImageGenerator.FLUX.value
             )
             self.ui.ddim_eta_slider_widget.hide()
             self.ui.frames_slider_widget.hide()
@@ -291,12 +285,6 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                     self._load_models_combobox()
 
     @Slot(str)
-    def on_scheduler_currentTextChanged(self, name):
-        print("SCHEDULER CHANGED", name)
-        self.update_generator_settings(scheduler=name)
-        self.api.art.change_scheduler(name)
-
-    @Slot(str)
     def on_pipeline_currentTextChanged(self, val: str):
         if (
             val
@@ -308,8 +296,6 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             == f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
         ):
             val = GeneratorSection.INPAINT.value
-        elif val == GeneratorSection.UPSCALER.value:
-            val = GeneratorSection.UPSCALER.value
 
         generator_settings = self.generator_settings
         updated_kwargs = {"pipeline_action": val}
@@ -331,14 +317,6 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 )
                 selected_model_id = new_model.id if new_model else None
                 updated_kwargs["model"] = selected_model_id
-        elif val == GeneratorSection.UPSCALER.value:
-            from airunner.enums import StableDiffusionVersion
-
-            updated_kwargs["version"] = (
-                StableDiffusionVersion.X4_UPSCALER.value
-            )
-            # When switching to upscaler we clear model so it reselects properly
-            updated_kwargs["model"] = None
         self.logger.debug(
             "Pipeline change -> version=%s pipeline=%s model(before)=%s model(after)=%s",
             generator_settings.version,
@@ -411,28 +389,10 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def _load_pipelines_combobox(self):
         self.ui.pipeline.blockSignals(True)
         self.ui.pipeline.clear()
-
-        if (
-            self.generator_settings.version
-            == StableDiffusionVersion.X4_UPSCALER.value
-        ):
-            pipeline_names = [GeneratorSection.UPSCALER.value]
-            self.update_generator_settings(
-                pipeline_action=GeneratorSection.UPSCALER.value
-            )
-        else:
-            pipeline_names = [
-                f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
-                f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
-            ]
-            # Do not force-overwrite pipeline action unless coming from upscaler
-            if (
-                self.generator_settings.pipeline_action
-                == GeneratorSection.UPSCALER.value
-            ):
-                self.update_generator_settings(
-                    pipeline_action=GeneratorSection.TXT2IMG.value
-                )
+        pipeline_names = [
+            f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
+            f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
+        ]
 
         current_pipeline = self.generator_settings.pipeline_action
         if current_pipeline != "":
@@ -448,9 +408,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     @property
     def versions(self) -> List[str]:
         if len(self._versions) == 0:
-            pipelines = self.get_pipelines(
-                category=ImageGenerator.STABLEDIFFUSION.value
-            )
+            pipelines = self.get_pipelines(category=ImageGenerator.FLUX.value)
             pipelines += self.get_pipelines(category=ImageGenerator.FLUX.value)
             self._versions = set(
                 [pipeline["version"] for pipeline in pipelines]
@@ -479,7 +437,6 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self._load_pipelines_combobox()
             self._load_versions_combobox()
             self._load_models_combobox()
-            self._load_schedulers_combobox()
         except RuntimeError as e:
             if AIRUNNER_ART_ENABLED:
                 self.logger.error(f"Error loading models: {e}")
@@ -505,18 +462,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self.action = self.generator_settings.pipeline_action
             self.version = self.generator_settings.version
 
-            image_generator = ImageGenerator.STABLEDIFFUSION.value
+            image_generator = ImageGenerator.FLUX.value
 
-            if (
-                self.generator_settings.pipeline_action
-                == GeneratorSection.UPSCALER.value
-            ):
-                pipeline_actions = [GeneratorSection.UPSCALER.value]
-            else:
-                pipeline_actions = [GeneratorSection.TXT2IMG.value]
+            pipeline_actions = [GeneratorSection.TXT2IMG.value]
 
-                if self.action == GeneratorSection.INPAINT.value:
-                    pipeline_actions.append(GeneratorSection.INPAINT.value)
+            if self.action == GeneratorSection.INPAINT.value:
+                pipeline_actions.append(GeneratorSection.INPAINT.value)
 
             self.models = AIModels.objects.filter(
                 AIModels.category == image_generator,
@@ -552,19 +503,3 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             if index != -1:
                 self.ui.model.setCurrentIndex(index)
         self.ui.model.blockSignals(False)
-
-    def _load_schedulers_combobox(self):
-        self.ui.scheduler.blockSignals(True)
-        scheduler_names = [s.display_name for s in self.schedulers]
-        self.ui.scheduler.clear()
-        self.ui.scheduler.addItems(scheduler_names)
-
-        current_scheduler = self.generator_settings.scheduler
-        if current_scheduler != "":
-            self.ui.scheduler.setCurrentText(current_scheduler)
-        else:
-            self.generator_settings.scheduler = self.ui.scheduler.currentText()
-        self.update_generator_settings(
-            scheduler=self.generator_settings.scheduler
-        )
-        self.ui.scheduler.blockSignals(False)

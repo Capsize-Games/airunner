@@ -4,13 +4,13 @@ from dataclasses import dataclass, asdict
 from PIL import Image
 
 from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
-from airunner.enums import GeneratorSection, ImagePreset, QualityEffects
+from airunner.enums import GeneratorSection
 
 
 @dataclass
 class ImageRequest:
     pipeline_action: str = ""
-    generator_name: str = "stablediffusion"
+    generator_name: str = "flux"
     prompt: str = ""
     negative_prompt: str = ""
     second_prompt: str = ""
@@ -19,7 +19,7 @@ class ImageRequest:
     model_path: str = ""
     custom_path: str = ""
     scheduler: str = AIRUNNER_DEFAULT_SCHEDULER
-    version: str = "SD 1.5"
+    version: str = "Flux.1 S"
     use_compel: bool = True
     steps: int = 20
     ddim_eta: float = 0.5
@@ -40,8 +40,6 @@ class ImageRequest:
     width: int = 512
     height: int = 512
     callback: Optional[callable] = None
-    image_preset: ImagePreset = ImagePreset.NONE
-    quality_effects: QualityEffects = QualityEffects.STANDARD
     node_id: Optional[str] = None
     image: Optional[Image.Image] = None
     mask: Optional[Image.Image] = None
@@ -54,7 +52,6 @@ class ImageRequest:
     custom_path: Optional[str] = None
     controlnet_enabled: Optional[bool] = None
     controlnet: str = "Canny"
-    nsfw_filter: Optional[bool] = None
     outpaint_mask_blur: int = 0
 
     additional_prompts: Optional[List[Dict[str, str]]] = None
