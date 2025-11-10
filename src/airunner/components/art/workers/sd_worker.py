@@ -44,24 +44,6 @@ class SDWorker(Worker):
         self._safety_checker = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
-        self.signal_handlers = {
-            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
-            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
-            SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
-            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
-            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
-            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED: self.on_input_image_settings_changed_signal,
-            SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
-            SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
-            SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
-            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
-            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
-        }
         self._current_model = None
         self._current_version = None
         self._current_pipeline = None
@@ -201,11 +183,6 @@ class SDWorker(Worker):
     def on_art_model_changed(self, data: Dict = None):
         self.unload_model_manager()
 
-    def on_unload_art_signal(self, data=None):
-        self.add_to_queue(
-            {"action": ModelAction.UNLOAD, "type": ModelType.SD, "data": data}
-        )
-
     def _get_model_path_from_image_request(
         self, image_request: Optional[ImageRequest]
     ) -> Optional[str]:
@@ -329,10 +306,31 @@ class SDWorker(Worker):
             if callback is not None:
                 callback(data)
 
+    def unload(self, data: Dict):
+        self.add_to_queue(
+            {"action": ModelAction.UNLOAD, "type": ModelType.SD, "data": data}
+        )
+
     def unload_model_manager(self, data: Dict = None):
         if self._model_manager is not None:
+            # CRITICAL: Store reference before clearing to check which manager it is
+            manager_ref = self._model_manager
+
+            # Unload the manager
             self._model_manager.unload()
             self.model_manager = None
+
+            # Clear the specific manager reference to allow garbage collection
+            # Without this, the manager stays in memory even after unload()
+            if manager_ref is self._flux:
+                self._flux = None
+            elif manager_ref is self._sd:
+                self._sd = None
+            elif manager_ref is self._sdxl:
+                self._sdxl = None
+            elif manager_ref is self._x4_upscaler:
+                self._x4_upscaler = None
+
         if data:
             callback = data.get("callback", None)
             if callback is not None:
