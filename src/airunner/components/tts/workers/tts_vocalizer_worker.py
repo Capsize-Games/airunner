@@ -6,7 +6,7 @@ import librosa  # Import librosa for resampling
 
 from PySide6.QtCore import QThread
 
-from airunner.enums import SignalCode, TTSModel
+from airunner.enums import TTSModel
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.components.application.workers.worker import Worker
 

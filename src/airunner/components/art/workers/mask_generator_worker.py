@@ -1,7 +1,6 @@
 import numpy as np
 from PIL import Image
 from PySide6.QtCore import QRect
-from airunner.enums import SignalCode
 from airunner.utils.image import convert_binary_to_image
 from airunner.components.application.workers.worker import Worker
 
