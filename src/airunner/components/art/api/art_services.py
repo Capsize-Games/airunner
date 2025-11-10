@@ -69,12 +69,6 @@ class ARTAPIService(APIServiceBase):
             data["pipeline"] = pipeline
         self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, data)
 
-    def load_safety_checker(self):
-        self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
-
-    def unload_safety_checker(self):
-        self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
-
     def change_scheduler(self, val: str):
         self.emit_signal(
             SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": val}

@@ -181,7 +181,6 @@ class X4ResponseMixin:
             "is_outpaint": False,
             "mask_blur": 0,
             "saved_path": saved_path,
-            "generator": "x4_upscaler",
         }
 
     def _queue_export(self, images: List[Image.Image], data: Dict):

@@ -89,9 +89,8 @@ class SDImageGenerationMixin:
         Main generation loop that:
         1. Prepares data and loads prompt embeddings
         2. Runs pipeline inference
-        3. Checks for NSFW content
-        4. Exports images
-        5. Sends responses
+        3. Exports images
+        4. Sends responses
 
         Handles interruption and errors gracefully.
         """
@@ -107,11 +106,7 @@ class SDImageGenerationMixin:
             for results in self._get_results(data):
 
                 # Benchmark getting images from results
-                generated_images = results.get("images", [])
-
-                images, nsfw_content_detected = (
-                    self._check_and_mark_nsfw_images(generated_images)
-                )
+                images = results.get("images", [])
 
                 if images is not None:
                     self.api.art.final_progress_update(
@@ -160,7 +155,6 @@ class SDImageGenerationMixin:
                     response = ImageResponse(
                         images=images,
                         data=data,
-                        nsfw_content_detected=any(nsfw_content_detected),
                         active_rect=self.active_rect,
                         is_outpaint=self.is_outpaint,
                         node_id=self.image_request.node_id,
@@ -198,6 +192,8 @@ class SDImageGenerationMixin:
                 message="Image generation interrupted",
             )
             self.do_interrupt_image_generation = False
+
+        clear_memory()
 
     def _get_results(self, data):
         """

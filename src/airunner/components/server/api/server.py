@@ -641,7 +641,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         response = ImageResponse(
             images=None,
             data=None,
-            nsfw_content_detected=False,
             active_rect=None,
             is_outpaint=False,
         )

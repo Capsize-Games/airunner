@@ -262,7 +262,6 @@ class FluxModelManager(
         self.logger.debug(
             "Skipping _move_pipe_to_device for FLUX (CPU offloading manages devices)"
         )
-        pass
 
     @property
     def generator(self) -> torch.Generator:

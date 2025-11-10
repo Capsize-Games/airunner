@@ -38,16 +38,6 @@ class ChooseModelsPage(BaseWizard):
 
         # Prepare core items (safety checker, feature extractor) and per-version controlnet groups
         core_items = [
-            {
-                "name": "safety_checker",
-                "display_name": "Safety Checker",
-                "size": 1.2 * 1024 * 1024,
-            },
-            {
-                "name": "feature_extractor",
-                "display_name": "Feature Extractor",
-                "size": 1.7 * 1024 * 1024,
-            },
         ]
 
         # Prepare core items (these will be placed outside the scroll area in the main grid)
@@ -58,15 +48,6 @@ class ChooseModelsPage(BaseWizard):
             chk.setChecked(True)
             chk.setObjectName(item["name"])
             self.models_enabled[item["name"]] = True
-            # Wire toggles to dedicated slots when appropriate
-            if item["name"] == "safety_checker":
-                chk.toggled.connect(
-                    lambda v, n="safety_checker": self._core_toggled(n, v)
-                )
-            elif item["name"] == "feature_extractor":
-                chk.toggled.connect(
-                    lambda v, n="feature_extractor": self._core_toggled(n, v)
-                )
             self._core_widgets.append((item["name"], chk))
 
         # Group ControlNet models by version
@@ -374,12 +355,6 @@ class ChooseModelsPage(BaseWizard):
         total_bytes = 0
 
         if self.models_enabled.get("stable_diffusion", False):
-            # core items
-            if self.models_enabled.get("safety_checker", False):
-                total_bytes += 1.2 * 1024 * 1024
-            if self.models_enabled.get("feature_extractor", False):
-                total_bytes += 1.7 * 1024 * 1024
-
             # FLUX core files
             if self.models_enabled.get("core_FLUX", False):
                 total_bytes += flux_core_size
@@ -468,14 +443,7 @@ class ChooseModelsPage(BaseWizard):
 
         # Determine if any stable-diffusion related option remains enabled
         any_enabled = False
-        # core items
-        if self.models_enabled.get(
-            "safety_checker", False
-        ) or self.models_enabled.get("feature_extractor", False):
-            any_enabled = True
-        # upscaler
-        if self.models_enabled.get("upscaler_x4", False):
-            any_enabled = True
+
         # per-version controlnet
         for k, v in list(self.models_enabled.items()):
             if k.startswith("controlnet_") and v:
@@ -494,7 +462,7 @@ class ChooseModelsPage(BaseWizard):
         self.update_total_size_label()
 
     def _core_toggled(self, name: str, val: bool):
-        """Handler for top-level core items like safety_checker and feature_extractor."""
+        """Handler for top-level core items """
         self.models_enabled[name] = bool(val)
         self._recalc_stable_diffusion_enabled()
         self.update_total_size_label()
@@ -502,10 +470,6 @@ class ChooseModelsPage(BaseWizard):
     def _recalc_stable_diffusion_enabled(self):
         """Update the global stable_diffusion enabled flag based on current selections."""
         any_enabled = False
-        if self.models_enabled.get(
-            "safety_checker", False
-        ) or self.models_enabled.get("feature_extractor", False):
-            any_enabled = True
         if self.models_enabled.get("upscaler_x4", False):
             any_enabled = True
         for k, v in list(self.models_enabled.items()):

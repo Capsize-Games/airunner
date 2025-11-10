@@ -52,63 +52,6 @@ class SomeDeepCacheClass:  # legacy test helper
         pass
 
 
-def load_safety_checker(
-    application_settings, path_settings, data_type
-) -> Optional[StableDiffusionSafetyChecker]:
-    if not application_settings.nsfw_filter:
-        return None
-    path = os.path.expanduser(
-        os.path.join(
-            path_settings.base_path,
-            "art",
-            "models",
-            "SD 1.5",
-            "txt2img",
-            "safety_checker",
-        )
-    )
-    try:
-        checker = StableDiffusionSafetyChecker.from_pretrained(
-            path,
-            torch_dtype=data_type,
-            device_map="cpu",
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            use_safetensors=False,
-        )
-        logger.info("Loaded safety checker model.")
-        return checker
-    except Exception as e:
-        logger.error(f"Unable to load safety checker: {e}")
-        return None
-
-
-def load_feature_extractor(
-    path_settings, data_type
-) -> Optional[CLIPFeatureExtractor]:
-    path = os.path.expanduser(
-        os.path.join(
-            path_settings.base_path,
-            "art",
-            "models",
-            "SD 1.5",
-            "txt2img",
-            "feature_extractor",
-        )
-    )
-    try:
-        extractor = CLIPFeatureExtractor.from_pretrained(
-            path,
-            torch_dtype=data_type,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            use_safetensors=True,
-        )
-        logger.info("Loaded feature extractor.")
-        return extractor
-    except Exception as e:
-        logger.error(f"Unable to load feature extractor: {e}")
-        return None
-
-
 def load_scheduler(
     scheduler_name: str, path_settings, version: str, logger: Any
 ) -> Optional[SchedulerMixin]:
@@ -196,29 +139,6 @@ def load_lora_weights(
         logger.warning(f"Failed to load LORA {filename}: {e}")
         return False
 
-
-def unload_safety_checker(pipe: Any, logger: Any) -> None:
-    """Unload the safety checker from the pipeline and free resources."""
-    if pipe is not None and hasattr(pipe, "safety_checker"):
-        try:
-            del pipe.safety_checker
-            pipe.safety_checker = None
-            logger.info("Unloaded safety checker from pipeline.")
-        except Exception as e:
-            logger.warning(f"Failed to unload safety checker: {e}")
-
-
-def unload_feature_extractor(pipe: Any, logger: Any) -> None:
-    """Unload the feature extractor from the pipeline and free resources."""
-    if pipe is not None and hasattr(pipe, "feature_extractor"):
-        try:
-            del pipe.feature_extractor
-            pipe.feature_extractor = None
-            logger.info("Unloaded feature extractor from pipeline.")
-        except Exception as e:
-            logger.warning(f"Failed to unload feature extractor: {e}")
-
-
 def unload_lora(pipe: Any, logger: Any) -> None:
     """Unload all LORA weights from the pipeline."""
     try:
@@ -269,9 +189,7 @@ def load_deep_cache_helper(pipe: Any, logger: Any) -> Optional[Any]:
         return None
 
 
-def unload_deep_cache_helper(
-    deep_cache_helper: Any, logger: Any
-) -> None:
+def unload_deep_cache_helper(deep_cache_helper: Any, logger: Any) -> None:
     """Disable and unload DeepCacheSDHelper."""
     try:
         if deep_cache_helper is not None:

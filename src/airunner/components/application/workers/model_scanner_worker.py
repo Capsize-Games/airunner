@@ -53,38 +53,44 @@ class ModelScannerWorker(Worker, PipelineMixin):
             entries = []
 
         # find all folders inside of model_path, each of those folders is a model version
+        print("*" * 100)
+        print("model_path", model_path)
         with os.scandir(model_path) as dir_object:
             # check if dir_object is a directory
+            print("*" * 100)
+            print("dir_object", dir_object)
             for version_entry in dir_object:
                 version = version_entry.name
                 path = os.path.join(model_path, version)
                 with os.scandir(path) as action_object:
+                    print("*" * 100)
+                    print("action_object", action_object)
                     for action_item in action_object:
                         action = action_item.name
                         if "controlnet_processors" in action_item.path:
                             continue
                         paths = [action_item.path]
-                        if "SDXL 1.0/txt2img" in action_item.path:
-                            paths.append(
-                                os.path.join(action_item.path, "turbo_models")
-                            )
+                        print("*" * 100)
+                        print("action_item", action_item)
                         for path in paths:
                             if not os.path.exists(path):
                                 continue
                             if not os.path.isdir(path):
                                 continue
+                            print("*" * 100)
+                            print("path", path)
                             with os.scandir(path) as file_object:
                                 for file_item in file_object:
+                                    print("*" * 100)
+                                    print("file_item", file_item)
                                     model = AIModels()
                                     model.name = os.path.basename(
                                         file_item.path
                                     )
                                     model.path = file_item.path
                                     model.branch = "main"
-                                    if "turbo_models" in path:
-                                        version = "SDXL Turbo"
                                     model.version = version
-                                    model.category = "stablediffusion"
+                                    model.category = "flux"
                                     model.pipeline_action = action
                                     model.enabled = True
                                     model.model_type = "art"

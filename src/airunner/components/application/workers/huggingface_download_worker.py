@@ -36,17 +36,27 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """Signal to emit on download failure."""
         return SignalCode.HUGGINGFACE_DOWNLOAD_FAILED
 
-    def _download_model(self, repo_id: str, model_type: str, output_dir: str):
+    def _download_model(
+        self,
+        repo_id: str,
+        model_type: str,
+        output_dir: str,
+        version: str = None,
+        pipeline_action: str = "txt2img",
+    ):
         """Download model files from HuggingFace.
 
         Args:
             repo_id: HuggingFace repository ID (e.g., "black-forest-labs/FLUX.1-dev")
             model_type: Type of model (llm, flux, etc.)
             output_dir: Directory to save the model
+            version: Version name for bootstrap data lookup (e.g., "SDXL 1.0", "Flux.1 S")
+            pipeline_action: Pipeline action (txt2img, inpaint, etc.)
 
         """
         self.logger.info(
-            f"_download_model called with repo_id={repo_id}, model_type={model_type}, output_dir={output_dir}"
+            f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
+            f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}"
         )
 
         settings = get_qsettings()
@@ -57,7 +67,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # For art models, don't create a subdirectory - use output_dir directly
         # since it already points to the correct location (e.g., the GGUF file's directory)
-        if model_type in ("flux", "art", "sdxl", "sd"):
+        if model_type in ("flux", "art"):
             model_path = Path(output_dir)
             self.logger.info(
                 f"Using output_dir directly for art model: {model_path}"
@@ -100,17 +110,29 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # Filter files to download
         # For art models, use the comprehensive bootstrap data
         # For LLM models, use the minimal required files
-        is_art_model = model_type in ("flux", "art", "sdxl", "sd")
+        is_art_model = model_type in ("flux", "art")
 
         if is_art_model:
-            # Try with common version names for Flux models
-            required_files = None
-            for version_name in ["Flux.1 S", "SDXL 1.0", "SD 1.5"]:
+            # Use the version parameter if provided, otherwise try FLUX versions
+            version_names = []
+            if version:
+                version_names.append(version)
                 self.logger.info(
-                    f"Trying to get required files for version: {version_name}"
+                    f"Using provided version for bootstrap data: {version}"
+                )
+            else:
+                version_names = ["Flux.1 S", "FLUX"]
+                self.logger.warning(
+                    f"No version provided, trying fallback versions: {version_names}"
+                )
+
+            required_files = None
+            for version_name in version_names:
+                self.logger.info(
+                    f"Trying to get required files for version: {version_name}, pipeline_action: {pipeline_action}"
                 )
                 required_files = get_required_files_for_model(
-                    "art", version_name, version_name, "txt2img"
+                    "art", version_name, version_name, pipeline_action
                 )
                 if required_files:
                     self.logger.info(
@@ -119,16 +141,18 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     break
                 else:
                     self.logger.warning(
-                        f"No required files found for {version_name}"
+                        f"No required files found for {version_name} with pipeline_action {pipeline_action}"
                     )
 
             if required_files is None or len(required_files) == 0:
                 self.logger.error(
-                    f"No bootstrap data found for {model_type}! Cannot determine required files."
+                    f"No bootstrap data found for {model_type} (version={version})! Cannot determine required files."
                 )
                 self.emit_signal(
                     self._failed_signal,
-                    {"error": f"No bootstrap data found for {model_type}"},
+                    {
+                        "error": f"No bootstrap data found for {model_type} (version={version})"
+                    },
                 )
                 return
         else:

@@ -6,9 +6,7 @@ contains the frustrated mood before building the prompt for generation.
 Uses a lightweight fake chatbot/settings to avoid loading heavy models.
 """
 
-from types import SimpleNamespace
 from airunner.components.llm.managers.workflow_manager import WorkflowManager
-from airunner.enums import LLMActionType
 
 
 class FakeSettings:

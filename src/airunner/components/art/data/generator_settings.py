@@ -21,7 +21,7 @@ class GeneratorSettings(BaseModel):
     __tablename__ = "generator_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     pipeline_action = Column(String, default="txt2img")
-    generator_name = Column(String, default="stablediffusion")
+    generator_name = Column(String, default="flux")
     quality_effects = Column(String, default="")
     image_preset = Column(String, default="")
     prompt = Column(String, default="")
@@ -37,7 +37,7 @@ class GeneratorSettings(BaseModel):
     scheduler = Column(String, default=AIRUNNER_DEFAULT_SCHEDULER)
     variation = Column(Boolean, default=False)
     use_prompt_builder = Column(Boolean, default=False)
-    version = Column(String, default="SD 1.5")
+    version = Column(String, default="Flux.1 S")
     is_preset = Column(Boolean, default=False)
     use_compel = Column(Boolean, default=True)
 

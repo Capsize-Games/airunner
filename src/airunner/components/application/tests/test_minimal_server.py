@@ -6,7 +6,6 @@ import subprocess
 import sys
 import time
 import requests
-import json
 
 # Start headless server
 print("=" * 70)

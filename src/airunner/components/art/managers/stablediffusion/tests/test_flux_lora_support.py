@@ -83,28 +83,18 @@ class TestFluxLoRAMethods:
         - SDXL LoRAs are NOT compatible with FLUX
         - FLUX.1-dev LoRAs may not work with FLUX.1-schnell (and vice versa)
         """
-        # This is a documentation test - no code to run
-        # Just verify the warning is clear
-        incompatible_models = {
-            "SD 1.5": "stable-diffusion-v1-5",
-            "SDXL 1.0": "stable-diffusion-xl-base-1.0",
-        }
-
         compatible_models = {
             "FLUX.1-dev": "black-forest-labs/FLUX.1-dev",
             "FLUX.1-schnell": "black-forest-labs/FLUX.1-schnell",
         }
 
         # Assert that we document this clearly
-        assert len(incompatible_models) == 2
         assert len(compatible_models) == 2
 
     def test_flux_lora_directory_structure(self):
         """Test expected FLUX LoRA directory structure."""
         expected_paths = [
             "art/models/FLUX/lora/",  # FLUX LoRAs
-            "art/models/SD 1.5/lora/",  # SD 1.5 LoRAs
-            "art/models/SDXL 1.0/lora/",  # SDXL LoRAs
         ]
 
         # Verify path structure is correct

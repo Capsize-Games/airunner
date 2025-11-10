@@ -10,10 +10,7 @@ from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
 from airunner.enums import (
-    ImagePreset,
-    QualityEffects,
     Scheduler,
-    StableDiffusionVersion,
 )
 
 
@@ -59,7 +56,6 @@ class ImageRequestNode(BaseArtNode):
         dict(name="lora_scale", display_name="Lora Scale"),
         dict(name="image_width", display_name="Image Width"),
         dict(name="image_height", display_name="Image Height"),
-        dict(name="image_preset", display_name="Image Preset"),
     ]
     _output_ports = [
         dict(name="image_request", display_name="Image Request"),
@@ -117,13 +113,6 @@ class ImageRequestNode(BaseArtNode):
             "name": "scheduler",
             "value": Scheduler.DPM_PP_2M_SDE_K.value,
             "items": [scheduler.value for scheduler in Scheduler],
-            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
-            "tab": "model",
-        },
-        {
-            "name": "version",
-            "value": StableDiffusionVersion.SDXL1_0.value,
-            "items": [version.value for version in StableDiffusionVersion],
             "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
             "tab": "model",
         },
@@ -245,20 +234,6 @@ class ImageRequestNode(BaseArtNode):
             "widget_type": NodePropWidgetEnum.VECTOR2,
             "tab": "advanced",
         },
-        {
-            "name": "quality_effects",
-            "value": QualityEffects.STANDARD,
-            "items": [effect.value for effect in QualityEffects],
-            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
-            "tab": "advanced",
-        },
-        {
-            "name": "image_preset",
-            "value": ImagePreset.NONE.name,
-            "items": [preset.name for preset in ImagePreset],
-            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
-            "tab": "advanced",
-        },
     ]
 
     generator_settings = None
@@ -324,13 +299,6 @@ class ImageRequestNode(BaseArtNode):
         image_width = self._get_value(input_data, "image_width", int)
         image_height = self._get_value(input_data, "image_height", int)
 
-        # Get image preset as string and convert to enum
-        image_preset_str = self._get_value(input_data, "image_preset", str)
-        try:
-            image_preset = ImagePreset[image_preset_str]
-        except (KeyError, TypeError):
-            image_preset = ImagePreset.NONE
-
         gs = self.generator_settings
         image_request = ImageRequest(
             pipeline_action=pipeline_action,
@@ -357,7 +325,6 @@ class ImageRequestNode(BaseArtNode):
             lora_scale=lora_scale,
             width=image_width,
             height=image_height,
-            image_preset=image_preset,
             crops_coords_top_left=getattr(gs, "crops_coords_top_left", None),
             negative_crops_coords_top_left=getattr(
                 gs, "negative_crops_coords_top_left", None
@@ -366,9 +333,6 @@ class ImageRequestNode(BaseArtNode):
             original_size=getattr(gs, "original_size", None),
             negative_target_size=getattr(gs, "negative_target_size", None),
             negative_original_size=getattr(gs, "negative_original_size", None),
-            quality_effects=QualityEffects(
-                getattr(gs, "quality_effects", QualityEffects.STANDARD)
-            ),
         )
         return {"image_request": image_request}
 

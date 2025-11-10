@@ -31,29 +31,6 @@ from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 class SDModelLoadingMixin:
     """Mixin providing model loading operations for Stable Diffusion."""
 
-    def _load_safety_checker(self):
-        """
-        Load NSFW safety checker model.
-
-        Loads both the safety checker and feature extractor if enabled.
-        """
-        if not self.use_safety_checker or self.safety_checker_is_loading:
-            return
-        self._safety_checker = model_loader.load_safety_checker(
-            self.application_settings, self.path_settings, self.data_type
-        )
-        self._feature_extractor = model_loader.load_feature_extractor(
-            self.path_settings, self.data_type
-        )
-        if self._safety_checker:
-            self.change_model_status(
-                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
-            )
-        else:
-            self.change_model_status(
-                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
-            )
-
     def _load_controlnet_model(self):
         """
         Load ControlNet model for conditional image generation.
@@ -174,79 +151,6 @@ class SDModelLoadingMixin:
             self._deep_cache_helper.enable()
         except AttributeError as e:
             self.logger.error(f"Failed to enable deep cache: {e}")
-
-    def _load_safety_checker_model(self):
-        """
-        Load safety checker model from disk.
-
-        Fallback loading method for safety checker initialization.
-        """
-        self.logger.debug("Loading safety checker")
-        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
-        safety_checker_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art",
-                "models",
-                "SD 1.5",
-                "txt2img",
-                "safety_checker",
-            )
-        )
-        try:
-            self._safety_checker = (
-                StableDiffusionSafetyChecker.from_pretrained(
-                    safety_checker_path,
-                    torch_dtype=self.data_type,
-                    device_map="cpu",
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                    use_safetensors=False,
-                )
-            )
-            self.change_model_status(
-                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
-            )
-        except Exception as e:
-            self.logger.error(f"Unable to load safety checker: {e}")
-            self.change_model_status(
-                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
-            )
-
-    def _load_feature_extractor(self):
-        """
-        Load CLIP feature extractor for safety checker.
-
-        Required for NSFW image detection.
-        """
-        self.logger.debug("Loading feature extractor")
-        self.change_model_status(
-            ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING
-        )
-        feature_extractor_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "art",
-                "models",
-                "SD 1.5",
-                "txt2img",
-                "feature_extractor",
-            )
-        )
-        try:
-            self._feature_extractor = CLIPFeatureExtractor.from_pretrained(
-                feature_extractor_path,
-                torch_dtype=self.data_type,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_safetensors=True,
-            )
-            self.change_model_status(
-                ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED
-            )
-        except Exception as e:
-            self.logger.error(f"Unable to load feature extractor {e}")
-            self.change_model_status(
-                ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED
-            )
 
     def _load_controlnet_processor(self):
         """

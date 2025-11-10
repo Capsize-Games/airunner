@@ -15,11 +15,8 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.application.data import ShortcutKeys
 from airunner.enums import (
-    QualityEffects,
     SignalCode,
     GeneratorSection,
-    ImagePreset,
-    StableDiffusionVersion,
     ModelStatus,
     ModelType,
 )
@@ -49,8 +46,6 @@ class SaveGeneratorSettingsWorker(
         self.current_negative_prompt_value = None
         self.current_secondary_prompt_value = None
         self.current_secondary_negative_prompt_value = None
-        self.crops_coords_top_left_x = 0
-        self.crops_coords_top_left_y = 0
 
     def run(self):
         do_update_settings = False
@@ -75,18 +70,6 @@ class SaveGeneratorSettingsWorker(
                 self.current_secondary_negative_prompt_value = value
                 do_update_settings = True
 
-            x = self.parent.ui.crops_coords_top_left_x.text()
-            y = self.parent.ui.crops_coords_top_left_y.text()
-            x = int(x) if x != "" else 0
-            y = int(y) if y != "" else 0
-
-            if self.crops_coords_top_left_x != x:
-                self.crops_coords_top_left_x = x
-                do_update_settings = True
-            if self.crops_coords_top_left_y != y:
-                self.crops_coords_top_left_y = y
-                do_update_settings = True
-
             if do_update_settings:
                 do_update_settings = False
                 # Update individual fields using the proper update methods
@@ -101,12 +84,6 @@ class SaveGeneratorSettingsWorker(
                 )
                 self.parent.update_generator_settings(
                     second_negative_prompt=self.current_secondary_negative_prompt_value,
-                )
-                self.parent.update_generator_settings(
-                    crops_coords_top_left={
-                        "x": self.crops_coords_top_left_x,
-                        "y": self.crops_coords_top_left_y,
-                    },
                 )
 
             time.sleep(0.1)
@@ -151,34 +128,16 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self._sd_version: str = self.generator_settings.version
-        self._toggle_sdxl_form_elements()
-        self.toggle_microconditioning(
-            self.generator_settings.quality_effects
-            == QualityEffects.CUSTOM.value
-        )
-        self.ui.quality_effects.blockSignals(True)
+        # Note: SDXL toggle removed as SDXL is deprecated
         self.ui.infinite_images_button.blockSignals(True)
-        self.ui.quality_effects.clear()
-        self.ui.quality_effects.addItems(
-            [effect.value for effect in QualityEffects]
-        )
-        self.ui.quality_effects.setCurrentText(
-            self.generator_settings.quality_effects
-        )
         self.ui.infinite_images_button.setChecked(
             self.generator_settings.generate_infinite_images
             if self.generator_settings.generate_infinite_images is not None
             else False
         )
-        self.ui.quality_effects.blockSignals(False)
         self.ui.infinite_images_button.blockSignals(False)
 
-    @property
-    def is_sd_xl_or_turbo(self) -> bool:
-        return (
-            self._sd_version == StableDiffusionVersion.SDXL1_0.value
-            or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
-        )
+    # Note: SDXL support deprecated - these properties are no longer used
 
     @Slot()
     def on_generate_button_clicked(self):
@@ -236,7 +195,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self._toggle_compel_form_elements(val)
         elif column in ("sd_version", "version"):
             self._sd_version = val
-            self._toggle_sdxl_form_elements()
+            # Note: SDXL toggle removed as SDXL is deprecated
 
     def _toggle_compel_form_elements(self, value: bool):
         self.logger.info("Toggle compel form elements")
@@ -248,123 +207,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             if widget:
                 widget.show() if value else widget.hide()
 
-    def _toggle_sdxl_form_elements(self):
-        if self.is_sd_xl_or_turbo:
-            self.ui.sdxl_settings_container.show()
-            self.ui.secondary_prompt.show()
-            self.ui.secondary_negative_prompt.show()
-            self.ui.original_size_width.blockSignals(True)
-            self.ui.original_size_height.blockSignals(True)
-            self.ui.negative_original_size_width.blockSignals(True)
-            self.ui.negative_original_size_height.blockSignals(True)
-            self.ui.target_size_width.blockSignals(True)
-            self.ui.target_size_height.blockSignals(True)
-            self.ui.negative_target_size_width.blockSignals(True)
-            self.ui.negative_target_size_height.blockSignals(True)
-            self.ui.crops_coords_top_left_x.blockSignals(True)
-            self.ui.crops_coords_top_left_y.blockSignals(True)
-            self.ui.negative_crops_coord_top_left_x.blockSignals(True)
-            self.ui.negative_crops_coord_top_left_y.blockSignals(True)
-            self.ui.original_size_width.setText(
-                str(
-                    (self.generator_settings.original_size or {}).get(
-                        "width", 0
-                    )
-                )
-            )
-            self.ui.original_size_height.setText(
-                str(
-                    (self.generator_settings.original_size or {}).get(
-                        "height", 0
-                    )
-                )
-            )
-            self.ui.negative_original_size_width.setText(
-                str(
-                    (self.generator_settings.negative_original_size or {}).get(
-                        "width", 0
-                    )
-                )
-            )
-            self.ui.negative_original_size_height.setText(
-                str(
-                    (self.generator_settings.negative_original_size or {}).get(
-                        "height", 0
-                    )
-                )
-            )
-            self.ui.target_size_width.setText(
-                str(
-                    (self.generator_settings.target_size or {}).get("width", 0)
-                )
-            )
-            self.ui.target_size_height.setText(
-                str(
-                    (self.generator_settings.target_size or {}).get(
-                        "height", 0
-                    )
-                )
-            )
-            self.ui.negative_target_size_width.setText(
-                str(
-                    (self.generator_settings.negative_target_size or {}).get(
-                        "width", 0
-                    )
-                )
-            )
-            self.ui.negative_target_size_height.setText(
-                str(
-                    (self.generator_settings.negative_target_size or {}).get(
-                        "height", 0
-                    )
-                )
-            )
-            self.ui.crops_coords_top_left_x.setText(
-                str(
-                    (self.generator_settings.crops_coords_top_left or {}).get(
-                        "x", 0
-                    )
-                )
-            )
-            self.ui.crops_coords_top_left_y.setText(
-                str(
-                    (self.generator_settings.crops_coords_top_left or {}).get(
-                        "y", 0
-                    )
-                )
-            )
-            self.ui.negative_crops_coord_top_left_x.setText(
-                str(
-                    (
-                        self.generator_settings.negative_crops_coords_top_left
-                        or {}
-                    ).get("x", 0)
-                )
-            )
-            self.ui.negative_crops_coord_top_left_y.setText(
-                str(
-                    (
-                        self.generator_settings.negative_crops_coords_top_left
-                        or {}
-                    ).get("y", 0)
-                )
-            )
-            self.ui.original_size_width.blockSignals(False)
-            self.ui.original_size_height.blockSignals(False)
-            self.ui.negative_original_size_width.blockSignals(False)
-            self.ui.negative_original_size_height.blockSignals(False)
-            self.ui.target_size_width.blockSignals(False)
-            self.ui.target_size_height.blockSignals(False)
-            self.ui.negative_target_size_width.blockSignals(False)
-            self.ui.negative_target_size_height.blockSignals(False)
-            self.ui.crops_coords_top_left_x.blockSignals(False)
-            self.ui.crops_coords_top_left_y.blockSignals(False)
-            self.ui.negative_crops_coord_top_left_x.blockSignals(False)
-            self.ui.negative_crops_coord_top_left_y.blockSignals(False)
-        else:
-            self.ui.sdxl_settings_container.hide()
-            self.ui.secondary_prompt.hide()
-            self.ui.secondary_negative_prompt.hide()
+    # Note: _toggle_sdxl_form_elements removed as SDXL is deprecated
 
     @property
     def is_txt2img(self):
@@ -431,10 +274,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
         prompt = msg.get("prompt", "")
         secondary_prompt = msg.get("second_prompt", "")
-        image_preset = msg.get("image_type", ImagePreset.ILLUSTRATION.value)
 
         # Update UI fields immediately
-        self.ui.image_presets.setCurrentText(image_preset)
         self.ui.prompt.setPlainText(prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
 
@@ -531,9 +372,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.secondary_prompt.blockSignals(False)
         self.ui.secondary_negative_prompt.blockSignals(False)
 
-    def handle_image_presets_changed(self, val):
-        self.update_generator_settings(image_preset=val)
-
     def do_generate_image_from_image_signal_handler(self, _data):
         self.do_generate()
 
@@ -590,70 +428,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         target_size["height"] = int(val)
         self.update_generator_settings(target_size=target_size)
 
-    @Slot(str)
-    def on_negative_target_size_width_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        negative_target_size = self.generator_settings.negative_target_size
-        negative_target_size = negative_target_size or {}
-        negative_target_size["width"] = int(val)
-        self.update_generator_settings(
-            negative_target_size=negative_target_size
-        )
-
-    @Slot(str)
-    def on_negative_target_size_height_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        negative_target_size = self.generator_settings.negative_target_size
-        negative_target_size = negative_target_size or {}
-        negative_target_size["height"] = int(val)
-        self.update_generator_settings(
-            negative_target_size=negative_target_size
-        )
-
-    @Slot(str)
-    def on_crops_coords_top_left_x_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        crops_coords_top_left = self.generator_settings.crops_coords_top_left
-        crops_coords_top_left = crops_coords_top_left or {}
-        crops_coords_top_left["x"] = int(val)
-        self.update_generator_settings(
-            crops_coords_top_left=crops_coords_top_left
-        )
-
-    @Slot(str)
-    def on_crops_coords_top_left_y_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        crops_coords_top_left = self.generator_settings.crops_coords_top_left
-        crops_coords_top_left = crops_coords_top_left or {}
-        crops_coords_top_left["y"] = int(val)
-        self.update_generator_settings(
-            crops_coords_top_left=crops_coords_top_left
-        )
-
-    @Slot(str)
-    def on_negative_crops_coord_top_left_x_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        negative_crops_coords_top_left = (
-            self.generator_settings.negative_crops_coords_top_left
-        )
-        negative_crops_coords_top_left = negative_crops_coords_top_left or {}
-        negative_crops_coords_top_left["x"] = int(val)
-        self.update_generator_settings(
-            negative_crops_coords_top_left=negative_crops_coords_top_left
-        )
-
-    @Slot(str)
-    def on_negative_crops_coord_top_left_y_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        negative_crops_coords_top_left = (
-            self.generator_settings.negative_crops_coords_top_left
-        )
-        negative_crops_coords_top_left = negative_crops_coords_top_left or {}
-        negative_crops_coords_top_left["y"] = int(val)
-        self.update_generator_settings(
-            negative_crops_coords_top_left=negative_crops_coords_top_left
-        )
-
     def generate(self, data=None):
         if self.generator_settings.random_seed:
             self.seed = random_seed()
@@ -697,24 +471,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             "use_tome_sd": self.memory_settings.use_tome_sd,
             "tome_sd_ratio": self.memory_settings.tome_sd_ratio,
         }
-
-    def handle_quality_effects_changed(self, val):
-        self.update_generator_settings(quality_effects=val)
-        self.toggle_microconditioning(val == QualityEffects.CUSTOM.value)
-
-    def toggle_microconditioning(self, enabled: bool):
-        self.ui.original_size_width.setEnabled(enabled)
-        self.ui.original_size_height.setEnabled(enabled)
-        self.ui.negative_original_size_width.setEnabled(enabled)
-        self.ui.negative_original_size_height.setEnabled(enabled)
-        self.ui.target_size_width.setEnabled(enabled)
-        self.ui.target_size_height.setEnabled(enabled)
-        self.ui.negative_target_size_width.setEnabled(enabled)
-        self.ui.negative_target_size_height.setEnabled(enabled)
-        self.ui.crops_coords_top_left_x.setEnabled(enabled)
-        self.ui.crops_coords_top_left_y.setEnabled(enabled)
-        self.ui.negative_crops_coord_top_left_x.setEnabled(enabled)
-        self.ui.negative_crops_coord_top_left_y.setEnabled(enabled)
 
     def handle_progress_bar(self, message):
         step = message.get("step")
@@ -778,8 +534,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.negative_prompt.blockSignals(True)
         self.ui.secondary_prompt.blockSignals(True)
         self.ui.secondary_negative_prompt.blockSignals(True)
-        self.ui.image_presets.blockSignals(True)
-        self.ui.quality_effects.blockSignals(True)
 
         self.ui.prompt.setPlainText(self.generator_settings.prompt)
         self.ui.negative_prompt.setPlainText(
@@ -792,24 +546,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.generator_settings.second_negative_prompt
         )
 
-        image_presets = [preset.value for preset in ImagePreset]
-        self.ui.image_presets.addItems(image_presets)
-        self.ui.image_presets.setCurrentIndex(
-            self.ui.image_presets.findText(
-                self.generator_settings.image_preset
-            )
-        )
-
-        self.ui.quality_effects.setCurrentText(
-            self.generator_settings.quality_effects
-        )
-
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
         self.ui.secondary_prompt.blockSignals(False)
         self.ui.secondary_negative_prompt.blockSignals(False)
-        self.ui.image_presets.blockSignals(False)
-        self.ui.quality_effects.blockSignals(False)
 
     def clear_prompts(self):
         self.ui.prompt.setPlainText("")

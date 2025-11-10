@@ -65,12 +65,12 @@ class JobStatusResponse(BaseModel):
 
 
 class ModelInfo(BaseModel):
-    """SD model information."""
+    """Model information."""
 
     id: str
     name: str
     loaded: bool
-    type: str  # sd15, sdxl, etc
+    type: str  # flux, etc
 
 
 # ====================
@@ -310,7 +310,7 @@ async def list_models(req: Request):
         models = []
 
         for model_id, model_spec in registry.models.items():
-            if model_spec.model_type.value in ["sd", "sdxl", "sd15"]:
+            if model_spec.model_type.value == "flux":
                 models.append(
                     ModelInfo(
                         id=model_id,

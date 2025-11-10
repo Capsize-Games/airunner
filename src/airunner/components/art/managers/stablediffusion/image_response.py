@@ -12,14 +12,12 @@ class ImageResponse:
     Attributes:
         images: A list of generated images.
         data: Additional metadata related to the image generation.
-        nsfw_content_detected: Flag indicating if NSFW content was detected.
         active_rect: The active rectangular region in the image.
         is_outpaint: Flag indicating if the image is an outpainting.
     """
 
     images: Optional[List[Image]]
     data: Optional[Dict[str, Any]]
-    nsfw_content_detected: bool
     active_rect: Optional[Rect]
     is_outpaint: bool
     node_id: Optional[str] = None
@@ -33,7 +31,6 @@ class ImageResponse:
         return {
             "images": self.images,
             "data": self.data,
-            "nsfw_content_detected": self.nsfw_content_detected,
             "active_rect": {
                 "x": self.active_rect.x,
                 "y": self.active_rect.y,

@@ -3,7 +3,6 @@ from airunner.components.art.managers.stablediffusion import (
     prompt_utils,
     prompt_weight_bridge,
 )
-from airunner.enums import ImagePreset
 
 
 def test_format_prompt_basic():
@@ -16,10 +15,6 @@ def test_format_prompt_with_preset_and_additional():
         "a", preset="b", additional_prompts=[{"prompt": "c"}]
     )
     assert "and()" in out
-
-
-def test_get_prompt_preset():
-    assert prompt_utils.get_prompt_preset(ImagePreset.NONE) == ""
 
 
 def test_apply_negative_and_preset():
