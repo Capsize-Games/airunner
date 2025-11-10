@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QThread
 
-from airunner.enums import SignalCode, ModelService
+from airunner.enums import ModelService
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
