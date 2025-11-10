@@ -119,11 +119,6 @@ class TestCalendarToolEval:
             else response.get("text", "").lower()
         )
 
-        print("*" * 100)
-        print("result", result)
-        print("response", response)
-        print("response_text", response_text)
-
         # Check if event was actually created in database
         # OR if response indicates intent to create (ReAct format)
         # OR if response acknowledges the request

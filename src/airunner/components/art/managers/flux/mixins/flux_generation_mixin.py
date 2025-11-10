@@ -91,14 +91,9 @@ class FluxGenerationMixin:
         CRITICAL: FLUX uses 'transformer' not 'unet', so we must explicitly
         delete it. The base class only deletes unet/vae/text_encoder.
         """
-        print("*" * 100)
-        print("FLUX _unload_pipe CALLED!")
-        print("*" * 100)
         self.logger.info("=== FLUX _unload_pipe CALLED ===")
         self.logger.debug("Unloading FLUX pipe")
         if self._pipe is not None:
-            import gc
-
             # CRITICAL: Remove Accelerate hooks first to prevent CPU cache retention
             try:
                 if hasattr(self._pipe, "_all_hooks"):

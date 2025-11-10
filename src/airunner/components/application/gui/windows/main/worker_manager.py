@@ -398,13 +398,9 @@ class WorkerManager(Worker):
             self._pending_generation_request = None
 
     def on_unload_art_signal(self, data: Dict):
-        print("*" * 100)
-        print("UNLOAD ART SIGNAL")
         if self._sd_worker is not None:
 
             def callback(res: Dict):
-                print("x" * 100)
-                print("deleting model manager")
                 del self._sd_worker
                 self._sd_worker = None
 
