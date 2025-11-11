@@ -32,6 +32,7 @@ class SafetyCheckerWorker(Worker):
         self._data_type = (
             torch.float16 if torch.cuda.is_available() else torch.float32
         )
+        self._is_loading = False  # Prevent concurrent load attempts
 
         # Register signal handlers
         self.register(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.handle_load)
@@ -76,6 +77,14 @@ class SafetyCheckerWorker(Worker):
             self._emit_status(ModelStatus.LOADED)
             return
 
+        # Prevent concurrent load attempts
+        if self._is_loading:
+            self.logger.info(
+                "Safety checker is already loading, skipping duplicate request"
+            )
+            return
+
+        self._is_loading = True
         self.logger.info("Loading safety checker models")
         self._emit_status(ModelStatus.LOADING)
 
@@ -145,21 +154,31 @@ class SafetyCheckerWorker(Worker):
                     SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
                     self._on_download_failed,
                 )
+
+                # Reset loading flag so download completion can retry
+                self._is_loading = False
                 return
 
-            # Load the models
+            # Load the models with proper device mapping
             self.logger.info("Loading StableDiffusionSafetyChecker")
             self._safety_checker = (
                 StableDiffusionSafetyChecker.from_pretrained(
                     safety_checker_path,
                     torch_dtype=self._data_type,
+                    device_map=self._device,  # Use device_map instead of .to()
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 )
             )
 
             if self._safety_checker:
-                self._safety_checker.to(self._device)
-                self.logger.info("Safety checker loaded successfully")
+                self._safety_checker.eval()  # Set to evaluation mode
+                self.logger.info(
+                    f"Safety checker loaded successfully on {self._device}"
+                )
+            else:
+                raise ValueError(
+                    "Safety checker failed to load from pretrained"
+                )
 
             # Load feature extractor (uses same preprocessor_config.json)
             self.logger.info("Loading CLIPFeatureExtractor")
@@ -170,9 +189,25 @@ class SafetyCheckerWorker(Worker):
 
             if self._feature_extractor:
                 self.logger.info("Feature extractor loaded successfully")
+            else:
+                raise ValueError(
+                    "Feature extractor failed to load from pretrained"
+                )
 
+            # Validate that models are actually functional
+            self.logger.info("Validating safety checker models")
+            if not hasattr(self._safety_checker, "forward") or not hasattr(
+                self._feature_extractor, "__call__"
+            ):
+                raise ValueError(
+                    "Safety checker models are not properly initialized"
+                )
+
+            self._is_loading = False
             self._emit_status(ModelStatus.LOADED)
-            self.logger.info("Safety checker worker loaded successfully")
+            self.logger.info(
+                "Safety checker worker loaded and validated successfully"
+            )
 
         except Exception as e:
             self.logger.error(
@@ -180,6 +215,7 @@ class SafetyCheckerWorker(Worker):
             )
             self._safety_checker = None
             self._feature_extractor = None
+            self._is_loading = False
             self._emit_status(ModelStatus.FAILED)
 
     def handle_unload(self, data: Optional[Dict] = None):

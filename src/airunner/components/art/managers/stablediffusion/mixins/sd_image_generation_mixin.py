@@ -97,6 +97,7 @@ class SDImageGenerationMixin:
         self.logger.debug("Generating image")
         if self._pipe is None:
             raise PipeNotLoadedException()
+
         self._load_prompt_embeds()
         clear_memory()
         data = self._prepare_data(self.active_rect)
