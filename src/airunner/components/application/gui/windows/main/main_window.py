@@ -512,7 +512,14 @@ class MainWindow(
 
     @Slot(bool)
     def on_actionToggle_Stable_Diffusion_toggled(self, val: bool):
-        self.on_toggle_sd({"enabled": val})
+        self._update_action_button(
+            ModelType.SD,
+            self.ui.actionToggle_Stable_Diffusion,
+            val,
+            SignalCode.SD_LOAD_SIGNAL,
+            SignalCode.SD_UNLOAD_SIGNAL,
+            "sd_enabled",
+        )
 
     @Slot()
     def on_actionSettings_triggered(self):
