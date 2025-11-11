@@ -30,6 +30,7 @@ class StatusWidget(BaseWidget):
         if not AIRUNNER_ART_ENABLED:
             self.ui.sd_status.deleteLater()
             self.ui.controlnet_status.deleteLater()
+            self.ui.nsfw_status.deleteLater()
 
         self.set_sd_pipeline_label()
         self.version = None
@@ -37,6 +38,16 @@ class StatusWidget(BaseWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_system_stats)
         self.timer.start(1000)
+
+        self.safety_checker_status = ModelStatus.UNLOADED
+        self.feature_extractor_status = ModelStatus.UNLOADED
+
+        if (
+            self.application_settings.nsfw_filter
+            and self.application_settings.sd_enabled
+        ):
+            self.safety_checker_status = ModelStatus.LOADING
+            self.feature_extractor_status = ModelStatus.LOADING
 
         self.update_system_stats()
 
@@ -109,6 +120,17 @@ class StatusWidget(BaseWidget):
                     "path": "",
                 }
             )
+        if (
+            self.application_settings.nsfw_filter
+            and self.application_settings.sd_enabled
+        ):
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.SAFETY_CHECKER,
+                    "status": self._model_status[ModelType.SAFETY_CHECKER],
+                    "path": "",
+                }
+            )
 
     def update_model_status(self, data):
         self._model_status[data["model"]] = data["status"]
@@ -151,6 +173,9 @@ class StatusWidget(BaseWidget):
         elif data["model"] == ModelType.STT:
             element_name = "stt_status"
             tool_tip = "STT"
+        elif data["model"] == ModelType.SAFETY_CHECKER:
+            element_name = "nsfw_status"
+            tool_tip = "Safety Checker"
 
         tool_tip += " " + data["status"].value
 

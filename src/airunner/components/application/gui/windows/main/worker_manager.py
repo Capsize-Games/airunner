@@ -33,6 +33,8 @@ class WorkerManager(Worker):
             SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
             SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
+            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_safety_checker_load_signal,
+            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_safety_checker_unload_signal,
             SignalCode.INPUT_IMAGE_SETTINGS_CHANGED: self.on_input_image_settings_changed_signal,
             SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
             SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
@@ -81,6 +83,7 @@ class WorkerManager(Worker):
         super().__init__()
         self._mask_generator_worker = None
         self._sd_worker = None
+        self._safety_checker_worker = None
         self._pending_generation_request = None
         self._download_dialog = (
             None  # Store dialog reference to prevent garbage collection
@@ -151,6 +154,16 @@ class WorkerManager(Worker):
 
             self._image_export_worker = create_worker(ImageExportWorker)
         return self._image_export_worker
+
+    @property
+    def safety_checker_worker(self):
+        if self._safety_checker_worker is None:
+            from airunner.components.art.workers.safety_checker_worker import (
+                SafetyCheckerWorker,
+            )
+
+            self._safety_checker_worker = create_worker(SafetyCheckerWorker)
+        return self._safety_checker_worker
 
     @property
     def mask_generator_worker(self):
@@ -532,6 +545,16 @@ class WorkerManager(Worker):
     def on_unload_controlnet_signal(self, data):
         if self._sd_worker is not None:
             self.sd_worker.on_unload_controlnet_signal(data)
+
+    def on_safety_checker_load_signal(self, data):
+        # Initialize the safety checker worker and trigger loading
+        if self.safety_checker_worker is not None:
+            self.safety_checker_worker.handle_load(data)
+
+    def on_safety_checker_unload_signal(self, data):
+        # Trigger unloading if worker exists
+        if self._safety_checker_worker is not None:
+            self._safety_checker_worker.handle_unload(data)
 
     def on_input_image_settings_changed_signal(self, data):
         if self._sd_worker is not None:

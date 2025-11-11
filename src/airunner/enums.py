@@ -221,6 +221,10 @@ class SignalCode(Enum):
     RAG_LOAD_DOCUMENTS = "rag_load_documents_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
+    SAFETY_CHECKER_LOAD_SIGNAL = "safety_checker_load_signal"
+    SAFETY_CHECKER_UNLOAD_SIGNAL = "safety_checker_unload_signal"
+    SAFETY_CHECKER_FILTER_REQUEST = "safety_checker_filter_request"
+    SAFETY_CHECKER_FILTER_COMPLETE = "safety_checker_filter_complete"
 
     BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
 
@@ -527,6 +531,8 @@ class ModelType(Enum):
     SD_UNET = "SD UNet"
     SD_TOKENIZER = "SD Tokenizer"
     SD_TEXT_ENCODER = "SD Text Encoder"
+    SAFETY_CHECKER = "Safety Checker"
+    FEATURE_EXTRACTOR = "Feature Extractor"
     TTS = "TTS Model"
     TTS_PROCESSOR = "TTS Processor"
     TTS_FEATURE_EXTRACTOR = "TTS Feature Extractor"
