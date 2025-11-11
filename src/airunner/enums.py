@@ -459,6 +459,7 @@ class CanvasToolName(Enum):
 
 
 class ImageGenerator(Enum):
+    STABLEDIFFUSION = "stablediffusion"
     FLUX = "flux"
 
 
@@ -467,10 +468,16 @@ class GeneratorSection(Enum):
     IMG2IMG = "img2img"
     INPAINT = "inpaint"
     OUTPAINT = "outpaint"
+    UPSCALER = "x4-upscaler"
 
 
 class StableDiffusionVersion(Enum):
     NONE = "None"
+    SDXL1_0 = "SDXL 1.0"
+    SDXL_TURBO = "SDXL Turbo"
+    SDXL_LIGHTNING = "SDXL Lightning"
+    SDXL_HYPER = "SDXL Hyper"
+    X4_UPSCALER = "x4-upscaler"
     FLUX_DEV = "FLUX.1-dev"
     FLUX_SCHNELL = "Flux.1 S"
 
@@ -532,6 +539,7 @@ class ModelType(Enum):
     STT_FEATURE_EXTRACTOR = "STT Feature Extractor"
     CONTROLNET = "SD Controlnet"
     CONTROLNET_PROCESSOR = "SD Controlnet Processor"
+    UPSCALER = "Upscaler"
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
@@ -642,6 +650,16 @@ class ModelService(enum.Enum):
     LOCAL = "local"
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
+
+
+class QualityEffects(enum.Enum):
+    CUSTOM = "Custom"
+    STANDARD = "Standard"
+    LOW_RESOLUTION = "Low Resolution"
+    HIGH_RESOLUTION = "High Resolution"
+    SUPER_SAMPLE_X2 = "Super Sample x2"
+    SUPER_SAMPLE_X4 = "Super Sample x4"
+    SUPER_SAMPLE_X8 = "Super Sample x8"
 
 
 class Quantize(enum.Enum):

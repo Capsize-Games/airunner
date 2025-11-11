@@ -226,12 +226,10 @@ class BaseDiffusersModelManager(
             return
 
         # Check for missing files and trigger download if needed
-        # Skip for single-file models - they'll check base model path themselves
-        if not getattr(self, "use_from_single_file", False):
-            should_download, download_info = self._check_and_trigger_download()
-            if should_download:
-                # Download in progress, will retry load after completion
-                return
+        should_download, download_info = self._check_and_trigger_download()
+        if should_download:
+            # Download in progress, will retry load after completion
+            return
 
         resource_manager = ModelResourceManager()
         prepare_result = resource_manager.prepare_model_loading(
@@ -545,6 +543,7 @@ class BaseDiffusersModelManager(
         self.logger.debug(f"Missing files: {missing_files}")
 
         # Emit signal to trigger download dialog
+        # Include image_request so generation can be retried after download
         self.emit_signal(
             SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
             {
@@ -553,6 +552,7 @@ class BaseDiffusersModelManager(
                 "missing_files": missing_files,
                 "version": version,
                 "pipeline_action": pipeline_action,
+                "image_request": self.image_request,  # Pass image_request for retry
             },
         )
 

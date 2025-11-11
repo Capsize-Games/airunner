@@ -70,7 +70,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # For art models, don't create a subdirectory - use output_dir directly
         # since it already points to the correct location (e.g., the GGUF file's directory)
-        if model_type in ("flux", "art"):
+        if model_type == "art":
             model_path = Path(output_dir)
             self.logger.info(
                 f"Using output_dir directly for art model: {model_path}"
@@ -113,7 +113,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # Filter files to download
         # If specific missing_files list is provided, use ONLY those files
         # Otherwise, use the comprehensive bootstrap data
-        is_art_model = model_type in ("flux", "art")
+        is_art_model = model_type == "art"
 
         if missing_files:
             # Use the explicitly provided missing files list

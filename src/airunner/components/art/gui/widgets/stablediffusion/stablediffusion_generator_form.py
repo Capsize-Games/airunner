@@ -19,6 +19,7 @@ from airunner.enums import (
     GeneratorSection,
     ModelStatus,
     ModelType,
+    StableDiffusionVersion,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import random_seed
@@ -128,7 +129,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self._sd_version: str = self.generator_settings.version
-        # Note: SDXL toggle removed as SDXL is deprecated
+        self._toggle_sdxl_form_elements()
         self.ui.infinite_images_button.blockSignals(True)
         self.ui.infinite_images_button.setChecked(
             self.generator_settings.generate_infinite_images
@@ -137,7 +138,12 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
         self.ui.infinite_images_button.blockSignals(False)
 
-    # Note: SDXL support deprecated - these properties are no longer used
+    @property
+    def is_sd_xl_or_turbo(self) -> bool:
+        return (
+            self._sd_version == StableDiffusionVersion.SDXL1_0.value
+            or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
+        )
 
     @Slot()
     def on_generate_button_clicked(self):
@@ -195,7 +201,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self._toggle_compel_form_elements(val)
         elif column in ("sd_version", "version"):
             self._sd_version = val
-            # Note: SDXL toggle removed as SDXL is deprecated
+            self._toggle_sdxl_form_elements()
 
     def _toggle_compel_form_elements(self, value: bool):
         self.logger.info("Toggle compel form elements")
@@ -207,7 +213,15 @@ class StableDiffusionGeneratorForm(BaseWidget):
             if widget:
                 widget.show() if value else widget.hide()
 
-    # Note: _toggle_sdxl_form_elements removed as SDXL is deprecated
+    def _toggle_sdxl_form_elements(self):
+        if self.is_sd_xl_or_turbo:
+            self.ui.sdxl_settings_container.show()
+            self.ui.secondary_prompt.show()
+            self.ui.secondary_negative_prompt.show()
+        else:
+            self.ui.sdxl_settings_container.hide()
+            self.ui.secondary_prompt.hide()
+            self.ui.secondary_negative_prompt.hide()
 
     @property
     def is_txt2img(self):

@@ -79,7 +79,6 @@ class TestFluxLoRAMethods:
         Document that FLUX LoRAs must be trained for FLUX architecture.
 
         This test documents that:
-        - SD 1.5 LoRAs are NOT compatible with FLUX
         - SDXL LoRAs are NOT compatible with FLUX
         - FLUX.1-dev LoRAs may not work with FLUX.1-schnell (and vice versa)
         """

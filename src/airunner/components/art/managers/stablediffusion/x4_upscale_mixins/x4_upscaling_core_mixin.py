@@ -200,6 +200,7 @@ class X4UpscalingCoreMixin:
             response = ImageResponse(
                 images=[result],
                 data=data,
+                nsfw_content_detected=False,
                 active_rect=getattr(self, "active_rect", None),
                 is_outpaint=False,
             )
