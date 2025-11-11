@@ -6,7 +6,7 @@ ai_art_models = [
         "name": "Flux.1 S",
         "path": "black-forest-labs/FLUX.1-schnell",
         "branch": "main",
-        "version": "FLUX",
+        "version": "Flux.1 S",
         "category": "flux",
         "pipeline_action": "txt2img",
         "enabled": True,

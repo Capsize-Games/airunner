@@ -137,7 +137,7 @@ class TestFluxModelManager:
         assert pipeline_class == FluxInpaintPipeline
 
     def test_use_from_single_file_false(self):
-        """Test FLUX uses from_pretrained for non-GGUF models."""
+        """Test FLUX uses from_pretrained for directory structures."""
         from airunner.components.art.managers.stablediffusion.image_request import (
             ImageRequest,
         )
@@ -163,6 +163,26 @@ class TestFluxModelManager:
             "model_path",
             new_callable=lambda: property(
                 lambda self: Path("/path/to/model.gguf")
+            ),
+        ):
+            assert manager.use_from_single_file is True
+
+    def test_use_from_single_file_true_for_safetensors(self):
+        """Test FLUX uses from_single_file for safetensors models."""
+        from airunner.components.art.managers.stablediffusion.image_request import (
+            ImageRequest,
+        )
+        from pathlib import Path
+
+        manager = FluxModelManager()
+        manager.image_request = ImageRequest()
+
+        # Mock model_path to return a safetensors file
+        with patch.object(
+            type(manager),
+            "model_path",
+            new_callable=lambda: property(
+                lambda self: Path("/path/to/model.safetensors")
             ),
         ):
             assert manager.use_from_single_file is True
