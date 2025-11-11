@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>597</width>
+    <width>568</width>
     <height>825</height>
    </rect>
   </property>
@@ -71,7 +71,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>597</width>
+           <width>568</width>
            <height>775</height>
           </rect>
          </property>
@@ -94,6 +94,128 @@
           <property name="verticalSpacing">
            <number>10</number>
           </property>
+          <item row="2" column="0">
+           <widget class="QWidget" name="sdxl_settings_container" native="true">
+            <layout class="QVBoxLayout" name="sdxl_settings">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="SliderWidget" name="n_samples" native="true">
+               <property name="label_text" stdset="0">
+                <string>Batches</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_page_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="settings_property" stdset="0">
+                <string>generator_settings.n_samples</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_14">
+               <item>
+                <widget class="SliderWidget" name="images_per_batch" native="true">
+                 <property name="label_text" stdset="0">
+                  <string>Images Per Batch</string>
+                 </property>
+                 <property name="current_value" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>6</number>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <number>6</number>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>generator_settings.images_per_batch</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="infinite_images_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>30</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>30</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Toggle infinite image generation</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../../../../gui/resources/feather.qrc">
+                   <normaloff>:/light/icons/feather/light/circle.svg</normaloff>:/light/icons/feather/light/circle.svg</iconset>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QSplitter" name="generator_form_splitter">
             <property name="orientation">
@@ -235,127 +357,51 @@
             </widget>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QWidget" name="sdxl_settings_container" native="true">
-            <layout class="QVBoxLayout" name="sdxl_settings">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <widget class="SliderWidget" name="n_samples" native="true">
-               <property name="label_text" stdset="0">
-                <string>Batches</string>
-               </property>
-               <property name="current_value" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="slider_maximum" stdset="0">
-                <number>1000</number>
-               </property>
-               <property name="spinbox_maximum" stdset="0">
-                <number>1000</number>
-               </property>
-               <property name="display_as_float" stdset="0">
-                <bool>false</bool>
-               </property>
-               <property name="spinbox_single_step" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="spinbox_page_step" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="spinbox_minimum" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="slider_minimum" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="settings_property" stdset="0">
-                <string>generator_settings.n_samples</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_14">
-               <item>
-                <widget class="SliderWidget" name="images_per_batch" native="true">
-                 <property name="label_text" stdset="0">
-                  <string>Images Per Batch</string>
-                 </property>
-                 <property name="current_value" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_maximum" stdset="0">
-                  <number>6</number>
-                 </property>
-                 <property name="spinbox_maximum" stdset="0">
-                  <number>6</number>
-                 </property>
-                 <property name="display_as_float" stdset="0">
-                  <bool>false</bool>
-                 </property>
-                 <property name="spinbox_single_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="spinbox_page_step" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="spinbox_minimum" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="slider_minimum" stdset="0">
-                  <number>1</number>
-                 </property>
-                 <property name="settings_property" stdset="0">
-                  <string>generator_settings.images_per_batch</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="infinite_images_button">
-                 <property name="minimumSize">
-                  <size>
-                   <width>30</width>
-                   <height>30</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>30</width>
-                   <height>30</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>Toggle infinite image generation</string>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="icon">
-                  <iconset resource="../../../../../../gui/resources/feather.qrc">
-                   <normaloff>:/light/icons/feather/light/circle.svg</normaloff>:/light/icons/feather/light/circle.svg</iconset>
-                 </property>
-                 <property name="checkable">
-                  <bool>true</bool>
-                 </property>
-                 <property name="checked">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
+          <item row="1" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QPushButton" name="enable_torch_compile">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Use torch compile (slow first generation, fast subsequent)</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/dark/icons/feather/dark/box.svg</normaloff>:/dark/icons/feather/dark/box.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
          </layout>
         </widget>

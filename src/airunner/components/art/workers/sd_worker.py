@@ -37,6 +37,8 @@ class SDWorker(Worker):
         self.image_export_worker = image_export_worker
         self._sdxl: Optional[SDXLModelManager] = None
         self._flux: Optional[FluxModelManager] = None
+        self._sd: Optional[SDModelManager] = None
+        self._sdxl: Optional[SDXLModelManager] = None
         self._x4_upscaler: Optional[X4UpscaleManager] = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE

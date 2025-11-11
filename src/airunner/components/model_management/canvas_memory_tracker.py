@@ -20,6 +20,8 @@ class CanvasMemoryTracker:
 
     def __init__(self):
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        # Cache memory estimates by entry ID to avoid recalculating
+        self._memory_cache: dict[int, tuple[float, float]] = {}
 
     def estimate_history_memory(
         self, scene: "CustomScene"
@@ -37,15 +39,25 @@ class CanvasMemoryTracker:
             total_vram_mb = 0.0
             total_ram_mb = 0.0
 
-            # Estimate from undo history
+            # Estimate from undo history with caching
             for entry in scene.undo_history:
-                vram, ram = self._estimate_entry_memory(entry)
+                entry_id = id(entry)
+                if entry_id not in self._memory_cache:
+                    vram, ram = self._estimate_entry_memory(entry)
+                    self._memory_cache[entry_id] = (vram, ram)
+                else:
+                    vram, ram = self._memory_cache[entry_id]
                 total_vram_mb += vram
                 total_ram_mb += ram
 
-            # Estimate from redo history
+            # Estimate from redo history with caching
             for entry in scene.redo_history:
-                vram, ram = self._estimate_entry_memory(entry)
+                entry_id = id(entry)
+                if entry_id not in self._memory_cache:
+                    vram, ram = self._estimate_entry_memory(entry)
+                    self._memory_cache[entry_id] = (vram, ram)
+                else:
+                    vram, ram = self._memory_cache[entry_id]
                 total_vram_mb += vram
                 total_ram_mb += ram
 
@@ -76,9 +88,18 @@ class CanvasMemoryTracker:
                 before = entry.get("before", {})
                 after = entry.get("after", {})
 
-                vram_mb += self._estimate_image_memory(before.get("image"))
+                # Use pre-extracted dimensions if available (faster)
+                vram_mb += self._estimate_image_memory_fast(
+                    before.get("image"),
+                    before.get("image_width"),
+                    before.get("image_height"),
+                )
+                vram_mb += self._estimate_image_memory_fast(
+                    after.get("image"),
+                    after.get("image_width"),
+                    after.get("image_height"),
+                )
                 vram_mb += self._estimate_image_memory(before.get("mask"))
-                vram_mb += self._estimate_image_memory(after.get("image"))
                 vram_mb += self._estimate_image_memory(after.get("mask"))
 
                 # Images are stored in VRAM (GPU textures) and RAM (CPU buffers)
@@ -99,6 +120,35 @@ class CanvasMemoryTracker:
             self.logger.debug(f"Failed to estimate entry memory: {e}")
 
         return vram_mb, ram_mb
+
+    def _estimate_image_memory_fast(
+        self,
+        image_data: bytes | None,
+        width: int | None,
+        height: int | None,
+    ) -> float:
+        """
+        Estimate VRAM usage using pre-extracted dimensions (fast path).
+
+        Args:
+            image_data: Binary image data (for validation)
+            width: Pre-extracted image width
+            height: Pre-extracted image height
+
+        Returns:
+            Estimated VRAM in MB
+        """
+        if not image_data:
+            return 0.0
+
+        # Fast path: use pre-extracted dimensions
+        if width is not None and height is not None:
+            pixels = width * height
+            bytes_size = pixels * 4  # RGBA = 4 bytes per pixel
+            return bytes_size / (1024 * 1024)
+
+        # Fallback to parsing binary
+        return self._estimate_image_memory(image_data)
 
     def _estimate_image_memory(self, image_data: bytes | None) -> float:
         """
@@ -183,3 +233,11 @@ class CanvasMemoryTracker:
             "vram_mb": vram_gb * 1024,
             "ram_mb": ram_gb * 1024,
         }
+
+    def clear_cache(self) -> None:
+        """Clear the memory estimation cache.
+
+        Call this when canvas history is cleared or major changes occur.
+        """
+        self._memory_cache.clear()
+        self.logger.debug("Canvas memory estimation cache cleared")

@@ -82,7 +82,8 @@ class SDPipelineManagementMixin:
                     self.scheduler_name,
                 )
             self._load_compel()
-            self._load_deep_cache()
+            # DeepCache disabled: incompatible with torch.compile()
+            # self._load_deep_cache()
             self._make_memory_efficient()
             self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
