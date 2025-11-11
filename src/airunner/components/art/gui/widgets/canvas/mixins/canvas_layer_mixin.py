@@ -20,7 +20,6 @@ from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.model_management import (
     ModelResourceManager,
-    CanvasMemoryTracker,
 )
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
     LayerImageItem,
@@ -430,7 +429,8 @@ class CanvasLayerMixin:
         """Update ModelResourceManager with current canvas memory usage."""
         try:
             resource_manager = ModelResourceManager()
-            tracker = CanvasMemoryTracker()
+            # Use the cached tracker from ModelResourceManager for performance
+            tracker = resource_manager.canvas_memory_tracker
             vram_gb, ram_gb = tracker.estimate_history_memory(self)
             resource_manager.update_canvas_history_allocation(vram_gb, ram_gb)
         except Exception as e:

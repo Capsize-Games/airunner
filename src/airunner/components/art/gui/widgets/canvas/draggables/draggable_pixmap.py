@@ -104,19 +104,31 @@ class DraggablePixmap(
         """Update the image data directly without conversion to pixmap"""
         if qimage is None:
             return
-        self.prepareGeometryChange()
-        self._qimage = qimage
-        self.update()  # Schedule a repaint of this item
+        # Defer geometry change and image update to avoid blocking
+        # This allows the function to return immediately
+        from PySide6.QtCore import QTimer
 
-        # With QOpenGLWidget viewports, item.update() may not always
-        # trigger a viewport repaint. Force an explicit update.
-        if self.scene():
+        def deferred_image_update():
+            if not self.scene():  # Item was removed
+                return
+            self.prepareGeometryChange()
+            self._qimage = qimage
+            self.update()  # Schedule a repaint of this item
+
+            # Also defer viewport updates
             rect = self.sceneBoundingRect()
-            self.scene().update(rect)
-            # Also notify all views to update their viewport
-            for view in self.scene().views():
-                if view.viewport():
-                    view.viewport().update()
+
+            def deferred_viewport_update():
+                if self.scene():  # Check scene still exists
+                    self.scene().update(rect)
+                    # Notify all views to update their viewport
+                    for view in self.scene().views():
+                        if view.viewport():
+                            view.viewport().update()
+
+            QTimer.singleShot(0, deferred_viewport_update)
+
+        QTimer.singleShot(0, deferred_image_update)
 
     @property
     def qimage(self) -> Optional[QImage]:

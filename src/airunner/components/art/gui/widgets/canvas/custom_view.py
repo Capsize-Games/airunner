@@ -418,11 +418,15 @@ class CustomGraphicsView(
         """Handler for when images are updated or added to the canvas.
         Ensures that newly generated images respect the current pan position.
         """
-        # Force complete layer refresh from database
-        if hasattr(self.scene, "_refresh_layer_display"):
-            self.scene._refresh_layer_display()
+        # Layer refresh is already scheduled in canvas_generation_mixin
+        # Skip redundant refresh to avoid blocking the UI thread
+        # if hasattr(self.scene, "_refresh_layer_display"):
+        #     self.scene._refresh_layer_display()
 
-        self.do_draw(force_draw=True)
+        # Defer the redraw to avoid blocking
+        from PySide6.QtCore import QTimer
+
+        QTimer.singleShot(0, lambda: self.do_draw(force_draw=True))
 
     def _get_default_text_font(self):
         font = QFont()

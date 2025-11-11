@@ -334,7 +334,9 @@ class BaseDiffusersModelManager(
             self._load_lora()
             self._load_embeddings()
             self._load_compel()
-            self._load_deep_cache()
+            # DeepCache disabled: incompatible with torch.compile() and provides
+            # only 15% speedup vs torch.compile's 2-3x speedup
+            # self._load_deep_cache()
             self._make_memory_efficient()
             self._finalize_load_stable_diffusion()
 

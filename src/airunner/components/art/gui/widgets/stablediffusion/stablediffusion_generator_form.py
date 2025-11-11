@@ -33,6 +33,7 @@ from airunner.components.art.gui.widgets.stablediffusion.prompt_container_widget
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class SaveGeneratorSettingsWorker(
@@ -137,6 +138,13 @@ class StableDiffusionGeneratorForm(BaseWidget):
             else False
         )
         self.ui.infinite_images_button.blockSignals(False)
+        settings = get_qsettings()
+        settings.beginGroup("generator_settings")
+        enable_torch_compile = settings.value(
+            "enable_torch_compile", False, type=bool
+        )
+        settings.endGroup()
+        self.ui.enable_torch_compile.setChecked(enable_torch_compile)
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -170,6 +178,13 @@ class StableDiffusionGeneratorForm(BaseWidget):
     @Slot()
     def on_interrupt_button_clicked(self):
         self.api.art.canvas.interrupt_image_generation()
+
+    @Slot(bool)
+    def on_enable_torch_compile_toggled(self, checked: bool):
+        settings = get_qsettings()
+        settings.beginGroup("generator_settings")
+        settings.setValue("enable_torch_compile", checked)
+        settings.endGroup()
 
     def on_delete_prompt_clicked(self, data: Dict):
         prompt_id = data.get("prompt_id", None)
