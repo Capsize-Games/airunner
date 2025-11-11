@@ -83,8 +83,10 @@ class BaseDiffusersModelManager(
         self._resolved_model_version: Optional[str] = None
         self._image_request = None
         self._controlnet_model = None
-        self._controlnet: Optional = None
+        self._controlnet: Optional[Any] = None
         self._controlnet_processor: Any = None
+        self._safety_checker: Optional[Any] = None
+        self._feature_extractor: Optional[Any] = None
         self._memory_settings_flags: dict = {
             "torch_compile_applied": False,
             "vae_slicing_applied": None,
@@ -177,6 +179,15 @@ class BaseDiffusersModelManager(
             return self.image_request.use_compel
         return True  # Default to True if no image_request
 
+    @property
+    def use_safety_checker(self) -> bool:
+        """Get whether to use safety checker for NSFW detection.
+
+        Returns:
+            True if safety checker should be used.
+        """
+        return self.application_settings.nsfw_filter
+
     def _get_scheduler_base_config(
         self, scheduler_class
     ) -> Optional[Dict[str, Any]]:
@@ -195,6 +206,44 @@ class BaseDiffusersModelManager(
         ):
             return self._pipe.scheduler.config
         return None
+
+    def _check_and_mark_nsfw_images(self, images):
+        """
+        Check images for NSFW content and mark detected images.
+
+        Wrapper around the nsfw_checker utility that integrates
+        safety checker functionality into the generation pipeline.
+
+        Args:
+            images: List of PIL Images to check
+
+        Returns:
+            Tuple of (marked_images, nsfw_flags) where marked_images
+            contains black overlays on NSFW detections and nsfw_flags
+            is a list of booleans indicating which images were detected.
+        """
+        if (
+            not self.use_safety_checker
+            or self._safety_checker is None
+            or self._feature_extractor is None
+        ):
+            # Safety checker disabled or not loaded, return unchanged
+            return images, [False] * len(images)
+
+        from airunner.components.art.utils.nsfw_checker import (
+            check_and_mark_nsfw_images,
+        )
+
+        try:
+            return check_and_mark_nsfw_images(
+                images,
+                self._feature_extractor,
+                self._safety_checker,
+                self._device,
+            )
+        except Exception as e:
+            self.logger.error(f"NSFW check failed: {e}")
+            return images, [False] * len(images)
 
     def reload(self):
         """Reload the model by unloading and loading again."""
@@ -242,6 +291,12 @@ class BaseDiffusersModelManager(
                 f"Cannot load SD model: {prepare_result.get('reason', 'Unknown reason')}"
             )
             self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return
+
+        if not self._load_safety_checker():
+            self.logger.info(
+                "Safety checker load deferred; waiting for download to complete"
+            )
             return
 
         if (
@@ -318,6 +373,7 @@ class BaseDiffusersModelManager(
         # Unload heavier GPU components
         self._unload_loras()
         self._unload_controlnet()
+        self._unload_safety_checker()
 
         # Clear memory after unloading auxiliary models
         clear_memory(self._device_index)

@@ -16,6 +16,7 @@ from airunner.utils.memory import clear_memory
 
 class SDModelUnloadingMixin:
     """Mixin providing model unloading operations for Stable Diffusion."""
+
     def _unload_scheduler(self):
         """
         Unload noise scheduler.
@@ -210,3 +211,27 @@ class SDModelUnloadingMixin:
         self.logger.debug("Unloading generator")
         del self._generator
         self._generator = None
+
+    def _unload_safety_checker(self):
+        """
+        Unload safety checker and feature extractor.
+
+        Frees GPU memory by removing both safety checker and feature extractor models.
+        """
+        self.logger.debug("Unloading safety checker and feature extractor")
+
+        if self._safety_checker is not None:
+            try:
+                del self._safety_checker
+            except Exception:
+                pass
+            self._safety_checker = None
+
+        if self._feature_extractor is not None:
+            try:
+                del self._feature_extractor
+            except Exception:
+                pass
+            self._feature_extractor = None
+
+        gc.collect()

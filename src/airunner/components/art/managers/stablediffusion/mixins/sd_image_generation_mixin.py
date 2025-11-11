@@ -108,7 +108,21 @@ class SDImageGenerationMixin:
                 # Benchmark getting images from results
                 images = results.get("images", [])
 
+                nsfw_flags = []
+
                 if images is not None:
+                    if images:
+                        processed_images, nsfw_flags = (
+                            self._check_and_mark_nsfw_images(images)
+                        )
+                        if any(nsfw_flags):
+                            self.logger.info(
+                                "NSFW content detected in generated batch; marked images will be returned"
+                            )
+                        images = processed_images
+                    else:
+                        nsfw_flags = []
+
                     self.api.art.final_progress_update(
                         total=self.image_request.steps
                     )
@@ -136,6 +150,8 @@ class SDImageGenerationMixin:
                             "path_settings": self.path_settings,
                             "metadata_settings": self.metadata_settings,
                             "controlnet_settings": self.controlnet_settings,
+                            "nsfw_detected": nsfw_flags,
+                            "nsfw_filter_active": self.use_safety_checker,
                         }
                     )
 
@@ -147,6 +163,7 @@ class SDImageGenerationMixin:
                     )
                 else:
                     images = images or []
+                    nsfw_flags = [False] * len(images)
 
                 self._current_state = HandlerState.PREPARING_TO_GENERATE
                 response = None

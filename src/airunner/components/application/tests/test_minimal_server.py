@@ -17,7 +17,7 @@ env["AIRUNNER_HEADLESS"] = "1"
 env["AIRUNNER_HTTP_PORT"] = "8188"
 env["AIRUNNER_HTTP_HOST"] = "127.0.0.1"
 env["AIRUNNER_TEST_MODEL_PATH"] = (
-    "/home/joe/.local/share/airunner/text/models/llm/causallm/Qwen2.5-7B-Instruct"
+    "~/.local/share/airunner/text/models/llm/causallm/Qwen2.5-7B-Instruct"
 )
 
 # Capture ALL server output

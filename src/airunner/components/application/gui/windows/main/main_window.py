@@ -580,6 +580,51 @@ class MainWindow(
     def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
         self.on_toggle_tts(val=val)
 
+    @Slot(bool)
+    def on_actionSafety_Checker_toggled(self, val: bool):
+        """Handle safety checker toggle action."""
+        # If disabling the safety checker, show warning dialog
+        if not val:
+            # Import the warning dialog
+            from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
+                show_nsfw_warning_dialog,
+            )
+
+            # Check if we should show the warning (user hasn't chosen to hide it)
+            settings = get_qsettings()
+            show_warning = settings.value(
+                "nsfw_warning/show_again", True, type=bool
+            )
+
+            if show_warning:
+                confirmed, do_not_show_again = show_nsfw_warning_dialog(
+                    self, show_again_default=show_warning
+                )
+
+                # Save the "do not show again" preference
+                if do_not_show_again:
+                    settings.setValue("nsfw_warning/show_again", False)
+
+                # If user cancelled, revert the checkbox
+                if not confirmed:
+                    if hasattr(self.ui, "actionsafety_checker"):
+                        self.ui.actionsafety_checker.blockSignals(True)
+                        self.ui.actionsafety_checker.setChecked(True)
+                        self.ui.actionsafety_checker.blockSignals(False)
+                    return
+
+        # Update the setting
+        self.update_application_settings(nsfw_filter=val)
+        self.set_nsfw_filter_tooltip()
+
+    def set_nsfw_filter_tooltip(self):
+        """Update the safety checker button tooltip based on current state."""
+        nsfw_filter = self.application_settings.nsfw_filter
+        if hasattr(self.ui, "actionsafety_checker"):
+            self.ui.actionsafety_checker.setToolTip(
+                f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
+            )
+
     @Slot()
     def on_actionAbout_triggered(self):
         AboutWindow()
@@ -999,6 +1044,16 @@ class MainWindow(
             item[0].blockSignals(True)
             item[0].setChecked(item[1] or False)
             item[0].blockSignals(False)
+
+        # Initialize safety checker action if it exists
+        if hasattr(self.ui, "actionsafety_checker"):
+            self.ui.actionsafety_checker.blockSignals(True)
+            self.ui.actionsafety_checker.setChecked(
+                self.application_settings.nsfw_filter
+            )
+            self.ui.actionsafety_checker.blockSignals(False)
+            self.set_nsfw_filter_tooltip()
+
         self.initialized = True
 
     def keyPressEvent(self, event):
