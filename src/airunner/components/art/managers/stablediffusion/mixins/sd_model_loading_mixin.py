@@ -315,9 +315,13 @@ class SDModelLoadingMixin:
             self.logger.info(
                 "Safety checker disabled in settings, skipping load"
             )
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED
+            )
             return True
 
         self.logger.info("Safety checker enabled, proceeding with load...")
+        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
 
         # Safety checker is stored as a standalone model
         safety_checker_path = os.path.expanduser(
@@ -421,12 +425,18 @@ class SDModelLoadingMixin:
             if self._feature_extractor:
                 self.logger.info("Feature extractor loaded successfully")
 
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
+            )
             return True
 
         except Exception as e:
             self.logger.error(f"Failed to load safety checker: {e}")
             self._safety_checker = None
             self._feature_extractor = None
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
+            )
             return False
 
     def _on_safety_checker_download_complete(self, data: Dict):

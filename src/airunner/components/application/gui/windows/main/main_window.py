@@ -16,6 +16,9 @@ from airunner.components.application.gui.widgets.status.status_widget import (
 from airunner.components.application.gui.windows.main.download_model_dialog import (
     show_download_model_dialog,
 )
+from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
+    show_nsfw_warning_dialog,
+)
 from airunner.components.art.gui.windows.prompt_browser.prompt_browser import (
     PromptBrowser,
 )
@@ -585,11 +588,6 @@ class MainWindow(
         """Handle safety checker toggle action."""
         # If disabling the safety checker, show warning dialog
         if not val:
-            # Import the warning dialog
-            from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
-                show_nsfw_warning_dialog,
-            )
-
             # Check if we should show the warning (user hasn't chosen to hide it)
             settings = get_qsettings()
             show_warning = settings.value(
@@ -607,21 +605,29 @@ class MainWindow(
 
                 # If user cancelled, revert the checkbox
                 if not confirmed:
-                    if hasattr(self.ui, "actionsafety_checker"):
-                        self.ui.actionsafety_checker.blockSignals(True)
-                        self.ui.actionsafety_checker.setChecked(True)
-                        self.ui.actionsafety_checker.blockSignals(False)
+                    if hasattr(self.ui, "actionSafety_Checker"):
+                        self.ui.actionSafety_Checker.blockSignals(True)
+                        self.ui.actionSafety_Checker.setChecked(True)
+                        self.ui.actionSafety_Checker.blockSignals(False)
                     return
 
         # Update the setting
         self.update_application_settings(nsfw_filter=val)
         self.set_nsfw_filter_tooltip()
 
+        # Emit signal to load or unload the safety checker worker
+        from airunner.enums import SignalCode
+
+        if val:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
+        else:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, {})
+
     def set_nsfw_filter_tooltip(self):
         """Update the safety checker button tooltip based on current state."""
         nsfw_filter = self.application_settings.nsfw_filter
-        if hasattr(self.ui, "actionsafety_checker"):
-            self.ui.actionsafety_checker.setToolTip(
+        if hasattr(self.ui, "actionSafety_Checker"):
+            self.ui.actionSafety_Checker.setToolTip(
                 f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
             )
 
@@ -1046,12 +1052,12 @@ class MainWindow(
             item[0].blockSignals(False)
 
         # Initialize safety checker action if it exists
-        if hasattr(self.ui, "actionsafety_checker"):
-            self.ui.actionsafety_checker.blockSignals(True)
-            self.ui.actionsafety_checker.setChecked(
+        if hasattr(self.ui, "actionSafety_Checker"):
+            self.ui.actionSafety_Checker.blockSignals(True)
+            self.ui.actionSafety_Checker.setChecked(
                 self.application_settings.nsfw_filter
             )
-            self.ui.actionsafety_checker.blockSignals(False)
+            self.ui.actionSafety_Checker.blockSignals(False)
             self.set_nsfw_filter_tooltip()
 
         self.initialized = True

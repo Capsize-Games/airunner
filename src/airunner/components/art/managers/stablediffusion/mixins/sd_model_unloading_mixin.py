@@ -234,4 +234,7 @@ class SDModelUnloadingMixin:
                 pass
             self._feature_extractor = None
 
+        self.change_model_status(
+            ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED
+        )
         gc.collect()

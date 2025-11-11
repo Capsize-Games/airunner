@@ -70,6 +70,7 @@ class BaseDiffusersModelManager(
         ModelType.CONTROLNET: ModelStatus.UNLOADED,
         ModelType.LORA: ModelStatus.UNLOADED,
         ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
+        ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
     }
 
     def __init__(self, *args, **kwargs):
@@ -85,8 +86,6 @@ class BaseDiffusersModelManager(
         self._controlnet_model = None
         self._controlnet: Optional[Any] = None
         self._controlnet_processor: Any = None
-        self._safety_checker: Optional[Any] = None
-        self._feature_extractor: Optional[Any] = None
         self._memory_settings_flags: dict = {
             "torch_compile_applied": False,
             "vae_slicing_applied": None,
@@ -213,6 +212,7 @@ class BaseDiffusersModelManager(
 
         Wrapper around the nsfw_checker utility that integrates
         safety checker functionality into the generation pipeline.
+        Gets the loaded models from the SafetyCheckerWorker singleton.
 
         Args:
             images: List of PIL Images to check
@@ -222,25 +222,46 @@ class BaseDiffusersModelManager(
             contains black overlays on NSFW detections and nsfw_flags
             is a list of booleans indicating which images were detected.
         """
-        if (
-            not self.use_safety_checker
-            or self._safety_checker is None
-            or self._feature_extractor is None
-        ):
-            # Safety checker disabled or not loaded, return unchanged
+        if not self.use_safety_checker:
+            # Safety checker disabled, return unchanged
             return images, [False] * len(images)
 
-        from airunner.components.art.utils.nsfw_checker import (
-            check_and_mark_nsfw_images,
-        )
-
+        # Get the safety checker worker singleton instance
         try:
+            from airunner.components.art.workers.safety_checker_worker import (
+                SafetyCheckerWorker,
+            )
+
+            safety_worker = SafetyCheckerWorker.get_instance()
+            if safety_worker is None:
+                self.logger.warning(
+                    "SafetyCheckerWorker not initialized, skipping NSFW check"
+                )
+                return images, [False] * len(images)
+
+            # Check if models are loaded in the worker
+            if (
+                safety_worker.safety_checker is None
+                or safety_worker.feature_extractor is None
+            ):
+                self.logger.warning(
+                    "Safety checker models not loaded, skipping NSFW check"
+                )
+                return images, [False] * len(images)
+
+            from airunner.components.art.utils.nsfw_checker import (
+                check_and_mark_nsfw_images,
+            )
+
             return check_and_mark_nsfw_images(
                 images,
-                self._feature_extractor,
-                self._safety_checker,
+                safety_worker.feature_extractor,
+                safety_worker.safety_checker,
                 self._device,
             )
+        except Exception as e:
+            self.logger.error(f"NSFW check failed: {e}")
+            return images, [False] * len(images)
         except Exception as e:
             self.logger.error(f"NSFW check failed: {e}")
             return images, [False] * len(images)
@@ -293,11 +314,8 @@ class BaseDiffusersModelManager(
             self.change_model_status(self.model_type, ModelStatus.FAILED)
             return
 
-        if not self._load_safety_checker():
-            self.logger.info(
-                "Safety checker load deferred; waiting for download to complete"
-            )
-            return
+        # Safety checker is now managed by SafetyCheckerWorker
+        # No need to load it here
 
         if (
             self.controlnet_enabled
@@ -373,7 +391,12 @@ class BaseDiffusersModelManager(
         # Unload heavier GPU components
         self._unload_loras()
         self._unload_controlnet()
-        self._unload_safety_checker()
+
+        # Unload safety checker if it was loaded
+        if self.use_safety_checker:
+            from airunner.enums import SignalCode
+
+            self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, {})
 
         # Clear memory after unloading auxiliary models
         clear_memory(self._device_index)
@@ -540,9 +563,16 @@ class BaseDiffusersModelManager(
 
         Verifies all required components are loaded and sets handler state
         to READY. Attaches ControlNet processor to pipeline if enabled.
+        Also triggers safety checker loading if enabled in settings.
         """
         if self._pipe is not None:
             self._current_state = HandlerState.READY
+
+            # Load safety checker if enabled in settings
+            if self.use_safety_checker:
+                from airunner.enums import SignalCode
+
+                self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
         else:
             self.logger.error(
                 "Something went wrong with Stable Diffusion loading"
