@@ -226,10 +226,12 @@ class BaseDiffusersModelManager(
             return
 
         # Check for missing files and trigger download if needed
-        should_download, download_info = self._check_and_trigger_download()
-        if should_download:
-            # Download in progress, will retry load after completion
-            return
+        # Skip for single-file models - they'll check base model path themselves
+        if not getattr(self, "use_from_single_file", False):
+            should_download, download_info = self._check_and_trigger_download()
+            if should_download:
+                # Download in progress, will retry load after completion
+                return
 
         resource_manager = ModelResourceManager()
         prepare_result = resource_manager.prepare_model_loading(
@@ -438,6 +440,20 @@ class BaseDiffusersModelManager(
 
             resource_manager = ModelResourceManager()
             resource_manager.model_loaded(self.model_path)
+        except RuntimeError as e:
+            error_msg = str(e)
+            if "download triggered" in error_msg:
+                # Download was triggered, register handler and wait
+                self.logger.info(f"Download triggered: {error_msg}")
+                self.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._on_model_download_complete,
+                )
+                self.change_model_status(self.model_type, ModelStatus.UNLOADED)
+            else:
+                self.logger.error(f"Failed to load pipe: {e}")
+                self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return False
         except Exception as e:
             self.logger.error(f"Failed to load pipe: {e}")
             self.change_model_status(self.model_type, ModelStatus.FAILED)

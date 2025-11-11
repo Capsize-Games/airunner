@@ -12,7 +12,12 @@ class FluxGenerationMixin:
     """Handles generation data preparation for FLUX models."""
 
     def _prepare_pipe_data(self) -> Dict[str, Any]:
-        """Prepare pipeline initialization parameters with FLUX optimizations."""
+        """Prepare pipeline initialization parameters with FLUX optimizations.
+
+        Note: Quantization only works with from_pretrained (directory loads).
+        Single-file loads (.safetensors) use bfloat16, but UNet-only checkpoints
+        will have their custom transformer quantized after loading.
+        """
         data = super()._prepare_pipe_data()
 
         data["torch_dtype"] = torch.bfloat16
@@ -20,12 +25,24 @@ class FluxGenerationMixin:
         is_gguf = self.model_path and str(self.model_path).lower().endswith(
             ".gguf"
         )
+        is_single_file = self.use_from_single_file
 
-        if not is_gguf:
+        if not is_gguf and not is_single_file:
             quantization_config = self._get_quantization_config()
             if quantization_config:
                 data["quantization_config"] = quantization_config
                 self.logger.info("4-bit quantization enabled for FLUX model")
+        elif is_single_file:
+            # For single-file loads, still pass quantization_config
+            # It will be applied after loading for UNet-only checkpoints
+            quantization_config = self._get_quantization_config()
+            if quantization_config:
+                data["quantization_config"] = quantization_config
+                self.logger.info(
+                    "Single-file load detected - using bfloat16 (quantization applied to custom transformer if UNet-only)"
+                )
+            else:
+                self.logger.info("Single-file load detected - using bfloat16")
         else:
             self.logger.info(
                 "GGUF model detected - skipping additional quantization"

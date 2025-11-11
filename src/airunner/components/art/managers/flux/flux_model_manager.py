@@ -169,15 +169,24 @@ class FluxModelManager(
         """
         Determine if model should be loaded with from_single_file.
 
-        GGUF models are single files and must use from_single_file.
-        Regular FLUX models use from_pretrained.
+        Single-file formats (.gguf, .safetensors, .ckpt) must use from_single_file.
+        Directory structures use from_pretrained.
 
         Returns:
-            True for GGUF files, False otherwise
+            True for single-file formats, False for directories
         """
-        if self.model_path:
-            return str(self.model_path).lower().endswith(".gguf")
-        return False
+        if not self.model_path:
+            return False
+
+        model_path_str = str(self.model_path).lower()
+        single_file_extensions = (
+            ".gguf",
+            ".safetensors",
+            ".ckpt",
+            ".pt",
+            ".bin",
+        )
+        return model_path_str.endswith(single_file_extensions)
 
     @property
     def compel_tokenizer(self) -> Any:

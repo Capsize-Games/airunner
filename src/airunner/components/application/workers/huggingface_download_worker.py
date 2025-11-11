@@ -43,6 +43,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         output_dir: str,
         version: str = None,
         pipeline_action: str = "txt2img",
+        missing_files: list = None,
     ):
         """Download model files from HuggingFace.
 
@@ -52,11 +53,13 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             output_dir: Directory to save the model
             version: Version name for bootstrap data lookup (e.g., "SDXL 1.0", "Flux.1 S")
             pipeline_action: Pipeline action (txt2img, inpaint, etc.)
+            missing_files: Specific list of files to download (if provided, only these files will be downloaded)
 
         """
         self.logger.info(
             f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
-            f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}"
+            f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}, "
+            f"missing_files={missing_files}"
         )
 
         settings = get_qsettings()
@@ -108,11 +111,18 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             return
 
         # Filter files to download
-        # For art models, use the comprehensive bootstrap data
-        # For LLM models, use the minimal required files
+        # If specific missing_files list is provided, use ONLY those files
+        # Otherwise, use the comprehensive bootstrap data
         is_art_model = model_type in ("flux", "art")
 
-        if is_art_model:
+        if missing_files:
+            # Use the explicitly provided missing files list
+            # This bypasses all skip logic (e.g., GGUF transformer skip)
+            self.logger.info(
+                f"Using explicitly provided missing_files list ({len(missing_files)} files)"
+            )
+            required_files = missing_files
+        elif is_art_model:
             # Use the version parameter if provided, otherwise try FLUX versions
             version_names = []
             if version:
@@ -179,10 +189,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             if is_art_model and required_files:
                 # Check if filename matches any required file
                 if filename in required_files:
-                    # Skip transformer weights for GGUF models (we have them in the GGUF file)
-                    # But still download text_encoder, vae, and config files
+                    # Skip transformer weights ONLY if we got files from bootstrap data
+                    # (not from explicit missing_files list) AND if GGUF exists
+                    # When missing_files is explicitly provided, download ALL requested files
                     if (
-                        "transformer/diffusion_pytorch_model" in filename
+                        not missing_files  # Only skip if using bootstrap data
+                        and "transformer/diffusion_pytorch_model" in filename
                         and filename.endswith(".safetensors")
                     ):
                         self.logger.info(

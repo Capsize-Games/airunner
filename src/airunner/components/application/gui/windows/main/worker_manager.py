@@ -366,6 +366,7 @@ class WorkerManager(Worker):
             "version": version,  # Pass full version name for bootstrap data lookup
             "pipeline_action": pipeline_action,  # Pass pipeline action (txt2img, inpaint, etc.)
             "output_dir": output_dir,
+            "missing_files": missing_files,  # Pass specific missing files to download
         }
 
         if self.logger:
@@ -635,4 +636,5 @@ class WorkerManager(Worker):
             self.tts_vocalizer_worker.on_playback_device_changed_signal(data)
 
     def on_image_exported_signal(self, data):
-        self.api.art.unload()
+        # self.api.art.unload()
+        pass

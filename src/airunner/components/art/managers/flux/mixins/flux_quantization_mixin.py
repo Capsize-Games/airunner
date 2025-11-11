@@ -86,6 +86,7 @@ class FluxQuantizationMixin:
             self._announce_quantized_save(
                 f"⚠ Failed to save quantized model: {exc}"
             )
+            self._handle_quantized_save_failure(quantized_path, exc)
 
     def _should_skip_quantized_save(self, model_path: str) -> bool:
         """Return True if saving a quantized model is unnecessary."""
