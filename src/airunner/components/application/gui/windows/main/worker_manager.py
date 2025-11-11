@@ -563,7 +563,7 @@ class WorkerManager(Worker):
             self.stt_audio_capture_worker.on_model_status_changed_signal(data)
 
     def on_load_art_signal(self, data):
-        if self._sd_worker is not None:
+        if self.sd_worker is not None:
             self.sd_worker.on_load_art_signal(data)
 
     def on_art_model_changed(self, data):

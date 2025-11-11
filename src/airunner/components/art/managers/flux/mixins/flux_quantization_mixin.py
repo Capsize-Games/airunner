@@ -78,14 +78,23 @@ class FluxQuantizationMixin:
                 f"✓ Quantized model saved to {quantized_path}"
             )
         except Exception as exc:  # noqa: BLE001 - saving is optional
-            self.logger.error(
-                "Failed to save quantized model at %s: %s",
-                quantized_path,
-                exc,
-            )
-            self._announce_quantized_save(
-                f"⚠ Failed to save quantized model: {exc}"
-            )
+            # Meta tensor errors are expected for single-file quantized loads
+            # and don't impact model functionality - just cache performance
+            message = str(exc).lower()
+            if "meta tensor" in message:
+                self.logger.debug(
+                    "Quantized pipeline save skipped due to meta tensors "
+                    "(expected for single-file loads)"
+                )
+            else:
+                self.logger.error(
+                    "Failed to save quantized model at %s: %s",
+                    quantized_path,
+                    exc,
+                )
+                self._announce_quantized_save(
+                    f"⚠ Failed to save quantized model: {exc}"
+                )
             self._handle_quantized_save_failure(quantized_path, exc)
 
     def _should_skip_quantized_save(self, model_path: str) -> bool:

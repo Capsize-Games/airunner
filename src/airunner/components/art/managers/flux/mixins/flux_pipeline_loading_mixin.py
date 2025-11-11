@@ -420,17 +420,24 @@ class FluxPipelineLoadingMixin:
         if "meta tensor" not in message:
             return
 
-        self.logger.info(
-            "Quantized pipeline save failed with meta tensors; caching components instead"
+        self.logger.debug(
+            "Attempting component-level cache fallback for quantized model"
         )
         try:
             self._save_quantized_component_cache(quantized_path)
         except Exception as cache_exc:  # noqa: BLE001 - best effort
-            self.logger.error(
-                "Failed to cache quantized components at %s: %s",
-                quantized_path,
-                cache_exc,
-            )
+            # Component cache failure for meta tensors is expected and doesn't
+            # impact model functionality - only affects subsequent load times
+            if "meta tensor" in str(cache_exc).lower():
+                self.logger.debug(
+                    "Component cache skipped - model will re-quantize on next load"
+                )
+            else:
+                self.logger.error(
+                    "Failed to cache quantized components at %s: %s",
+                    quantized_path,
+                    cache_exc,
+                )
 
     def _save_quantized_component_cache(self, quantized_path: Path) -> None:
         """Persist quantized transformer/text encoder as a component cache."""
@@ -510,9 +517,9 @@ class FluxPipelineLoadingMixin:
             )
 
             if meta_count > 0:
-                self.logger.warning(
-                    "Skipped %d meta tensors in transformer export - "
-                    "skipping transformer cache export",
+                self.logger.debug(
+                    "Skipping transformer cache export - %d meta tensors present "
+                    "(expected for single-file quantized loads)",
                     meta_count,
                 )
                 self._cleanup_component_dir(export_dir)
@@ -564,9 +571,9 @@ class FluxPipelineLoadingMixin:
             )
 
             if meta_count > 0:
-                self.logger.warning(
-                    "Skipped %d meta tensors in T5 encoder export - "
-                    "skipping encoder cache export",
+                self.logger.debug(
+                    "Skipping T5 encoder cache export - %d meta tensors present "
+                    "(expected for single-file quantized loads)",
                     meta_count,
                 )
                 self._cleanup_component_dir(export_dir)
