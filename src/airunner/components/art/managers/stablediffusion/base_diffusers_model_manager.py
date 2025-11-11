@@ -314,8 +314,8 @@ class BaseDiffusersModelManager(
             self.change_model_status(self.model_type, ModelStatus.FAILED)
             return
 
-        # Safety checker is now managed by SafetyCheckerWorker
-        # No need to load it here
+        # Safety checker is now managed by WorkerManager before generation
+        # Don't trigger it here to avoid race conditions
 
         if (
             self.controlnet_enabled
@@ -563,16 +563,9 @@ class BaseDiffusersModelManager(
 
         Verifies all required components are loaded and sets handler state
         to READY. Attaches ControlNet processor to pipeline if enabled.
-        Also triggers safety checker loading if enabled in settings.
         """
         if self._pipe is not None:
             self._current_state = HandlerState.READY
-
-            # Load safety checker if enabled in settings
-            if self.use_safety_checker:
-                from airunner.enums import SignalCode
-
-                self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
         else:
             self.logger.error(
                 "Something went wrong with Stable Diffusion loading"

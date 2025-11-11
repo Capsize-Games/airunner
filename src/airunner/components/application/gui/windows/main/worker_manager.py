@@ -112,8 +112,8 @@ class WorkerManager(Worker):
                 if self.sd_worker is not None:
                     self.sd_worker.on_start_auto_image_generation_signal(data)
             elif request_type == "image_generate":
-                if self.sd_worker is not None:
-                    self.sd_worker.on_do_generate_signal(data)
+                # Intercept image generation to ensure safety checker is ready
+                self._handle_image_generation_request(data)
             elif request_type == "tts_generate":
                 if self.tts_vocalizer_worker is not None:
                     self.tts_vocalizer_worker.on_tts_generator_worker_add_to_stream_signal(
@@ -332,7 +332,9 @@ class WorkerManager(Worker):
         # Store the pending image generation request so we can retry after download
         image_request = data.get("image_request")
         if image_request:
-            self._pending_generation_request = image_request
+            self._pending_generation_request = (
+                data  # Store the full data dict, not just image_request
+            )
             if self.logger:
                 self.logger.info(
                     "Stored pending generation request to retry after download"
@@ -483,9 +485,10 @@ class WorkerManager(Worker):
                 )
 
             # Re-emit the generation signal to trigger model loading and generation
+            # The pending request already has the correct structure
             self.emit_signal(
                 SignalCode.DO_GENERATE_SIGNAL,
-                {"image_request": self._pending_generation_request},
+                self._pending_generation_request,
             )
             self._pending_generation_request = None
         else:
@@ -525,6 +528,35 @@ class WorkerManager(Worker):
             self.sd_worker.on_change_scheduler_signal(data)
 
     def on_model_status_changed_signal(self, data):
+        from airunner.enums import ModelStatus, ModelType
+
+        model_type = data.get("model") or data.get("model_type")
+        status = data.get("status")
+
+        if (
+            model_type == ModelType.SAFETY_CHECKER
+            and status == ModelStatus.LOADED
+            and self._pending_generation_request is not None
+        ):
+            self.logger.info(
+                "Safety checker loaded, proceeding with pending image generation"
+            )
+            pending_data = self._pending_generation_request
+            self._pending_generation_request = None
+            self._proceed_with_generation(pending_data)
+
+        elif (
+            model_type == ModelType.SAFETY_CHECKER
+            and status == ModelStatus.FAILED
+            and self._pending_generation_request is not None
+        ):
+            self.logger.warning(
+                "Safety checker failed to load; continuing image generation without it"
+            )
+            pending_data = self._pending_generation_request
+            self._pending_generation_request = None
+            self._proceed_with_generation(pending_data)
+
         if self._sd_worker is not None:
             self.sd_worker.on_model_status_changed_signal(data)
         if self._stt_audio_capture_worker is not None:
@@ -555,6 +587,53 @@ class WorkerManager(Worker):
         # Trigger unloading if worker exists
         if self._safety_checker_worker is not None:
             self._safety_checker_worker.handle_unload(data)
+
+    def _handle_image_generation_request(self, data):
+        """
+        Handle image generation request, ensuring safety checker is ready if needed.
+
+        Args:
+            data: Image generation request data
+        """
+        from airunner.components.settings.data.application_settings import (
+            ApplicationSettings,
+        )
+
+        app_settings = ApplicationSettings.objects.first()
+
+        # Check if safety checker is enabled
+        if not app_settings.nsfw_filter:
+            # Safety checker disabled, proceed immediately
+            self._proceed_with_generation(data)
+            return
+
+        # Safety checker is enabled, check if it's already loaded
+        safety_worker = self.safety_checker_worker
+        if (
+            safety_worker
+            and safety_worker.safety_checker is not None
+            and safety_worker.feature_extractor is not None
+        ):
+            # Already loaded, proceed immediately
+            self._proceed_with_generation(data)
+            return
+
+        # Safety checker needs to be loaded, store the request and trigger load
+        self.logger.info(
+            "Safety checker not ready, triggering load before generation"
+        )
+        self._pending_generation_request = data
+        self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
+
+    def _proceed_with_generation(self, data):
+        """
+        Proceed with image generation after safety checker is ready (or not needed).
+
+        Args:
+            data: Image generation request data
+        """
+        if self.sd_worker is not None:
+            self.sd_worker.on_do_generate_signal(data)
 
     def on_input_image_settings_changed_signal(self, data):
         if self._sd_worker is not None:
