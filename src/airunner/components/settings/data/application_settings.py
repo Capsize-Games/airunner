@@ -19,6 +19,7 @@ class ApplicationSettings(BaseModel):
     tts_enabled = Column(Boolean, default=False)
     stt_enabled = Column(Boolean, default=False)
     controlnet_enabled = Column(Boolean, default=False)
+    nsfw_filter = Column(Boolean, default=True)
     ai_mode = Column(Boolean, default=True)
     active_grid_size_lock = Column(Boolean, default=False)
     installation_path = Column(String, default="~/.local/share/airunner")
@@ -41,9 +42,7 @@ class ApplicationSettings(BaseModel):
     working_width = Column(Integer, default=512)
     working_height = Column(Integer, default=512)
     current_llm_generator = Column(String, default="causallm")
-    current_image_generator = Column(
-        String, default=ImageGenerator.FLUX.value
-    )
+    current_image_generator = Column(String, default=ImageGenerator.FLUX.value)
     generator_section = Column(String, default=GeneratorSection.TXT2IMG.value)
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")

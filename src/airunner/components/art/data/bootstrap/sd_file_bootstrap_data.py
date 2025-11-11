@@ -116,6 +116,13 @@ SD_FILE_BOOTSTRAP_DATA = {
             "vae/diffusion_pytorch_model.safetensors",
         ],
     },
+    "Safety Checker": {
+        "safety_checker": [
+            "config.json",
+            "pytorch_model.bin",
+            "preprocessor_config.json",
+        ],
+    },
 }
 
 

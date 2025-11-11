@@ -6,7 +6,7 @@ ControlNet, LoRA, embeddings, Compel, DeepCache, and schedulers.
 """
 
 import os
-from typing import Optional
+from typing import Dict, Optional
 
 import diffusers
 from DeepCache import DeepCacheSDHelper
@@ -298,3 +298,219 @@ class SDModelLoadingMixin:
         """
         self.logger.debug("Loading compel proc")
         self._compel_proc = Compel(**self.compel_parameters)
+
+    def _load_safety_checker(self):
+        """
+        Load safety checker and feature extractor for NSFW detection.
+
+        Only loads if use_safety_checker is True in application settings.
+        Loads both StableDiffusionSafetyChecker and CLIPFeatureExtractor.
+        Automatically downloads missing files from HuggingFace if needed.
+        """
+        self.logger.info(
+            f"_load_safety_checker called. use_safety_checker={self.use_safety_checker}"
+        )
+
+        if not self.use_safety_checker:
+            self.logger.info(
+                "Safety checker disabled in settings, skipping load"
+            )
+            return True
+
+        self.logger.info("Safety checker enabled, proceeding with load...")
+
+        # Safety checker is stored as a standalone model
+        safety_checker_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "art/models/Safety Checker",
+            )
+        )
+
+        self.logger.info(f"Safety checker path: {safety_checker_path}")
+
+        # Ensure directory exists
+        os.makedirs(safety_checker_path, exist_ok=True)
+
+        # Check for missing files and trigger download if needed
+        try:
+            from airunner.components.art.utils.model_file_checker import (
+                ModelFileChecker,
+            )
+
+            # Check safety checker files
+            self.logger.info(
+                f"Checking for missing safety checker files at: {safety_checker_path}"
+            )
+            should_download_checker, download_info_checker = (
+                ModelFileChecker.should_trigger_download(
+                    model_path=safety_checker_path,
+                    model_type="art",
+                    version="Safety Checker",
+                    pipeline_action="safety_checker",
+                )
+            )
+
+            self.logger.info(
+                f"should_download_checker={should_download_checker}, "
+                f"download_info={download_info_checker}"
+            )
+
+            if should_download_checker:
+                self.logger.info(
+                    f"Safety checker files missing, triggering download: "
+                    f"{download_info_checker.get('missing_files', [])}"
+                )
+
+                from airunner.enums import SignalCode
+
+                # Request download via global HuggingFace download worker
+                self.emit_signal(
+                    SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
+                    {
+                        "repo_id": download_info_checker.get(
+                            "repo_id",
+                            "CompVis/stable-diffusion-safety-checker",
+                        ),
+                        "model_path": safety_checker_path,
+                        "model_type": "art",
+                        "version": "Safety Checker",
+                        "pipeline_action": "safety_checker",
+                        "missing_files": download_info_checker.get(
+                            "missing_files", []
+                        ),
+                        "image_request": getattr(self, "image_request", None),
+                    },
+                )
+
+                # Register for download completion/failure to retry or log
+                self._unregister_safety_checker_download_handlers()
+                self.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._on_safety_checker_download_complete,
+                )
+                self.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                    self._on_safety_checker_download_failed,
+                )
+                return False
+
+            # Try to load the models
+            self.logger.info(
+                f"Loading safety checker from: {safety_checker_path}"
+            )
+            self._safety_checker = (
+                StableDiffusionSafetyChecker.from_pretrained(
+                    safety_checker_path,
+                    torch_dtype=self.data_type,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                )
+            )
+            if self._safety_checker:
+                self._safety_checker.to(self._device)
+                self.logger.info("Safety checker loaded successfully")
+
+            # Load feature extractor (uses same preprocessor_config.json as safety checker)
+            self.logger.info(
+                f"Loading feature extractor from: {safety_checker_path}"
+            )
+            self._feature_extractor = CLIPFeatureExtractor.from_pretrained(
+                safety_checker_path,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+            )
+            if self._feature_extractor:
+                self.logger.info("Feature extractor loaded successfully")
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to load safety checker: {e}")
+            self._safety_checker = None
+            self._feature_extractor = None
+            return False
+
+    def _on_safety_checker_download_complete(self, data: Dict):
+        """Retry safety checker load after custom downloader finishes."""
+
+        expected_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "art/models/Safety Checker",
+            )
+        )
+        downloaded_path = data.get("model_path", "")
+
+        if not downloaded_path:
+            self.logger.warning(
+                "Download complete signal received but no model_path provided"
+            )
+            return
+
+        if os.path.abspath(downloaded_path) != os.path.abspath(expected_path):
+            self.logger.debug(
+                f"Download complete for different path: {downloaded_path} vs {expected_path}"
+            )
+            return
+
+        self.logger.info(
+            "Safety checker download complete, unregistering handlers"
+        )
+
+        self._unregister_safety_checker_download_handlers()
+
+        # If generation is in progress, WorkerManager will retry automatically
+        if getattr(self, "image_request", None) is not None:
+            self.logger.info(
+                "Pending image request detected; letting WorkerManager retry load"
+            )
+            return
+
+        # Only retry load if model is not already loaded
+        if self._safety_checker is None or self._feature_extractor is None:
+            self.logger.info(
+                "Safety checker/feature extractor not loaded, retrying full model load"
+            )
+            self.load()
+        else:
+            self.logger.info(
+                "Safety checker and feature extractor already loaded, skipping retry"
+            )
+
+    def _on_safety_checker_download_failed(self, data: Dict):
+        """Log failure from custom downloader and clean up handlers."""
+
+        expected_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "art/models/Safety Checker",
+            )
+        )
+        failed_path = data.get("model_path") or data.get("output_dir")
+
+        if failed_path and os.path.abspath(failed_path) != os.path.abspath(
+            expected_path
+        ):
+            return
+
+        error = data.get("error", "Unknown error")
+        self.logger.error(f"Safety checker download failed: {error}")
+
+        self._unregister_safety_checker_download_handlers()
+
+    def _unregister_safety_checker_download_handlers(self) -> None:
+        from airunner.enums import SignalCode
+
+        for code, handler in (
+            (
+                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._on_safety_checker_download_complete,
+            ),
+            (
+                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                self._on_safety_checker_download_failed,
+            ),
+        ):
+            try:
+                self.mediator.unregister(code, handler)
+            except Exception:
+                pass

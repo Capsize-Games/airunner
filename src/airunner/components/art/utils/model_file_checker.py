@@ -148,8 +148,8 @@ class ModelFileChecker:
         """Get HuggingFace repo ID for a given model version.
 
         Args:
-            version: Model version (e.g., "SDXL 1.0", "Flux.1 S")
-            pipeline_action: Pipeline action (e.g., "txt2img", "inpaint")
+            version: Model version (e.g., "SDXL 1.0", "Flux.1 S", "Safety Checker")
+            pipeline_action: Pipeline action (e.g., "txt2img", "inpaint", "safety_checker")
 
         Returns:
             HuggingFace repo ID if found, otherwise None
@@ -157,7 +157,13 @@ class ModelFileChecker:
         Examples:
             >>> ModelFileChecker.get_repo_id_for_version("Flux.1 S", "txt2img")
             "black-forest-labs/FLUX.1-schnell"
+            >>> ModelFileChecker.get_repo_id_for_version("Safety Checker", "safety_checker")
+            "CompVis/stable-diffusion-safety-checker"
         """
+        # Special case for Safety Checker
+        if version == "Safety Checker":
+            return "CompVis/stable-diffusion-safety-checker"
+
         for model in model_bootstrap_data:
             if (
                 model.get("version") == version
