@@ -1,4 +1,3 @@
-
 from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.enums import SignalCode, StableDiffusionVersion
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
@@ -33,9 +32,6 @@ class ControlnetSettingsWidget(BaseWidget):
         ):
             current_index = 0
             self._version = self.generator_settings.version
-            if self._version == StableDiffusionVersion.SDXL_TURBO.value:
-                self._version = StableDiffusionVersion.SDXL1_0.value
-
             controlnet_models = ControlnetModel.objects.filter_by(
                 version=self._version
             )

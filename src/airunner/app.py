@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale
 
 from airunner.utils.application import get_logger
+from airunner.utils.settings import get_qsettings
 
 # CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch
 # This prevents fragmentation issues when loading large quantized models
@@ -650,8 +651,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         # Load saved screen preference
         try:
-            from airunner.utils.settings import get_qsettings
-
             qsettings = get_qsettings()
             qsettings.beginGroup("window_settings")
             saved_screen_name = qsettings.value("screen_name", None, type=str)

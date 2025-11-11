@@ -48,7 +48,7 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
     def stablediffusion_toggled(self, val):
         if val:
             self.update_application_settings(
-                current_image_generator=ImageGenerator.STABLEDIFFUSION.value
+                current_image_generator=ImageGenerator.FLUX.value
             )
             self.update_application_settings(
                 generator_section=GeneratorSection.TXT2IMG.value

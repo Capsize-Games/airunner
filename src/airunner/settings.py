@@ -155,43 +155,6 @@ AIRUNNER_BASE_PATH = os.environ.get(
 )
 AIRUNNER_USER_DATA_PATH = AIRUNNER_BASE_PATH
 MODELS_DIR = os.path.join(AIRUNNER_BASE_PATH, "models")
-AIRUNNER_PHOTO_REALISTIC_PROMPT = os.environ.get(
-    "AIRUNNER_PHOTO_REALISTIC_PROMPT",
-    (
-        "photo, photograph, photography, high-definition, video, "
-        "realistic, hyper-realistic, film, 8k, 4k, ultra-detailed, "
-        "highly detailed, realistic lighting"
-    ),
-)
-AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT = os.environ.get(
-    "AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT",
-    (
-        "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
-        "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
-    ),
-)
-AIRUNNER_ILLUSTRATION_PROMPT = os.environ.get(
-    "AIRUNNER_ILLUSTRATION_PROMPT",
-    (
-        "illustration, drawing, cartoon, not real, fake, cgi, 3d animation, "
-        "3d art, sculpture, animation, anime, Digital art, Concept art, Pixel art"
-    ),
-)
-AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT = os.environ.get(
-    "AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT",
-    (
-        "photo, photograph, photography, high-definition, video, "
-        "realistic, hyper-realistic, film"
-    ),
-)
-AIRUNNER_PAINTING_PROMPT = os.environ.get(
-    "AIRUNNER_PAINTING_PROMPT",
-    ("painting, art, canvas, brush strokes, colors, professional painting, "),
-)
-AIRUNNER_PAINTING_NEGATIVE_PROMPT = os.environ.get(
-    "AIRUNNER_PAINTING_NEGATIVE_PROMPT",
-    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
-)
 AIRUNNER_BUG_REPORT_LINK = os.environ.get(
     "AIRUNNER_BUG_REPORT_LINK",
     (
@@ -236,9 +199,6 @@ AIRUNNER_DEFAULT_SCHEDULER = os.environ.get(
 )
 AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get(
     "AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3
-)
-AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get(
-    "AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected"
 )
 AIRUNNER_DISCORD_URL = os.environ.get(
     "AIRUNNER_DISCORD_URL", "https://discord.gg/PUVDDCJ7gz"
@@ -319,6 +279,9 @@ AIRUNNER_ART_PIPELINE = os.environ.get("AIRUNNER_ART_PIPELINE", "")
 AIRUNNER_ART_SCHEDULER = os.environ.get("AIRUNNER_ART_SCHEDULER", "")
 AIRUNNER_LOCAL_FILES_ONLY = (
     os.environ.get("AIRUNNER_LOCAL_FILES_ONLY", "1") == "1"
+)
+AIRUNNER_ADD_WATER_MARK = (
+    os.environ.get("AIRUNNER_ADD_WATER_MARK", "0") == "1"
 )
 
 AIRUNNER_ART_USE_COMPEL = os.environ.get("AIRUNNER_ART_USE_COMPEL", None)

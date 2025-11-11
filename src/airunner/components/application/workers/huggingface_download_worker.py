@@ -14,6 +14,9 @@ from airunner.components.llm.utils.model_downloader import (
 )
 from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.settings import MODELS_DIR
+from airunner.components.data.bootstrap.unified_model_files import (
+    get_required_files_for_model,
+)
 
 
 class HuggingFaceDownloadWorker(BaseDownloadWorker):
@@ -33,23 +36,67 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """Signal to emit on download failure."""
         return SignalCode.HUGGINGFACE_DOWNLOAD_FAILED
 
-    def _download_model(self, repo_id: str, model_type: str, output_dir: str):
+    def _download_model(
+        self,
+        repo_id: str,
+        model_type: str,
+        output_dir: str,
+        version: str = None,
+        pipeline_action: str = "txt2img",
+        missing_files: list = None,
+    ):
         """Download model files from HuggingFace.
 
         Args:
             repo_id: HuggingFace repository ID (e.g., "black-forest-labs/FLUX.1-dev")
             model_type: Type of model (llm, flux, etc.)
             output_dir: Directory to save the model
+            version: Version name for bootstrap data lookup (e.g., "SDXL 1.0", "Flux.1 S")
+            pipeline_action: Pipeline action (txt2img, inpaint, etc.)
+            missing_files: Specific list of files to download (if provided, only these files will be downloaded)
 
         """
+        self.logger.info(
+            f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
+            f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}, "
+            f"missing_files={missing_files}"
+        )
+
         settings = get_qsettings()
         api_key = settings.value("huggingface/api_key", "")
 
         if not output_dir:
             output_dir = os.path.join(MODELS_DIR, "text/models/llm/causallm")
 
-        model_name = repo_id.split("/")[-1]
-        model_path = self._initialize_download(output_dir, model_name)
+        # For art models, don't create a subdirectory - use output_dir directly
+        # since it already points to the correct location (e.g., the GGUF file's directory)
+        if model_type == "art":
+            model_path = Path(output_dir)
+            self.logger.info(
+                f"Using output_dir directly for art model: {model_path}"
+            )
+        else:
+            model_name = repo_id.split("/")[-1]
+            model_path = Path(output_dir) / model_name
+            self.logger.info(
+                f"Creating subdirectory for LLM model: {model_path}"
+            )
+
+        # Initialize download state
+        self.is_cancelled = False
+        self._completed_files.clear()
+        self._failed_files.clear()
+        self._file_progress.clear()
+        self._file_sizes.clear()
+        self._file_threads.clear()
+        self._total_downloaded = 0
+        self._total_size = 0
+
+        temp_dir = model_path / ".downloading"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        self._model_path = model_path
+        self._temp_dir = temp_dir
 
         self.emit_signal(
             SignalCode.UPDATE_DOWNLOAD_LOG,
@@ -64,9 +111,66 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             return
 
         # Filter files to download
-        required_files = self.downloader.REQUIRED_FILES.get(
-            model_type, self.downloader.REQUIRED_FILES["llm"]
-        )
+        # If specific missing_files list is provided, use ONLY those files
+        # Otherwise, use the comprehensive bootstrap data
+        is_art_model = model_type == "art"
+
+        if missing_files:
+            # Use the explicitly provided missing files list
+            # This bypasses all skip logic (e.g., GGUF transformer skip)
+            self.logger.info(
+                f"Using explicitly provided missing_files list ({len(missing_files)} files)"
+            )
+            required_files = missing_files
+        elif is_art_model:
+            # Use the version parameter if provided, otherwise try FLUX versions
+            version_names = []
+            if version:
+                version_names.append(version)
+                self.logger.info(
+                    f"Using provided version for bootstrap data: {version}"
+                )
+            else:
+                version_names = ["Flux.1 S", "FLUX"]
+                self.logger.warning(
+                    f"No version provided, trying fallback versions: {version_names}"
+                )
+
+            required_files = None
+            for version_name in version_names:
+                self.logger.info(
+                    f"Trying to get required files for version: {version_name}, pipeline_action: {pipeline_action}"
+                )
+                required_files = get_required_files_for_model(
+                    "art", version_name, version_name, pipeline_action
+                )
+                if required_files:
+                    self.logger.info(
+                        f"Found {len(required_files)} required files for {version_name}: {required_files[:5]}..."
+                    )
+                    break
+                else:
+                    self.logger.warning(
+                        f"No required files found for {version_name} with pipeline_action {pipeline_action}"
+                    )
+
+            if required_files is None or len(required_files) == 0:
+                self.logger.error(
+                    f"No bootstrap data found for {model_type} (version={version})! Cannot determine required files."
+                )
+                self.emit_signal(
+                    self._failed_signal,
+                    {
+                        "error": f"No bootstrap data found for {model_type} (version={version})"
+                    },
+                )
+                return
+        else:
+            # For LLM models, use the minimal required files from downloader
+            required_files = self.downloader.REQUIRED_FILES.get(
+                model_type, self.downloader.REQUIRED_FILES["llm"]
+            )
+
         files_to_download = []
 
         for file_info in all_files:
@@ -81,19 +185,51 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             if final_path.exists():
                 continue
 
-            # EXCLUDE consolidated.safetensors - we need individual shards for gradual loading
-            if filename == "consolidated.safetensors":
+            # For art models with required_files list, check if file is in the list
+            if is_art_model and required_files:
+                # Check if filename matches any required file
+                if filename in required_files:
+                    # Skip transformer weights ONLY if we got files from bootstrap data
+                    # (not from explicit missing_files list) AND if GGUF exists
+                    # When missing_files is explicitly provided, download ALL requested files
+                    if (
+                        not missing_files  # Only skip if using bootstrap data
+                        and "transformer/diffusion_pytorch_model" in filename
+                        and filename.endswith(".safetensors")
+                    ):
+                        self.logger.info(
+                            f"Skipping transformer weights (using GGUF): {filename}"
+                        )
+                        continue
+
+                    files_to_download.append(
+                        {
+                            "filename": filename,
+                            "size": file_info.get("size", 0),
+                        }
+                    )
+                else:
+                    # File not in required_files, skip it for art models
+                    pass
                 continue
 
-            # Include required files (config, tokenizer files)
+            # Include required files (config, tokenizer files) for LLM models
             if filename in required_files:
                 files_to_download.append(
                     {"filename": filename, "size": file_info.get("size", 0)}
                 )
                 continue
 
-            # Include model shards (model-00001-of-00010.safetensors pattern)
-            # Include all config/tokenizer files (.json, .txt, .model)
+            # For art models without specific required_files, skip everything
+            if is_art_model:
+                continue
+
+            # For LLM models: Include model shards and config files
+            # EXCLUDE consolidated.safetensors - we need individual shards for gradual loading
+            if filename == "consolidated.safetensors":
+                continue
+
+            # Include all config/tokenizer/model files (.json, .txt, .model, .safetensors)
             if filename.endswith((".safetensors", ".json", ".txt", ".model")):
                 files_to_download.append(
                     {"filename": filename, "size": file_info.get("size", 0)}
@@ -189,6 +325,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """
         temp_path = temp_dir / filename
         final_path = model_path / filename
+
+        # Create parent directories for files in subdirectories
+        temp_path.parent.mkdir(parents=True, exist_ok=True)
 
         url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
         headers = {}

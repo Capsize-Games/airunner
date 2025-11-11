@@ -4,7 +4,6 @@ This test verifies that the cache invalidation fix resolves the panning bug.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QPointF
 
 
@@ -30,7 +29,7 @@ class TestCompleteCenterPanWorkflow:
         working_height = 512
 
         # Step 1: Image initially at (0, 0) - this gets cached
-        initial_cached_pos = QPointF(0, 0)
+        QPointF(0, 0)
 
         # Step 2: Center calculates new position
         centered_x = (viewport_width - working_width) / 2.0  # 144

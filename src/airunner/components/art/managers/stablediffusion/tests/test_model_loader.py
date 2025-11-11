@@ -39,18 +39,6 @@ def test_unload_functions_noop(monkeypatch):
 
     pipe = Pipe()
     # functions should not raise
-    model_loader.unload_safety_checker(
-        pipe,
-        logger=types.SimpleNamespace(
-            info=lambda *a, **k: None, warning=lambda *a, **k: None
-        ),
-    )
-    model_loader.unload_feature_extractor(
-        pipe,
-        logger=types.SimpleNamespace(
-            info=lambda *a, **k: None, warning=lambda *a, **k: None
-        ),
-    )
     model_loader.unload_lora(
         pipe,
         logger=types.SimpleNamespace(

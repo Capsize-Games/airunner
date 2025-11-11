@@ -89,15 +89,15 @@ class SDImageGenerationMixin:
         Main generation loop that:
         1. Prepares data and loads prompt embeddings
         2. Runs pipeline inference
-        3. Checks for NSFW content
-        4. Exports images
-        5. Sends responses
+        3. Exports images
+        4. Sends responses
 
         Handles interruption and errors gracefully.
         """
         self.logger.debug("Generating image")
         if self._pipe is None:
             raise PipeNotLoadedException()
+
         self._load_prompt_embeds()
         clear_memory()
         data = self._prepare_data(self.active_rect)
@@ -107,13 +107,23 @@ class SDImageGenerationMixin:
             for results in self._get_results(data):
 
                 # Benchmark getting images from results
-                generated_images = results.get("images", [])
+                images = results.get("images", [])
 
-                images, nsfw_content_detected = (
-                    self._check_and_mark_nsfw_images(generated_images)
-                )
+                nsfw_flags = []
 
                 if images is not None:
+                    if images:
+                        processed_images, nsfw_flags = (
+                            self._check_and_mark_nsfw_images(images)
+                        )
+                        if any(nsfw_flags):
+                            self.logger.info(
+                                "NSFW content detected in generated batch; marked images will be returned"
+                            )
+                        images = processed_images
+                    else:
+                        nsfw_flags = []
+
                     self.api.art.final_progress_update(
                         total=self.image_request.steps
                     )
@@ -141,6 +151,8 @@ class SDImageGenerationMixin:
                             "path_settings": self.path_settings,
                             "metadata_settings": self.metadata_settings,
                             "controlnet_settings": self.controlnet_settings,
+                            "nsfw_detected": nsfw_flags,
+                            "nsfw_filter_active": self.use_safety_checker,
                         }
                     )
 
@@ -152,6 +164,7 @@ class SDImageGenerationMixin:
                     )
                 else:
                     images = images or []
+                    nsfw_flags = [False] * len(images)
 
                 self._current_state = HandlerState.PREPARING_TO_GENERATE
                 response = None
@@ -160,7 +173,6 @@ class SDImageGenerationMixin:
                     response = ImageResponse(
                         images=images,
                         data=data,
-                        nsfw_content_detected=any(nsfw_content_detected),
                         active_rect=self.active_rect,
                         is_outpaint=self.is_outpaint,
                         node_id=self.image_request.node_id,
@@ -199,6 +211,8 @@ class SDImageGenerationMixin:
             )
             self.do_interrupt_image_generation = False
 
+        clear_memory()
+
     def _get_results(self, data):
         """
         Run pipeline inference and yield results.
@@ -219,6 +233,35 @@ class SDImageGenerationMixin:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
                 results = self._pipe(**data)
+
+                # Debug: Check what we got from the pipeline
+                import numpy as np
+                from PIL import Image
+
+                if "images" in results and len(results["images"]) > 0:
+                    img = results["images"][0]
+                    if isinstance(img, Image.Image):
+                        img_array = np.array(img)
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image type: PIL Image"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image shape: {img_array.shape}"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image dtype: {img_array.dtype}"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image min: {img_array.min()}, max: {img_array.max()}"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Unique values: {len(np.unique(img_array))}"
+                        )
+                    else:
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image type: {type(img)}"
+                        )
+
                 yield results
                 if not self.image_request.generate_infinite_images:
                     total += 1

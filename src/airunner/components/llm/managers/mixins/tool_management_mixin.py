@@ -134,7 +134,23 @@ class ToolManagementMixin:
         Returns:
             List of formatted tool description strings
         """
-        descriptions = ["You have access to the following tools:", ""]
+        descriptions = [
+            "You have access to the following tools:",
+            "",
+            "IMPORTANT: Decide whether to use a tool based on what the user asks for.",
+            "",
+            "Use tools when the user wants you to PERFORM AN ACTION:",
+            "  - Create, update, delete data (calendar events, files, etc.)",
+            "  - Generate content (images, code, etc.)",
+            "  - Search or retrieve information from external sources",
+            "  - Execute commands or operations",
+            "",
+            "DO NOT use tools for simple conversation:",
+            "  - Greetings: 'Hello', 'Hi', 'How are you?'",
+            "  - Acknowledgments: 'Thanks', 'OK', 'Got it'",
+            "  - General questions about yourself: 'What can you do?', 'Who are you?'",
+            "",
+        ]
 
         for tool in self._tools:
             tool_name = self._get_tool_name(tool)

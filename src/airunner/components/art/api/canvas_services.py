@@ -18,7 +18,7 @@ from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.components.art.data.ai_models import AIModels
-from airunner.enums import ImagePreset, QualityEffects, Scheduler, SignalCode
+from airunner.enums import Scheduler, SignalCode
 from airunner.utils.image.convert_binary_to_image import (
     convert_binary_to_image,
 )
@@ -241,11 +241,6 @@ class CanvasAPIService(APIServiceBase):
         # Get image from ImageToImageSettings if img2img
         if is_img2img:
             binary_image = self.image_to_image_settings.image
-        elif pipeline_action in (
-            GeneratorSection.UPSCALER.value,
-        ):
-            binary_image = self.drawing_pad_settings.image
-            scheduler = Scheduler.DDIM.value
 
         if binary_image is not None:
             image = convert_binary_to_image(binary_image)
@@ -293,13 +288,6 @@ class CanvasAPIService(APIServiceBase):
             lora_scale=generator_settings.lora_scale,
             additional_prompts=kwargs.get("additional_prompts", []),
             callback=kwargs.get("callback", None),
-            image_preset=ImagePreset(generator_settings.image_preset),
-            quality_effects=(
-                QualityEffects(generator_settings.quality_effects)
-                if generator_settings.quality_effects != ""
-                and generator_settings.quality_effects is not None
-                else QualityEffects.STANDARD
-            ),
             image=image,
             mask=mask,
             controlnet_conditioning_scale=self.controlnet_settings.conditioning_scale
@@ -308,7 +296,6 @@ class CanvasAPIService(APIServiceBase):
             custom_path=custom_path,
             controlnet_enabled=controlnet_enabled,
             controlnet=self.controlnet_settings.controlnet,
-            nsfw_filter=self.application_settings.nsfw_filter,
             outpaint_mask_blur=self.outpaint_settings.mask_blur,
             controlnet_image=controlnet_image,
         )

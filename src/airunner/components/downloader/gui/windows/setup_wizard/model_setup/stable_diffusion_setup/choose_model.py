@@ -30,7 +30,7 @@ class ChooseModel(BaseWizard):
         self.ui.models.clear()
         for model in model_bootstrap_data:
             if (
-                model["category"] == ImageGenerator.STABLEDIFFUSION.value
+                model["category"] == ImageGenerator.FLUX.value
                 and model["version"] == self.model_version
                 and model["pipeline_action"] == "txt2img"
             ):

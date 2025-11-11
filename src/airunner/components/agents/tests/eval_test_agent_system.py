@@ -1,7 +1,7 @@
 """LangSmith evaluation tests for expert agent system.
 
 These tests validate LLM output quality using LangSmith evaluators.
-Following the pattern from /home/joe/Projects/agent/eval_tests/test_dev_onboarding_agent.py
+Following the pattern from ~/Projects/agent/eval_tests/test_dev_onboarding_agent.py
 """
 
 import pytest

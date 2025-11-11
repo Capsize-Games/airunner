@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QSizePolicy,
     QProgressDialog,
+    QApplication,
 )
 from PySide6.QtCore import Qt, QThread
 import os
@@ -209,8 +210,29 @@ class DownloadModelDialog(QDialog):
         self.layout.insertWidget(2, QLabel("Select a version to download:"))
         self.list_widget.clear()
         for v in data.get("modelVersions", []):
+            # Extract file size from the first suitable file
+            file_size_str = ""
+            files = v.get("files", [])
+            for f in files:
+                if f.get("downloadUrl") and any(
+                    f.get("name", "").endswith(ext)
+                    for ext in [".safetensors", ".ckpt", ".pt", ".gguf"]
+                ):
+                    size_kb = f.get("sizeKB", 0) or 0
+                    if size_kb > 0:
+                        # Format size in a human-readable way
+                        if size_kb < 1024:
+                            file_size_str = f" ({size_kb:.0f} KB)"
+                        elif size_kb < 1024 * 1024:
+                            file_size_str = f" ({size_kb / 1024:.1f} MB)"
+                        else:
+                            file_size_str = (
+                                f" ({size_kb / (1024 * 1024):.2f} GB)"
+                            )
+                    break
+
             item = QListWidgetItem(
-                f"Version {v.get('id')}: {v.get('name', '')}"
+                f"Version {v.get('id')}: {v.get('name', '')}{file_size_str}"
             )
             item.setData(Qt.ItemDataRole.UserRole, v)
             self.list_widget.addItem(item)
@@ -311,6 +333,28 @@ class DownloadModelDialog(QDialog):
         self._progress_dialog.setValue(percent)
 
     def _on_download_finished(self, save_path: str) -> None:
+        self.logger.info(f"Download completed successfully: {save_path}")
+
+        # Verify file exists
+        if os.path.exists(save_path):
+            file_size = os.path.getsize(save_path)
+            self.logger.info(f"Downloaded file size: {file_size} bytes")
+        else:
+            self.logger.error(
+                f"Download finished but file not found: {save_path}"
+            )
+
+        # Disconnect the progress dialog's canceled signal BEFORE cleanup
+        # to prevent auto-close from triggering file deletion
+        try:
+            if self._progress_dialog is not None:
+                try:
+                    self._progress_dialog.canceled.disconnect()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Persist trigger words immediately (no popup, no delay)
         if (
             self._current_version_data
@@ -340,6 +384,10 @@ class DownloadModelDialog(QDialog):
         self._cleanup_download()
 
     def _on_download_failed(self, error: Exception) -> None:
+        self.logger.error(
+            f"Download failed with exception: {error}", exc_info=True
+        )
+
         # Clear download context on failure
         self._current_version_data = None
         self._current_model_type = None
@@ -353,6 +401,8 @@ class DownloadModelDialog(QDialog):
         )
 
     def _on_download_failed_str(self, msg: str) -> None:
+        self.logger.error(f"Download failed: {msg}")
+
         # Clear download context on failure
         self._current_version_data = None
         self._current_model_type = None
@@ -422,7 +472,7 @@ class DownloadModelDialog(QDialog):
         for f in files:
             if f.get("downloadUrl") and any(
                 f.get("name", "").endswith(ext)
-                for ext in [".safetensors", ".ckpt", ".pt"]
+                for ext in [".safetensors", ".ckpt", ".pt", ".gguf"]
             ):
                 file_url = f["downloadUrl"]
                 file_name = f.get("name")
@@ -449,6 +499,15 @@ class DownloadModelDialog(QDialog):
         )
         os.makedirs(model_dir, exist_ok=True)
         save_path = os.path.join(model_dir, file_name)
+
+        # Log download details for debugging
+        self.logger.info(f"Starting CivitAI download:")
+        self.logger.info(f"  File: {file_name}")
+        self.logger.info(f"  Size: {file_size_kb} KB")
+        self.logger.info(f"  Destination: {save_path}")
+        self.logger.info(f"  Base model: {base_model}")
+        self.logger.info(f"  Model type: {model_type}")
+        self.logger.info(f"  Subfolder: {subfolder}")
 
         # Store context for persistence after successful download
         self._current_version_data = version
@@ -585,7 +644,14 @@ class DownloadModelDialog(QDialog):
                     try:
                         # Reparent the thread to the application so it won't be
                         # deleted when this dialog is destroyed.
-                        self._download_thread.setParent(None)
+                        app = QApplication.instance()
+                        if app:
+                            self._download_thread.setParent(app)
+                        else:
+                            self.logger.warning(
+                                "No QApplication instance available for thread reparenting"
+                            )
+                            self._download_thread.setParent(None)
                     except Exception:
                         self.logger.debug(
                             "Failed to reparent download thread", exc_info=True

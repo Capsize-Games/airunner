@@ -44,15 +44,6 @@ class TTSGeneratorWorker(Worker):
         self.play_queue_started = False
         self.do_interrupt = False
         self._current_model: Optional[str] = None
-        self._signal_handlers = {
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
-            SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
-            SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
-            SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.TTS_QUEUE_SIGNAL: self.on_add_to_queue_signal,
-        }
         super().__init__()
 
     @property

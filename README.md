@@ -63,13 +63,13 @@ Show your support for this project by choosing one of the following options for 
 | **📚 Enhanced Knowledge Retrieval** |
 | - RAG for documents/websites<br>- Use local data to enrich chat |
 | **🖼️ Image Generation & Manipulation** |
-| - Text-to-Image (Stable Diffusion 1.5, SDXL, Turbo)<br>- Drawing tools & ControlNet<br>- LoRA & Embeddings<br>- Inpainting, outpainting, filters |
+| - Text-to-Image (FLUX models)<br>- Drawing tools<br>- LoRA & Embeddings<br>- Inpainting, outpainting, filters |
 | **🌍 Multi-lingual Capabilities** |
 | - Partial multi-lingual TTS/STT/interface<br>- English & Japanese GUI |
 | **🔒 Privacy and Security** |
 | - Runs locally, no external API (default)<br>- Customizable LLM guardrails & image safety<br>- Disables HuggingFace telemetry<br> - Restricts network access |
 | **⚡ Performance & Utility** |
-| - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
+| - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- Extension API<br>- Python library & API support |
 
 
 ### 🌍 Language Support
@@ -175,11 +175,7 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 | Huggingface (various models) | 1.5 GB - 20 GB |
 | Ministral instruct 8b (4bit) | 5.8 GB |
 | **Image Generation** | |
-| Controlnet (SD 1.5) | 10.6 GB |
-| Controlnet (SDXL) | 320.2 MB |
-| Safety Checker + Feature Extractor | 3.2 GB |
-| SD 1.5 | 1.6 MB |
-| SDXL 1.0 | 6.45 MB |
+| FLUX.1 Dev/Schnell | 8-12 GB (GGUF quantized) |
 
 
 ## Stack
@@ -284,23 +280,7 @@ Organize them under your local AI Runner data directory:
 ~/.local/share/airunner
 ├── art
 │   └── models
-│       ├── SD 1.5
-│       │   ├── controlnet
-│       │   ├── embeddings
-│       │   ├── inpaint
-│       │   ├── lora
-│       │   └── txt2img
-│       ├── SDXL 1.0
-│       │   ├── controlnet
-│       │   ├── embeddings
-│       │   ├── inpaint
-│       │   ├── lora
-│       │   └── txt2img
-│       └── SDXL Turbo
-│           ├── controlnet
-│           ├── embeddings
-│           ├── inpaint
-│           ├── lora
+│       └── Flux.1 S
 │           └── txt2img
 ```
 

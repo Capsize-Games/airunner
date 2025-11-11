@@ -24,9 +24,6 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
-from airunner.components.application.workers.model_scanner_worker import (
-    ModelScannerWorker,
-)
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 from airunner.components.nodegraph.api.nodegraph_services import (
@@ -171,18 +168,11 @@ class API(App):
         super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
         if self._initialize_app:
             api_module.setup_database()
-        self._initialize_model_scanner()
 
     @property
     def emit_signal(self):
         # Always return the instance method, so LLMAPIService uses the patched version in tests
         return super().emit_signal
-
-    def _initialize_model_scanner(self):
-        if self._initialize_app:
-            setup_database()
-            self.model_scanner_worker = create_worker(ModelScannerWorker)
-            self.model_scanner_worker.add_to_queue("scan_for_models")
 
     def show_hello_world_window(self):
         """

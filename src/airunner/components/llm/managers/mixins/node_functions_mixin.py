@@ -4,6 +4,7 @@ Handles LangGraph node implementations (_call_model, _force_response_node, _rout
 These are broken into focused helper methods for maintainability.
 """
 
+import re
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -282,8 +283,8 @@ Provide a clear, conversational answer using only the information above."""
             return "end"
 
         # Tools that don't need a follow-up response (status/action tools)
+        # NOTE: update_mood removed - we want the model to provide a conversational response after updating mood
         NO_RESPONSE_TOOLS = {
-            "update_mood",
             "clear_conversation",
             "emit_signal",
             "toggle_tts",
@@ -613,7 +614,7 @@ Provide a clear, conversational answer using only the information above."""
         # Escape curly braces for LangChain template compatibility
         escaped_system_prompt = self._escape_system_prompt()
 
-        # Add tool instructions if tools available
+        # Add tool instructions for JSON mode (bind_tools doesn't inject them)
         escaped_system_prompt = self._add_tool_instructions(
             escaped_system_prompt
         )
@@ -638,35 +639,120 @@ Provide a clear, conversational answer using only the information above."""
 
         return prompt.invoke({"messages": trimmed_messages})
 
+    def _should_include_tool_instructions(
+        self, trimmed_messages: List[BaseMessage]
+    ) -> bool:
+        """Determine whether to include tool instructions in system prompt.
+
+        Heuristic rules (fast, local):
+        - If no tools bound, return False.
+        - If last user message length < 25 chars AND contains only a greeting/ack
+          and no action verbs or tool-related keywords, return False.
+        - Otherwise return True.
+
+        This prevents the model from seeing the full tool catalogue when the
+        user just says "hello" and thus reduces spurious tool call attempts.
+        """
+        if not self._tools:
+            return False
+
+        if not trimmed_messages:
+            return False
+
+        last = trimmed_messages[-1]
+        # Only gate on HumanMessage
+        if last.__class__.__name__ != "HumanMessage":
+            return True
+
+        content = (getattr(last, "content", "") or "").strip().lower()
+        if len(content) > 25:
+            return True
+
+        # Greeting / acknowledgement patterns
+        greeting_patterns = [
+            "hello",
+            "hi",
+            "hey",
+            "good morning",
+            "good afternoon",
+            "good evening",
+            "thanks",
+            "thank you",
+            "ok",
+            "okay",
+            "yo",
+        ]
+        action_keywords = [
+            "solve",
+            "calculate",
+            "search",
+            "find",
+            "create",
+            "generate",
+            "update",
+            "schedule",
+            "plot",
+            "graph",
+        ]
+
+        if any(k in content for k in action_keywords):
+            return True
+
+        # strip punctuation for greeting match
+        normalized = re.sub(r"[!.?,]", "", content)
+        if normalized in greeting_patterns:
+            return False
+
+        return True
+
     def _escape_system_prompt(self) -> str:
         """Escape curly braces in system prompt for LangChain.
 
         Returns:
             Escaped system prompt
         """
-        return self._system_prompt.replace("{", "{{").replace("}", "}}")
+        # Build prompt dynamically to reflect variables (date, mood, etc.)
+        try:
+            prompt_source = (
+                self.system_prompt  # Prefer dynamic property if available
+                if hasattr(self, "system_prompt")
+                else getattr(self, "_system_prompt", "")
+            )
+        except Exception:
+            prompt_source = getattr(self, "_system_prompt", "")
+
+        return prompt_source.replace("{", "{{").replace("}", "}}")
 
     def _add_tool_instructions(self, system_prompt: str) -> str:
         """Add tool instructions to system prompt if tools available.
+
+        NOTE: For Qwen JSON mode, tools should be formatted by apply_chat_template,
+        NOT manually injected into the system prompt. bind_tools() provides tools
+        to the chat model, which should handle formatting them properly.
+
+        For native modes (Mistral), bind_tools() handles everything automatically.
 
         Args:
             system_prompt: Current system prompt
 
         Returns:
-            System prompt with tool instructions
+            Unchanged system prompt (tools handled by chat model adapter)
         """
-        if self._tools and len(self._tools) > 0:
-            compact_tools = self._create_compact_tool_list()
-            if compact_tools:
-                # Escape curly braces
-                compact_tools_escaped = compact_tools.replace(
-                    "{", "{{"
-                ).replace("}", "}}")
-                system_prompt = f"{system_prompt}\n\n{compact_tools_escaped}"
-                self.logger.debug(
-                    "Appended tool instructions (%s tools) to system prompt",
-                    len(self._tools),
-                )
+        if not self._tools or len(self._tools) == 0:
+            return system_prompt
+
+        # Tools are handled by the chat model adapter's apply_chat_template
+        # Do NOT manually inject tool lists - this causes model confusion
+        tool_calling_mode = getattr(
+            self._chat_model, "tool_calling_mode", "react"
+        )
+
+        self.logger.debug(
+            "Tools (%s) bound via bind_tools() - chat adapter will format them (mode: %s)",
+            len(self._tools),
+            tool_calling_mode,
+        )
+
         return system_prompt
 
     def _add_post_tool_instructions(

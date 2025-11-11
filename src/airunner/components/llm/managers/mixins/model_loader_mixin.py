@@ -368,6 +368,8 @@ class ModelLoaderMixin:
         # Don't pass quantization_config - it's already in saved config.json
         model_kwargs["device_map"] = "auto"
         model_kwargs["torch_dtype"] = self.torch_dtype
+        # Do NOT set max_memory for pre-quantized models - let transformers handle it
+        # The quantization config in config.json already specifies memory requirements
         return model_kwargs
 
     def _load_with_runtime_quantization(self, dtype: str) -> None:

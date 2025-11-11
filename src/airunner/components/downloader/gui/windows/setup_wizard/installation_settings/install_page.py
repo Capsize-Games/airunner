@@ -51,34 +51,8 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
 )
 
 
-CONTROLNET_PATHS = [
-    "lllyasviel/control_v11p_sd15_canny",
-    "lllyasviel/control_v11f1p_sd15_depth",
-    "lllyasviel/control_v11f1p_sd15_depth",
-    "lllyasviel/control_v11f1p_sd15_depth",
-    "lllyasviel/control_v11f1p_sd15_depth",
-    "lllyasviel/control_v11p_sd15_mlsd",
-    "lllyasviel/control_v11p_sd15_normalbae",
-    "lllyasviel/control_v11p_sd15_normalbae",
-    "lllyasviel/control_v11p_sd15_scribble",
-    "lllyasviel/control_v11p_sd15_scribble",
-    "lllyasviel/control_v11p_sd15_seg",
-    "lllyasviel/control_v11p_sd15_lineart",
-    "lllyasviel/control_v11p_sd15_lineart",
-    "lllyasviel/control_v11p_sd15s2_lineart_anime",
-    "lllyasviel/control_v11p_sd15_openpose",
-    "lllyasviel/control_v11p_sd15_openpose",
-    "lllyasviel/control_v11p_sd15_openpose",
-    "lllyasviel/control_v11p_sd15_openpose",
-    "lllyasviel/control_v11p_sd15_openpose",
-    "lllyasviel/control_v11p_sd15_softedge",
-    "lllyasviel/control_v11p_sd15_softedge",
-    "lllyasviel/control_v11p_sd15_softedge",
-    "lllyasviel/control_v11p_sd15_softedge",
-    "lllyasviel/control_v11e_sd15_ip2p",
-    "lllyasviel/control_v11p_sd15_inpaint",
-    "lllyasviel/control_v11e_sd15_shuffle",
-]
+# Note: SD 1.5 ControlNet support has been deprecated in favor of FLUX models
+CONTROLNET_PATHS = []
 controlnet_processor_files = [
     "150_16_swin_l_oneformer_coco_100ep.pth",
     "250_16_swin_l_oneformer_ade20k_160k.pth",
@@ -202,15 +176,8 @@ class InstallWorker(
         models = model_bootstrap_data
 
         for model in models:
-            if model["name"] == "CompVis Safety Checker":
-                action_key = "safety_checker"
-                action = f"{model['pipeline_action']}/{action_key}"
-            elif model["name"] == "OpenAI Feature Extractor":
-                action_key = "feature_extractor"
-                action = f"{model['pipeline_action']}/{action_key}"
-            else:
-                action = model["pipeline_action"]
-                action_key = model["pipeline_action"]
+            action = model["pipeline_action"]
+            action_key = model["pipeline_action"]
             if not self.models_enabled.get(action, True):
                 continue
             # Skip files if this SD version group or its core files are disabled
@@ -226,15 +193,8 @@ class InstallWorker(
                 continue
 
         for model in models:
-            if model["name"] == "CompVis Safety Checker":
-                action_key = "safety_checker"
-                action = f"{model['pipeline_action']}/{action_key}"
-            elif model["name"] == "OpenAI Feature Extractor":
-                action_key = "feature_extractor"
-                action = f"{model['pipeline_action']}/{action_key}"
-            else:
-                action = model["pipeline_action"]
-                action_key = model["pipeline_action"]
+            action = model["pipeline_action"]
+            action_key = model["pipeline_action"]
             if not self.models_enabled.get(action, True):
                 continue
             # Skip downloading if this SD version group or its core files are disabled
@@ -1300,29 +1260,16 @@ class InstallPage(BaseWizard):
         # These will increase
         self.total_steps = 0
 
-        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["txt2img"])
-        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["inpaint"])
-
-        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"])
+        for version in SD_FILE_BOOTSTRAP_DATA.keys():
+            for action in SD_FILE_BOOTSTRAP_DATA[version].keys():
+                self.total_steps += len(
+                    SD_FILE_BOOTSTRAP_DATA[version][action]
+                )
 
         # Determine total controlnet models being downloaded
-        if self.models_enabled["safety_checker"]:
-            self.total_steps += len(
-                SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["safety_checker"]
-            )
-
-        if self.models_enabled["feature_extractor"]:
-            self.total_steps += len(
-                SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["feature_extractor"]
-            )
 
         # Controlnet models
         for model in self.stablediffusion_models:
-            if model["name"] in (
-                "safety_checker",
-                "feature_extractor",
-            ):
-                continue
             # Use .get to avoid KeyError for model names that aren't present in models_enabled
             if self.models_enabled.get(model["name"], True):
                 try:
@@ -1456,15 +1403,8 @@ class InstallPage(BaseWizard):
         if self.models_enabled["stable_diffusion"]:
             models = model_bootstrap_data
             for model in models:
-                if model["name"] == "CompVis Safety Checker":
-                    action_key = "safety_checker"
-                    action = f"{model['pipeline_action']}/{action_key}"
-                elif model["name"] == "OpenAI Feature Extractor":
-                    action_key = "feature_extractor"
-                    action = f"{model['pipeline_action']}/{action_key}"
-                else:
-                    action = model["pipeline_action"]
-                    action_key = model["pipeline_action"]
+                action = model["pipeline_action"]
+                action_key = model["pipeline_action"]
                 if not self.models_enabled.get(action, True):
                     continue
                 # Skip files for this model if its SD version group or core files for that version are disabled

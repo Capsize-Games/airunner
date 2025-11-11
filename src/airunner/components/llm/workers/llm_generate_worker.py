@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QThread
 
-from airunner.enums import SignalCode, ModelService
+from airunner.enums import ModelService
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
@@ -42,7 +42,6 @@ class LLMGenerateWorker(
 
     def __init__(self):
         """Initialize worker with signal handlers and state."""
-        self.signal_handlers = self._create_signal_handlers()
         self.context_manager = ContextManager()
         self._model_manager: Optional[LLMModelManager] = None
         self._model_manager_lock = threading.Lock()
@@ -53,60 +52,6 @@ class LLMGenerateWorker(
         self.download_manager = None
         super().__init__()
         self._llm_thread = None
-
-    def _create_signal_handlers(self) -> Dict:
-        """Create the signal handlers mapping.
-
-        Returns:
-            Dictionary mapping SignalCode to handler methods
-        """
-        return {
-            **self._create_model_handlers(),
-            **self._create_rag_handlers(),
-            **self._create_training_handlers(),
-            **self._create_conversation_handlers(),
-        }
-
-    def _create_model_handlers(self) -> Dict:
-        """Create model lifecycle signal handlers."""
-        return {
-            SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
-            SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
-            SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
-            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
-            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE: self.on_huggingface_download_complete_signal,
-        }
-
-    def _create_rag_handlers(self) -> Dict:
-        """Create RAG and indexing signal handlers."""
-        return {
-            SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
-            SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
-            SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: self.on_rag_index_selected_documents_signal,
-            SignalCode.RAG_INDEX_CANCEL: self.on_rag_index_cancel_signal,
-            SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
-            SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
-        }
-
-    def _create_training_handlers(self) -> Dict:
-        """Create training and quantization signal handlers."""
-        return {
-            SignalCode.LLM_START_FINE_TUNE: self.on_llm_start_fine_tune_signal,
-            SignalCode.LLM_FINE_TUNE_CANCEL: self.on_llm_fine_tune_cancel_signal,
-            SignalCode.LLM_START_QUANTIZATION: self.on_llm_start_quantization_signal,
-        }
-
-    def _create_conversation_handlers(self) -> Dict:
-        """Create conversation and interaction signal handlers."""
-        return {
-            SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
-            SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
-            SignalCode.LOAD_CONVERSATION: self.on_llm_load_conversation,
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.llm_on_interrupt_process_signal,
-            SignalCode.QUIT_APPLICATION: self.on_quit_application_signal,
-            SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
-            SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
-        }
 
     @property
     def use_openrouter(self) -> bool:

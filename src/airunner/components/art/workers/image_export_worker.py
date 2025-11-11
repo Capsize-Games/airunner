@@ -2,7 +2,7 @@ import datetime
 import os
 from typing import Any, Dict, List, Optional
 from airunner.components.application.workers.worker import Worker
-from airunner.enums import QueueType
+from airunner.enums import QueueType, SignalCode
 from airunner.components.art.managers.stablediffusion import (
     image_generation,
 )
@@ -30,6 +30,7 @@ class ImageExportWorker(Worker):
         image_generation.export_images_with_metadata(
             images, file_path, metadata
         )
+        self.emit_signal(SignalCode.IMAGE_EXPORTED, {"file_path": file_path})
 
     def _initialize_metadata(
         self, images: List[Any], data: Dict

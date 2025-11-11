@@ -12,13 +12,16 @@ from typing import List, Dict, Optional, Tuple
 from airunner.components.data.bootstrap.unified_model_files import (
     get_required_files_for_model,
 )
+from airunner.components.data.bootstrap.model_bootstrap_data import (
+    model_bootstrap_data,
+)
 
 
 class ModelFileChecker:
     """Check for missing model files and coordinate downloads.
 
     Supports all model types:
-    - art: Stable Diffusion models (SD 1.5, SDXL, FLUX)
+    - art: Stable Diffusion and Flux
     - llm: Language models (Llama, Qwen, etc.)
     - stt: Speech-to-text models (Whisper)
     - tts_openvoice: OpenVoice TTS models
@@ -37,7 +40,7 @@ class ModelFileChecker:
         Args:
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
             model_id: Model identifier (repo_id or version name)
-            version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+            version: Model version (for art models like "SDXL 1.0" and "Flux.1 S")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -59,10 +62,10 @@ class ModelFileChecker:
         """Check if all required files exist for a model.
 
         Args:
-            model_path: Path to the model directory
+            model_path: Path to the model directory or GGUF file
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+            version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -70,6 +73,21 @@ class ModelFileChecker:
         """
         if not model_path or not os.path.exists(model_path):
             return False, []
+
+        # For single-file models (GGUF, safetensors, etc.), check for companion files in the parent directory
+        model_dir = Path(model_path)
+        single_file_extensions = (
+            ".gguf",
+            ".safetensors",
+            ".ckpt",
+            ".pt",
+            ".pth",
+        )
+        if (
+            model_path.lower().endswith(single_file_extensions)
+            and model_dir.is_file()
+        ):
+            model_dir = model_dir.parent
 
         # For art models, use version; for others use model_id
         if model_type == "art":
@@ -88,7 +106,6 @@ class ModelFileChecker:
             # If no required files defined, assume all files exist
             return True, []
 
-        model_dir = Path(model_path)
         missing_files = []
 
         for file_path in required_files:
@@ -125,6 +142,37 @@ class ModelFileChecker:
         return None
 
     @staticmethod
+    def get_repo_id_for_version(
+        version: str, pipeline_action: str = "txt2img"
+    ) -> Optional[str]:
+        """Get HuggingFace repo ID for a given model version.
+
+        Args:
+            version: Model version (e.g., "SDXL 1.0", "Flux.1 S", "Safety Checker")
+            pipeline_action: Pipeline action (e.g., "txt2img", "inpaint", "safety_checker")
+
+        Returns:
+            HuggingFace repo ID if found, otherwise None
+
+        Examples:
+            >>> ModelFileChecker.get_repo_id_for_version("Flux.1 S", "txt2img")
+            "black-forest-labs/FLUX.1-schnell"
+            >>> ModelFileChecker.get_repo_id_for_version("Safety Checker", "safety_checker")
+            "CompVis/stable-diffusion-safety-checker"
+        """
+        # Special case for Safety Checker
+        if version == "Safety Checker":
+            return "CompVis/stable-diffusion-safety-checker"
+
+        for model in model_bootstrap_data:
+            if (
+                model.get("version") == version
+                and model.get("pipeline_action") == pipeline_action
+            ):
+                return model.get("path")
+        return None
+
+    @staticmethod
     def should_trigger_download(
         model_path: str,
         model_type: str = "art",
@@ -138,7 +186,7 @@ class ModelFileChecker:
             model_path: Path to the model
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+            version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -157,6 +205,12 @@ class ModelFileChecker:
             return False, {}
 
         repo_id = ModelFileChecker.get_model_repo_id(model_path)
+
+        # For art models with a version, try looking up the repo_id from bootstrap data
+        if repo_id is None and model_type == "art" and version:
+            repo_id = ModelFileChecker.get_repo_id_for_version(
+                version, pipeline_action or "txt2img"
+            )
 
         # For non-art models, try using model_id as repo_id
         if repo_id is None and model_id:

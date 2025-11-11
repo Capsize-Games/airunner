@@ -10,7 +10,8 @@ import os
 from typing import Dict
 
 import torch
-from airunner.enums import GeneratorSection
+from airunner.enums import GeneratorSection, ModelStatus
+from airunner.settings import AIRUNNER_ADD_WATER_MARK
 from airunner.utils.memory import clear_memory
 
 
@@ -64,7 +65,6 @@ class SDPipelineManagementMixin:
                     # NOTE: "scheduler" is intentionally excluded here
                     # We manage the scheduler separately via _load_scheduler()
                     # to ensure scheduler changes persist across pipeline swaps
-                    "feature_extractor",
                     "image_encoder",
                     "force_zeros_for_empty_prompt",
                 ]
@@ -82,7 +82,8 @@ class SDPipelineManagementMixin:
                     self.scheduler_name,
                 )
             self._load_compel()
-            self._load_deep_cache()
+            # DeepCache disabled: incompatible with torch.compile()
+            # self._load_deep_cache()
             self._make_memory_efficient()
             self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
@@ -103,7 +104,7 @@ class SDPipelineManagementMixin:
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
                 config=config_path,
-                add_watermarker=False,
+                add_watermarker=AIRUNNER_ADD_WATER_MARK,
                 **data,
             )
         else:
@@ -154,7 +155,7 @@ class SDPipelineManagementMixin:
         text_encoder) to ensure memory is released.
         """
         self.logger.debug("Unloading pipe")
-        self.change_model_status(self.model_type, self.ModelStatus.LOADING)
+        self.change_model_status(self.model_type, ModelStatus.LOADING)
         if self._pipe is not None:
             # Explicitly delete all major components directly
             try:

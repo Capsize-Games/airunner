@@ -148,7 +148,7 @@ and built with a custom script (see the following list).
   ```
 - Example:
   ```
-  feat: Add support for new image generation model
+  feat: Add support for FLUX image generation
 
-  Added support for SDXL Turbo model in the image generation pipeline.
+  Added support for FLUX models in the image generation pipeline.
   ```

@@ -34,6 +34,9 @@ class ToolExecutionMixin:
         This wraps the standard ToolNode behavior but adds real-time status
         updates that can be displayed in the UI.
 
+        NOTE: Validation removed - bind_tools() ensures the model only receives
+        valid tool schemas. Invalid calls should not occur with proper binding.
+
         Args:
             state: Workflow state containing messages
 
@@ -51,9 +54,14 @@ class ToolExecutionMixin:
             return state
 
         tool_calls = last_message.tool_calls or []
+        if not tool_calls:
+            return state
 
         # Emit "starting" status for each tool
         self._emit_starting_status(tool_calls)
+
+        # Sanitize tool functions to ensure docstrings exist before wrapping
+        self._sanitize_tool_functions()
 
         # Execute tools using standard ToolNode
         tool_node = ToolNode(self._tools)
@@ -63,6 +71,32 @@ class ToolExecutionMixin:
         self._emit_completed_status(result_state, tool_calls)
 
         return result_state
+
+    def _sanitize_tool_functions(self) -> None:
+        """Ensure each tool function has a docstring.
+
+        LangChain's StructuredTool.from_function raises ValueError if a function
+        lacks both a description and a docstring. Some legacy mixin tools created
+        via @tool (langchain.tools) may omit docstrings. This method adds a minimal
+        docstring dynamically to prevent runtime failures.
+        """
+        sanitized = 0
+        for func in self._tools:
+            # Skip if already documented
+            if getattr(func, "__doc__", None):
+                continue
+            # Attempt to use .description attribute if present
+            desc = (
+                getattr(func, "description", None)
+                or f"Tool function '{getattr(func, 'name', func.__name__)}' automatically documented."
+            )
+            func.__doc__ = desc  # type: ignore
+            sanitized += 1
+        if sanitized:
+            self.logger.debug(
+                "Added fallback docstrings to %d tool(s) missing documentation",
+                sanitized,
+            )
 
     def _emit_starting_status(self, tool_calls: list):
         """Emit starting status signals for tool calls.

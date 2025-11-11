@@ -71,8 +71,16 @@ class ModelLoadingMixin:
                     self.logger.info(
                         f"Found {len(active_models)} active models while loading unregistered model"
                     )
+                    self.logger.debug(
+                        f"Active models: {[(m.model_type, m.state) for m in active_models]}"
+                    )
                     # Attempt to swap to make room
                     swap_result = self.request_model_swap(model_id, model_type)
+                    self.logger.info(
+                        f"Swap result: success={swap_result['success']}, "
+                        f"unloaded={swap_result['unloaded_models']}, "
+                        f"reason={swap_result.get('reason', 'N/A')}"
+                    )
                     if (
                         swap_result["success"]
                         and swap_result["unloaded_models"]
@@ -85,6 +93,10 @@ class ModelLoadingMixin:
                             "reason": "Model not in registry but made room via auto-swap",
                             "swapped_models": swap_result["unloaded_models"],
                         }
+                    else:
+                        self.logger.warning(
+                            f"Auto-swap did not unload any models. Proceeding anyway but OOM likely."
+                        )
 
             # Allow load but warn
             return {
@@ -282,16 +294,32 @@ class ModelLoadingMixin:
 
         # Get all loaded models that can be unloaded
         candidates = []
+        self.logger.debug(
+            f"Determining models to unload for {target_model_type} (priority {target_priority})"
+        )
+        self.logger.debug(
+            f"Current model states: {list(self._model_states.items())}"
+        )
+
         for model_id, state in self._model_states.items():
             if state not in (ModelState.LOADED, ModelState.UNLOADED):
                 # Skip models that are loading or busy
+                self.logger.debug(
+                    f"Skipping {model_id} - state {state} not eligible for unload"
+                )
                 continue
 
             if state == ModelState.UNLOADED:
+                self.logger.debug(f"Skipping {model_id} - already unloaded")
                 continue
 
             model_type = self._model_types.get(model_id, "unknown")
             model_priority = priority_map.get(model_type, 2)
+
+            self.logger.debug(
+                f"Checking {model_id}: type={model_type}, priority={model_priority}, "
+                f"target_priority={target_priority}"
+            )
 
             # Only unload models with lower or equal priority
             if model_priority <= target_priority:
@@ -305,6 +333,18 @@ class ModelLoadingMixin:
                             allocation.vram_allocated_gb,
                         )
                     )
+                    self.logger.debug(
+                        f"Added {model_id} as unload candidate "
+                        f"(VRAM: {allocation.vram_allocated_gb:.1f}GB)"
+                    )
+                else:
+                    self.logger.debug(
+                        f"Skipping {model_id} - no allocation record found"
+                    )
+            else:
+                self.logger.debug(
+                    f"Skipping {model_id} - priority {model_priority} > target {target_priority}"
+                )
 
         # Sort by priority (lowest first), then by VRAM usage (largest first)
         candidates.sort(key=lambda x: (x[2], -x[3]))
@@ -314,6 +354,15 @@ class ModelLoadingMixin:
         # In the future, we could be smarter and only unload what's needed
 
         models_to_unload = [model_id for model_id, _, _, _ in candidates]
+
+        if models_to_unload:
+            self.logger.info(
+                f"Selected {len(models_to_unload)} models for unloading: {models_to_unload}"
+            )
+        else:
+            self.logger.warning(
+                f"No models selected for unloading despite {len(self._model_states)} tracked models"
+            )
 
         return models_to_unload
 

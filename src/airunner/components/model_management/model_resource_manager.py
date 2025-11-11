@@ -62,6 +62,13 @@ class ModelResourceManager(
         hardware = self.hardware_profiler.get_profile()
         self.memory_allocator = MemoryAllocator(hardware)
 
+        # Canvas memory tracker (singleton, reused for caching)
+        from airunner.components.model_management.canvas_memory_tracker import (
+            CanvasMemoryTracker,
+        )
+
+        self.canvas_memory_tracker = CanvasMemoryTracker()
+
         # Model state tracking
         self._model_states: Dict[str, ModelState] = {}
         self._model_types: Dict[str, str] = {}

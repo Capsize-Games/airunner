@@ -20,7 +20,7 @@ def __getattr__(name):
 
         return DownloadHuggingface
     elif name == "FluxModelManager":
-        from .flux_model_manager import FluxModelManager
+        from ..flux.flux_model_manager import FluxModelManager
 
         return FluxModelManager
     elif name == "ImageResponse":

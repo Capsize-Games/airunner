@@ -28,10 +28,14 @@ class LLMGeneratorSettings(BaseModel):
     min_length = Column(Integer, default=1)
     max_new_tokens = Column(Integer, default=1000)
     repetition_penalty = Column(Integer, default=100)
-    do_sample = Column(Boolean, default=False)
+    do_sample = Column(
+        Boolean, default=True
+    )  # Changed from False - required for temperature to work
     early_stopping = Column(Boolean, default=True)
     num_beams = Column(Integer, default=1)
-    temperature = Column(Integer, default=1000)
+    temperature = Column(
+        Integer, default=7000
+    )  # Changed from 1000 -> 0.7 for natural conversation
     ngram_size = Column(Integer, default=0)
     top_k = Column(Integer, default=10)
     eta_cutoff = Column(Integer, default=10)

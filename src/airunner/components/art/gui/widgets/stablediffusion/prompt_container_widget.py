@@ -19,14 +19,7 @@ class PromptContainerWidget(BaseWidget):
         }
         super().__init__(*args, **kwargs)
         self._sd_version: str = self.generator_settings.version
-        self._toggle_sdxl_form_elements()
-
-    @property
-    def is_sd_xl_or_turbo(self) -> bool:
-        return (
-            self._sd_version == StableDiffusionVersion.SDXL1_0.value
-            or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
-        )
+        # Note: SDXL support deprecated, secondary prompt feature removed
 
     @Slot()
     def on_delete_prompt_button_clicked(self):
@@ -35,13 +28,6 @@ class PromptContainerWidget(BaseWidget):
     def on_widget_element_changed(self, data: Dict):
         if data.get("element") in ("sd_version",):
             self._sd_version = data.get("version")
-            self._toggle_sdxl_form_elements()
-
-    def _toggle_sdxl_form_elements(self):
-        if self.is_sd_xl_or_turbo:
-            self.ui.secondary_prompt.show()
-        else:
-            self.ui.secondary_prompt.hide()
 
     def get_prompt(self):
         """Get the current prompt text from the widget."""

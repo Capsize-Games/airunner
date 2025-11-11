@@ -42,6 +42,29 @@ class HuggingFaceDownloader:
             "tokenizer.json",
             "special_tokens_map.json",
         ],
+        "flux": [
+            # Flux/Stable Diffusion models need all config files
+            "model_index.json",
+            "scheduler/scheduler_config.json",
+            "text_encoder/config.json",
+            "text_encoder_2/config.json",
+            "tokenizer/tokenizer_config.json",
+            "tokenizer/merges.txt",
+            "tokenizer/vocab.json",
+            "tokenizer_2/tokenizer_config.json",
+            "tokenizer_2/merges.txt",
+            "tokenizer_2/vocab.json",
+            "transformer/config.json",
+            "vae/config.json",
+        ],
+        "art": [
+            # Generic art model files (FLUX)
+            "model_index.json",
+            "scheduler/scheduler_config.json",
+            "text_encoder/config.json",
+            "tokenizer/tokenizer_config.json",
+            "vae/config.json",
+        ],
     }
 
     def __init__(self, cache_dir: Optional[str] = None):
@@ -59,7 +82,7 @@ class HuggingFaceDownloader:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def get_model_files(
-        self, repo_id: str, revision: str = "main"
+        self, repo_id: str, revision: str = "main", recursive: bool = True
     ) -> List[Dict[str, any]]:
         """
         Get list of files in a HuggingFace repository.
@@ -67,15 +90,11 @@ class HuggingFaceDownloader:
         Args:
             repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
             revision: Git revision/branch (default: "main")
+            recursive: If True, recursively fetch files from subdirectories
 
         Returns:
             List of file info dicts with 'path', 'size', etc.
         """
-        # Use HuggingFace's API to list files
-        api_url = (
-            f"https://huggingface.co/api/models/{repo_id}/tree/{revision}"
-        )
-
         # Get HuggingFace API token from settings
         from airunner.utils.settings.get_qsettings import get_qsettings
 
@@ -87,13 +106,36 @@ class HuggingFaceDownloader:
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        try:
-            response = requests.get(api_url, headers=headers, timeout=30)
-            response.raise_for_status()
-            files = response.json()
-            return files
-        except Exception as e:
-            raise RuntimeError(f"Failed to list files for {repo_id}: {e}")
+        def fetch_directory(path: str = "") -> List[Dict[str, any]]:
+            """Fetch files from a directory path."""
+            if path:
+                api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}/{path}"
+            else:
+                api_url = f"https://huggingface.co/api/models/{repo_id}/tree/{revision}"
+
+            try:
+                response = requests.get(api_url, headers=headers, timeout=30)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to list files for {repo_id}/{path}: {e}"
+                )
+
+        # Fetch root level
+        all_files = []
+        items = fetch_directory()
+
+        for item in items:
+            if item.get("type") == "directory" and recursive:
+                # Recursively fetch subdirectory contents
+                subdir_path = item.get("path", "")
+                subdir_files = fetch_directory(subdir_path)
+                all_files.extend(subdir_files)
+            else:
+                all_files.append(item)
+
+        return all_files
 
     def download_file(
         self,

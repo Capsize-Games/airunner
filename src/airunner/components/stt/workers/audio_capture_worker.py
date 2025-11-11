@@ -16,12 +16,6 @@ class AudioCaptureWorker(Worker):
     """
 
     def __init__(self):
-        self.signal_handlers = {
-            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_audio_capture_worker_response_signal,
-            SignalCode.STT_STOP_CAPTURE_SIGNAL: self.on_stt_stop_capture_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.RECORDING_DEVICE_CHANGED: self.on_recording_device_changed_signal,
-        }
         super().__init__()
         self.listening: bool = False
         self.voice_input_start_time: time.time = None

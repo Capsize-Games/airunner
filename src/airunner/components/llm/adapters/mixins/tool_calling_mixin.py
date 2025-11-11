@@ -329,7 +329,7 @@ class ToolCallingMixin:
         tool_args = data.get("arguments", {})
         return {
             "name": tool_name,
-            "args": tool_args,
+            "args": tool_args or {},
             "id": str(uuid.uuid4()),
         }
 
