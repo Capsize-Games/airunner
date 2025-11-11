@@ -1260,10 +1260,11 @@ class InstallPage(BaseWizard):
         # These will increase
         self.total_steps = 0
 
-        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["txt2img"])
-        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["inpaint"])
-
-        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"])
+        for version in SD_FILE_BOOTSTRAP_DATA.keys():
+            for action in SD_FILE_BOOTSTRAP_DATA[version].keys():
+                self.total_steps += len(
+                    SD_FILE_BOOTSTRAP_DATA[version][action]
+                )
 
         # Determine total controlnet models being downloaded
 

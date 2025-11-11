@@ -21,7 +21,7 @@ class ModelFileChecker:
     """Check for missing model files and coordinate downloads.
 
     Supports all model types:
-    - art: Stable Diffusion models (SD 1.5, SDXL, FLUX)
+    - art: Stable Diffusion and Flux
     - llm: Language models (Llama, Qwen, etc.)
     - stt: Speech-to-text models (Whisper)
     - tts_openvoice: OpenVoice TTS models
@@ -40,7 +40,7 @@ class ModelFileChecker:
         Args:
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
             model_id: Model identifier (repo_id or version name)
-            version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+            version: Model version (for art models like "SDXL 1.0" and "Flux.1 S")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -65,7 +65,7 @@ class ModelFileChecker:
             model_path: Path to the model directory or GGUF file
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+            version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -148,7 +148,7 @@ class ModelFileChecker:
         """Get HuggingFace repo ID for a given model version.
 
         Args:
-            version: Model version (e.g., "SD 1.5", "SDXL 1.0", "Flux.1 S")
+            version: Model version (e.g., "SDXL 1.0", "Flux.1 S")
             pipeline_action: Pipeline action (e.g., "txt2img", "inpaint")
 
         Returns:
@@ -180,7 +180,7 @@ class ModelFileChecker:
             model_path: Path to the model
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+            version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:

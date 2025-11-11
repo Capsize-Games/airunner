@@ -8,8 +8,6 @@ Modules:
 - datasets: Simple image+caption dataset loaders for folder-based data.
 - finetune: Full or UNet-only fine-tuning trainer.
 - textual_inversion: Trainer for learnable token embeddings.
-
-Note: SD 1.5 and SDXL support has been deprecated in favor of FLUX models.
 """
 
 from airunner.components.art.trainers.base import TrainingConfig, BaseTrainer

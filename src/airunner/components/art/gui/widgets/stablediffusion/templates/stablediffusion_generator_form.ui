@@ -501,10 +501,8 @@
   <slot>save_settings()</slot>
   <slot>handle_pipeline_changed(QString)</slot>
   <slot>handle_version_changed(QString)</slot>
-  <slot>handle_image_presets_changed(QString)</slot>
   <slot>handle_second_prompt_changed()</slot>
   <slot>handle_second_negative_prompt_changed()</slot>
-  <slot>handle_quality_effects_changed(QString)</slot>
   <slot>past_conversations_clicked()</slot>
   <slot>on_use_refiner_checkbox_toggled(bool)</slot>
  </slots>

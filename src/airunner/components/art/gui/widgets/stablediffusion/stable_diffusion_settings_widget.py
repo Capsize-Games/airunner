@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.components.art.data.ai_models import AIModels
+from airunner.components.art.data.schedulers import Schedulers
 from airunner.enums import (
     SignalCode,
     GeneratorSection,
@@ -54,6 +55,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self._load_versions_combobox()
         self._load_pipelines_combobox()
         self._load_models_combobox()
+        self._load_schedulers_combobox()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -92,8 +94,6 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         except RuntimeError as e:
             if AIRUNNER_ART_ENABLED:
                 self.logger.error(f"Error updating form: {e}")
-
-        self.model_scanner_worker.add_to_queue("scan_for_models")
 
         try:
             self.ui.use_compel.setChecked(self.generator_settings.use_compel)
@@ -408,12 +408,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     @property
     def versions(self) -> List[str]:
         if len(self._versions) == 0:
-            pipelines = self.get_pipelines(category=ImageGenerator.FLUX.value)
-            pipelines += self.get_pipelines(category=ImageGenerator.FLUX.value)
-            self._versions = set(
-                [pipeline["version"] for pipeline in pipelines]
-            )
-        return list(self._versions)
+            versions_set = set()
+            for image_generator in ImageGenerator:
+                pipelines = self.get_pipelines(category=image_generator.value)
+                versions_set.update(
+                    [pipeline["version"] for pipeline in pipelines]
+                )
+            self._versions = list(versions_set)
+        return self._versions
 
     @property
     def version(self) -> str:
@@ -437,6 +439,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self._load_pipelines_combobox()
             self._load_versions_combobox()
             self._load_models_combobox()
+            self._load_schedulers_combobox()
         except RuntimeError as e:
             if AIRUNNER_ART_ENABLED:
                 self.logger.error(f"Error loading models: {e}")
@@ -503,3 +506,28 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             if index != -1:
                 self.ui.model.setCurrentIndex(index)
         self.ui.model.blockSignals(False)
+
+    @property
+    def schedulers(self):
+        return Schedulers.objects.all()
+
+    def _load_schedulers_combobox(self):
+        self.ui.scheduler.blockSignals(True)
+        scheduler_names = [s.display_name for s in self.schedulers]
+        self.ui.scheduler.clear()
+        self.ui.scheduler.addItems(scheduler_names)
+
+        current_scheduler = self.generator_settings.scheduler
+        if current_scheduler != "":
+            self.ui.scheduler.setCurrentText(current_scheduler)
+        else:
+            self.generator_settings.scheduler = self.ui.scheduler.currentText()
+        self.update_generator_settings(
+            scheduler=self.generator_settings.scheduler
+        )
+        self.ui.scheduler.blockSignals(False)
+
+    @Slot(str)
+    def on_scheduler_currentTextChanged(self, name):
+        self.update_generator_settings(scheduler=name)
+        self.api.art.change_scheduler(name)

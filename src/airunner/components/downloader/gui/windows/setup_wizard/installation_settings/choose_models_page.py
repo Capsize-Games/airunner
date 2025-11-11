@@ -95,7 +95,7 @@ class ChooseModelsPage(BaseWizard):
             version_group = QGroupBox(self)
             v_layout = QVBoxLayout(version_group)
 
-            # Create a checkable group box for the SD version (acts as the SD 1.5 / SDXL 1.0 checkbox)
+            # Create a checkable group box for the SD version (acts as the SDXL 1.0 checkbox)
             master_flag = f"sd_{version}"
             self.models_enabled[master_flag] = True
             version_group.setTitle(version)

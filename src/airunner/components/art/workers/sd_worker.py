@@ -2,6 +2,12 @@ import os
 from typing import Dict, Optional
 
 import torch
+from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
+    SDXLModelManager,
+)
+from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
+    X4UpscaleManager,
+)
 from airunner.components.art.managers.flux.flux_model_manager import (
     FluxModelManager,
 )
@@ -29,7 +35,9 @@ class SDWorker(Worker):
 
     def __init__(self, image_export_worker):
         self.image_export_worker = image_export_worker
+        self._sdxl: Optional[SDXLModelManager] = None
         self._flux: Optional[FluxModelManager] = None
+        self._x4_upscaler: Optional[X4UpscaleManager] = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
         self._current_model = None
@@ -66,6 +74,15 @@ class SDWorker(Worker):
                 StableDiffusionVersion.FLUX_SCHNELL,
             ):
                 self._model_manager = self.flux
+            elif version in (
+                StableDiffusionVersion.SDXL1_0,
+                StableDiffusionVersion.SDXL_TURBO,
+                StableDiffusionVersion.SDXL_LIGHTNING,
+                StableDiffusionVersion.SDXL_HYPER,
+            ):
+                self._model_manager = self.sdxl
+            elif version == StableDiffusionVersion.X4_UPSCALER:
+                self._model_manager = self.x4_upscaler
             else:
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
@@ -82,6 +99,20 @@ class SDWorker(Worker):
             self._flux = FluxModelManager()
             self._flux.image_export_worker = self.image_export_worker
         return self._flux
+
+    @property
+    def sdxl(self):
+        if self._sdxl is None:
+            self._sdxl = SDXLModelManager()
+            self._sdxl.image_export_worker = self.image_export_worker
+        return self._sdxl
+
+    @property
+    def x4_upscaler(self):
+        if self._x4_upscaler is None:
+            self._x4_upscaler = X4UpscaleManager()
+            self._x4_upscaler.image_export_worker = self.image_export_worker
+        return self._x4_upscaler
 
     def scan_for_embeddings(self):
         if self.model_manager:
@@ -213,7 +244,6 @@ class SDWorker(Worker):
                 negative_original_size=settings.negative_original_size,
                 negative_target_size=settings.negative_target_size,
                 lora_scale=settings.lora_scale,
-                quality_effects=settings.quality_effects,
                 width=self.application_settings.working_width,
                 height=self.application_settings.working_height,
             )
@@ -295,6 +325,13 @@ class SDWorker(Worker):
                 self._sdxl.image_export_worker = None
                 del self._sdxl
                 self._sdxl = None
+            elif manager_ref is self._x4_upscaler:
+                self.logger.info(">>> Unloading X4 Upscaler model manager")
+                self._x4_upscaler.image_export_worker.stop()
+                del self._x4_upscaler.image_export_worker
+                self._x4_upscaler.image_export_worker = None
+                del self._x4_upscaler
+                self._x4_upscaler = None
 
         if data:
             callback = data.get("callback", None)

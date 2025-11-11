@@ -41,7 +41,6 @@ class WorkerManager(Worker):
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
-            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE: self.on_huggingface_download_complete_signal,
             SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
             SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: self.on_rag_index_selected_documents_signal,
@@ -83,6 +82,9 @@ class WorkerManager(Worker):
         self._mask_generator_worker = None
         self._sd_worker = None
         self._pending_generation_request = None
+        self._download_dialog = (
+            None  # Store dialog reference to prevent garbage collection
+        )
         self._stt_audio_capture_worker = None
         self._stt_audio_processor_worker = None
         self._tts_generator_worker = None
@@ -307,7 +309,6 @@ class WorkerManager(Worker):
         from airunner.components.llm.gui.windows.huggingface_download_dialog import (
             HuggingFaceDownloadDialog,
         )
-        from PySide6.QtWidgets import QApplication
 
         repo_id = data.get("repo_id")
         model_path = data.get("model_path")
@@ -329,8 +330,9 @@ class WorkerManager(Worker):
                 f"WorkerManager: Starting download for {repo_id} ({len(missing_files)} missing files)"
             )
 
-        # Determine model type for download worker (only FLUX is supported)
-        model_type = "flux" if "flux" in version.lower() else "art"
+        # Determine model type for download worker
+        # All art models (SDXL, FLUX, SD) use "art" type for bootstrap data lookup
+        model_type = "art"
 
         # Determine output directory (parent of model file for single-file models, or model_path for repos)
         single_file_extensions = (
@@ -345,19 +347,63 @@ class WorkerManager(Worker):
         else:
             output_dir = model_path
 
-        # Show download dialog
-        main_window = QApplication.activeWindow()
+        # Show download dialog (modal to ensure it stays visible)
+        main_window = self._get_main_window()
         if main_window:
             try:
-                download_dialog = HuggingFaceDownloadDialog(
+                # Close any existing download dialog
+                if self._download_dialog:
+                    self._download_dialog.close()
+                    self._download_dialog = None
+
+                # Create new download dialog and store reference
+                self._download_dialog = HuggingFaceDownloadDialog(
                     parent=main_window,
                     model_name=f"{version} Config Files",
                     model_path=output_dir,
                 )
-                download_dialog.show()
+
+                # Connect dialog to download worker signals
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_LOG,
+                    self._download_dialog.on_log_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_file_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._download_dialog.on_download_complete,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                    self._download_dialog.on_download_failed,
+                )
+
+                # Show the dialog
+                self._download_dialog.show()
+                self._download_dialog.raise_()
+                self._download_dialog.activateWindow()
+
+                if self.logger:
+                    self.logger.info(
+                        "Download dialog shown and connected to worker signals"
+                    )
             except Exception as e:
                 if self.logger:
-                    self.logger.error(f"Error showing download dialog: {e}")
+                    self.logger.error(
+                        f"Error showing download dialog: {e}", exc_info=True
+                    )
+        else:
+            if self.logger:
+                self.logger.error(
+                    "Unable to locate the main window; download dialog could not be displayed"
+                )
 
         # Queue download request
         download_data = {
@@ -374,6 +420,31 @@ class WorkerManager(Worker):
 
         self.huggingface_download_worker.add_to_queue(download_data)
 
+    def _get_main_window(self):
+        """Return the main application window if available."""
+        try:
+            from PySide6.QtWidgets import QApplication
+        except ImportError:
+            return None
+
+        app = QApplication.instance()
+        if app is None:
+            return None
+
+        window = app.activeWindow()
+        if window is not None:
+            return window
+
+        for widget in app.topLevelWidgets():
+            if (
+                widget.objectName() == "MainWindow"
+                or widget.__class__.__name__ == "MainWindow"
+            ):
+                return widget
+
+        # Fallback: some components expose the main window via settings API
+        return getattr(self.api, "main_window", None)
+
     def on_huggingface_download_complete(self, data: Dict):
         """Handle download completion and retry pending generation.
 
@@ -384,6 +455,9 @@ class WorkerManager(Worker):
             self.logger.info(
                 f"WorkerManager: Download complete for {data.get('model_path')}"
             )
+            self.logger.info(
+                f"Pending generation request: {self._pending_generation_request is not None}"
+            )
 
         # If we have a pending generation request, retry it now
         if self._pending_generation_request:
@@ -391,12 +465,21 @@ class WorkerManager(Worker):
                 self.logger.info(
                     "Retrying pending generation request after download completion"
                 )
+                self.logger.debug(
+                    f"Image request details: {self._pending_generation_request}"
+                )
 
             # Re-emit the generation signal to trigger model loading and generation
             self.emit_signal(
-                SignalCode.DO_GENERATE_SIGNAL, self._pending_generation_request
+                SignalCode.DO_GENERATE_SIGNAL,
+                {"image_request": self._pending_generation_request},
             )
             self._pending_generation_request = None
+        else:
+            if self.logger:
+                self.logger.warning(
+                    "No pending generation request found after download completion"
+                )
 
     def on_unload_art_signal(self, data: Dict):
         if self._sd_worker is not None:
