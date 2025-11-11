@@ -170,41 +170,52 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
 
     def _is_cache_valid(self, image: Image.Image) -> bool:
         """Check if cached QImage is still valid."""
-        image_hash = (
-            hash(image.tobytes()) if hasattr(image, "tobytes") else id(image)
-        )
+        # Use object identity instead of content hash for performance
+        # Hash computation on 4MB images is too expensive (~700ms)
+        image_id = id(image)
         return (
             self._qimage_cache is not None
             and self._qimage_cache_size == image.size
-            and hasattr(self, "_qimage_cache_hash")
-            and self._qimage_cache_hash == image_hash
+            and hasattr(self, "_qimage_cache_id")
+            and self._qimage_cache_id == image_id
             and not self._qimage_cache.isNull()
         )
 
     def _convert_pil_to_qimage_direct(self, image: Image.Image) -> QImage:
         """Convert PIL Image to QImage using direct conversion."""
+        import time
+
+        start = time.time()
+
         if image.mode == "RGBA":
             w, h = image.size
             img_data = image.tobytes("raw", "RGBA")
-            return QImage(img_data, w, h, QImage.Format.Format_RGBA8888)
+            result = QImage(img_data, w, h, QImage.Format.Format_RGBA8888)
         elif image.mode == "RGB":
             w, h = image.size
             img_data = image.tobytes("raw", "RGB")
-            return QImage(img_data, w, h, QImage.Format.Format_RGB888)
+            result = QImage(img_data, w, h, QImage.Format.Format_RGB888)
         else:
             rgba_image = image.convert("RGBA")
             w, h = rgba_image.size
             img_data = rgba_image.tobytes("raw", "RGBA")
-            return QImage(img_data, w, h, QImage.Format.Format_RGBA8888)
+            result = QImage(img_data, w, h, QImage.Format.Format_RGBA8888)
+
+        elapsed = (time.time() - start) * 1000
+        if elapsed > 10:
+            self.logger.warning(
+                f"[PERF] PIL→QImage conversion took {elapsed:.1f}ms"
+            )
+
+        return result
 
     def _cache_qimage(self, q_image: QImage, image: Image.Image) -> None:
         """Cache the converted QImage."""
-        image_hash = (
-            hash(image.tobytes()) if hasattr(image, "tobytes") else id(image)
-        )
+        # Use object identity instead of content hash for performance
+        image_id = id(image)
         self._qimage_cache = q_image
         self._qimage_cache_size = image.size
-        self._qimage_cache_hash = image_hash
+        self._qimage_cache_id = image_id
 
     def _fallback_conversion(self, image: Image.Image) -> Optional[QImage]:
         """Fallback conversion using ImageQt."""

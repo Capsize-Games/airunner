@@ -12,6 +12,8 @@ from typing import Optional, Dict, Any
 import os
 import requests
 from PySide6.QtCore import QObject, Signal
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ModelInfoWorker(QObject):
@@ -102,11 +104,13 @@ class FileDownloadWorker(QObject):
         total_size_bytes: int = 0,
     ) -> None:
         super().__init__()
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.url = url
         self.save_path = os.path.expanduser(save_path)
         self.api_key = api_key or ""
         self.total_size = max(0, int(total_size_bytes))
         self._is_cancelled = False
+        self._retry_attempted = False  # Prevent infinite retry loop
 
     def cancel(self) -> None:
         self._is_cancelled = True
@@ -118,6 +122,10 @@ class FileDownloadWorker(QObject):
         return h
 
     def _try_download(self, url: str) -> bool:
+        self.logger.info(f"FileDownloadWorker starting download from: {url}")
+        self.logger.info(f"Saving to: {self.save_path}")
+        self.logger.info(f"Expected size: {self.total_size} bytes")
+
         try:
             with requests.get(
                 url,
@@ -126,20 +134,32 @@ class FileDownloadWorker(QObject):
                 headers=self._headers(),
                 timeout=30,
             ) as r:
+                self.logger.info(f"HTTP response status: {r.status_code}")
                 r.raise_for_status()
+
                 # Get total from headers if not provided
                 if self.total_size == 0:
                     try:
                         self.total_size = int(
                             r.headers.get("content-length", 0)
                         )
+                        self.logger.info(
+                            f"Size from headers: {self.total_size} bytes"
+                        )
                     except Exception:
                         self.total_size = 0
+                        self.logger.warning("Could not get size from headers")
+
                 os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
+                self.logger.info(
+                    f"Created directory: {os.path.dirname(self.save_path)}"
+                )
+
                 with open(self.save_path, "wb") as f:
                     downloaded = 0
                     for chunk in r.iter_content(chunk_size=8192):
                         if self._is_cancelled:
+                            self.logger.info("Download cancelled by user")
                             # best-effort cleanup of partial file
                             try:
                                 f.close()
@@ -148,6 +168,9 @@ class FileDownloadWorker(QObject):
                             try:
                                 if os.path.exists(self.save_path):
                                     os.remove(self.save_path)
+                                    self.logger.info(
+                                        f"Removed partial file: {self.save_path}"
+                                    )
                             except Exception:
                                 pass
                             self.canceled.emit()
@@ -156,20 +179,43 @@ class FileDownloadWorker(QObject):
                             f.write(chunk)
                             downloaded += len(chunk)
                             self.progress.emit(downloaded, self.total_size)
+
+                self.logger.info(
+                    f"Download complete: {downloaded} bytes written to {self.save_path}"
+                )
                 self.finished.emit(self.save_path)
                 return True
         except requests.HTTPError as http_err:
-            # If 401, retry with ?token=...
+            self.logger.error(f"HTTP error during download: {http_err}")
+            # If 401, retry ONCE with ?token=...
             status = getattr(
                 getattr(http_err, "response", None), "status_code", None
             )
-            if status == 401 and self.api_key:
+            if status == 401 and self.api_key and not self._retry_attempted:
+                self.logger.info("Got 401, retrying with token in URL")
+                self._retry_attempted = True  # Mark that we tried the retry
                 sep = "&" if "?" in url else "?"
                 token_url = f"{url}{sep}token={self.api_key}"
                 return self._try_download(token_url)
-            self.error.emit(str(http_err))
+
+            # If we already retried or no API key, emit error
+            if status == 401:
+                error_msg = (
+                    "401 Unauthorized: This model requires authentication. "
+                    "Please check that:\n"
+                    "1. Your CivitAI API key is valid (get it from https://civitai.com/user/account)\n"
+                    "2. You have access to this model (some models require early access)\n"
+                    "3. The model hasn't been removed or made private"
+                )
+                self.logger.error(error_msg)
+                self.error.emit(error_msg)
+            else:
+                self.error.emit(str(http_err))
             return False
         except Exception as e:  # noqa: BLE001
+            self.logger.error(
+                f"Download failed with exception: {e}", exc_info=True
+            )
             self.error.emit(str(e))
             return False
 

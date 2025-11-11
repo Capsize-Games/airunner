@@ -9,13 +9,8 @@ This suggests the image is using a different position source than the grid.
 """
 
 import pytest
-from unittest.mock import MagicMock, PropertyMock
-from PySide6.QtCore import QPointF, QSize
+from PySide6.QtCore import QPointF
 
-from airunner.components.art.gui.widgets.canvas.custom_view import (
-    CustomGraphicsView,
-)
-from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,
@@ -176,4 +171,3 @@ class TestPanningOffsetBug:
         """
         # This test needs real database interaction
         # Mark as xfail until we can verify the actual behavior
-        pass

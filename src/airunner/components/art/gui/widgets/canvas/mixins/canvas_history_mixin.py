@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, Optional
 from dataclasses import asdict, is_dataclass
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import QPointF, QTimer
 from PIL import ImageQt
 
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
@@ -115,12 +115,26 @@ class CanvasHistoryMixin:
 
         mask_val = getattr(settings, "mask", None)
 
+        # Extract dimensions from AIRAW1 binary to avoid re-parsing in memory tracker
+        image_width = None
+        image_height = None
+        if (
+            image_val
+            and isinstance(image_val, bytes)
+            and image_val.startswith(b"AIRAW1")
+            and len(image_val) >= 14
+        ):
+            image_width = int.from_bytes(image_val[6:10], "big")
+            image_height = int.from_bytes(image_val[10:14], "big")
+
         return {
             "image": image_val,
             "mask": mask_val,
             "x_pos": getattr(settings, "x_pos", 0) or 0,
             "y_pos": getattr(settings, "y_pos", 0) or 0,
             "text_items": getattr(settings, "text_items", None),
+            "image_width": image_width,
+            "image_height": image_height,
         }
 
     def _apply_layer_state(
@@ -242,7 +256,9 @@ class CanvasHistoryMixin:
             self.api.art.canvas.update_history(
                 len(self.undo_history), len(self.redo_history)
             )
-        self._update_canvas_memory_allocation()
+        # Defer memory allocation update to next event loop iteration
+        # This allows the canvas to display the image immediately
+        QTimer.singleShot(0, self._update_canvas_memory_allocation)
 
     def _cancel_layer_history_transaction(
         self, layer_id: Optional[int]

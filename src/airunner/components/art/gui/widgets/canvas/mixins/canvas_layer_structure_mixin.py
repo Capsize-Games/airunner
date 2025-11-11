@@ -17,9 +17,6 @@ from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
-from airunner.components.model_management.canvas_memory_tracker import (
-    CanvasMemoryTracker,
-)
 
 
 class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
@@ -290,7 +287,8 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
         """Update ModelResourceManager with current canvas memory usage."""
         try:
             resource_manager = ModelResourceManager()
-            tracker = CanvasMemoryTracker()
+            # Use the cached tracker from ModelResourceManager for performance
+            tracker = resource_manager.canvas_memory_tracker
 
             # Estimate memory used by canvas history
             vram_gb, ram_gb = tracker.estimate_history_memory(self)

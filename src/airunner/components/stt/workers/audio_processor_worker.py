@@ -1,5 +1,6 @@
-from airunner.components.stt.managers.whisper_model_manager import \
-    WhisperModelManager
+from airunner.components.stt.managers.whisper_model_manager import (
+    WhisperModelManager,
+)
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
 
@@ -14,11 +15,6 @@ class AudioProcessorWorker(Worker):
 
     def __init__(self):
         self._stt = None
-        self.signal_handlers = {
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.update_properties,
-            SignalCode.STT_UNLOAD_SIGNAL: self.on_stt_unload_signal,
-            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_stt_process_audio_signal,
-        }
         super().__init__()
 
     def start_worker_thread(self):

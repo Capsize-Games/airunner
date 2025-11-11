@@ -15,8 +15,8 @@ import gc
 
 from diffusers import StableDiffusionUpscalePipeline
 
-from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
-    StableDiffusionModelManager,
+from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+    BaseDiffusersModelManager,
 )
 from airunner.components.art.managers.stablediffusion.x4_upscale_mixins import (
     X4PropertiesMixin,
@@ -37,7 +37,7 @@ from airunner.enums import SignalCode, ModelType
 
 
 class X4UpscaleManager(
-    StableDiffusionModelManager,
+    BaseDiffusersModelManager,
     X4PropertiesMixin,
     X4PipelineSetupMixin,
     X4DataPreparationMixin,

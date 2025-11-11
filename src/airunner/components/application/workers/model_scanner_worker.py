@@ -53,6 +53,7 @@ class ModelScannerWorker(Worker, PipelineMixin):
             entries = []
 
         # find all folders inside of model_path, each of those folders is a model version
+        print("model_path", model_path)
         with os.scandir(model_path) as dir_object:
             # check if dir_object is a directory
             for version_entry in dir_object:
@@ -64,10 +65,6 @@ class ModelScannerWorker(Worker, PipelineMixin):
                         if "controlnet_processors" in action_item.path:
                             continue
                         paths = [action_item.path]
-                        if "SDXL 1.0/txt2img" in action_item.path:
-                            paths.append(
-                                os.path.join(action_item.path, "turbo_models")
-                            )
                         for path in paths:
                             if not os.path.exists(path):
                                 continue
@@ -81,25 +78,29 @@ class ModelScannerWorker(Worker, PipelineMixin):
                                     )
                                     model.path = file_item.path
                                     model.branch = "main"
-                                    if "turbo_models" in path:
-                                        version = "SDXL Turbo"
                                     model.version = version
-                                    model.category = "stablediffusion"
+                                    model.category = "flux"
                                     model.pipeline_action = action
                                     model.enabled = True
                                     model.model_type = "art"
                                     model.is_default = False
                                     if (
                                         file_item.is_file()
-                                    ):  # ckpt or safetensors file
-                                        if file_item.name.endswith(
-                                            ".ckpt"
-                                        ) or file_item.name.endswith(
-                                            ".safetensors"
+                                    ):  # ckpt, safetensors, or gguf file
+                                        if (
+                                            file_item.name.endswith(".ckpt")
+                                            or file_item.name.endswith(
+                                                ".safetensors"
+                                            )
+                                            or file_item.name.endswith(".gguf")
                                         ):
-                                            name = file_item.name.replace(
-                                                ".ckpt", ""
-                                            ).replace(".safetensors", "")
+                                            name = (
+                                                file_item.name.replace(
+                                                    ".ckpt", ""
+                                                )
+                                                .replace(".safetensors", "")
+                                                .replace(".gguf", "")
+                                            )
                                             model.name = name
                                         else:
                                             model = None

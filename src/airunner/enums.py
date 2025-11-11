@@ -49,6 +49,7 @@ class CodeOperationType(Enum):
 
 
 class SignalCode(Enum):
+    IMAGE_EXPORTED = "image_exported_signal"
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
@@ -167,7 +168,6 @@ class SignalCode(Enum):
     SD_LOAD_PROMPT_SIGNAL = "load_saved_stablediffuion_prompt_signal"
     SD_GENERATE_IMAGE_SIGNAL = "generate_image_signal"
     SD_IMAGE_GENERATED_SIGNAL = "image_generated_signal"
-    SD_NSFW_CONTENT_DETECTED_SIGNAL = "nsfw_content_detected_signal"
     HANDLE_LATENTS_SIGNAL = "handle_latents_signal"
     STT_START_CAPTURE_SIGNAL = "stt_start_capture"
     STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
@@ -221,8 +221,10 @@ class SignalCode(Enum):
     RAG_LOAD_DOCUMENTS = "rag_load_documents_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
-    SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
-    SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
+    SAFETY_CHECKER_LOAD_SIGNAL = "safety_checker_load_signal"
+    SAFETY_CHECKER_UNLOAD_SIGNAL = "safety_checker_unload_signal"
+    SAFETY_CHECKER_FILTER_REQUEST = "safety_checker_filter_request"
+    SAFETY_CHECKER_FILTER_COMPLETE = "safety_checker_filter_complete"
 
     BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
 
@@ -371,7 +373,6 @@ class EngineResponseCode(Enum):
     CAPTION_GENERATED = 800
     ADD_TO_CONVERSATION = 900
     CLEAR_MEMORY = 1000
-    NSFW_CONTENT_DETECTED = 1100
     INSUFFICIENT_GPU_MEMORY = 1200
     INTERRUPTED = 1300
 
@@ -463,6 +464,7 @@ class CanvasToolName(Enum):
 
 class ImageGenerator(Enum):
     STABLEDIFFUSION = "stablediffusion"
+    FLUX = "flux"
 
 
 class GeneratorSection(Enum):
@@ -479,10 +481,9 @@ class StableDiffusionVersion(Enum):
     SDXL_TURBO = "SDXL Turbo"
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
-    SD1_5 = "SD 1.5"
     X4_UPSCALER = "x4-upscaler"
     FLUX_DEV = "FLUX.1-dev"
-    FLUX_SCHNELL = "FLUX.1-schnell"
+    FLUX_SCHNELL = "Flux.1 S"
 
 
 class Language(Enum):
@@ -530,6 +531,8 @@ class ModelType(Enum):
     SD_UNET = "SD UNet"
     SD_TOKENIZER = "SD Tokenizer"
     SD_TEXT_ENCODER = "SD Text Encoder"
+    SAFETY_CHECKER = "Safety Checker"
+    FEATURE_EXTRACTOR = "Feature Extractor"
     TTS = "TTS Model"
     TTS_PROCESSOR = "TTS Processor"
     TTS_FEATURE_EXTRACTOR = "TTS Feature Extractor"
@@ -542,8 +545,6 @@ class ModelType(Enum):
     STT_FEATURE_EXTRACTOR = "STT Feature Extractor"
     CONTROLNET = "SD Controlnet"
     CONTROLNET_PROCESSOR = "SD Controlnet Processor"
-    SAFETY_CHECKER = "SD Safety Checker"
-    FEATURE_EXTRACTOR = "SD Feature Extractor"
     UPSCALER = "Upscaler"
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"
@@ -568,13 +569,6 @@ class TTSModel(Enum):
     ESPEAK = "Espeak"
     SPEECHT5 = "SpeechT5"
     OPENVOICE = "OpenVoice"
-
-
-class ImagePreset(Enum):
-    NONE = ""
-    ILLUSTRATION = "Illustration"
-    PHOTOGRAPH = "Photograph"
-    PAINTING = "Painting"
 
 
 class SpeechT5Voices(Enum):

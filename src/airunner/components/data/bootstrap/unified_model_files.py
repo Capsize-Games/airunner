@@ -44,14 +44,14 @@ def get_required_files_for_model(
     Args:
         model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
         model_id: Model identifier (repo_id or version name)
-        version: Model version (for art models like "SD 1.5", "SDXL 1.0")
+        version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
         pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
     Returns:
         List of required file paths, or None if not found
 
     Examples:
-        >>> get_required_files_for_model("art", "SD 1.5", "SD 1.5", "txt2img")
+        >>> get_required_files_for_model("art", "Flux.1 S", "SDXL 1.0", "txt2img")
         ["scheduler/scheduler_config.json", ...]
         >>> get_required_files_for_model("stt", "openai/whisper-tiny")
         ["config.json", "model.safetensors", ...]

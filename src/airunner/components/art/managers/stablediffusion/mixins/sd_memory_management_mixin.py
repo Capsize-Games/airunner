@@ -22,8 +22,10 @@ from airunner.settings import (
     AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD,
     AIRUNNER_MEM_USE_TOME_SD,
     AIRUNNER_MEM_TOME_SD_RATIO,
+    AIRUNNER_DISABLE_FLASH_ATTENTION,
 )
 from airunner.utils.memory import is_ampere_or_newer
+from airunner.utils.settings import get_qsettings
 
 
 class SDMemoryManagementMixin:
@@ -34,7 +36,7 @@ class SDMemoryManagementMixin:
         Apply all memory efficiency settings to pipeline.
 
         Applies settings like VAE slicing, attention slicing, CPU offload,
-        and ToMe SD based on current memory settings.
+        ToMe SD, xformers, and torch.compile based on current memory settings.
         """
         self._current_memory_settings = self.memory_settings.to_dict()
         if not self._pipe:
@@ -65,6 +67,13 @@ class SDMemoryManagementMixin:
             "use_accelerated_transformers",
             self._apply_accelerated_transformers,
         )
+
+        # Apply xformers for Flash Attention 2 (major speedup)
+        self._apply_xformers()
+
+        # Apply torch.compile for 2-3x speedup (one-time compilation)
+        self._apply_torch_compile()
+
         self._apply_memory_setting(
             "cpu_offload_applied",
             "use_enable_sequential_cpu_offload",
@@ -302,6 +311,97 @@ class SDMemoryManagementMixin:
                 )
         else:
             self._remove_tome_sd()
+
+    def _apply_xformers(self):
+        """
+        Apply xformers memory-efficient attention (Flash Attention 2).
+
+        This provides significant speedup on modern GPUs (RTX 30xx/40xx).
+        Can be disabled via AIRUNNER_DISABLE_FLASH_ATTENTION environment variable.
+        """
+        if AIRUNNER_DISABLE_FLASH_ATTENTION:
+            self.logger.debug(
+                "xformers disabled via AIRUNNER_DISABLE_FLASH_ATTENTION"
+            )
+            return
+
+        if not is_ampere_or_newer(self._device_index):
+            self.logger.debug(
+                "xformers requires Ampere or newer GPU (RTX 30xx/40xx+)"
+            )
+            return
+
+        try:
+            if hasattr(
+                self._pipe, "enable_xformers_memory_efficient_attention"
+            ):
+                self._pipe.enable_xformers_memory_efficient_attention()
+                self.logger.info(
+                    "✓ Enabled xformers memory-efficient attention (Flash Attention 2)"
+                )
+            else:
+                self.logger.debug("Pipeline does not support xformers")
+        except Exception as e:
+            self.logger.warning(f"Could not enable xformers: {e}")
+            self.logger.debug(
+                "Install xformers for Flash Attention 2: pip install xformers"
+            )
+
+    def _apply_torch_compile(self):
+        """
+        Apply torch.compile() to UNet for 2-3x inference speedup.
+
+        NOTE: torch.compile() is lazy - it wraps the model but doesn't compile
+        until the first forward pass. This means:
+        - Wrapping is instant (happens here)
+        - Compilation is slow (happens during first generation, 2-3 minutes)
+        - Cache persists per input shape (different resolutions = recompile)
+
+        Only applies once per pipeline load to avoid recompilation overhead.
+
+        Note: DeepCache has been permanently disabled as it's incompatible
+        with torch.compile() and provides inferior speedup (15% vs 2-3x).
+        """
+        settings = get_qsettings()
+        settings.beginGroup("generator_settings")
+        enable_torch_compile = settings.value(
+            "enable_torch_compile", False, type=bool
+        )
+        settings.endGroup()
+        print("APPLY TORCH COMPILE")
+        print("-" * 100)
+        print(enable_torch_compile)
+        if not enable_torch_compile:
+            return
+
+        if self._memory_settings_flags.get("torch_compile_applied"):
+            return  # Already compiled
+
+        if not hasattr(self._pipe, "unet") or self._pipe.unet is None:
+            return
+
+        try:
+            self.logger.info(
+                "Wrapping UNet with torch.compile() - compilation will happen on first generation"
+            )
+            # Note: torch.compile caches are stored in PyTorch's internal cache
+            # directory (~/.triton or TORCH_COMPILE_DIR). They persist across runs
+            # and are reused when the same model graph AND input shapes are seen.
+            self._pipe.unet = torch.compile(
+                self._pipe.unet,
+                mode="reduce-overhead",  # Best for inference
+                fullgraph=False,  # Allow fallback for unsupported ops
+            )
+            self._memory_settings_flags["torch_compile_applied"] = True
+            self.logger.info(
+                "✓ UNet wrapped for compilation (first generation will take 2-3 min)"
+            )
+            self.logger.debug(
+                "Compiled cache stored in ~/.triton per input shape (resolution/batch)"
+            )
+        except Exception as e:
+            self.logger.warning(f"Could not compile UNet: {e}")
+            self.logger.debug("torch.compile requires PyTorch 2.0+")
 
     def _remove_tome_sd(self):
         """

@@ -182,7 +182,6 @@ class WhisperModelManager(BaseModelManager):
         if self._model is None and retry is False:
             return self.load(retry=True)
         self._load_processor()
-        self._load_feature_extractor()
         if (
             self._model is not None
             and self._processor is not None
@@ -253,19 +252,6 @@ class WhisperModelManager(BaseModelManager):
             )
         except Exception as e:
             self.logger.error(f"Failed to load processor: {e}")
-            return None
-
-    def _load_feature_extractor(self):
-        model_path = self.model_path
-        self.logger.debug(f"Loading feature extractor {model_path}")
-        try:
-            self._feature_extractor = WhisperFeatureExtractor.from_pretrained(
-                model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load feature extractor")
-            self.logger.error(e)
             return None
 
     def _unload_model(self):

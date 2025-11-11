@@ -2,13 +2,13 @@ import os
 from typing import Dict, Optional
 
 import torch
-from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
-    StableDiffusionModelManager,
-)
 from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
 )
-from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
+    X4UpscaleManager,
+)
+from airunner.components.art.managers.flux.flux_model_manager import (
     FluxModelManager,
 )
 
@@ -25,9 +25,6 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
-from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
-    X4UpscaleManager,
-)
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -36,33 +33,15 @@ torch.backends.cuda.matmul.allow_tf32 = True
 class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
-    def __init__(self):
-        self._sd: Optional[StableDiffusionModelManager] = None
+    def __init__(self, image_export_worker):
+        self.image_export_worker = image_export_worker
         self._sdxl: Optional[SDXLModelManager] = None
         self._flux: Optional[FluxModelManager] = None
+        self._sd: Optional[SDModelManager] = None
+        self._sdxl: Optional[SDXLModelManager] = None
         self._x4_upscaler: Optional[X4UpscaleManager] = None
-        self._safety_checker = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
-        self.signal_handlers = {
-            SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
-            SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
-            SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
-            SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
-            SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
-            SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
-            SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
-            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED: self.on_input_image_settings_changed_signal,
-            SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
-            SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
-            SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
-            SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
-            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
-            SignalCode.ART_MODEL_DOWNLOAD_REQUIRED: self.on_art_model_download_required,
-        }
         self._current_model = None
         self._current_version = None
         self._current_pipeline = None
@@ -92,8 +71,11 @@ class SDWorker(Worker):
         if self._model_manager is None:
             version = StableDiffusionVersion(self.generator_settings.version)
 
-            if version is StableDiffusionVersion.SD1_5:
-                self._model_manager = self.sd
+            if version in (
+                StableDiffusionVersion.FLUX_DEV,
+                StableDiffusionVersion.FLUX_SCHNELL,
+            ):
+                self._model_manager = self.flux
             elif version in (
                 StableDiffusionVersion.SDXL1_0,
                 StableDiffusionVersion.SDXL_TURBO,
@@ -101,12 +83,7 @@ class SDWorker(Worker):
                 StableDiffusionVersion.SDXL_HYPER,
             ):
                 self._model_manager = self.sdxl
-            elif version in (
-                StableDiffusionVersion.FLUX_DEV,
-                StableDiffusionVersion.FLUX_SCHNELL,
-            ):
-                self._model_manager = self.flux
-            elif version is StableDiffusionVersion.X4_UPSCALER:
+            elif version == StableDiffusionVersion.X4_UPSCALER:
                 self._model_manager = self.x4_upscaler
             else:
                 raise ValueError(
@@ -119,36 +96,25 @@ class SDWorker(Worker):
         self._model_manager = value
 
     @property
-    def sd(self):
-        if self._sd is None:
-            self._sd = StableDiffusionModelManager()
-        return self._sd
+    def flux(self):
+        if self._flux is None:
+            self._flux = FluxModelManager()
+            self._flux.image_export_worker = self.image_export_worker
+        return self._flux
 
     @property
     def sdxl(self):
         if self._sdxl is None:
             self._sdxl = SDXLModelManager()
+            self._sdxl.image_export_worker = self.image_export_worker
         return self._sdxl
-
-    @property
-    def flux(self):
-        if self._flux is None:
-            self._flux = FluxModelManager()
-        return self._flux
 
     @property
     def x4_upscaler(self):
         if self._x4_upscaler is None:
-            self._x4_upscaler = X4UpscaleManager(mediator=self.mediator)
+            self._x4_upscaler = X4UpscaleManager()
+            self._x4_upscaler.image_export_worker = self.image_export_worker
         return self._x4_upscaler
-
-    def on_load_safety_checker(self):
-        if self.model_manager:
-            self._load_safety_checker()
-
-    def on_unload_safety_checker(self):
-        if self.model_manager:
-            self._unload_safety_checker()
 
     def scan_for_embeddings(self):
         if self.model_manager:
@@ -201,11 +167,6 @@ class SDWorker(Worker):
 
     def on_art_model_changed(self, data: Dict = None):
         self.unload_model_manager()
-
-    def on_unload_art_signal(self, data=None):
-        self.add_to_queue(
-            {"action": ModelAction.UNLOAD, "type": ModelType.SD, "data": data}
-        )
 
     def _get_model_path_from_image_request(
         self, image_request: Optional[ImageRequest]
@@ -285,7 +246,6 @@ class SDWorker(Worker):
                 negative_original_size=settings.negative_original_size,
                 negative_target_size=settings.negative_target_size,
                 lora_scale=settings.lora_scale,
-                quality_effects=settings.quality_effects,
                 width=self.application_settings.working_width,
                 height=self.application_settings.working_height,
             )
@@ -330,10 +290,51 @@ class SDWorker(Worker):
             if callback is not None:
                 callback(data)
 
+    def unload(self, data: Dict):
+        self.add_to_queue(
+            {"action": ModelAction.UNLOAD, "type": ModelType.SD, "data": data}
+        )
+
     def unload_model_manager(self, data: Dict = None):
         if self._model_manager is not None:
+            # CRITICAL: Store reference before clearing to check which manager it is
+            manager_ref = self._model_manager
+
+            # Unload the manager
             self._model_manager.unload()
             self.model_manager = None
+
+            # Clear the specific manager reference to allow garbage collection
+            # Without this, the manager stays in memory even after unload()
+            if manager_ref is self._flux:
+                self.logger.info(">>> Unloading FLUX model manager")
+                self._flux.image_export_worker.stop()
+                del self._flux.image_export_worker
+                self._flux.image_export_worker = None
+                del self._flux
+                self._flux = None
+            elif manager_ref is self._sd:
+                self.logger.info(">>> Unloading SD model manager")
+                self._sd.image_export_worker.stop()
+                del self._sd.image_export_worker
+                self._sd.image_export_worker = None
+                del self._sd
+                self._sd = None
+            elif manager_ref is self._sdxl:
+                self.logger.info(">>> Unloading SDXL model manager")
+                self._sdxl.image_export_worker.stop()
+                del self._sdxl.image_export_worker
+                self._sdxl.image_export_worker = None
+                del self._sdxl
+                self._sdxl = None
+            elif manager_ref is self._x4_upscaler:
+                self.logger.info(">>> Unloading X4 Upscaler model manager")
+                self._x4_upscaler.image_export_worker.stop()
+                del self._x4_upscaler.image_export_worker
+                self._x4_upscaler.image_export_worker = None
+                del self._x4_upscaler
+                self._x4_upscaler = None
+
         if data:
             callback = data.get("callback", None)
             if callback is not None:
@@ -346,14 +347,6 @@ class SDWorker(Worker):
     def _unload_controlnet(self):
         if self.model_manager:
             self.model_manager.unload_controlnet()
-
-    def _load_safety_checker(self):
-        if self.model_manager:
-            self.model_manager.load_safety_checker()
-
-    def _unload_safety_checker(self):
-        if self.model_manager:
-            self.model_manager.unload_safety_checker()
 
     def on_tokenizer_load_signal(self, data: Dict = None):
         if self.model_manager:
@@ -432,6 +425,13 @@ class SDWorker(Worker):
 
     def _finalize_do_generate_signal(self, message: Dict):
         if self.model_manager:
+            # Don't try to generate if model isn't loaded yet (e.g., download in progress)
+            if not self.model_manager.model_is_loaded:
+                self.logger.info(
+                    "Model not loaded yet, skipping generation (download may be in progress)"
+                )
+                return
+
             try:
                 self.model_manager.handle_generate_signal(message)
             except (PipeNotLoadedException, TypeError) as e:
@@ -466,41 +466,3 @@ class SDWorker(Worker):
                 "message": message,
             },
         )
-
-    def on_art_model_download_required(self, data: Dict):
-        """Handle art model download requirement by showing download dialog.
-
-        Args:
-            data: Download info with repo_id, model_path, missing_files, etc.
-        """
-
-        repo_id = data.get("repo_id")
-        data.get("model_path")
-        missing_files = data.get("missing_files", [])
-        version = data.get("version", "")
-
-        self.logger.info(
-            f"Showing download dialog for {repo_id} ({len(missing_files)} missing files)"
-        )
-
-        # Determine model type for download worker
-        model_type = "art"
-        if "flux" in version.lower():
-            model_type = "flux"
-        elif "sdxl" in version.lower():
-            model_type = "sdxl"
-        elif "sd" in version.lower():
-            model_type = "sd"
-
-        # Emit signal to start download
-        self.emit_signal(
-            SignalCode.START_HUGGINGFACE_DOWNLOAD,
-            {
-                "repo_id": repo_id,
-                "model_type": model_type,
-                "output_dir": None,  # Will use model_path from repo_id
-            },
-        )
-
-        # Show download dialog (will be shown by UI layer)
-        # The dialog will connect to the download worker signals

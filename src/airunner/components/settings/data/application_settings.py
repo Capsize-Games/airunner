@@ -19,6 +19,7 @@ class ApplicationSettings(BaseModel):
     tts_enabled = Column(Boolean, default=False)
     stt_enabled = Column(Boolean, default=False)
     controlnet_enabled = Column(Boolean, default=False)
+    nsfw_filter = Column(Boolean, default=True)
     ai_mode = Column(Boolean, default=True)
     active_grid_size_lock = Column(Boolean, default=False)
     installation_path = Column(String, default="~/.local/share/airunner")
@@ -27,7 +28,6 @@ class ApplicationSettings(BaseModel):
     trust_remote_code = Column(
         Boolean, default=False
     )  # Leave this hardcoded. We will never trust remote code.
-    nsfw_filter = Column(Boolean, default=True)
     resize_on_paste = Column(Boolean, default=True)
     image_to_new_layer = Column(Boolean, default=True)
     dark_mode_enabled = Column(Boolean, default=True)
@@ -42,9 +42,7 @@ class ApplicationSettings(BaseModel):
     working_width = Column(Integer, default=512)
     working_height = Column(Integer, default=512)
     current_llm_generator = Column(String, default="causallm")
-    current_image_generator = Column(
-        String, default=ImageGenerator.STABLEDIFFUSION.value
-    )
+    current_image_generator = Column(String, default=ImageGenerator.FLUX.value)
     generator_section = Column(String, default=GeneratorSection.TXT2IMG.value)
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")
@@ -55,7 +53,6 @@ class ApplicationSettings(BaseModel):
     mode = Column(String, default=Mode.IMAGE.value)
     autoload_sd = Column(Boolean, default=True)
     autoload_llm = Column(Boolean, default=False)
-    show_nsfw_warning = Column(Boolean, default=True)
     run_setup_wizard = Column(Boolean, default=True)
     download_wizard_completed = Column(Boolean, default=False)
     stable_diffusion_agreement_checked = Column(Boolean, default=True)

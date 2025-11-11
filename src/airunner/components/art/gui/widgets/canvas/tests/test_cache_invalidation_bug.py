@@ -10,8 +10,6 @@ After updating DrawingPadSettings during recenter, invalidate the cache
 for that layer's settings.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, call
 from PySide6.QtCore import QPointF
 
 
@@ -78,8 +76,6 @@ class TestSettingsCacheInvalidation:
         """
         # This test documents the fix needed
         layer_id = 1
-        new_x = 144.0
-        new_y = 44.0
 
         expected_cache_key = f"DrawingPadSettings_layer_{layer_id}"
 
@@ -111,7 +107,6 @@ class TestSettingsCacheInvalidation:
         Option 2 is more efficient (no DB read), but Option 1 is simpler.
         """
         # This test documents both fix approaches
-        pass
 
     def test_original_item_positions_cache_vs_settings_cache(self):
         """Understand the two-level caching issue.
@@ -133,4 +128,3 @@ class TestSettingsCacheInvalidation:
         The fix is at step 2: invalidate Settings cache after DB update.
         """
         # This test documents the complete bug flow
-        pass

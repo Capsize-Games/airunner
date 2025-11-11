@@ -16,6 +16,9 @@ from airunner.components.application.gui.widgets.status.status_widget import (
 from airunner.components.application.gui.windows.main.download_model_dialog import (
     show_download_model_dialog,
 )
+from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
+    show_nsfw_warning_dialog,
+)
 from airunner.components.art.gui.windows.prompt_browser.prompt_browser import (
     PromptBrowser,
 )
@@ -55,7 +58,6 @@ from airunner.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
     AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
     AIRUNNER_STATUS_NORMAL_COLOR_DARK,
-    AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE,
     AIRUNNER_DISCORD_URL,
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
@@ -103,9 +105,6 @@ from airunner.components.update.gui.windows.update.update_window import (
 )
 from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.components.plugins.plugin_loader import PluginLoader
-from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
-    show_nsfw_warning_dialog,
-)
 
 
 # Utility functions moved from deleted agent.actions
@@ -201,7 +200,6 @@ class MainWindow(
         ("image", "menuStable_Diffusion"),
         ("activity", "actionStats"),
         ("zap", "actionRun_setup_wizard_2"),
-        ("slash", "actionSafety_Checker"),
         ("external-link", "actionBug_report"),
         ("external-link", "actionReport_vulnerability"),
         ("message-square", "actionDiscord"),
@@ -276,7 +274,6 @@ class MainWindow(
         self.signal_handlers = {
             SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
             SignalCode.QUIT_APPLICATION: self.handle_quit_application_signal,
-            SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
             SignalCode.WRITE_FILE: self.on_write_file_signal,
             SignalCode.TOGGLE_FULLSCREEN_SIGNAL: self.on_toggle_fullscreen_signal,
             SignalCode.TOGGLE_TTS_SIGNAL: self.on_toggle_tts,
@@ -515,7 +512,14 @@ class MainWindow(
 
     @Slot(bool)
     def on_actionToggle_Stable_Diffusion_toggled(self, val: bool):
-        self.on_toggle_sd({"enabled": val})
+        self._update_action_button(
+            ModelType.SD,
+            self.ui.actionToggle_Stable_Diffusion,
+            val,
+            SignalCode.SD_LOAD_SIGNAL,
+            SignalCode.SD_UNLOAD_SIGNAL,
+            "sd_enabled",
+        )
 
     @Slot()
     def on_actionSettings_triggered(self):
@@ -538,20 +542,6 @@ class MainWindow(
     @Slot(bool)
     def on_actionToggle_LLM_toggled(self, val: bool):
         self.on_toggle_llm(val=val)
-
-    @Slot(bool)
-    def on_actionSafety_Checker_toggled(self, val: bool):
-        if val is False:
-            self.show_nsfw_warning_popup()
-        else:
-            self.update_application_settings(nsfw_filter=val)
-            self.toggle_nsfw_filter()
-            if not self.api or not hasattr(self.api, "art"):
-                self.logger.warning(
-                    "MainWindow: self.api.art is missing. Cannot load safety checker."
-                )
-                return
-            self.api.art.load_safety_checker()
 
     @Slot(bool)
     def on_actionToggle_Speech_to_Text_toggled(self, val: bool):
@@ -599,6 +589,54 @@ class MainWindow(
     @Slot(bool)
     def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
         self.on_toggle_tts(val=val)
+
+    @Slot(bool)
+    def on_actionSafety_Checker_toggled(self, val: bool):
+        """Handle safety checker toggle action."""
+        # If disabling the safety checker, show warning dialog
+        if not val:
+            # Check if we should show the warning (user hasn't chosen to hide it)
+            settings = get_qsettings()
+            show_warning = settings.value(
+                "nsfw_warning/show_again", True, type=bool
+            )
+
+            if show_warning:
+                confirmed, do_not_show_again = show_nsfw_warning_dialog(
+                    self, show_again_default=show_warning
+                )
+
+                # Save the "do not show again" preference
+                if do_not_show_again:
+                    settings.setValue("nsfw_warning/show_again", False)
+
+                # If user cancelled, revert the checkbox
+                if not confirmed:
+                    if hasattr(self.ui, "actionSafety_Checker"):
+                        self.ui.actionSafety_Checker.blockSignals(True)
+                        self.ui.actionSafety_Checker.setChecked(True)
+                        self.ui.actionSafety_Checker.blockSignals(False)
+                    return
+
+        # Update the setting
+        self.update_application_settings(nsfw_filter=val)
+        self.set_nsfw_filter_tooltip()
+
+        # Emit signal to load or unload the safety checker worker
+        from airunner.enums import SignalCode
+
+        if val:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
+        else:
+            self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, {})
+
+    def set_nsfw_filter_tooltip(self):
+        """Update the safety checker button tooltip based on current state."""
+        nsfw_filter = self.application_settings.nsfw_filter
+        if hasattr(self.ui, "actionSafety_Checker"):
+            self.ui.actionSafety_Checker.setToolTip(
+                f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
+            )
 
     @Slot()
     def on_actionAbout_triggered(self):
@@ -1019,6 +1057,16 @@ class MainWindow(
             item[0].blockSignals(True)
             item[0].setChecked(item[1] or False)
             item[0].blockSignals(False)
+
+        # Initialize safety checker action if it exists
+        if hasattr(self.ui, "actionSafety_Checker"):
+            self.ui.actionSafety_Checker.blockSignals(True)
+            self.ui.actionSafety_Checker.setChecked(
+                self.application_settings.nsfw_filter
+            )
+            self.ui.actionSafety_Checker.blockSignals(False)
+            self.set_nsfw_filter_tooltip()
+
         self.initialized = True
 
     def keyPressEvent(self, event):
@@ -1073,15 +1121,6 @@ class MainWindow(
     def set_path_settings(self, key, val):
         self.update_path_settings(**{key: val})
 
-    def on_nsfw_content_detected_signal(self):
-        # display message in status
-        if not self.api:
-            self.logger.warning(
-                "MainWindow: self.api is missing. Cannot display NSFW content detected message."
-            )
-            return
-        self.api.application_error(AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE)
-
     def closeEvent(self, event):
         event.ignore()
         self.handle_close()
@@ -1114,14 +1153,6 @@ class MainWindow(
         # path = getattr(self.path_settings, name)
         # TODO: Implement file browser opening if needed
         pass
-
-    def toggle_nsfw_filter(self):
-        self.set_nsfw_filter_tooltip()
-
-    def set_nsfw_filter_tooltip(self):
-        self.ui.actionSafety_Checker.setToolTip(
-            f"Click to {'enable' if not self.application_settings.nsfw_filter else 'disable'} NSFW filter"
-        )
 
     def on_toggle_fullscreen_signal(self):
         if self.isFullScreen():
@@ -1399,42 +1430,6 @@ class MainWindow(
                 except Exception:
                     pass
 
-    def show_nsfw_warning_popup(self):
-        if self.application_settings.show_nsfw_warning:
-            confirmed, do_not_show_again = show_nsfw_warning_dialog(
-                self, self.application_settings.show_nsfw_warning
-            )
-            if confirmed:
-                self._disable_nsfw_filter(not do_not_show_again)
-            self.ui.actionSafety_Checker.blockSignals(True)
-            self.ui.actionSafety_Checker.setChecked(
-                self.application_settings.nsfw_filter
-            )
-            self.ui.actionSafety_Checker.blockSignals(False)
-        else:
-            self._disable_nsfw_filter()
-
-    def _disable_nsfw_filter(self, show_nsfw_warning=None):
-        """
-        Do not call this function directly.
-        :return:
-        """
-        # User confirmed to disable the NSFW filter
-        # Update the settings accordingly
-        self.update_application_settings(nsfw_filter=False)
-        # Update the show_nsfw_warning setting based on the checkbox state
-        if show_nsfw_warning is not None:
-            self.update_application_settings(
-                show_nsfw_warning=show_nsfw_warning
-            )
-        self.toggle_nsfw_filter()
-        if not self.api or not hasattr(self.api, "art"):
-            self.logger.warning(
-                "MainWindow: self.api.art is missing. Cannot unload safety checker."
-            )
-            return
-        self.api.art.unload_safety_checker()
-
     ###### End window handlers ######
 
     def show_update_message(self):
@@ -1465,7 +1460,6 @@ class MainWindow(
 
         self.logger.debug("showEvent called, initializing window")
         self._initialize_window()
-        self._initialize_default_buttons()
         self._initialize_filter_actions()
 
         self.initialized = True
@@ -1514,13 +1508,6 @@ class MainWindow(
     @staticmethod
     def display_filter_window(image_filter):
         FilterWindow(image_filter.id)
-
-    def _initialize_default_buttons(self):
-        self.ui.actionSafety_Checker.blockSignals(True)
-        self.ui.actionSafety_Checker.setChecked(
-            self.application_settings.nsfw_filter
-        )
-        self.ui.actionSafety_Checker.blockSignals(False)
 
     def _initialize_window(self):
         # Don't override window geometry if it's already been restored

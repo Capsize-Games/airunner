@@ -9,8 +9,7 @@ the bugs exist. Once fixed, remove the @pytest.mark.xfail decorators.
 """
 
 import pytest
-from unittest.mock import MagicMock
-from PySide6.QtCore import QPointF, QSize
+from PySide6.QtCore import QPointF
 
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,

@@ -74,13 +74,16 @@ class CanvasGenerationMixin:
         # Commit to undo history
         self._commit_layer_history_transaction(layer_id, "image")
 
-        # Refresh the layer display
+        # Defer layer display refresh to next event loop
+        # This allows the canvas image to display immediately
         try:
-            self._refresh_layer_display()
+            from PySide6.QtCore import QTimer
+
+            QTimer.singleShot(0, self._refresh_layer_display)
         except Exception as e:
             if hasattr(self, "logger"):
                 self.logger.error(
-                    f"Failed to refresh layer display after image generation: {e}",
+                    f"Failed to schedule layer display refresh: {e}",
                     exc_info=True,
                 )
 

@@ -156,6 +156,13 @@ class ComponentLoaderMixin:
                 tools=tools_to_use,
                 max_tokens=2000,
                 conversation_id=None,
+                llm_settings=(
+                    self.llm_settings
+                    if hasattr(self, "llm_settings")
+                    else None
+                ),
+                chatbot=self.chatbot if hasattr(self, "chatbot") else None,
+                signal_emitter=self,  # Pass self for signal emission
             )
             self.logger.info(
                 "Workflow manager loaded (conversation ID will be set on first use)"

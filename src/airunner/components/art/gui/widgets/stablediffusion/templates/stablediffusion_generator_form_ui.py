@@ -15,11 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QPlainTextEdit, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
+    QVBoxLayout, QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 import airunner.feather_rc
@@ -28,7 +27,7 @@ class Ui_stablediffusion_generator_form(object):
     def setupUi(self, stablediffusion_generator_form):
         if not stablediffusion_generator_form.objectName():
             stablediffusion_generator_form.setObjectName(u"stablediffusion_generator_form")
-        stablediffusion_generator_form.resize(597, 825)
+        stablediffusion_generator_form.resize(568, 825)
         font = QFont()
         font.setPointSize(8)
         stablediffusion_generator_form.setFont(font)
@@ -50,12 +49,63 @@ class Ui_stablediffusion_generator_form(object):
         self.stable_diffusion_generator_form.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 597, 775))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 568, 775))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(10, 0, 10, 0)
+        self.sdxl_settings_container = QWidget(self.scrollAreaWidgetContents)
+        self.sdxl_settings_container.setObjectName(u"sdxl_settings_container")
+        self.sdxl_settings = QVBoxLayout(self.sdxl_settings_container)
+        self.sdxl_settings.setObjectName(u"sdxl_settings")
+        self.sdxl_settings.setContentsMargins(0, 0, 0, 0)
+        self.n_samples = SliderWidget(self.sdxl_settings_container)
+        self.n_samples.setObjectName(u"n_samples")
+        self.n_samples.setProperty(u"current_value", 1)
+        self.n_samples.setProperty(u"slider_maximum", 1000)
+        self.n_samples.setProperty(u"spinbox_maximum", 1000)
+        self.n_samples.setProperty(u"display_as_float", False)
+        self.n_samples.setProperty(u"spinbox_single_step", 1)
+        self.n_samples.setProperty(u"spinbox_page_step", 1)
+        self.n_samples.setProperty(u"spinbox_minimum", 1)
+        self.n_samples.setProperty(u"slider_minimum", 1)
+
+        self.sdxl_settings.addWidget(self.n_samples)
+
+        self.horizontalLayout_14 = QHBoxLayout()
+        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
+        self.images_per_batch = SliderWidget(self.sdxl_settings_container)
+        self.images_per_batch.setObjectName(u"images_per_batch")
+        self.images_per_batch.setProperty(u"current_value", 1)
+        self.images_per_batch.setProperty(u"slider_maximum", 6)
+        self.images_per_batch.setProperty(u"spinbox_maximum", 6)
+        self.images_per_batch.setProperty(u"display_as_float", False)
+        self.images_per_batch.setProperty(u"spinbox_single_step", 1)
+        self.images_per_batch.setProperty(u"spinbox_page_step", 1)
+        self.images_per_batch.setProperty(u"spinbox_minimum", 1)
+        self.images_per_batch.setProperty(u"slider_minimum", 1)
+
+        self.horizontalLayout_14.addWidget(self.images_per_batch)
+
+        self.infinite_images_button = QPushButton(self.sdxl_settings_container)
+        self.infinite_images_button.setObjectName(u"infinite_images_button")
+        self.infinite_images_button.setMinimumSize(QSize(30, 30))
+        self.infinite_images_button.setMaximumSize(QSize(30, 30))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.infinite_images_button.setIcon(icon)
+        self.infinite_images_button.setCheckable(True)
+        self.infinite_images_button.setChecked(False)
+
+        self.horizontalLayout_14.addWidget(self.infinite_images_button)
+
+
+        self.sdxl_settings.addLayout(self.horizontalLayout_14)
+
+
+        self.gridLayout.addWidget(self.sdxl_settings_container, 2, 0, 1, 1)
+
         self.generator_form_splitter = QSplitter(self.scrollAreaWidgetContents)
         self.generator_form_splitter.setObjectName(u"generator_form_splitter")
         self.generator_form_splitter.setOrientation(Qt.Orientation.Vertical)
@@ -145,227 +195,25 @@ class Ui_stablediffusion_generator_form(object):
 
         self.gridLayout.addWidget(self.generator_form_splitter, 0, 0, 1, 1)
 
-        self.sdxl_settings_container = QWidget(self.scrollAreaWidgetContents)
-        self.sdxl_settings_container.setObjectName(u"sdxl_settings_container")
-        self.sdxl_settings = QVBoxLayout(self.sdxl_settings_container)
-        self.sdxl_settings.setObjectName(u"sdxl_settings")
-        self.sdxl_settings.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.verticalLayout = QVBoxLayout()
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.label_2 = QLabel(self.sdxl_settings_container)
-        self.label_2.setObjectName(u"label_2")
+        self.enable_torch_compile = QPushButton(self.scrollAreaWidgetContents)
+        self.enable_torch_compile.setObjectName(u"enable_torch_compile")
+        self.enable_torch_compile.setMinimumSize(QSize(30, 30))
+        self.enable_torch_compile.setMaximumSize(QSize(30, 30))
+        icon1 = QIcon()
+        icon1.addFile(u":/dark/icons/feather/dark/box.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.enable_torch_compile.setIcon(icon1)
+        self.enable_torch_compile.setCheckable(True)
 
-        self.verticalLayout.addWidget(self.label_2)
+        self.horizontalLayout.addWidget(self.enable_torch_compile)
 
-        self.image_presets = QComboBox(self.sdxl_settings_container)
-        self.image_presets.setObjectName(u"image_presets")
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.verticalLayout.addWidget(self.image_presets)
+        self.horizontalLayout.addItem(self.horizontalSpacer_2)
 
-        self.line_2 = QFrame(self.sdxl_settings_container)
-        self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.Shape.HLine)
-        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.verticalLayout.addWidget(self.line_2)
-
-
-        self.horizontalLayout.addLayout(self.verticalLayout)
-
-        self.quality_effects_container = QVBoxLayout()
-        self.quality_effects_container.setObjectName(u"quality_effects_container")
-        self.label_3 = QLabel(self.sdxl_settings_container)
-        self.label_3.setObjectName(u"label_3")
-
-        self.quality_effects_container.addWidget(self.label_3)
-
-        self.quality_effects = QComboBox(self.sdxl_settings_container)
-        self.quality_effects.addItem("")
-        self.quality_effects.addItem("")
-        self.quality_effects.addItem("")
-        self.quality_effects.addItem("")
-        self.quality_effects.setObjectName(u"quality_effects")
-
-        self.quality_effects_container.addWidget(self.quality_effects)
-
-        self.line = QFrame(self.sdxl_settings_container)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.Shape.HLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.quality_effects_container.addWidget(self.line)
-
-
-        self.horizontalLayout.addLayout(self.quality_effects_container)
-
-
-        self.sdxl_settings.addLayout(self.horizontalLayout)
-
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.groupBox = QGroupBox(self.sdxl_settings_container)
-        self.groupBox.setObjectName(u"groupBox")
-        self.horizontalLayout_3 = QHBoxLayout(self.groupBox)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.original_size_width = QLineEdit(self.groupBox)
-        self.original_size_width.setObjectName(u"original_size_width")
-
-        self.horizontalLayout_3.addWidget(self.original_size_width)
-
-        self.original_size_height = QLineEdit(self.groupBox)
-        self.original_size_height.setObjectName(u"original_size_height")
-
-        self.horizontalLayout_3.addWidget(self.original_size_height)
-
-
-        self.horizontalLayout_5.addWidget(self.groupBox)
-
-        self.groupBox_3 = QGroupBox(self.sdxl_settings_container)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.horizontalLayout_9 = QHBoxLayout(self.groupBox_3)
-        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
-        self.negative_original_size_width = QLineEdit(self.groupBox_3)
-        self.negative_original_size_width.setObjectName(u"negative_original_size_width")
-
-        self.horizontalLayout_9.addWidget(self.negative_original_size_width)
-
-        self.negative_original_size_height = QLineEdit(self.groupBox_3)
-        self.negative_original_size_height.setObjectName(u"negative_original_size_height")
-
-        self.horizontalLayout_9.addWidget(self.negative_original_size_height)
-
-
-        self.horizontalLayout_5.addWidget(self.groupBox_3)
-
-
-        self.sdxl_settings.addLayout(self.horizontalLayout_5)
-
-        self.horizontalLayout_10 = QHBoxLayout()
-        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
-        self.groupBox_4 = QGroupBox(self.sdxl_settings_container)
-        self.groupBox_4.setObjectName(u"groupBox_4")
-        self.horizontalLayout_11 = QHBoxLayout(self.groupBox_4)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.target_size_width = QLineEdit(self.groupBox_4)
-        self.target_size_width.setObjectName(u"target_size_width")
-
-        self.horizontalLayout_11.addWidget(self.target_size_width)
-
-        self.target_size_height = QLineEdit(self.groupBox_4)
-        self.target_size_height.setObjectName(u"target_size_height")
-
-        self.horizontalLayout_11.addWidget(self.target_size_height)
-
-
-        self.horizontalLayout_10.addWidget(self.groupBox_4)
-
-        self.groupBox_2 = QGroupBox(self.sdxl_settings_container)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.horizontalLayout_4 = QHBoxLayout(self.groupBox_2)
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.negative_target_size_width = QLineEdit(self.groupBox_2)
-        self.negative_target_size_width.setObjectName(u"negative_target_size_width")
-
-        self.horizontalLayout_4.addWidget(self.negative_target_size_width)
-
-        self.negative_target_size_height = QLineEdit(self.groupBox_2)
-        self.negative_target_size_height.setObjectName(u"negative_target_size_height")
-
-        self.horizontalLayout_4.addWidget(self.negative_target_size_height)
-
-
-        self.horizontalLayout_10.addWidget(self.groupBox_2)
-
-
-        self.sdxl_settings.addLayout(self.horizontalLayout_10)
-
-        self.horizontalLayout_12 = QHBoxLayout()
-        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.croops_coord_top_left_groupbox = QGroupBox(self.sdxl_settings_container)
-        self.croops_coord_top_left_groupbox.setObjectName(u"croops_coord_top_left_groupbox")
-        self.horizontalLayout_2 = QHBoxLayout(self.croops_coord_top_left_groupbox)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(9, 9, 9, 9)
-        self.crops_coords_top_left_x = QLineEdit(self.croops_coord_top_left_groupbox)
-        self.crops_coords_top_left_x.setObjectName(u"crops_coords_top_left_x")
-
-        self.horizontalLayout_2.addWidget(self.crops_coords_top_left_x)
-
-        self.crops_coords_top_left_y = QLineEdit(self.croops_coord_top_left_groupbox)
-        self.crops_coords_top_left_y.setObjectName(u"crops_coords_top_left_y")
-
-        self.horizontalLayout_2.addWidget(self.crops_coords_top_left_y)
-
-
-        self.horizontalLayout_12.addWidget(self.croops_coord_top_left_groupbox)
-
-        self.groupBox_5 = QGroupBox(self.sdxl_settings_container)
-        self.groupBox_5.setObjectName(u"groupBox_5")
-        self.horizontalLayout_13 = QHBoxLayout(self.groupBox_5)
-        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
-        self.negative_crops_coord_top_left_x = QLineEdit(self.groupBox_5)
-        self.negative_crops_coord_top_left_x.setObjectName(u"negative_crops_coord_top_left_x")
-
-        self.horizontalLayout_13.addWidget(self.negative_crops_coord_top_left_x)
-
-        self.negative_crops_coord_top_left_y = QLineEdit(self.groupBox_5)
-        self.negative_crops_coord_top_left_y.setObjectName(u"negative_crops_coord_top_left_y")
-
-        self.horizontalLayout_13.addWidget(self.negative_crops_coord_top_left_y)
-
-
-        self.horizontalLayout_12.addWidget(self.groupBox_5)
-
-
-        self.sdxl_settings.addLayout(self.horizontalLayout_12)
-
-        self.n_samples = SliderWidget(self.sdxl_settings_container)
-        self.n_samples.setObjectName(u"n_samples")
-        self.n_samples.setProperty(u"current_value", 1)
-        self.n_samples.setProperty(u"slider_maximum", 1000)
-        self.n_samples.setProperty(u"spinbox_maximum", 1000)
-        self.n_samples.setProperty(u"display_as_float", False)
-        self.n_samples.setProperty(u"spinbox_single_step", 1)
-        self.n_samples.setProperty(u"spinbox_page_step", 1)
-        self.n_samples.setProperty(u"spinbox_minimum", 1)
-        self.n_samples.setProperty(u"slider_minimum", 1)
-
-        self.sdxl_settings.addWidget(self.n_samples)
-
-        self.horizontalLayout_14 = QHBoxLayout()
-        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
-        self.images_per_batch = SliderWidget(self.sdxl_settings_container)
-        self.images_per_batch.setObjectName(u"images_per_batch")
-        self.images_per_batch.setProperty(u"current_value", 1)
-        self.images_per_batch.setProperty(u"slider_maximum", 6)
-        self.images_per_batch.setProperty(u"spinbox_maximum", 6)
-        self.images_per_batch.setProperty(u"display_as_float", False)
-        self.images_per_batch.setProperty(u"spinbox_single_step", 1)
-        self.images_per_batch.setProperty(u"spinbox_page_step", 1)
-        self.images_per_batch.setProperty(u"spinbox_minimum", 1)
-        self.images_per_batch.setProperty(u"slider_minimum", 1)
-
-        self.horizontalLayout_14.addWidget(self.images_per_batch)
-
-        self.infinite_images_button = QPushButton(self.sdxl_settings_container)
-        self.infinite_images_button.setObjectName(u"infinite_images_button")
-        self.infinite_images_button.setMinimumSize(QSize(30, 30))
-        self.infinite_images_button.setMaximumSize(QSize(30, 30))
-        icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.infinite_images_button.setIcon(icon)
-        self.infinite_images_button.setCheckable(True)
-        self.infinite_images_button.setChecked(False)
-
-        self.horizontalLayout_14.addWidget(self.infinite_images_button)
-
-
-        self.sdxl_settings.addLayout(self.horizontalLayout_14)
-
-
-        self.gridLayout.addWidget(self.sdxl_settings_container, 2, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
         self.stable_diffusion_generator_form.setWidget(self.scrollAreaWidgetContents)
 
@@ -395,9 +243,9 @@ class Ui_stablediffusion_generator_form(object):
         self.generate_button.setSizePolicy(sizePolicy1)
         self.generate_button.setMinimumSize(QSize(30, 30))
         self.generate_button.setMaximumSize(QSize(30, 30))
-        icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.generate_button.setIcon(icon1)
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.generate_button.setIcon(icon2)
 
         self.horizontalLayout_7.addWidget(self.generate_button)
 
@@ -408,9 +256,9 @@ class Ui_stablediffusion_generator_form(object):
         self.interrupt_button.setMinimumSize(QSize(30, 30))
         self.interrupt_button.setMaximumSize(QSize(30, 30))
         self.interrupt_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/x.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.interrupt_button.setIcon(icon2)
+        icon3 = QIcon()
+        icon3.addFile(u":/light/icons/feather/light/x.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.interrupt_button.setIcon(icon3)
 
         self.horizontalLayout_7.addWidget(self.interrupt_button)
 
@@ -424,67 +272,18 @@ class Ui_stablediffusion_generator_form(object):
         QWidget.setTabOrder(self.secondary_prompt, self.add_prompt_button)
         QWidget.setTabOrder(self.add_prompt_button, self.negative_prompt)
         QWidget.setTabOrder(self.negative_prompt, self.secondary_negative_prompt)
-        QWidget.setTabOrder(self.secondary_negative_prompt, self.image_presets)
-        QWidget.setTabOrder(self.image_presets, self.quality_effects)
-        QWidget.setTabOrder(self.quality_effects, self.original_size_width)
-        QWidget.setTabOrder(self.original_size_width, self.original_size_height)
-        QWidget.setTabOrder(self.original_size_height, self.negative_original_size_width)
-        QWidget.setTabOrder(self.negative_original_size_width, self.negative_original_size_height)
-        QWidget.setTabOrder(self.negative_original_size_height, self.target_size_width)
-        QWidget.setTabOrder(self.target_size_width, self.target_size_height)
-        QWidget.setTabOrder(self.target_size_height, self.negative_target_size_width)
-        QWidget.setTabOrder(self.negative_target_size_width, self.negative_target_size_height)
-        QWidget.setTabOrder(self.negative_target_size_height, self.crops_coords_top_left_x)
-        QWidget.setTabOrder(self.crops_coords_top_left_x, self.crops_coords_top_left_y)
-        QWidget.setTabOrder(self.crops_coords_top_left_y, self.negative_crops_coord_top_left_x)
-        QWidget.setTabOrder(self.negative_crops_coord_top_left_x, self.negative_crops_coord_top_left_y)
-        QWidget.setTabOrder(self.negative_crops_coord_top_left_y, self.generate_button)
+        QWidget.setTabOrder(self.secondary_negative_prompt, self.generate_button)
         QWidget.setTabOrder(self.generate_button, self.interrupt_button)
         QWidget.setTabOrder(self.interrupt_button, self.save_prompts_button)
         QWidget.setTabOrder(self.save_prompts_button, self.stable_diffusion_generator_form)
 
         self.retranslateUi(stablediffusion_generator_form)
-        self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
-        self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
 
         QMetaObject.connectSlotsByName(stablediffusion_generator_form)
     # setupUi
 
     def retranslateUi(self, stablediffusion_generator_form):
         stablediffusion_generator_form.setWindowTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Form", None))
-        self.add_prompt_button.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Add Prompt", None))
-        self.label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
-        self.prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
-        self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second prompt", None))
-        self.save_prompts_button.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Save Prompts", None))
-        self.negative_prompt_label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative Prompt", None))
-        self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative prompt", None))
-        self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second negative prompt", None))
-        self.label_2.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Presets", None))
-        self.label_3.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Quality Effects", None))
-        self.quality_effects.setItemText(0, "")
-        self.quality_effects.setItemText(1, QCoreApplication.translate("stablediffusion_generator_form", u"Normal", None))
-        self.quality_effects.setItemText(2, QCoreApplication.translate("stablediffusion_generator_form", u"Upscaled", None))
-        self.quality_effects.setItemText(3, QCoreApplication.translate("stablediffusion_generator_form", u"Downscaled", None))
-
-        self.groupBox.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Original size", None))
-        self.original_size_width.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"width", None))
-        self.original_size_height.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"height", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Negative original size", None))
-        self.negative_original_size_width.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"width", None))
-        self.negative_original_size_height.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"height", None))
-        self.groupBox_4.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Target size", None))
-        self.target_size_width.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"width", None))
-        self.target_size_height.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"height", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Negative target size", None))
-        self.negative_target_size_width.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"width", None))
-        self.negative_target_size_height.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"height", None))
-        self.croops_coord_top_left_groupbox.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Crops top left", None))
-        self.crops_coords_top_left_x.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"x position", None))
-        self.crops_coords_top_left_y.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"y position", None))
-        self.groupBox_5.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Negative crops top left", None))
-        self.negative_crops_coord_top_left_x.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"x position", None))
-        self.negative_crops_coord_top_left_y.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"y position", None))
         self.n_samples.setProperty(u"label_text", QCoreApplication.translate("stablediffusion_generator_form", u"Batches", None))
         self.n_samples.setProperty(u"settings_property", QCoreApplication.translate("stablediffusion_generator_form", u"generator_settings.n_samples", None))
         self.images_per_batch.setProperty(u"label_text", QCoreApplication.translate("stablediffusion_generator_form", u"Images Per Batch", None))
@@ -493,6 +292,18 @@ class Ui_stablediffusion_generator_form(object):
         self.infinite_images_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Toggle infinite image generation", None))
 #endif // QT_CONFIG(tooltip)
         self.infinite_images_button.setText("")
+        self.add_prompt_button.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Add Prompt", None))
+        self.label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
+        self.prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
+        self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second prompt", None))
+        self.save_prompts_button.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Save Prompts", None))
+        self.negative_prompt_label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative Prompt", None))
+        self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative prompt", None))
+        self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second negative prompt", None))
+#if QT_CONFIG(tooltip)
+        self.enable_torch_compile.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Use torch compile (slow first generation, fast subsequent)", None))
+#endif // QT_CONFIG(tooltip)
+        self.enable_torch_compile.setText("")
 #if QT_CONFIG(tooltip)
         self.generate_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Generate image", None))
 #endif // QT_CONFIG(tooltip)

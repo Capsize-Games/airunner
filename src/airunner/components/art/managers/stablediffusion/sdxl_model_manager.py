@@ -16,9 +16,9 @@ from safetensors.torch import load_file
 
 from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.managers.stablediffusion import prompt_utils
-from airunner.enums import QualityEffects, StableDiffusionVersion
-from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
-    StableDiffusionModelManager,
+from airunner.enums import StableDiffusionVersion
+from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+    BaseDiffusersModelManager,
 )
 from airunner.utils.memory import clear_memory
 from airunner.components.application.managers.base_model_manager import (
@@ -26,7 +26,7 @@ from airunner.components.application.managers.base_model_manager import (
 )
 
 
-class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
+class SDXLModelManager(BaseDiffusersModelManager, ModelManagerInterface):
     def __init__(self, *args, **kwargs):
         self._refiner = None
         super().__init__(*args, **kwargs)
@@ -166,6 +166,29 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
         """
         return self.use_compel and bool(self.second_prompt)
 
+    @property
+    def use_from_single_file(self) -> bool:
+        """
+        Determine if model should be loaded with from_single_file.
+
+        Single-file formats (.safetensors, .ckpt, .pt, .bin) must use from_single_file.
+        Directory structures use from_pretrained.
+
+        Returns:
+            True for single-file formats, False for directories
+        """
+        if not self.model_path:
+            return False
+
+        model_path_str = str(self.model_path).lower()
+        single_file_extensions = (
+            ".safetensors",
+            ".ckpt",
+            ".pt",
+            ".bin",
+        )
+        return model_path_str.endswith(single_file_extensions)
+
     def _build_dual_compel_embeddings(
         self,
         prompt: str,
@@ -297,6 +320,7 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
         return out, None
 
     def _prepare_data(self, active_rect=None) -> Dict:
+        """Prepare data for SDXL pipeline without deprecated quality_effects."""
         data = super()._prepare_data(active_rect)
         data.update(
             {
@@ -305,105 +329,7 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             }
         )
 
-        if (
-            self.image_request.quality_effects
-            is QualityEffects.HIGH_RESOLUTION
-        ):
-            data["target_size"] = (
-                self.image_request.width,
-                self.image_request.height,
-            )
-            data["original_size"] = (
-                self.image_request.width,
-                self.image_request.height,
-            )
-            data["negative_original_size"] = (
-                self.image_request.width // 2,
-                self.image_request.height // 2,
-            )
-            data["negative_target_size"] = (
-                self.image_request.width // 2,
-                self.image_request.height // 2,
-            )
-        elif (
-            self.image_request.quality_effects is QualityEffects.LOW_RESOLUTION
-        ):
-            data["target_size"] = (
-                0,
-                0,
-            )
-            data["original_size"] = (
-                0,
-                0,
-            )
-            data["negative_original_size"] = (
-                self.image_request.width,
-                self.image_request.height,
-            )
-            data["negative_target_size"] = (
-                self.image_request.width,
-                self.image_request.height,
-            )
-        elif self.image_request.quality_effects in (
-            QualityEffects.SUPER_SAMPLE_X2,
-            QualityEffects.SUPER_SAMPLE_X4,
-            QualityEffects.SUPER_SAMPLE_X8,
-        ):
-            if (
-                self.image_request.quality_effects
-                is QualityEffects.SUPER_SAMPLE_X2
-            ):
-                multiplier = 2
-            elif (
-                self.image_request.quality_effects
-                is QualityEffects.SUPER_SAMPLE_X4
-            ):
-                multiplier = 4
-            else:
-                multiplier = 8
-            data["target_size"] = (
-                self.image_request.width,
-                self.image_request.height,
-            )
-            data["original_size"] = (
-                self.image_request.width * multiplier,
-                self.image_request.height * multiplier,
-            )
-            data["negative_original_size"] = (
-                self.image_request.width // 2,
-                self.image_request.height // 2,
-            )
-            data["negative_target_size"] = (
-                self.image_request.width // 2,
-                self.image_request.height // 2,
-            )
-        elif self.image_request.quality_effects is QualityEffects.CUSTOM:
-            for key in [
-                "target_size",
-                "original_size",
-                "negative_target_size",
-                "negative_original_size",
-            ]:
-                for key in [
-                    "crops_coords_top_left",
-                    "negative_crops_coords_top_left",
-                ]:
-                    val = getattr(self.image_request, key, None)
-                    if (
-                        val
-                        and val.get("x", None) is not None
-                        and val.get("y", None) is not None
-                    ):
-                        data.update({key: (val["x"], val["y"])})
-
-                val = getattr(self.image_request, key, None)
-                if (
-                    val
-                    and val.get("width", None) is not None
-                    and val.get("height", None) is not None
-                ):
-                    data.update({key: (val["width"], val["height"])})
-
+        # Add secondary prompts for SDXL dual text encoders
         if not self.use_compel:
             data.update(
                 {
@@ -469,9 +395,9 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
 
     @property
     def second_prompt(self) -> str:
+        """Get secondary prompt without preset formatting."""
         second_prompt = prompt_utils.format_prompt(
             self.image_request.second_prompt,
-            prompt_utils.get_prompt_preset(self.image_request.image_preset),
             (
                 self.image_request.additional_prompts
                 if self.do_join_prompts
@@ -483,11 +409,9 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
 
     @property
     def second_negative_prompt(self) -> str:
+        """Get secondary negative prompt without preset formatting."""
         return prompt_utils.format_negative_prompt(
-            self.image_request.second_negative_prompt,
-            prompt_utils.get_negative_prompt_preset(
-                self.image_request.image_preset
-            ),
+            self.image_request.second_negative_prompt
         )
 
     def _load_prompt_embeds(self):
