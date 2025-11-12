@@ -53,6 +53,8 @@ class SignalCode(Enum):
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
+    OPEN_RESEARCH_DOCUMENT = "open_research_document_signal"
+    UNLOCK_RESEARCH_DOCUMENT = "unlock_research_document_signal"
     SAVE_STATE = "save_state_signal"
     RUN_SCRIPT = "run_script_signal"
     UPATE_LOCALE = "update_locale_signal"
@@ -449,6 +451,8 @@ class LLMActionType(Enum):
 
     FILE_INTERACTION = "file_interaction"
     WORKFLOW_INTERACTION = "workflow_interaction"
+
+    DEEP_RESEARCH = "deep_research"
 
 
 class CanvasToolName(Enum):

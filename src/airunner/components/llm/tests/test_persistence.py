@@ -158,6 +158,69 @@ class TestDatabaseChatMessageHistory(DatabaseTestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0].content, "Persistent message")
 
+    def test_tool_call_metadata_storage(self):
+        """Test that tool calls and results are stored as metadata."""
+        history = DatabaseChatMessageHistory()
+
+        # Add a regular message
+        history.add_message(HumanMessage(content="Search for something"))
+
+        # Add an AI message with tool calls
+        ai_msg_with_tools = AIMessage(content="")
+        ai_msg_with_tools.tool_calls = [
+            {
+                "name": "search_web",
+                "args": {"query": "test query"},
+                "id": "call_123",
+            }
+        ]
+        history.add_message(ai_msg_with_tools)
+
+        # Add a tool result message
+        from langchain_core.messages import ToolMessage
+
+        tool_msg = ToolMessage(
+            content="Search results here...", tool_call_id="call_123"
+        )
+        history.add_message(tool_msg)
+
+        # Add final AI response
+        history.add_message(AIMessage(content="Here's what I found..."))
+
+        # Verify regular messages don't include tool metadata
+        messages = history.messages
+        self.assertEqual(len(messages), 2)  # Only user + final AI message
+        self.assertEqual(messages[0].content, "Search for something")
+        self.assertEqual(messages[1].content, "Here's what I found...")
+
+        # Verify tool call metadata is stored separately
+        metadata = history.get_tool_call_metadata()
+        self.assertEqual(len(metadata), 2)  # Tool call + tool result
+
+        # Check tool call metadata
+        tool_call_entry = next(
+            (m for m in metadata if m.get("metadata_type") == "tool_calls"),
+            None,
+        )
+        self.assertIsNotNone(tool_call_entry)
+        self.assertEqual(tool_call_entry["role"], "tool_calls")
+        self.assertIn("tool_calls", tool_call_entry)
+        self.assertEqual(
+            tool_call_entry["tool_calls"][0]["name"], "search_web"
+        )
+
+        # Check tool result metadata
+        tool_result_entry = next(
+            (m for m in metadata if m.get("metadata_type") == "tool_result"),
+            None,
+        )
+        self.assertIsNotNone(tool_result_entry)
+        self.assertEqual(tool_result_entry["role"], "tool_result")
+        self.assertEqual(
+            tool_result_entry["content"], "Search results here..."
+        )
+        self.assertEqual(tool_result_entry["tool_call_id"], "call_123")
+
 
 class TestDatabaseCheckpointSaver(DatabaseTestCase):
     """Test DatabaseCheckpointSaver class."""

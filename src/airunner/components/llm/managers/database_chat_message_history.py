@@ -72,7 +72,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         """Retrieve all messages from the conversation.
 
         Returns:
-            List of LangChain BaseMessage objects
+            List of LangChain BaseMessage objects (excludes tool call metadata)
         """
         if not self._conversation:
             return []
@@ -85,6 +85,11 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             # Convert from database format to LangChain messages
             langchain_messages = []
             for msg in conversation_value:
+                # Skip metadata entries (tool calls and tool results)
+                # These are stored for debugging but not sent to the LLM
+                if msg.get("metadata_type") in ("tool_calls", "tool_result"):
+                    continue
+
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
 
@@ -115,24 +120,72 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         try:
             import datetime
 
-            # Skip ToolMessages - they're internal workflow state
-            # The model will see them during workflow execution via checkpoints,
-            # but they don't need to be in the persistent conversation history
+            # Track tool calls and tool messages for debugging, but store them separately
+            # These won't appear as regular conversation messages but will be logged
+
+            # Handle ToolMessages (results from tool execution)
             if message.__class__.__name__ == "ToolMessage":
                 self.logger.debug(
-                    "Skipping ToolMessage - internal workflow state"
+                    f"Tool result: {message.content[:100]}... "
+                    f"(tool_call_id: {getattr(message, 'tool_call_id', 'unknown')})"
+                )
+                # Store tool result in a separate metadata entry
+                now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                tool_result_dict = {
+                    "role": "tool_result",
+                    "name": "Tool Result",
+                    "content": message.content,
+                    "timestamp": now,
+                    "blocks": [
+                        {"block_type": "text", "text": message.content}
+                    ],
+                    "tool_call_id": getattr(message, "tool_call_id", None),
+                    "metadata_type": "tool_result",  # Mark as metadata for filtering
+                }
+                if self._conversation.value is None:
+                    self._conversation.value = []
+                self._conversation.value.append(tool_result_dict)
+                Conversation.objects.update(
+                    self.conversation_id, value=self._conversation.value
                 )
                 return
 
-            # Skip AIMessages with tool_calls - they're internal workflow instructions
-            # (These are the "thinking" steps where model decides to call a tool)
+            # Handle AIMessages with tool_calls (LLM requesting tool execution)
             if (
                 isinstance(message, AIMessage)
                 and hasattr(message, "tool_calls")
                 and message.tool_calls
             ):
                 self.logger.debug(
-                    "Skipping AIMessage with tool_calls - internal workflow instruction"
+                    f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
+                )
+                # Store tool call request in metadata
+                now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                tool_calls_dict = {
+                    "role": "tool_calls",
+                    "name": "Tool Planning",
+                    "content": f"Requested {len(message.tool_calls)} tool(s): "
+                    + ", ".join(
+                        [
+                            tc.get("name", "unknown")
+                            for tc in message.tool_calls
+                        ]
+                    ),
+                    "timestamp": now,
+                    "blocks": [
+                        {
+                            "block_type": "text",
+                            "text": f"Tool calls: {message.tool_calls}",
+                        }
+                    ],
+                    "tool_calls": message.tool_calls,  # Store actual tool call data
+                    "metadata_type": "tool_calls",  # Mark as metadata for filtering
+                }
+                if self._conversation.value is None:
+                    self._conversation.value = []
+                self._conversation.value.append(tool_calls_dict)
+                Conversation.objects.update(
+                    self.conversation_id, value=self._conversation.value
                 )
                 return
 
@@ -207,3 +260,31 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             self.logger.error(
                 f"Error clearing conversation: {e}", exc_info=True
             )
+
+    def get_tool_call_metadata(self) -> List[dict]:
+        """Retrieve tool call metadata for debugging.
+
+        Returns:
+            List of dicts containing tool call requests and results
+        """
+        if not self._conversation:
+            return []
+
+        try:
+            # Refresh conversation from database
+            self._conversation = Conversation.objects.get(self.conversation_id)
+            conversation_value = self._conversation.value or []
+
+            # Extract only metadata entries
+            metadata = []
+            for msg in conversation_value:
+                if msg.get("metadata_type") in ("tool_calls", "tool_result"):
+                    metadata.append(msg)
+
+            return metadata
+
+        except Exception as e:
+            self.logger.error(
+                f"Error retrieving tool call metadata: {e}", exc_info=True
+            )
+            return []

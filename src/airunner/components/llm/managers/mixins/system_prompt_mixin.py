@@ -260,6 +260,16 @@ class SystemPromptMixin:
                 "search_web for supplementary internet searches."
             )
 
+        elif action == LLMActionType.DEEP_RESEARCH:
+            base_prompt += (
+                "\n\nMode: DEEP RESEARCH"
+                "\nConduct comprehensive, multi-source research on the given topic. "
+                "Use 15-20+ tool calls to gather information from diverse sources. "
+                "Your goal is to produce a thorough, well-structured research document "
+                "(2000-5000+ words) with clear sections, extensive citations, and actionable insights. "
+                "Use search_web, scrape_website, and other research tools extensively."
+            )
+
         elif action == LLMActionType.APPLICATION_COMMAND:
             base_prompt += (
                 "\n\nMode: AUTO (Full Capabilities)"
