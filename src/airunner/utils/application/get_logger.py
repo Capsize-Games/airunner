@@ -36,10 +36,26 @@ class Logger:
         # Add file handler if enabled
         if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1":
             try:
+                # Import locally to avoid circular dependency
+                from airunner.components.settings.data.path_settings import (
+                    PathSettings,
+                )
+
+                settings = PathSettings.objects.first()
+                base_path = (
+                    settings.base_path
+                    if settings
+                    else "~/.local/share/airunner"
+                )
+            except (ImportError, Exception):
+                # Fallback if PathSettings not available yet (during initialization)
+                base_path = "~/.local/share/airunner"
+
+            try:
                 log_file = os.environ.get(
                     "AIRUNNER_LOG_FILE",
                     os.path.join(
-                        os.path.expanduser("~/.local/share/airunner"),
+                        os.path.expanduser(base_path),
                         "airunner.log",
                     ),
                 )

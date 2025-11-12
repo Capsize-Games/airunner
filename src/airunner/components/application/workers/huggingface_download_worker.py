@@ -242,7 +242,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             )
             self.emit_signal(
                 self._complete_signal,
-                {"model_path": str(model_path)},
+                {"model_path": str(model_path), "repo_id": repo_id},
             )
             return
 
@@ -301,7 +301,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._cleanup_temp_files()
         self.emit_signal(
             self._complete_signal,
-            {"model_path": str(model_path)},
+            {"model_path": str(model_path), "repo_id": repo_id},
         )
 
     def _download_file(

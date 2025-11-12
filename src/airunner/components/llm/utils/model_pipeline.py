@@ -21,12 +21,18 @@ from airunner.components.llm.utils.model_downloader import (
 from airunner.components.llm.utils.model_quantizer import ModelQuantizer
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
-class ModelPipeline:
+class ModelPipeline(
+    MediatorMixin,
+    SettingsMixin,
+):
     """
     Unified pipeline for downloading and quantizing LLM models.
 
@@ -85,9 +91,11 @@ class ModelPipeline:
         Args:
             base_path: Base directory for models (default: ~/.local/share/airunner/text/models/llm)
         """
+        super().__init__()
         if base_path is None:
-            base_path = os.path.expanduser(
-                "~/.local/share/airunner/text/models/llm"
+            base_path = os.path.join(
+                os.path.expanduser(self.path_settings.base_path),
+                f"text/models/llm",
             )
 
         self.base_path = Path(base_path)

@@ -119,6 +119,13 @@ class Ui_status_widget(object):
 
         self.horizontalLayout.addWidget(self.llm_status)
 
+        self.line_3 = QFrame(status_widget)
+        self.line_3.setObjectName(u"line_3")
+        self.line_3.setFrameShape(QFrame.Shape.VLine)
+        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout.addWidget(self.line_3)
+
         self.tts_status = QLabel(status_widget)
         self.tts_status.setObjectName(u"tts_status")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)

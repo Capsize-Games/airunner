@@ -10,8 +10,14 @@ import requests
 from pathlib import Path
 from typing import List, Optional, Callable, Dict
 
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
-class HuggingFaceDownloader:
+
+class HuggingFaceDownloader(
+    MediatorMixin,
+    SettingsMixin,
+):
     """
     Download models from HuggingFace without using their Hub client.
 
@@ -74,9 +80,11 @@ class HuggingFaceDownloader:
         Args:
             cache_dir: Directory to store downloaded models
         """
+        super().__init__()
         if cache_dir is None:
-            cache_dir = os.path.expanduser(
-                "~/.local/share/airunner/text/models/llm/causallm"
+            cache_dir = os.path.join(
+                os.path.expanduser(self.path_settings.base_path),
+                f"text/models/llm/causallm",
             )
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
