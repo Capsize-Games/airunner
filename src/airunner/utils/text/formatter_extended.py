@@ -167,20 +167,13 @@ class FormatterExtended:
             "markdown.extensions.tables",
             "markdown.extensions.nl2br",
         ]
-        pygments_css = HtmlFormatter(style="monokai").get_style_defs(
-            ".codehilite"
-        )
+
+        # Generate HTML content without injecting inline styles
+        # The conversation widget should load pygments CSS separately
         html_content = markdown.markdown(
             processed_markdown, extensions=extensions
         )
-        # Only include Pygments syntax highlighting CSS, let content_widget.css handle layout
-        html_with_css = f"""
-        <style>
-        {pygments_css}
-        </style>
-        {html_content}
-        """
-        return html_with_css
+        return html_content
 
     @staticmethod
     def format_content(content_string: str) -> dict:
