@@ -137,14 +137,115 @@ body {
 }
 
 .message .content {
-    line-height: 1.25em;
+    line-height: 1.6em;
     font-size: 0.92em;
     color: var(--light-color);
     margin: 0;
     padding: 10px 12px 0 12px;
-    white-space: pre-wrap;
     word-wrap: break-word;
+    /* Remove pre-wrap to allow proper HTML rendering */
 }
+
+/* Markdown element styles */
+.message .content p {
+    margin: 0.5em 0;
+}
+
+.message .content p:first-child {
+    margin-top: 0;
+}
+
+.message .content p:last-child {
+    margin-bottom: 0;
+}
+
+.message .content strong {
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.message .content em {
+    font-style: italic;
+}
+
+.message .content code {
+    background: var(--dark-color);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    font-size: 0.9em;
+}
+
+.message .content pre {
+    background: var(--dark-color);
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.8em 0;
+}
+
+.message .content pre code {
+    background: none;
+    padding: 0;
+}
+
+.message .content ol,
+.message .content ul {
+    margin: 0.6em 0;
+    padding-left: 2em;
+    line-height: 1.8em;
+}
+
+.message .content ol {
+    list-style-type: decimal;
+}
+
+.message .content ul {
+    list-style-type: disc;
+}
+
+.message .content li {
+    margin: 0.3em 0;
+    padding-left: 0.3em;
+}
+
+.message .content li::marker {
+    color: var(--primary-color);
+}
+
+.message .content h1,
+.message .content h2,
+.message .content h3,
+.message .content h4 {
+    margin: 1em 0 0.5em 0;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.message .content h1:first-child,
+.message .content h2:first-child,
+.message .content h3:first-child,
+.message .content h4:first-child {
+    margin-top: 0;
+}
+
+.message .content blockquote {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 1em;
+    margin: 0.8em 0;
+    color: var(--dim-color);
+    font-style: italic;
+}
+
+.message .content a {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.message .content a:hover {
+    color: var(--primary-color-light);
+}
+
 
 .message .timestamp {
     font-size: 0.85em;

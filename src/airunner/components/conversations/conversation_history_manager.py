@@ -122,7 +122,24 @@ class ConversationHistoryManager:
                     )
                     continue
 
+                # Skip tool call metadata messages (for debugging only, not for display)
+                if msg_obj.get("metadata_type") in (
+                    "tool_calls",
+                    "tool_result",
+                ):
+                    self.logger.debug(
+                        f"Skipping tool metadata message: {msg_obj.get('role')}"
+                    )
+                    continue
+
+                # Also skip by role for backward compatibility
                 role = msg_obj.get("role")
+                if role in ("tool_calls", "tool_result"):
+                    self.logger.debug(
+                        f"Skipping tool call message with role: {role}"
+                    )
+                    continue
+
                 is_bot = role == "assistant"
 
                 # Name extraction logic: prefer message-level, then conversation-level, then default

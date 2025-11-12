@@ -86,6 +86,81 @@ def search_web(
 
 
 @tool(
+    name="search_news",
+    category=ToolCategory.SEARCH,
+    description=(
+        "Search for recent news articles and current events using DuckDuckGo News. "
+        "Returns news articles with titles, URLs, snippets, sources, and dates. "
+        "ALWAYS use this for current events, recent decisions, breaking news, or anything time-sensitive. "
+        "Better than search_web for: politics, government actions, recent appointments, etc."
+    ),
+    return_direct=False,
+    requires_api=False,
+)
+def search_news(
+    query: Annotated[
+        str,
+        "News search query - focus on current events and recent information",
+    ],
+) -> str:
+    """Search for recent news articles using DuckDuckGo News.
+
+    This tool is specifically designed for current events and should be used when:
+    - User asks about recent events ("recent", "latest", "new")
+    - Political news, government decisions, appointments
+    - Breaking news or time-sensitive information
+    - Anything that happened in the last days/weeks/months
+
+    Args:
+        query: News search query
+
+    Returns:
+        Formatted news results with sources and dates
+    """
+    try:
+        from airunner.components.tools.search_providers.duckduckgo_provider import (
+            DuckDuckGoProvider,
+        )
+        import asyncio
+
+        logger.info(f"📰 Searching news for: {query}")
+
+        # Use DuckDuckGo news search
+        provider = DuckDuckGoProvider()
+        results = asyncio.run(provider.news_search(query, num_results=10))
+
+        logger.info(f"Got {len(results)} news results")
+
+        if not results:
+            logger.warning(f"No news results for: {query}")
+            return f"No news articles found for: {query}"
+
+        # Format top 7 results (news articles tend to be more focused)
+        formatted = f"Recent news articles for '{query}':\n\n"
+        for i, result in enumerate(results[:7], 1):
+            title = result.get("title", "N/A")
+            link = result.get("link", "#")
+            snippet = result.get("snippet", "")[:250]
+            source = result.get("source", "Unknown source")
+            date = result.get("date", "")
+
+            formatted += f"{i}. {title}\n"
+            formatted += f"   Source: {source}"
+            if date:
+                formatted += f" | Date: {date}"
+            formatted += f"\n   URL: {link}\n"
+            if snippet:
+                formatted += f"   {snippet}...\n"
+            formatted += "\n"
+
+        logger.info(f"✓ Formatted {len(results[:7])} news results")
+        return formatted
+    except Exception as e:
+        logger.error(f"News search error: {e}", exc_info=True)
+        return f"Error searching news: {str(e)}"
+
+
+@tool(
     name="scrape_website",
     category=ToolCategory.SEARCH,
     description=(
