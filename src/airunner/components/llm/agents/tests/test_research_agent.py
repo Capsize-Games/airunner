@@ -4,6 +4,9 @@ Unit tests for ResearchAgent.
 
 from unittest.mock import Mock
 
+# Import tools to trigger registration
+import airunner.components.llm.tools  # noqa: F401
+
 from airunner.components.llm.agents.research_agent import (
     ResearchAgent,
     ResearchState,
@@ -23,6 +26,32 @@ class TestResearchAgent:
         assert agent._chat_model is not None
         assert agent._system_prompt is not None
         assert isinstance(agent._tools, list)
+
+    def test_includes_web_search_tools(self):
+        """Test that research agent includes web search tools."""
+        mock_model = Mock()
+        mock_model.bind_tools = Mock(return_value=mock_model)
+
+        agent = ResearchAgent(chat_model=mock_model)
+
+        # Get tool names (tools are functions, so use __name__)
+        tool_names = [tool.__name__ for tool in agent._tools]
+
+        # Verify web search tools are included
+        assert (
+            "search_web" in tool_names
+        ), "search_web tool should be available"
+        assert (
+            "scrape_website" in tool_names
+        ), "scrape_website tool should be available"
+
+        # Verify research tools are also included
+        assert (
+            "synthesize_sources" in tool_names
+        ), "synthesize_sources tool should be available"
+        assert (
+            "cite_sources" in tool_names
+        ), "cite_sources tool should be available"
 
     def test_custom_system_prompt(self):
         """Test custom system prompt is used."""

@@ -17,10 +17,19 @@ from langchain_core.messages import AIMessage
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.enums import LLMActionType
+from airunner.enums import LLMActionType, SignalCode
 
 if TYPE_CHECKING:
     pass
+
+
+# NOTE: Import path_settings for research folder access
+try:
+    from airunner.components.settings.data.path_settings import PathSettings
+
+    PATH_SETTINGS_AVAILABLE = True
+except ImportError:
+    PATH_SETTINGS_AVAILABLE = False
 
 
 class GenerationMixin:
@@ -206,6 +215,133 @@ class GenerationMixin:
 
         return ""
 
+    def _handle_deep_research(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        llm_request: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """Handle Deep Research mode by routing to DeepResearchAgent.
+
+        Args:
+            prompt: The research topic/question
+            system_prompt: Optional custom system prompt
+            llm_request: Optional LLM request parameters
+
+        Returns:
+            Dictionary with 'response' key containing result message and document path
+        """
+        try:
+            from airunner.components.llm.agents.deep_research_agent import (
+                DeepResearchAgent,
+            )
+            import os
+
+            # Get research folder path
+            if not PATH_SETTINGS_AVAILABLE:
+                return {
+                    "response": "Error: Cannot access path settings for Deep Research mode.",
+                    "error": "PathSettings unavailable",
+                }
+
+            path_settings = PathSettings.objects.first()
+            if not path_settings or not path_settings.base_path:
+                return {
+                    "response": "Error: Path settings not configured.",
+                    "error": "PathSettings not configured",
+                }
+
+            research_path = os.path.join(
+                path_settings.base_path, "text/other/research"
+            )
+
+            # Create DeepResearchAgent with current chat model
+            agent = DeepResearchAgent(
+                chat_model=self._chat_model,
+                research_path=research_path,
+                system_prompt=system_prompt,
+                api=self,  # Pass self as API for tool access
+            )
+
+            # Compile the agent graph
+            compiled_graph = agent.compile()
+
+            # Run the deep research workflow
+            self.logger.info(f"Starting Deep Research: '{prompt}'")
+
+            # Emit status message to show research has started
+            if llm_request:
+                status_response = LLMResponse(
+                    message="🔬 **Starting Deep Research workflow...**\n\nThis will perform comprehensive multi-phase research including:\n- RAG document search\n- Web search and news gathering\n- Source analysis and note-taking\n- Document creation and writing\n\nThis may take several minutes. A locked research document will be created and updated as research progresses.",
+                    is_first_message=True,
+                    is_end_of_message=True,
+                    action=LLMActionType.DEEP_RESEARCH,
+                    request_id=getattr(llm_request, "request_id", None),
+                )
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    {"response": status_response},
+                )
+
+            # Create initial message for the agent
+            from langchain_core.messages import HumanMessage
+
+            initial_state = {
+                "messages": [HumanMessage(content=prompt)],
+                "research_topic": prompt,
+                "current_phase": "plan",
+                "search_queries": [],
+                "collected_sources": [],
+                "notes_path": "",
+                "outline": "",
+                "document_path": "",
+                "rag_loaded": False,
+                "sources_scraped": 0,
+                "sections_written": [],
+            }
+
+            result = compiled_graph.invoke(
+                initial_state
+            )  # Extract final message and document path from result
+            messages = result.get("messages", [])
+            document_path = result.get("document_path", "")
+
+            if messages:
+                final_message = messages[-1]
+                response_text = getattr(
+                    final_message, "content", str(final_message)
+                )
+            else:
+                response_text = "Deep research completed."
+
+            # Add document path to response
+            if document_path:
+                response_text += (
+                    f"\n\n**Research document saved to:** `{document_path}`"
+                )
+
+            self.logger.info(
+                f"Deep Research complete. Document: {document_path}"
+            )
+
+            return {
+                "response": response_text,
+                "document_path": document_path,
+            }
+
+        except ImportError as e:
+            self.logger.error(f"Failed to import DeepResearchAgent: {e}")
+            return {
+                "response": "Error: DeepResearchAgent is not available.",
+                "error": str(e),
+            }
+        except Exception as e:
+            self.logger.error(f"Deep Research failed: {e}", exc_info=True)
+            return {
+                "response": f"Deep Research encountered an error: {str(e)}",
+                "error": str(e),
+            }
+
     def _do_generate(
         self,
         prompt: str,
@@ -261,6 +397,17 @@ class GenerationMixin:
             )
             self.unload()
             self.load()
+
+        # DEEP RESEARCH MODE: Route to specialized deep research agent
+        if action == LLMActionType.DEEP_RESEARCH:
+            self.logger.info(
+                "Deep Research mode detected - routing to DeepResearchAgent"
+            )
+            return self._handle_deep_research(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                llm_request=llm_request,
+            )
 
         llm_request = llm_request or LLMRequest()
         self._setup_generation_workflow(

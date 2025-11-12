@@ -117,12 +117,38 @@ function initializeChatView() {
 }
 
 function sanitizeContent(html) {
-    // No DOMPurify: allow trusted HTML from backend (assume backend sanitizes)
-    // This enables MathJax, code, and markdown rendering as intended.
-    return html;
-}
+    // Content is already formatted HTML from FormatterExtended on the backend
+    // Just unescape if it's a JSON string, then return as-is
+    let content = html;
 
-function createMessageElement(msg) {
+    if (typeof content === 'string') {
+        content = content.trim();
+
+        // If content looks like a JSON string (wrapped in quotes with escaped chars), unescape it
+        if (content.startsWith('"') && content.endsWith('"')) {
+            try {
+                content = JSON.parse(content);
+            } catch (e) {
+                // Manual unescape if JSON.parse fails
+                content = content.slice(1, -1)
+                    .replace(/\\n/g, '\n')
+                    .replace(/\\"/g, '"')
+                    .replace(/\\\\/g, '\\');
+            }
+        }
+    }
+
+    return content;
+} function createMessageElement(msg) {
+    // Debug: log the raw content to see what we're receiving
+    if (msg.content && (msg.content.includes('<style') || msg.content.includes('pre {'))) {
+        console.log('[DEBUG] Message with HTML/CSS detected:', {
+            id: msg.id,
+            is_bot: msg.is_bot,
+            contentPreview: msg.content.substring(0, 500)
+        });
+    }
+
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
     messageDiv.setAttribute('data-message-id', msg.id || Date.now());

@@ -38,6 +38,8 @@ class DocumentEditorContainerWidget(BaseWidget):
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
             SignalCode.RUN_SCRIPT: self.run_script,
             SignalCode.NEW_DOCUMENT: self.handle_new_document_signal,
+            SignalCode.OPEN_RESEARCH_DOCUMENT: self.handle_open_research_document,
+            SignalCode.UNLOCK_RESEARCH_DOCUMENT: self.handle_unlock_research_document,
         }
         super().__init__(*args, **kwargs)
         # Register a Ctrl+W shortcut at the container level so closing a
@@ -171,6 +173,140 @@ class DocumentEditorContainerWidget(BaseWidget):
                     )
                 )
                 process.start()
+
+    def handle_open_research_document(self, data: Dict) -> None:
+        """Open a research document in a locked (read-only) tab.
+
+        Args:
+            data: Dict containing:
+                - path: str - File path to open
+                - title: str - Optional tab title (defaults to filename)
+                - locked: bool - Whether to lock the document (defaults to True)
+        """
+        file_path = data.get("path")
+        if not file_path:
+            return
+
+        title = data.get("title")
+        locked = data.get("locked", True)
+
+        # Normalize path for comparison
+        try:
+            target = os.path.abspath(file_path)
+        except Exception:
+            target = file_path
+
+        # Check if already open, and update lock status if so
+        for i in range(self.ui.documents.count()):
+            w = self.ui.documents.widget(i)
+            candidate = None
+            if hasattr(w, "file_path") and callable(getattr(w, "file_path")):
+                try:
+                    candidate = w.file_path()
+                except Exception:
+                    candidate = None
+            else:
+                candidate = getattr(w, "current_file_path", None) or getattr(
+                    w, "file_path", None
+                )
+            if candidate:
+                try:
+                    if os.path.abspath(candidate) == target:
+                        # Tab already exists, just update lock status
+                        self.ui.documents.setCurrentIndex(i)
+                        if hasattr(w, "set_locked"):
+                            w.set_locked(locked)
+                        # Update tab title with lock indicator
+                        tab_title = title or os.path.basename(file_path)
+                        if locked:
+                            tab_title = f"🔒 {tab_title}"
+                        self.ui.documents.setTabText(i, tab_title)
+                        return
+                except Exception:
+                    pass
+
+        # Create new tab
+        editor = DocumentEditorWidget()
+        editor.load_file(file_path)
+
+        # Set lock status
+        if hasattr(editor, "set_locked"):
+            editor.set_locked(locked)
+
+        # Set tab title with lock indicator
+        tab_title = title or os.path.basename(file_path)
+        if locked:
+            tab_title = f"🔒 {tab_title}"
+
+        self.ui.documents.addTab(editor, tab_title)
+
+        # Connect document modification signal
+        try:
+            doc = getattr(editor, "editor").document()
+            doc.modificationChanged.connect(
+                lambda modified, ed=editor: self._on_editor_modified(
+                    ed, modified
+                )
+            )
+        except Exception:
+            pass
+
+        self.ui.documents.setCurrentWidget(editor)
+
+        # Give keyboard focus to the editor
+        try:
+            if hasattr(editor, "editor"):
+                editor.editor.setFocus()
+        except Exception:
+            pass
+
+    def handle_unlock_research_document(self, data: Dict) -> None:
+        """Unlock a research document to allow editing.
+
+        Args:
+            data: Dict containing:
+                - path: str - File path to unlock
+        """
+        file_path = data.get("path")
+        if not file_path:
+            return
+
+        # Normalize path for comparison
+        try:
+            target = os.path.abspath(file_path)
+        except Exception:
+            target = file_path
+
+        # Find the tab and unlock it
+        for i in range(self.ui.documents.count()):
+            w = self.ui.documents.widget(i)
+            candidate = None
+            if hasattr(w, "file_path") and callable(getattr(w, "file_path")):
+                try:
+                    candidate = w.file_path()
+                except Exception:
+                    candidate = None
+            else:
+                candidate = getattr(w, "current_file_path", None) or getattr(
+                    w, "file_path", None
+                )
+            if candidate:
+                try:
+                    if os.path.abspath(candidate) == target:
+                        # Unlock the document
+                        if hasattr(w, "set_locked"):
+                            w.set_locked(False)
+
+                        # Remove lock indicator from tab title
+                        current_title = self.ui.documents.tabText(i)
+                        if current_title.startswith("🔒 "):
+                            new_title = current_title[
+                                3:
+                            ]  # Remove "🔒 " prefix
+                            self.ui.documents.setTabText(i, new_title)
+                        return
+                except Exception:
+                    pass
 
     def _append_process_output(self, process: QProcess) -> None:
         data = process.readAllStandardOutput().data().decode("utf-8")

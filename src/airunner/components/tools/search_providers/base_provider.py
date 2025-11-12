@@ -16,9 +16,17 @@ class BaseSearchProvider(ABC):
     common utilities for formatting results and HTTP client management.
     """
 
+    def __init__(self):
+        """Initialize the base search provider."""
+        self._logger = None
+
     @staticmethod
     def _format_result(
-        title: str, link: str, snippet: str = ""
+        title: str,
+        link: str,
+        snippet: str = "",
+        source: str = "",
+        date: str = "",
     ) -> Dict[str, str]:
         """Format a search result into a standard dictionary.
 
@@ -26,15 +34,22 @@ class BaseSearchProvider(ABC):
             title: Result title
             link: Result URL
             snippet: Result snippet/description
+            source: Source name (for news results)
+            date: Publication date (for news results)
 
         Returns:
             Formatted result dictionary
         """
-        return {
+        result = {
             "title": title.strip(),
             "link": link.strip(),
             "snippet": snippet.strip(),
         }
+        if source:
+            result["source"] = source.strip()
+        if date:
+            result["date"] = date.strip()
+        return result
 
     @staticmethod
     async def get_async_client() -> aiohttp.ClientSession:

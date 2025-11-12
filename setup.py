@@ -137,7 +137,7 @@ extras_require = {
         "networkx==3.4.2",
     ],
     "search": [
-        "duckduckgo-search>=8.1.0",
+        "ddgs>=9.0.0",  # Renamed from duckduckgo-search
         "aiohttp>=3.11.0",
         "google-api-python-client>=2.170.0",
         "wikipedia>=1.4.0",
