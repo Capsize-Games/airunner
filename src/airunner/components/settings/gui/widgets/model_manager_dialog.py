@@ -28,9 +28,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, Slot
 
 from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
 
-class ManageModelsDialog(QDialog):
+class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
     """Dialog for managing local LLM models.
 
     Features:
@@ -234,8 +238,9 @@ class ManageModelsDialog(QDialog):
         Returns:
             Absolute path to model directory
         """
-        return os.path.expanduser(
-            f"~/.local/share/airunner/text/models/llm/causallm/{model_name}"
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            f"text/models/llm/causallm/{model_name}",
         )
 
     @Slot()

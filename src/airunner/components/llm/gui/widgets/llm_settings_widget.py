@@ -93,8 +93,12 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 )
                 if model_info:
                     model_name = model_info["name"]
-                    model_path = os.path.expanduser(
-                        f"~/.local/share/airunner/text/models/llm/causallm/{model_name}"
+                    self.update_llm_generator_settings(
+                        model_version=model_name
+                    )
+                    model_path = os.path.join(
+                        os.path.expanduser(self.path_settings.base_path),
+                        f"text/models/llm/causallm/{model_name}",
                     )
                     print(f"  Setting model_path to: {model_path}")
                     self.ui.model_path.setText(model_path)
@@ -150,8 +154,9 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         quantization_bits = index_to_quant.get(quant_index, 4)
 
         model_name = model_info["name"]
-        model_path = os.path.expanduser(
-            f"~/.local/share/airunner/text/models/llm/causallm/{model_name}"
+        model_path = os.path.join(
+            os.path.expanduser(self.settings.base_path),
+            f"/text/models/llm/causallm/{model_name}",
         )
 
         # Emit signal to show download dialog (same as when model is required during chat)
@@ -358,8 +363,9 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             )
             if model_info:
                 model_name = model_info["name"]
-                model_path = os.path.expanduser(
-                    f"~/.local/share/airunner/text/models/llm/causallm/{model_name}"
+                model_path = os.path.join(
+                    os.path.expanduser(self.path_settings.base_path),
+                    f"text/models/llm/causallm/{model_name}",
                 )
                 # Save to database
                 self.update_llm_generator_settings(model_path=model_path)

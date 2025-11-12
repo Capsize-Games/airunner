@@ -1,6 +1,8 @@
 from typing import Dict
 import os
+import shutil
 
+from PySide6.QtGui import QStandardItemModel
 from PySide6.QtCore import (
     Signal,
     Qt,
@@ -26,6 +28,9 @@ from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
 from airunner.components.documents.gui.widgets.kiwix_widget import KiwixWidget
+from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
+    FileExplorerWidget,
+)
 
 
 class DocumentsWidget(BaseWidget):
@@ -66,13 +71,10 @@ class DocumentsWidget(BaseWidget):
 
     def setup_knowledge_folder(self):
         """Setup the knowledge folder file explorer in the Knowledge tab."""
-        from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
-            FileExplorerWidget,
-        )
-
         # Get the knowledge folder path
-        knowledge_path = os.path.expanduser(
-            "~/.local/share/airunner/knowledge"
+        knowledge_path = os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            f"knowledge",
         )
 
         # Create the directory if it doesn't exist
@@ -93,8 +95,6 @@ class DocumentsWidget(BaseWidget):
         # inject a virtual "Kiwix Zim Files" folder without creating it on
         # disk). We'll list local documents from `documents_path` and add a
         # top-level virtual folder for ZIM files stored in the ZimFile model.
-        from PySide6.QtGui import QStandardItemModel
-
         self.documents_model = QStandardItemModel(self)
         self.ui.documentsTreeView.setModel(self.documents_model)
         self.ui.documentsTreeView.setHeaderHidden(True)
@@ -580,8 +580,6 @@ class DocumentsWidget(BaseWidget):
 
             for folder_path in selected_folders:
                 # Delete all documents in the folder from database and disk
-                import shutil
-
                 try:
                     if os.path.exists(folder_path):
                         # First delete from database

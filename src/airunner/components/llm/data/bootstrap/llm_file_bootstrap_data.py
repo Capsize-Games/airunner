@@ -50,10 +50,17 @@ LLM_FILE_BOOTSTRAP_DATA = {
         "path_settings": "llm_causallm_model_path",
         "files": [
             "config.json",
-            "consolidated.safetensors",
             "generation_config.json",
+            "model-00001-of-00004.safetensors",
+            "model-00002-of-00004.safetensors",
+            "model-00003-of-00004.safetensors",
+            "model-00004-of-00004.safetensors",
+            "model.safetensors.index.json",
             "params.json",
+            "special_tokens_map.json",
             "tekken.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
         ],
     },
     "w4ffl35/Ministral-8B-Instruct-2410-doublequant": {
@@ -106,6 +113,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
         "path_settings": "text_embedding",
         "files": [
             "1_Pooling/config.json",
+            "config_sentence_transformers.json",
             "config.json",
             "model.safetensors",
             "modules.json",
