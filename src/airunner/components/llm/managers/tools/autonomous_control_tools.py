@@ -5,10 +5,11 @@ import json
 
 from langchain.tools import tool
 
+from airunner.components.tools.base_tool import BaseTool
 from airunner.enums import SignalCode
 
 
-class AutonomousControlTools:
+class AutonomousControlTools(BaseTool):
     """Mixin class providing full autonomous control over the application.
 
     These tools allow the LLM to control the application like a user would,
