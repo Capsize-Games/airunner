@@ -66,6 +66,7 @@ class StatusWidget(BaseWidget):
 
     def on_application_settings_changed(self):
         self.set_sd_status_text()
+        self.set_llm_status_text()
 
     def set_sd_pipeline_label(self, data: Optional[Dict] = None):
         data = data or {}
@@ -79,6 +80,7 @@ class StatusWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.set_sd_status_text()
+        self.set_llm_status_text()
 
         if self.application_settings.sd_enabled:
             self.on_model_status_changed_signal(
@@ -191,6 +193,15 @@ class StatusWidget(BaseWidget):
             except RuntimeError as e:
                 if AIRUNNER_ART_ENABLED:
                     self.logger.warning(f"Error setting SD status text: {e}")
+
+    def set_llm_status_text(self):
+        model_version = self.llm_generator_settings.model_version
+        if self.version != model_version:
+            version = model_version
+            try:
+                self.ui.llm_status.setText(version)
+            except RuntimeError as e:
+                self.logger.warning(f"Error setting LLM status text: {e}")
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)

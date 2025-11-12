@@ -48,10 +48,21 @@ class LLMGenerateWorker(
         self._interrupted = False
         self._download_dialog_showing = False
         self._download_dialog = None
+        self._pending_llm_request = (
+            None  # Store pending request during download
+        )
         self.manager_thread: Optional[QThread] = None
         self.download_manager = None
         super().__init__()
         self._llm_thread = None
+
+        # Register download completion handler
+        from airunner.enums import SignalCode
+
+        self.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+            self.on_huggingface_download_complete_signal,
+        )
 
     @property
     def use_openrouter(self) -> bool:
@@ -172,8 +183,12 @@ class LLMGenerateWorker(
         for doc in documents:
             self.model_manager.agent.load_html_into_rag(doc)
 
-    def on_quit_application_signal(self) -> None:
-        """Handle application quit signal."""
+    def on_quit_application_signal(self, data: Optional[Dict] = None) -> None:
+        """Handle application quit signal.
+
+        Args:
+            data: Optional signal data dictionary
+        """
         self.logger.debug("Quitting LLM")
         self.running = False
         if self._model_manager:
@@ -308,8 +323,36 @@ class LLMGenerateWorker(
             flush=True,
         )
 
+        # Store the request in case a download is triggered
+        # This will be retried after download completes
+        self._pending_llm_request = message
+        self.logger.info(
+            f"Stored pending request with ID: {message.get('request_id')}"
+        )
+
         manager = self.model_manager
-        manager.handle_request(message, self.context_manager.all_contexts())
+        result = manager.handle_request(
+            message, self.context_manager.all_contexts()
+        )
+
+        # Clear pending request only if request truly completed successfully
+        # Check for error responses (response starting with "Error:")
+        if result:
+            response_text = result.get("response", "")
+            has_error = result.get("error") or (
+                isinstance(response_text, str)
+                and response_text.startswith("Error:")
+            )
+
+            if not has_error:
+                self.logger.info(
+                    "Request completed successfully, clearing pending request"
+                )
+                self._pending_llm_request = None
+            else:
+                self.logger.info(
+                    f"Request failed with error, keeping pending request for retry after download"
+                )
 
     def _load_llm_thread(self, data: Optional[Dict] = None) -> None:
         """Load LLM in a separate thread.

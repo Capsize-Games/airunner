@@ -232,11 +232,31 @@ class GenerationMixin:
         Returns:
             Dictionary with 'response' key containing generated text
         """
-        if self._current_model_path != self.model_path:
+        # Validate model path before generation
+        try:
+            current_path = self._current_model_path
+            configured_path = self.model_path
+        except ValueError as e:
+            # Model path validation failed (e.g., embedding model set as main LLM)
+            self.logger.error(
+                f"Cannot generate - model path validation failed: {e}"
+            )
+            error_msg = str(e)
+            if "embedding model" in error_msg.lower():
+                return {
+                    "response": "Error: Invalid model configuration. The embedding model is set as the main LLM. Please select a proper chat model in Settings > LLM.",
+                    "error": str(e),
+                }
+            return {
+                "response": "Error: No LLM model configured. Please select a model in Settings > LLM.",
+                "error": str(e),
+            }
+
+        if current_path != configured_path:
             self.logger.warning(
                 f"Model path mismatch detected: "
-                f"current='{self._current_model_path}' vs "
-                f"settings='{self.model_path}'. "
+                f"current='{current_path}' vs "
+                f"settings='{configured_path}'. "
                 f"Reloading model..."
             )
             self.unload()

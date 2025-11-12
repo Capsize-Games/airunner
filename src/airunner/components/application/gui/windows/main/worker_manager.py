@@ -474,7 +474,13 @@ class WorkerManager(Worker):
                 f"Pending generation request: {self._pending_generation_request is not None}"
             )
 
-        # If we have a pending generation request, retry it now
+        # Delegate to LLM worker for LLM model downloads
+        if self._llm_generate_worker is not None:
+            self.llm_generate_worker.on_huggingface_download_complete_signal(
+                data
+            )
+
+        # If we have a pending generation request (for image generation), retry it now
         if self._pending_generation_request:
             if self.logger:
                 self.logger.info(

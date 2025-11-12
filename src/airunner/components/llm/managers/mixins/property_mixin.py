@@ -153,10 +153,21 @@ class PropertyMixin:
             Absolute path to the model directory
 
         Raises:
-            ValueError: If no model path is configured in settings
+            ValueError: If no model path is configured in settings or if
+                       embedding model path is incorrectly used as main LLM
         """
         if not self.llm_generator_settings.model_path:
             raise ValueError(
                 "No model path configured. Please select a model in LLM settings."
             )
-        return os.path.expanduser(self.llm_generator_settings.model_path)
+
+        model_path = os.path.expanduser(self.llm_generator_settings.model_path)
+
+        # Validate that the embedding model path is not used as main LLM
+        if "intfloat/e5-large" in model_path or "/embedding/" in model_path:
+            raise ValueError(
+                f"Invalid model path: '{model_path}' appears to be an embedding model. "
+                "Please configure a proper chat LLM model in LLM settings."
+            )
+
+        return model_path

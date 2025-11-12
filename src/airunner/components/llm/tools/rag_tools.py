@@ -11,6 +11,7 @@ from typing import Annotated, Any
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.documents.data.models.document import Document
 from airunner.components.data.session_manager import session_scope
+from airunner.components.settings.data.path_settings import PathSettings
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -254,7 +255,8 @@ def save_to_knowledge_base(
     """
     try:
         # Create a document file
-        base_path = os.path.expanduser("~/.local/share/airunner")
+        settings = PathSettings.objects.first()
+        base_path = os.path.expanduser(settings.base_path)
         kb_path = os.path.join(base_path, "knowledge_base", category)
         os.makedirs(kb_path, exist_ok=True)
 
