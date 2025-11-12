@@ -694,3 +694,29 @@ class DocumentEditorWidget(BaseWidget):
                 self, "Error", f"Error saving file {path}: {e}"
             )
             return False
+
+    def set_locked(self, locked: bool) -> None:
+        """Set the document's locked (read-only) state.
+
+        Args:
+            locked: If True, document becomes read-only with visual indicator.
+                   If False, document is editable.
+        """
+        try:
+            self.editor.setReadOnly(locked)
+
+            # Optional: Add visual feedback for locked state
+            if locked:
+                # Set a slightly different background color to indicate read-only
+                palette = self.editor.palette()
+                palette.setColor(
+                    self.editor.backgroundRole(),
+                    QColor(245, 245, 245),  # Light gray background
+                )
+                self.editor.setPalette(palette)
+            else:
+                # Restore default background
+                self.editor.setPalette(self.style().standardPalette())
+
+        except Exception as e:
+            self._logger.exception("Failed to set locked state: %s", e)

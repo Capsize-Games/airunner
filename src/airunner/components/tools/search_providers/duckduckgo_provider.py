@@ -14,10 +14,56 @@ except ImportError:
 from airunner.components.tools.search_providers.base_provider import (
     BaseSearchProvider,
 )
+from airunner.components.tools.web_content_extractor import WebContentExtractor
 
 
 class DuckDuckGoProvider(BaseSearchProvider):
     """DuckDuckGo web search provider."""
+
+    @staticmethod
+    def _build_exclusion_query(query: str) -> str:
+        """Add -site: exclusions to query for blocked domains.
+
+        Args:
+            query: Original search query
+
+        Returns:
+            Query with -site: exclusions appended
+        """
+        try:
+            blocklist = WebContentExtractor.get_blocklist()
+
+            # Limit to priority blocked domains to avoid query length issues
+            # DDG has query length limits, so we can't exclude hundreds of sites
+            priority_blocks = []
+            for domain in blocklist:
+                # Prioritize common low-quality or blocked domains
+                if any(
+                    bad in domain.lower()
+                    for bad in [
+                        "wikipedia",
+                        "reuters",
+                        "tandfonline",
+                        "washingtonpost",
+                        "compliancewire",
+                        "nytimes",
+                    ]
+                ):
+                    priority_blocks.append(domain)
+
+            # Limit to 10 exclusions max to keep query reasonable
+            priority_blocks = priority_blocks[:10]
+
+            if priority_blocks:
+                exclusions = " ".join(
+                    [f"-site:{domain}" for domain in priority_blocks]
+                )
+                return f"{query} {exclusions}"
+        except Exception:
+            # If blocklist fails, just return original query
+            pass
+
+        return query
 
     async def search(
         self,
@@ -35,12 +81,15 @@ class DuckDuckGoProvider(BaseSearchProvider):
         Returns:
             List of search results
         """
-        self.logger.info(f"Starting DuckDuckGo search for: {query}")
+        # Add blocklist exclusions to query
+        enhanced_query = self._build_exclusion_query(query)
+
+        self.logger.info(f"Starting DuckDuckGo search for: {enhanced_query}")
         results = []
         try:
             with DDGS() as ddgs:
                 for r in ddgs.text(
-                    query,
+                    enhanced_query,  # Use enhanced query with exclusions
                     region="wt-wt",
                     safesearch="Moderate",
                     max_results=num_results,
@@ -83,12 +132,17 @@ class DuckDuckGoProvider(BaseSearchProvider):
         Returns:
             List of news article results
         """
-        self.logger.info(f"Starting DuckDuckGo NEWS search for: {query}")
+        # Add blocklist exclusions to query
+        enhanced_query = self._build_exclusion_query(query)
+
+        self.logger.info(
+            f"Starting DuckDuckGo NEWS search for: {enhanced_query}"
+        )
         results = []
         try:
             with DDGS() as ddgs:
                 for r in ddgs.news(
-                    query,
+                    enhanced_query,  # Use enhanced query with exclusions
                     region="wt-wt",
                     safesearch="Moderate",
                     max_results=num_results,

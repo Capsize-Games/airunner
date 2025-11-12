@@ -74,6 +74,7 @@ class ChatPromptWidget(BaseWidget):
             ("Chat", LLMActionType.CHAT),
             ("Auto", LLMActionType.APPLICATION_COMMAND),
             ("RAG", LLMActionType.PERFORM_RAG_SEARCH),
+            ("Deep Research", LLMActionType.DEEP_RESEARCH),
         ]
         if AIRUNNER_ART_ENABLED:
             action_map.append(("Image", LLMActionType.GENERATE_IMAGE))
@@ -274,6 +275,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.GENERATE_IMAGE
         elif val == "RAG":
             llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
+        elif val == "Deep Research":
+            llm_action_value = LLMActionType.DEEP_RESEARCH
         elif val == "Auto":
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         else:

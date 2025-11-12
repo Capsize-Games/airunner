@@ -338,6 +338,20 @@ class LLMRequest:
                 tool_categories=None,  # Enable all tools for commands/decisions
             )
 
+        elif action == LLMActionType.DEEP_RESEARCH:
+            # Deep Research: Comprehensive, creative, high token budget
+            # Needs to generate long-form structured content with extensive tool use
+            return cls(
+                do_sample=True,  # Creative research writing
+                temperature=0.7,  # Balanced - creative but factual
+                repetition_penalty=1.15,  # Avoid redundant phrasing
+                no_repeat_ngram_size=3,  # Some phrase blocking
+                max_new_tokens=8192,  # Very high for comprehensive documents
+                top_k=50,  # Broad vocabulary
+                top_p=0.9,  # Diverse but coherent
+                tool_categories=["RESEARCH", "SEARCH"],  # Research tools only
+            )
+
         else:
             # Default: Balanced settings
             return cls(

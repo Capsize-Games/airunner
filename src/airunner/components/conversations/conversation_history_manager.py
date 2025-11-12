@@ -114,6 +114,9 @@ class ConversationHistoryManager:
             if len(raw_messages) > max_messages:
                 raw_messages = raw_messages[-max_messages:]
 
+            # Track URLs from tool results for citation
+            pending_citations: List[str] = []
+
             formatted_messages: List[Dict[str, Any]] = []
             for msg_idx, msg_obj in enumerate(raw_messages):
                 if not isinstance(msg_obj, dict):
@@ -127,6 +130,18 @@ class ConversationHistoryManager:
                     "tool_calls",
                     "tool_result",
                 ):
+                    # Extract URLs from tool_result messages for citations
+                    if msg_obj.get("metadata_type") == "tool_result":
+                        content_text = msg_obj.get("content", "")
+                        # Extract URLs using regex (matches http:// and https://)
+                        import re
+
+                        urls = re.findall(
+                            r'https?://[^\s<>"{}|\\^`\[\]]+', content_text
+                        )
+
+                        pending_citations.extend(urls)
+
                     self.logger.debug(
                         f"Skipping tool metadata message: {msg_obj.get('role')}"
                     )
@@ -190,6 +205,20 @@ class ConversationHistoryManager:
                     "is_bot": is_bot,
                     "id": msg_idx,  # Simple index within this loaded history
                 }
+
+                # If this is an assistant message and we have pending citations, append them
+                if is_bot and pending_citations:
+                    # Remove duplicates while preserving order
+                    unique_citations = list(dict.fromkeys(pending_citations))
+
+                    # Format citations as markdown links
+                    citation_text = "\n\n---\n\n**Sources:**\n\n"
+                    for i, url in enumerate(unique_citations, 1):
+                        citation_text += f"{i}. [{url}]({url})\n"
+
+                    formatted_msg["content"] = content + citation_text
+                    pending_citations.clear()
+
                 # Pass through mood/emoji fields if present
                 for key in ("bot_mood", "bot_mood_emoji", "user_mood"):
                     if key in msg_obj:

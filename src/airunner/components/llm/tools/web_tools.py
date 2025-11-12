@@ -5,6 +5,7 @@ Provides tools for searching the internet via DuckDuckGo and
 scraping content from websites using BeautifulSoup.
 """
 
+import time
 from typing import Annotated
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
@@ -12,6 +13,10 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+# Rate limiting for DuckDuckGo searches
+_last_search_time = 0
+_SEARCH_COOLDOWN = 2.0  # seconds between searches
 
 
 @tool(
@@ -36,7 +41,20 @@ def search_web(
     Returns:
         Formatted search results from DuckDuckGo
     """
+    global _last_search_time
+
     try:
+        # Rate limiting: wait if we searched too recently
+        time_since_last = time.time() - _last_search_time
+        if time_since_last < _SEARCH_COOLDOWN:
+            wait_time = _SEARCH_COOLDOWN - time_since_last
+            logger.info(
+                f"Rate limiting: waiting {wait_time:.1f}s before search"
+            )
+            time.sleep(wait_time)
+
+        _last_search_time = time.time()
+
         from airunner.components.tools.search_tool import (
             AggregatedSearchTool,
         )
@@ -52,26 +70,20 @@ def search_web(
             f"Search results keys: {results.keys() if results else 'None'}"
         )
 
-        # Format results
-        if not results or "duckduckgo" not in results:
-            logger.warning(
-                f"No results dict or missing duckduckgo key for: {query}"
-            )
-            return f"No search results available for: {query}"
-
-        ddg_results = results["duckduckgo"]
+        # Return structured results dict for programmatic consumption
+        ddg_results = results.get("duckduckgo", []) if results else []
         logger.info(f"Got {len(ddg_results)} DuckDuckGo results")
 
         if not ddg_results:
             logger.warning(f"Empty DuckDuckGo results list for: {query}")
-            return f"No search results available for: {query}"
+            return {"results": []}
 
-        # Format top 5 results
+        # Provide both raw results and a human-readable summary
         formatted = f"Web search results for '{query}':\n\n"
         for i, result in enumerate(ddg_results[:5], 1):
             title = result.get("title", "N/A")
             link = result.get("link", "#")
-            snippet = result.get("snippet", "")[:200]  # Limit snippet length
+            snippet = result.get("snippet", "")[:200]
             formatted += f"{i}. {title}\n"
             formatted += f"   URL: {link}\n"
             if snippet:
@@ -79,7 +91,7 @@ def search_web(
             formatted += "\n"
 
         logger.info(f"✓ Formatted {len(ddg_results[:5])} search results")
-        return formatted
+        return {"results": ddg_results, "summary": formatted}
     except Exception as e:
         logger.error(f"Web search error: {e}", exc_info=True)
         return f"Error searching web: {str(e)}"
@@ -117,7 +129,20 @@ def search_news(
     Returns:
         Formatted news results with sources and dates
     """
+    global _last_search_time
+
     try:
+        # Rate limiting: wait if we searched too recently
+        time_since_last = time.time() - _last_search_time
+        if time_since_last < _SEARCH_COOLDOWN:
+            wait_time = _SEARCH_COOLDOWN - time_since_last
+            logger.info(
+                f"Rate limiting: waiting {wait_time:.1f}s before news search"
+            )
+            time.sleep(wait_time)
+
+        _last_search_time = time.time()
+
         from airunner.components.tools.search_providers.duckduckgo_provider import (
             DuckDuckGoProvider,
         )
@@ -133,9 +158,9 @@ def search_news(
 
         if not results:
             logger.warning(f"No news results for: {query}")
-            return f"No news articles found for: {query}"
+            return {"results": []}
 
-        # Format top 7 results (news articles tend to be more focused)
+        # Format top 7 results and return structured dict
         formatted = f"Recent news articles for '{query}':\n\n"
         for i, result in enumerate(results[:7], 1):
             title = result.get("title", "N/A")
@@ -154,7 +179,7 @@ def search_news(
             formatted += "\n"
 
         logger.info(f"✓ Formatted {len(results[:7])} news results")
-        return formatted
+        return {"results": results, "summary": formatted}
     except Exception as e:
         logger.error(f"News search error: {e}", exc_info=True)
         return f"Error searching news: {str(e)}"
@@ -177,8 +202,8 @@ def scrape_website(
         str,
         "Website URL to scrape content from (must include http:// or https://)",
     ],
-) -> str:
-    """Scrape and extract clean content from a website.
+) -> dict:
+    """Scrape and extract clean content with metadata from a website.
 
     Uses Trafilatura for intelligent content extraction that automatically
     identifies and extracts the main content while removing navigation,
@@ -188,7 +213,7 @@ def scrape_website(
         url: Website URL to scrape (e.g., "https://example.com/article")
 
     Returns:
-        Extracted and summarized content, or error message if scraping fails
+        Dictionary with content and metadata, or error dict if scraping fails
     """
     logger.info(f"Scraping: {url}")
 
@@ -197,19 +222,26 @@ def scrape_website(
             WebContentExtractor,
         )
 
-        # Use WebContentExtractor which uses Trafilatura for smart extraction
-        # This automatically handles content detection, boilerplate removal, and summarization
-        content = WebContentExtractor.fetch_and_extract(url, use_cache=True)
+        # Use new method that extracts both content and metadata
+        result = WebContentExtractor.fetch_and_extract_with_metadata(
+            url, use_cache=True
+        )
 
-        if content:
-            logger.info(f"✓ Extracted {len(content)} characters from {url}")
-            return content
-        else:
-            return (
-                f"Could not extract content from {url}. "
-                "The page may be empty, require JavaScript, or be blocking scrapers."
+        if result and result.get("content"):
+            logger.info(
+                f"✓ Extracted {len(result['content'])} characters from {url}"
             )
+            logger.info(f"  Title: {result.get('title', 'N/A')}")
+            return result
+        else:
+            return {
+                "content": None,
+                "error": (
+                    f"Could not extract content from {url}. "
+                    "The page may be empty, require JavaScript, or be blocking scrapers."
+                ),
+            }
 
     except Exception as e:
         logger.error(f"Web scraping error for {url}: {e}", exc_info=True)
-        return f"Error scraping {url}: {str(e)}"
+        return {"content": None, "error": f"Error scraping {url}: {str(e)}"}
