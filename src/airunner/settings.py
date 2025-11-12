@@ -381,3 +381,6 @@ SLASH_COMMANDS = {
     "w": LLMActionType.WORKFLOW,
 }
 
+AIRUNNER_SCRAPER_BLACKLIST = [
+    "wikipedia.org",
+]

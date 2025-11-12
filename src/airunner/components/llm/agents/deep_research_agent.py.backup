@@ -1,0 +1,455 @@
+"""
+Deep Research Agent - Comprehensive multi-stage research workflow.
+
+This agent conducts Google Deep Research-style comprehensive analysis:
+- Broad multi-query searches (10-15 results per query)
+- Scrapes and analyzes multiple sources
+- Synthesizes findings into structured markdown documents
+- Saves research papers to disk for future reference
+"""
+
+import os
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Annotated, List, Callable, Dict
+from typing_extensions import TypedDict
+
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.graph import START, END, StateGraph, add_messages
+from langgraph.prebuilt import ToolNode
+
+from airunner.components.llm.core.tool_registry import (
+    ToolRegistry,
+    ToolCategory,
+)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+class DeepResearchState(TypedDict):
+    """
+    State schema for Deep Research agent.
+
+    Attributes:
+        messages: Conversation messages
+        research_topic: Main research topic
+        current_phase: Current workflow phase (phase0, phase1a, phase1b, etc.)
+        search_queries: List of search queries to execute
+        collected_sources: URLs and content from scraped sources
+        notes_path: Path to temporary research notes file
+        outline: Document outline structure
+        document_path: Path where final document will be saved
+        rag_loaded: Whether RAG documents have been loaded
+        sources_scraped: Number of sources scraped
+        sections_written: List of section names written
+    """
+
+    messages: Annotated[list[BaseMessage], add_messages]
+    research_topic: str
+    current_phase: str
+    search_queries: List[str]
+    collected_sources: List[Dict[str, str]]
+    notes_path: str
+    outline: str
+    document_path: str
+    rag_loaded: bool
+    sources_scraped: int
+    sections_written: List[str]
+
+
+class DeepResearchAgent:
+    """
+    Deep Research Agent for comprehensive multi-stage research.
+
+    Produces Google Deep Research-style comprehensive documents:
+    - 10-20 pages of structured content
+    - Multiple sections with headers
+    - Extensive citations and sources
+    - Markdown formatted for readability
+    - Saved to research folder
+    """
+
+    def __init__(
+        self,
+        chat_model: Any,
+        research_path: str,
+        system_prompt: str = None,
+        api: Any = None,
+    ):
+        """
+        Initialize Deep Research Agent.
+
+        Args:
+            chat_model: LangChain chat model
+            research_path: Base path for saving research documents
+            system_prompt: Optional custom system prompt
+            api: Optional API instance for tool access
+        """
+        self._chat_model = chat_model
+        self._research_path = Path(research_path)
+        self._research_path.mkdir(parents=True, exist_ok=True)
+        self._system_prompt = system_prompt or self._default_system_prompt()
+        self._api = api
+        self._tools = self._get_research_tools()
+
+        # Bind tools to model
+        if self._tools and hasattr(self._chat_model, "bind_tools"):
+            self._chat_model = self._chat_model.bind_tools(self._tools)
+            logger.info(f"Deep Research agent bound {len(self._tools)} tools")
+
+    def _default_system_prompt(self) -> str:
+        """Get base system prompt for deep research mode."""
+        return """You are an expert research AI producing comprehensive, publication-quality documents.
+
+Your research documents should be:
+- Well-structured with clear sections
+- Extensively cited with sources
+- Objective and balanced
+- 2000-5000+ words
+- Professional markdown formatting
+
+Use the provided tools to gather, analyze, and synthesize information."""
+
+    def _get_research_tools(self) -> List[Any]:
+        """Get RESEARCH and SEARCH category tools from registry."""
+        from langchain_core.tools import StructuredTool
+        from inspect import signature
+
+        research_tools = ToolRegistry.get_by_category(ToolCategory.RESEARCH)
+        search_tools = ToolRegistry.get_by_category(ToolCategory.SEARCH)
+
+        all_tools = research_tools + search_tools
+        logger.info(
+            f"Deep Research: {len(research_tools)} RESEARCH + "
+            f"{len(search_tools)} SEARCH = {len(all_tools)} tools"
+        )
+
+        # Convert ToolInfo to LangChain StructuredTool objects
+        langchain_tools = []
+        for tool_info in all_tools:
+            # Create a StructuredTool with proper schema
+            structured_tool = StructuredTool.from_function(
+                func=tool_info.func,
+                name=tool_info.name,
+                description=tool_info.description,
+                return_direct=tool_info.return_direct,
+            )
+            langchain_tools.append(structured_tool)
+
+        logger.info(
+            f"Converted {len(langchain_tools)} tools to LangChain format"
+        )
+        return langchain_tools
+
+    def _plan_research(self, state: DeepResearchState) -> dict:
+        """
+        Generate comprehensive research plan with multiple search queries.
+
+        Args:
+            state: Current research state
+
+        Returns:
+            Updated state with topic, queries, document path
+        """
+        messages = state.get("messages", [])
+        if not messages:
+            return {}
+
+        # Get last user message
+        last_msg = None
+        for msg in reversed(messages):
+            if hasattr(msg, "type") and msg.type == "human":
+                last_msg = msg
+                break
+
+        if not last_msg:
+            return {}
+
+        topic = str(last_msg.content)
+
+        # Generate document filename from topic
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_topic = "".join(
+            c if c.isalnum() or c in (" ", "_") else "_" for c in topic[:50]
+        )
+        safe_topic = "_".join(safe_topic.split())
+        filename = f"{timestamp}_{safe_topic}.md"
+        document_path = str(self._research_path / filename)
+
+        # Generate diverse search queries
+        # TODO: In future, could use LLM to generate these
+        search_queries = [
+            topic,  # Original query
+            f"{topic} overview background",  # Context query
+            f"{topic} recent news developments",  # News query
+            f"{topic} analysis expert opinion",  # Analysis query
+        ]
+
+        logger.info(
+            f"Deep research plan: topic='{topic[:50]}...', "
+            f"queries={len(search_queries)}, path={document_path}"
+        )
+
+        return {
+            "research_topic": topic,
+            "search_queries": search_queries,
+            "collected_sources": [],
+            "research_phases": ["planned"],
+            "document_path": document_path,
+        }
+
+    def _call_model(self, state: DeepResearchState) -> dict:
+        """
+        Call the LLM with deep research context.
+
+        Args:
+            state: Current research state
+
+        Returns:
+            Updated state with new AI message
+        """
+        messages = state.get("messages", [])
+        topic = state.get("research_topic", "")
+        phases = state.get("research_phases", [])
+        document_path = state.get("document_path", "")
+
+        # Build prompt with research context
+        phase_status = ", ".join(phases) if phases else "starting"
+
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", self._system_prompt),
+                (
+                    "system",
+                    f"Deep Research Topic: '{topic}'\n"
+                    f"Current Phase: {phase_status}\n"
+                    f"Document will be saved to: {document_path}\n\n"
+                    f"Conduct comprehensive multi-stage research. Use 15-20+ tool calls.",
+                ),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
+
+        chain = prompt | self._chat_model
+        response = chain.invoke({"messages": messages})
+
+        return {"messages": [response]}
+
+    def _route_after_model(self, state: DeepResearchState) -> str:
+        """
+        Determine next step after model call.
+
+        Args:
+            state: Current research state
+
+        Returns:
+            Next node name ("tools", "finalize", or "end")
+        """
+        messages = state.get("messages", [])
+        if not messages:
+            return "end"
+
+        last_message = messages[-1]
+
+        # Check if model wants to use tools
+        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+            logger.info(
+                f"Model requested {len(last_message.tool_calls)} tool calls"
+            )
+            return "tools"
+
+        # Check if we should finalize the document
+        phases = state.get("research_phases", [])
+        if "finalize" not in phases and isinstance(last_message, AIMessage):
+            # If we have content and haven't finalized, do that now
+            return "finalize"
+
+        return "end"
+
+    def _finalize_document(self, state: DeepResearchState) -> dict:
+        """
+        Save the final research document to disk.
+
+        Args:
+            state: Current research state
+
+        Returns:
+            Updated state with finalized phase
+        """
+        messages = state.get("messages", [])
+        document_path = state.get("document_path", "")
+
+        # Get the last AI message as the document content
+        document_content = ""
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage) and msg.content:
+                document_content = msg.content
+                break
+
+        if not document_content:
+            logger.warning("No content to save for deep research document")
+            return {
+                "research_phases": state.get("research_phases", [])
+                + ["finalized"]
+            }
+
+        # Save document
+        try:
+            with open(document_path, "w", encoding="utf-8") as f:
+                f.write(document_content)
+
+            logger.info(f"✓ Saved deep research document to: {document_path}")
+
+            # Add confirmation message
+            confirmation = AIMessage(
+                content=f"\n\n✅ **Research document saved to:** `{document_path}`"
+            )
+
+            return {
+                "messages": [confirmation],
+                "research_phases": state.get("research_phases", [])
+                + ["finalized"],
+            }
+
+        except Exception as e:
+            logger.error(
+                f"Failed to save research document: {e}", exc_info=True
+            )
+            error_msg = AIMessage(
+                content=f"\n\n⚠️ **Error saving document:** {str(e)}"
+            )
+            return {
+                "messages": [error_msg],
+                "research_phases": state.get("research_phases", [])
+                + ["finalized"],
+            }
+
+    def build_graph(self) -> StateGraph:
+        """
+        Build the Deep Research agent graph.
+
+        Returns:
+            StateGraph for deep research mode
+        """
+        logger.info("Building Deep Research agent graph")
+
+        graph = StateGraph(DeepResearchState)
+
+        # Add nodes
+        graph.add_node("plan_research", self._plan_research)
+        graph.add_node("model", self._call_model)
+        graph.add_node("finalize", self._finalize_document)
+
+        if self._tools:
+            # Create custom tool node that injects API
+            def tool_node_with_api(state: DeepResearchState) -> dict:
+                """Execute tools with API injection."""
+                from langchain_core.messages import ToolMessage
+
+                messages = state.get("messages", [])
+                if not messages:
+                    return {"messages": []}
+
+                last_message = messages[-1]
+                if (
+                    not hasattr(last_message, "tool_calls")
+                    or not last_message.tool_calls
+                ):
+                    return {"messages": []}
+
+                # Execute tool calls with API injection
+                tool_messages = []
+                for tool_call in last_message.tool_calls:
+                    tool_name = tool_call.get("name")
+                    tool_args = tool_call.get("args", {})
+                    tool_id = tool_call.get("id")
+
+                    # Find the StructuredTool by name
+                    tool_obj = None
+                    for tool in self._tools:
+                        if hasattr(tool, "name") and tool.name == tool_name:
+                            tool_obj = tool
+                            break
+
+                    if tool_obj:
+                        try:
+                            # Inject API if tool requires it
+                            # Check the original function signature to see if it accepts 'api'
+                            import inspect
+
+                            func = (
+                                tool_obj.func
+                                if hasattr(tool_obj, "func")
+                                else tool_obj.run
+                            )
+                            sig = inspect.signature(func)
+                            if "api" in sig.parameters and self._api:
+                                tool_args["api"] = self._api
+
+                            # Execute tool using invoke() for StructuredTool
+                            result = tool_obj.invoke(tool_args)
+                            tool_messages.append(
+                                ToolMessage(
+                                    content=str(result),
+                                    tool_call_id=tool_id,
+                                )
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"Tool {tool_name} failed: {e}", exc_info=True
+                            )
+                            tool_messages.append(
+                                ToolMessage(
+                                    content=f"Error: {str(e)}",
+                                    tool_call_id=tool_id,
+                                )
+                            )
+                    else:
+                        tool_messages.append(
+                            ToolMessage(
+                                content=f"Error: Tool {tool_name} not found",
+                                tool_call_id=tool_id,
+                            )
+                        )
+
+                return {"messages": tool_messages}
+
+            graph.add_node("tools", tool_node_with_api)
+
+        # Add edges
+        graph.add_edge(START, "plan_research")
+        graph.add_edge("plan_research", "model")
+
+        if self._tools:
+            graph.add_conditional_edges(
+                "model",
+                self._route_after_model,
+                {
+                    "tools": "tools",
+                    "finalize": "finalize",
+                    "end": END,
+                },
+            )
+            graph.add_edge("tools", "model")
+            graph.add_edge("finalize", END)
+        else:
+            graph.add_edge("model", "finalize")
+            graph.add_edge("finalize", END)
+
+        logger.info("Deep Research agent graph built successfully")
+        return graph
+
+    def compile(self) -> Any:
+        """
+        Build and compile the Deep Research agent graph.
+
+        Returns:
+            Compiled graph ready for invocation
+        """
+        graph = self.build_graph()
+        compiled = graph.compile()
+        logger.info("Deep Research agent compiled successfully")
+        return compiled

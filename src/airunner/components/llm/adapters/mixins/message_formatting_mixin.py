@@ -100,6 +100,18 @@ class MessageFormattingMixin:
                     {"role": "assistant", "content": msg.content}
                 )
 
+        # Debug logging to trace what we send into the chat template
+        try:
+            preview = chat_messages[:]
+            if preview:
+                preview[0] = {
+                    **preview[0],
+                    "content": str(preview[0].get("content", ""))[:200],
+                }
+            self.logger.debug("Chat template input messages: %s", preview)
+        except Exception:
+            pass
+
         # Check if we have tools to pass to the template
         template_kwargs = {
             "tokenize": False,
