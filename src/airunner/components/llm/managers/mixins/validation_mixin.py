@@ -29,8 +29,8 @@ class ValidationMixin:
     def _check_model_exists(self: "LLMModelManager") -> bool:
         """Check if model exists with all necessary files.
 
-        Validates that the model directory contains config.json and
-        at least one .safetensors file.
+        Uses llm_file_bootstrap_data.py as the source of truth for required files.
+        Only files listed in that configuration are considered essential.
 
         Returns:
             True if model exists with required files, False otherwise.
@@ -41,9 +41,49 @@ class ValidationMixin:
         model_path = self.model_path
         if not os.path.exists(model_path):
             self.logger.info(f"Model path does not exist: {model_path}")
+            self._missing_files = None  # Full download needed
             return False
 
-        return self._verify_model_files(model_path)
+        # Get repo_id for this model
+        repo_id = self._get_repo_id_for_model()
+        if not repo_id:
+            # If no repo_id, fall back to basic validation
+            self.logger.warning(
+                f"No repo_id found for {self.model_name} - using basic file validation"
+            )
+            self._missing_files = None
+            return self._verify_model_files(model_path)
+
+        # Use llm_file_bootstrap_data as source of truth
+        from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
+            LLM_FILE_BOOTSTRAP_DATA,
+        )
+
+        if repo_id not in LLM_FILE_BOOTSTRAP_DATA:
+            self.logger.warning(
+                f"Model {repo_id} not in LLM_FILE_BOOTSTRAP_DATA - using basic file validation"
+            )
+            self._missing_files = None
+            return self._verify_model_files(model_path)
+
+        # Check which required files are missing
+        required_files = LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"]
+        missing_files = []
+
+        for required_file in required_files:
+            file_path = os.path.join(model_path, required_file)
+            if not os.path.exists(file_path):
+                missing_files.append(required_file)
+
+        if missing_files:
+            self._missing_files = missing_files
+            self.logger.info(
+                f"Model incomplete - missing {len(missing_files)} files: {missing_files[:5]}..."
+            )
+            return False
+
+        self._missing_files = None
+        return True
 
     def _verify_model_files(self: "LLMModelManager", model_path: str) -> bool:
         """Verify essential model files exist in directory.
@@ -190,13 +230,19 @@ class ValidationMixin:
         Args:
             repo_id: HuggingFace repository identifier.
         """
+        signal_data = {
+            "model_path": self.model_path,
+            "model_name": self.model_name,
+            "repo_id": repo_id,
+        }
+
+        # Include missing_files if we have them (for partial downloads)
+        if hasattr(self, "_missing_files") and self._missing_files:
+            signal_data["missing_files"] = self._missing_files
+
         self.emit_signal(
             SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
-            {
-                "model_path": self.model_path,
-                "model_name": self.model_name,
-                "repo_id": repo_id,
-            },
+            signal_data,
         )
 
     def _validate_model_path(self: "LLMModelManager") -> bool:
@@ -221,12 +267,31 @@ class ValidationMixin:
                 return False
         except ValueError as e:
             # Catch the ValueError raised by the property when path is not configured
+            # or when embedding model is incorrectly used as main LLM
             self.logger.error(f"Model path validation failed: {e}")
+
+            # Check if this is an embedding model error - auto-fix it
+            error_msg = str(e)
+            if "embedding model" in error_msg.lower():
+                self.logger.warning(
+                    "Detected embedding model set as main LLM - clearing corrupted model_path"
+                )
+                # Clear the corrupted path so user can select a proper model
+                self.llm_generator_settings.model_path = ""
+                self.session.commit()
+
+                message = (
+                    "Invalid model configuration detected and cleared: "
+                    "The embedding model was incorrectly set as the main LLM. "
+                    "Please go to Settings > LLM and select a proper chat model "
+                    "(e.g., Qwen, Mistral, or Llama)."
+                )
+            else:
+                message = "No LLM model selected. Please go to Settings > LLM and select a model."
+
             self.emit_signal(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                {
-                    "message": "No LLM model selected. Please go to Settings > LLM and select a model."
-                },
+                {"message": message},
             )
             return False
 

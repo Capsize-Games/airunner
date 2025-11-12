@@ -5,8 +5,10 @@ from typing import Callable
 
 from langchain.tools import tool
 
+from airunner.components.tools.base_tool import BaseTool
 
-class FileTools:
+
+class FileTools(BaseTool):
     """Mixin class providing file system and document management tools."""
 
     def list_files_tool(self) -> Callable:
@@ -96,7 +98,7 @@ class FileTools:
                     file_path += ".py"
 
                 # Build full path
-                base_path = os.path.expanduser("~/.local/share/airunner")
+                base_path = os.path.expanduser(self.path_settings.base_path)
                 full_path = os.path.join(base_path, "user_code", file_path)
 
                 # Create directory if needed

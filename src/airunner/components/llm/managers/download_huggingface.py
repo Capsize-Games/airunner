@@ -39,6 +39,7 @@ class DownloadHuggingFaceModel(Worker):
         output_dir: Optional[str] = None,
         setup_quantization: bool = True,
         quantization_bits: int = 4,
+        missing_files: Optional[list] = None,
     ):
         """
         Download a HuggingFace model.
@@ -63,6 +64,7 @@ class DownloadHuggingFaceModel(Worker):
                 "repo_id": repo_id,
                 "model_type": model_type,
                 "output_dir": output_dir,
+                "missing_files": missing_files,
             }
         )
 

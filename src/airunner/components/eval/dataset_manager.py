@@ -12,6 +12,10 @@ from typing import Optional, Callable
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 
 from .mixins import (
     DatasetCacheMixin,
@@ -22,7 +26,7 @@ from .mixins import (
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
-def get_airunner_base_path() -> str:
+def get_airunner_base_path(base_path: str) -> str:
     """Get AI Runner base path without initializing settings infrastructure.
 
     Returns:
@@ -34,10 +38,12 @@ def get_airunner_base_path() -> str:
     if "XDG_DATA_HOME" in os.environ:
         return os.path.join(os.environ["XDG_DATA_HOME"], "airunner")
 
-    return os.path.expanduser("~/.local/share/airunner")
+    return os.path.expanduser(base_path)
 
 
 class DatasetManager(
+    MediatorMixin,
+    SettingsMixin,
     DatasetCacheMixin,
     DatasetDownloadMixin,
     DatasetLoaderMixin,
@@ -85,10 +91,11 @@ class DatasetManager(
             cache_dir: Directory to cache downloaded datasets
             headless: If True, use tqdm progress bars
         """
+        super().__init__()
         self.headless = headless
 
         if cache_dir is None:
-            base_path = get_airunner_base_path()
+            base_path = get_airunner_base_path(self.path_settings.base_path)
             cache_dir = os.path.join(base_path, "text", "datasets")
 
         self.cache_dir = Path(cache_dir)
