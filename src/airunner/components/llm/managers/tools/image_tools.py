@@ -5,10 +5,11 @@ import os
 
 from langchain.tools import tool
 
+from airunner.components.tools.base_tool import BaseTool
 from airunner.enums import SignalCode
 
 
-class ImageTools:
+class ImageTools(BaseTool):
     """Mixin class providing image generation and manipulation tools."""
 
     def generate_image_tool(self) -> Callable:

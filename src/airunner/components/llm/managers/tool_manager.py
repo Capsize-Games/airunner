@@ -2,10 +2,6 @@
 
 from typing import List, Callable, Optional, Any
 
-from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.components.application.gui.windows.main.settings_mixin import (
-    SettingsMixin,
-)
 from airunner.components.llm.managers.tools import (
     ImageTools,
     FileTools,
@@ -21,8 +17,6 @@ from airunner.components.llm import tools  # noqa: F401
 
 
 class ToolManager(
-    MediatorMixin,
-    SettingsMixin,
     ImageTools,
     FileTools,
     SystemTools,

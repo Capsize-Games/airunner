@@ -5,10 +5,11 @@ from typing import Callable
 
 from langchain.tools import tool
 
+from airunner.components.tools.base_tool import BaseTool
 from airunner.enums import SignalCode
 
 
-class SystemTools:
+class SystemTools(BaseTool):
     """Mixin class providing system control and application management tools."""
 
     def clear_conversation_tool(self) -> Callable:

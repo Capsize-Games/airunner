@@ -6,10 +6,11 @@ from datetime import datetime, timedelta
 from langchain.tools import tool
 
 from airunner.components.llm.data.conversation import Conversation
+from airunner.components.tools.base_tool import BaseTool
 from airunner.enums import SignalCode
 
 
-class ConversationTools:
+class ConversationTools(BaseTool):
     """Mixin class providing conversation management and autonomous control tools."""
 
     def list_conversations_tool(self) -> Callable:
