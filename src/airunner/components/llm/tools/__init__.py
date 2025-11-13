@@ -51,6 +51,7 @@ from airunner.components.llm.tools import (
     code_tools,
     research_tools,
     research_document_tools,  # CRITICAL: Document creation tools for Deep Research
+    research_rag_tools,  # RAG-based research tools (search, summaries)
     qa_tools,
     # Phase 3: Code generation tools
     code_generation_tools,

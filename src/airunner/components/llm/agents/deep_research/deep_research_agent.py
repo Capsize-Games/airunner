@@ -9,8 +9,8 @@ This agent conducts Google Deep Research-style comprehensive analysis:
 """
 
 from pathlib import Path
-from typing import Any, Annotated, List, Dict
-from typing_extensions import TypedDict
+from typing import Any, Annotated, List, Dict, Optional
+from typing_extensions import TypedDict, NotRequired
 
 from langchain_core.messages import (
     BaseMessage,
@@ -18,6 +18,7 @@ from langchain_core.messages import (
 )
 from langgraph.graph import add_messages
 
+from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.llm.agents.deep_research.mixins import (
     ContentValidationMixin,
     ContentParsingMixin,
@@ -25,6 +26,7 @@ from airunner.components.llm.agents.deep_research.mixins import (
     PlanningPhaseMixin,
     SearchGatherMixin,
     CuriosityResearchMixin,
+    ValidationPhaseMixin,  # NEW: Post-scraping validation
     AnalysisPhaseMixin,
     WritingPhaseMixin,
     ReviewPhaseMixin,
@@ -34,6 +36,7 @@ from airunner.components.llm.agents.deep_research.mixins import (
     ToolNormalizationMixin,
     PhaseExecutionMixin,
     GraphBuildingMixin,
+    ResearchSummaryMixin,
 )
 
 # Import tools to ensure they're registered
@@ -70,27 +73,30 @@ class DeepResearchState(TypedDict):
     research_topic: str
     clean_topic: str
     current_phase: str
-    search_queries: List[str]
-    collected_sources: List[Dict[str, str]]
-    notes_path: str
-    outline: str
-    document_path: str
-    rag_loaded: bool
-    sources_scraped: int
-    scraped_urls: List[str]
-    sections_written: List[str]
-    thesis_statement: str
-    previous_sections: Dict[str, str]
-    error: str
+    search_queries: NotRequired[List[str]]
+    collected_sources: NotRequired[List[Dict[str, str]]]
+    notes_path: NotRequired[str]
+    outline: NotRequired[str]
+    document_path: NotRequired[str]
+    rag_loaded: NotRequired[bool]
+    sources_scraped: NotRequired[int]
+    scraped_urls: NotRequired[List[str]]
+    sections_written: NotRequired[List[str]]
+    thesis_statement: NotRequired[str]
+    previous_sections: NotRequired[Dict[str, str]]
+    error: NotRequired[str]
 
 
 class DeepResearchAgent(
+    MediatorMixin,
+    ResearchSummaryMixin,
     ContentValidationMixin,
     ContentParsingMixin,
     SectionSynthesisMixin,
     PlanningPhaseMixin,
     SearchGatherMixin,
     CuriosityResearchMixin,
+    ValidationPhaseMixin,  # NEW: Post-scraping validation phase
     AnalysisPhaseMixin,
     WritingPhaseMixin,
     ReviewPhaseMixin,
@@ -127,6 +133,9 @@ class DeepResearchAgent(
             system_prompt: Optional custom system prompt
             api: Optional API instance for tool access
         """
+        # Initialize MediatorMixin for signal handling
+        super().__init__()
+
         self._research_path = Path(research_path)
         self._research_path.mkdir(parents=True, exist_ok=True)
         self._system_prompt = system_prompt or self._default_system_prompt()
@@ -134,7 +143,26 @@ class DeepResearchAgent(
         self._tools = self._get_research_tools()
 
         # Keep reference to base model WITHOUT tools (for synthesis)
-        self._base_model = chat_model
+        # CRITICAL: Use LOW TEMPERATURE for factual synthesis to prevent hallucination
+        # High temp (0.7) causes fabrication - synthesis needs deterministic output (0.1-0.3)
+        synthesis_temp = 0.2  # Low temp for factual, deterministic writing
+
+        # Use .bind() to create a wrapper with different temperature
+        # This does NOT reload the model - just changes inference parameters
+        if hasattr(chat_model, "bind"):
+            try:
+                self._base_model = chat_model.bind(temperature=synthesis_temp)
+                logger.info(
+                    f"Synthesis model bound with temperature={synthesis_temp} "
+                    f"(original: {getattr(chat_model, 'temperature', 'unknown')})"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Could not bind synthesis temperature: {e}, using original model"
+                )
+                self._base_model = chat_model
+        else:
+            self._base_model = chat_model
 
         # CRITICAL: Create a NEW instance of the chat model with tools bound
         # DO NOT modify the original chat_model instance (it has conversation history)

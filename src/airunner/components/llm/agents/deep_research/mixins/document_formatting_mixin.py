@@ -14,29 +14,54 @@ class DocumentFormattingMixin:
     """Provides document formatting and enhancement methods."""
 
     def _generate_abstract(self, doc_content: str) -> tuple[str, list]:
-        """Generate and insert abstract section if missing.
-
-        Args:
-            doc_content: Current document content
-
-        Returns:
-            Tuple of (updated_content, revisions_applied)
-        """
+        """Generate and insert abstract section if missing."""
         revisions = []
 
         if "## Abstract" in doc_content:
             return doc_content, revisions
 
+        # Find insertion position
         lines = doc_content.split("\n")
-        insert_pos = 0
-        for i, line in enumerate(lines):
-            if line.startswith("**Status:**"):
-                insert_pos = i + 1
-                break
-
+        insert_pos = self._find_abstract_insertion_pos(lines)
         if insert_pos == 0:
             return doc_content, revisions
 
+        # Extract context for abstract generation
+        intro_text, conclusion_text = self._extract_abstract_context(
+            doc_content
+        )
+        if not (intro_text and conclusion_text):
+            return doc_content, revisions
+
+        # Generate abstract with LLM
+        abstract_text = self._generate_abstract_with_llm(
+            intro_text, conclusion_text
+        )
+        if not abstract_text:
+            return doc_content, revisions
+
+        # Insert abstract
+        abstract = f"\n\n---\n\n## Abstract\n\n{abstract_text}\n"
+        lines.insert(insert_pos, abstract)
+        doc_content = "\n".join(lines)
+        revisions.append("Generated abstract")
+        logger.info(
+            f"[Phase 1F] Generated abstract via LLM: {len(abstract_text)} chars"
+        )
+
+        return doc_content, revisions
+
+    def _find_abstract_insertion_pos(self, lines: list) -> int:
+        """Find position to insert abstract."""
+        for i, line in enumerate(lines):
+            if line.startswith("**Status:**"):
+                return i + 1
+        return 0
+
+    def _extract_abstract_context(
+        self, doc_content: str
+    ) -> tuple[str | None, str | None]:
+        """Extract introduction and conclusion text for abstract."""
         intro_match = re.search(
             r"## Introduction\n\n(.+?)(?:\n##|$)", doc_content, re.DOTALL
         )
@@ -45,11 +70,16 @@ class DocumentFormattingMixin:
         )
 
         if not (intro_match and conclusion_match):
-            return doc_content, revisions
+            return None, None
 
         intro_text = intro_match.group(1).strip()[:800]
         conclusion_text = conclusion_match.group(1).strip()[:600]
+        return intro_text, conclusion_text
 
+    def _generate_abstract_with_llm(
+        self, intro_text: str, conclusion_text: str
+    ) -> str | None:
+        """Generate abstract text using LLM."""
         prompt = f"""Write a concise academic abstract (150-200 words) for this research paper.
 
 INTRODUCTION EXCERPT:
@@ -76,20 +106,13 @@ Write the abstract now:"""
             )
 
             if hasattr(response, "content") and response.content:
-                abstract_text = response.content.strip()
-                abstract = f"\n\n---\n\n## Abstract\n\n{abstract_text}\n"
-                lines.insert(insert_pos, abstract)
-                doc_content = "\n".join(lines)
-                revisions.append("Generated abstract")
-                logger.info(
-                    f"[Phase 1F] Generated abstract via LLM: {len(abstract_text)} chars"
-                )
+                return response.content.strip()
         except Exception as e:
             logger.warning(
                 f"[Phase 1F] Failed to generate abstract via LLM: {e}"
             )
 
-        return doc_content, revisions
+        return None
 
     def _generate_table_of_contents(
         self, doc_content: str

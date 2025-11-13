@@ -5,31 +5,17 @@ Handles Phase 1B: analyzing collected notes and formulating a central thesis sta
 
 import logging
 from pathlib import Path
-from typing import TypedDict
 
 from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
 
-class DeepResearchState(TypedDict):
-    """Type definition for deep research state."""
-
-    messages: list
-    current_phase: str
-    research_topic: str
-    clean_topic: str
-    search_queries: list
-    document_path: str
-    notes_path: str
-    scraped_urls: list
-
-
 class AnalysisPhaseMixin:
     """Provides Phase 1B analysis and thesis formulation methods."""
 
-    def _phase1b_analyze(self, state: DeepResearchState) -> dict:
-        """Phase 1B: Read notes file and create structured outline."""
+    def _phase1b_analyze(self, state) -> dict:
+        """Phase 1B: Analyze collected notes and extract key information."""
         logger.info(f"[Phase 1B] Analyzing collected notes")
 
         notes_path = state.get("notes_path", "")
@@ -50,7 +36,7 @@ class AnalysisPhaseMixin:
             "current_phase": "phase1b_thesis",
         }
 
-    def _phase1b_thesis(self, state: DeepResearchState) -> dict:
+    def _phase1b_thesis(self, state) -> dict:
         """Phase 1B-Thesis: Formulate central thesis/argument from collected sources."""
         topic = state.get("research_topic", "")
         notes_path = state.get("notes_path", "")
@@ -192,9 +178,7 @@ Write ONLY the thesis statement (1-2 sentences, no preamble):"""
         """Generate fallback thesis statement."""
         return f"This research examines {topic} through analysis of {num_sources} sources, revealing key patterns and implications."
 
-    def _create_thesis_result(
-        self, state: DeepResearchState, thesis: str
-    ) -> dict:
+    def _create_thesis_result(self, state, thesis: str) -> dict:
         """Create result dictionary with thesis statement."""
         return {
             "messages": state.get("messages", []),

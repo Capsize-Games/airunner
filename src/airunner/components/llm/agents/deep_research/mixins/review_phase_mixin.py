@@ -32,19 +32,7 @@ class ReviewPhaseMixin:
     """Provides Phase 1E and 1F review, revision, and finalization methods."""
 
     def _phase1e_review(self, state: DeepResearchState) -> dict:
-        """
-        Phase 1E: Review and validate document quality.
-
-        Checks:
-        - All sections are present
-        - Citations are included
-        - Content is substantial
-        - No raw notes remain
-        - FACTUAL ACCURACY (multiple passes)
-
-        Returns:
-            Updated state with review notes
-        """
+        """Phase 1E: Review and validate document quality."""
         document_path = state.get("document_path", "")
         thesis = state.get("thesis_statement", "")
 
@@ -53,28 +41,70 @@ class ReviewPhaseMixin:
         )
         self._emit_progress("Phase 1E", "Reviewing document quality and facts")
 
+        # Validate document exists
+        doc_content = self._load_document_for_review(document_path)
+        if not doc_content:
+            return self._review_skip_state(state)
+
+        # Perform all review checks
+        review_notes = self._perform_review_checks(
+            doc_content, thesis, document_path
+        )
+
+        # Log and emit results
+        self._finalize_review(review_notes)
+
+        return {
+            "messages": state.get("messages", []),
+            "review_notes": review_notes,
+            "current_phase": "phase1f",
+        }
+
+    def _load_document_for_review(self, document_path: str) -> str | None:
+        """Load document content for review."""
         if not document_path or not Path(document_path).exists():
             logger.error(f"[Phase 1E] Document not found: {document_path}")
-            return {
-                "messages": state.get("messages", []),
-                "current_phase": "phase1f",
-            }
+            return None
 
-        # Read document
         try:
             with open(document_path, "r", encoding="utf-8") as f:
-                doc_content = f.read()
+                return f.read()
         except Exception as e:
             logger.error(f"[Phase 1E] Failed to read document: {e}")
-            return {
-                "messages": state.get("messages", []),
-                "current_phase": "phase1f",
-            }
+            return None
 
-        # Review checks
+    def _review_skip_state(self, state: DeepResearchState) -> dict:
+        """Return state when skipping review."""
+        return {
+            "messages": state.get("messages", []),
+            "current_phase": "phase1f",
+        }
+
+    def _perform_review_checks(
+        self, doc_content: str, thesis: str, document_path: str
+    ) -> list:
+        """Perform all review checks on document."""
         review_notes = []
 
         # Check for required sections
+        review_notes.extend(self._check_required_sections(doc_content))
+
+        # Check content quality
+        review_notes.extend(self._check_content_quality(doc_content))
+
+        # Check for raw notes
+        if self._contains_raw_notes(doc_content):
+            review_notes.append("Document may contain unprocessed raw notes")
+            logger.warning(f"[Phase 1E] Found potential raw notes markers")
+
+        # Fact-check (two passes)
+        review_notes.extend(self._fact_check_two_passes(doc_content, thesis))
+
+        return review_notes
+
+    def _check_required_sections(self, doc_content: str) -> list:
+        """Check for required sections."""
+        review_notes = []
         required_sections = [
             "Introduction",
             "Background",
@@ -86,15 +116,20 @@ class ReviewPhaseMixin:
             if f"## {section}" not in doc_content:
                 review_notes.append(f"Missing section: {section}")
                 logger.warning(f"[Phase 1E] Missing section: {section}")
+        return review_notes
 
-        # Check for substance
+    def _check_content_quality(self, doc_content: str) -> list:
+        """Check content quality metrics."""
+        review_notes = []
+
+        # Check length
         if len(doc_content) < 1000:
             review_notes.append("Document is too short")
             logger.warning(
                 f"[Phase 1E] Document only {len(doc_content)} chars"
             )
 
-        # Check for source references (look for **Source N** format)
+        # Check source citations
         source_count = len(re.findall(r"\*\*Source \d+\*\*", doc_content))
         if source_count < 3:
             review_notes.append(
@@ -102,36 +137,43 @@ class ReviewPhaseMixin:
             )
             logger.warning(f"[Phase 1E] Only {source_count} sources found")
 
-        # Check for unprocessed notes markers (shouldn't have ### URLs anymore)
-        if re.search(r"###\s+https?://", doc_content):
-            review_notes.append("Document may contain unprocessed raw notes")
-            logger.warning(f"[Phase 1E] Found potential raw notes markers")
+        return review_notes
 
-        # CRITICAL: Fact-check the document (multiple passes)
+    def _contains_raw_notes(self, doc_content: str) -> bool:
+        """Check if document contains unprocessed notes markers."""
+        return bool(re.search(r"###\s+https?://", doc_content))
+
+    def _fact_check_two_passes(self, doc_content: str, thesis: str) -> list:
+        """Run fact-checking in two passes."""
+        review_notes = []
+
+        # First pass
         logger.info(f"[Phase 1E] Running fact-checking pass 1/2")
         self._emit_progress("Phase 1E", "Fact-checking document (pass 1)")
         fact_errors = self._fact_check_document(doc_content, thesis)
 
-        if fact_errors:
-            for error in fact_errors:
-                review_notes.append(f"FACTUAL ERROR: {error}")
-                logger.warning(f"[Phase 1E] Factual error detected: {error}")
+        for error in fact_errors:
+            review_notes.append(f"FACTUAL ERROR: {error}")
+            logger.warning(f"[Phase 1E] Factual error detected: {error}")
 
-        # Second fact-check pass on different sections
+        # Second pass on different section
         logger.info(f"[Phase 1E] Running fact-checking pass 2/2")
         self._emit_progress("Phase 1E", "Fact-checking document (pass 2)")
         fact_errors_2 = self._fact_check_document(
             doc_content[3000:6000], thesis
         )
 
-        if fact_errors_2:
-            for error in fact_errors_2:
-                if error not in review_notes:  # Avoid duplicates
-                    review_notes.append(f"FACTUAL ERROR: {error}")
-                    logger.warning(
-                        f"[Phase 1E] Factual error detected (pass 2): {error}"
-                    )
+        for error in fact_errors_2:
+            if error not in review_notes:
+                review_notes.append(f"FACTUAL ERROR: {error}")
+                logger.warning(
+                    f"[Phase 1E] Factual error detected (pass 2): {error}"
+                )
 
+        return review_notes
+
+    def _finalize_review(self, review_notes: list):
+        """Log and emit review results."""
         if review_notes:
             logger.info(
                 f"[Phase 1E] Review found {len(review_notes)} issues to address"
@@ -150,29 +192,12 @@ class ReviewPhaseMixin:
             ),
         )
 
-        return {
-            "messages": state.get("messages", []),
-            "review_notes": review_notes,
-            "current_phase": "phase1f",
-        }
-
     # ==================================================================
     # PHASE 1F: REVISE
     # ==================================================================
 
     def _phase1f_revise(self, state: DeepResearchState) -> dict:
-        """Phase 1F: Apply final polishing and improvements, including FACTUAL CORRECTIONS.
-
-        Improvements:
-        - Fix factual errors identified in review
-        - Add transitions between sections
-        - Ensure proper formatting
-        - Add executive summary if missing
-        - Finalize citations
-
-        Returns:
-            Updated state
-        """
+        """Phase 1F: Apply final polishing and improvements."""
         document_path = state.get("document_path", "")
         review_notes = state.get("review_notes", [])
 
@@ -183,26 +208,59 @@ class ReviewPhaseMixin:
             "Phase 1F", "Correcting facts and polishing document"
         )
 
+        # Load document
+        doc_content = self._load_document_for_revision(document_path)
+        if not doc_content:
+            return self._revise_skip_state(state)
+
+        # Apply all revisions
+        doc_content, revisions_applied = self._apply_all_revisions(
+            doc_content, review_notes
+        )
+
+        # Save revised document
+        self._save_revised_document(
+            document_path, doc_content, revisions_applied
+        )
+
+        self._emit_progress(
+            "Phase 1F",
+            f"Applied {len(revisions_applied)} improvements (including fact corrections)",
+        )
+
+        return {
+            "messages": state.get("messages", []),
+            "revisions_applied": revisions_applied,
+            "current_phase": "finalize",
+        }
+
+    def _load_document_for_revision(self, document_path: str) -> str | None:
+        """Load document content for revision."""
         if not document_path or not Path(document_path).exists():
             logger.error(f"[Phase 1F] Document not found: {document_path}")
-            return {
-                "messages": state.get("messages", []),
-                "current_phase": "finalize",
-            }
+            return None
 
         try:
             with open(document_path, "r", encoding="utf-8") as f:
-                doc_content = f.read()
+                return f.read()
         except Exception as e:
             logger.error(f"[Phase 1F] Failed to read document: {e}")
-            return {
-                "messages": state.get("messages", []),
-                "current_phase": "finalize",
-            }
+            return None
 
+    def _revise_skip_state(self, state: DeepResearchState) -> dict:
+        """Return state when skipping revision."""
+        return {
+            "messages": state.get("messages", []),
+            "current_phase": "finalize",
+        }
+
+    def _apply_all_revisions(
+        self, doc_content: str, review_notes: list
+    ) -> tuple[str, list]:
+        """Apply all revisions to document."""
         revisions_applied = []
 
-        # Apply all revisions using helper methods
+        # Apply factual corrections
         factual_errors = [
             note for note in review_notes if "FACTUAL ERROR" in note
         ]
@@ -211,6 +269,7 @@ class ReviewPhaseMixin:
         )
         revisions_applied.extend(revisions)
 
+        # Apply formatting revisions
         doc_content, revisions = self._generate_abstract(doc_content)
         revisions_applied.extend(revisions)
 
@@ -223,7 +282,12 @@ class ReviewPhaseMixin:
         doc_content, revisions = self._add_source_count_to_title(doc_content)
         revisions_applied.extend(revisions)
 
-        # Write revised document
+        return doc_content, revisions_applied
+
+    def _save_revised_document(
+        self, document_path: str, doc_content: str, revisions_applied: list
+    ):
+        """Save revised document to file."""
         try:
             with open(document_path, "w", encoding="utf-8") as f:
                 f.write(doc_content)
@@ -234,17 +298,6 @@ class ReviewPhaseMixin:
                 logger.info(f"  - {revision}")
         except Exception as e:
             logger.error(f"[Phase 1F] Failed to write revisions: {e}")
-
-        self._emit_progress(
-            "Phase 1F",
-            f"Applied {len(revisions_applied)} improvements (including fact corrections)",
-        )
-
-        return {
-            "messages": state.get("messages", []),
-            "revisions_applied": revisions_applied,
-            "current_phase": "finalize",
-        }
 
     # ==================================================================
     # FINALIZATION
@@ -292,7 +345,9 @@ class ReviewPhaseMixin:
         logger.info(f"[Finalize] Finalizing document: {document_path}")
 
         try:
-            result = finalize_research_document(document_path=document_path)
+            result = finalize_research_document(
+                document_path=document_path, api=self
+            )
             logger.info(f"[Finalize] {result}")
             self._emit_progress("Finalize", f"Document ready: {document_path}")
         except Exception as e:
