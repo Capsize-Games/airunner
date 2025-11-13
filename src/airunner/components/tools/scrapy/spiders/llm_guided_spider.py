@@ -9,7 +9,6 @@ on which links are worth following.
 
 import scrapy
 from typing import Callable, Optional, Set, Dict, List
-from urllib.parse import urljoin, urlparse
 
 from airunner.components.tools.web_content_extractor import WebContentExtractor
 from airunner.settings import AIRUNNER_LOG_LEVEL

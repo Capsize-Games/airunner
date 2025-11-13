@@ -7,9 +7,6 @@ from transformers.models.whisper.modeling_whisper import (
     WhisperForConditionalGeneration,
 )
 from transformers.models.whisper.processing_whisper import WhisperProcessor
-from transformers.models.whisper.feature_extraction_whisper import (
-    WhisperFeatureExtractor,
-)
 from PySide6.QtCore import QThread, QMutex, QObject, Signal
 
 from airunner.components.application.managers.base_model_manager import (

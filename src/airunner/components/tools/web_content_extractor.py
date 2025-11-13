@@ -474,8 +474,7 @@ class WebContentExtractor:
             Returns None if extraction fails.
         """
         try:
-            from bs4 import BeautifulSoup
-            from urllib.parse import urljoin, urlparse
+            pass
 
             # Fetch content if not provided
             if content is None:
