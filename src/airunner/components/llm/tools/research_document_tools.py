@@ -9,7 +9,6 @@ editor and locked to prevent user editing while the LLM is working.
 import os
 from datetime import datetime
 from typing import Annotated, Any
-from pathlib import Path
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.settings import AIRUNNER_LOG_LEVEL
@@ -22,6 +21,7 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 RESEARCH_DOCUMENT_TEMPLATE = """# {title}
 
 **Research Date:** {date}  
+**Research Started:** {datetime_started}  
 **Status:** In Progress
 
 ---
@@ -78,6 +78,7 @@ def create_research_document(
         content = RESEARCH_DOCUMENT_TEMPLATE.format(
             title=topic,
             date=datetime.now().strftime("%B %d, %Y"),
+            datetime_started=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
         # Write the file
@@ -221,7 +222,7 @@ def append_research_notes(
         "Use this to incrementally build the research document."
     ),
     return_direct=False,
-    requires_api=False,
+    requires_api=True,
 )
 def update_research_section(
     document_path: Annotated[str, "Path to the research document"],
@@ -230,6 +231,7 @@ def update_research_section(
         "Section to update (e.g., 'Abstract', 'Introduction', 'Conclusion')",
     ],
     content: Annotated[str, "New content for the section"],
+    api: Any = None,
 ) -> str:
     """
     Update a section of the research document.
@@ -238,6 +240,7 @@ def update_research_section(
         document_path: Path to research document
         section_name: Name of section to update
         content: New content
+        api: API instance (injected automatically)
 
     Returns:
         Success/error message
@@ -287,6 +290,14 @@ def update_research_section(
         # Write updated document
         with open(document_path, "w", encoding="utf-8") as f:
             f.write(new_content)
+
+        # Signal to refresh the document in the editor
+        if api:
+            api.emit_signal(
+                SignalCode.OPEN_RESEARCH_DOCUMENT,
+                {"path": document_path, "locked": True, "refresh": True},
+            )
+            logger.info(f"Signaled document refresh for: {document_path}")
 
         return f"Successfully updated {section_name} section"
 

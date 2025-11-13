@@ -75,40 +75,76 @@ class DuckDuckGoProvider(BaseSearchProvider):
 
         Args:
             query: Search query string
-            num_results: Maximum number of results
+            num_results: Maximum number of results to return (after filtering)
             client: Optional aiohttp client (unused, kept for interface consistency)
 
         Returns:
-            List of search results
+            List of search results (filtered by blocklist)
         """
-        # Add blocklist exclusions to query
-        enhanced_query = self._build_exclusion_query(query)
+        # Don't add exclusions to query - DDG doesn't respect them properly
+        # Instead, we'll filter results after fetching
+        self.logger.info(f"Starting DuckDuckGo search for: {query}")
 
-        self.logger.info(f"Starting DuckDuckGo search for: {enhanced_query}")
-        results = []
+        # Fetch MORE results than requested to account for filtering
+        fetch_count = (
+            num_results * 5
+        )  # Fetch 5x to ensure we have enough after filtering
+
+        all_results = []
         try:
+            # Get blocklist for filtering
+            blocklist = WebContentExtractor.get_blocklist()
+
             with DDGS() as ddgs:
                 for r in ddgs.text(
-                    enhanced_query,  # Use enhanced query with exclusions
+                    query,
                     region="wt-wt",
                     safesearch="Moderate",
-                    max_results=num_results,
+                    max_results=fetch_count,
                 ):
-                    results.append(
+                    link = r.get("href", r.get("url", "#"))
+
+                    # Filter out blocked domains
+                    from urllib.parse import urlparse
+
+                    try:
+                        domain = urlparse(link).netloc.lower()
+                        if domain.startswith("www."):
+                            domain = domain[4:]
+
+                        # Check if domain is in blocklist
+                        is_blocked = any(
+                            domain == blocked or domain.endswith("." + blocked)
+                            for blocked in blocklist
+                        )
+
+                        if is_blocked:
+                            self.logger.debug(
+                                f"Filtered blocked domain: {domain}"
+                            )
+                            continue
+
+                    except Exception:
+                        pass  # If parsing fails, include the result
+
+                    all_results.append(
                         self._format_result(
                             title=r.get("title", "N/A"),
-                            link=r.get("href", r.get("url", "#")),
+                            link=link,
                             snippet=r.get("body", r.get("snippet", "")),
                         )
                     )
-                    if len(results) >= num_results:
+
+                    # Stop once we have enough filtered results
+                    if len(all_results) >= num_results:
                         break
+
             self.logger.info(
-                f"DuckDuckGo search completed. Found {len(results)} results."
+                f"DuckDuckGo search completed. Found {len(all_results)} results after filtering."
             )
         except Exception as e:
             self.logger.error(f"DuckDuckGo search error: {e}")
-        return results
+        return all_results
 
     async def news_search(
         self,
@@ -126,32 +162,59 @@ class DuckDuckGoProvider(BaseSearchProvider):
 
         Args:
             query: Search query string
-            num_results: Maximum number of results
+            num_results: Maximum number of results to return (after filtering)
             client: Optional aiohttp client (unused, kept for interface consistency)
 
         Returns:
-            List of news article results
+            List of news article results (filtered by blocklist)
         """
-        # Add blocklist exclusions to query
-        enhanced_query = self._build_exclusion_query(query)
+        self.logger.info(f"Starting DuckDuckGo NEWS search for: {query}")
 
-        self.logger.info(
-            f"Starting DuckDuckGo NEWS search for: {enhanced_query}"
-        )
-        results = []
+        # Fetch MORE results than requested to account for filtering
+        fetch_count = num_results * 5
+
+        all_results = []
         try:
+            # Get blocklist for filtering
+            blocklist = WebContentExtractor.get_blocklist()
+
             with DDGS() as ddgs:
                 for r in ddgs.news(
-                    enhanced_query,  # Use enhanced query with exclusions
+                    query,
                     region="wt-wt",
                     safesearch="Moderate",
-                    max_results=num_results,
+                    max_results=fetch_count,
                 ):
+                    link = r.get("url", r.get("href", "#"))
+
+                    # Filter out blocked domains
+                    from urllib.parse import urlparse
+
+                    try:
+                        domain = urlparse(link).netloc.lower()
+                        if domain.startswith("www."):
+                            domain = domain[4:]
+
+                        # Check if domain is in blocklist
+                        is_blocked = any(
+                            domain == blocked or domain.endswith("." + blocked)
+                            for blocked in blocklist
+                        )
+
+                        if is_blocked:
+                            self.logger.debug(
+                                f"Filtered blocked domain: {domain}"
+                            )
+                            continue
+
+                    except Exception:
+                        pass
+
                     # News results have slightly different structure
-                    results.append(
+                    all_results.append(
                         self._format_result(
                             title=r.get("title", "N/A"),
-                            link=r.get("url", r.get("href", "#")),
+                            link=link,
                             snippet=r.get(
                                 "body", r.get("excerpt", r.get("snippet", ""))
                             ),
@@ -159,11 +222,13 @@ class DuckDuckGoProvider(BaseSearchProvider):
                             date=r.get("date", ""),
                         )
                     )
-                    if len(results) >= num_results:
+
+                    if len(all_results) >= num_results:
                         break
+
             self.logger.info(
-                f"DuckDuckGo news search completed. Found {len(results)} results."
+                f"DuckDuckGo news search completed. Found {len(all_results)} results after filtering."
             )
         except Exception as e:
             self.logger.error(f"DuckDuckGo news search error: {e}")
-        return results
+        return all_results

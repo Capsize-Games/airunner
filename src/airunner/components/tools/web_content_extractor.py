@@ -362,18 +362,19 @@ class WebContentExtractor:
         return None
 
     @staticmethod
-    def fetch_and_extract_with_metadata(
-        url: str, use_cache: bool = True
+    def fetch_and_extract_with_metadata_raw(
+        url: str, use_cache: bool = True, summarize: bool = False
     ) -> Optional[Dict]:
-        """Fetch, extract, and summarize main content with metadata from a URL.
+        """Fetch and extract main content with metadata from a URL.
 
         Args:
             url: The URL to fetch and extract
             use_cache: Whether to use cache
+            summarize: Whether to apply Sumy summarization (default: False for raw content)
 
         Returns:
             Dictionary with:
-            - content: Clean summarized text content
+            - content: Clean text content (raw or summarized based on parameter)
             - title: Page title (from metadata)
             - description: Page description (from metadata)
             - author: Author name if available
@@ -387,8 +388,8 @@ class WebContentExtractor:
             )
             return None
 
-        # Check cache first
-        if use_cache:
+        # Check cache first (only if we want summarized content - raw content changes)
+        if use_cache and summarize:
             cached_metadata = WebContentExtractor.get_cached_metadata(url)
             if cached_metadata:
                 logger.debug(f"Using cached metadata for {url}")
@@ -429,11 +430,15 @@ class WebContentExtractor:
             # Extract metadata
             metadata = trafilatura.extract_metadata(html_content)
 
-            # Summarize the text
-            summarized_text = WebContentExtractor._summarize_text(main_text)
+            # Optionally summarize the text
+            content_text = (
+                WebContentExtractor._summarize_text(main_text)
+                if summarize
+                else main_text
+            )
 
             result = {
-                "content": summarized_text,
+                "content": content_text,
                 "title": metadata.title if metadata else None,
                 "description": metadata.description if metadata else None,
                 "author": metadata.author if metadata else None,
@@ -442,8 +447,8 @@ class WebContentExtractor:
                 ),
             }
 
-            # Cache the result for future use
-            if use_cache:
+            # Cache the result for future use (only cache summarized)
+            if use_cache and summarize:
                 WebContentExtractor.set_metadata_cache(url, result)
                 logger.debug(f"Cached metadata for {url}")
 
@@ -457,6 +462,30 @@ class WebContentExtractor:
             # Add to blocklist on exception - likely blocking scrapers
             WebContentExtractor._add_to_blocklist(url)
             return None
+
+    @staticmethod
+    def fetch_and_extract_with_metadata(
+        url: str, use_cache: bool = True
+    ) -> Optional[Dict]:
+        """Fetch, extract, and summarize main content with metadata from a URL.
+
+        Args:
+            url: The URL to fetch and extract
+            use_cache: Whether to use cache
+
+        Returns:
+            Dictionary with:
+            - content: Clean summarized text content
+            - title: Page title (from metadata)
+            - description: Page description (from metadata)
+            - author: Author name if available
+            - publish_date: Publication date if available
+            Returns None if extraction fails.
+        """
+        # Use the raw method with summarization enabled
+        return WebContentExtractor.fetch_and_extract_with_metadata_raw(
+            url, use_cache=use_cache, summarize=True
+        )
 
     @staticmethod
     def extract_with_links(url: str, content: str = None) -> Optional[Dict]:
@@ -474,8 +503,7 @@ class WebContentExtractor:
             Returns None if extraction fails.
         """
         try:
-            from bs4 import BeautifulSoup
-            from urllib.parse import urljoin, urlparse
+            pass
 
             # Fetch content if not provided
             if content is None:
