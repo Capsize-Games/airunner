@@ -6,11 +6,8 @@ following relevant links and gathering comprehensive information.
 """
 
 from typing import Annotated, Any
-import tempfile
-import os
 
 from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.tools.scrapy.spiders.llm_guided_spider import (

@@ -4,9 +4,8 @@ Handles the main generation loop, exporting images, and metadata.
 Follows project standards: docstrings, type hints, logging.
 """
 
-from typing import Any, List, Optional, Tuple
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
+from typing import Any, List, Optional
+from PIL import Image
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.image import export_images

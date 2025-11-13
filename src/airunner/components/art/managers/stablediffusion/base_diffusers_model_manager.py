@@ -23,7 +23,6 @@ from airunner.enums import (
 from airunner.utils.memory import clear_memory
 
 from airunner.components.art.managers.stablediffusion import (
-    image_generation,
     utils,
 )
 from airunner.components.art.managers.stablediffusion.mixins import (
