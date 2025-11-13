@@ -74,21 +74,11 @@ Fact-check results:"""
 
         return []
 
-
     def _apply_factual_corrections(
         self, doc_content: str, factual_errors: list
     ) -> tuple[str, list]:
-        """Apply factual corrections to document based on review notes.
-
-        Args:
-            doc_content: Current document content
-            factual_errors: List of factual error notes from review
-
-        Returns:
-            Tuple of (updated_content, revisions_applied)
-        """
+        """Apply factual corrections to document based on review notes."""
         revisions = []
-
         if not factual_errors:
             return doc_content, revisions
 
@@ -99,6 +89,30 @@ Fact-check results:"""
             "Phase 1F", f"Correcting {len(factual_errors)} factual errors"
         )
 
+        correction_prompt = self._build_correction_prompt(
+            doc_content, factual_errors
+        )
+
+        try:
+            corrections = self._generate_corrections_with_llm(
+                correction_prompt
+            )
+            if corrections:
+                correction_blocks = self._parse_correction_blocks(corrections)
+                revisions = self._apply_correction_blocks(
+                    doc_content, correction_blocks
+                )
+        except Exception as e:
+            logger.error(
+                f"[Phase 1F] Failed to generate fact corrections: {e}"
+            )
+
+        return doc_content, revisions
+
+    def _build_correction_prompt(
+        self, doc_content: str, factual_errors: list
+    ) -> str:
+        """Build prompt for factual corrections."""
         errors_list = "\n".join(
             [
                 f"- {err.replace('FACTUAL ERROR: ', '')}"
@@ -106,7 +120,7 @@ Fact-check results:"""
             ]
         )
 
-        correction_prompt = f"""You are editing a research document to fix FACTUAL ERRORS. The following errors were identified:
+        return f"""You are editing a research document to fix FACTUAL ERRORS. The following errors were identified:
 
 {errors_list}
 
@@ -130,54 +144,57 @@ CORRECTED TEXT:
 
 Focus ONLY on factual corrections. If you cannot find an error in the excerpt, note it."""
 
-        try:
-            response = self._base_model.invoke(
-                [HumanMessage(content=correction_prompt)],
-                temperature=0.1,
-                max_new_tokens=2048,
-                repetition_penalty=1.1,
+    def _generate_corrections_with_llm(self, prompt: str) -> str | None:
+        """Generate corrections using LLM."""
+        response = self._base_model.invoke(
+            [HumanMessage(content=prompt)],
+            temperature=0.1,
+            max_new_tokens=2048,
+            repetition_penalty=1.1,
+        )
+
+        if hasattr(response, "content") and response.content:
+            return response.content.strip()
+        return None
+
+    def _parse_correction_blocks(self, corrections: str) -> list:
+        """Parse correction blocks from LLM response."""
+        import re
+
+        return re.findall(
+            r"SECTION:\s*(.+?)\n+CORRECTED TEXT:\s*\n+(.+?)(?=\n---|\Z)",
+            corrections,
+            re.DOTALL | re.IGNORECASE,
+        )
+
+    def _apply_correction_blocks(
+        self, doc_content: str, correction_blocks: list
+    ) -> list:
+        """Apply correction blocks to document."""
+        import re
+
+        revisions = []
+        for section_name, corrected_text in correction_blocks:
+            section_name = section_name.strip()
+            section_pattern = (
+                rf"(## {re.escape(section_name)}\n+)(.+?)(?=\n##|\Z)"
+            )
+            section_match = re.search(
+                section_pattern, doc_content, re.DOTALL | re.IGNORECASE
             )
 
-            if hasattr(response, "content") and response.content:
-                corrections = response.content.strip()
-                correction_blocks = re.findall(
-                    r"SECTION:\s*(.+?)\n+CORRECTED TEXT:\s*\n+(.+?)(?=\n---|\Z)",
-                    corrections,
-                    re.DOTALL | re.IGNORECASE,
-                )
-
-                for section_name, corrected_text in correction_blocks:
-                    section_name = section_name.strip()
-                    section_pattern = (
-                        rf"(## {re.escape(section_name)}\n+)(.+?)(?=\n##|\Z)"
-                    )
-                    section_match = re.search(
-                        section_pattern, doc_content, re.DOTALL | re.IGNORECASE
-                    )
-
-                    if section_match:
-                        logger.info(
-                            f"[Phase 1F] Applying fact corrections to {section_name} section"
-                        )
-                        revisions.append(
-                            f"Fact-corrected {section_name} section"
-                        )
-                    else:
-                        logger.warning(
-                            f"[Phase 1F] Could not locate section '{section_name}' for correction"
-                        )
-
+            if section_match:
                 logger.info(
-                    f"[Phase 1F] Fact-check corrections generated:\n{corrections[:500]}"
+                    f"[Phase 1F] Applying fact corrections to {section_name} section"
                 )
-                revisions.append(
-                    f"Generated fact corrections for {len(correction_blocks)} sections"
+                revisions.append(f"Fact-corrected {section_name} section")
+            else:
+                logger.warning(
+                    f"[Phase 1F] Could not locate section '{section_name}' for correction"
                 )
 
-        except Exception as e:
-            logger.error(
-                f"[Phase 1F] Failed to generate fact corrections: {e}"
-            )
-
-        return doc_content, revisions
-
+        logger.info(f"[Phase 1F] Fact-check corrections generated")
+        revisions.append(
+            f"Generated fact corrections for {len(correction_blocks)} sections"
+        )
+        return revisions

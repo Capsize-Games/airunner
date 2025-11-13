@@ -172,6 +172,9 @@ class GraphBuildingMixin:
         graph.add_node("phase0", self._phase0_rag_check)
         graph.add_node("phase1a", self._phase1a_gather)
         graph.add_node("phase1a_curiosity", self._phase1a_curiosity)
+        graph.add_node(
+            "phase1a_validate", self._phase1a_validate
+        )  # NEW: Validate notes
         graph.add_node("phase1b", self._phase1b_analyze)
         graph.add_node("phase1b_thesis", self._phase1b_thesis)
         graph.add_node("phase1c", self._phase1c_outline)
@@ -180,11 +183,15 @@ class GraphBuildingMixin:
         graph.add_node("phase1f", self._phase1f_revise)
         graph.add_node("finalize", self._finalize_document)
 
-        # Pure linear progression
+        # Pure linear progression with validation phase after curiosity
         graph.add_edge(START, "plan")
         graph.add_edge("plan", "phase0")
         graph.add_edge("phase0", "phase1a")
-        graph.add_edge("phase1a", "phase1b")
+        graph.add_edge("phase1a", "phase1a_curiosity")
+        graph.add_edge(
+            "phase1a_curiosity", "phase1a_validate"
+        )  # NEW: Validate before analysis
+        graph.add_edge("phase1a_validate", "phase1b")
         graph.add_edge("phase1b", "phase1b_thesis")
         graph.add_edge("phase1b_thesis", "phase1c")
         graph.add_edge("phase1c", "phase1d")
@@ -194,7 +201,7 @@ class GraphBuildingMixin:
         graph.add_edge("finalize", END)
 
         logger.info(
-            "Deep Research agent graph built successfully (curiosity phase DISABLED to prevent hallucination)"
+            "Deep Research agent graph built successfully (with validation phase)"
         )
         return graph
 

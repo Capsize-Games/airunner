@@ -5,6 +5,7 @@ This mixin provides parsing and validation methods for research content.
 
 import re
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -40,92 +41,115 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
             if not section.strip():
                 continue
 
-            curiosity_match = re.search(
-                r"\*\*CURIOSITY DEEP-DIVE: (.+?)\*\*", section
-            )
-            is_curiosity = curiosity_match is not None
-            curiosity_topic = (
-                curiosity_match.group(1) if is_curiosity else None
-            )
+            source_info = self._parse_single_source(section)
+            if source_info:
+                parsed["sources"].append(source_info)
+                self._extract_entities_and_themes(
+                    source_info["content"], parsed
+                )
 
-            url_match = re.search(r"###\s+(https?://\S+)", section)
-            if not url_match:
-                url_match = re.search(r"URL:\s+(https?://\S+)", section)
-            url = url_match.group(1) if url_match else "Unknown"
-
-            title_match = re.search(r"Title:\s+(.+?)(?:\n|$)", section)
-            title = title_match.group(1).strip() if title_match else None
-
-            extract_match = re.search(
-                r"Extract:\s+(.+?)(?:\n---|\n###|$)", section, re.DOTALL
-            )
-            if extract_match:
-                content = extract_match.group(1).strip()
-            else:
-                lines = section.split("\n")
-                content_start = (
-                    next(
-                        (
-                            i
-                            for i, line in enumerate(lines)
-                            if line.startswith("URL:")
-                        ),
-                        -1,
+                if (
+                    source_info["is_curiosity"]
+                    and source_info["curiosity_topic"]
+                ):
+                    parsed["curiosity_topics"].append(
+                        source_info["curiosity_topic"]
                     )
-                    + 1
-                )
-                content = (
-                    "\n".join(lines[content_start:]).strip()
-                    if content_start > 0
-                    else section.strip()
-                )
 
-            source_info = {
-                "url": url,
-                "title": title,
-                "content": content,
-                "is_curiosity": is_curiosity,
-                "curiosity_topic": curiosity_topic,
-            }
-            parsed["sources"].append(source_info)
-
-            entities = re.findall(
-                r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", content
-            )
-            parsed["entities"].update(entities)
-
-            dates = re.findall(
-                r"\b(?:January|February|March|April|May|June|July|August|September|"
-                r"October|November|December)\s+\d{1,2},?\s+\d{4}\b",
-                content,
-            )
-            dates += re.findall(r"\b\d{4}\b", content)
-            parsed["dates"].update(dates)
-
-            words = re.findall(r"\b[a-z]{4,}\b", content.lower())
-            for word in words:
-                if word not in [
-                    "that",
-                    "this",
-                    "with",
-                    "from",
-                    "have",
-                    "been",
-                    "were",
-                    "will",
-                ]:
-                    parsed["themes"][word] = parsed["themes"].get(word, 0) + 1
-
-        for source in parsed["sources"]:
-            if source["is_curiosity"] and source["curiosity_topic"]:
-                parsed["curiosity_topics"].append(source["curiosity_topic"])
-
-        top_themes = sorted(
-            parsed["themes"].items(), key=lambda x: x[1], reverse=True
-        )[:10]
-        parsed["top_themes"] = [theme for theme, _ in top_themes]
-
+        parsed["top_themes"] = self._get_top_themes(parsed["themes"])
         return parsed
+
+    def _parse_single_source(self, section: str) -> dict:
+        """Parse a single source section."""
+        curiosity_match = re.search(
+            r"\*\*CURIOSITY DEEP-DIVE: (.+?)\*\*", section
+        )
+        is_curiosity = curiosity_match is not None
+        curiosity_topic = curiosity_match.group(1) if is_curiosity else None
+
+        url = self._extract_url(section)
+        title = self._extract_title(section)
+        content = self._extract_content(section)
+
+        return {
+            "url": url,
+            "title": title,
+            "content": content,
+            "is_curiosity": is_curiosity,
+            "curiosity_topic": curiosity_topic,
+        }
+
+    def _extract_url(self, section: str) -> str:
+        """Extract URL from section."""
+        url_match = re.search(r"###\s+(https?://\S+)", section)
+        if not url_match:
+            url_match = re.search(r"URL:\s+(https?://\S+)", section)
+        return url_match.group(1) if url_match else "Unknown"
+
+    def _extract_title(self, section: str) -> str:
+        """Extract title from section."""
+        title_match = re.search(r"Title:\s+(.+?)(?:\n|$)", section)
+        return title_match.group(1).strip() if title_match else None
+
+    def _extract_content(self, section: str) -> str:
+        """Extract content from section."""
+        extract_match = re.search(
+            r"Extract:\s+(.+?)(?:\n---|\n###|$)", section, re.DOTALL
+        )
+        if extract_match:
+            return extract_match.group(1).strip()
+
+        lines = section.split("\n")
+        content_start = (
+            next(
+                (i for i, line in enumerate(lines) if line.startswith("URL:")),
+                -1,
+            )
+            + 1
+        )
+        return (
+            "\n".join(lines[content_start:]).strip()
+            if content_start > 0
+            else section.strip()
+        )
+
+    def _extract_entities_and_themes(self, content: str, parsed: dict):
+        """Extract entities, dates, and themes from content."""
+        # Extract entities (capitalized names)
+        entities = re.findall(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b", content)
+        parsed["entities"].update(entities)
+
+        # Extract dates
+        dates = re.findall(
+            r"\b(?:January|February|March|April|May|June|July|August|September|"
+            r"October|November|December)\s+\d{1,2},?\s+\d{4}\b",
+            content,
+        )
+        dates += re.findall(r"\b\d{4}\b", content)
+        parsed["dates"].update(dates)
+
+        # Extract themes (common words)
+        stopwords = {
+            "that",
+            "this",
+            "with",
+            "from",
+            "have",
+            "been",
+            "were",
+            "will",
+        }
+        words = re.findall(r"\b[a-z]{4,}\b", content.lower())
+        for word in words:
+            if word not in stopwords:
+                parsed["themes"][word] = parsed["themes"].get(word, 0) + 1
+
+    def _get_top_themes(self, themes: dict) -> list:
+        """Get top 10 themes by frequency."""
+        top_themes = sorted(themes.items(), key=lambda x: x[1], reverse=True)[
+            :10
+        ]
+        return [theme for theme, _ in top_themes]
 
     def _validate_synthesized_content(
         self, content: str, section_name: str
@@ -172,7 +196,6 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
     @staticmethod
     def _get_domain_name(url: str) -> str:
         """Extract clean domain name from URL."""
-        from urllib.parse import urlparse
 
         try:
             parsed = urlparse(url)
