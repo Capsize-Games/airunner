@@ -6,7 +6,7 @@ It formats prompts, invokes the LLM, and parses decisions about which links to f
 """
 
 import json
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Any, Callable
 from dataclasses import dataclass
 
 from airunner.settings import AIRUNNER_LOG_LEVEL

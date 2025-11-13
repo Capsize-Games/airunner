@@ -5,7 +5,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.prompt_container_ui import (
     Ui_prompt_container_widget,
 )
-from airunner.enums import SignalCode, StableDiffusionVersion
+from airunner.enums import SignalCode
 
 
 class PromptContainerWidget(BaseWidget):

@@ -3,9 +3,7 @@
 import os
 from typing import Any, Dict, Optional
 
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from diffusers import SchedulerMixin
-from transformers import CLIPFeatureExtractor
 
 from controlnet_aux.processor import MODELS as controlnet_aux_models
 from airunner.components.art.data.lora import Lora

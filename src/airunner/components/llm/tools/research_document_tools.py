@@ -9,7 +9,6 @@ editor and locked to prevent user editing while the LLM is working.
 import os
 from datetime import datetime
 from typing import Annotated, Any
-from pathlib import Path
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.settings import AIRUNNER_LOG_LEVEL

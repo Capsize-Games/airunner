@@ -1,6 +1,6 @@
 """Unit tests for web tools (search_web and scrape_website)."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from airunner.components.llm.tools.web_tools import search_web, scrape_website
 
 

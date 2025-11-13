@@ -17,8 +17,6 @@ from airunner.enums import (
     SignalCode,
     TemplateName,
 )
-from airunner.setup_database import setup_database
-from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
 from airunner.utils.application.ui_loader import (
     load_ui_file,

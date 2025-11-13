@@ -9,15 +9,21 @@ This mixin handles:
 - Main generation orchestration
 """
 
+import os
+import traceback
 import random
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import torch
 from langchain_core.messages import AIMessage
+from langchain_core.messages import HumanMessage
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.enums import LLMActionType, SignalCode
+from airunner.components.llm.agents.deep_research.deep_research_agent import (
+    DeepResearchAgent,
+)
 
 if TYPE_CHECKING:
     pass
@@ -152,8 +158,6 @@ class GenerationMixin:
         Returns:
             Error message
         """
-        import traceback
-
         self.logger.error(f"Error during generation: {exc}", exc_info=True)
         # Print full traceback for debugging
         print(f"[ERROR HANDLER] Exception type: {type(exc)}", flush=True)
@@ -232,11 +236,6 @@ class GenerationMixin:
             Dictionary with 'response' key containing result message and document path
         """
         try:
-            from airunner.components.llm.agents.deep_research_agent import (
-                DeepResearchAgent,
-            )
-            import os
-
             # Get research folder path
             if not PATH_SETTINGS_AVAILABLE:
                 return {
@@ -284,8 +283,6 @@ class GenerationMixin:
                 )
 
             # Create initial message for the agent
-            from langchain_core.messages import HumanMessage
-
             initial_state = {
                 "messages": [HumanMessage(content=prompt)],
                 "research_topic": prompt,
@@ -327,13 +324,6 @@ class GenerationMixin:
             return {
                 "response": response_text,
                 "document_path": document_path,
-            }
-
-        except ImportError as e:
-            self.logger.error(f"Failed to import DeepResearchAgent: {e}")
-            return {
-                "response": "Error: DeepResearchAgent is not available.",
-                "error": str(e),
             }
         except Exception as e:
             self.logger.error(f"Deep Research failed: {e}", exc_info=True)

@@ -18,7 +18,7 @@ from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.components.art.data.ai_models import AIModels
-from airunner.enums import Scheduler, SignalCode
+from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import (
     convert_binary_to_image,
 )
