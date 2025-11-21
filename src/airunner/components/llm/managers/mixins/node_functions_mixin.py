@@ -946,9 +946,6 @@ Provide a clear, conversational answer using only the information above."""
 
         complete_content = "".join(streamed_content)
 
-        # NOTE: Don't call token callback here - already called per-chunk in _generate_streaming_response
-        # Calling it here would send the entire message again after it was already streamed
-
         response_message = AIMessage(
             content=complete_content,
             additional_kwargs=additional_kwargs,
