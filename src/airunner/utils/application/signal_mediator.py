@@ -260,6 +260,17 @@ class SignalMediator(metaclass=SingletonMeta):
             logger.info(
                 f"SignalMediator: Registering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
             )
+            # Prevent duplicate registrations for the same callback
+            for existing in list(self.signals[code]):
+                try:
+                    if existing.matches(slot_function):
+                        logger.debug(
+                            f"SignalMediator: Skipping duplicate registration for {code} -> {slot_function}"
+                        )
+                        return
+                except Exception:
+                    # If we cannot match, be conservative and continue
+                    pass
             self.signals[code].append(Signal(callback=slot_function))
 
     def unregister(self, code: SignalCode, slot_function: Callable):
@@ -276,6 +287,21 @@ class SignalMediator(metaclass=SingletonMeta):
 
         if code not in self.signals:
             return
+        # Remove signal wrappers that match the provided slot_function
+        new_list = []
+        for s in self.signals[code]:
+            try:
+                if s.matches(slot_function):
+                    logger.info(
+                        f"SignalMediator: Unregistering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
+                    )
+                    # drop this signal wrapper
+                    continue
+            except Exception:
+                # If something went wrong while matching, retain the signal
+                pass
+            new_list.append(s)
+        self.signals[code] = new_list
 
     def emit_signal(self, code: SignalCode, data: Optional[Dict] = None):
         """
