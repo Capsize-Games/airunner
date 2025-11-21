@@ -4,7 +4,6 @@ import os
 import sys
 
 # Set headless mode
-os.environ["AIRUNNER_HEADLESS"] = "1"
 os.environ["AIRUNNER_HTTP_PORT"] = "8188"
 os.environ["AIRUNNER_KNOWLEDGE_ON"] = "0"
 
@@ -20,7 +19,7 @@ except Exception as e:
 # Test worker creation
 try:
     print("Creating app instance...")
-    app = App(initialize_gui=False)
+    app = App(headless=True)
     print("✓ App created")
 
     # Check if Qt app exists

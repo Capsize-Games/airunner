@@ -281,6 +281,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "tool_categories": "tool_categories",
             "model": "model",
             "rag_files": "rag_files",
+            # Mode-based routing / override options
+            "use_mode_routing": "use_mode_routing",
+            "mode_override": "mode_override",
         }
         excluded = {
             "prompt",

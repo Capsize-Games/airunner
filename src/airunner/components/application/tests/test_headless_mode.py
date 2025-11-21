@@ -11,25 +11,24 @@ import os
 
 def test_headless_mode_env_variable(monkeypatch):
     """Test that AIRUNNER_HEADLESS=1 enables headless mode."""
-    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
 
     from airunner.app import App
 
     # Create app with AIRUNNER_HEADLESS set
-    app = App()
+    app = App(headless=True)
 
-    assert app.initialize_gui is False
+    assert app.headless is True
     assert app.api_server_thread is not None  # Server started in headless mode
     assert app.api_server_thread.is_alive()  # Thread is running
 
 
 def test_headless_mode_explicit_flag():
-    """Test that initialize_gui=False enables headless mode."""
+    """Test that headless=True enables headless mode."""
     from airunner.app import App
 
-    app = App(initialize_gui=False)
+    app = App(headless=True)
 
-    assert app.initialize_gui is False
+    assert app.headless is True
 
 
 def test_headless_health_endpoint():
@@ -41,7 +40,6 @@ def test_headless_health_endpoint():
 
     # Start headless server in subprocess
     env = os.environ.copy()
-    env["AIRUNNER_HEADLESS"] = "1"
     env["AIRUNNER_HTTP_PORT"] = "8765"  # Use non-standard port for testing
 
     # Note: This test requires the airunner-headless command to be available

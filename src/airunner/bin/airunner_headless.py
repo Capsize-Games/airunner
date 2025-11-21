@@ -7,13 +7,13 @@ the HTTP API server for /llm, /art, /stt, /tts endpoints.
 
 Usage:
     airunner-headless
-    airunner-headless --host 0.0.0.0 --port 8188
+    airunner-headless --host 0.0.0.0 --port 8080
     airunner-headless --help
 
 Environment Variables:
     AIRUNNER_HEADLESS: Set to 1 (automatically set by this script)
     AIRUNNER_HTTP_HOST: Override host (default: 0.0.0.0)
-    AIRUNNER_HTTP_PORT: Override port (default: 8188)
+    AIRUNNER_HTTP_PORT: Override port (default: 8080)
     AIRUNNER_LLM_ON: Enable LLM service (default: 1)
     AIRUNNER_TTS_ON: Enable TTS service (default: 0)
     AIRUNNER_STT_ON: Enable STT service (default: 0)
@@ -21,14 +21,14 @@ Environment Variables:
     AIRUNNER_CN_ON: Enable ControlNet (default: 0)
 
 Examples:
-    # Start with defaults (0.0.0.0:8188)
+    # Start with defaults (0.0.0.0:8080)
     airunner-headless
 
     # Start on custom port
     airunner-headless --port 9000
 
     # Start on localhost only
-    airunner-headless --host 127.0.0.1 --port 8188
+    airunner-headless --host 127.0.0.1 --port 8080
 
     # Enable all services
     AIRUNNER_LLM_ON=1 AIRUNNER_SD_ON=1 airunner-headless
@@ -40,9 +40,6 @@ import os
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-
-# CRITICAL: Set headless mode BEFORE importing App
-os.environ["AIRUNNER_HEADLESS"] = "1"
 
 
 def main():
@@ -63,8 +60,8 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("AIRUNNER_HTTP_PORT", "8188")),
-        help="Port to listen on (default: 8188)",
+        default=int(os.environ.get("AIRUNNER_HTTP_PORT", "8080")),
+        help="Port to listen on (default: 8080)",
     )
 
     args = parser.parse_args()
@@ -126,7 +123,7 @@ def main():
         # This initializes the app, workers, and HTTP server
         from airunner.components.application.api.api import API
 
-        api = API(initialize_gui=False)
+        api = API(headless=True)
 
         # Store API instance globally so get_api() can access it
         from airunner.components.server.api import server

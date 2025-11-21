@@ -13,7 +13,6 @@ print("Starting headless server...")
 print("=" * 70)
 
 env = os.environ.copy()
-env["AIRUNNER_HEADLESS"] = "1"
 env["AIRUNNER_HTTP_PORT"] = "8188"
 env["AIRUNNER_HTTP_HOST"] = "127.0.0.1"
 env["AIRUNNER_TEST_MODEL_PATH"] = (

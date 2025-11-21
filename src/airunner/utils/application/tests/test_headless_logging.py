@@ -17,7 +17,6 @@ import pytest
 def test_headless_logging_writes_to_file(tmp_path, monkeypatch):
     # Use a temporary file to verify logging output
     log_file = tmp_path / "headless_test.log"
-    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
     monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "1")
     monkeypatch.setenv("AIRUNNER_LOG_FILE", str(log_file))
     monkeypatch.setenv("DEV_ENV", "0")
@@ -69,7 +68,6 @@ def test_headless_logging_reconfigures_preexisting_loggers(
     headless_file = tmp_path / "headless_final.log"
 
     # Step 1 - Create pre-existing GUI logger
-    monkeypatch.setenv("AIRUNNER_HEADLESS", "0")
     monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "1")
     monkeypatch.setenv("AIRUNNER_LOG_FILE", str(pre_file))
     monkeypatch.setenv("DEV_ENV", "0")
@@ -87,7 +85,6 @@ def test_headless_logging_reconfigures_preexisting_loggers(
     pre_logger.info("message_before_headless")
 
     # Step 2 - Switch to headless mode and configure headless logging
-    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
     monkeypatch.setenv("AIRUNNER_LOG_FILE", str(headless_file))
 
     logging_utils = _importlib.import_module(

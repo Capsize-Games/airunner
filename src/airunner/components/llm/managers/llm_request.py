@@ -72,6 +72,8 @@ class LLMRequest:
         False  # If True, conversation stays in memory but not saved to database
     )
     model: str = ""
+    use_mode_routing: bool = False  # Enable mode-based routing (author/code/research/qa/general)
+    mode_override: Optional[str] = None  # Force specific mode instead of auto-classification
 
     def to_dict(self) -> Dict:
         """
