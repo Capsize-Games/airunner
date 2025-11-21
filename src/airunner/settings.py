@@ -36,7 +36,7 @@ NLTK_DOWNLOAD_DIR = os.path.join(
 )
 AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
     "AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH",
-    "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
+    None,
 )
 AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
     "AIRUNNER_DEFAULT_STT_HF_PATH", "openai/whisper-tiny"
@@ -261,6 +261,11 @@ AIRUNNER_LLM_USE_CHATBOT_MOOD = (
 AIRUNNER_LLM_PERFORM_CONVERSATION_RAG = (
     os.environ.get("AIRUNNER_LLM_PERFORM_CONVERSATION_RAG", "1") == "1"
 )
+
+# Duplicate detection window in number of AI messages to consider
+AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW = int(
+    os.environ.get("AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW", 3)
+)
 AIRUNNER_TTS_MODEL_TYPE = os.environ.get("AIRUNNER_TTS_MODEL_TYPE", None)
 
 # Headless
@@ -280,9 +285,7 @@ AIRUNNER_ART_SCHEDULER = os.environ.get("AIRUNNER_ART_SCHEDULER", "")
 AIRUNNER_LOCAL_FILES_ONLY = (
     os.environ.get("AIRUNNER_LOCAL_FILES_ONLY", "1") == "1"
 )
-AIRUNNER_ADD_WATER_MARK = (
-    os.environ.get("AIRUNNER_ADD_WATER_MARK", "0") == "1"
-)
+AIRUNNER_ADD_WATER_MARK = os.environ.get("AIRUNNER_ADD_WATER_MARK", "0") == "1"
 
 AIRUNNER_ART_USE_COMPEL = os.environ.get("AIRUNNER_ART_USE_COMPEL", None)
 if AIRUNNER_ART_USE_COMPEL is not None:
@@ -356,8 +359,19 @@ LANGUAGES = {
     "openvoice": ["en", "es", "fr", "ja", "zh", "zh_mix_en", "ko"],
     "speecht5": ["en"],
 }
+
+# Server settings for local static content serving
 LOCAL_SERVER_HOST = os.environ.get("LOCAL_SERVER_HOST", "127.0.0.1")
 LOCAL_SERVER_PORT = os.environ.get("LOCAL_SERVER_PORT", 5005)
+
+# Server settings for AI Runner headless server
+AIRUNNER_HEADLESS_SERVER_HOST = os.environ.get(
+    "AIRUNNER_HEADLESS_SERVER_HOST", "localhost"
+)
+AIRUNNER_HEADLESS_SERVER_PORT = int(
+    os.environ.get("AIRUNNER_HEADLESS_SERVER_PORT", 8080)
+)
+
 # STATIC_BASE_PATH should match the protocol used by the local server (default: https)
 STATIC_BASE_PATH = f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"
 MATHJAX_VERSION = "3.2.2"

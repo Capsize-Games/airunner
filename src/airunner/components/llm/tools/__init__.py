@@ -46,6 +46,7 @@ from airunner.components.llm.tools import (
     user_data_tools,
     agent_tools,
     mood_tools,
+    generation_tools,  # Direct text generation tools
     # Phase 2: Mode-specific tools
     author_tools,
     code_tools,
@@ -89,6 +90,7 @@ __all__ = [
     "user_data_tools",
     "agent_tools",
     "mood_tools",
+    "generation_tools",
     "langchain_calendar_tools",
     # Phase 2: Mode-specific tools
     "author_tools",

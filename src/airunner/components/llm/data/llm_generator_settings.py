@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, Boolean, String, BigInteger
+import os
 
 from airunner.components.data.models.base import BaseModel
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
@@ -44,7 +45,7 @@ class LLMGeneratorSettings(BaseModel):
     use_cache = Column(Boolean, default=True)
     length_penalty = Column(Integer, default=900)
     model_service = Column(String, default=ModelService.LOCAL.value)
-    model_path = Column(String, default="")
+    model_path = Column(String, default=AIRUNNER_DEFAULT_LLM_HF_PATH)
     auto_extract_knowledge = Column(Boolean, default=True)
 
     # Mode-based routing settings

@@ -1,3 +1,4 @@
+import traceback
 from typing import Dict, List, Optional, Tuple
 from abc import ABC, ABCMeta
 from abc import abstractmethod
@@ -137,12 +138,9 @@ class BaseWidget(AbstractBaseWidget):
             js = f"window.currentTheme = '{theme_name}';"
             self.web_engine_view.page().runJavaScript(js)
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    f"Failed to render template {self.template}: {e}"
-                )
-            else:
-                print(f"Failed to render template {self.template}: {e}")
+            self.logger.error(
+                f"Failed to render template {self.template}: {e}"
+            )
 
     def on_theme_changed_signal(self, data: Dict):
         template = data.get("template", TemplateName.SYSTEM_DEFAULT)
@@ -409,14 +407,14 @@ class BaseWidget(AbstractBaseWidget):
                     )
             query_string = "&".join(query_params) if query_params else ""
             template_url = f"http://127.0.0.1:5005/static/html/{template_name}?{query_string}"
-            print(f"[BaseWidget] Loading template from URL: {template_url}")
+            self.logger.info(
+                f"[BaseWidget] Loading template from URL: {template_url}"
+            )
             element.setUrl(QUrl(template_url))
         except Exception as e:
-            print(
+            self.logger.error(
                 f"[BaseWidget] Error rendering template {template_name}: {e}"
             )
-            import traceback
-
             traceback.print_exc()
 
     def set_status_message_text(self, message: str):

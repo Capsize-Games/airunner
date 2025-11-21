@@ -8,6 +8,7 @@ from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner.components.llm.utils import get_chatbot
+from airunner.enums import LLMActionType
 
 
 @dataclass
@@ -55,10 +56,22 @@ class LLMRequest:
     do_tts_reply: bool = True
     node_id: Optional[str] = None
     use_memory: bool = True
+    ephemeral: bool = False  # If True, conversation won't be saved to database
     tool_categories: Optional[List[str]] = field(
         default_factory=list
     )  # Default: no tools (empty list). Use None for all tools.
     role: MessageRole = MessageRole.USER
+    system_prompt: Optional[str] = None  # Optional system prompt override
+    response_format: Optional[str] = (
+        None  # Override response format instruction (e.g., "json", "conversational")
+    )
+    rag_files: Optional[List[str]] = field(
+        default_factory=list
+    )  # List of file paths to load into RAG
+    ephemeral_conversation: bool = (
+        False  # If True, conversation stays in memory but not saved to database
+    )
+    model: str = ""
 
     def to_dict(self) -> Dict:
         """
@@ -98,7 +111,6 @@ class LLMRequest:
 
         data.pop("node_id")
         data.pop("use_memory")
-        data.pop("tool_categories")
         data.pop("role")
 
         return data
@@ -261,8 +273,6 @@ class LLMRequest:
         Returns:
             LLMRequest: A new instance with parameters optimized for the action
         """
-        from airunner.enums import LLMActionType
-
         # Action-specific parameters
         if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
             # Chat: Conversational, coherent, natural

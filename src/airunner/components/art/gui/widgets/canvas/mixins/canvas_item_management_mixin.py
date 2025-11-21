@@ -44,10 +44,9 @@ class CanvasItemManagementMixin:
             try:
                 self.item.updateImage(image)
             except Exception:
-                if hasattr(self, "logger"):
-                    self.logger.warning(
-                        "Failed to update existing item with new image."
-                    )
+                self.logger.warning(
+                    "Failed to update existing item with new image."
+                )
 
     def set_item(
         self,

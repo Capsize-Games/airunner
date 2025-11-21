@@ -221,8 +221,7 @@ class SystemPromptMixin:
             return None
         except Exception as e:
             # If mood retrieval fails, just log and return None (fallback to default)
-            if hasattr(self, "logger"):
-                self.logger.debug(f"Could not retrieve current mood: {e}")
+            self.logger.debug(f"Could not retrieve current mood: {e}")
             return None
 
     def get_system_prompt_for_action(self, action: LLMActionType) -> str:

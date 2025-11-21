@@ -237,10 +237,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
                 "If this is not intentional, call set_agent(agent) after instantiation."
             )
         self._agent = agent
-        if hasattr(self, "logger"):
-            self.logger.debug(
-                f"HuggingFaceLLM initialized with agent: {repr(agent)}"
-            )
+        self.logger.debug(
+            f"HuggingFaceLLM initialized with agent: {repr(agent)}"
+        )
         model_kwargs = model_kwargs or {}
         model = model or AutoModelForCausalLM.from_pretrained(
             model_name, device_map=device_map, **model_kwargs
@@ -331,10 +330,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         Set the agent reference after instantiation (for deserialization/external instantiation).
         """
         self._agent = agent
-        if hasattr(self, "logger"):
-            self.logger.debug(
-                f"HuggingFaceLLM agent set via set_agent: {repr(agent)}"
-            )
+        self.logger.debug(
+            f"HuggingFaceLLM agent set via set_agent: {repr(agent)}"
+        )
 
     @property
     def model(self):

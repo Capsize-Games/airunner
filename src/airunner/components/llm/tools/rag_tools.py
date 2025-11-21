@@ -29,13 +29,12 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         "or use search_web instead."
     ),
     return_direct=False,
-    requires_api=True,
+    requires_api=False,  # Changed to False - we'll get API internally
 )
 def rag_search(
     query: Annotated[
         str, "Search query for finding relevant document content"
     ],
-    api: Any = None,
 ) -> str:
     """Search through LOADED documents in memory for relevant information.
 
@@ -51,15 +50,26 @@ def rag_search(
 
     Args:
         query: Search query for finding relevant document content
-        api: API instance (injected)
 
     Returns:
         Relevant excerpts from loaded documents or error message
     """
     logger.info(f"rag_search called with query: {query}")
 
+    # Get API directly instead of receiving it as parameter
+    from airunner.components.server.api.server import get_api
+
+    api = get_api()
+
+    print(
+        f"DEBUG rag_search: api type: {type(api).__name__ if api else 'None'}"
+    )
+    print(
+        f"DEBUG rag_search: api has rag_manager attr: {hasattr(api, 'rag_manager') if api else False}"
+    )
+
     rag_manager = getattr(api, "rag_manager", None) if api else None
-    logger.debug(f"rag_manager available: {rag_manager is not None}")
+    logger.info(f"rag_manager available: {rag_manager is not None}")
 
     if not rag_manager:
         error_msg = (
@@ -122,10 +132,11 @@ def rag_search(
         "Search across ALL knowledge base documents to find the most relevant "
         "ones. This is a broad search across document titles and paths - like "
         "a search engine for your entire knowledge base. Use this BEFORE "
-        "rag_search to determine which documents should be loaded."
+        "rag_search to determine which documents should be loaded. If documents "
+        "aren't indexed, this tool will automatically discover and index them."
     ),
     return_direct=False,
-    requires_api=False,
+    requires_api=True,
 )
 def search_knowledge_base_documents(
     query: Annotated[
@@ -133,6 +144,7 @@ def search_knowledge_base_documents(
         "What topics/documents you're looking for (e.g., 'Python programming books')",
     ],
     k: Annotated[int, "Number of document paths to return"] = 10,
+    api: Any = None,
 ) -> str:
     """Search across ALL knowledge base documents to find relevant ones.
 
@@ -161,12 +173,302 @@ def search_knowledge_base_documents(
         with session_scope() as session:
             # Get all active documents
             docs = session.query(Document).filter_by(active=True).all()
+            
+            # Initialize found_files to track discovered files
+            found_files = []
+
+            # If no document records exist yet, attempt to discover files
+            # on disk and add them to the database so the KB tools can work
+            if not docs and api:
+                logger.info(f"No docs in DB, attempting discovery. api={type(api).__name__}")
+                try:
+                    # Discover candidate document directories from PathSettings
+                    settings = (
+                        api.path_settings or PathSettings.objects.first()
+                    )
+                    logger.info(f"PathSettings: {settings}")
+                    candidate_dirs = []
+                    if settings:
+                        candidate_dirs.extend(
+                            [
+                                settings.documents_path,
+                                settings.ebook_path,
+                                settings.webpages_path,
+                                os.path.join(
+                                    settings.base_path, "knowledge_base"
+                                ),
+                            ]
+                        )
+
+                    logger.info(
+                        f"Candidate dirs for KB discovery: {candidate_dirs}"
+                    )
+                    for d in candidate_dirs:
+                        if not d:
+                            logger.debug(f"Skipping empty candidate dir")
+                            continue
+                        d = os.path.expanduser(d)
+                        if not os.path.exists(d):
+                            logger.info(f"KB discovery dir not found: {d}")
+                            continue
+                        logger.info(f"Scanning KB dir for documents: {d}")
+                        file_count = 0
+                        for root, _, files in os.walk(d):
+                            for fname in files:
+                                ext = os.path.splitext(fname)[1].lower()
+                                if ext in [
+                                    ".pdf",
+                                    ".epub",
+                                    ".html",
+                                    ".htm",
+                                    ".md",
+                                    ".txt",
+                                    ".zim",
+                                ]:
+                                    file_count += 1
+                                    found_files.append(
+                                        os.path.join(root, fname)
+                                    )
+                        logger.info(f"Found {file_count} files in {d}")
+
+                    # Create Document DB entries for found files
+                    logger.debug(
+                        f"Found {len(found_files)} candidate files during discovery"
+                    )
+                    for fpath in found_files:
+                        exists = Document.objects.filter_by(path=fpath)
+                        if not exists or len(exists) == 0:
+                            logger.info(f"Creating Document record for: {fpath}")
+                            Document.objects.create(
+                                path=fpath, active=True, indexed=False
+                            )
+                            if hasattr(api, "emit_signal"):
+                                api.emit_signal(
+                                    SignalCode.DOCUMENT_COLLECTION_CHANGED,
+                                    {"path": fpath, "action": "discovered"},
+                                )
+                        else:
+                            logger.debug(f"Document already exists: {fpath}")
+
+                    # Re-query after adding files
+                    docs = session.query(Document).filter_by(active=True).all()
+                    logger.info(
+                        f"After discovery, DB now has {len(docs)} active document records"
+                    )
+
+                except Exception as e:
+                    logger.error(f"Disk discovery failed: {e}", exc_info=True)
+            # If no files were found with standard paths, attempt to discover
+            # sample files in the repository (booksite) for dev environments
+            if docs == [] and not found_files:
+                try:
+                    # Walk up the directory tree to find repo root with booksite
+                    repo_root = os.path.abspath(
+                        os.path.join(
+                            os.path.dirname(__file__),
+                            "..",
+                            "..",
+                            "..",
+                            "..",
+                            "..",
+                        )
+                    )
+                    # Climb upwards until we find 'booksite' or reach filesystem root
+                    candidate = repo_root
+                    while True:
+                        if os.path.exists(os.path.join(candidate, "booksite")):
+                            break
+                        parent = os.path.abspath(
+                            os.path.join(candidate, os.pardir)
+                        )
+                        if parent == candidate:
+                            candidate = None
+                            break
+                        candidate = parent
+                    if candidate:
+                        logger.debug(
+                            f"Repo fallback candidate root: {candidate}"
+                        )
+                        # Known sample locations in repo
+                        fallback_dirs = [
+                            os.path.join(
+                                candidate,
+                                "booksite",
+                                "text",
+                                "other",
+                                "documents",
+                            ),
+                            os.path.join(
+                                candidate,
+                                "booksite",
+                                "text",
+                                "other",
+                                "ebooks",
+                            ),
+                            os.path.join(
+                                candidate,
+                                "booksite",
+                                "text",
+                                "other",
+                                "webpages",
+                            ),
+                        ]
+                        for d in fallback_dirs:
+                            if os.path.exists(d):
+                                logger.debug(
+                                    f"Scanning repo fallback dir for KB files: {d}"
+                                )
+                                for root, _, files in os.walk(d):
+                                    for fname in files:
+                                        ext = os.path.splitext(fname)[
+                                            1
+                                        ].lower()
+                                        if ext in [
+                                            ".pdf",
+                                            ".epub",
+                                            ".html",
+                                            ".htm",
+                                            ".md",
+                                            ".txt",
+                                            ".zim",
+                                        ]:
+                                            fpath = os.path.join(root, fname)
+                                            exists = (
+                                                Document.objects.filter_by(
+                                                    path=fpath
+                                                )
+                                            )
+                                            if not exists or len(exists) == 0:
+                                                Document.objects.create(
+                                                    path=fpath,
+                                                    active=True,
+                                                    indexed=False,
+                                                )
+                                                found_files.append(fpath)
+                                                if hasattr(api, "emit_signal"):
+                                                    api.emit_signal(
+                                                        SignalCode.DOCUMENT_COLLECTION_CHANGED,
+                                                        {
+                                                            "path": fpath,
+                                                            "action": "discovered",
+                                                        },
+                                                    )
+                        if found_files:
+                            docs = (
+                                session.query(Document)
+                                .filter_by(active=True)
+                                .all()
+                            )
+                except Exception as e:
+                    logger.warning(f"Fallback repo discovery failed: {e}")
 
             if not docs:
+                logger.info(f"[KB SEARCH] No docs found after all discovery attempts. Returning error message.")
                 return (
                     "No documents found in knowledge base. "
                     "Please index some documents first."
                 )
+
+            # If no files were found with standard paths, attempt to discover
+            # sample files in the repository (booksite) for dev environments
+            if docs == [] and not found_files:
+                try:
+                    # Walk up the directory tree to find repo root with booksite
+                    repo_root = os.path.abspath(
+                        os.path.join(
+                            os.path.dirname(__file__),
+                            "..",
+                            "..",
+                            "..",
+                            "..",
+                            "..",
+                        )
+                    )
+                    # Climb upwards until we find 'booksite' or reach filesystem root
+                    candidate = repo_root
+                    while True:
+                        if os.path.exists(os.path.join(candidate, "booksite")):
+                            break
+                        parent = os.path.abspath(
+                            os.path.join(candidate, os.pardir)
+                        )
+                        if parent == candidate:
+                            candidate = None
+                            break
+                        candidate = parent
+                    if candidate:
+                        # Known sample locations in repo
+                        fallback_dirs = [
+                            os.path.join(
+                                candidate,
+                                "booksite",
+                                "text",
+                                "other",
+                                "documents",
+                            ),
+                            os.path.join(
+                                candidate,
+                                "booksite",
+                                "text",
+                                "other",
+                                "ebooks",
+                            ),
+                            os.path.join(
+                                candidate,
+                                "booksite",
+                                "text",
+                                "other",
+                                "webpages",
+                            ),
+                        ]
+                        for d in fallback_dirs:
+                            if os.path.exists(d):
+                                logger.debug(
+                                    f"Scanning repo fallback dir for KB files: {d}"
+                                )
+                                for root, _, files in os.walk(d):
+                                    for fname in files:
+                                        ext = os.path.splitext(fname)[
+                                            1
+                                        ].lower()
+                                        if ext in [
+                                            ".pdf",
+                                            ".epub",
+                                            ".html",
+                                            ".htm",
+                                            ".md",
+                                            ".txt",
+                                            ".zim",
+                                        ]:
+                                            fpath = os.path.join(root, fname)
+                                            exists = (
+                                                Document.objects.filter_by(
+                                                    path=fpath
+                                                )
+                                            )
+                                            if not exists or len(exists) == 0:
+                                                Document.objects.create(
+                                                    path=fpath,
+                                                    active=True,
+                                                    indexed=False,
+                                                )
+                                                found_files.append(fpath)
+                                                if hasattr(api, "emit_signal"):
+                                                    api.emit_signal(
+                                                        SignalCode.DOCUMENT_COLLECTION_CHANGED,
+                                                        {
+                                                            "path": fpath,
+                                                            "action": "discovered",
+                                                        },
+                                                    )
+                        if found_files:
+                            docs = (
+                                session.query(Document)
+                                .filter_by(active=True)
+                                .all()
+                            )
+                except Exception as e:
+                    logger.warning(f"Fallback repo discovery failed: {e}")
 
             # Simple keyword-based relevance scoring
             query_lower = query.lower()
@@ -193,19 +495,91 @@ def search_knowledge_base_documents(
             top_docs = scored_docs[:k]
 
             if not top_docs:
-                return (
-                    f"No documents found matching '{query}'. "
-                    f"Try different search terms."
-                )
+                # No file/path matches for query terms. Try to index any unindexed
+                # active documents and retry scoring (useful for content-based
+                # searching where filenames may not include query terms).
+                try:
+                    if api and hasattr(api, "rag_manager"):
+                        rag_manager = api.rag_manager
+                        unindexed = [d.path for d in docs if not d.indexed]
+                        if unindexed and hasattr(
+                            rag_manager, "ensure_indexed_files"
+                        ):
+                            logger.info(
+                                f"No filepath matches for query '{query}'. Attempting to index {len(unindexed)} documents and retry."
+                            )
+                            success = rag_manager.ensure_indexed_files(
+                                unindexed
+                            )
+                            if success:
+                                # Recompute scoring after indexing
+                                docs = (
+                                    session.query(Document)
+                                    .filter_by(active=True)
+                                    .all()
+                                )
+                                scored_docs = []
+                                for doc in docs:
+                                    path_lower = doc.path.lower()
+                                    filename = os.path.basename(path_lower)
+                                    score = 0
+                                    for term in query_terms:
+                                        if term in filename:
+                                            score += 10
+                                        elif term in path_lower:
+                                            score += 5
+                                    if score > 0:
+                                        scored_docs.append((score, doc))
+                                scored_docs.sort(
+                                    reverse=True, key=lambda x: x[0]
+                                )
+                                top_docs = scored_docs[:k]
+                except Exception as e:
+                    logger.warning(f"On-demand indexing and retry failed: {e}")
+
+                if not top_docs:
+                    return (
+                        f"No documents found matching '{query}'. "
+                        f"Try different search terms or provide relevant files."
+                    )
 
             # Format response
             result_parts = [
                 f"Found {len(top_docs)} relevant document(s) "
                 f"for '{query}':\n"
             ]
+            # If we found documents but they are not indexed, attempt to index them
+            to_index_files = [
+                doc.path for _, doc in top_docs if not doc.indexed
+            ]
+            indexed_now_count = 0
+            if to_index_files and api:
+                logger.debug(
+                    f"Attempting to on-demand index {len(to_index_files)} files"
+                )
+                print(
+                    f"DEBUG search_knowledge_base_documents: attempting to index {len(to_index_files)} files"
+                )
+                rag_manager = getattr(api, "rag_manager", None)
+                if rag_manager and hasattr(
+                    rag_manager, "ensure_indexed_files"
+                ):
+                    try:
+                        success = rag_manager.ensure_indexed_files(
+                            to_index_files
+                        )
+                        indexed_now_count = (
+                            len(to_index_files) if success else 0
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to index files on demand: {e}")
+
             for i, (score, doc) in enumerate(top_docs, 1):
                 filename = os.path.basename(doc.path)
                 indexed_status = "indexed" if doc.indexed else "not indexed"
+                # If we just indexed them, update display status
+                if doc.path in to_index_files and indexed_now_count > 0:
+                    indexed_status = "indexed"
                 result_parts.append(f"{i}. {filename} ({indexed_status})")
                 result_parts.append(f"   Path: {doc.path}")
 
@@ -214,6 +588,12 @@ def search_knowledge_base_documents(
                 "detailed content."
             )
 
+            # If we performed indexing, append summary of what happened
+            if indexed_now_count > 0:
+                result_parts.insert(
+                    0,
+                    f"Automatically indexed {indexed_now_count} document(s) and refreshed the KB.\n",
+                )
             return "\n".join(result_parts)
     except Exception as e:
         logger.error(f"Error searching knowledge base: {e}")

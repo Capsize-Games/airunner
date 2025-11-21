@@ -1,3 +1,4 @@
+import traceback
 from typing import Dict, Optional, Callable as CallableType
 import inspect
 from typing import Callable
@@ -100,6 +101,7 @@ class Signal(QObject):
 
     @Slot(object)
     def on_signal_received(self, data: Dict):
+        logger.debug(f"Signal.on_signal_received CALLED")
         try:
             # Resolve the weak reference to get the live callable
             # If this Signal is tied to a QObject, ensure the underlying C++
@@ -109,21 +111,28 @@ class Signal(QObject):
             # If we've been notified that the QObject has been destroyed,
             # skip calling the callback.
             if getattr(self, "_dead", False):
+                logger.debug(f"Object is dead, skipping")
                 return
             cb = None
             try:
                 cb = self._callback_ref()
-            except Exception:
+            except Exception as e2:
+                logger.debug(f"Exception resolving callback: {e2}")
                 cb = None
 
             if cb is None:
                 # The Python callable has been garbage collected; skip
+                logger.debug(f"Callback is None (garbage collected?)")
                 return
 
+            logger.debug(
+                f"About to call callback: {cb} with param_count={self.param_count}"
+            )
             if self.param_count == 0:
                 cb()
             else:
                 cb(data)
+            logger.debug(f"allback completed")
         except Exception as e:
             # Print full traceback and context to aid debugging of signal handlers
             # Use a guarded traceback print: some traceback/inspect utilities
@@ -132,9 +141,9 @@ class Signal(QObject):
             # We attempt the full traceback first, but fall back to a minimal
             # safe print if anything goes wrong while formatting the traceback.
             try:
-                import traceback
-
-                print(f"Error in signal callback: {e} (type: {type(e)})")
+                logger.error(
+                    f"Error in signal callback: {e} (type: {type(e)})"
+                )
                 try:
                     print("data", data)
                 except Exception:
@@ -152,30 +161,30 @@ class Signal(QObject):
                         cb = None
                     print("callback:", repr(cb))
                 except Exception:
-                    print("callback: <unprintable>")
+                    logger.error("callback: <unprintable>")
                 # This can still raise (e.g., inspect.getsource), so guard it
                 try:
                     traceback.print_exc()
                 except RecursionError:
                     # Fallback: simple stack summary using traceback.format_exc may also fail,
                     # so provide a minimal representation of the exception.
-                    print(
+                    logger.warning(
                         "Traceback unavailable due to recursion; exception repr below:"
                     )
                     try:
                         print(repr(e))
                     except Exception:
-                        print("<unrepresentable exception>")
+                        logger.error("<unrepresentable exception>")
             except RecursionError:
                 # If even importing or using traceback triggers recursion, print minimal info
                 try:
-                    print(
+                    logger.debug(
                         "Error in signal callback (RecursionError during traceback formatting)"
                     )
                     try:
                         print("data", data)
                     except Exception:
-                        print("data: <unprintable>")
+                        logger.error("data: <unprintable>")
                     try:
                         cb = None
                         try:
@@ -248,6 +257,9 @@ class SignalMediator(metaclass=SingletonMeta):
             # Default PySide6-based implementation
             if code not in self.signals:
                 self.signals[code] = []
+            logger.info(
+                f"SignalMediator: Registering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
+            )
             self.signals[code].append(Signal(callback=slot_function))
 
     def unregister(self, code: SignalCode, slot_function: Callable):
@@ -274,17 +286,6 @@ class SignalMediator(metaclass=SingletonMeta):
         # Check if this is a response to a pending request
         request_id = data.get("request_id")
 
-        # DEBUG: Log request correlation attempts
-        if request_id:
-            logger.debug(f"Signal {code} with request_id={request_id}")
-            logger.debug(
-                f"Pending requests: {list(self._pending_requests.keys())}"
-            )
-            logger.debug(f"Callbacks: {list(self._request_callbacks.keys())}")
-            logger.debug(
-                f"Match check: {request_id in self._pending_requests}"
-            )
-
         if request_id and request_id in self._pending_requests:
             # CRITICAL: Only route to callbacks if this is an actual RESPONSE
             # (has "response" key), not just the REQUEST signal echo.
@@ -293,31 +294,21 @@ class SignalMediator(metaclass=SingletonMeta):
             is_response = "response" in data
 
             if is_response:
-                logger.info(f"ROUTING response for request_id={request_id}")
-
                 # Route response to pending request queue
                 with self._request_lock:
                     if request_id in self._pending_requests:
                         self._pending_requests[request_id].put(data)
-                        logger.info(f"Added to queue for {request_id}")
 
                 # Also call registered callback if exists
                 with self._request_lock:
                     if request_id in self._request_callbacks:
                         try:
-                            logger.info(f"Calling callback for {request_id}")
                             self._request_callbacks[request_id](data)
-                            logger.info(f"Callback completed for {request_id}")
                         except Exception as e:
                             logger.error(
                                 f"Error in request callback: {e}",
                                 exc_info=True,
                             )
-            else:
-                logger.debug(
-                    f"Skipping callback for request_id={request_id} - "
-                    "this is a REQUEST signal, not a RESPONSE"
-                )
 
         if self.backend:
             # Delegate emission to the custom backend

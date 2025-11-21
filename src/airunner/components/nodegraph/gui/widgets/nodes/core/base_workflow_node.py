@@ -259,10 +259,7 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
         """
         try:
             # Log pause action using logger if available, otherwise fallback to print
-            if hasattr(self, "logger"):
-                self.logger.debug(f"Node '{self.name()}' paused.")
-            else:
-                self.logger.info(f"Node '{self.name()}' paused.")
+            self.logger.debug(f"Node '{self.name()}' paused.")
         except Exception as e:
             self.logger.info(
                 f"Error in on_pause for node '{self.name()}': {e}"
@@ -277,10 +274,7 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
         """
         try:
             # Log stop action using logger if available, otherwise fallback to print
-            if hasattr(self, "logger"):
-                self.logger.debug(f"Node '{self.name()}' stopped.")
-            else:
-                self.logger.info(f"Node '{self.name()}' stopped.")
+            self.logger.debug(f"Node '{self.name()}' stopped.")
         except Exception as e:
             self.logger.info(f"Error in on_stop for node '{self.name()}': {e}")
 
@@ -292,10 +286,7 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
         """
         try:
             # Log resume action using logger if available, otherwise fallback to print
-            if hasattr(self, "logger"):
-                self.logger.debug(f"Node '{self.name()}' resumed.")
-            else:
-                self.logger.info(f"Node '{self.name()}' resumed.")
+            self.logger.debug(f"Node '{self.name()}' resumed.")
         except Exception as e:
             self.logger.info(
                 f"Error in on_resume for node '{self.name()}': {e}"

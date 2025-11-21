@@ -5,10 +5,23 @@ RAG system components.
 """
 
 import gc
+import os
 from typing import Optional, List, Dict, Any
 from llama_index.core import VectorStoreIndex, Settings
 from llama_index.core.schema import Document
 from bs4 import BeautifulSoup
+from llama_index.core.readers import SimpleDirectoryReader
+from llama_index.readers.file import PDFReader, MarkdownReader
+from airunner.components.llm.managers.agent.custom_epub_reader import (
+    CustomEpubReader,
+)
+from airunner.components.llm.managers.agent.html_file_reader import (
+    HtmlFileReader,
+)
+from airunner.components.zimreader.llamaindex_zim_reader import (
+    LlamaIndexZIMReader,
+)
+import tempfile
 
 
 class RAGLifecycleMixin:
@@ -55,20 +68,18 @@ class RAGLifecycleMixin:
             # example during finetune preparation to conserve GPU memory), then
             # avoid initializing the RAG system which will load embeddings.
             if getattr(self, "_skip_agent_load", False):
-                if hasattr(self, "logger"):
-                    self.logger.debug(
-                        "Skipping RAG setup due to finetune-only mode"
-                    )
+                self.logger.debug(
+                    "Skipping RAG setup due to finetune-only mode"
+                )
                 return
 
             # Check if embedding model is available
             # Note: We don't need Settings.llm since LangChain handles chat flow
             # We only need embedding model for document retrieval
             if not hasattr(self, "embedding") or self.embedding is None:
-                if hasattr(self, "logger"):
-                    self.logger.debug(
-                        "Deferring RAG setup - embedding model not yet available"
-                    )
+                self.logger.debug(
+                    "Deferring RAG setup - embedding model not yet available"
+                )
                 return
 
             # Set up LlamaIndex settings
@@ -78,14 +89,9 @@ class RAGLifecycleMixin:
 
             # Check for old unified index and migrate if needed
             self._detect_and_migrate_old_index()
-
-            if hasattr(self, "logger"):
-                self.logger.info("RAG system initialized successfully")
+            self.logger.info("RAG system initialized successfully")
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    f"Error setting up RAG: {str(e)}", exc_info=True
-                )
+            self.logger.error(f"Error setting up RAG: {str(e)}", exc_info=True)
 
     def reload_rag(self):
         """Reload RAG components.
@@ -93,8 +99,7 @@ class RAGLifecycleMixin:
         Clears all caches and resets component state without unloading
         the embedding model. Useful for refreshing indexes after changes.
         """
-        if hasattr(self, "logger"):
-            self.logger.debug("Reloading RAG...")
+        self.logger.debug("Reloading RAG...")
         self._index = None
         self._retriever = None
         self._rag_engine = None
@@ -114,8 +119,7 @@ class RAGLifecycleMixin:
         Resets the target files list and reloads RAG components.
         This does not unload the embedding model.
         """
-        if hasattr(self, "logger"):
-            self.logger.debug("Clearing RAG documents...")
+        self.logger.debug("Clearing RAG documents...")
         self.target_files = None
         # Only reload if not in the process of unloading
         if not getattr(self, "_is_unloading", False):
@@ -128,8 +132,7 @@ class RAGLifecycleMixin:
         to free GPU memory. Use this when switching to finetune mode or
         shutting down.
         """
-        if hasattr(self, "logger"):
-            self.logger.debug("Unloading RAG...")
+        self.logger.debug("Unloading RAG...")
         self._is_unloading = True
         try:
             self.target_files = None
@@ -139,24 +142,20 @@ class RAGLifecycleMixin:
                 try:
                     # Try to access and delete the internal model if it exists
                     if hasattr(self._embedding, "_model"):
-                        if hasattr(self, "logger"):
-                            self.logger.debug(
-                                "Deleting embedding internal model..."
-                            )
+                        self.logger.debug(
+                            "Deleting embedding internal model..."
+                        )
                         del self._embedding._model
                     if hasattr(self._embedding, "model"):
-                        if hasattr(self, "logger"):
-                            self.logger.debug(
-                                "Deleting embedding model attribute..."
-                            )
+                        self.logger.debug(
+                            "Deleting embedding model attribute..."
+                        )
                         del self._embedding.model
                     # Delete the embedding wrapper
-                    if hasattr(self, "logger"):
-                        self.logger.debug("Deleting embedding wrapper...")
+                    self.logger.debug("Deleting embedding wrapper...")
                     del self._embedding
                 except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.warning(f"Error deleting embedding: {e}")
+                    self.logger.warning(f"Error deleting embedding: {e}")
             self._embedding = None
             self._text_splitter = None
 
@@ -190,18 +189,120 @@ class RAGLifecycleMixin:
                 },
             )
 
-            if self._index:
-                self._index.insert(doc)
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        f"Inserted HTML content '{source_name}' into unified index"
-                    )
+            # Create index if it doesn't exist
+            if not self._index:
+                self.logger.info("Creating new RAG index for HTML content")
+                self._index = VectorStoreIndex.from_documents(
+                    [doc],
+                    embed_model=self.embedding,
+                    show_progress=False,
+                )
+                self.logger.info(
+                    f"Created index with HTML content '{source_name}'"
+                )
             else:
-                if hasattr(self, "logger"):
-                    self.logger.warning(
-                        "No index available to insert HTML content"
-                    )
+                self._index.insert(doc)
+                self.logger.info(
+                    f"Inserted HTML content '{source_name}' into unified index"
+                )
+
+            # CRITICAL: Clear retriever so it gets recreated with the new index
+            self._retriever = None
+            # Track loaded source so future checks can skip reindex
+            try:
+                self._loaded_doc_ids.append(source_name)
+            except Exception as e:
+                self.logger.error(f"Error tracking loaded doc ID: {e}")
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error loading HTML into RAG: {e}")
+            self.logger.error(f"Error loading HTML into RAG: {e}")
+
+    def load_file_into_rag(self, file_path: str) -> None:
+        """Load a local file (PDF/EPUB/HTML/MD/ZIM) into the unified RAG index.
+
+        This will use the configured reader for the file type (e.g. CustomEpubReader
+        for .epub), extract the document(s), and insert them into the unified index
+        using the same approach as load_html_into_rag.
+
+        Args:
+            file_path: Absolute path to a file on disk
+        """
+        try:
+            if not os.path.exists(file_path):
+                self.logger.warning(f"File not found: {file_path}")
+                return
+            reader = SimpleDirectoryReader(
+                input_files=[file_path],
+                file_extractor={
+                    ".pdf": PDFReader(),
+                    ".epub": CustomEpubReader(),
+                    ".html": HtmlFileReader(),
+                    ".htm": HtmlFileReader(),
+                    ".md": MarkdownReader(),
+                    ".zim": LlamaIndexZIMReader(),
+                },
+                file_metadata=self._extract_metadata,
+            )
+
+            documents = reader.load_data()
+            # Enrich metadata and insert into unified index
+            for doc in documents:
+                file_path_meta = doc.metadata.get("file_path")
+                if file_path_meta:
+                    doc.metadata.update(self._extract_metadata(file_path_meta))
+
+                if not self._index:
+                    # create unified index from first document
+                    self._index = VectorStoreIndex.from_documents(
+                        [doc], embed_model=self.embedding, show_progress=False
+                    )
+                    self.logger.info(
+                        f"Created unified index with content from {file_path}"
+                    )
+                else:
+                    self._index.insert(doc)
+
+                    self.logger.info(
+                        f"Inserted content from {file_path} into unified index"
+                    )
+
+            # Clear retriever to ensure it's rebuilt against the new index
+            self._retriever = None
+            # Track loaded doc path
+            try:
+                self._loaded_doc_ids.append(file_path)
+            except Exception:
+                pass
+        except Exception as e:
+            self.logger.error(f"Error loading file into RAG: {e}")
+
+    def load_bytes_into_rag(
+        self, content_bytes: bytes, source_name: str, file_ext: str = ".epub"
+    ) -> None:
+        """Load binary content into RAG, writing to a temporary file first.
+
+        Useful when callers provide raw bytes for EPUB/PDF content instead of
+        a file on disk. The data is written to a NamedTemporaryFile with the
+        provided extension and then loaded via load_file_into_rag.
+
+        Args:
+            content_bytes: Raw file bytes
+            source_name: Identifier used in metadata/file name
+            file_ext: File extension (e.g. '.epub', '.pdf', '.txt')
+        """
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb", suffix=file_ext, delete=False
+            ) as fh:
+                fh.write(content_bytes)
+                tmp_path = fh.name
+
+            # Reuse file loading logic
+            self.load_file_into_rag(tmp_path)
+            # Track loaded doc path for temp file
+            try:
+                self._loaded_doc_ids.append(tmp_path)
+            except Exception:
+                pass
+        except Exception as e:
+            self.logger.error(f"Error loading bytes into RAG: {e}")

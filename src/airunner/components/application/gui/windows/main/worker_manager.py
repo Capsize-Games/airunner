@@ -98,10 +98,20 @@ class WorkerManager(Worker):
         self._image_export_worker = None
         self._model_scanner_worker = None
         if self.logger:
-            self.logger.debug("WorkerManager initialized.")
+            self.logger.debug(
+                f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
+            )
+
+        # CRITICAL: Register signal handlers so WorkerManager receives signals
+        self.register_signals()
+
         self.model_scanner_worker.add_to_queue("scan_for_models")
 
     def handle_message(self, message: Dict):
+        if self.logger:
+            self.logger.info(
+                f"WorkerManager::handle_message CALLED with request_type={message.get('request_type')}"
+            )
         data = message.get("data", {})
         request_type = message.get("request_type")
         try:
@@ -262,6 +272,10 @@ class WorkerManager(Worker):
         return self._huggingface_download_worker
 
     def on_llm_request_signal(self, data: Dict):
+        if self.logger:
+            self.logger.info(
+                f"WorkerManager::on_llm_request_signal CALLED with data keys: {list(data.keys())}"
+            )
         self.add_to_queue(
             {
                 "data": data,

@@ -29,18 +29,32 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
     # CLASS-LEVEL storage for checkpoint state (shared across all instances)
     # This ensures checkpoint state persists even when new instances are created
     _checkpoint_state: Dict[str, Any] = {}
+    _stateless_mode: bool = (
+        False  # New: disable checkpoint persistence globally
+    )
 
-    def __init__(self, conversation_id: Optional[int] = None):
+    def __init__(
+        self,
+        conversation_id: Optional[int] = None,
+        stateless: bool = False,
+        ephemeral: bool = False,
+    ):
         """Initialize the database checkpoint saver.
 
         Args:
             conversation_id: Optional conversation ID to use. If None, will use
                            the current conversation.
+            stateless: If True, disable checkpoint persistence (for independent requests)
+            ephemeral: If True, disable conversation history persistence (no DB writes)
         """
         super().__init__()
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.conversation_id = conversation_id
-        self.message_history = DatabaseChatMessageHistory(conversation_id)
+        self.ephemeral = ephemeral
+        self.message_history = DatabaseChatMessageHistory(
+            conversation_id, ephemeral=ephemeral
+        )
+        self.stateless = stateless or DatabaseCheckpointSaver._stateless_mode
 
     def put(
         self,
@@ -61,6 +75,17 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             Updated configuration with checkpoint ID
         """
         try:
+            # In stateless mode, don't persist checkpoints
+            if self.stateless:
+                return {
+                    "configurable": {
+                        "thread_id": str(
+                            uuid.uuid4()
+                        ),  # Random thread ID each time
+                        "checkpoint_id": str(uuid.uuid4()),
+                    }
+                }
+
             self.logger.info(
                 f"🔵 DatabaseCheckpointSaver.put() called for conversation {self.conversation_id}"
             )
@@ -167,9 +192,16 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             config: Runtime configuration
 
         Returns:
-            Checkpoint tuple or None if not found
+        Checkpoint tuple or None if not found
         """
         try:
+            # In stateless mode, always return None (fresh start)
+            if self.stateless:
+                self.logger.debug(
+                    "Stateless mode: returning None (no checkpoint restoration)"
+                )
+                return None
+
             # First, try to get from in-memory checkpoint state
             thread_id = config.get("configurable", {}).get("thread_id")
 
@@ -301,4 +333,34 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         self.message_history.clear()
         self.logger.info(
             f"Cleared message history for conversation {self.conversation_id}"
+        )
+
+    def clear_thread(self, thread_id: str) -> None:
+        """Clear checkpoint state for a specific thread.
+
+        This removes checkpoint state for a single thread, useful for
+        cleaning up between independent operations (e.g., classifying different books).
+
+        Args:
+            thread_id: The thread ID to clear
+        """
+        if thread_id in DatabaseCheckpointSaver._checkpoint_state:
+            del DatabaseCheckpointSaver._checkpoint_state[thread_id]
+            self.logger.info(
+                f"Cleared checkpoint state for thread {thread_id}"
+            )
+
+    @classmethod
+    def set_stateless_mode(cls, enabled: bool) -> None:
+        """Enable or disable stateless mode globally.
+
+        When enabled, all DatabaseCheckpointSaver instances will not persist
+        checkpoints, making each operation completely independent.
+
+        Args:
+            enabled: Whether to enable stateless mode
+        """
+        cls._stateless_mode = enabled
+        get_logger(__name__, AIRUNNER_LOG_LEVEL).info(
+            f"Stateless mode: {enabled}"
         )
