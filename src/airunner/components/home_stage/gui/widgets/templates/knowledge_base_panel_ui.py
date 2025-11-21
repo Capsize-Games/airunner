@@ -94,15 +94,6 @@ class Ui_knowledge_base_panel(object):
 
         self.verticalLayout.addWidget(self.progress_bar)
 
-        self.progress_text = QLabel(knowledge_base_panel)
-        self.progress_text.setObjectName(u"progress_text")
-        sizePolicy1.setHeightForWidth(self.progress_text.sizePolicy().hasHeightForWidth())
-        self.progress_text.setSizePolicy(sizePolicy1)
-        self.progress_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.progress_text.setWordWrap(True)
-
-        self.verticalLayout.addWidget(self.progress_text)
-
         self.index_button = QPushButton(knowledge_base_panel)
         self.index_button.setObjectName(u"index_button")
         self.index_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -132,7 +123,6 @@ class Ui_knowledge_base_panel(object):
         self.unindexed_docs_value.setText(QCoreApplication.translate("knowledge_base_panel", u"0", None))
         self.status_message.setText("")
         self.progress_bar.setFormat(QCoreApplication.translate("knowledge_base_panel", u"%p%", None))
-        self.progress_text.setText("")
         self.index_button.setText(QCoreApplication.translate("knowledge_base_panel", u"Index All", None))
         self.cancel_button.setText(QCoreApplication.translate("knowledge_base_panel", u"Cancel", None))
     # retranslateUi
