@@ -83,12 +83,11 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
             model_instance = model_cls(**data)
             model_cls.objects.merge(model_instance)
         except Exception as exc:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    "Failed to merge %s for layer operation: %s",
-                    model_cls.__name__,
-                    exc,
-                )
+            self.logger.error(
+                "Failed to merge %s for layer operation: %s",
+                model_cls.__name__,
+                exc,
+            )
 
     def _restore_layers_from_snapshots(
         self, snapshots: List[Dict[str, Any]]
@@ -298,10 +297,9 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
 
         except Exception as e:
             # Don't let canvas memory tracking errors break the canvas
-            if hasattr(self, "logger"):
-                self.logger.debug(
-                    f"Failed to update canvas memory allocation: {e}"
-                )
+            self.logger.debug(
+                f"Failed to update canvas memory allocation: {e}"
+            )
 
     def _cancel_layer_structure_transaction(self) -> None:
         """Cancel the current layer structure transaction."""

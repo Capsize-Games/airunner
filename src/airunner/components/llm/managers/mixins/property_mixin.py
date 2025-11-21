@@ -149,6 +149,10 @@ class PropertyMixin:
     def model_path(self) -> str:
         """Get the filesystem path to the model files from settings.
 
+        Supports runtime model loading via LLMRequest.model field.
+        If LLMRequest.model is set, constructs path from base_path/text/models/llm/causallm/{model}.
+        Otherwise uses llm_generator_settings.model_path, constructing full path if needed.
+
         Returns:
             Absolute path to the model directory
 
@@ -156,12 +160,38 @@ class PropertyMixin:
             ValueError: If no model path is configured in settings or if
                        embedding model path is incorrectly used as main LLM
         """
-        if not self.llm_generator_settings.model_path:
+        model_path = None
+        if self.llm_request is not None and self.llm_request.model:
+            model_path = os.path.join(
+                self.path_settings.base_path,
+                "text/models/llm/causallm",
+                self.llm_request.model,
+            )
+        else:
+            model_path = self.llm_generator_settings.model_path
+
+        # Handle empty/None model_path by falling back to default
+        # Empty string check is important for existing DB records
+        if not model_path or (isinstance(model_path, str) and model_path.strip() == ""):
+            from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+            model_path = AIRUNNER_DEFAULT_LLM_HF_PATH
+            self.logger.info(f"No model path configured, using default: {model_path}")
+            
+        if not model_path:
             raise ValueError(
                 "No model path configured. Please select a model in LLM settings."
             )
 
-        model_path = os.path.expanduser(self.llm_generator_settings.model_path)
+        model_path = os.path.expanduser(model_path)
+        
+        # If model_path doesn't contain a path separator, it's just a model name
+        # Construct the full path
+        if "/" not in model_path and "\\" not in model_path:
+            model_path = os.path.join(
+                self.path_settings.base_path,
+                "text/models/llm/causallm",
+                model_path,
+            )
 
         # Validate that the embedding model path is not used as main LLM
         if "intfloat/e5-large" in model_path or "/embedding/" in model_path:

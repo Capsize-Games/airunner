@@ -1,18 +1,28 @@
-from typing import Optional, Dict
+from typing import List, Optional, Dict
 import glob
+import logging
 import os
 import os.path
 import signal
+import sys
+import subprocess
+import time
 import traceback
 from pathlib import Path
 from PySide6 import QtCore
-from PySide6.QtCore import QObject, QTimer
-from PySide6.QtGui import QGuiApplication, Qt, QWindow
+from PySide6.QtCore import QObject, QTimer, QCoreApplication
+from PySide6.QtGui import QGuiApplication, Qt, QWindow, QSurfaceFormat
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTranslator, QLocale
+from PySide6.QtCore import QTranslator, QLocale, qVersion
+from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
+from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from airunner.utils.application import get_logger
 from airunner.utils.settings import get_qsettings
+from airunner.settings import (
+    AIRUNNER_HEADLESS_SERVER_HOST,
+    AIRUNNER_HEADLESS_SERVER_PORT,
+)
 
 # CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch
 # This prevents fragmentation issues when loading large quantized models
@@ -40,26 +50,39 @@ from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
     AIRUNNER_DISCORD_URL,
     AIRUNNER_LOG_LEVEL,
+    AIRUNNER_USER_DATA_PATH,
     MATHJAX_VERSION,
-    QTWEBENGINE_REMOTE_DEBUGGING,  # Add this import
+    QTWEBENGINE_REMOTE_DEBUGGING,
+    LOCAL_SERVER_PORT,
 )
 from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.components.splash_screen.splash_screen import SplashScreen
-import subprocess
-import sys
-from airunner.settings import LOCAL_SERVER_PORT
+
+# NOTE: set_api, APIServerThread, and MainWindow imports are inline to avoid circular dependency with API class
+from airunner.components.knowledge import initialize_knowledge_system
+from airunner.utils.application.create_worker import create_worker
+from airunner.components.application.gui.windows.main import (
+    WorkerManager,
+    ModelLoadBalancer,
+    LLMGeneratorSettings,
+)
+from airunner.components.data.session_manager import session_scope
+from airunner.bin.airunner_migrate_knowledge import KnowledgeMigrator
+from airunner.app_installer import AppInstaller
+from airunner.utils.application.logging_utils import configure_headless_logging
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
+from airunner.enums import ModelService
+from airunner.components.art.data.ai_models import AIModels
+
 
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
 LNA_ENABLED = os.environ.get("AIRUNNER_LNA_ENABLED", "0") == "1"
 
 os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = QTWEBENGINE_REMOTE_DEBUGGING
 
-from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtCore import qVersion
 
-
-def set_global_tooltip_style():
+def set_global_tooltip_style() -> None:
+    """Set global tooltip style for the application."""
     app = QApplication.instance()
     if app is not None:
         app.setStyleSheet(
@@ -80,7 +103,10 @@ def set_global_tooltip_style():
 class CapturingWebEnginePage(QWebEnginePage):
     """QWebEnginePage subclass to capture JS console messages for diagnostics."""
 
-    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+    def javaScriptConsoleMessage(
+        self, level: int, message: str, lineNumber: int, sourceID: str
+    ) -> None:
+        """Capture JavaScript console messages for diagnostics."""
         log_message = f"JSCONSOLE::: Level: {level}, Msg: {message}, Src: {sourceID}:{lineNumber}"
         print(log_message)
         super().javaScriptConsoleMessage(level, message, lineNumber, sourceID)
@@ -97,10 +123,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
         no_splash: bool = False,
         main_window_class: QWindow = None,
         window_class_params: Optional[Dict] = None,
-        initialize_gui: bool = True,  # New flag to control GUI initialization
+        initialize_gui: bool = True,
     ):
-        """
-        Initialize the application.
+        """Initialize the application.
 
         Args:
             no_splash: Skip splash screen display (GUI mode only)
@@ -108,102 +133,184 @@ class App(MediatorMixin, SettingsMixin, QObject):
             window_class_params: Parameters for main window (GUI mode only)
             initialize_gui: If False, run in headless mode (no GUI)
         """
-        self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
-        # Check environment variable for headless mode
+        self._init_attributes(
+            no_splash, main_window_class, window_class_params, initialize_gui
+        )
+        super().__init__()
+        self._register_signals()
+        self._ensure_mathjax()
+
+        if self.initialize_gui:
+            self._init_gui_mode()
+        else:
+            self._init_headless_mode()
+
+        self._initialize_knowledge_system()
+
+    @property
+    def static_dir(self) -> str:
+        """Get the static directory path."""
+        return os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "static")
+        )
+
+    @property
+    def static_search_dirs(self) -> List[str]:
+        """Get the list of static search directories."""
+        # Find all components/**/gui/static directories
+        components_static_dirs = glob.glob(
+            os.path.join(
+                os.path.dirname(__file__), "components", "**", "gui", "static"
+            ),
+            recursive=True,
+        )
+        # Add user web dir if it exists
+        static_search_dirs = [self.static_dir] + components_static_dirs
+        if os.path.isdir(self.user_web_dir):
+            static_search_dirs.append(self.user_web_dir)
+        return static_search_dirs
+
+    def _init_attributes(
+        self,
+        no_splash: bool,
+        main_window_class: QWindow,
+        window_class_params: Optional[Dict],
+        initialize_gui: bool,
+    ) -> None:
+        """Initialize instance attributes."""
         headless_env = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
         if headless_env:
             initialize_gui = False
+
+        if not initialize_gui:
+            configure_headless_logging()
+
+        self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
+
+        # Debug logging state
+        try:
+            root = logging.getLogger()
+        except:
+            pass
 
         self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
         self.app = None
         self.splash = None
-        self.initialize_gui = initialize_gui  # Store the flag
+        self.initialize_gui = initialize_gui
         self.http_server_thread = None
-        self.api_server_thread = None  # New: API server for headless mode
+        self.api_server_thread = None
         self.is_running = False
 
-        """
-        Mediator and Settings mixins are initialized here, enabling the application
-        to easily access the application settings dictionary.
-        """
-        super().__init__()
-
+    def _register_signals(self) -> None:
+        """Register signal handlers."""
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
         self.register(SignalCode.UPATE_LOCALE, self.on_update_locale_signal)
 
-        self._ensure_mathjax()
+    def _init_gui_mode(self) -> None:
+        """Initialize GUI mode with static server and main window."""
+        mathjax_dir = os.path.join(
+            self.static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
+        )
+        if not os.path.isdir(mathjax_dir):
+            raise RuntimeError(
+                "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+            )
 
-        # Start HTTPS server for static assets (MathJax and content widgets)
-        # Only needed in GUI mode
-        if self.initialize_gui:
-            static_dir = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "static")
-            )
-            # Find all components/**/gui/static directories
-            print(
-                flush=True,
-            )
-            components_static_dirs = glob.glob(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    "components",
-                    "**",
-                    "gui",
-                    "static",
-                ),
-                recursive=True,
-            )
-            print(
-                flush=True,
-            )
-            # Add user web dir if it exists
-            static_search_dirs = [static_dir] + components_static_dirs
-            if os.path.isdir(self.user_web_dir):
-                static_search_dirs.append(self.user_web_dir)
-            mathjax_dir = os.path.join(
-                static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
-            )
-            if os.path.isdir(mathjax_dir):
-                self.logger.info(
-                    "Starting local HTTPS server for static assets."
-                )
-                print(
-                    flush=True,
-                )
-                self.http_server_thread = LocalHttpServerThread(
-                    directory=static_dir,
-                    additional_directories=static_search_dirs[1:],
-                    port=LOCAL_SERVER_PORT,
-                    lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
-                )
-                print(
-                    flush=True,
-                )
-                self.http_server_thread.start()
-                self.start()
-                print(
-                    flush=True,
-                )
-                self.set_translations()
-                self.run()
-            else:
-                print(
-                    f"ERROR: MathJax directory not found: {mathjax_dir}\nPlease run the MathJax setup script or follow the manual instructions in the README."
-                )
-                raise RuntimeError(
-                    "MathJax is required for LaTeX rendering. See README.md for setup instructions."
-                )
-        else:
-            # Headless mode - just initialize core systems
-            self.logger.info("Running in headless mode (no GUI)")
-            self._init_headless_services()
-            # Note: Call run() after __init__ to start headless event loop
-            self.is_running = True
+        self._start_local_http_server()
+        self.set_translations()
+        self.run()
 
-        # Initialize knowledge extraction system (works in both GUI and headless modes)
-        self._initialize_knowledge_system()
+    def _start_local_http_server(self) -> None:
+        self.logger.info("Starting local HTTP server for static assets.")
+        self.http_server_thread = LocalHttpServerThread(
+            directory=self.static_dir,
+            additional_directories=self.static_search_dirs[1:],
+            port=LOCAL_SERVER_PORT,
+            lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
+        )
+        self.http_server_thread.start()
+        self.start()
+
+    def _init_headless_mode(self) -> None:
+        """Initialize headless mode."""
+        self.logger.info("Running in headless mode (no GUI)")
+        signal.signal(signal.SIGINT, self.signal_handler)
+        self._init_headless_services()
+        self.is_running = True
+
+    def _kill_via_lsof(self, port: int) -> bool:
+        """Try to kill process using lsof. Returns True if successful."""
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split("\n")
+                for pid in pids:
+                    try:
+                        self.logger.info(
+                            f"Killing process {pid} using port {port}"
+                        )
+                        subprocess.run(
+                            ["kill", "-9", pid], timeout=5, check=False
+                        )
+                        time.sleep(0.5)
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Failed to kill process {pid}: {e}"
+                        )
+                return True
+        except FileNotFoundError:
+            return False
+        except Exception as e:
+            self.logger.debug(f"Could not kill process on port {port}: {e}")
+        return False
+
+    def _kill_via_netstat(self, port: int) -> None:
+        """Try to kill process using netstat."""
+        try:
+            result = subprocess.run(
+                ["netstat", "-tlnp"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            for line in result.stdout.split("\n"):
+                if f":{port}" in line and "LISTEN" in line:
+                    parts = line.split()
+                    if len(parts) > 6:
+                        pid_program = parts[6]
+                        if "/" in pid_program:
+                            pid = pid_program.split("/")[0]
+                            try:
+                                self.logger.info(
+                                    f"Killing process {pid} using port {port}"
+                                )
+                                subprocess.run(
+                                    ["kill", "-9", pid], timeout=5, check=False
+                                )
+                            except Exception as e:
+                                self.logger.warning(
+                                    f"Failed to kill process {pid}: {e}"
+                                )
+        except Exception as e:
+            self.logger.debug(
+                f"Could not check for processes on port {port}: {e}"
+            )
+
+    def _kill_process_on_port(self, port: int) -> None:
+        """Kill any process using the specified port.
+
+        Args:
+            port: Port number to check and clear
+        """
+        if not self._kill_via_lsof(port):
+            self._kill_via_netstat(port)
 
     def _init_headless_services(self):
         """Initialize services for headless mode (no GUI).
@@ -212,28 +319,40 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """
         # Create QCoreApplication for Qt event loop (needed by workers)
         # This is minimal Qt without any GUI components
-        from PySide6.QtCore import QCoreApplication
-
         self.app = QCoreApplication.instance()
         if self.app is None:
             self.app = QCoreApplication([])
         self.app.api = self
         self.logger.info("Qt Core event loop initialized (headless mode)")
 
+        # Register this API instance globally for tools to access
+        # Import here to avoid circular dependency with API class
+        from airunner.components.server.api.server import set_api
+
+        set_api(self)
+        self.logger.info("API instance registered globally")
+
         # Initialize workers BEFORE starting HTTP server
         # so they're ready to handle requests immediately
         self._initialize_headless_workers()
+
+        # Pre-load LLM model if configured in settings
+        self._preload_llm_model()
 
         # Start API server for /llm, /art, /stt, /tts endpoints
         # Skip if we're being created from within an HTTP request handler
         # (server is already running in that case)
         if os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
+            # Import here to avoid circular dependency with API class
             from airunner.components.server.api.api_server_thread import (
                 APIServerThread,
             )
 
-            host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
-            port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
+            host = AIRUNNER_HEADLESS_SERVER_HOST
+            port = AIRUNNER_HEADLESS_SERVER_PORT
+
+            # Kill any existing process using this port
+            self._kill_process_on_port(port)
 
             self.logger.info(f"Starting API server on {host}:{port}")
             self.api_server_thread = APIServerThread(host=host, port=port)
@@ -256,10 +375,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             return
 
         try:
-            from airunner.components.knowledge import (
-                initialize_knowledge_system,
-            )
-
             initialize_knowledge_system()
             self.logger.info("Knowledge extraction system initialized")
 
@@ -277,16 +392,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
         and ModelLoadBalancer for model lifecycle management.
         """
         try:
-            from airunner.utils.application.create_worker import (
-                create_worker,
-            )
-            from airunner.components.application.gui.windows.main.worker_manager import (
-                WorkerManager,
-            )
-            from airunner.components.application.gui.windows.main.model_load_balancer import (
-                ModelLoadBalancer,
-            )
-
             # Create WorkerManager - it registers LLM_TEXT_GENERATE_REQUEST_SIGNAL
             # and lazily creates workers (LLMGenerateWorker, SDWorker, etc.) as needed
             self._worker_manager = create_worker(WorkerManager)
@@ -295,6 +400,14 @@ class App(MediatorMixin, SettingsMixin, QObject):
             # The worker must be created BEFORE any LLM requests are sent
             _ = self._worker_manager.llm_generate_worker
             self.logger.info("LLM worker initialized and ready")
+
+            # Register RAG signal handler for headless mode
+            # In GUI mode, this is handled by WorkerManager
+            self.register(
+                SignalCode.RAG_LOAD_DOCUMENTS,
+                self.on_rag_load_documents_signal,
+            )
+            self.logger.info("RAG signal handler registered")
 
             # Create ModelLoadBalancer to manage model loading/unloading
             self._model_load_balancer = ModelLoadBalancer(
@@ -309,6 +422,133 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 f"Failed to initialize headless workers: {e}", exc_info=True
             )
 
+    def _preload_llm_model(self):
+        """Pre-load LLM model from settings if configured.
+
+        This speeds up first request by loading model at startup.
+        """
+        try:
+            # Log which database we're using and dev/prod mode for debugging
+            try:
+                from airunner.settings import AIRUNNER_DB_URL, DEV_ENV
+
+                self.logger.info(
+                    f"DEBUG: Preload LLM - DB URL: {AIRUNNER_DB_URL} DEV_ENV={DEV_ENV}"
+                )
+            except Exception:
+                # Best-effort; not critical if we can't fetch settings
+                pass
+            with session_scope() as session:
+                llm_settings = session.query(LLMGeneratorSettings).first()
+                # If there's no LLM settings row configured, attempt to create one
+                # using the environment default model path (useful for production
+                # installs where the DB has not been configured via UI).
+                if not llm_settings:
+                    default_model_path = (
+                        os.environ.get("AIRUNNER_LLM_MODEL_PATH")
+                        or os.environ.get("AIRUNNER_DEFAULT_LLM_HF_PATH")
+                        or AIRUNNER_DEFAULT_LLM_HF_PATH
+                    )
+                    # If no default path from env, try to find an installed AI model
+                    # for LLMs in the AIModels table and use that as a fallback.
+                    if not default_model_path:
+                        try:
+                            aimodel = (
+                                session.query(AIModels)
+                                .filter(AIModels.model_type == "llm")
+                                .filter(AIModels.enabled.is_(True))
+                                .order_by(AIModels.is_default.desc())
+                                .first()
+                            )
+                            if aimodel and aimodel.path:
+                                default_model_path = aimodel.path
+                                self.logger.info(
+                                    f"No env default model set; using AIModels path: {default_model_path}"
+                                )
+                        except Exception:
+                            # Not critical if we can't access AIModels
+                            pass
+                    if default_model_path:
+                        self.logger.info(
+                            f"No LLM settings row; creating default settings for model: {default_model_path}"
+                        )
+                        new_settings = LLMGeneratorSettings()
+                        new_settings.model_path = default_model_path
+                        new_settings.model_service = ModelService.LOCAL.value
+                        session.add(new_settings)
+                        session.commit()
+                        llm_settings = new_settings
+
+                if llm_settings and llm_settings.model_path:
+                    self.logger.info(
+                        f"Pre-loading LLM model: {llm_settings.model_path}"
+                    )
+                    self.logger.info("This may take 30-60 seconds...")
+
+                    # Emit model load signal - WorkerManager will handle it
+                    self.emit_signal(
+                        SignalCode.LLM_LOAD_SIGNAL,
+                        {"model_path": llm_settings.model_path},
+                    )
+
+                    # Wait a bit for loading to start
+                    time.sleep(5)
+                    self.logger.info("Model loading initiated in background")
+                else:
+                    self.logger.info(
+                        "No LLM model configured - model will load on first request"
+                    )
+        except Exception as e:
+            self.logger.info(f"Warning: Could not pre-load model: {e}")
+            self.logger.info("Model will load on first request")
+
+    @property
+    def rag_manager(self) -> Optional[object]:
+        """Get the RAG manager (model manager) for tool access.
+
+        This property exposes the LLM model manager which has RAG capabilities.
+        It's used by tools that need to search documents via rag_search.
+
+        Returns:
+            LLMModelManager instance or None if not available
+        """
+        if hasattr(self, "_worker_manager") and self._worker_manager:
+            return self._worker_manager.llm_generate_worker.model_manager
+        return None
+
+    def on_rag_load_documents_signal(self, data: Dict) -> None:
+        """Handle RAG_LOAD_DOCUMENTS signal in headless mode.
+
+        This forwards the signal to the LLM worker which has the model_manager
+        with RAG capabilities.
+
+        Args:
+            data: Dictionary containing documents and clear_documents flag
+        """
+        try:
+            self.logger.info("✓✓✓ RAG_LOAD_DOCUMENTS signal received in App!")
+            self.logger.info("✓✓✓ RAG_LOAD_DOCUMENTS signal received in App!")
+            self.logger.info(
+                f"DEBUG: Data keys: {list(data.keys()) if data else 'None'}"
+            )
+
+            if hasattr(self, "_worker_manager") and self._worker_manager:
+                self.logger.info("DEBUG: Forwarding to worker manager...")
+                self._worker_manager.llm_generate_worker.on_rag_load_documents_signal(
+                    data
+                )
+                self.logger.info("✓ Forwarded RAG load signal to LLM worker")
+                self.logger.info("✓ Forwarded RAG load signal to LLM worker")
+            else:
+                self.logger.warning(
+                    "Worker manager not available for RAG loading"
+                )
+                self.logger.info("ERROR: Worker manager not available")
+        except Exception as e:
+            self.logger.error(
+                f"Error handling RAG load signal: {e}", exc_info=True
+            )
+
     def _run_knowledge_migration_if_needed(self):
         """Run one-time migration from JSON to database if not already done.
 
@@ -316,10 +556,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
         instances start simultaneously.
         """
         try:
-            from pathlib import Path
-            from airunner.settings import AIRUNNER_USER_DATA_PATH
-            from airunner.components.data.session_manager import session_scope
-
             # Use database transaction to check and set migration flag atomically
             with session_scope() as session:
                 # Lock the settings row to prevent concurrent migrations
@@ -331,8 +567,20 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 )
 
                 if not settings:
-                    self.logger.error("Application settings not found")
-                    return
+                    # Create default settings if they don't exist yet
+                    self.logger.info("Creating default application settings")
+                    settings = ApplicationSettings(
+                        id=1, knowledge_migrated=False
+                    )
+                    session.add(settings)
+                    session.commit()
+                    # Re-query to get the locked row
+                    settings = (
+                        session.query(ApplicationSettings)
+                        .filter_by(id=1)
+                        .with_for_update()
+                        .first()
+                    )
 
                 # Check if migration already completed (within transaction)
                 if settings.knowledge_migrated:
@@ -358,10 +606,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 )
 
             # Migration runs outside the locked transaction
-            from airunner.bin.airunner_migrate_knowledge import (
-                KnowledgeMigrator,
-            )
-
             migrator = KnowledgeMigrator(json_path=json_path)
             stats = migrator.migrate_all(dry_run=False, skip_backup=False)
 
@@ -390,8 +634,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def _mark_migration_complete(self):
         """Mark knowledge migration as complete in settings."""
         try:
-            from airunner.components.data.session_manager import session_scope
-
             with session_scope() as session:
                 settings = (
                     session.query(ApplicationSettings).filter_by(id=1).first()
@@ -404,10 +646,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 f"Failed to mark migration complete: {e}", exc_info=True
             )
 
-    def on_update_locale_signal(self, data: dict):
+    def on_update_locale_signal(self, data: dict) -> None:
+        """Handle locale update signal."""
         self.set_translations(data)
 
-    def set_translations(self, data: Optional[Dict] = None):
+    def set_translations(self, data: Optional[Dict] = None) -> None:
+        """Set application translations based on language settings."""
         locale_language = None
 
         # Get the locale language from the data dictionary
@@ -457,7 +701,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self._load_translations(locale=QLocale(locale_language))
 
     @staticmethod
-    def run_setup_wizard():
+    def run_setup_wizard() -> None:
+        """Run the application setup wizard if needed."""
         if AIRUNNER_DISABLE_SETUP_WIZARD:
             return
         application_settings = ApplicationSettings.objects.first()
@@ -473,8 +718,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             not os.path.exists(base_path)
             or application_settings.run_setup_wizard
         ):
-            from airunner.app_installer import AppInstaller
-
             AppInstaller()
 
     def _load_translations(self, locale: Optional[QLocale] = None):
@@ -512,11 +755,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 else:
                     self.app.translator = None
 
-    def on_log_logged_signal(self, data: dict):
+    def on_log_logged_signal(self, data: dict) -> None:
+        """Handle log message signal."""
         message = data["message"].split(" - ")
         self.update_splash_message(self.splash, message[4])
 
-    def start(self):
+    def start(self) -> None:
         """
         Conditionally initialize and display the setup wizard.
         :return:
@@ -546,8 +790,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
         )
 
         # Set up OpenGL surface format before creating QApplication
-        from PySide6.QtGui import QSurfaceFormat
-
         fmt = QSurfaceFormat()
         fmt.setVersion(3, 3)
         fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CoreProfile)
@@ -568,7 +810,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         # Set global tooltip style ONCE at startup
         set_global_tooltip_style()
 
-    def run(self):
+    def run(self) -> None:
         """
         Run as a GUI application.
         A splash screen is displayed while the application is loading
@@ -591,8 +833,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         Uses Qt event loop to process worker signals while server runs.
         """
-        from PySide6.QtCore import QTimer
-
         # Workers are already initialized in _init_headless_services()
         # No need to initialize again here
 
@@ -602,23 +842,34 @@ class App(MediatorMixin, SettingsMixin, QObject):
         # Qt event loop blocks Python signal handlers, so we need to
         # periodically allow Python to process signals
         # This timer does nothing but allows KeyboardInterrupt to be caught
-        timer = QTimer()
-        timer.start(500)  # Wake up every 500ms
-        timer.timeout.connect(lambda: None)
+        # We use a simple no-op function instead of lambda to avoid issues
+        def _timer_tick():
+            pass
+
+        self._headless_timer = QTimer()
+        self._headless_timer.timeout.connect(_timer_tick)
+        self._headless_timer.start(500)  # Wake up every 500ms
 
         try:
             # Run Qt event loop (processes worker signals)
-            sys.exit(self.app.exec())
+            self.logger.info("DEBUG: Starting Qt event loop")
+            ret = self.app.exec()
+            self.logger.info(f"DEBUG: Qt event loop returned with {ret}")
+            sys.exit(ret)
         except KeyboardInterrupt:
             self.logger.info("Interrupted by user")
             self.cleanup()
             sys.exit(0)
+        except Exception as e:
+            self.logger.exception(f"CRITICAL: Headless server crashed: {e}")
+            self.cleanup()
+            sys.exit(1)
 
     def _post_splash_startup(self):
         self.show_main_application(self.app)
 
     @staticmethod
-    def signal_handler(_signal, _frame):
+    def signal_handler(_signal: int, _frame: object) -> None:
         """
         Handle the SIGINT signal in a clean way.
         :param _signal:
@@ -636,7 +887,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
             print(e)
             sys.exit(0)
 
-    def display_splash_screen(self, app):
+    def display_splash_screen(
+        self, app: QApplication
+    ) -> Optional[SplashScreen]:
         """
         Display a splash screen while the application is loading using the SplashScreen class.
         :param app:
@@ -687,7 +940,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
         return splash
 
     @staticmethod
-    def update_splash_message(splash, message: str):
+    def update_splash_message(
+        splash: Optional[SplashScreen], message: str
+    ) -> None:
+        """Update splash screen message."""
         if hasattr(splash, "show_message"):
             splash.show_message(message)
         else:
@@ -698,7 +954,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 QtCore.Qt.GlobalColor.white,
             )
 
-    def show_main_application(self, app):
+    def show_main_application(self, app: QApplication) -> None:
         """
         Show the main application window.
         :param app:
@@ -710,6 +966,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         window_class = self.main_window_class_
         if not window_class:
+            # Import here to avoid circular dependency with API class
             from airunner.components.application.gui.windows.main.main_window import (
                 MainWindow,
             )
@@ -794,11 +1051,46 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 except Exception as e:
                     self.logger.warning(f"Error stopping API server: {e}")
 
-            # Emit shutdown signal for components to cleanup
+            # Emit quit signal for components to cleanup (workers listen for QUIT_APPLICATION)
             try:
-                self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
+                self.emit_signal(SignalCode.QUIT_APPLICATION, {})
             except Exception as e:
-                self.logger.warning(f"Error emitting shutdown signal: {e}")
+                self.logger.warning(f"Error emitting quit signal: {e}")
+
+            # Stop and join all worker threads created by create_worker()
+            try:
+                from airunner.utils.application.create_worker import (
+                    WORKERS,
+                    THREADS,
+                )
+
+                # Ask each worker to stop (this will emit finished and quit their QThread)
+                for w in WORKERS:
+                    try:
+                        w.stop()
+                    except Exception:
+                        pass
+
+                # Ensure threads exit and join them
+                for t in THREADS:
+                    try:
+                        # Quit and wait for termination; if wait fails, force terminate
+                        t.quit()
+                        t.wait(2000)
+                        if t.isRunning():
+                            t.terminate()
+                            t.wait(500)
+                    except Exception:
+                        pass
+
+                # Clear global lists so future create_worker runs start fresh
+                try:
+                    WORKERS.clear()
+                    THREADS.clear()
+                except Exception:
+                    pass
+            except Exception as e:
+                self.logger.warning(f"Error stopping workers/threads: {e}")
 
             self.logger.info("App cleanup complete")
 
@@ -835,14 +1127,19 @@ class App(MediatorMixin, SettingsMixin, QObject):
                     "MathJax is required but could not be set up. See README.md for instructions."
                 )
 
-    def retranslate_ui_signal(self):
+    def retranslate_ui_signal(self) -> None:
+        """Retranslate UI elements (placeholder for subclasses)."""
         pass
 
 
 # Dummy classes for test patching
 class AppInstaller:
+    """Dummy AppInstaller class for test patching."""
+
     pass
 
 
 class MainWindow:
+    """Dummy MainWindow class for test patching."""
+
     pass

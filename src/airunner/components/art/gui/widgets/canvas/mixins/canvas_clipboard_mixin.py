@@ -48,8 +48,7 @@ class CanvasClipboardMixin:
         """
         clipboard = QApplication.clipboard()
         mime = clipboard.mimeData()
-        if hasattr(self, "logger"):
-            self.logger.debug(f"Clipboard mime types: {mime.formats()}")
+        self.logger.debug(f"Clipboard mime types: {mime.formats()}")
 
         # Try QImage data first
         img = self._try_qimage_from_clipboard(mime, clipboard)
@@ -71,8 +70,7 @@ class CanvasClipboardMixin:
         if img:
             return img
 
-        if hasattr(self, "logger"):
-            self.logger.warning("No image found in clipboard for paste.")
+        self.logger.warning("No image found in clipboard for paste.")
         return None
 
     def _try_qimage_from_clipboard(
@@ -126,18 +124,16 @@ class CanvasClipboardMixin:
                     img = Image.open(io.BytesIO(data_bytes))
                     img.verify()
                     img = Image.open(io.BytesIO(data_bytes))
-                    if hasattr(self, "logger"):
-                        self.logger.debug(
-                            f"Loaded image from clipboard mime {fmt} using "
-                            f"{get_bytes.__name__}"
-                        )
+                    self.logger.debug(
+                        f"Loaded image from clipboard mime {fmt} using "
+                        f"{get_bytes.__name__}"
+                    )
                     return img
                 except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.error(
-                            f"Failed to load image from clipboard mime {fmt} "
-                            f"using {get_bytes.__name__}: {e}"
-                        )
+                    self.logger.error(
+                        f"Failed to load image from clipboard mime {fmt} "
+                        f"using {get_bytes.__name__}: {e}"
+                    )
         return None
 
     def _try_url_from_clipboard(self, mime) -> Optional[Image.Image]:

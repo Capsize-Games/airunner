@@ -28,7 +28,11 @@ def set_huggingface_environment_variables(allow_downloads: bool = None):
     :param allow_downloads:
     :return:
     """
-    print("Setting Hugging Face environment variables")
+    from airunner.utils.application.get_logger import get_logger
+
+    logger = get_logger(__name__)
+
+    logger.info("Setting Hugging Face environment variables")
     allow_downloads = (
         HF_ALLOW_DOWNLOADS if allow_downloads is None else allow_downloads
     )

@@ -34,8 +34,7 @@ class RAGSearchMixin:
             List of Document objects with page_content and metadata
         """
         if not self.retriever:
-            if hasattr(self, "logger"):
-                self.logger.warning("No retriever available for search")
+            self.logger.warning("No retriever available for search")
             return []
 
         try:
@@ -51,16 +50,14 @@ class RAGSearchMixin:
                 )
                 results.append(doc)
 
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    f"Search for '{query}' returned {len(results)} results"
-                )
+            self.logger.info(
+                f"Search for '{query}' returned {len(results)} results"
+            )
 
             return results
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error during search: {e}")
+            self.logger.error(f"Error during search: {e}")
             return []
 
     def get_retriever_for_query(
@@ -80,8 +77,7 @@ class RAGSearchMixin:
             Configured retriever with optional metadata filters
         """
         if not self.index:
-            if hasattr(self, "logger"):
-                self.logger.error("No index available for retriever")
+            self.logger.error("No index available for retriever")
             return None
 
         try:
@@ -100,49 +96,65 @@ class RAGSearchMixin:
                 filters=filters,
             )
 
-            if hasattr(self, "logger"):
-                self.logger.debug(
-                    f"Created retriever with top_k={similarity_top_k}, "
-                    f"filtered_docs={len(doc_ids) if doc_ids else 'all'}"
-                )
+            self.logger.debug(
+                f"Created retriever with top_k={similarity_top_k}, "
+                f"filtered_docs={len(doc_ids) if doc_ids else 'all'}"
+            )
             return retriever
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error creating retriever: {e}")
+            self.logger.error(f"Error creating retriever: {e}")
             return None
 
     @property
     def retriever(self) -> Optional[VectorIndexRetriever]:
-        """Get retriever for manually-activated documents.
+        """Get retriever for search operations.
 
-        Only loads documents marked as active=True in the database.
-        No automatic filtering - users manually control which documents to search.
+        Priority order:
+        1. Multi-index retriever for active documents (if any exist in database)
+        2. Unified index retriever (for dynamically loaded content)
+        3. None (no documents available)
 
         Returns:
-            MultiIndexRetriever instance that lazy-loads active document indexes
+            VectorIndexRetriever instance or None
         """
         if not self._retriever:
-            # Create multi-index retriever for active documents only
-            try:
-                # Import here to avoid circular dependency
-                from airunner.components.llm.managers.agent.retriever import (
-                    MultiIndexRetriever,
-                )
-
-                self._retriever = MultiIndexRetriever(
-                    rag_mixin=self,
-                    similarity_top_k=5,
-                )
-                active_count = len(self._get_active_document_ids())
-                if hasattr(self, "logger"):
-                    self.logger.debug(
-                        f"Created retriever for {active_count} active document(s)"
+            # Try creating multi-index retriever for active documents
+            active_doc_ids = self._get_active_document_ids()
+            if active_doc_ids and len(active_doc_ids) > 0:
+                # Have active documents in database - use multi-index retriever
+                try:
+                    from airunner.components.llm.managers.agent.retriever import (
+                        MultiIndexRetriever,
                     )
-            except Exception as e:
-                if hasattr(self, "logger"):
+
+                    self._retriever = MultiIndexRetriever(
+                        rag_mixin=self,
+                        similarity_top_k=5,
+                    )
+                    self.logger.debug(
+                        f"Created retriever for {len(active_doc_ids)} active document(s)"
+                    )
+                except Exception as e:
                     self.logger.error(
                         f"Error creating multi-index retriever: {e}"
                     )
+            elif self._index:
+                # No active documents, but unified index exists (dynamically loaded content)
+                try:
+                    self._retriever = VectorIndexRetriever(
+                        index=self._index,
+                        similarity_top_k=5,
+                    )
+                    self.logger.debug(
+                        "Created retriever for unified index (dynamically loaded content)"
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error creating unified index retriever: {e}"
+                    )
+            else:
+                # No documents available
+                self.logger.debug("No documents available for retriever")
 
         return self._retriever

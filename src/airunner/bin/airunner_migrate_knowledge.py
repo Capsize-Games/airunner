@@ -64,6 +64,13 @@ class KnowledgeMigrator:
                 f"Path is not a file: {self.json_path}"
             )
 
+        # Handle empty file (fresh install)
+        if self.json_path.stat().st_size == 0:
+            self.logger.info(
+                "JSON file is empty (fresh install) - no migration needed"
+            )
+            return True
+
         try:
             with open(self.json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -111,6 +118,11 @@ class KnowledgeMigrator:
         Raises:
             KnowledgeMigrationError: If parsing fails
         """
+        # Handle empty file (fresh install)
+        if self.json_path.stat().st_size == 0:
+            self.logger.info("JSON file is empty - returning empty fact list")
+            return []
+
         try:
             with open(self.json_path, "r", encoding="utf-8") as f:
                 facts = json.load(f)

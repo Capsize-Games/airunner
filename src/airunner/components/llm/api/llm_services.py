@@ -25,6 +25,7 @@ class LLMAPIService(APIServiceBase):
         node_id: Optional[str] = None,
         request_id: Optional[str] = None,
         callback: Optional[callable] = None,
+        **kwargs,
     ):
         """Send an LLM generation request.
 
@@ -39,13 +40,22 @@ class LLMAPIService(APIServiceBase):
             callback: Optional callback function for responses
         """
         # Use action-optimized defaults if no explicit request provided
+        # Accept backwards-compatible extra kwargs such as 'system_prompt'
+        system_prompt = kwargs.pop("system_prompt", None)
         llm_request = llm_request or LLMRequest.for_action(action)
+        if system_prompt:
+            try:
+                setattr(llm_request, "system_prompt", system_prompt)
+            except Exception:
+                self.logger.exception(
+                    "Failed to set system_prompt on llm_request"
+                )
+        if kwargs:
+            # Warn about any other unknown kwargs but do not raise
+            self.logger.warning(
+                f"LLMAPIService.send_request received unknown kwargs: {list(kwargs.keys())} - ignoring"
+            )
         llm_request.do_tts_reply = do_tts_reply
-
-        # DEBUG: Log max_new_tokens value
-        self.logger.debug(
-            f"llm_request.max_new_tokens={llm_request.max_new_tokens}, action={action}"
-        )
 
         data = {
             "llm_request": True,
@@ -73,6 +83,7 @@ class LLMAPIService(APIServiceBase):
                 mediator.register_pending_request(request_id, callback)
 
         self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
+        self.logger.info("LLM API: Signal emitted")
 
     def clear_history(self, **kwargs):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, kwargs)
@@ -119,13 +130,6 @@ class LLMAPIService(APIServiceBase):
             action=LLMActionType.CHAT,
             do_tts_reply=True,
         )
-        # self.send_llm_text_streamed_signal(
-        #     LLMResponse(
-        #         message="Your image has been generated successfully.",
-        #         is_first_message=True,
-        #         is_end_of_message=True,
-        #     )
-        # )
 
     def send_llm_text_streamed_signal(self, response: LLMResponse):
         # Include request_id at top level for SignalMediator correlation

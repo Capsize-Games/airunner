@@ -76,6 +76,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             airunner_egg_info_path,
             "/tmp/",
             "/etc/",
+            "/var/log/airunner/",  # Add headless server log directory
             os.path.join(os.path.expanduser("~"), "nltk_data/"),
             os.path.join(
                 os.path.expanduser("~"), "nltk_data/corpora/stopwords/english"
@@ -149,8 +150,25 @@ except FileExistsError:
 
 DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
-    sys.stdout = open(AIRUNNER_LOG_FILE, "a")
-    sys.stderr = open(AIRUNNER_LOG_FILE, "a")
+    try:
+        os.makedirs(
+            os.path.dirname(os.path.expanduser(AIRUNNER_LOG_FILE)),
+            exist_ok=True,
+        )
+        sys.stdout = open(AIRUNNER_LOG_FILE, "a")
+        sys.stderr = open(AIRUNNER_LOG_FILE, "a")
+    except PermissionError:
+        # Fall back to /tmp if we don't have permissions to write the desired file
+        fallback = os.path.join("/tmp", "airunner.log")
+        try:
+            sys.stdout = open(fallback, "a")
+            sys.stderr = open(fallback, "a")
+        except Exception:
+            # If this still fails, keep default stdout/stderr and continue
+            pass
+    except Exception:
+        # Any other unexpected error: don't crash the startup
+        pass
 
 ################################################################
 # Set the environment variable for PyTorch to use expandable
@@ -226,8 +244,20 @@ def main():
 
     setup_database()
 
+    # Configure headless logging early, before API/App instantiation
+    # This ensures root logger is configured before service loggers are created
+    sys.stderr.write("DEBUG: main.py starting\n")
+
+    # Initialize headless logging early to capture startup issues
+    if os.environ.get("AIRUNNER_HEADLESS") == "1":
+        from airunner.utils.application.logging_utils import configure_headless_logging
+        configure_headless_logging()
+
     # Start the main application
-    API()
+    api = API()
+    sys.stderr.write("DEBUG: API initialized\n")
+    api.run_headless()
+    sys.stderr.write("DEBUG: run_headless returned\n")
 
 
 if __name__ == "__main__":

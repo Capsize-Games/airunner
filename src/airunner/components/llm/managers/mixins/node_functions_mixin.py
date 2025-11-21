@@ -15,7 +15,10 @@ from langchain_core.messages import (
     trim_messages,
 )
 
-from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.settings import (
+    AIRUNNER_LOG_LEVEL,
+    AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW,
+)
 from airunner.utils.application import get_logger
 
 if TYPE_CHECKING:
@@ -24,22 +27,6 @@ if TYPE_CHECKING:
 
 class NodeFunctionsMixin:
     """Implements LangGraph node functions for the workflow."""
-
-    def __init__(self):
-        """Initialize node functions mixin."""
-        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-        self._system_prompt = ""
-        self._chat_model = None
-        self._tools = []
-        self._max_tokens = 2000
-        self._token_counter = None
-        self._token_callback = None
-        self._interrupted = False
-        self._conversation_id: Optional[int] = None
-
-    # ========================================================================
-    # FORCE RESPONSE NODE
-    # ========================================================================
 
     def _force_response_node(self, state: "WorkflowState") -> "WorkflowState":
         """Node that generates forced response when redundancy detected.
@@ -398,7 +385,10 @@ Provide a clear, conversational answer using only the information above."""
             return False
 
         # Get previous tool calls
-        previous_tool_calls = self._extract_previous_tool_calls(ai_messages)
+        previous_tool_calls = self._extract_previous_tool_calls(
+            ai_messages,
+            max_last_messages=AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW,
+        )
 
         # Check each current tool call against previous ones
         for current_tc in last_message.tool_calls:
@@ -410,7 +400,9 @@ Provide a clear, conversational answer using only the information above."""
         return False
 
     def _extract_previous_tool_calls(
-        self, ai_messages: List[BaseMessage]
+        self,
+        ai_messages: List[BaseMessage],
+        max_last_messages: Optional[int] = None,
     ) -> List[Dict]:
         """Extract all previous tool calls from AI messages.
 
@@ -421,6 +413,10 @@ Provide a clear, conversational answer using only the information above."""
             List of tool call dictionaries
         """
         previous_tool_calls = []
+        # Optionally limit previous AI messages to the last `max_last_messages`
+        if max_last_messages is not None and max_last_messages > 0:
+            ai_messages = ai_messages[-(max_last_messages + 1) :]
+
         for i, ai_msg in enumerate(ai_messages[:-1]):  # Exclude current
             if hasattr(ai_msg, "tool_calls") and ai_msg.tool_calls:
                 for tc in ai_msg.tool_calls:
@@ -627,7 +623,6 @@ Provide a clear, conversational answer using only the information above."""
         # Debug logging
         self.logger.debug("Full system prompt being sent to model:")
         self.logger.debug("%s...", escaped_system_prompt[:1000])
-        self.logger.debug("End of system prompt\n")
 
         # Build prompt template
         prompt = ChatPromptTemplate.from_messages(
@@ -711,15 +706,10 @@ Provide a clear, conversational answer using only the information above."""
         Returns:
             Escaped system prompt
         """
-        # Build prompt dynamically to reflect variables (date, mood, etc.)
-        try:
-            prompt_source = (
-                self.system_prompt  # Prefer dynamic property if available
-                if hasattr(self, "system_prompt")
-                else getattr(self, "_system_prompt", "")
-            )
-        except Exception:
-            prompt_source = getattr(self, "_system_prompt", "")
+        # CRITICAL FIX: Always use _system_prompt (the stored value set by update_system_prompt),
+        # NOT the system_prompt property which dynamically generates the chatbot prompt.
+        # This ensures custom system prompts (e.g., for classification) are preserved.
+        prompt_source = self._system_prompt
 
         return prompt_source.replace("{", "{{").replace("}", "}}")
 
@@ -776,22 +766,55 @@ Provide a clear, conversational answer using only the information above."""
         )
 
         if has_tool_results and tool_calling_mode == "json":
+            # Check if response format is explicitly set
+            response_format = getattr(self, "_response_format", None)
+            self.logger.info(
+                f"[POST-TOOL] response_format={response_format}, tool_calling_mode={tool_calling_mode}"
+            )
+
+            if response_format == "json":
+                # Force JSON response even after tools
+                instruction = (
+                    "\n\n=== CRITICAL RESPONSE FORMAT REQUIREMENT ===\n"
+                    "You have tool results in the conversation above. "
+                    "Now answer the user's question using that information.\n"
+                    "YOU MUST respond ONLY with valid JSON in the EXACT format specified in the system prompt above.\n"
+                    "Do NOT write conversational text. Do NOT explain or narrate. ONLY output the JSON object.\n"
+                    "Your entire response must be parseable JSON - nothing else."
+                )
+            elif response_format == "conversational":
+                # Explicitly request conversational response
+                instruction = (
+                    "\n\nYou have tool results in the conversation above. "
+                    "Answer the user's question using that information. "
+                    "Respond conversationally, not in JSON."
+                )
+            elif response_format is None:
+                # Default behavior - conversational
+                instruction = (
+                    "\n\nYou have tool results in the conversation above. "
+                    "Answer the user's question using that information. "
+                    "Respond conversationally, not in JSON."
+                )
+            else:
+                # Custom format specified
+                instruction = (
+                    f"\n\nYou have tool results in the conversation above. "
+                    f"Answer the user's question using that information. "
+                    f"Respond in {response_format} format."
+                )
+
+            system_prompt += instruction
+            self.logger.info(
+                f"[POST-TOOL] Full instruction text:\n{instruction}"
+            )
+
             # After tool execution, instruct model to respond normally
             tool_msgs = [
                 m
                 for m in trimmed_messages
                 if m.__class__.__name__ == "ToolMessage"
             ]
-
-            instruction = (
-                "\n\nYou have tool results in the conversation above. "
-                "Answer the user's question using that information. "
-                "Respond conversationally, not in JSON."
-            )
-            system_prompt += instruction
-            self.logger.debug(
-                f"Added post-tool instruction: {instruction.strip()}"
-            )
 
             if tool_msgs:
                 self.logger.info(
@@ -854,29 +877,12 @@ Provide a clear, conversational answer using only the information above."""
                 chunk_message = getattr(chunk, "message", chunk)
                 text = getattr(chunk_message, "content", "") or ""
 
-                print(
-                    f"[STREAM CHUNK DEBUG] chunk type: {type(chunk)}",
-                    flush=True,
-                )
-                print(
-                    f"[STREAM CHUNK DEBUG] chunk_message type: {type(chunk_message)}",
-                    flush=True,
-                )
-                print(
-                    f"[STREAM CHUNK DEBUG] chunk_message.tool_calls: {getattr(chunk_message, 'tool_calls', 'NO ATTR')}",
-                    flush=True,
-                )
-
                 # Always capture last chunk (might have tool_calls with no content)
                 last_chunk_message = chunk_message
 
                 # Collect tool_calls from ANY chunk that has them
                 chunk_tool_calls = getattr(chunk_message, "tool_calls", None)
                 if chunk_tool_calls:
-                    print(
-                        f"[TOOL CALLS COLLECTION] Found {len(chunk_tool_calls)} tool calls in chunk",
-                        flush=True,
-                    )
                     collected_tool_calls.extend(chunk_tool_calls)
 
                 # Only skip if content is empty AND no tool_calls
@@ -927,24 +933,6 @@ Provide a clear, conversational answer using only the information above."""
                     getattr(last_chunk_message, "tool_calls", None) or []
                 )
 
-            print(
-                f"[CREATE MESSAGE DEBUG] last_chunk_message type: {type(last_chunk_message)}",
-                flush=True,
-            )
-            print(
-                f"[CREATE MESSAGE DEBUG] collected_tool_calls: {collected_tool_calls}",
-                flush=True,
-            )
-            print(
-                f"[CREATE MESSAGE DEBUG] final tool_calls: {tool_calls}",
-                flush=True,
-            )
-        else:
-            print(
-                "[CREATE MESSAGE DEBUG] last_chunk_message is None!",
-                flush=True,
-            )
-
         complete_content = "".join(streamed_content)
 
         # Stream content to GUI
@@ -962,10 +950,6 @@ Provide a clear, conversational answer using only the information above."""
             content=complete_content,
             additional_kwargs=additional_kwargs,
             tool_calls=tool_calls or [],
-        )
-
-        print(
-            f"[DEBUG WORKFLOW] AIMessage content: {response_message.content[:200]}"
         )
 
         return response_message

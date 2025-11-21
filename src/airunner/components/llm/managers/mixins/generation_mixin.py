@@ -73,6 +73,20 @@ class GenerationMixin:
         if self._workflow_manager:
             self._workflow_manager.update_system_prompt(action_system_prompt)
 
+            # Set response format if provided in request
+            response_format = (
+                llm_request.response_format
+                if llm_request and hasattr(llm_request, "response_format")
+                else None
+            )
+            if response_format and hasattr(
+                self._workflow_manager, "set_response_format"
+            ):
+                self._workflow_manager.set_response_format(response_format)
+                self.logger.info(
+                    f"Set workflow response format to: {response_format}"
+                )
+
             # Only setup tools if not already filtered
             if not skip_tool_setup and self._tool_manager:
                 action_tools = self._tool_manager.get_tools_for_action(action)

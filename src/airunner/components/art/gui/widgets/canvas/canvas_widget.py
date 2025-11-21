@@ -365,8 +365,7 @@ class CanvasWidget(BaseWidget):
                 "Open Document Failed",
                 f"Unable to open the selected document.\n\n{exc}",
             )
-            if hasattr(self, "logger"):
-                self.logger.exception(exc)
+            self.logger.exception(exc)
             return
 
         try:
@@ -376,8 +375,7 @@ class CanvasWidget(BaseWidget):
                 "Open Document Failed",
                 "The document could not be loaded.",
             )
-            if hasattr(self, "logger"):
-                self.logger.error(exc)
+            self.logger.error(exc)
 
     @Slot()
     def on_save_art_document_clicked(self) -> None:
@@ -405,8 +403,7 @@ class CanvasWidget(BaseWidget):
                 "Save Document Failed",
                 f"Unable to save the document.\n\n{exc}",
             )
-            if hasattr(self, "logger"):
-                self.logger.exception(exc)
+            self.logger.exception(exc)
 
     @Slot()
     def on_filter_button_clicked(self) -> None:
@@ -716,8 +713,7 @@ class CanvasWidget(BaseWidget):
             return True
         except Exception as exc:  # pragma: no cover - protective guard
             self.api.art.canvas.cancel_layer_operation("delete")
-            if hasattr(self, "logger"):
-                self.logger.exception(exc)
+            self.logger.exception(exc)
             return False
 
     def _serialize_canvas_document(self) -> Dict[str, Any]:
@@ -810,8 +806,7 @@ class CanvasWidget(BaseWidget):
             )
         except Exception as exc:  # pragma: no cover - protective guard
             self.api.art.canvas.cancel_layer_operation("create")
-            if hasattr(self, "logger"):
-                self.logger.error(exc)
+            self.logger.error(exc)
             return
 
         self.api.art.canvas.show_layers()
@@ -960,8 +955,7 @@ class CanvasWidget(BaseWidget):
         try:
             QMessageBox.critical(self, title, message)
         except Exception:  # pragma: no cover - best effort logging fallback
-            if hasattr(self, "logger"):
-                self.logger.error(f"{title}: {message}")
+            self.logger.error(f"{title}: {message}")
 
     def _delete_layer_records(self, layer_id: int) -> None:
         DrawingPadSettings.objects.delete_by(layer_id=layer_id)

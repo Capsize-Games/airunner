@@ -54,8 +54,36 @@ class ToolExecutor:
             # Inject dependencies if required
             if tool_info.requires_agent and self.agent:
                 kwargs["agent"] = self.agent
-            if tool_info.requires_api and self.api:
-                kwargs["api"] = self.api
+
+            if (
+                tool_info.requires_api
+                or tool_info.name == "search_knowledge_base_documents"
+            ):
+                # Lazy load API if not present (handles initialization order issues)
+                if not self.api:
+                    try:
+                        from airunner.components.server.api.server import (
+                            get_api,
+                        )
+
+                        self.api = get_api()
+                    except ImportError:
+                        self.logger.error(
+                            f"Failed to import API for tool {tool_info.name}"
+                        )
+                        pass
+                    except Exception as e:
+                        self.logger.error(
+                            f"Failed to lazy load API for tool {tool_info.name}: {e}"
+                        )
+
+                if self.api:
+                    kwargs["api"] = self.api
+                else:
+                    print(
+                        f"[TOOL_EXEC] WARNING: Tool {tool_info.name} requires API but self.api is None",
+                        flush=True,
+                    )
 
             try:
                 return tool_info.func(*args, **kwargs)
@@ -114,11 +142,34 @@ class ToolExecutor:
                 )
                 continue
 
-            if tool_info.requires_api and not self.api:
-                self.logger.warning(
-                    f"Skipping tool {tool_info.name}: requires API"
-                )
-                continue
+            if tool_info.requires_api:
+                # Lazy load API if not present
+                if not self.api:
+                    try:
+                        from airunner.components.server.api.server import (
+                            get_api,
+                        )
+
+                        self.api = get_api()
+                        print(
+                            f"[TOOL_EXEC] get_all_tools lazy loaded API: {self.api}",
+                            flush=True,
+                        )
+                    except ImportError:
+                        self.logger.error(
+                            f"[TOOL_EXEC] get_all_tools failed to import API: {e}"
+                        )
+                        pass
+                    except Exception as e:
+                        self.logger.error(
+                            f"[TOOL_EXEC] get_all_tools failed to lazy load API: {e}"
+                        )
+
+                if not self.api:
+                    self.logger.warning(
+                        f"Skipping tool {tool_info.name}: requires API"
+                    )
+                    continue
 
             tools.append(self.to_function_tool(tool_info))
 

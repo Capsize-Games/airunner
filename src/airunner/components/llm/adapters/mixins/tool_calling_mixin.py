@@ -194,6 +194,11 @@ class ToolCallingMixin:
             flush=True,
         )
 
+        # Try extracting JSON from <tool_call> XML tags first
+        parsed = self._try_parse_tool_call_tags(response_text)
+        if parsed:
+            return parsed
+
         response_text = self._fix_json_quotes(response_text)
 
         # Try parsing entire response as JSON first
@@ -240,6 +245,63 @@ class ToolCallingMixin:
                 )
                 return text_fixed
         return text
+
+    def _try_parse_tool_call_tags(
+        self, response_text: str
+    ) -> Optional[Tuple[List[dict], str]]:
+        """Try extracting JSON from <tool_call> XML tags.
+
+        Some LLMs wrap their tool call JSON in <tool_call>...</tool_call> tags.
+        This method extracts the JSON from those tags and parses it.
+
+        Args:
+            response_text: Text potentially containing <tool_call> tags
+
+        Returns:
+            (tool_calls, cleaned_text) tuple or None if no tags found
+        """
+        # Pattern to match <tool_call>...</tool_call> tags
+        tool_call_tag_pattern = r"<tool_call>\s*(\{[^<]+\})\s*</tool_call>"
+        matches = re.findall(tool_call_tag_pattern, response_text, re.DOTALL)
+
+        if not matches:
+            return None
+
+        tool_calls = []
+        for match in matches:
+            try:
+                # Try parsing the JSON inside the tags
+                json_str = match.strip()
+                data = json.loads(json_str)
+
+                # Handle both flat format and nested format
+                if isinstance(data, dict):
+                    # Check if it's a direct tool call with "tool"/"name" key
+                    if "tool" in data or "name" in data:
+                        tool_calls.append(self._extract_tool_call(data))
+
+            except json.JSONDecodeError as e:
+                self.logger.debug(
+                    f"Failed to parse JSON in <tool_call> tag: {e}"
+                )
+                continue
+
+        if tool_calls:
+            # Remove the <tool_call> tags from the response
+            cleaned_text = re.sub(
+                tool_call_tag_pattern, "", response_text, flags=re.DOTALL
+            ).strip()
+            return (tool_calls, cleaned_text)
+
+        # If we found tags but no valid tool calls, return the original text
+        # without the tags (they might contain regular data)
+        cleaned_text = re.sub(
+            tool_call_tag_pattern,
+            lambda m: m.group(1),
+            response_text,
+            flags=re.DOTALL,
+        ).strip()
+        return (None, cleaned_text)
 
     def _try_parse_entire_response(
         self, response_text: str
