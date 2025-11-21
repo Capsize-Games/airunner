@@ -45,7 +45,10 @@ class API(App):
 
     def __init__(self, *args, **kwargs):
         import sys
-        sys.stderr.write(f"DEBUG: API.__init__ called. Initialized={getattr(self, '_initialized', False)}\n")
+
+        sys.stderr.write(
+            f"DEBUG: API.__init__ called. Initialized={getattr(self, '_initialized', False)}\n"
+        )
         if hasattr(self, "_initialized") and self._initialized:
             return
         self.paths = {
@@ -160,12 +163,11 @@ class API(App):
 
         # Extract the initialize_app flag and pass the rest to the parent App class
         self._initialize_app = kwargs.pop("initialize_app", True)
-        initialize_gui = kwargs.pop("initialize_gui", True)
         self.signal_handlers = {
             SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
             SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
         }
-        super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
+        super().__init__(*args, **kwargs)
         if self._initialize_app:
             setup_database()
 

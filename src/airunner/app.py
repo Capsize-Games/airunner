@@ -123,7 +123,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         no_splash: bool = False,
         main_window_class: QWindow = None,
         window_class_params: Optional[Dict] = None,
-        initialize_gui: bool = True,
+        headless: bool = False,
     ):
         """Initialize the application.
 
@@ -131,19 +131,20 @@ class App(MediatorMixin, SettingsMixin, QObject):
             no_splash: Skip splash screen display (GUI mode only)
             main_window_class: Custom main window class (GUI mode only)
             window_class_params: Parameters for main window (GUI mode only)
-            initialize_gui: If False, run in headless mode (no GUI)
+            headless: If True, run in headless mode (no GUI)
         """
+        self.headless = headless
         self._init_attributes(
-            no_splash, main_window_class, window_class_params, initialize_gui
+            no_splash, main_window_class, window_class_params
         )
         super().__init__()
         self._register_signals()
         self._ensure_mathjax()
 
-        if self.initialize_gui:
-            self._init_gui_mode()
-        else:
+        if self.headless:
             self._init_headless_mode()
+        else:
+            self._init_gui_mode()
 
         self._initialize_knowledge_system()
 
@@ -174,31 +175,19 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self,
         no_splash: bool,
         main_window_class: QWindow,
-        window_class_params: Optional[Dict],
-        initialize_gui: bool,
+        window_class_params: Optional[Dict]
     ) -> None:
         """Initialize instance attributes."""
-        headless_env = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
-        if headless_env:
-            initialize_gui = False
-
-        if not initialize_gui:
+        if self.headless:
             configure_headless_logging()
 
         self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
-
-        # Debug logging state
-        try:
-            root = logging.getLogger()
-        except:
-            pass
 
         self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
         self.app = None
         self.splash = None
-        self.initialize_gui = initialize_gui
         self.http_server_thread = None
         self.api_server_thread = None
         self.is_running = False
@@ -765,7 +754,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Conditionally initialize and display the setup wizard.
         :return:
         """
-        if not self.initialize_gui:
+        if self.headless:
             return  # Skip GUI initialization if the flag is False
         signal.signal(signal.SIGINT, self.signal_handler)
 
@@ -817,7 +806,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         and a main window is displayed once the application is ready.
         Override this method to run the application in a different mode.
         """
-        if not self.initialize_gui:
+        if self.headless:
             # Headless mode - keep server running
             self.run_headless()
             return
@@ -833,9 +822,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         Uses Qt event loop to process worker signals while server runs.
         """
+        print("run headless function called")
         # Workers are already initialized in _init_headless_services()
         # No need to initialize again here
-
         self.logger.info("AI Runner headless mode - server running")
         self.logger.info("Press Ctrl+C to stop")
 
@@ -961,7 +950,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         :param splash:
         :return:
         """
-        if not self.initialize_gui:
+        if self.headless:
             return  # Skip showing the main application window if GUI is disabled
 
         window_class = self.main_window_class_

@@ -249,6 +249,43 @@ class LLMModelManager(
         # Check if use_memory=False - if so, clear conversation history
         llm_request = data["request_data"].get("llm_request")
         self.llm_request = llm_request
+
+        # Check if mode routing parameters changed - if so, reload workflow manager
+        if llm_request and (
+            getattr(llm_request, "use_mode_routing", False)
+            or getattr(llm_request, "mode_override", None)
+        ):
+            use_mode_routing = getattr(llm_request, "use_mode_routing", False)
+            mode_override = getattr(llm_request, "mode_override", None)
+            
+            # Check if workflow manager needs to be rebuilt with new mode settings
+            needs_rebuild = False
+            if self._workflow_manager:
+                current_mode_routing = getattr(
+                    self._workflow_manager, "_use_mode_routing", False
+                )
+                current_mode_override = getattr(
+                    self._workflow_manager, "_mode_override", None
+                )
+                if (
+                    current_mode_routing != use_mode_routing
+                    or current_mode_override != mode_override
+                ):
+                    needs_rebuild = True
+                    self.logger.info(
+                        f"Mode routing settings changed: "
+                        f"use_mode_routing={use_mode_routing}, "
+                        f"mode_override={mode_override} - "
+                        f"rebuilding workflow manager"
+                    )
+            else:
+                needs_rebuild = True
+            
+            if needs_rebuild:
+                # Unload and reload workflow manager with new settings
+                self._unload_workflow_manager()
+                self._load_workflow_manager()
+
         if llm_request and not llm_request.use_memory:
             self.logger.info(
                 "use_memory=False - clearing conversation history for this request"

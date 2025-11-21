@@ -1,8 +1,12 @@
 from typing import Callable
 from PySide6.QtCore import QObject, Signal
-from airunner.components.application.workers.download_worker import DownloadWorker
+from airunner.components.application.workers.download_worker import (
+    DownloadWorker,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.utils.application.create_worker import create_worker
 
 
@@ -13,14 +17,14 @@ class HuggingfaceDownloader(
 ):
     completed = Signal()
 
-    def __init__(self, callback=None, initialize_gui=True):
+    def __init__(self, callback=None, headless=False):
         super().__init__()
         self.thread = None
         self.worker = None
         self.downloading = False
 
         self.worker = create_worker(
-            DownloadWorker, initialize_gui=initialize_gui
+            DownloadWorker, headless=headless
         )
 
         # Connect signals
