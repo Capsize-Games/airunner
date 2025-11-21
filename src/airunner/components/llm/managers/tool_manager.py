@@ -9,6 +9,7 @@ from airunner.components.llm.managers.tools import (
     ConversationTools,
     AutonomousControlTools,
 )
+from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.enums import LLMActionType
 
 # CRITICAL: Import tools to trigger ToolRegistry registration
@@ -82,14 +83,20 @@ class ToolManager(
             if tool_info.requires_api:
                 # Remove api from kwargs if the model provided it (it will be None)
                 kwargs.pop("api", None)
-                # Get API from rag_manager if available, otherwise from global
-                api = (
-                    self.rag_manager.api
-                    if self.rag_manager
+                # For RAG tools, inject rag_manager directly as api
+                # Otherwise get API from rag_manager.api or global
+                if tool_info.category == ToolCategory.RAG and self.rag_manager:
+                    # RAG tools get the rag_manager directly (LLMModelManager with RAG methods)
+                    api = self.rag_manager
+                elif (
+                    self.rag_manager
                     and hasattr(self.rag_manager, "api")
                     and self.rag_manager.api
-                    else get_api()
-                )
+                ):
+                    api = self.rag_manager.api
+                else:
+                    api = get_api()
+
                 if api is None:
                     return (
                         f"Error: API not available for tool {tool_info.name}"

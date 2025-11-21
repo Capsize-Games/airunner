@@ -29,12 +29,13 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         "or use search_web instead."
     ),
     return_direct=False,
-    requires_api=False,  # Changed to False - we'll get API internally
+    requires_api=True,  # API injection provides access to rag_manager
 )
 def rag_search(
     query: Annotated[
         str, "Search query for finding relevant document content"
     ],
+    api: Any = None,  # Injected by ToolManager
 ) -> str:
     """Search through LOADED documents in memory for relevant information.
 
@@ -50,40 +51,34 @@ def rag_search(
 
     Args:
         query: Search query for finding relevant document content
+        api: API instance (injected by ToolManager)
 
     Returns:
         Relevant excerpts from loaded documents or error message
     """
     logger.info(f"rag_search called with query: {query}")
 
-    # Get API directly instead of receiving it as parameter
-    from airunner.components.server.api.server import get_api
-
-    api = get_api()
+    # For RAG tools, api IS the rag_manager (LLMModelManager with RAG search methods)
+    rag_manager = api
 
     print(
-        f"DEBUG rag_search: api type: {type(api).__name__ if api else 'None'}"
+        f"DEBUG rag_search: rag_manager type: {type(rag_manager).__name__ if rag_manager else 'None'}"
     )
     print(
-        f"DEBUG rag_search: api has rag_manager attr: {hasattr(api, 'rag_manager') if api else False}"
+        f"DEBUG rag_search: has search method: {hasattr(rag_manager, 'search') if rag_manager else False}"
     )
 
-    rag_manager = getattr(api, "rag_manager", None) if api else None
     logger.info(f"rag_manager available: {rag_manager is not None}")
 
     if not rag_manager:
         error_msg = (
-            "TOOL UNAVAILABLE: No documents are currently loaded in memory "
-            "for RAG search. The document index is empty. "
-            "You have two options:\n"
-            "1. Use search_web to find information online instead\n"
-            "2. Tell the user that documents need to be loaded before "
-            "searching them\n"
-            "DO NOT call rag_search again - it will fail with the same error."
+            "TOOL UNAVAILABLE: No RAG manager available. "
+            "This is an internal error - RAG tools should receive the LLM model manager."
         )
         logger.warning(error_msg)
         return error_msg
 
+    # Check if documents are loaded by calling the RAG manager's search method
     try:
         results = rag_manager.search(query, k=3)
         logger.info(
@@ -173,14 +168,16 @@ def search_knowledge_base_documents(
         with session_scope() as session:
             # Get all active documents
             docs = session.query(Document).filter_by(active=True).all()
-            
+
             # Initialize found_files to track discovered files
             found_files = []
 
             # If no document records exist yet, attempt to discover files
             # on disk and add them to the database so the KB tools can work
             if not docs and api:
-                logger.info(f"No docs in DB, attempting discovery. api={type(api).__name__}")
+                logger.info(
+                    f"No docs in DB, attempting discovery. api={type(api).__name__}"
+                )
                 try:
                     # Discover candidate document directories from PathSettings
                     settings = (
@@ -238,7 +235,9 @@ def search_knowledge_base_documents(
                     for fpath in found_files:
                         exists = Document.objects.filter_by(path=fpath)
                         if not exists or len(exists) == 0:
-                            logger.info(f"Creating Document record for: {fpath}")
+                            logger.info(
+                                f"Creating Document record for: {fpath}"
+                            )
                             Document.objects.create(
                                 path=fpath, active=True, indexed=False
                             )
@@ -363,7 +362,9 @@ def search_knowledge_base_documents(
                     logger.warning(f"Fallback repo discovery failed: {e}")
 
             if not docs:
-                logger.info(f"[KB SEARCH] No docs found after all discovery attempts. Returning error message.")
+                logger.info(
+                    f"[KB SEARCH] No docs found after all discovery attempts. Returning error message."
+                )
                 return (
                     "No documents found in knowledge base. "
                     "Please index some documents first."
