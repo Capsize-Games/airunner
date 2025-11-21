@@ -61,7 +61,12 @@ class RAGIndexingMixin:
         Returns:
             True if agent is loaded and available
         """
-        if self.model_manager and self.model_manager.agent:
+        # Accept either an explicit agent bound to the manager or the manager
+        # performing the agent role itself (backwards compatibility).
+        if self.model_manager and (
+            getattr(self.model_manager, "agent", None)
+            or hasattr(self.model_manager, "index_all_documents")
+        ):
             return True
 
         self.logger.info(f"Loading LLM for {operation}...")
@@ -72,7 +77,10 @@ class RAGIndexingMixin:
             self._emit_indexing_error(f"Failed to load LLM: {str(e)}")
             return False
 
-        if not self.model_manager or not self.model_manager.agent:
+        if not self.model_manager or (
+            not getattr(self.model_manager, "agent", None)
+            and not hasattr(self.model_manager, "index_all_documents")
+        ):
             self.logger.error("Model manager loaded but agent is still None")
             self._emit_indexing_error("LLM agent not available after loading")
             return False
@@ -85,8 +93,12 @@ class RAGIndexingMixin:
         Returns:
             True if agent supports indexing
         """
-        if not hasattr(self.model_manager.agent, "index_all_documents"):
-            self.logger.error("Agent does not support manual indexing")
+        # Support either an explicit agent or the model manager
+        agent = (
+            getattr(self.model_manager, "agent", None) or self.model_manager
+        )
+        if not hasattr(agent, "index_all_documents"):
+            self.logger.error("Agent/manager does not support manual indexing")
             self._emit_indexing_error("Agent does not support indexing")
             return False
         return True
@@ -95,7 +107,11 @@ class RAGIndexingMixin:
         """Perform the actual indexing of all documents."""
         self.logger.info("Starting manual document indexing with loaded agent")
         try:
-            self.model_manager.agent.index_all_documents()
+            agent = (
+                getattr(self.model_manager, "agent", None)
+                or self.model_manager
+            )
+            agent.index_all_documents()
         except Exception as e:
             self.logger.error(f"Error during indexing: {e}")
             self._emit_indexing_error(f"Indexing error: {str(e)}")
@@ -152,8 +168,13 @@ class RAGIndexingMixin:
         Returns:
             True if agent supports document indexing
         """
-        if not hasattr(self.model_manager.agent, "_index_single_document"):
-            self.logger.error("Agent does not support document indexing")
+        agent = (
+            getattr(self.model_manager, "agent", None) or self.model_manager
+        )
+        if not hasattr(agent, "_index_single_document"):
+            self.logger.error(
+                "Agent/manager does not support document indexing"
+            )
             self._emit_indexing_error("Agent does not support indexing")
             return False
         return True
@@ -206,7 +227,11 @@ class RAGIndexingMixin:
             self.logger.info(
                 f"Indexing document {idx + 1}/{total}: {file_path}"
             )
-            success = self.model_manager.agent._index_single_document(db_doc)
+            agent = (
+                getattr(self.model_manager, "agent", None)
+                or self.model_manager
+            )
+            success = agent._index_single_document(db_doc)
 
             if success:
                 DBDocument.objects.update(pk=db_doc.id, active=True)
@@ -269,13 +294,16 @@ class RAGIndexingMixin:
                 except Exception:
                     pass
 
-            if (
-                self.model_manager
-                and self.model_manager.agent
-                and hasattr(self.model_manager.agent, "do_interrupt")
-            ):
-                setattr(self.model_manager.agent, "do_interrupt", True)
-                self.logger.info("Set agent.do_interrupt = True")
+            agent_or_mgr = (
+                getattr(self.model_manager, "agent", None)
+                or self.model_manager
+            )
+            if agent_or_mgr and hasattr(agent_or_mgr, "do_interrupt"):
+                try:
+                    setattr(agent_or_mgr, "do_interrupt", True)
+                    self.logger.info("Set agent_or_mgr.do_interrupt = True")
+                except Exception:
+                    pass
         except Exception as e:
             self.logger.error(f"Error during cancel indexing: {e}")
 
@@ -330,7 +358,11 @@ class RAGIndexingMixin:
         """
         try:
             self.logger.info(f"Indexing document: {filename}")
-            success = self.model_manager.agent._index_single_document(db_doc)
+            agent = (
+                getattr(self.model_manager, "agent", None)
+                or self.model_manager
+            )
+            success = agent._index_single_document(db_doc)
 
             if success:
                 self._handle_indexing_success(path, db_doc, filename)
