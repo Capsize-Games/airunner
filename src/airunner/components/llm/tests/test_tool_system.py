@@ -84,6 +84,27 @@ class TestToolRegistry:
         assert info.requires_agent is True
         assert info.requires_api is True
 
+    def test_get_triggers_reload_for_default_tool(self):
+        """Ensure ToolRegistry.get reloads default tool modules when the requested
+        tool is missing and registry contains other tools (regression test).
+        """
+        ToolRegistry.clear()
+
+        @tool(
+            name="img_check",
+            category=ToolCategory.IMAGE,
+            description="Img check",
+        )
+        def img_check():
+            return "ok"
+
+        # At this point, only our test tool should be present
+        assert "img_check" in ToolRegistry._tools
+
+        # Request a known default tool - should trigger import & registration
+        gen_tool = ToolRegistry.get("generate_direct_response")
+        assert gen_tool is not None
+
 
 class TestToolExecutor:
     """Test tool execution with dependency injection."""
