@@ -47,6 +47,7 @@ def test_classifier():
         ("what day is tomorrow", ["time"]),
         ("search for information about Python", ["search"]),
         ("tell me about machine learning", ["search"]),
+        ("what is mindwar?", ["search"]),
         ("clear my conversation history", ["conversation"]),
         ("scrape site.com and calculate the sum", ["search", "math"]),
     ]

@@ -119,9 +119,7 @@ class RAGIndexManagementMixin:
         try:
             index_dir = self._get_doc_index_dir(doc_id, doc_info["path"])
             if not os.path.exists(index_dir):
-                self.logger.warning(
-                    f"Index directory not found: {index_dir}"
-                )
+                self.logger.warning(f"Index directory not found: {index_dir}")
                 return None
 
             storage_context = StorageContext.from_defaults(
@@ -213,9 +211,7 @@ class RAGIndexManagementMixin:
             # Load old unified index
             old_index = self._load_index()
             if not old_index:
-                self.logger.warning(
-                    "Could not load old index for migration"
-                )
+                self.logger.warning("Could not load old index for migration")
                 return
 
             # Get all documents from unified index
@@ -223,9 +219,7 @@ class RAGIndexManagementMixin:
             docstore = old_index.docstore
             all_docs = list(docstore.docs.values())
 
-            self.logger.info(
-                f"Found {len(all_docs)} documents in old index"
-            )
+            self.logger.info(f"Found {len(all_docs)} documents in old index")
 
             # Group documents by file_path
             docs_by_file: Dict[str, list] = {}

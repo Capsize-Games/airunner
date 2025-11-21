@@ -64,9 +64,7 @@ class RAGIndexingMixin:
                 )
                 self.logger.debug("Document reader created successfully")
             except Exception as e:
-                self.logger.error(
-                    f"Error creating document reader: {str(e)}"
-                )
+                self.logger.error(f"Error creating document reader: {str(e)}")
                 return None
         return self._document_reader
 
@@ -126,9 +124,7 @@ class RAGIndexingMixin:
 
             docs = reader.load_data()
             if not docs:
-                self.logger.warning(
-                    f"No content extracted from {db_doc.path}"
-                )
+                self.logger.warning(f"No content extracted from {db_doc.path}")
                 return False
 
             # Enrich with metadata
@@ -176,9 +172,7 @@ class RAGIndexingMixin:
         one or more indexing operations failed.
         """
         if not file_paths:
-            self.logger.debug(
-                "No file paths provided to ensure_indexed_files"
-            )
+            self.logger.debug("No file paths provided to ensure_indexed_files")
             return True
 
         success = True
@@ -186,9 +180,7 @@ class RAGIndexingMixin:
             # Skip if already tracked as loaded/indexed
             try:
                 if path in getattr(self, "_loaded_doc_ids", []):
-                    self.logger.debug(
-                        f"Skipping already indexed path: {path}"
-                    )
+                    self.logger.debug(f"Skipping already indexed path: {path}")
                     continue
             except Exception:
                 pass
@@ -205,9 +197,7 @@ class RAGIndexingMixin:
                 self.logger.info(f"Ensuring indexing for file: {path}")
                 self.load_file_into_rag(path)
             except Exception as e:
-                self.logger.error(
-                    f"Failed to ensure index for {path}: {e}"
-                )
+                self.logger.error(f"Failed to ensure index for {path}: {e}")
                 success = False
 
         # Recreate retriever after any indexing operations
@@ -231,9 +221,7 @@ class RAGIndexingMixin:
             )
 
             # Emit initial progress signal
-            self.logger.info(
-                "Emitting initial RAG_INDEXING_PROGRESS signal"
-            )
+            self.logger.info("Emitting initial RAG_INDEXING_PROGRESS signal")
             self.emit_signal(
                 SignalCode.RAG_INDEXING_PROGRESS,
                 {
@@ -289,9 +277,7 @@ class RAGIndexingMixin:
                     return False
 
                 if not os.path.exists(db_doc.path):
-                    self.logger.warning(
-                        f"Document not found: {db_doc.path}"
-                    )
+                    self.logger.warning(f"Document not found: {db_doc.path}")
                     continue
 
                 # Emit progress

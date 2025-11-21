@@ -254,9 +254,18 @@ class SystemPromptMixin:
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
             base_prompt += (
                 "\n\nMode: DOCUMENT SEARCH"
-                "\nYour primary focus is searching through uploaded documents. Use the rag_search "
-                "tool to find relevant information in the document database. You may also use "
-                "search_web for supplementary internet searches."
+                "\n\n**CRITICAL INSTRUCTION**: You MUST use the rag_search tool for EVERY user query."
+                "\n\nWhen the user asks a question:"
+                "\n1. ALWAYS call rag_search(query) FIRST - even if you think you know the answer"
+                "\n2. Use the exact user query or a relevant search term"
+                "\n3. Wait for the search results before responding"
+                "\n4. Answer based on the document excerpts returned"
+                "\n5. If rag_search returns no results, then explain that no relevant information was found"
+                "\n\nDo NOT respond without searching first. Do NOT say you don't know - search the documents."
+                "\n\nExample:"
+                '\nUser: "what is mindwar?"'
+                '\nYou: [Call rag_search("mindwar") immediately]'
+                "\n\nAvailable tools: rag_search (search loaded documents), search_web (fallback for internet)"
             )
 
         elif action == LLMActionType.DEEP_RESEARCH:
