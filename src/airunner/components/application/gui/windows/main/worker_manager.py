@@ -102,9 +102,6 @@ class WorkerManager(Worker):
                 f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
             )
 
-        # CRITICAL: Register signal handlers so WorkerManager receives signals
-        self.register_signals()
-
         self.model_scanner_worker.add_to_queue("scan_for_models")
 
     def handle_message(self, message: Dict):
