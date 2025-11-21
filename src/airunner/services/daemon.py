@@ -190,7 +190,7 @@ class AIRunnerDaemon:
 
         try:
             # Initialize App in headless mode (no GUI)
-            self.app = App(initialize_gui=False, no_splash=True)
+            self.app = App(headless=True, no_splash=True)
 
             logger.info("AI Runner app initialized in headless mode")
 

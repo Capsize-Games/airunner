@@ -120,6 +120,24 @@ class ComponentLoaderMixin:
                 WorkflowManager,
             )
 
+            # Extract mode routing parameters from llm_request if available
+            use_mode_routing = False
+            mode_override = None
+            if hasattr(self, "llm_request") and self.llm_request:
+                use_mode_routing = getattr(
+                    self.llm_request, "use_mode_routing", False
+                )
+                mode_override = getattr(self.llm_request, "mode_override", None)
+                if use_mode_routing:
+                    self.logger.info(
+                        f"Mode-based routing enabled for this request"
+                        + (
+                            f" (override: {mode_override})"
+                            if mode_override
+                            else ""
+                        )
+                    )
+
             # The conversation ID will be set explicitly when needed
             self._workflow_manager = WorkflowManager(
                 system_prompt=self.system_prompt,
@@ -127,6 +145,8 @@ class ComponentLoaderMixin:
                 tools=tools_to_use,
                 max_tokens=2000,
                 conversation_id=None,
+                use_mode_routing=use_mode_routing,
+                mode_override=mode_override,
                 llm_settings=(
                     self.llm_settings
                     if hasattr(self, "llm_settings")

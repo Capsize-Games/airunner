@@ -15,7 +15,6 @@ def test_preload_creates_llm_row(tmp_path, monkeypatch):
     monkeypatch.setenv("DEV_ENV", "1")
 
     # Ensure we run in headless mode and don't start the server thread
-    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
     monkeypatch.setenv("AIRUNNER_SERVER_RUNNING", "1")
     monkeypatch.setenv("AIRUNNER_LLM_ON", "0")
 
@@ -31,7 +30,7 @@ def test_preload_creates_llm_row(tmp_path, monkeypatch):
     # Instantiate the App (headless)
     from airunner.app import App
 
-    app = App(initialize_gui=False)
+    app = App(headless=True)
 
     # Now check that llm_generator_settings row exists with model_path set
     from airunner.components.data.session_manager import session_scope
@@ -64,7 +63,6 @@ def test_preload_emits_llm_load_signal(tmp_path, monkeypatch):
     monkeypatch.setenv("DEV_ENV", "1")
 
     # Ensure we run in headless mode and don't start the server thread
-    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
     monkeypatch.setenv("AIRUNNER_SERVER_RUNNING", "1")
     monkeypatch.setenv("AIRUNNER_LLM_ON", "1")
 
@@ -91,7 +89,7 @@ def test_preload_emits_llm_load_signal(tmp_path, monkeypatch):
     # Instantiate the App (headless) - triggers preload
     from airunner.app import App
 
-    app = App(initialize_gui=False)
+    app = App(headless=True)
 
     # Ensure LLM_LOAD_SIGNAL was emitted with expected model_path
     assert any(

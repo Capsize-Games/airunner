@@ -248,16 +248,9 @@ def main():
     # This ensures root logger is configured before service loggers are created
     sys.stderr.write("DEBUG: main.py starting\n")
 
-    # Initialize headless logging early to capture startup issues
-    if os.environ.get("AIRUNNER_HEADLESS") == "1":
-        from airunner.utils.application.logging_utils import configure_headless_logging
-        configure_headless_logging()
-
     # Start the main application
     api = API()
-    sys.stderr.write("DEBUG: API initialized\n")
-    api.run_headless()
-    sys.stderr.write("DEBUG: run_headless returned\n")
+    api.run()
 
 
 if __name__ == "__main__":
