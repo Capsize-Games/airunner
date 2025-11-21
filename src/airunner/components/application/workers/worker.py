@@ -26,8 +26,7 @@ class Worker(
 
     def __init__(
         self,
-        sleep_time_in_ms: int = AIRUNNER_SLEEP_TIME_IN_MS,
-        initialize_gui=True,
+        sleep_time_in_ms: int = AIRUNNER_SLEEP_TIME_IN_MS
     ):
         super().__init__()
         self._sleep_time_in_ms: int = sleep_time_in_ms

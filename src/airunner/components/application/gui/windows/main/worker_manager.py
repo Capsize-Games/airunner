@@ -697,11 +697,11 @@ class WorkerManager(Worker):
             self.llm_generate_worker.on_llm_reload_rag_index_signal(data)
 
     def on_rag_index_all_documents_signal(self, data):
-        if self._llm_generate_worker is not None:
+        if self.llm_generate_worker is not None:
             self.llm_generate_worker.on_rag_index_all_documents_signal(data)
 
     def on_rag_index_selected_documents_signal(self, data):
-        if self._llm_generate_worker is not None:
+        if self.llm_generate_worker is not None:
             self.llm_generate_worker.on_rag_index_selected_documents_signal(
                 data
             )

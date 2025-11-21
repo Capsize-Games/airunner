@@ -16,14 +16,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QLabel,
-    QProgressBar, QPushButton, QSizePolicy, QVBoxLayout,
-    QWidget)
+    QProgressBar, QPushButton, QSizePolicy, QSpacerItem,
+    QVBoxLayout, QWidget)
 
 class Ui_knowledge_base_panel(object):
     def setupUi(self, knowledge_base_panel):
         if not knowledge_base_panel.objectName():
             knowledge_base_panel.setObjectName(u"knowledge_base_panel")
-        knowledge_base_panel.resize(400, 275)
+        knowledge_base_panel.resize(400, 328)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -31,8 +31,9 @@ class Ui_knowledge_base_panel(object):
         knowledge_base_panel.setSizePolicy(sizePolicy)
         knowledge_base_panel.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.verticalLayout = QVBoxLayout(knowledge_base_panel)
+        self.verticalLayout.setSpacing(10)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(10, 10, 10, 10)
+        self.verticalLayout.setContentsMargins(10, 0, 10, 10)
         self.stats_group = QGroupBox(knowledge_base_panel)
         self.stats_group.setObjectName(u"stats_group")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
@@ -41,7 +42,9 @@ class Ui_knowledge_base_panel(object):
         sizePolicy1.setHeightForWidth(self.stats_group.sizePolicy().hasHeightForWidth())
         self.stats_group.setSizePolicy(sizePolicy1)
         self.gridLayout_2 = QGridLayout(self.stats_group)
+        self.gridLayout_2.setSpacing(5)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(10, 10, 10, 10)
         self.total_label = QLabel(self.stats_group)
         self.total_label.setObjectName(u"total_label")
 
@@ -78,30 +81,12 @@ class Ui_knowledge_base_panel(object):
 
         self.verticalLayout.addWidget(self.stats_group)
 
-        self.status_message = QLabel(knowledge_base_panel)
-        self.status_message.setObjectName(u"status_message")
-        sizePolicy1.setHeightForWidth(self.status_message.sizePolicy().hasHeightForWidth())
-        self.status_message.setSizePolicy(sizePolicy1)
-        self.status_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status_message.setWordWrap(True)
-
-        self.verticalLayout.addWidget(self.status_message)
-
         self.progress_bar = QProgressBar(knowledge_base_panel)
         self.progress_bar.setObjectName(u"progress_bar")
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
 
         self.verticalLayout.addWidget(self.progress_bar)
-
-        self.progress_text = QLabel(knowledge_base_panel)
-        self.progress_text.setObjectName(u"progress_text")
-        sizePolicy1.setHeightForWidth(self.progress_text.sizePolicy().hasHeightForWidth())
-        self.progress_text.setSizePolicy(sizePolicy1)
-        self.progress_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.progress_text.setWordWrap(True)
-
-        self.verticalLayout.addWidget(self.progress_text)
 
         self.index_button = QPushButton(knowledge_base_panel)
         self.index_button.setObjectName(u"index_button")
@@ -114,6 +99,10 @@ class Ui_knowledge_base_panel(object):
         self.cancel_button.setEnabled(False)
 
         self.verticalLayout.addWidget(self.cancel_button)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer)
 
 
         self.retranslateUi(knowledge_base_panel)
@@ -130,9 +119,7 @@ class Ui_knowledge_base_panel(object):
         self.indexed_docs_value.setText(QCoreApplication.translate("knowledge_base_panel", u"0", None))
         self.unindexed_label.setText(QCoreApplication.translate("knowledge_base_panel", u"Unindexed:", None))
         self.unindexed_docs_value.setText(QCoreApplication.translate("knowledge_base_panel", u"0", None))
-        self.status_message.setText("")
         self.progress_bar.setFormat(QCoreApplication.translate("knowledge_base_panel", u"%p%", None))
-        self.progress_text.setText("")
         self.index_button.setText(QCoreApplication.translate("knowledge_base_panel", u"Index All", None))
         self.cancel_button.setText(QCoreApplication.translate("knowledge_base_panel", u"Cancel", None))
     # retranslateUi

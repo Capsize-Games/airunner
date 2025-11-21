@@ -384,8 +384,19 @@
      </property>
     </widget>
    </item>
+   <item row="4" column="0">
+    <widget class="KnowledgeBasePanelWidget" name="knowledge_base_panel_widget" native="true"/>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KnowledgeBasePanelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner.components.documents.gui.widgets.knowledge_base_panel_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
