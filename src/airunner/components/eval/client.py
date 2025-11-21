@@ -78,6 +78,24 @@ class AIRunnerClient:
         except requests.RequestException as e:
             raise AIRunnerClientError(f"Health check failed: {e}")
 
+    def reset_memory(self) -> Dict[str, Any]:
+        """Reset the server's memory (clear conversation).
+
+        Returns:
+            Dict: JSON response from API
+
+        Raises:
+            AIRunnerClientError: If the request fails
+        """
+        try:
+            response = requests.post(
+                f"{self.base_url}/admin/reset_memory", timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise AIRunnerClientError(f"Reset memory request failed: {e}")
+
     def list_models(self) -> List[str]:
         """Get list of available LLM models.
 
@@ -130,8 +148,10 @@ class AIRunnerClient:
                 "Use generate_stream() instead."
             )
 
+        # Use streaming internally since non-streaming is broken
+        # Collect all chunks and return as single response
         request_data = self._build_request_data(
-            prompt, model, max_tokens, temperature, False, **kwargs
+            prompt, model, max_tokens, temperature, True, **kwargs
         )
 
         try:
@@ -139,9 +159,27 @@ class AIRunnerClient:
                 f"{self.base_url}/llm/generate",
                 json=request_data,
                 timeout=self.timeout,
+                stream=True,
             )
             response.raise_for_status()
-            return self._process_response(response.json())
+
+            # Collect all chunks
+            full_text = []
+            tools = []
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        chunk = json.loads(line.decode("utf-8"))
+                        message = chunk.get("message", "")
+                        # Collect tools if present (last chunk may include executed tools)
+                        if "tools" in chunk and chunk.get("tools") is not None:
+                            tools = chunk.get("tools")
+                        if message:
+                            full_text.append(message)
+                    except json.JSONDecodeError:
+                        continue
+
+            return {"text": "".join(full_text), "tools": tools}
         except requests.RequestException as e:
             raise AIRunnerClientError(f"Generate request failed: {e}")
 
