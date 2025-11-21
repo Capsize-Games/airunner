@@ -40,16 +40,21 @@ class NodeFunctionsMixin:
         Returns:
             Updated state with forced response message
         """
-        last_message = state["messages"][-1]
+        # Find the AIMessage with tool_calls (should be second-to-last, before ToolMessage)
+        ai_message_with_tools = None
+        for msg in reversed(state["messages"]):
+            if self._has_tool_calls(msg):
+                ai_message_with_tools = msg
+                break
 
-        if not self._has_tool_calls(last_message):
+        if not ai_message_with_tools:
             self.logger.error(
-                "Force response node called but last message has no tool_calls"
+                "Force response node called but no AIMessage with tool_calls found"
             )
             return state
 
         # Get tool information
-        tool_name = last_message.tool_calls[0].get("name")
+        tool_name = ai_message_with_tools.tool_calls[0].get("name")
         tool_messages = self._get_tool_messages(state["messages"])
         all_tool_content = self._combine_tool_results(tool_messages)
 
@@ -65,15 +70,15 @@ class NodeFunctionsMixin:
             all_tool_content, tool_name, user_question
         )
 
-        # Create AIMessage with NO tool_calls (empty list)
+        # Create AIMessage with NO tool_calls and append it
         forced_message = AIMessage(
             content=response_content,
             tool_calls=[],  # Explicitly set to empty list
         )
-        state["messages"][-1] = forced_message
+        state["messages"].append(forced_message)
 
         self.logger.info(
-            f"✓ Force response node: Replaced tool call with {len(response_content)} char conversational response (tool_calls=[])"
+            f"✓ Force response node: Added {len(response_content)} char conversational response (tool_calls=[])"
         )
 
         return state
@@ -172,17 +177,19 @@ class NodeFunctionsMixin:
         )
 
         try:
-            # Build prompt with explicit user question
+            # Build prompt with explicit user question and strong no-tool instructions
             question_context = (
-                f"\nUser's question: {user_question}\n"
+                f"User's question: {user_question}\n\n"
                 if user_question
                 else ""
             )
 
-            simple_prompt_text = f"""Based on the following tool results, answer the user's question.{question_context}
+            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
+
+{question_context}Search results:
 {all_tool_content}
 
-Provide a clear, conversational answer using ONLY the information above. Do not add any information not present in the tool results."""
+Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
@@ -206,6 +213,9 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
     def _stream_model_response(self, prompt: List[BaseMessage]) -> str:
         """Stream model response and accumulate content.
 
+        Uses a completely fresh model instance without tool binding to ensure
+        clean generation without tool call interference.
+
         Args:
             prompt: List of messages to send to model
 
@@ -213,16 +223,60 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
             Complete response content
         """
         response_content = ""
-        for chunk in self._chat_model.stream(
-            prompt, disable_tool_parsing=True
-        ):
-            chunk_content = (
-                chunk.content if hasattr(chunk, "content") else str(chunk)
-            )
-            if chunk_content:
-                response_content += chunk_content
+
+        # Create a fresh unbind model instance for clean generation
+        # This prevents the model from trying to call tools
+        from langchain_core.language_models import BaseChatModel
+
+        # DEBUG: Check if token callback is set
+        self.logger.info(
+            f"[STREAM DEBUG] _token_callback is set: {self._token_callback is not None}"
+        )
+
+        # Get the underlying model without tool bindings
+        if hasattr(self._chat_model, "unbind"):
+            clean_model = self._chat_model.unbind()
+        elif hasattr(self._chat_model, "bind_tools"):
+            # If we can't unbind, create a fresh instance
+            # For now, use the existing model but explicitly disable tools
+            clean_model = self._chat_model
+        else:
+            clean_model = self._chat_model
+
+        # Stream with explicit configuration to disable all tool-related behavior
+        try:
+            for chunk in clean_model.stream(prompt):
+                chunk_content = (
+                    chunk.content if hasattr(chunk, "content") else str(chunk)
+                )
+                if chunk_content:
+                    response_content += chunk_content
+                    # CRITICAL: Call token callback for GUI streaming
+                    if self._token_callback:
+                        self.logger.info(
+                            f"[STREAM DEBUG] Calling callback with {len(chunk_content)} chars"
+                        )
+                        self._token_callback(chunk_content)
+                    else:
+                        self.logger.warning(
+                            f"[STREAM DEBUG] No callback available for {len(chunk_content)} chars"
+                        )
+        except Exception as e:
+            self.logger.error(f"Error during model streaming: {e}")
+            # Fall back to non-streaming if streaming fails
+            try:
+                result = clean_model.invoke(prompt)
+                response_content = (
+                    result.content
+                    if hasattr(result, "content")
+                    else str(result)
+                )
                 if self._token_callback:
-                    self._token_callback(chunk_content)
+                    self._token_callback(response_content)
+            except Exception as e2:
+                self.logger.error(f"Error during model invoke fallback: {e2}")
+                raise
+
         return response_content
 
     def _generate_fallback_response(self, tool_name: str) -> str:
@@ -283,11 +337,14 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
         Some tools (like update_mood) are status-only and don't need a response.
         Other tools (like scrape_website) return data that needs interpretation.
 
+        CRITICAL: Check for potential duplicate tool calls BEFORE routing back to model.
+        If we detect the model will likely call the same tool again, route to force_response.
+
         Args:
             state: Workflow state
 
         Returns:
-            Routing decision: "model" or "end"
+            Routing decision: "model", "force_response", or "end"
         """
         # Get the last tool messages to check what tools executed
         tool_messages = self._get_tool_messages(state["messages"])
@@ -332,7 +389,29 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
             tool_name = tool_call.get("name", "")
             self.logger.info(f"[ROUTE DEBUG] Checking tool: {tool_name}")
             if tool_name not in NO_RESPONSE_TOOLS:
-                # Tool needs model to process results
+                # CRITICAL: For certain tools (RAG, search), we want to force response after first execution
+                # to prevent the model from looping and calling the same tool again
+
+                # Tools that should force response after execution (don't let model call again)
+                FORCE_RESPONSE_AFTER_EXECUTION = {
+                    "rag_search",
+                    "search_web",
+                    "search_news",
+                    "scrape_website",
+                    "search_knowledge_base_documents",
+                }
+
+                if tool_name in FORCE_RESPONSE_AFTER_EXECUTION:
+                    # Always force response for these tools - don't let model decide
+                    self.logger.info(
+                        f"[ROUTE DEBUG] Tool '{tool_name}' is in FORCE_RESPONSE list - routing to force_response"
+                    )
+                    self.logger.info(
+                        f"[ROUTE DEBUG] Tool result length: {len(last_tool_msg.content) if hasattr(last_tool_msg, 'content') and last_tool_msg.content else 0} chars"
+                    )
+                    return "force_response"
+
+                # Other tools: let model process results normally
                 self.logger.info(
                     f"[ROUTE DEBUG] Tool '{tool_name}' needs model response - routing back to model"
                 )
