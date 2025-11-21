@@ -213,7 +213,7 @@ class NodeFunctionsMixin:
 {question_context}Search results:
 {all_tool_content}
 
-Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response."""
+Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
