@@ -1,9 +1,10 @@
 """LLM generation worker with signal-based coordination."""
 
 import threading
+import time
 from typing import Dict, Optional
-
-from PySide6.QtCore import QThread
+import os
+from PySide6.QtCore import QThread, QTimer
 
 from airunner.enums import ModelService
 from airunner.components.application.workers.worker import Worker
@@ -56,6 +57,12 @@ class LLMGenerateWorker(
         super().__init__()
         self._llm_thread = None
 
+        # Auto-unload timer state
+        self._last_request_time: Optional[float] = None
+        self._inactivity_timer: Optional[QTimer] = None
+        self._inactivity_timeout = 300  # 5 minutes in seconds
+        self._auto_unload_enabled = True  # Can be configured
+
         # Register download completion handler
         from airunner.enums import SignalCode
 
@@ -63,6 +70,9 @@ class LLMGenerateWorker(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self.on_huggingface_download_complete_signal,
         )
+
+        # Start inactivity monitoring timer
+        self._start_inactivity_timer()
 
     @property
     def use_openrouter(self) -> bool:
@@ -159,20 +169,29 @@ class LLMGenerateWorker(
         Args:
             data: Dictionary containing documents and clear_documents flag
         """
-        if not self.has_model_manager or not self.model_manager.agent:
-            return
+        self.logger.debug("Worker received RAG signal!")
+
+        # Access model_manager property which will create it if needed
+        # This ensures the manager exists before we try to load documents
+        manager = self.model_manager
+        self.logger.debug(
+            f"Model manager ready (type: {type(manager).__name__})"
+        )
 
         if data.get("clear_documents", False):
+            self.logger.debug("Clearing RAG documents")
             self._clear_rag_documents()
 
         documents = data.get("documents", [])
         if documents:
+            self.logger.debug(f"Loading {len(documents)} documents into RAG")
             self._load_documents_into_rag(documents)
+            self.logger.info(f"✓ Loaded {len(documents)} documents into RAG")
 
     def _clear_rag_documents(self) -> None:
         """Clear all previous RAG documents."""
-        if hasattr(self.model_manager.agent, "clear_rag_documents"):
-            self.model_manager.agent.clear_rag_documents()
+        if hasattr(self.model_manager, "clear_rag_documents"):
+            self.model_manager.clear_rag_documents()
 
     def _load_documents_into_rag(self, documents: list) -> None:
         """Load documents into the RAG engine.
@@ -181,7 +200,110 @@ class LLMGenerateWorker(
             documents: List of documents to load
         """
         for doc in documents:
-            self.model_manager.agent.load_html_into_rag(doc)
+            # If the caller passed a file path, use the file loader which will
+            # pick the proper reader (epub/pdf/html/md/etc.)
+            try:
+                if isinstance(doc, str) and os.path.exists(doc):
+                    self.model_manager.load_file_into_rag(doc)
+                    continue
+
+                # If bytes were passed (e.g., uploaded file content), we need
+                # to detect extension or default to .epub if provided as attr
+                if isinstance(doc, (bytes, bytearray)):
+                    # Fallback name and extension - caller could pass a tuple
+                    # or dict with more info in the future if needed.
+                    self.model_manager.load_bytes_into_rag(
+                        doc, source_name="upload", file_ext=".epub"
+                    )
+                    continue
+
+                # If dict-like with content and file_type, use that
+                if isinstance(doc, dict) and "content" in doc:
+                    file_type = doc.get("file_type", "")
+                    content = doc.get("content")
+                    if file_type.lower() in [".html", "html"]:
+                        self.model_manager.load_file_into_rag(
+                            content,
+                            source_name=doc.get("source_name", "web_content"),
+                        )
+                    elif file_type.lower() in [".epub", "epub"]:
+                        # content should be bytes for epub; try to coerce
+                        content_bytes = (
+                            content
+                            if isinstance(content, (bytes, bytearray))
+                            else (str(content).encode("utf-8"))
+                        )
+                        self.model_manager.load_bytes_into_rag(
+                            content_bytes,
+                            source_name=doc.get("source_name", "epub_upload"),
+                            file_ext=".epub",
+                        )
+                    else:
+                        # Fallback to treating as HTML text
+                        self.model_manager.load_html_into_rag(
+                            str(content),
+                            source_name=doc.get("source_name", "web_content"),
+                        )
+                    continue
+
+                # If plain string content (HTML) - heuristics: contains <html> or a lot of whitespace
+                if isinstance(doc, str) and (
+                    "<html" in doc.lower()
+                    or "<body" in doc.lower()
+                    or len(doc) > 100
+                ):
+                    self.model_manager.load_html_into_rag(doc)
+                    continue
+
+                # Unrecognized type - convert to string and insert as HTML fallback
+                self.model_manager.load_html_into_rag(str(doc))
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to load RAG document {repr(doc)}: {e}"
+                )
+
+    def _start_inactivity_timer(self) -> None:
+        """Start the inactivity monitoring timer."""
+        if not self._auto_unload_enabled:
+            return
+
+        self._inactivity_timer = QTimer()
+        self._inactivity_timer.timeout.connect(self._check_inactivity)
+        # Check every 60 seconds
+        self._inactivity_timer.start(60000)
+        self.logger.info("LLM auto-unload timer started (5 minute timeout)")
+
+    def _check_inactivity(self) -> None:
+        """Check if model should be unloaded due to inactivity."""
+        if not self._auto_unload_enabled or not self._last_request_time:
+            return
+
+        # Check if model is currently loaded
+        if not self._model_manager or not self.has_model_manager:
+            return
+
+        from airunner.enums import ModelStatus, ModelType
+
+        # Only unload if model is actually loaded
+        if (
+            self._model_manager.model_status.get(ModelType.LLM)
+            != ModelStatus.LOADED
+        ):
+            return
+
+        # Calculate time since last request
+        inactive_time = time.time() - self._last_request_time
+
+        if inactive_time >= self._inactivity_timeout:
+            self.logger.info(
+                f"LLM model idle for {int(inactive_time/60)} minutes - auto-unloading"
+            )
+            self.unload_llm()
+            self._last_request_time = None  # Reset timestamp
+
+    def _update_activity_timestamp(self) -> None:
+        """Update the last request timestamp."""
+        self._last_request_time = time.time()
 
     def on_quit_application_signal(self, data: Optional[Dict] = None) -> None:
         """Handle application quit signal.
@@ -246,14 +368,17 @@ class LLMGenerateWorker(
             message: Request message dictionary
         """
         self.logger.info(
-            f"[LLM WORKER] Received LLM request signal: {list(message.keys())}"
+            f"Received LLM request signal: {list(message.keys())}"
         )
         if self._interrupted:
             self.logger.info("Clearing interrupt flag - new message received")
             self._interrupted = False
 
+        # Track activity for auto-unload timer
+        self._update_activity_timestamp()
+
         self.add_to_queue(message)
-        self.logger.info(f"[LLM WORKER] Added request to queue")
+        self.logger.info(f"Added request to queue")
 
     def llm_on_interrupt_process_signal(self) -> None:
         """Handle interrupt signal - stop ongoing generation and clear queue."""
@@ -314,14 +439,10 @@ class LLMGenerateWorker(
             self.logger.info("Skipping message - worker interrupted")
             return
 
-        print(
-            f"[LLM WORKER] handle_message called with keys: {list(message.keys())}",
-            flush=True,
+        self.logger.info(
+            f"handle_message called with keys: {list(message.keys())}"
         )
-        print(
-            f"[LLM WORKER] request_id in message: {message.get('request_id')}",
-            flush=True,
-        )
+        self.logger.info(f"request_id in message: {message.get('request_id')}")
 
         # Store the request in case a download is triggered
         # This will be retried after download completes
@@ -331,6 +452,20 @@ class LLMGenerateWorker(
         )
 
         manager = self.model_manager
+
+        # Check for RAG files in the request and load them if present
+        request_data = message.get("request_data", {})
+        llm_request = request_data.get("llm_request")
+
+        if (
+            llm_request.rag_files is not None
+            and len(llm_request.rag_files) > 0
+        ):
+            self.logger.info(
+                f"Auto-loading {len(llm_request.rag_files)} RAG documents from request"
+            )
+            self._load_documents_into_rag(llm_request.rag_files)
+
         result = manager.handle_request(
             message, self.context_manager.all_contexts()
         )

@@ -102,6 +102,7 @@ class LLMModelManager(
         super().__init__(*args, **kwargs)
         # Explicitly initialize RAGMixin since it's in the inheritance chain
         # This ensures all private attributes (_retriever, _embedding, etc.) are created
+        self.llm_request: Optional[Any] = None
         RAGMixin.__init__(self)
         self._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
         self.llm_settings = LLMSettings()
@@ -131,17 +132,15 @@ class LLMModelManager(
         - Loading the workflow manager
         - Updating the model status based on loading results
         """
-        print(
-            f"[LLM LOAD] load() called, current status: {self.model_status[ModelType.LLM]}",
-            flush=True,
+        self.logger.info(
+            f"load() called, current status: {self.model_status[ModelType.LLM]}"
         )
         if self.model_status[ModelType.LLM] in (
             ModelStatus.LOADING,
             ModelStatus.LOADED,
         ):
-            print(
-                f"[LLM LOAD] Returning early - model already in state: {self.model_status[ModelType.LLM]}",
-                flush=True,
+            self.logger.info(
+                f"Returning early - model already in state: {self.model_status[ModelType.LLM]}"
             )
             return
 
@@ -166,9 +165,8 @@ class LLMModelManager(
                 f"Cannot load model: {prepare_result.get('reason', 'Unknown reason')}"
             )
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
-            print(
-                f"[LLM LOAD] Model cannot be loaded - resource conflict",
-                flush=True,
+            self.logger.info(
+                f"[LLM LOAD] Model cannot be loaded - resource conflict"
             )
             return
 
@@ -178,33 +176,28 @@ class LLMModelManager(
         self._load_local_llm_components()
 
         self._load_chat_model()
-        print(
-            f"[LLM LOAD] Chat model loaded: {self._chat_model is not None}",
-            flush=True,
+        self.logger.info(
+            f"[LLM LOAD] Chat model loaded: {self._chat_model is not None}"
         )
 
         self._load_tool_manager()
-        print(
-            f"[LLM LOAD] Tool manager loaded: {self._tool_manager is not None}",
-            flush=True,
+        self.logger.info(
+            f"[LLM LOAD] Tool manager loaded: {self._tool_manager is not None}"
         )
 
         self._load_workflow_manager()
-        print(
-            f"[LLM LOAD] Workflow manager loaded: {self._workflow_manager is not None}",
-            flush=True,
+        self.logger.info(
+            f"[LLM LOAD] Workflow manager loaded: {self._workflow_manager is not None}"
         )
 
         self._update_model_status()
-        print(
-            f"[LLM LOAD] Model status updated to: {self.model_status[ModelType.LLM]}",
-            flush=True,
+        self.logger.info(
+            f"[LLM LOAD] Model status updated to: {self.model_status[ModelType.LLM]}"
         )
 
         # Mark model as loaded
-        print(
-            f"[LLM LOAD] Marking model as loaded in resource manager",
-            flush=True,
+        self.logger.info(
+            f"[LLM LOAD] Marking model as loaded in resource manager"
         )
         resource_manager.model_loaded(self.model_path)
 
@@ -255,6 +248,7 @@ class LLMModelManager(
 
         # Check if use_memory=False - if so, clear conversation history
         llm_request = data["request_data"].get("llm_request")
+        self.llm_request = llm_request
         if llm_request and not llm_request.use_memory:
             self.logger.info(
                 "use_memory=False - clearing conversation history for this request"
@@ -262,13 +256,29 @@ class LLMModelManager(
             if self._workflow_manager:
                 self._workflow_manager.clear_memory()
 
+        conversation = self._get_or_create_conversation(data)
+        if conversation and self._workflow_manager:
+            self._workflow_manager.set_conversation_id(
+                conversation.id,
+                ephemeral=llm_request.ephemeral_conversation,
+            )
+
         # Check if tool_categories specified - if so, filter tools
         tools_filtered = False
+        system_prompt = None  # Extract system prompt from request
         if llm_request:
-            print(
-                f"[LLM MANAGER DEBUG] llm_request.tool_categories={llm_request.tool_categories}",
-                flush=True,
+            self.logger.info(
+                f"[LLM MANAGER DEBUG] llm_request.tool_categories={llm_request.tool_categories}"
             )
+            # Extract system_prompt if provided
+            if (
+                hasattr(llm_request, "system_prompt")
+                and llm_request.system_prompt
+            ):
+                system_prompt = llm_request.system_prompt
+                self.logger.info(
+                    f"Using custom system prompt from request: {system_prompt[:100]}..."
+                )
 
         # Handle Auto mode: intelligently select tool categories based on prompt
         if llm_request and llm_request.tool_categories is None:
@@ -284,9 +294,8 @@ class LLMModelManager(
             self._apply_tool_filter(selected_categories)
             tools_filtered = True
         elif llm_request and llm_request.tool_categories is not None:
-            print(
-                f"[LLM MANAGER DEBUG] APPLYING TOOL FILTER with {llm_request.tool_categories}",
-                flush=True,
+            self.logger.info(
+                f"[LLM MANAGER DEBUG] APPLYING TOOL FILTER with {llm_request.tool_categories}"
             )
             self.logger.info(
                 f"Applying tool filter with categories: {llm_request.tool_categories}"
@@ -294,15 +303,66 @@ class LLMModelManager(
             self._apply_tool_filter(llm_request.tool_categories)
             tools_filtered = True
         else:
-            print(
-                f"[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories is None",
-                flush=True,
+            self.logger.info(
+                f"[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories is None"
             )
             self.logger.info("No tool filtering - using all tools")
+
+        # If rag_files were provided, ensure they are loaded into the RAG
+        # engine and indexed before generation. This avoids a race where the
+        # worker loads files but indexing is not ready when the LLM runs.
+        if llm_request and getattr(llm_request, "rag_files", None):
+            try:
+                rag_files = llm_request.rag_files
+                if hasattr(self, "ensure_indexed_files"):
+                    # Prefer the mixin helper which handles file tracking
+                    self.ensure_indexed_files(rag_files)
+                else:
+                    # Fallback: load files individually
+                    for doc in rag_files:
+                        if isinstance(doc, str):
+                            self.load_file_into_rag(doc)
+                        elif isinstance(doc, (bytes, bytearray)):
+                            self.load_bytes_into_rag(doc, source_name="upload")
+                        elif isinstance(doc, dict) and doc.get("content"):
+                            ft = doc.get("file_type", "")
+                            content = doc.get("content")
+                            if ft.lower() in [".epub", ".pdf"]:
+                                b = (
+                                    content
+                                    if isinstance(content, (bytes, bytearray))
+                                    else str(content).encode("utf-8")
+                                )
+                                self.load_bytes_into_rag(
+                                    b,
+                                    source_name=doc.get(
+                                        "source_name", "upload"
+                                    ),
+                                    file_ext=ft,
+                                )
+                            elif ft.lower() in [".html", ".htm", ".md"]:
+                                self.load_html_into_rag(
+                                    str(content),
+                                    source_name=doc.get(
+                                        "source_name", "web_content"
+                                    ),
+                                )
+                            else:
+                                self.load_html_into_rag(
+                                    str(content),
+                                    source_name=doc.get(
+                                        "source_name", "web_content"
+                                    ),
+                                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Error ensuring rag files are indexed: {e}"
+                )
 
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
             action=data["request_data"]["action"],
+            system_prompt=system_prompt,  # Pass extracted system prompt
             llm_request=data["request_data"]["llm_request"],
             extra_context=extra_context,
             skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
@@ -316,17 +376,15 @@ class LLMModelManager(
                            None = all tools (handled by caller).
                            Supports aliases like "USER_DATA" -> "SYSTEM", "KNOWLEDGE" -> "RAG"
         """
-        print(
-            f"[TOOL FILTER] ENTER _apply_tool_filter with categories: {tool_categories}",
-            flush=True,
+        self.logger.info(
+            f"[TOOL FILTER] ENTER _apply_tool_filter with categories: {tool_categories}"
         )
         if not self._workflow_manager or not self._tool_manager:
             self.logger.warning(
                 "Cannot apply tool filter - workflow_manager or tool_manager not initialized"
             )
-            print(
-                f"[TOOL FILTER] workflow_manager: {self._workflow_manager}, tool_manager: {self._tool_manager}",
-                flush=True,
+            self.logger.info(
+                f"[TOOL FILTER] workflow_manager: {self._workflow_manager}, tool_manager: {self._tool_manager}"
             )
             return
 
@@ -389,30 +447,42 @@ class LLMModelManager(
                     f"Valid categories: {[c.value for c in ToolCategory]}. "
                     f"Valid aliases: {list(CATEGORY_ALIASES.keys())}"
                 )
-
+        # Debug: Log the allowed categories for visibility in server logs
+        debug_allowed = [c.value for c in allowed_categories]
+        self.logger.info(
+            f"[TOOL FILTER DEBUG] allowed_categories computed: {debug_allowed}"
+        )
         if not allowed_categories:
             self.logger.warning(
                 "No valid tool categories specified - using all tools"
             )
             return
 
-        print(
+        self.logger.info(
             f"[TOOL FILTER] Getting tools by categories: {list(allowed_categories)}",
-            flush=True,
         )
         filtered_tools = self._tool_manager.get_tools_by_categories(
             list(allowed_categories)
         )
-        print(
+        # Debug: Log the filtered tools (names) for verification
+        try:
+            filtered_names = [
+                getattr(t, "name", getattr(t, "__name__", str(t)))
+                for t in filtered_tools
+            ]
+        except Exception:
+            filtered_names = str(filtered_tools)
+        self.logger.info(
+            f"[TOOL FILTER DEBUG] Filtered tools: {filtered_names}"
+        )
+        self.logger.info(
             f"[TOOL FILTER] Got {len(filtered_tools)} filtered tools",
-            flush=True,
         )
         self.logger.info(
             f"Filtered to {len(filtered_tools)} tools from categories: {tool_categories}"
         )
-        print(
+        self.logger.info(
             f"[TOOL FILTER] Calling update_tools with {len(filtered_tools)} tools",
-            flush=True,
         )
         self._workflow_manager.update_tools(filtered_tools)
 

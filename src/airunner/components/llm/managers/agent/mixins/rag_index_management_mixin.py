@@ -34,14 +34,12 @@ class RAGIndexManagementMixin:
             try:
                 with open(self.registry_path, "r") as f:
                     registry = json.load(f)
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        f"Loaded registry with {len(registry.get('documents', {}))} documents"
-                    )
+                self.logger.info(
+                    f"Loaded registry with {len(registry.get('documents', {}))} documents"
+                )
                 return registry
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(f"Error loading registry: {e}")
+                self.logger.error(f"Error loading registry: {e}")
 
         # Return empty registry
         return {"documents": {}, "version": "1.0"}
@@ -52,11 +50,9 @@ class RAGIndexManagementMixin:
             os.makedirs(self.doc_indexes_dir, exist_ok=True)
             with open(self.registry_path, "w") as f:
                 json.dump(self._index_registry, f, indent=2)
-            if hasattr(self, "logger"):
-                self.logger.debug("Registry saved successfully")
+            self.logger.debug("Registry saved successfully")
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error saving registry: {e}")
+            self.logger.error(f"Error saving registry: {e}")
 
     def _update_registry_entry(
         self,
@@ -116,18 +112,16 @@ class RAGIndexManagementMixin:
         # Get doc info from registry
         doc_info = self.index_registry["documents"].get(doc_id)
         if not doc_info:
-            if hasattr(self, "logger"):
-                self.logger.warning(f"Document {doc_id} not found in registry")
+            self.logger.warning(f"Document {doc_id} not found in registry")
             return None
 
         # Load from disk
         try:
             index_dir = self._get_doc_index_dir(doc_id, doc_info["path"])
             if not os.path.exists(index_dir):
-                if hasattr(self, "logger"):
-                    self.logger.warning(
-                        f"Index directory not found: {index_dir}"
-                    )
+                self.logger.warning(
+                    f"Index directory not found: {index_dir}"
+                )
                 return None
 
             storage_context = StorageContext.from_defaults(
@@ -139,15 +133,13 @@ class RAGIndexManagementMixin:
             self._doc_indexes_cache[doc_id] = doc_index
             self._loaded_doc_ids.append(doc_id)
 
-            if hasattr(self, "logger"):
-                self.logger.debug(
-                    f"Loaded index for document {doc_info['file_name']}"
-                )
+            self.logger.debug(
+                f"Loaded index for document {doc_info['file_name']}"
+            )
             return doc_index
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error loading index for {doc_id}: {e}")
+            self.logger.error(f"Error loading index for {doc_id}: {e}")
             return None
 
     def _unload_doc_index(self, doc_id: str):
@@ -160,8 +152,7 @@ class RAGIndexManagementMixin:
             del self._doc_indexes_cache[doc_id]
             if doc_id in self._loaded_doc_ids:
                 self._loaded_doc_ids.remove(doc_id)
-            if hasattr(self, "logger"):
-                self.logger.debug(f"Unloaded index for document {doc_id}")
+            self.logger.debug(f"Unloaded index for document {doc_id}")
 
     def _save_index(self):
         """Save the unified index to disk (legacy).
@@ -174,11 +165,9 @@ class RAGIndexManagementMixin:
                 self._index.storage_context.persist(
                     persist_dir=self.storage_persist_dir
                 )
-                if hasattr(self, "logger"):
-                    self.logger.info("Unified index saved to storage")
+                self.logger.info("Unified index saved to storage")
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(f"Error saving index: {e}")
+                self.logger.error(f"Error saving index: {e}")
 
     def _load_index(self) -> Optional[VectorStoreIndex]:
         """Load the unified index from disk (legacy).
@@ -192,12 +181,10 @@ class RAGIndexManagementMixin:
                     persist_dir=self.storage_persist_dir
                 )
                 index = load_index_from_storage(storage_context)
-                if hasattr(self, "logger"):
-                    self.logger.info("Unified index loaded from storage")
+                self.logger.info("Unified index loaded from storage")
                 return index
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(f"Error loading index: {e}")
+                self.logger.error(f"Error loading index: {e}")
         return None
 
     def _detect_old_unified_index(self) -> bool:
@@ -218,19 +205,17 @@ class RAGIndexManagementMixin:
         3. Creates per-document indexes
         4. Archives the old index
         """
-        if hasattr(self, "logger"):
-            self.logger.info(
-                "Starting migration from unified index to per-document indexes"
-            )
+        self.logger.info(
+            "Starting migration from unified index to per-document indexes"
+        )
 
         try:
             # Load old unified index
             old_index = self._load_index()
             if not old_index:
-                if hasattr(self, "logger"):
-                    self.logger.warning(
-                        "Could not load old index for migration"
-                    )
+                self.logger.warning(
+                    "Could not load old index for migration"
+                )
                 return
 
             # Get all documents from unified index
@@ -238,10 +223,9 @@ class RAGIndexManagementMixin:
             docstore = old_index.docstore
             all_docs = list(docstore.docs.values())
 
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    f"Found {len(all_docs)} documents in old index"
-                )
+            self.logger.info(
+                f"Found {len(all_docs)} documents in old index"
+            )
 
             # Group documents by file_path
             docs_by_file: Dict[str, list] = {}
@@ -274,31 +258,26 @@ class RAGIndexManagementMixin:
                         doc_id, file_path, len(file_docs)
                     )
 
-                    if hasattr(self, "logger"):
-                        self.logger.info(f"Migrated {file_path}")
+                    self.logger.info(f"Migrated {file_path}")
 
                 except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.error(f"Error migrating {file_path}: {e}")
+                    self.logger.error(f"Error migrating {file_path}: {e}")
 
             # Archive old unified index
             archive_path = f"{self.storage_persist_dir}_archived_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             shutil.move(self.storage_persist_dir, archive_path)
 
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    f"Migration complete. Old index archived to {archive_path}"
-                )
+            self.logger.info(
+                f"Migration complete. Old index archived to {archive_path}"
+            )
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error during migration: {e}")
+            self.logger.error(f"Error during migration: {e}")
 
     def _detect_and_migrate_old_index(self):
         """Detect and migrate old unified index if present."""
         if self._detect_old_unified_index():
-            if hasattr(self, "logger"):
-                self.logger.info("Old unified index detected, migrating...")
+            self.logger.info("Old unified index detected, migrating...")
             self._migrate_from_unified_index()
 
     def _validate_cache_integrity(self) -> bool:
@@ -317,33 +296,29 @@ class RAGIndexManagementMixin:
 
                 # Check if file still exists
                 if not os.path.exists(file_path):
-                    if hasattr(self, "logger"):
-                        self.logger.warning(
-                            f"Indexed file no longer exists: {file_path}"
-                        )
+                    self.logger.warning(
+                        f"Indexed file no longer exists: {file_path}"
+                    )
                     continue
 
                 # Check if index directory exists
                 index_dir = self._get_doc_index_dir(doc_id, file_path)
                 if not os.path.exists(index_dir):
-                    if hasattr(self, "logger"):
-                        self.logger.warning(
-                            f"Index directory missing for {file_path}"
-                        )
+                    self.logger.warning(
+                        f"Index directory missing for {file_path}"
+                    )
                     continue
 
                 # Check file hash to detect changes
                 current_hash = self._calculate_file_hash(file_path)
                 if current_hash != doc_info.get("file_hash"):
-                    if hasattr(self, "logger"):
-                        self.logger.info(
-                            f"File changed since indexing: {file_path}"
-                        )
+                    self.logger.info(
+                        f"File changed since indexing: {file_path}"
+                    )
 
             self._cache_validated = True
             return True
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error validating cache integrity: {e}")
+            self.logger.error(f"Error validating cache integrity: {e}")
             return False

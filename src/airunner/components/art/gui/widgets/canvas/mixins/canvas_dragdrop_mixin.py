@@ -60,8 +60,7 @@ class CanvasDragDropMixin:
             event: Drop event containing image data.
         """
         mime = event.mimeData()
-        if hasattr(self, "logger"):
-            self.logger.debug(f"Drop mime types: {mime.formats()}")
+        self.logger.debug(f"Drop mime types: {mime.formats()}")
 
         handled = self._handle_raw_image_drop(mime)
 
@@ -101,8 +100,7 @@ class CanvasDragDropMixin:
                 self._process_dropped_image(img)
                 return True
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.debug(f"Failed to load image from {fmt}: {e}")
+                self.logger.debug(f"Failed to load image from {fmt}: {e}")
         return False
 
     def _handle_url_drop(self, mime) -> bool:
@@ -198,8 +196,7 @@ class CanvasDragDropMixin:
                 resp.raise_for_status()
                 return Image.open(io.BytesIO(resp.content)).convert("RGBA")
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(f"Failed to download image: {e}")
+                self.logger.error(f"Failed to download image: {e}")
                 return None
         elif url_or_path.startswith("file://"):
             path = url_or_path[7:]
@@ -207,16 +204,14 @@ class CanvasDragDropMixin:
                 try:
                     return Image.open(path).convert("RGBA")
                 except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.error(f"Failed to open file image: {e}")
+                    self.logger.error(f"Failed to open file image: {e}")
             return None
         else:
             if os.path.exists(url_or_path):
                 try:
                     return Image.open(url_or_path).convert("RGBA")
                 except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.error(f"Failed to open file image: {e}")
+                    self.logger.error(f"Failed to open file image: {e}")
             return None
 
     def _load_image_from_object(

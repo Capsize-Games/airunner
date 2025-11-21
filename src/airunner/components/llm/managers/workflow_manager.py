@@ -108,6 +108,7 @@ class WorkflowManager(
         self._token_counter = lambda msgs: count_tokens_approximately(msgs)
         self._conversation_id = conversation_id
         self._memory = DatabaseCheckpointSaver(conversation_id)
+        self._response_format = None  # Optional response format override (e.g., "json", "conversational")
 
         # Store settings for automatic mood tracking
         self.llm_settings = llm_settings
@@ -153,17 +154,22 @@ class WorkflowManager(
         # Rebuild workflow with fresh memory
         self._build_and_compile_workflow()
 
-    def set_conversation_id(self, conversation_id: int):
+    def set_conversation_id(
+        self, conversation_id: int, ephemeral: bool = False
+    ):
         """Set the conversation ID for persistence.
 
         Args:
             conversation_id: Conversation ID to use for storing messages
+            ephemeral: If True, don't save messages to database (memory-only)
         """
 
         self._conversation_id = conversation_id
         self._thread_id = str(conversation_id)
 
-        self._memory = DatabaseCheckpointSaver(conversation_id)
+        self._memory = DatabaseCheckpointSaver(
+            conversation_id, ephemeral=ephemeral
+        )
 
         # CRITICAL: Clear checkpoint state after creating new memory instance
         # The class-level _checkpoint_state dict persists across instances
@@ -187,6 +193,15 @@ class WorkflowManager(
         )
         self._system_prompt = system_prompt
         self._build_and_compile_workflow()
+
+    def set_response_format(self, response_format: Optional[str]):
+        """Set the expected response format after tool execution.
+
+        Args:
+            response_format: Response format ("json", "conversational", or None for default)
+        """
+        self._response_format = response_format
+        self.logger.info(f"Response format set to: {response_format}")
 
     def set_token_callback(
         self, callback: Optional[Callable[[str], None]]

@@ -209,8 +209,7 @@ class CanvasLayerMixin:
                 if self.item.scene():
                     self.removeItem(self.item)
             except (RuntimeError, AttributeError) as e:
-                if hasattr(self, "logger"):
-                    self.logger.debug(f"Could not remove legacy item: {e}")
+                self.logger.debug(f"Could not remove legacy item: {e}")
             self.item = None
 
     def _remove_orphaned_layer_items(self, layer_data: List[Dict]) -> None:
@@ -434,10 +433,9 @@ class CanvasLayerMixin:
             vram_gb, ram_gb = tracker.estimate_history_memory(self)
             resource_manager.update_canvas_history_allocation(vram_gb, ram_gb)
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.debug(
-                    f"Failed to update canvas memory allocation: {e}"
-                )
+            self.logger.debug(
+                f"Failed to update canvas memory allocation: {e}"
+            )
 
     def _cancel_layer_structure_transaction(self) -> None:
         """Cancel current layer structure transaction."""
@@ -595,12 +593,11 @@ class CanvasLayerMixin:
             model_instance = model_cls(**data)
             model_cls.objects.merge(model_instance)
         except Exception as exc:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    "Failed to merge %s for layer operation: %s",
-                    model_cls.__name__,
-                    exc,
-                )
+            self.logger.error(
+                "Failed to merge %s for layer operation: %s",
+                model_cls.__name__,
+                exc,
+            )
 
     def _remove_layers(self, layer_ids: Iterable[int]) -> None:
         """Remove layers and their associated data.

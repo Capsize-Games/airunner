@@ -20,19 +20,34 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
     This class integrates LangChain's memory system with AI Runner's Conversation
     model, ensuring that all chat messages are properly persisted to the database
     and can be loaded later.
+
+    Ephemeral Mode:
+        When ephemeral=True, messages are kept in memory only and never saved to
+        the database. This is useful for:
+        - Headless API requests that shouldn't pollute conversation history
+        - Batch processing tasks (e.g., book classification)
+        - Temporary analysis or classification tasks
+        - Any operation that should leave no trace in conversation history
     """
 
-    def __init__(self, conversation_id: Optional[int] = None):
+    def __init__(
+        self, conversation_id: Optional[int] = None, ephemeral: bool = False
+    ):
         """Initialize the database chat message history.
 
         Args:
             conversation_id: Optional conversation ID to load. If None, will use
                            or create the current conversation.
+            ephemeral: If True, messages won't be saved to database (memory-only)
         """
         self.logger = get_logger(self.__class__.__name__)
         self.conversation_id = conversation_id
+        self.ephemeral = ephemeral
         self._conversation = None
-        self._load_conversation()
+        self._ephemeral_messages = []  # In-memory storage for ephemeral mode
+
+        if not ephemeral:
+            self._load_conversation()
 
     def _load_conversation(self) -> None:
         """Load the conversation from database or create a new one."""
@@ -74,6 +89,10 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         Returns:
             List of LangChain BaseMessage objects (excludes tool call metadata)
         """
+        # In ephemeral mode, return in-memory messages
+        if self.ephemeral:
+            return self._ephemeral_messages.copy()
+
         if not self._conversation:
             return []
 
@@ -113,6 +132,11 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         Args:
             message: LangChain message to add
         """
+        # In ephemeral mode, store in memory only
+        if self.ephemeral:
+            self._ephemeral_messages.append(message)
+            return
+
         if not self._conversation:
             self.logger.error("Cannot add message: no conversation loaded")
             return
@@ -228,10 +252,6 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             # Save to database
             Conversation.objects.update(
                 self.conversation_id, value=self._conversation.value
-            )
-
-            self.logger.debug(
-                f"Added {role} message to conversation {self.conversation_id}"
             )
 
         except Exception as e:

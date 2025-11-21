@@ -60,11 +60,36 @@ class ToolManager(
             Wrapped function with dependencies injected
         """
         from airunner.components.server.api.server import get_api
+        from functools import wraps
 
+        @wraps(tool_info.func)
         def wrapped(*args, **kwargs):
-            # Inject API if required
+            # Debug/logging: report invocation args for better diagnosis
+            try:
+                self.logger.debug(
+                    f"[TOOL WRAPPER] Invoking tool: {tool_info.name} "
+                    f"args={args} kwargs_keys={list(kwargs.keys())}"
+                )
+            except Exception:
+                # logger might not always be available in unit tests
+                print(
+                    f"[TOOL WRAPPER] Invoking tool: {tool_info.name} "
+                    f"args={args} kwargs_keys={list(kwargs.keys())}",
+                    flush=True,
+                )
+
+            # Inject API if required (ALWAYS get from global, ignore kwargs)
             if tool_info.requires_api:
-                api = get_api()
+                # Remove api from kwargs if the model provided it (it will be None)
+                kwargs.pop("api", None)
+                # Get API from rag_manager if available, otherwise from global
+                api = (
+                    self.rag_manager.api
+                    if self.rag_manager
+                    and hasattr(self.rag_manager, "api")
+                    and self.rag_manager.api
+                    else get_api()
+                )
                 if api is None:
                     return (
                         f"Error: API not available for tool {tool_info.name}"
@@ -76,7 +101,16 @@ class ToolManager(
             #     kwargs["agent"] = self.agent
 
             try:
-                return tool_info.func(*args, **kwargs)
+                result = tool_info.func(*args, **kwargs)
+                # Log/trace return value shape for diagnostics
+                try:
+                    truncated = repr(result)[:2000]
+                except Exception:
+                    print(
+                        f"[TOOL WRAPPER] Tool {tool_info.name} returned: {repr(result)[:2000]}",
+                        flush=True,
+                    )
+                return result
             except Exception as e:
                 import traceback
 
@@ -143,6 +177,8 @@ class ToolManager(
             wrapped_func.name = tool_info.name
             wrapped_func.description = tool_info.description
             wrapped_func.return_direct = tool_info.return_direct
+            # Keep the tool category for downstream filtering/diagnostics
+            wrapped_func.category = getattr(tool_info, "category", None)
             tools.append(wrapped_func)
 
         # Add any custom tools from database
@@ -219,6 +255,13 @@ class ToolManager(
                     # Copy metadata
                     tracked_tool.name = original_func.name
                     tracked_tool.description = original_func.description
+                    # Ensure compatibility with frameworks expecting .__name__ and return_direct
+                    tracked_tool.__name__ = getattr(
+                        original_func, "__name__", tracked_tool.name
+                    )
+                    tracked_tool.return_direct = getattr(
+                        original_func, "return_direct", False
+                    )
 
                     return tracked_tool
 
@@ -265,12 +308,49 @@ class ToolManager(
             return common_tools + additional_tools
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
-            # RAG mode: focus on search tools
+            # RAG mode: prefer any ToolRegistry tools that look like a search tool.
             additional_tools = []
-            for tool_name in ["rag_search", "search_web"]:
+            try:
+                from airunner.components.llm.core.tool_registry import (
+                    ToolRegistry,
+                )
+
+                for tool_info in ToolRegistry.all().values():
+                    name_lower = (tool_info.name or "").lower()
+                    category_lower = str(
+                        getattr(tool_info, "category", "")
+                    ).lower()
+
+                    # Heuristic: search / rag / knowledge keywords indicate a true search tool
+                    if (
+                        "search" in name_lower
+                        or "rag" in name_lower
+                        or "knowledge" in name_lower
+                        or "search" in category_lower
+                    ):
+                        wrapped = self._wrap_tool_with_dependencies(tool_info)
+                        wrapped.name = tool_info.name
+                        wrapped.description = tool_info.description
+                        wrapped.return_direct = tool_info.return_direct
+                        wrapped.category = getattr(tool_info, "category", None)
+                        additional_tools.append(wrapped)
+            except Exception:
+                # fall back to explicit names if registry not available
+                self.logger.debug(
+                    "ToolRegistry unavailable while filtering search tools; falling back to hardcoded names"
+                )
+
+            # Fallback named tools in case registry doesn't cover them. This
+            # captures older mixin tools and name variants.
+            for tool_name in [
+                "rag_search",
+                "search_web",
+                "search_knowledge_base_documents",
+            ]:
                 tool = self._get_tool_by_name(tool_name)
                 if tool:
                     additional_tools.append(tool)
+
             return common_tools + additional_tools
 
         elif action == LLMActionType.APPLICATION_COMMAND:
@@ -349,17 +429,29 @@ class ToolManager(
 
         # First check the NEW ToolRegistry (for @tool decorated functions)
         tool_info = ToolRegistry.get(name)
+        # Fuzzy/case-insensitive or partial match fallback against ToolRegistry
+        if not tool_info:
+            for t in ToolRegistry.all().values():
+                # exact/case-insensitive match OR substring match
+                if (t.name or "").lower() == name.lower() or name.lower() in (
+                    t.name or ""
+                ).lower():
+                    tool_info = t
+                    break
         if tool_info:
             print(
                 f"[TOOL MANAGER DEBUG] Found NEW tool in registry: {name}",
                 flush=True,
             )
-            # CRITICAL: Add attributes to make it compatible with LangChain
-            func = tool_info.func
-            func.name = tool_info.name
-            func.description = tool_info.description
-            func.return_direct = tool_info.return_direct
-            return func
+            # CRITICAL: Wrap with dependencies (API/Agent injection)
+            wrapped_func = self._wrap_tool_with_dependencies(tool_info)
+
+            # Add attributes to make it compatible with LangChain
+            wrapped_func.name = tool_info.name
+            wrapped_func.description = tool_info.description
+            wrapped_func.return_direct = tool_info.return_direct
+            wrapped_func.category = getattr(tool_info, "category", None)
+            return wrapped_func
 
         # Fallback to OLD mixin-based tools
         # Map tool names to their getter methods

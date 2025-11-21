@@ -47,17 +47,15 @@ class RAGDocumentMixin:
                     and doc.file_hash
                     and current_hash != doc.file_hash
                 ):
-                    if hasattr(self, "logger"):
-                        self.logger.info(
-                            f"File changed, needs re-indexing: {doc.path}"
-                        )
+                    self.logger.info(
+                        f"File changed, needs re-indexing: {doc.path}"
+                    )
                     DBDocument.objects.update(pk=doc.id, indexed=False)
                     unindexed.append(doc)
 
             return unindexed
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error getting unindexed documents: {e}")
+            self.logger.error(f"Error getting unindexed documents: {e}")
             return []
 
     def _get_active_document_ids(self) -> List[str]:
@@ -80,8 +78,7 @@ class RAGDocumentMixin:
                     doc_ids.append(doc_id)
             return doc_ids
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error getting active documents: {e}")
+            self.logger.error(f"Error getting active documents: {e}")
             return []
 
     def _get_active_document_names(self) -> List[str]:
@@ -101,8 +98,7 @@ class RAGDocumentMixin:
                     names.append(filename)
             return names
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error getting active document names: {e}")
+            self.logger.error(f"Error getting active document names: {e}")
             return []
 
     def _mark_document_indexed(self, file_path: str):
@@ -131,11 +127,9 @@ class RAGDocumentMixin:
                     indexed_at=datetime.utcnow(),
                     file_size=file_size,
                 )
-                if hasattr(self, "logger"):
-                    self.logger.debug(f"Marked as indexed: {file_path}")
+                self.logger.debug(f"Marked as indexed: {file_path}")
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error marking document as indexed: {e}")
+            self.logger.error(f"Error marking document as indexed: {e}")
 
     def _extract_metadata(self, file_path: str) -> Dict[str, Any]:
         """Extract metadata for a document.
@@ -190,10 +184,9 @@ class RAGDocumentMixin:
                     sha256_hash.update(byte_block)
             return sha256_hash.hexdigest()
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    f"Error calculating file hash for {file_path}: {e}"
-                )
+            self.logger.error(
+                f"Error calculating file hash for {file_path}: {e}"
+            )
             return None
 
     def _generate_doc_id(self, file_path: str) -> str:

@@ -81,19 +81,17 @@ class CanvasGenerationMixin:
 
             QTimer.singleShot(0, self._refresh_layer_display)
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    f"Failed to schedule layer display refresh: {e}",
-                    exc_info=True,
-                )
+            self.logger.error(
+                f"Failed to schedule layer display refresh: {e}",
+                exc_info=True,
+            )
 
         # Notify other components that the canvas image changed (matches drop/paste flow)
         try:
             if self.api and hasattr(self.api, "art"):
                 self.api.art.canvas.image_updated()
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.debug(f"image_updated notification failed: {e}")
+            self.logger.debug(f"image_updated notification failed: {e}")
 
     def on_image_generated_signal(self, data: Dict):
         """Handle image generation completion signal.

@@ -87,7 +87,16 @@ class MediatorMixin:
         }
         :return:
         """
+        from airunner.utils.application.get_logger import get_logger
+
+        logger = get_logger(__name__)
+        logger.info(
+            f"MediatorMixin.register_signals() called for {self.__class__.__name__}, handlers count: {len(self.signal_handlers)}"
+        )
         for signal, handler in self.signal_handlers.items():
+            logger.info(
+                f"  Registering {signal} -> {handler.__name__ if hasattr(handler, '__name__') else handler}"
+            )
             self.register(signal, handler)
 
     def emit_signal(self, code: SignalCode, data: object = None):

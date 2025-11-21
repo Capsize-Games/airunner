@@ -22,6 +22,7 @@ from airunner.components.eval.benchmark_datasets.gsm8k_dataset import (
     load_gsm8k,
 )
 from airunner.components.llm.core.tool_registry import ToolCategory
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,7 @@ class TestToolCategoryDiagnostics:
                 use_memory=False,
                 system_prompt=system_prompt,
                 tool_categories=tool_categories,
+                model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             )
 
             output = response.get("text", "")

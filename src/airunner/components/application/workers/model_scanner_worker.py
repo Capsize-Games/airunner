@@ -53,7 +53,6 @@ class ModelScannerWorker(Worker, PipelineMixin):
             entries = []
 
         # find all folders inside of model_path, each of those folders is a model version
-        print("model_path", model_path)
         with os.scandir(model_path) as dir_object:
             # check if dir_object is a directory
             for version_entry in dir_object:

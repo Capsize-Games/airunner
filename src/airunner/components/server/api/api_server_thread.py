@@ -11,6 +11,10 @@ from socketserver import ThreadingMixIn
 from airunner.components.server.api.server import AIRunnerAPIRequestHandler
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.settings import (
+    AIRUNNER_HEADLESS_SERVER_HOST,
+    AIRUNNER_HEADLESS_SERVER_PORT,
+)
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -33,7 +37,11 @@ class APIServerThread(threading.Thread):
         port: Port to listen on (default: 8080)
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080):
+    def __init__(
+        self,
+        host: str = AIRUNNER_HEADLESS_SERVER_HOST,
+        port: int = AIRUNNER_HEADLESS_SERVER_PORT,
+    ):
         super().__init__(daemon=True)
         self.host = host
         self.port = port

@@ -242,7 +242,6 @@ class GenerationMixin:
         generation_kwargs = self._build_generation_kwargs(
             inputs, streamer, kwargs
         )
-        self._log_generation_params(generation_kwargs, inputs, kwargs)
 
         thread = self._start_generation_thread(generation_kwargs)
         full_response = []
@@ -259,36 +258,15 @@ class GenerationMixin:
             ):
                 token_count += 1
                 if not should_buffer:
-                    print(
-                        f"[STREAM YIELD DEBUG] Yielding content chunk during loop (token #{token_count})",
-                        flush=True,
-                    )
                     yield chunk
-                else:
-                    if (
-                        token_count % 100 == 0
-                    ):  # Log every 100 tokens to reduce spam
-                        print(
-                            f"[STREAM YIELD DEBUG] Buffered {token_count} tokens so far...",
-                            flush=True,
-                        )
         finally:
-            print(
-                f"[STREAM YIELD DEBUG] Stream ended - total tokens buffered: {token_count}",
-                flush=True,
-            )
             thread.join()
 
         # Always yield a final complete message
         response_text = "".join(full_response)
 
         if self.tools:
-            print(
-                f"[STREAM YIELD DEBUG] Tools enabled, preparing final chunk",
-                flush=True,
-            )
             # Parse tool calls and get cleaned text
-            self._log_stream_completion(response_text, kwargs)
             tool_calls = self._parse_stream_tool_calls(response_text, kwargs)
             _, cleaned_text = self._parse_tool_calls_if_enabled(
                 response_text, kwargs
@@ -303,22 +281,7 @@ class GenerationMixin:
             )
             chunk = ChatGenerationChunk(message=message)
 
-            print(
-                f"[STREAM DEBUG] Yielding complete message - content: '{cleaned_text}', tool_calls: {len(tool_calls or [])}",
-                flush=True,
-            )
-            if tool_calls:
-                print(f"[STREAM DEBUG] Tool calls: {tool_calls}", flush=True)
-
-            print(
-                f"[STREAM YIELD DEBUG] About to yield tool chunk",
-                flush=True,
-            )
             yield chunk
-            print(
-                f"[STREAM YIELD DEBUG] Finished yielding tool chunk",
-                flush=True,
-            )
         # DON'T yield final chunk if we already yielded chunks during the loop
         # (this would cause duplication since node_functions_mixin appends all chunks)
 
@@ -369,35 +332,6 @@ class GenerationMixin:
             "streamer": streamer,
             "stopping_criteria": stopping_criteria,
         }
-
-    def _log_generation_params(self, generation_kwargs, inputs, kwargs):
-        """Log generation parameters for debugging.
-
-        Args:
-            generation_kwargs: Final generation parameters
-            inputs: Input tensors
-            kwargs: Original kwargs
-        """
-        debug_msg = f"""
-{'='*70}
-[ADAPTER STREAM DEBUG] Generation Parameters:
-  max_new_tokens FROM KWARGS: {kwargs.get('max_new_tokens', 'NOT SET')}
-  max_new_tokens FALLBACK: {self.max_new_tokens}
-  max_new_tokens FINAL: {generation_kwargs['max_new_tokens']}
-  temperature: {generation_kwargs['temperature']}
-  top_p: {generation_kwargs['top_p']}
-  top_k: {generation_kwargs['top_k']}
-  repetition_penalty: {generation_kwargs['repetition_penalty']}
-  do_sample: {generation_kwargs['do_sample']}
-  Input tokens: {inputs['input_ids'].shape[1] if 'input_ids' in inputs else 'unknown'}
-  eos_token_id: {generation_kwargs['eos_token_id']}
-  pad_token_id: {generation_kwargs['pad_token_id']}
-  ALL KWARGS KEYS: {list(kwargs.keys())}
-{'='*70}
-"""
-        sys.stderr.write(debug_msg)
-        sys.stderr.flush()
-        self.logger.warning(debug_msg)
 
     def _start_generation_thread(self, generation_kwargs):
         """Start generation in background thread.
@@ -466,62 +400,15 @@ class GenerationMixin:
             ChatGenerationChunk with tool calls if found
         """
         if not self.tools or not full_response:
-            print(
-                "[STREAM TOOL DEBUG] Skipping tool call handling - no tools or empty response",
-                flush=True,
-            )
             return
 
         response_text = "".join(full_response)
-        self._log_stream_completion(response_text, kwargs)
 
         tool_calls = self._parse_stream_tool_calls(response_text, kwargs)
 
         if tool_calls:
-            print(
-                f"[STREAM TOOL DEBUG] Yielding tool_call_chunk with {len(tool_calls)} tool calls",
-                flush=True,
-            )
             chunk = self._create_tool_call_chunk(tool_calls)
-            print(f"[STREAM TOOL DEBUG] Chunk created: {chunk}", flush=True)
-            print(
-                f"[STREAM TOOL DEBUG] Chunk.message.tool_calls: {chunk.message.tool_calls}",
-                flush=True,
-            )
             yield chunk
-        else:
-            print(
-                "[STREAM TOOL DEBUG] No tool calls found after parsing",
-                flush=True,
-            )
-
-    def _log_stream_completion(self, response_text, kwargs):
-        """Log stream completion debug information.
-
-        Args:
-            response_text: Complete response text
-            kwargs: Generation parameters
-        """
-        print(
-            f"[CHAT ADAPTER DEBUG] Stream complete, response length: {len(response_text)} chars",
-            flush=True,
-        )
-        print(
-            f"[CHAT ADAPTER DEBUG] Response preview: {response_text[:300]}...",
-            flush=True,
-        )
-        print(
-            f"[CHAT ADAPTER DEBUG] Tool calling mode: {self.tool_calling_mode}",
-            flush=True,
-        )
-        print(
-            f"[CHAT ADAPTER DEBUG] use_json_mode: {self.use_json_mode}",
-            flush=True,
-        )
-        print(
-            f"[CHAT ADAPTER DEBUG] disable_tool_parsing: {kwargs.get('disable_tool_parsing', False)}",
-            flush=True,
-        )
 
     def _parse_stream_tool_calls(self, response_text, kwargs):
         """Parse tool calls from streamed response.
@@ -545,27 +432,10 @@ class GenerationMixin:
             return tool_calls
 
         elif self.tool_calling_mode == "json" and self.use_json_mode:
-            print(
-                "[CHAT ADAPTER DEBUG] Calling _parse_json_mode_tool_calls...",
-                flush=True,
-            )
             tool_calls, _ = self._parse_json_mode_tool_calls(response_text)
-            print(
-                f"[CHAT ADAPTER DEBUG] Parse result: {len(tool_calls) if tool_calls else 0} tool calls",
-                flush=True,
-            )
             if tool_calls:
-                print(
-                    f"[CHAT ADAPTER DEBUG] Tool calls: {tool_calls}",
-                    flush=True,
-                )
                 self.logger.debug(
                     f"JSON mode extracted {len(tool_calls)} tool call(s) from stream"
-                )
-            else:
-                print(
-                    "[CHAT ADAPTER DEBUG] NO TOOL CALLS FOUND in response",
-                    flush=True,
                 )
             return tool_calls
 
@@ -612,9 +482,4 @@ class GenerationMixin:
                 continue
             seen.add(signature)
             deduped.append(call)
-        if len(deduped) != len(tool_calls):
-            print(
-                f"[TOOL DEDUP DEBUG] Reduced tool calls from {len(tool_calls)} to {len(deduped)}",
-                flush=True,
-            )
         return deduped

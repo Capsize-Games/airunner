@@ -78,10 +78,9 @@ class CanvasSurfaceManagementMixin:
                     y_pos=int(origin.y()),
                 )
         except Exception as exc:
-            if hasattr(self, "logger"):
-                self.logger.warning(
-                    f"Failed to persist item origin update: {exc}"
-                )
+            self.logger.warning(
+                f"Failed to persist item origin update: {exc}"
+            )
 
     def _expand_item_surface(
         self,

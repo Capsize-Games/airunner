@@ -1,6 +1,9 @@
 import logging
 import inspect
 import os
+from typing import Optional
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
 
 
 class Logger:
@@ -28,7 +31,7 @@ class Logger:
                         record.caller = "<unknown>::<unknown> - 0"
                 return super().format(record)
 
-        # Add console handler
+        # Add console handler -> send to stdout so systemd captures it when configured
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(SafeFormatter(fmt))
         logger.addHandler(console_handler)
@@ -207,5 +210,7 @@ class Logger:
             )
 
 
-def get_logger(name: str, level: int = logging.DEBUG) -> Logger:
+def get_logger(name: str, level: Optional[int] = None) -> Logger:
+    if level is None:
+        level = AIRUNNER_LOG_LEVEL
     return Logger(name=name, level=level)

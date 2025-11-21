@@ -77,10 +77,18 @@ class SettingsMixin(
                 )
             }
 
+
         # Get API reference from application
         app = QApplication.instance()
         if app:
             self.api = getattr(app, "api", None)
+        else:
+            # In headless mode, there's no QApplication, so get API from global instance
+            try:
+                from airunner.components.server.api.server import get_api
+                self.api = get_api()
+            except Exception as e:
+                self.api = None
 
     @property
     def settings_mixin_shared_instance(self) -> SettingsMixinSharedInstance:
