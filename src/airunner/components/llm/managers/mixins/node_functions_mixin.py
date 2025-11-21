@@ -891,6 +891,17 @@ Provide a clear, conversational answer using only the information above."""
 
                 streamed_content.append(text)
 
+                # Stream each chunk to GUI immediately
+                if text and self._token_callback:
+                    try:
+                        self._token_callback(text)
+                    except Exception as callback_error:
+                        self.logger.error(
+                            "Token callback failed: %s",
+                            callback_error,
+                            exc_info=True,
+                        )
+
             # Return message if we have content or tool_calls
             if streamed_content or last_chunk_message:
                 return self._create_streamed_message(
@@ -935,16 +946,8 @@ Provide a clear, conversational answer using only the information above."""
 
         complete_content = "".join(streamed_content)
 
-        # Stream content to GUI
-        if complete_content and self._token_callback:
-            try:
-                self._token_callback(complete_content)
-            except Exception as callback_error:
-                self.logger.error(
-                    "Token callback failed: %s",
-                    callback_error,
-                    exc_info=True,
-                )
+        # NOTE: Don't call token callback here - already called per-chunk in _generate_streaming_response
+        # Calling it here would send the entire message again after it was already streamed
 
         response_message = AIMessage(
             content=complete_content,
