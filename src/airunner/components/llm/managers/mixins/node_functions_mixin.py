@@ -53,13 +53,16 @@ class NodeFunctionsMixin:
         tool_messages = self._get_tool_messages(state["messages"])
         all_tool_content = self._combine_tool_results(tool_messages)
 
+        # Extract original user question from first HumanMessage
+        user_question = self._get_user_question(state["messages"])
+
         self.logger.info(
             f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
         )
 
         # Generate response based on tool results
         response_content = self._generate_forced_response(
-            all_tool_content, tool_name
+            all_tool_content, tool_name, user_question
         )
 
         # Create AIMessage with NO tool_calls (empty list)
@@ -85,6 +88,21 @@ class NodeFunctionsMixin:
             True if message has tool_calls attribute with non-empty value
         """
         return hasattr(message, "tool_calls") and message.tool_calls
+
+    def _get_user_question(self, messages: List[BaseMessage]) -> str:
+        """Extract the most recent user question from message history.
+
+        Args:
+            messages: List of messages
+
+        Returns:
+            User question content, or empty string if not found
+        """
+        # Find the most recent HumanMessage
+        for message in reversed(messages):
+            if message.__class__.__name__ == "HumanMessage":
+                return message.content
+        return ""
 
     def _get_tool_messages(self, messages: List[BaseMessage]) -> List[Any]:
         """Extract all ToolMessage instances from message list.
@@ -117,32 +135,34 @@ class NodeFunctionsMixin:
         return all_tool_content
 
     def _generate_forced_response(
-        self, all_tool_content: str, tool_name: str
+        self, all_tool_content: str, tool_name: str, user_question: str = ""
     ) -> str:
         """Generate forced response based on tool results.
 
         Args:
             all_tool_content: Combined tool results
             tool_name: Name of the tool that was called
+            user_question: Original user question
 
         Returns:
             Generated response content
         """
         if len(all_tool_content) > 100:
             return self._generate_response_from_results(
-                all_tool_content, tool_name
+                all_tool_content, tool_name, user_question
             )
         else:
             return self._generate_fallback_response(tool_name)
 
     def _generate_response_from_results(
-        self, all_tool_content: str, tool_name: str
+        self, all_tool_content: str, tool_name: str, user_question: str = ""
     ) -> str:
         """Generate response from actual tool results.
 
         Args:
             all_tool_content: Combined tool results
             tool_name: Name of the tool
+            user_question: Original user question
 
         Returns:
             Generated response content
@@ -152,11 +172,17 @@ class NodeFunctionsMixin:
         )
 
         try:
-            simple_prompt_text = f"""Based on the following tool results, answer the user's question:
+            # Build prompt with explicit user question
+            question_context = (
+                f"\nUser's question: {user_question}\n"
+                if user_question
+                else ""
+            )
 
+            simple_prompt_text = f"""Based on the following tool results, answer the user's question.{question_context}
 {all_tool_content}
 
-Provide a clear, conversational answer using only the information above."""
+Provide a clear, conversational answer using ONLY the information above. Do not add any information not present in the tool results."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]

@@ -62,10 +62,24 @@ class ToolManagementMixin:
         Handles exceptions gracefully and provides informative logging.
         """
         try:
-            self._chat_model = self._chat_model.bind_tools(self._tools)
-            self.logger.info(
-                "Successfully bound %s tools to chat model", len(self._tools)
-            )
+            # Check if tool_choice was set via update_tools()
+            tool_choice = getattr(self, "_tool_choice", None)
+
+            if tool_choice:
+                self._chat_model = self._chat_model.bind_tools(
+                    self._tools, tool_choice=tool_choice
+                )
+                self.logger.info(
+                    "Successfully bound %s tools to chat model with tool_choice='%s'",
+                    len(self._tools),
+                    tool_choice,
+                )
+            else:
+                self._chat_model = self._chat_model.bind_tools(self._tools)
+                self.logger.info(
+                    "Successfully bound %s tools to chat model",
+                    len(self._tools),
+                )
             self.logger.debug("Tools bound successfully via bind_tools()")
 
             # NOTE: Tool instructions are added in _call_model() on each generation,
@@ -318,15 +332,19 @@ class ToolManagementMixin:
             "Then continue reasoning or provide your final answer."
         )
 
-    def update_tools(self, tools: List[Callable]):
+    def update_tools(self, tools: List[Callable], tool_choice: str = None):
         """Update the tools and rebuild the workflow.
 
         Args:
             tools: List of LangChain tool callables
+            tool_choice: Optional tool_choice parameter ("any", "auto", "required", etc.)
         """
         self.logger.debug("Updating tools: %s tools provided", len(tools))
         for tool in tools:
             self.logger.debug("Tool: %s", getattr(tool, "__name__", str(tool)))
         self._tools = tools
+        self._tool_choice = (
+            tool_choice  # Store for use in _bind_tools_to_model
+        )
         self._initialize_model()  # Re-bind tools
         self._build_and_compile_workflow()
