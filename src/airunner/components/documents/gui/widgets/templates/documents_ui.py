@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFram
     QSizePolicy, QSplitter, QTabWidget, QTreeView,
     QVBoxLayout, QWidget)
 
+from airunner.components.documents.gui.widgets.knowledge_base_panel_widget import KnowledgeBasePanelWidget
+
 class Ui_documents(object):
     def setupUi(self, documents):
         if not documents.objectName():
@@ -225,6 +227,11 @@ class Ui_documents(object):
         self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line, 3, 0, 1, 1)
+
+        self.knowledge_base_panel_widget = KnowledgeBasePanelWidget(documents)
+        self.knowledge_base_panel_widget.setObjectName(u"knowledge_base_panel_widget")
+
+        self.gridLayout.addWidget(self.knowledge_base_panel_widget, 4, 0, 1, 1)
 
 
         self.retranslateUi(documents)

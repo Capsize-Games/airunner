@@ -31,9 +31,6 @@ from airunner.components.documents.gui.widgets.kiwix_widget import KiwixWidget
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
     FileExplorerWidget,
 )
-from airunner.components.documents.gui.widgets.knowledge_base_panel_widget import (
-    KnowledgeBasePanelWidget,
-)
 
 
 class DocumentsWidget(BaseWidget):
@@ -92,22 +89,6 @@ class DocumentsWidget(BaseWidget):
 
         # Add it to the container layout
         self.ui.knowledgeFolderLayout.addWidget(self.knowledge_file_explorer)
-
-        # Add a small knowledge base panel (Indexing controls) to the
-        # knowledge base panel container; this replaces the previous
-        # HomeStageWidget knowledge base and restores the "Index All"
-        # control behaviour by emitting the RAG_INDEX_ALL_DOCUMENTS signal.
-        try:
-            self.knowledgeBasePanelWidget = KnowledgeBasePanelWidget(
-                parent=self.ui.knowledgeBasePanelContainer
-            )
-            self.ui.knowledgeBasePanelLayout.addWidget(
-                self.knowledgeBasePanelWidget
-            )
-        except Exception:
-            # If something fails we should still continue to offer document
-            # and folder management; log quietly.
-            self.logger.debug("Failed to instantiate KnowledgeBasePanelWidget")
 
     def setup_file_explorer(self):
         # Setup available documents tree (use a QStandardItemModel so we can
