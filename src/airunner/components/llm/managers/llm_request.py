@@ -72,8 +72,12 @@ class LLMRequest:
         False  # If True, conversation stays in memory but not saved to database
     )
     model: str = ""
-    use_mode_routing: bool = False  # Enable mode-based routing (author/code/research/qa/general)
-    mode_override: Optional[str] = None  # Force specific mode instead of auto-classification
+    use_mode_routing: bool = (
+        False  # Enable mode-based routing (author/code/research/qa/general)
+    )
+    mode_override: Optional[str] = (
+        None  # Force specific mode instead of auto-classification
+    )
 
     def to_dict(self) -> Dict:
         """
@@ -301,9 +305,24 @@ class LLMRequest:
                 top_p=0.95,
             )
 
+        elif action == LLMActionType.PERFORM_RAG_SEARCH:
+            # RAG Search: Enable RAG and search tools for document retrieval
+            return cls(
+                do_sample=True,
+                temperature=0.3,  # Mostly consistent
+                repetition_penalty=1.1,  # Moderate anti-repetition
+                no_repeat_ngram_size=2,  # Some phrase blocking
+                max_new_tokens=300,  # Concise responses
+                top_k=30,
+                top_p=0.9,
+                tool_categories=[
+                    "RAG",
+                    "SEARCH",
+                ],  # Enable RAG and search tools
+            )
+
         elif action in (
             LLMActionType.SUMMARIZE,
-            LLMActionType.PERFORM_RAG_SEARCH,
             LLMActionType.SEARCH,
         ):
             # Summarize/Search: Concise, factual, consistent
@@ -315,6 +334,7 @@ class LLMRequest:
                 max_new_tokens=300,  # Concise responses
                 top_k=30,
                 top_p=0.9,
+                tool_categories=["SEARCH"],  # Enable search tools
             )
 
         elif action == LLMActionType.GENERATE_IMAGE:

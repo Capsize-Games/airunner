@@ -37,11 +37,18 @@ from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
 from airunner.enums import (
+    LLMActionType,
     ModelType,
     ModelStatus,
 )
 from airunner.utils.memory import clear_memory
 from airunner.components.llm.managers.llm_settings import LLMSettings
+from airunner.components.documents.data.models.document import (
+    Document,
+)
+from airunner.components.data.session_manager import (
+    session_scope,
+)
 
 
 class LLMModelManager(
@@ -257,7 +264,7 @@ class LLMModelManager(
         ):
             use_mode_routing = getattr(llm_request, "use_mode_routing", False)
             mode_override = getattr(llm_request, "mode_override", None)
-            
+
             # Check if workflow manager needs to be rebuilt with new mode settings
             needs_rebuild = False
             if self._workflow_manager:
@@ -280,7 +287,7 @@ class LLMModelManager(
                     )
             else:
                 needs_rebuild = True
-            
+
             if needs_rebuild:
                 # Unload and reload workflow manager with new settings
                 self._unload_workflow_manager()
@@ -328,7 +335,11 @@ class LLMModelManager(
             self.logger.info(
                 f"Auto mode selected categories: {selected_categories}"
             )
-            self._apply_tool_filter(selected_categories)
+            action = data["request_data"].get("action")
+            self._apply_tool_filter(
+                selected_categories,
+                action=action,
+            )
             tools_filtered = True
         elif llm_request and llm_request.tool_categories is not None:
             self.logger.info(
@@ -337,7 +348,8 @@ class LLMModelManager(
             self.logger.info(
                 f"Applying tool filter with categories: {llm_request.tool_categories}"
             )
-            self._apply_tool_filter(llm_request.tool_categories)
+            action = data["request_data"].get("action")
+            self._apply_tool_filter(llm_request.tool_categories, action=action)
             tools_filtered = True
         else:
             self.logger.info(
@@ -396,6 +408,38 @@ class LLMModelManager(
                     f"Error ensuring rag files are indexed: {e}"
                 )
 
+        # If the request has no explicit rag_files but search tools were
+        # selected, auto-attach active, indexed docs from the DB so that
+        # the model can use local knowledge (RAG) when appropriate.
+        try:
+            if llm_request and not getattr(llm_request, "rag_files", None):
+                # Only do this auto-load when 'search' is in selected categories
+                # and we have rag indexing available in the manager
+                if "search" in (selected_categories or []) and hasattr(
+                    self, "ensure_indexed_files"
+                ):
+                    with session_scope() as session:
+                        docs = (
+                            session.query(Document)
+                            .filter_by(active=True, indexed=True)
+                            .all()
+                        )
+
+                        if docs:
+                            # Select a small number (3) of candidate docs to load
+                            cand = [d.path for d in docs[:3]]
+                            llm_request.rag_files = cand
+                            self.logger.info(
+                                f"Auto-attached {len(cand)} indexed document(s) to rag_files for search: {cand}"
+                            )
+                            # Ensure they are indexed/loaded now
+                            self.ensure_indexed_files(cand)
+        except Exception:
+            # Best-effort auto-load; if it fails, just continue without RAG
+            self.logger.debug(
+                "Auto attachment of RAG files failed, continuing without local RAG."
+            )
+
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
             action=data["request_data"]["action"],
@@ -405,7 +449,9 @@ class LLMModelManager(
             skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
         )
 
-    def _apply_tool_filter(self, tool_categories: List[str]) -> None:
+    def _apply_tool_filter(
+        self, tool_categories: List[str], action=None
+    ) -> None:
         """Apply tool category filter to workflow manager.
 
         Args:
@@ -521,7 +567,13 @@ class LLMModelManager(
         self.logger.info(
             f"[TOOL FILTER] Calling update_tools with {len(filtered_tools)} tools",
         )
-        self._workflow_manager.update_tools(filtered_tools)
+        # For RAG mode, force tool usage with tool_choice="any"
+        tool_choice = (
+            "any" if action == LLMActionType.PERFORM_RAG_SEARCH else None
+        )
+        self._workflow_manager.update_tools(
+            filtered_tools, tool_choice=tool_choice
+        )
 
     def _classify_prompt_for_tools(self, prompt: str) -> list:
         """
@@ -619,7 +671,7 @@ class LLMModelManager(
         ):
             selected_categories.append("time")
 
-        # Search/research keywords
+        # Search/research keywords (added common question patterns like 'what is', 'who is')
         if any(
             word in prompt_lower
             for word in [
@@ -631,6 +683,9 @@ class LLMModelManager(
                 "tell me about",
                 "what do you know",
                 "explain",
+                "what is",
+                "who is",
+                "what are",
             ]
         ):
             selected_categories.append("search")
