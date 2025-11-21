@@ -8,6 +8,7 @@ to see exactly how the LLM is using (or misusing) the tools.
 import logging
 import pytest
 from airunner.components.llm.core.tool_registry import ToolCategory
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ Work through it carefully and provide your final answer in \\boxed{{}} format.""
 
     response_no_tools = airunner_client.generate(
         prompt_no_tools,
+        model=AIRUNNER_DEFAULT_LLM_HF_PATH,
         temperature=0.0,
         max_tokens=4096,
         use_memory=False,
@@ -72,6 +74,7 @@ Provide your final answer in \\boxed{{}} format."""
 
     response_with_tools = airunner_client.generate(
         prompt_with_tools,
+        model=AIRUNNER_DEFAULT_LLM_HF_PATH,
         temperature=0.0,
         max_tokens=4096,
         use_memory=False,
@@ -145,6 +148,7 @@ Provide your final answer in \\boxed{{}} format."""
 
     response = airunner_client.generate(
         prompt,
+        model=AIRUNNER_DEFAULT_LLM_HF_PATH,
         temperature=0.0,
         max_tokens=4096,
         use_memory=False,

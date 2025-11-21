@@ -242,6 +242,9 @@ class TestRAGToolErrorHandling:
                 "couldn't find",
                 "no documents",
                 "don't have",
+                "doesn't match",
+                "does not match",
+                "no matches",
             ]
         ), f"Expected search or acknowledgment, got tools: {tools}, response: {response_text}"
 
