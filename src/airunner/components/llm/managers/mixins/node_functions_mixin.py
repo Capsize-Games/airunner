@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 class NodeFunctionsMixin:
     """Implements LangGraph node functions for the workflow."""
 
-    def _force_response_node(self, state: "WorkflowState") -> "WorkflowState":
+    def _force_response_node(self, state: "WorkflowState") -> Dict[str, Any]:
         """Node that generates forced response when redundancy detected.
 
         This is a proper LangGraph node (not just a router) so state updates
@@ -38,23 +38,31 @@ class NodeFunctionsMixin:
             state: Workflow state with messages
 
         Returns:
-            Updated state with forced response message
+            Dict with new forced response message to be added to state
         """
-        last_message = state["messages"][-1]
+        # Find the AIMessage with tool_calls (should be second-to-last, before ToolMessage)
+        ai_message_with_tools = None
+        for msg in reversed(state["messages"]):
+            if self._has_tool_calls(msg):
+                ai_message_with_tools = msg
+                break
 
-        if not self._has_tool_calls(last_message):
+        if not ai_message_with_tools:
             self.logger.error(
-                "Force response node called but last message has no tool_calls"
+                "Force response node called but no AIMessage with tool_calls found"
             )
-            return state
+            return {"messages": []}
 
         # Get tool information
-        tool_name = last_message.tool_calls[0].get("name")
+        tool_name = ai_message_with_tools.tool_calls[0].get("name")
         tool_messages = self._get_tool_messages(state["messages"])
         all_tool_content = self._combine_tool_results(tool_messages)
 
         # Extract original user question from first HumanMessage
         user_question = self._get_user_question(state["messages"])
+
+        # Extract generation_kwargs from state for streaming configuration
+        generation_kwargs = state.get("generation_kwargs", {})
 
         self.logger.info(
             f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
@@ -62,21 +70,21 @@ class NodeFunctionsMixin:
 
         # Generate response based on tool results
         response_content = self._generate_forced_response(
-            all_tool_content, tool_name, user_question
+            all_tool_content, tool_name, user_question, generation_kwargs
         )
 
-        # Create AIMessage with NO tool_calls (empty list)
+        # Create AIMessage with NO tool_calls
         forced_message = AIMessage(
             content=response_content,
             tool_calls=[],  # Explicitly set to empty list
         )
-        state["messages"][-1] = forced_message
 
         self.logger.info(
             f"✓ Force response node: Replaced tool call with {len(response_content)} char conversational response (tool_calls=[])"
         )
 
-        return state
+        # Return dict with new message for LangGraph to merge via add_messages reducer
+        return {"messages": [forced_message]}
 
     def _has_tool_calls(self, message: BaseMessage) -> bool:
         """Check if message has tool calls.
@@ -135,27 +143,47 @@ class NodeFunctionsMixin:
         return all_tool_content
 
     def _generate_forced_response(
-        self, all_tool_content: str, tool_name: str, user_question: str = ""
+        self,
+        tool_content: str,
+        tool_name: str,
+        user_question: str,
+        generation_kwargs: Optional[Dict] = None,
     ) -> str:
-        """Generate forced response based on tool results.
+        """Generate a conversational response from tool results.
 
         Args:
-            all_tool_content: Combined tool results
+            tool_content: Combined content from tool executions
             tool_name: Name of the tool that was called
-            user_question: Original user question
+            user_question: Original user's question
+            generation_kwargs: Optional generation parameters for streaming control
 
         Returns:
-            Generated response content
+            Response text
         """
-        if len(all_tool_content) > 100:
+        try:
+            # Use RAG-specific logic for rag_search
+            if tool_name == "rag_search":
+                return self._generate_response_from_results(
+                    tool_content, tool_name, user_question, generation_kwargs
+                )
+
+            # For other tools, use generic response generation
             return self._generate_response_from_results(
-                all_tool_content, tool_name, user_question
+                tool_content, tool_name, user_question, generation_kwargs
             )
-        else:
-            return self._generate_fallback_response(tool_name)
+        except Exception as e:
+            self.logger.error(f"Failed to generate forced response: {e}")
+            fallback = "I found some information but encountered an issue generating a complete response."
+            if self._token_callback:
+                self._token_callback(fallback)
+            return fallback
 
     def _generate_response_from_results(
-        self, all_tool_content: str, tool_name: str, user_question: str = ""
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str = "",
+        generation_kwargs: Optional[Dict] = None,
     ) -> str:
         """Generate response from actual tool results.
 
@@ -163,6 +191,7 @@ class NodeFunctionsMixin:
             all_tool_content: Combined tool results
             tool_name: Name of the tool
             user_question: Original user question
+            generation_kwargs: Optional generation parameters for streaming control
 
         Returns:
             Generated response content
@@ -172,23 +201,27 @@ class NodeFunctionsMixin:
         )
 
         try:
-            # Build prompt with explicit user question
+            # Build prompt with explicit user question and strong no-tool instructions
             question_context = (
-                f"\nUser's question: {user_question}\n"
+                f"User's question: {user_question}\n\n"
                 if user_question
                 else ""
             )
 
-            simple_prompt_text = f"""Based on the following tool results, answer the user's question.{question_context}
+            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
+
+{question_context}Search results:
 {all_tool_content}
 
-Provide a clear, conversational answer using ONLY the information above. Do not add any information not present in the tool results."""
+Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
 
-            # Stream response
-            response_content = self._stream_model_response(simple_prompt)
+            # Stream response with generation kwargs for token-by-token streaming
+            response_content = self._stream_model_response(
+                simple_prompt, generation_kwargs
+            )
 
             self.logger.info(
                 f"Model streamed {len(response_content)} char answer"
@@ -203,27 +236,58 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
                 self._token_callback(fallback)
             return fallback
 
-    def _stream_model_response(self, prompt: List[BaseMessage]) -> str:
+    def _stream_model_response(
+        self,
+        prompt: List[BaseMessage],
+        generation_kwargs: Optional[Dict] = None,
+    ) -> str:
         """Stream model response and accumulate content.
+
+        Uses the standard streaming response generation to ensure proper
+        token-by-token streaming with generation kwargs.
 
         Args:
             prompt: List of messages to send to model
+            generation_kwargs: Optional generation parameters for streaming control
 
         Returns:
             Complete response content
         """
-        response_content = ""
-        for chunk in self._chat_model.stream(
-            prompt, disable_tool_parsing=True
-        ):
-            chunk_content = (
-                chunk.content if hasattr(chunk, "content") else str(chunk)
+        # Use empty dict if no kwargs provided
+        if generation_kwargs is None:
+            generation_kwargs = {}
+
+        chat_model = self._chat_model
+
+        # Temporarily disable tools/JSON mode so the adapter does not buffer
+        tools_backup = getattr(chat_model, "tools", None)
+        mode_backup = getattr(chat_model, "tool_calling_mode", None)
+        json_mode_backup = getattr(chat_model, "use_json_mode", None)
+
+        try:
+            if hasattr(chat_model, "tools"):
+                chat_model.tools = None
+            if hasattr(chat_model, "tool_calling_mode"):
+                chat_model.tool_calling_mode = "react"
+            if hasattr(chat_model, "use_json_mode"):
+                chat_model.use_json_mode = False
+
+            # Use the standard streaming response method which properly handles generation_kwargs
+            response_message = self._generate_streaming_response(
+                prompt, generation_kwargs
             )
-            if chunk_content:
-                response_content += chunk_content
-                if self._token_callback:
-                    self._token_callback(chunk_content)
-        return response_content
+
+            if response_message and hasattr(response_message, "content"):
+                return response_message.content
+
+            return ""
+        finally:
+            if hasattr(chat_model, "tools"):
+                chat_model.tools = tools_backup
+            if hasattr(chat_model, "tool_calling_mode"):
+                chat_model.tool_calling_mode = mode_backup
+            if hasattr(chat_model, "use_json_mode"):
+                chat_model.use_json_mode = json_mode_backup
 
     def _generate_fallback_response(self, tool_name: str) -> str:
         """Generate fallback response when tool returned insufficient results.
@@ -283,11 +347,14 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
         Some tools (like update_mood) are status-only and don't need a response.
         Other tools (like scrape_website) return data that needs interpretation.
 
+        CRITICAL: Check for potential duplicate tool calls BEFORE routing back to model.
+        If we detect the model will likely call the same tool again, route to force_response.
+
         Args:
             state: Workflow state
 
         Returns:
-            Routing decision: "model" or "end"
+            Routing decision: "model", "force_response", or "end"
         """
         # Get the last tool messages to check what tools executed
         tool_messages = self._get_tool_messages(state["messages"])
@@ -332,7 +399,29 @@ Provide a clear, conversational answer using ONLY the information above. Do not 
             tool_name = tool_call.get("name", "")
             self.logger.info(f"[ROUTE DEBUG] Checking tool: {tool_name}")
             if tool_name not in NO_RESPONSE_TOOLS:
-                # Tool needs model to process results
+                # CRITICAL: For certain tools (RAG, search), we want to force response after first execution
+                # to prevent the model from looping and calling the same tool again
+
+                # Tools that should force response after execution (don't let model call again)
+                FORCE_RESPONSE_AFTER_EXECUTION = {
+                    "rag_search",
+                    "search_web",
+                    "search_news",
+                    "scrape_website",
+                    "search_knowledge_base_documents",
+                }
+
+                if tool_name in FORCE_RESPONSE_AFTER_EXECUTION:
+                    # Always force response for these tools - don't let model decide
+                    self.logger.info(
+                        f"[ROUTE DEBUG] Tool '{tool_name}' is in FORCE_RESPONSE list - routing to force_response"
+                    )
+                    self.logger.info(
+                        f"[ROUTE DEBUG] Tool result length: {len(last_tool_msg.content) if hasattr(last_tool_msg, 'content') and last_tool_msg.content else 0} chars"
+                    )
+                    return "force_response"
+
+                # Other tools: let model process results normally
                 self.logger.info(
                     f"[ROUTE DEBUG] Tool '{tool_name}' needs model response - routing back to model"
                 )
