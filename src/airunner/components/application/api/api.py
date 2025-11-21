@@ -32,7 +32,7 @@ from airunner.components.stt.api.stt_services import STTAPIService
 from airunner.components.tts.api.tts_services import TTSAPIService
 from airunner.components.art.api.art_services import ARTAPIService
 from airunner.components.llm.api.llm_services import LLMAPIService
-from airunner.components.application.api import api as api_module
+from airunner.setup_database import setup_database
 
 
 class API(App):
@@ -44,6 +44,8 @@ class API(App):
         return cls._instance
 
     def __init__(self, *args, **kwargs):
+        import sys
+        sys.stderr.write(f"DEBUG: API.__init__ called. Initialized={getattr(self, '_initialized', False)}\n")
         if hasattr(self, "_initialized") and self._initialized:
             return
         self.paths = {
@@ -165,7 +167,7 @@ class API(App):
         }
         super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
         if self._initialize_app:
-            api_module.setup_database()
+            setup_database()
 
     @property
     def emit_signal(self):

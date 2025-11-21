@@ -1,8 +1,9 @@
 """
 Pytest fixtures for AI Runner evaluation testing.
 
-Provides fixtures to automatically start/stop the headless AI Runner server
-and create client instances for testing.
+Provides fixtures to connect to the running airunner-headless systemd service
+for testing. Tests should NOT start their own server - they use the existing
+service on port 8080.
 
 Usage:
     def test_llm_generation(airunner_client):
@@ -10,12 +11,7 @@ Usage:
         assert "4" in response["text"]
 """
 
-import os
-import socket
-import subprocess
-import sys
 import time
-from typing import Generator
 
 import pytest
 import requests
@@ -23,63 +19,22 @@ import requests
 from airunner.components.eval.client import AIRunnerClient
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-
+from airunner.settings import (
+    AIRUNNER_HEADLESS_SERVER_HOST,
+    AIRUNNER_HEADLESS_SERVER_PORT,
+)
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
-def _find_available_port(host: str) -> int:
-    """Find an available TCP port on the given host."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind((host, 0))
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return sock.getsockname()[1]
-
-
-def _start_server_process(port: int, host: str):
-    """Start the headless server subprocess."""
-    env = os.environ.copy()
-    env["AIRUNNER_HEADLESS"] = "1"
-    env["AIRUNNER_HTTP_PORT"] = str(port)
-    env["AIRUNNER_HTTP_HOST"] = host
-
-    # Pass test-related environment variables to subprocess
-    test_env_vars = [
-        "AIRUNNER_DATABASE_URL",
-        "AIRUNNER_ENVIRONMENT",
-        "AIRUNNER_TEST_MODEL_PATH",
-    ]
-    for var in test_env_vars:
-        if var in os.environ:
-            env[var] = os.environ[var]
-
-    logger.info(f"Starting headless server on {host}:{port}")
-    server_log = open("/tmp/airunner_test_server.log", "w")
-
-    return (
-        subprocess.Popen(
-            [sys.executable, "-m", "airunner.bin.airunner_headless"],
-            env=env,
-            stdout=server_log,
-            stderr=subprocess.STDOUT,
-        ),
-        server_log,
-    )
-
-
-def _wait_for_server_health(base_url: str, timeout: int = 30) -> bool:
+def _wait_for_server_health(base_url: str, timeout: int = 10) -> bool:
     """Poll server health endpoint until ready or timeout."""
     start_time = time.time()
-    logger.info(f"Waiting for server at {base_url}/health to be ready...")
+    logger.info(f"Checking if server at {base_url}/health is ready...")
 
     while time.time() - start_time < timeout:
         try:
-            logger.debug(
-                f"Attempting health check "
-                f"({time.time() - start_time:.1f}s elapsed)..."
-            )
             response = requests.get(f"{base_url}/health", timeout=1)
-            logger.debug(f"Health check response: {response.status_code}")
             if response.status_code == 200:
                 logger.info("Server is ready!")
                 return True
@@ -90,87 +45,44 @@ def _wait_for_server_health(base_url: str, timeout: int = 30) -> bool:
     return False
 
 
-def _terminate_server_process(process: subprocess.Popen):
-    """Gracefully terminate server process."""
-    logger.info("Terminating headless server")
-    process.terminate()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        logger.warning("Server did not terminate gracefully, killing")
-        process.kill()
-
-
 @pytest.fixture(scope="session")
-def airunner_server() -> Generator[subprocess.Popen, None, None]:
-    """Start headless AI Runner server for testing session.
+def airunner_server():
+    """Verify the airunner-headless systemd service is running.
 
-    This fixture:
-    1. Starts the headless server in a subprocess
-    2. Waits for the /health endpoint to respond
-    3. Yields control to tests
-    4. Terminates the server on session cleanup
-
-    Yields:
-        subprocess.Popen: The server process
+    This fixture does NOT start a server - it checks that the existing
+    systemd service on port 8080 is accessible.
 
     Raises:
-        RuntimeError: If server fails to start within timeout
+        RuntimeError: If server is not accessible
     """
-    host = os.environ.get("AIRUNNER_HTTP_HOST", "127.0.0.1")
-    port_env = os.environ.get("AIRUNNER_HTTP_PORT")
-    if port_env:
-        port = int(port_env)
-    else:
-        port = _find_available_port(host)
-        os.environ["AIRUNNER_HTTP_PORT"] = str(port)
+    base_url = f"http://{AIRUNNER_HEADLESS_SERVER_HOST}:{AIRUNNER_HEADLESS_SERVER_PORT}"
 
-    base_url = f"http://{host}:{port}"
-    timeout = (
-        120  # Increased from 30 to 120 seconds to allow model loading time
+    logger.info(
+        f"Checking for running airunner-headless service on port {AIRUNNER_HEADLESS_SERVER_PORT}..."
     )
 
-    process, server_log = _start_server_process(port, host)
-
-    ready = _wait_for_server_health(base_url, timeout)
-
-    if not ready:
-        process.terminate()
-        process.wait(timeout=5)
-        server_log.close()
-        with open("/tmp/airunner_test_server.log", "r") as f:
-            log_content = f.read()
-        error_msg = (
-            f"Server failed to start within {timeout}s\n"
-            f"Server log:\n{log_content}"
+    if not _wait_for_server_health(base_url, timeout=10):
+        raise RuntimeError(
+            f"airunner-headless service is not running on port {AIRUNNER_HEADLESS_SERVER_PORT}. "
+            f"Start it with: sudo systemctl start airunner-headless"
         )
-        raise RuntimeError(error_msg)
 
-    yield process
-
-    _terminate_server_process(process)
-    server_log.close()
+    logger.info("✓ Found running airunner-headless service")
+    yield base_url
+    # No cleanup - we don't own the server
 
 
 @pytest.fixture(scope="session")
-def airunner_client(
-    airunner_server: subprocess.Popen,
-) -> AIRunnerClient:
-    """Create AIRunnerClient instance connected to test server.
-
-    Depends on airunner_server fixture to ensure server is running.
+def airunner_client(airunner_server: str) -> AIRunnerClient:
+    """Create AIRunnerClient instance connected to systemd service.
 
     Args:
-        airunner_server: The running server process (dependency)
+        airunner_server: The base URL of the running service
 
     Returns:
         AIRunnerClient: Configured client instance
     """
-    port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8188"))
-    host = os.environ.get("AIRUNNER_HTTP_HOST", "127.0.0.1")
-    base_url = f"http://{host}:{port}"
-
-    client = AIRunnerClient(base_url=base_url)
+    client = AIRunnerClient(base_url=airunner_server)
 
     # Verify client can connect
     try:
@@ -182,22 +94,22 @@ def airunner_client(
 
 
 @pytest.fixture
-def airunner_client_function_scope(
-    airunner_server: subprocess.Popen,
-) -> AIRunnerClient:
+def airunner_client_function_scope(airunner_server: str) -> AIRunnerClient:
     """Create function-scoped AIRunnerClient instance.
 
     Use this fixture when you need a fresh client for each test function.
-    The server remains running (session scope), but the client is recreated.
 
     Args:
-        airunner_server: The running server process (dependency)
+        airunner_server: The base URL of the running service
 
     Returns:
         AIRunnerClient: New client instance
     """
-    port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8188"))
-    host = os.environ.get("AIRUNNER_HTTP_HOST", "127.0.0.1")
-    base_url = f"http://{host}:{port}"
-
-    return AIRunnerClient(base_url=base_url)
+    client = AIRunnerClient(base_url=airunner_server)
+    # Ensure fresh conversation for each test function to avoid duplication
+    try:
+        client.reset_memory()
+    except Exception:
+        # Not fatal - continue even if reset fails
+        logger.exception("Failed to reset memory for test client")
+    return client

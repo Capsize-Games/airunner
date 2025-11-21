@@ -16,6 +16,7 @@ import sys
 import time
 from typing import Dict, Any, List
 from airunner.components.llm.core.tool_registry import ToolCategory
+from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,7 @@ If documents aren't loaded, explain what you would search for."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=1024,
             use_memory=False,
@@ -113,6 +115,7 @@ Be concise in your response."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=1024,
             use_memory=False,
@@ -158,6 +161,7 @@ Acknowledge the information shared."""
 
         response1 = airunner_client.generate(
             prompt1,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=512,
             use_memory=True,  # Enable memory for this test
@@ -175,6 +179,7 @@ Acknowledge the information shared."""
 
         response2 = airunner_client.generate(
             prompt2,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=512,
             use_memory=True,
@@ -209,6 +214,7 @@ Provide a brief, friendly explanation suitable for a general audience."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=512,
             use_memory=False,
@@ -254,6 +260,7 @@ Provide accurate system information when asked."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.0,
             max_tokens=256,
             use_memory=False,
@@ -294,6 +301,7 @@ Explain what file operations you can help with."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=512,
             use_memory=False,
@@ -337,6 +345,7 @@ If you can generate images, do so. Otherwise, explain the process."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=512,
             use_memory=False,
@@ -381,6 +390,7 @@ Explain what workflows you can help with."""
         start = time.time()
         response = airunner_client.generate(
             prompt,
+            model=AIRUNNER_DEFAULT_LLM_HF_PATH,
             temperature=0.7,
             max_tokens=512,
             use_memory=False,
@@ -445,6 +455,7 @@ class TestToolCategorySuite:
                 start = time.time()
                 response = airunner_client.generate(
                     test_prompt,
+                    model=AIRUNNER_DEFAULT_LLM_HF_PATH,
                     temperature=0.7,
                     max_tokens=256,
                     use_memory=False,

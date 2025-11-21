@@ -41,15 +41,13 @@ class RAGIndexingMixin:
             SimpleDirectoryReader instance or None if no target files
         """
         if not self.target_files:
-            if hasattr(self, "logger"):
-                self.logger.debug("No target files specified")
+            self.logger.debug("No target files specified")
             return None
 
         if not self._document_reader:
-            if hasattr(self, "logger"):
-                self.logger.debug(
-                    f"Creating unified document reader for {len(self.target_files)} files"
-                )
+            self.logger.debug(
+                f"Creating unified document reader for {len(self.target_files)} files"
+            )
             try:
                 self._document_reader = SimpleDirectoryReader(
                     input_files=self.target_files,
@@ -64,13 +62,11 @@ class RAGIndexingMixin:
                     exclude_hidden=False,
                     file_metadata=self._extract_metadata,
                 )
-                if hasattr(self, "logger"):
-                    self.logger.debug("Document reader created successfully")
+                self.logger.debug("Document reader created successfully")
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(
-                        f"Error creating document reader: {str(e)}"
-                    )
+                self.logger.error(
+                    f"Error creating document reader: {str(e)}"
+                )
                 return None
         return self._document_reader
 
@@ -82,8 +78,7 @@ class RAGIndexingMixin:
             List of Document instances with metadata
         """
         if not self.document_reader:
-            if hasattr(self, "logger"):
-                self.logger.debug("No document reader available")
+            self.logger.debug("No document reader available")
             return []
 
         try:
@@ -95,14 +90,12 @@ class RAGIndexingMixin:
                 if file_path:
                     doc.metadata.update(self._extract_metadata(file_path))
 
-            if hasattr(self, "logger"):
-                self.logger.debug(
-                    f"Loaded {len(documents)} documents with metadata"
-                )
+            self.logger.debug(
+                f"Loaded {len(documents)} documents with metadata"
+            )
             return documents
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error loading documents: {e}")
+            self.logger.error(f"Error loading documents: {e}")
             return []
 
     def _index_single_document(self, db_doc: DBDocument) -> bool:
@@ -133,10 +126,9 @@ class RAGIndexingMixin:
 
             docs = reader.load_data()
             if not docs:
-                if hasattr(self, "logger"):
-                    self.logger.warning(
-                        f"No content extracted from {db_doc.path}"
-                    )
+                self.logger.warning(
+                    f"No content extracted from {db_doc.path}"
+                )
                 return False
 
             # Enrich with metadata
@@ -162,16 +154,68 @@ class RAGIndexingMixin:
             # Mark as indexed in DB
             self._mark_document_indexed(db_doc.path)
 
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    f"Indexed document {os.path.basename(db_doc.path)} ({len(docs)} chunks)"
-                )
+            self.logger.info(
+                f"Indexed document {os.path.basename(db_doc.path)} ({len(docs)} chunks)"
+            )
+            try:
+                self._loaded_doc_ids.append(db_doc.path)
+            except Exception:
+                pass
             return True
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Failed to index {db_doc.path}: {e}")
+            self.logger.error(f"Failed to index {db_doc.path}: {e}")
             return False
+
+    def ensure_indexed_files(self, file_paths: List[str]) -> bool:
+        """Ensure that the given file paths have been loaded/indexed.
+
+        This method will load files into the RAG index synchronously if they
+        are not already present. It returns True if at least one file was
+        indexed or all files were already indexed. It returns False only if
+        one or more indexing operations failed.
+        """
+        if not file_paths:
+            self.logger.debug(
+                "No file paths provided to ensure_indexed_files"
+            )
+            return True
+
+        success = True
+        for path in file_paths:
+            # Skip if already tracked as loaded/indexed
+            try:
+                if path in getattr(self, "_loaded_doc_ids", []):
+                    self.logger.debug(
+                        f"Skipping already indexed path: {path}"
+                    )
+                    continue
+            except Exception:
+                pass
+
+            if not os.path.exists(path):
+                self.logger.warning(
+                    f"File does not exist for indexing: {path}"
+                )
+                success = False
+                continue
+
+            # Use the load_file_into_rag to index - it will update _loaded_doc_ids
+            try:
+                self.logger.info(f"Ensuring indexing for file: {path}")
+                self.load_file_into_rag(path)
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to ensure index for {path}: {e}"
+                )
+                success = False
+
+        # Recreate retriever after any indexing operations
+        try:
+            self._retriever = None
+        except Exception:
+            pass
+        return success
 
     def index_all_documents(self) -> bool:
         """Manually index all documents with progress reporting.
@@ -182,46 +226,39 @@ class RAGIndexingMixin:
             True if indexing succeeded, False otherwise
         """
         try:
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    "=== Starting per-document indexing (index_all_documents called) ==="
-                )
+            self.logger.info(
+                "=== Starting per-document indexing (index_all_documents called) ==="
+            )
 
             # Emit initial progress signal
-            if hasattr(self, "emit_signal"):
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        "Emitting initial RAG_INDEXING_PROGRESS signal"
-                    )
-                self.emit_signal(
-                    SignalCode.RAG_INDEXING_PROGRESS,
-                    {
-                        "progress": 0,
-                        "current": 0,
-                        "total": 0,
-                        "document_name": "Preparing to index...",
-                    },
-                )
+            self.logger.info(
+                "Emitting initial RAG_INDEXING_PROGRESS signal"
+            )
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_PROGRESS,
+                {
+                    "progress": 0,
+                    "current": 0,
+                    "total": 0,
+                    "document_name": "Preparing to index...",
+                },
+            )
 
             # Get all unindexed documents
-            if hasattr(self, "logger"):
-                self.logger.info("Getting list of unindexed documents...")
+            self.logger.info("Getting list of unindexed documents...")
             unindexed_docs = self._get_unindexed_documents()
             total_docs = len(unindexed_docs)
-            if hasattr(self, "logger"):
-                self.logger.info(f"Found {total_docs} unindexed documents")
+            self.logger.info(f"Found {total_docs} unindexed documents")
 
             if total_docs == 0:
-                if hasattr(self, "logger"):
-                    self.logger.info("No documents need indexing")
-                if hasattr(self, "emit_signal"):
-                    self.emit_signal(
-                        SignalCode.RAG_INDEXING_COMPLETE,
-                        {
-                            "success": True,
-                            "message": "All documents already indexed",
-                        },
-                    )
+                self.logger.info("No documents need indexing")
+                self.emit_signal(
+                    SignalCode.RAG_INDEXING_COMPLETE,
+                    {
+                        "success": True,
+                        "message": "All documents already indexed",
+                    },
+                )
                 return True
 
             # Reset any previous interrupt flag
@@ -236,16 +273,14 @@ class RAGIndexingMixin:
             for idx, db_doc in enumerate(unindexed_docs, 1):
                 # Check for external interrupt/cancel request
                 if getattr(self, "do_interrupt", False):
-                    if hasattr(self, "logger"):
-                        self.logger.info("Indexing interrupted by user")
-                    if hasattr(self, "emit_signal"):
-                        self.emit_signal(
-                            SignalCode.RAG_INDEXING_COMPLETE,
-                            {
-                                "success": False,
-                                "message": f"Indexing cancelled by user ({success_count}/{total_docs} completed)",
-                            },
-                        )
+                    self.logger.info("Indexing interrupted by user")
+                    self.emit_signal(
+                        SignalCode.RAG_INDEXING_COMPLETE,
+                        {
+                            "success": False,
+                            "message": f"Indexing cancelled by user ({success_count}/{total_docs} completed)",
+                        },
+                    )
                     # Reset flag
                     try:
                         setattr(self, "do_interrupt", False)
@@ -254,34 +289,30 @@ class RAGIndexingMixin:
                     return False
 
                 if not os.path.exists(db_doc.path):
-                    if hasattr(self, "logger"):
-                        self.logger.warning(
-                            f"Document not found: {db_doc.path}"
-                        )
+                    self.logger.warning(
+                        f"Document not found: {db_doc.path}"
+                    )
                     continue
 
                 # Emit progress
                 doc_name = os.path.basename(db_doc.path)
-                if hasattr(self, "emit_signal"):
-                    progress_data = {
-                        "current": idx,
-                        "total": total_docs,
-                        "progress": min((idx / total_docs) * 100, 99),
-                        "document_name": doc_name,
-                    }
-                    if hasattr(self, "logger"):
-                        self.logger.debug(
-                            f"Emitting RAG_INDEXING_PROGRESS: {progress_data}"
-                        )
-                    self.emit_signal(
-                        SignalCode.RAG_INDEXING_PROGRESS,
-                        progress_data,
-                    )
+                progress_data = {
+                    "current": idx,
+                    "total": total_docs,
+                    "progress": min((idx / total_docs) * 100, 99),
+                    "document_name": doc_name,
+                }
+                self.logger.debug(
+                    f"Emitting RAG_INDEXING_PROGRESS: {progress_data}"
+                )
+                self.emit_signal(
+                    SignalCode.RAG_INDEXING_PROGRESS,
+                    progress_data,
+                )
 
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        f"Indexing ({idx}/{total_docs}): {db_doc.path}"
-                    )
+                self.logger.info(
+                    f"Indexing ({idx}/{total_docs}): {db_doc.path}"
+                )
 
                 # Index the document
                 if self._index_single_document(db_doc):
@@ -290,32 +321,28 @@ class RAGIndexingMixin:
             # Emit completion
             self._cache_validated = True
 
-            if hasattr(self, "emit_signal"):
-                self.emit_signal(
-                    SignalCode.RAG_INDEXING_COMPLETE,
-                    {
-                        "success": True,
-                        "message": f"Successfully indexed {success_count}/{total_docs} document(s)",
-                    },
-                )
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_COMPLETE,
+                {
+                    "success": True,
+                    "message": f"Successfully indexed {success_count}/{total_docs} document(s)",
+                },
+            )
 
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    f"Per-document indexing complete: {success_count}/{total_docs} documents indexed"
-                )
+            self.logger.info(
+                f"Per-document indexing complete: {success_count}/{total_docs} documents indexed"
+            )
             return success_count > 0
 
         except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(f"Error during per-document indexing: {e}")
-            if hasattr(self, "emit_signal"):
-                self.emit_signal(
-                    SignalCode.RAG_INDEXING_COMPLETE,
-                    {
-                        "success": False,
-                        "message": f"Indexing failed: {str(e)}",
-                    },
-                )
+            self.logger.error(f"Error during per-document indexing: {e}")
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_COMPLETE,
+                {
+                    "success": False,
+                    "message": f"Indexing failed: {str(e)}",
+                },
+            )
             # Ensure interrupt flag cleared on failure
             try:
                 if hasattr(self, "do_interrupt"):

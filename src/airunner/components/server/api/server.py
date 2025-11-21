@@ -12,7 +12,7 @@ import json
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler
-from typing import Optional
+from typing import Dict, Optional
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
@@ -27,23 +27,49 @@ from airunner.components.application.api.api import API
 from airunner.components.calendar.data.event import Event
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.data.conversation import Conversation
+from airunner.utils.application.get_logger import get_logger
 
 # Lazy import to avoid circular dependency
 _api = None
+logger = get_logger(__name__)
 
 
 def get_api():
     """Get or create the API singleton instance."""
     global _api
+    logger.info(
+        f"DEBUG get_api: _api is {'None' if _api is None else type(_api).__name__}"
+    )
     if _api is None:
         _api = API()
     return _api
 
 
+def set_api(api_instance):
+    """Set the global API instance.
+
+    Use this when creating an API instance manually (e.g., in headless mode)
+    to ensure tools can access it via get_api().
+
+    Args:
+        api_instance: The API/App instance to register globally
+    """
+    global _api
+    logger.info(
+        f"DEBUG set_api: Setting global API to {type(api_instance).__name__}"
+    )
+    _api = api_instance
+    logger.info(
+        f"DEBUG set_api: Global API is now {'None' if _api is None else type(_api).__name__}"
+    )
+
+
 class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-        self._timeout: int = 30  # 5 minutes for long generations
+        self._timeout: int = (
+            60  # 60 second timeout for generation requests with RAG
+        )
         super().__init__(*args, **kwargs)
 
     def _set_headers(self, status=200, content_type="application/json"):
@@ -59,34 +85,134 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    def do_POST(self):
-        path = self.path.rstrip("/")
+    def _read_request_body(self) -> bytes:
+        """Read raw request body bytes from the HTTP request.
+
+        Returns:
+            Raw bytes from request body
+        """
         content_length = int(self.headers.get("Content-Length", 0))
-        post_data = self.rfile.read(content_length)
+        transfer_encoding = (
+            self.headers.get("Transfer-Encoding", "") or ""
+        ).lower()
+
+        if content_length > 0:
+            return self.rfile.read(content_length)
+        elif "chunked" in transfer_encoding:
+            return self._read_chunked()
+        else:
+            return b""
+
+    def _try_parse_json(self, post_data: bytes) -> Optional[Dict]:
+        """Try to parse request body as JSON.
+
+        Args:
+            post_data: Raw request body bytes
+
+        Returns:
+            Parsed dict if successful, None otherwise
+        """
         try:
-            data = json.loads(post_data.decode("utf-8")) if post_data else {}
+            return json.loads(post_data.decode("utf-8")) if post_data else {}
         except Exception:
-            self._set_headers(400)
-            self.wfile.write(
-                json.dumps({"error": "Invalid JSON"}).encode("utf-8")
-            )
-            return
-        if path == "/llm" or path == "/llm/generate":
-            self._handle_llm(data)
-        elif path == "/llm/generate_batch":
-            self._handle_llm_batch(data)
-        elif path == "/admin/reset_memory":
-            self._handle_reset_memory()
-        elif path == "/admin/reset_database":
-            self._handle_reset_database()
-        elif path == "/admin/shutdown":
-            self._handle_shutdown()
-        elif path == "/art":
-            self._handle_stub("STT not implemented")
-        elif path == "/stt":
-            self._handle_stub("STT not implemented")
-        elif path == "/tts":
-            self._handle_stub("TTS not implemented")
+            return None
+
+    def _parse_llm_request_json(self, data: Dict):
+        """Parse llm_request field from string to dict if needed.
+
+        Args:
+            data: Dictionary to update in-place
+        """
+        if "llm_request" in data and isinstance(data["llm_request"], str):
+            try:
+                data["llm_request"] = json.loads(data["llm_request"])
+            except Exception:
+                pass
+
+    def _try_parse_form_data(self, post_data: bytes) -> Optional[Dict]:
+        """Try to parse request body as form-encoded data.
+
+        Args:
+            post_data: Raw request body bytes
+
+        Returns:
+            Parsed dict if successful, None otherwise
+        """
+        from urllib.parse import parse_qs
+
+        try:
+            form = parse_qs(post_data.decode("utf-8"))
+            data = {
+                k: (v[0] if isinstance(v, list) and len(v) > 0 else v)
+                for k, v in form.items()
+            }
+            self._parse_llm_request_json(data)
+            return data
+        except Exception:
+            return None
+
+    def _send_parse_error(self, error_msg: str):
+        """Send a 400 error response for parse failures.
+
+        Args:
+            error_msg: Error message to send
+        """
+        self._set_headers(400)
+        self.wfile.write(json.dumps({"error": error_msg}).encode("utf-8"))
+
+    def _parse_request_body(self) -> Optional[Dict]:
+        """Parse request body from JSON or form-encoded data.
+
+        Returns:
+            Dict containing parsed request data, or None if parsing failed
+        """
+        post_data = self._read_request_body()
+        content_type = (self.headers.get("Content-Type", "") or "").lower()
+
+        self.logger.debug(f"Content-Type: {content_type}")
+        self.logger.debug(
+            f"Raw post_data (first 200 chars): {post_data[:200]}"
+        )
+
+        result = self._try_parse_json(post_data)
+        if result is not None:
+            self.logger.debug("Successfully parsed as JSON")
+            return result
+
+        if "application/x-www-form-urlencoded" in content_type:
+            self.logger.debug("Attempting to parse as form-encoded data")
+            result = self._try_parse_form_data(post_data)
+            if result is not None:
+                self.logger.debug("Successfully parsed as form-encoded")
+                return result
+            self._send_parse_error("Invalid form data")
+        else:
+            self._send_parse_error("Invalid JSON")
+        return None
+
+    def do_POST(self):
+        """Handle POST requests by parsing body and routing to appropriate handler."""
+        path = self.path.rstrip("/")
+        data = self._parse_request_body()
+        if data is None:
+            return  # Error response already sent by _parse_request_body
+
+        # Route to appropriate handler
+        route_map = {
+            "/llm": self._handle_llm,
+            "/llm/generate": self._handle_llm,
+            "/llm/generate_batch": self._handle_llm_batch,
+            "/admin/reset_memory": lambda d: self._handle_reset_memory(),
+            "/admin/reset_database": lambda d: self._handle_reset_database(),
+            "/admin/shutdown": lambda d: self._handle_shutdown(),
+            "/art": lambda d: self._handle_stub("ART not implemented"),
+            "/stt": lambda d: self._handle_stub("STT not implemented"),
+            "/tts": lambda d: self._handle_stub("TTS not implemented"),
+        }
+
+        handler = route_map.get(path)
+        if handler:
+            handler(data)
         else:
             self._set_headers(404)
             self.wfile.write(
@@ -131,28 +257,64 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         }
         self.wfile.write(json.dumps(models_data).encode("utf-8"))
 
-    def _handle_llm(self, data):
-        """Handle LLM generation request with streaming support.
+    def _extract_llm_request_data(self, data: Dict) -> Dict:
+        """Extract and normalize llm_request data from request.
 
-        Expected JSON format:
-        {
-            "prompt": "What is the capital of France?",
-            "system_prompt": "You are a helpful assistant",  // optional
-            "action": "CHAT",  // optional, default: CHAT
-            "stream": true,  // optional, default: true
-            "use_memory": false,  // optional, disable conversation history
-            "llm_request": {  // optional LLM parameters
-                "temperature": 0.8,
-                "max_new_tokens": 100,
-                ...
-            }
-            // OR top-level params (will be moved to llm_request):
-            "temperature": 0.8,
-            "max_tokens": 100,
-            ...
-        }
+        Args:
+            data: Request data dictionary
+
+        Returns:
+            Normalized llm_request dictionary
         """
-        # Parse request parameters
+        llm_request_raw = data.get("llm_request", {})
+        return llm_request_raw if isinstance(llm_request_raw, dict) else {}
+
+    def _map_top_level_params(self, data: Dict, llm_request_data: Dict):
+        """Map top-level parameters to llm_request fields."""
+        param_mapping = {
+            "temperature": "temperature",
+            "max_tokens": "max_new_tokens",
+            "top_p": "top_p",
+            "top_k": "top_k",
+            "repetition_penalty": "repetition_penalty",
+            "use_memory": "use_memory",
+            "tool_categories": "tool_categories",
+            "model": "model",
+            "rag_files": "rag_files",
+        }
+        excluded = {
+            "prompt",
+            "system_prompt",
+            "action",
+            "stream",
+            "llm_request",
+        }
+        for client_param, llm_param in param_mapping.items():
+            if client_param in data and client_param not in excluded:
+                llm_request_data[llm_param] = data[client_param]
+
+    def _parse_action_type(self, action_str: str) -> LLMActionType:
+        """Parse action string to LLMActionType enum.
+
+        Args:
+            action_str: Action string from request
+
+        Returns:
+            LLMActionType enum value
+        """
+        try:
+            return (
+                LLMActionType[action_str]
+                if isinstance(action_str, str)
+                else action_str
+            )
+        except KeyError:
+            return LLMActionType.CHAT
+
+    def _handle_llm(self, data):
+        """Handle LLM generation request with streaming support."""
+        print("HANDLE LLM CALLED")
+        print("data", data)
         prompt = data.get("prompt")
         if not prompt:
             self._set_headers(400)
@@ -162,79 +324,22 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             return
 
         system_prompt = data.get("system_prompt")
-        action_str = data.get("action", "CHAT")
+        action = self._parse_action_type(data.get("action", "CHAT"))
         stream = data.get("stream", True)
-        llm_request_data = data.get("llm_request", {})
-
-        # DEBUG: Log incoming request data
-        self.logger.debug(f"Incoming request data keys: {list(data.keys())}")
-        self.logger.debug(f"stream value: {stream} (type: {type(stream)})")
-        if "tool_categories" in data:
-            self.logger.debug(
-                f"tool_categories in request: {data['tool_categories']}"
-            )
-        else:
-            self.logger.debug("NO tool_categories in request!")
-
-        # Handle top-level LLM parameters (for convenience)
-        # Map common parameter names to LLMRequest fields
-        param_mapping = {
-            "temperature": "temperature",
-            "max_tokens": "max_new_tokens",
-            "top_p": "top_p",
-            "top_k": "top_k",
-            "repetition_penalty": "repetition_penalty",
-            "use_memory": "use_memory",
-            "tool_categories": "tool_categories",  # CRITICAL: Allow disabling tools
-        }
-
-        for client_param, llm_param in param_mapping.items():
-            if client_param in data and client_param not in [
-                "prompt",
-                "system_prompt",
-                "action",
-                "stream",
-                "llm_request",
-            ]:
-                llm_request_data[llm_param] = data[client_param]
-
-        # DEBUG: Show what got mapped
-        self.logger.debug(
-            f"llm_request_data after mapping: {llm_request_data}"
-        )
-
-        # Parse action type
-        try:
-            action = (
-                LLMActionType[action_str]
-                if isinstance(action_str, str)
-                else action_str
-            )
-        except KeyError:
-            action = LLMActionType.CHAT
-
-        # Create LLMRequest from provided parameters
+        llm_request_data = self._extract_llm_request_data(data)
+        self._map_top_level_params(data, llm_request_data)
         llm_request = self._create_llm_request(llm_request_data)
-
-        # Generate unique request ID for correlation
+        if system_prompt:
+            llm_request.system_prompt = system_prompt
         request_id = str(uuid.uuid4())
-
-        self.logger.debug(f"stream={stream}, about to branch...")
-
         if stream:
-            self.logger.debug("Taking STREAM path")
-            # Stream NDJSON responses
-            self._handle_llm_stream(
-                prompt, system_prompt, action, llm_request, request_id
-            )
+            self._handle_llm_stream(prompt, action, llm_request, request_id)
         else:
-            self.logger.debug("Taking NON-STREAM path")
-            # Return single JSON response
             self._handle_llm_non_stream(
-                prompt, system_prompt, action, llm_request, request_id
+                prompt, action, llm_request, request_id
             )
 
-    def _create_llm_request(self, params: dict) -> LLMRequest:
+    def _create_llm_request(self, params: Dict) -> LLMRequest:
         """Create LLMRequest from dictionary parameters.
 
         Args:
@@ -243,12 +348,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         Returns:
             LLMRequest object with specified or default parameters
         """
-        # Start with defaults
         llm_request = LLMRequest()
-
         self.logger.debug(f"Creating LLMRequest from params: {params}")
-
-        # Override with provided parameters
         for key, value in params.items():
             if hasattr(llm_request, key):
                 setattr(llm_request, key, value)
@@ -257,16 +358,58 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 self.logger.warning(
                     f"Ignoring unknown LLMRequest parameter: {key}={value}"
                 )
-
-        self.logger.debug(
-            f"Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}"
-        )
         return llm_request
+
+    def _parse_chunk_size(self, line: bytes) -> Optional[int]:
+        """Parse chunk size from HTTP chunked encoding line.
+
+        Args:
+            line: Raw line containing chunk size
+
+        Returns:
+            Chunk size as integer, or None if invalid
+        """
+        try:
+            return int(line.split(b";", 1)[0].strip(), 16)
+        except Exception:
+            return None
+
+    def _consume_trailers(self):
+        """Consume HTTP trailer headers until CRLF."""
+        while True:
+            trailer = self.rfile.readline()
+            if not trailer or trailer.strip() == b"":
+                break
+
+    def _read_chunked(self) -> bytes:
+        """Read a chunked HTTP request body from self.rfile.
+
+        Returns the full concatenated body bytes.
+        """
+        data = b""
+        try:
+            while True:
+                line = self.rfile.readline()
+                if not line or not line.strip():
+                    if not line:
+                        break
+                    continue
+                size = self._parse_chunk_size(line.strip())
+                if size is None:
+                    break
+                if size == 0:
+                    self._consume_trailers()
+                    break
+                chunk = self.rfile.read(size)
+                data += chunk
+                self.rfile.read(2)  # Read trailing CRLF
+        except Exception:
+            pass
+        return data
 
     def _handle_llm_stream(
         self,
         prompt: str,
-        system_prompt: Optional[str],
         action: LLMActionType,
         llm_request: LLMRequest,
         request_id: str,
@@ -309,7 +452,14 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     "is_end_of_message": response.is_end_of_message,
                     "sequence_number": getattr(response, "sequence_number", 0),
                     "action": action_str,
+                    "tools": getattr(response, "tools", None),
                 }
+                try:
+                    self.logger.debug(
+                        f"HTTP Server: stream_callback invoked: msg_len={len(response.message) if response and response.message else 0}, is_end={response.is_end_of_message}, seq={getattr(response, 'sequence_number', None)}"
+                    )
+                except Exception:
+                    pass
                 self.wfile.write(
                     json.dumps(response_data).encode("utf-8") + b"\n"
                 )
@@ -323,15 +473,54 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.logger.debug(
             f"Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}"
         )
-        api.llm.send_request(
-            prompt=prompt,
-            action=action,
-            llm_request=llm_request,
-            request_id=request_id,
-            callback=stream_callback,
+        import inspect
+
+        self.logger.info(
+            f"HTTP Server: send_request file: {inspect.getfile(api.llm.send_request)}"
         )
+        self.logger.info(
+            f"HTTP Server: About to call api.llm.send_request, api type={type(api)}, api.llm type={type(api.llm)}"
+        )
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=action,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=stream_callback,
+            )
+            self.logger.debug(
+                "HTTP Server: send_request returned (non-blocking)"
+            )
+            self.logger.info(
+                "HTTP Server: api.llm.send_request completed successfully"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"HTTP Server: Exception calling send_request: {e}",
+                exc_info=True,
+            )
+            # Immediately return error NDJSON to HTTP client - avoids long timeout
+            try:
+                error_response = {
+                    "message": f"Error invoking LLM: {str(e)}",
+                    "is_first_message": True,
+                    "is_end_of_message": True,
+                    "sequence_number": 0,
+                    "error": True,
+                }
+                self.wfile.write(
+                    json.dumps(error_response).encode("utf-8") + b"\n"
+                )
+                self.wfile.flush()
+            except Exception:
+                pass
+            return
 
         # Wait for completion (with timeout)
+        self.logger.debug(
+            f"HTTP Server: Waiting for completion event with timeout {self._timeout}s (request_id={request_id})"
+        )
         if not complete_event.wait(
             timeout=self._timeout
         ):  # 5 minute timeout for longer generations
@@ -347,11 +536,14 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 json.dumps(error_response).encode("utf-8") + b"\n"
             )
             self.wfile.flush()
+        else:
+            self.logger.debug(
+                f"HTTP Server: complete_event set for request_id={request_id}"
+            )
 
     def _handle_llm_non_stream(
         self,
         prompt: str,
-        system_prompt: Optional[str],
         action: LLMActionType,
         llm_request: LLMRequest,
         request_id: str,
@@ -490,7 +682,12 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         system_prompt = data.get("system_prompt")
         action_str = data.get("action", "CHAT")
         is_async = data.get("async", False)
-        llm_request_data = data.get("llm_request", {})
+
+        # Ensure llm_request_data is always a dict, not a string
+        llm_request_raw = data.get("llm_request", {})
+        llm_request_data = (
+            llm_request_raw if isinstance(llm_request_raw, dict) else {}
+        )
 
         # Handle top-level LLM parameters
         param_mapping = {

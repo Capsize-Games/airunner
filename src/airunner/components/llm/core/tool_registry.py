@@ -6,8 +6,14 @@ Tools are automatically discovered and routed based on their metadata.
 """
 
 from dataclasses import dataclass
+import importlib
 from typing import Callable, Dict, Optional, List
 from enum import Enum
+
+from airunner.utils.application import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class ToolCategory(Enum):
@@ -53,6 +59,9 @@ class ToolCategory(Enum):
     MOOD = "mood"
     ANALYSIS = "analysis"
     WORKFLOW = "workflow"
+    GENERATION = (
+        "generation"  # Direct text generation without conversational wrappers
+    )
 
     # Legacy categories (for backward compatibility)
     SEARCH = "search"  # Use RESEARCH or QA instead
@@ -132,16 +141,20 @@ class ToolRegistry:
     @classmethod
     def get(cls, name: str) -> Optional[ToolInfo]:
         """Retrieve tool by name."""
+        # If the requested tool name is not present, try to load default tool modules
+        cls._ensure_default_tools_loaded(required_name=name)
         return cls._tools.get(name)
 
     @classmethod
     def get_by_category(cls, category: ToolCategory) -> List[ToolInfo]:
         """Retrieve all tools in a category."""
+        cls._ensure_default_tools_loaded(required_category=category)
         return cls._categories.get(category, [])
 
     @classmethod
     def all(cls) -> Dict[str, ToolInfo]:
         """Retrieve all registered tools."""
+        cls._ensure_default_tools_loaded()
         return dict(cls._tools)
 
     @classmethod
@@ -149,6 +162,103 @@ class ToolRegistry:
         """Clear all registered tools (mainly for testing)."""
         cls._tools.clear()
         cls._categories.clear()
+
+    @classmethod
+    def _ensure_default_tools_loaded(
+        cls,
+        required_name: Optional[str] = None,
+        required_category: Optional[ToolCategory] = None,
+    ) -> None:
+        """Ensure that the default tools package is loaded.
+
+        This is a defensive measure to handle test ordering where the
+        registry may have been cleared by other tests. If the registry
+        is currently empty, attempt to import/reload the built-in tools
+        module to re-register the default tools.
+        """
+        try:
+            # Only load defaults if specifically requested or the registry is empty.
+            # This allows tests to clear the registry and run in isolation without
+            # unexpectedly importing the default tools.
+            should_load = False
+            if required_name and required_name not in cls._tools:
+                should_load = True
+            if required_category and (
+                required_category not in cls._categories
+                or not cls._categories[required_category]
+            ):
+                should_load = True
+            # Fallback: if no context provided, load only if registry is completely empty
+            if (
+                required_name is None
+                and required_category is None
+                and not cls._tools
+            ):
+                should_load = True
+
+            if not should_load:
+                return
+
+            # Import the tools package to ensure submodules are available
+            try:
+                importlib.import_module("airunner.components.llm.tools")
+            except Exception as exc:
+                # Log failure to import the tools package for easier debugging
+                logger.exception(
+                    "Failed to import airunner.components.llm.tools package: %s",
+                    exc,
+                )
+                # If we cannot import the package, stop here
+                return
+
+            # List of tool modules admitted into the package. Reload each
+            # explicitly to ensure decorators run and the ToolRegistry is
+            # populated even after a prior clear(). This is 'best effort'
+            # and should not raise for any module import errors.
+            modules_to_reload = [
+                "airunner.components.llm.tools.image_tools",
+                "airunner.components.llm.tools.system_tools",
+                "airunner.components.llm.tools.conversation_tools",
+                "airunner.components.llm.tools.math_tools",
+                "airunner.components.llm.tools.reasoning_tools",
+                "airunner.components.llm.tools.web_tools",
+                "airunner.components.llm.tools.calendar_tools",
+                "airunner.components.llm.tools.rag_tools",
+                "airunner.components.llm.tools.knowledge_tools",
+                "airunner.components.llm.tools.user_data_tools",
+                "airunner.components.llm.tools.agent_tools",
+                "airunner.components.llm.tools.mood_tools",
+                "airunner.components.llm.tools.generation_tools",
+                "airunner.components.llm.tools.author_tools",
+                "airunner.components.llm.tools.code_tools",
+                "airunner.components.llm.tools.research_tools",
+                "airunner.components.llm.tools.research_document_tools",
+                "airunner.components.llm.tools.research_rag_tools",
+                "airunner.components.llm.tools.qa_tools",
+                "airunner.components.llm.tools.code_generation_tools",
+            ]
+            for module_name in modules_to_reload:
+                try:
+                    logger.debug(
+                        "Importing/reloading tool module: %s", module_name
+                    )
+                    mod = importlib.import_module(module_name)
+                    importlib.reload(mod)
+                    logger.debug(
+                        "Successfully imported/reloaded: %s", module_name
+                    )
+                except Exception as exc:
+                    # Best effort - don't fail if specific tool module isn't
+                    # present or throws during import, but log the exception
+                    logger.exception(
+                        "Failed to import/reload tool module %s: %s",
+                        module_name,
+                        exc,
+                    )
+                    continue
+        except Exception:
+            # Guard against any unexpected exception while ensuring defaults
+            pass
 
 
 def tool(

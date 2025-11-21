@@ -17,6 +17,10 @@ except ImportError:
 from airunner.components.settings.gui.widgets.service_settings_widget import (
     ServiceSettingsWidget,
 )
+from airunner.settings import (
+    AIRUNNER_HEADLESS_SERVER_HOST,
+    AIRUNNER_HEADLESS_SERVER_PORT,
+)
 
 
 class TestServiceSettingsWidget:
@@ -55,8 +59,8 @@ class TestServiceSettingsWidget:
         widget.run_background_cb.setChecked(True)
         widget.start_login_cb.setChecked(True)
         widget.server_enabled_cb.setChecked(True)
-        widget.host_input.setText("0.0.0.0")
-        widget.port_input.setValue(8080)
+        widget.host_input.setText(AIRUNNER_HEADLESS_SERVER_HOST)
+        widget.port_input.setValue(AIRUNNER_HEADLESS_SERVER_PORT)
         widget.lna_enabled_cb.setChecked(True)
 
         settings = widget.get_settings()
@@ -64,8 +68,8 @@ class TestServiceSettingsWidget:
         assert settings["run_in_background"] is True
         assert settings["start_at_login"] is True
         assert settings["http_server_enabled"] is True
-        assert settings["http_server_host"] == "0.0.0.0"
-        assert settings["http_server_port"] == 8080
+        assert settings["http_server_host"] == AIRUNNER_HEADLESS_SERVER_HOST
+        assert settings["http_server_port"] == AIRUNNER_HEADLESS_SERVER_PORT
         assert settings["lna_enabled"] is True
 
     def test_set_settings(self):
@@ -137,8 +141,8 @@ class TestServiceSettingsWidget:
 
         # Change values
         widget.run_background_cb.setChecked(True)
-        widget.host_input.setText("0.0.0.0")
-        widget.port_input.setValue(8080)
+        widget.host_input.setText(AIRUNNER_HEADLESS_SERVER_HOST)
+        widget.port_input.setValue(AIRUNNER_HEADLESS_SERVER_PORT)
 
         # Reset
         widget._on_reset()
@@ -253,7 +257,7 @@ class TestServiceSettingsWidget:
 
         # Change and apply
         widget.run_background_cb.setChecked(True)
-        widget.port_input.setValue(8080)
+        widget.port_input.setValue(AIRUNNER_HEADLESS_SERVER_PORT)
         widget._on_apply()
 
         # Now change again
@@ -263,7 +267,7 @@ class TestServiceSettingsWidget:
         # Reset should go to last applied, not original
         widget._on_reset()
         assert widget.run_background_cb.isChecked() is True
-        assert widget.port_input.value() == 8080
+        assert widget.port_input.value() == AIRUNNER_HEADLESS_SERVER_PORT
 
     def test_server_settings_message_on_change(self):
         """Test that changing server settings shows restart message."""
@@ -284,7 +288,7 @@ class TestServiceSettingsWidget:
         widget._on_apply()  # This sets _initial_values
 
         # Change server setting
-        widget.port_input.setValue(8080)
+        widget.port_input.setValue(AIRUNNER_HEADLESS_SERVER_PORT)
 
         # Mock QMessageBox.information
         with patch(

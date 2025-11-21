@@ -105,10 +105,9 @@ class RAGPropertiesMixin:
 
                 # Check if model files exist and trigger download if needed
                 if not self._check_and_download_embedding_model(model_name):
-                    if hasattr(self, "logger"):
-                        self.logger.warning(
-                            "Embedding model files missing - download in progress"
-                        )
+                    self.logger.warning(
+                        "Embedding model files missing - download in progress"
+                    )
                     return None
 
                 device = "cpu"
@@ -120,11 +119,10 @@ class RAGPropertiesMixin:
                 ):
                     device = "mps"
 
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        f"Initializing embedding model on {device}: "
-                        f"{model_name}"
-                    )
+                self.logger.info(
+                    f"Initializing embedding model on {device}: "
+                    f"{model_name}"
+                )
 
                 # Set quantization flag if using CPU or limited GPU memory
                 # This can reduce memory usage significantly
@@ -139,17 +137,13 @@ class RAGPropertiesMixin:
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 )
 
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        "Embedding model initialized successfully"
-                    )
+                self.logger.info("Embedding model initialized successfully")
 
             except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(
-                        f"Failed to initialize embedding model: {e}",
-                        exc_info=True,
-                    )
+                self.logger.error(
+                    f"Failed to initialize embedding model: {e}",
+                    exc_info=True,
+                )
                 # Don't raise - return None to allow RAG setup to skip gracefully
                 return None
 
@@ -172,13 +166,10 @@ class RAGPropertiesMixin:
             value: List of file paths or None to target all documents
         """
         self._target_files = value
-        if hasattr(self, "logger"):
-            if value:
-                self.logger.info(f"Set {len(value)} target files for indexing")
-            else:
-                self.logger.info(
-                    "Cleared target files (will index all documents)"
-                )
+        if value:
+            self.logger.info(f"Set {len(value)} target files for indexing")
+        else:
+            self.logger.info("Cleared target files (will index all documents)")
 
     @property
     def rag_system_prompt(self) -> str:
@@ -237,10 +228,9 @@ class RAGPropertiesMixin:
         repo_id = "intfloat/e5-large"
 
         if repo_id not in LLM_FILE_BOOTSTRAP_DATA:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    f"Embedding model {repo_id} not in LLM_FILE_BOOTSTRAP_DATA"
-                )
+            self.logger.error(
+                f"Embedding model {repo_id} not in LLM_FILE_BOOTSTRAP_DATA"
+            )
             return False
 
         # Check which required files are missing
@@ -257,25 +247,23 @@ class RAGPropertiesMixin:
             return True
 
         # Files are missing - trigger download
-        if hasattr(self, "logger"):
-            self.logger.info(
-                f"Missing {len(missing_files)} files for embedding model {repo_id}, triggering download"
-            )
-            self.logger.debug(f"Missing files: {missing_files}")
+        self.logger.info(
+            f"Missing {len(missing_files)} files for embedding model {repo_id}, triggering download"
+        )
+        self.logger.debug(f"Missing files: {missing_files}")
 
         # Emit signal to trigger download dialog
         # Avoid triggering multiple simultaneous downloads
         if not getattr(self, "_embedding_download_pending", False):
-            if hasattr(self, "emit_signal"):
-                self.emit_signal(
-                    SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
-                    {
-                        "repo_id": repo_id,
-                        "model_path": model_path,
-                        "missing_files": missing_files,
-                        "model_type": "embedding",
-                    },
-                )
+            self.emit_signal(
+                SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+                {
+                    "repo_id": repo_id,
+                    "model_path": model_path,
+                    "missing_files": missing_files,
+                    "model_type": "embedding",
+                },
+            )
             self._embedding_download_pending = True
 
         # Register handler for download completion to retry embedding initialization
@@ -299,10 +287,9 @@ class RAGPropertiesMixin:
         """
         repo_id = data.get("repo_id")
         if repo_id == "intfloat/e5-large":
-            if hasattr(self, "logger"):
-                self.logger.info(
-                    "Embedding model download complete - will initialize on next access"
-                )
+            self.logger.info(
+                "Embedding model download complete - will initialize on next access"
+            )
             # Clear cached embedding so it will be re-initialized on next access
             self._embedding = None
             self._embedding_download_pending = False

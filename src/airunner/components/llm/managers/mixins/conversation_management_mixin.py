@@ -65,18 +65,23 @@ class ConversationManagementMixin:
         )
 
     def _update_workflow_with_conversation(
-        self: "LLMModelManager", conversation: Optional[Conversation]
+        self: "LLMModelManager",
+        conversation: Optional[Conversation],
+        ephemeral: bool = False,
     ) -> None:
         """Update workflow manager with conversation ID or clear memory.
 
         Args:
             conversation: Conversation object, or None to clear memory.
+            ephemeral: If True, don't save conversation to database (memory-only).
         """
         if not self._workflow_manager:
             return
 
         if conversation:
-            self._workflow_manager.set_conversation_id(conversation.id)
+            self._workflow_manager.set_conversation_id(
+                conversation.id, ephemeral=ephemeral
+            )
         else:
             self._workflow_manager.clear_memory()
 

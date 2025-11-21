@@ -4,6 +4,7 @@ Agent coordinator - simplified agent management.
 This replaces the overly complex BaseAgent with a clean, focused coordinator
 that delegates to specialized handlers.
 """
+
 from typing import Optional, Any, Dict, List
 
 from llama_index.core.chat_engine.types import AgentChatResponse
