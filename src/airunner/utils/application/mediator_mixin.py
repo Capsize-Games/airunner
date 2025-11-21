@@ -3,6 +3,7 @@ import json
 from typing import Callable, Dict, Optional
 
 from airunner.enums import SignalCode
+from airunner.utils.application import get_logger
 from airunner.utils.application.signal_mediator import SignalMediator
 from airunner.components.messaging.backends.rabbitmq_backend import (
     RabbitMQBackend,
@@ -87,16 +88,7 @@ class MediatorMixin:
         }
         :return:
         """
-        from airunner.utils.application.get_logger import get_logger
-
-        logger = get_logger(__name__)
-        logger.info(
-            f"MediatorMixin.register_signals() called for {self.__class__.__name__}, handlers count: {len(self.signal_handlers)}"
-        )
         for signal, handler in self.signal_handlers.items():
-            logger.info(
-                f"  Registering {signal} -> {handler.__name__ if hasattr(handler, '__name__') else handler}"
-            )
             self.register(signal, handler)
 
     def emit_signal(self, code: SignalCode, data: object = None):
