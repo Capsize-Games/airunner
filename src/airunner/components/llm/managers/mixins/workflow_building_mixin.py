@@ -215,12 +215,14 @@ class WorkflowBuildingMixin:
         )
         # After tools execute, conditionally route:
         # - "model" if tool returned data needing interpretation
+        # - "force_response" if tool is RAG/search and should synthesize results directly
         # - "end" if tool was status-only (like update_mood)
         workflow.add_conditional_edges(
             "tools",
             self._route_after_tools,
             {
                 "model": "model",
+                "force_response": "force_response",
                 "end": END,
             },
         )
