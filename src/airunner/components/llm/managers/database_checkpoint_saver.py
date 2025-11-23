@@ -316,24 +316,25 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         if current:
             yield current
 
-    def clear_checkpoints(self) -> None:
-        """Clear all checkpoint state.
+    def clear_checkpoints(self, clear_history: bool = True) -> None:
+        """Clear checkpoint cache and optionally wipe stored history.
 
-        This removes all in-memory checkpoint state from the class-level
-        _checkpoint_state dictionary, forcing a fresh start for the workflow.
-
-        CRITICAL: This is needed to prevent checkpoint contamination between
-        tests or when resetting conversation memory.
+        Args:
+            clear_history: When True (default), also clear the persisted
+                conversation transcript. Set to False when you only need to
+                drop LangGraph's cached checkpoints but want to keep the
+                existing database history intact.
         """
-        # Clear the class-level checkpoint state dictionary
+        # Clear the class-level checkpoint state dictionary so new requests
+        # start with a clean LangGraph cache.
         DatabaseCheckpointSaver._checkpoint_state.clear()
         self.logger.info("Cleared all LangGraph checkpoint state")
 
-        # Also clear message history for completeness
-        self.message_history.clear()
-        self.logger.info(
-            f"Cleared message history for conversation {self.conversation_id}"
-        )
+        if clear_history:
+            self.message_history.clear()
+            self.logger.info(
+                f"Cleared message history for conversation {self.conversation_id}"
+            )
 
     def clear_thread(self, thread_id: str) -> None:
         """Clear checkpoint state for a specific thread.

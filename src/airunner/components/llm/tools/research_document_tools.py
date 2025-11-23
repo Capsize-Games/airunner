@@ -157,6 +157,14 @@ def create_research_notes(
             f.write(content)
 
         logger.info(f"Created research notes: {filepath}")
+
+        # Signal to open notes in editor (read-only/locked during research)
+        if api and hasattr(api, "emit_signal"):
+            api.emit_signal(
+                SignalCode.OPEN_RESEARCH_DOCUMENT,
+                {"path": filepath, "locked": True, "title": f"Notes: {topic}"},
+            )
+
         return filepath
 
     except Exception as e:
@@ -173,12 +181,13 @@ def create_research_notes(
         "Use this after scraping each web page during research phase."
     ),
     return_direct=False,
-    requires_api=False,
+    requires_api=True,
 )
 def append_research_notes(
     notes_path: Annotated[str, "Path to the notes file"],
     source_url: Annotated[str, "URL of the source"],
     findings: Annotated[str, "Key findings/summary from this source"],
+    api: Any = None,
 ) -> str:
     """
     Append findings to research notes.
@@ -192,6 +201,7 @@ def append_research_notes(
         Success/error message
     """
     try:
+        # Build the entry
         entry = f"""
 ### {source_url}
 
@@ -202,8 +212,18 @@ def append_research_notes(
 ---
 
 """
+
+        # Append to file
         with open(notes_path, "a", encoding="utf-8") as f:
             f.write(entry)
+
+        # Stream the content to open document (if any)
+        if api:
+            # Send the full entry as a streaming update
+            api.emit_signal(
+                SignalCode.STREAM_TO_DOCUMENT,
+                {"path": notes_path, "chunk": entry},
+            )
 
         logger.info(f"Appended notes from {source_url}")
         return f"Successfully added notes from {source_url}"
@@ -291,13 +311,17 @@ def update_research_section(
         with open(document_path, "w", encoding="utf-8") as f:
             f.write(new_content)
 
-        # Signal to refresh the document in the editor
+        # Signal to update the document in memory
         if api:
             api.emit_signal(
-                SignalCode.OPEN_RESEARCH_DOCUMENT,
-                {"path": document_path, "locked": True, "refresh": True},
+                SignalCode.UPDATE_DOCUMENT_CONTENT,
+                {
+                    "path": document_path,
+                    "content": new_content,
+                    "append": False,
+                },
             )
-            logger.info(f"Signaled document refresh for: {document_path}")
+            logger.info(f"Signaled document update for: {document_path}")
 
         return f"Successfully updated {section_name} section"
 
@@ -613,3 +637,83 @@ def load_indexed_documents_into_rag(
             f"Error loading indexed documents: {str(e)}. "
             f"Proceeding with web-only research."
         )
+
+
+@tool(
+    name="edit_document_find_replace",
+    category=ToolCategory.RESEARCH,
+    description=(
+        "Edit a document by finding and replacing text. "
+        "Supports simple string replacement and regular expressions. "
+        "Use this for precise edits, correcting errors, or updating specific parts of the document."
+    ),
+    return_direct=False,
+    requires_api=True,
+)
+def edit_document_find_replace(
+    document_path: Annotated[str, "Path to the document to edit"],
+    find_text: Annotated[str, "Text or pattern to find"],
+    replace_text: Annotated[str, "Text to replace with"],
+    is_regex: Annotated[
+        bool, "Whether find_text is a regular expression"
+    ] = False,
+    api: Any = None,
+) -> str:
+    """
+    Edit a document using find and replace.
+
+    Args:
+        document_path: Path to the document
+        find_text: Text to find
+        replace_text: Replacement text
+        is_regex: Treat find_text as regex
+        api: API instance
+
+    Returns:
+        Result message
+    """
+    import re
+
+    try:
+        if not os.path.exists(document_path):
+            return f"Error: Document not found at {document_path}"
+
+        # Read current document
+        with open(document_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Perform replacement
+        if is_regex:
+            new_content, count = re.subn(find_text, replace_text, content)
+        else:
+            count = content.count(find_text)
+            new_content = content.replace(find_text, replace_text)
+
+        if count == 0:
+            return f"Text not found: '{find_text}'"
+
+        # Write updated document
+        with open(document_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+
+        logger.info(
+            f"Updated document {document_path}: replaced {count} occurrence(s) of '{find_text}'"
+        )
+
+        # Signal to update the document in memory
+        if api:
+            api.emit_signal(
+                SignalCode.UPDATE_DOCUMENT_CONTENT,
+                {
+                    "path": document_path,
+                    "content": new_content,
+                    "append": False,
+                },
+            )
+            logger.info(f"Signaled document update for: {document_path}")
+
+        return f"Successfully replaced {count} occurrence(s) of text."
+
+    except Exception as e:
+        logger.error(f"Failed to edit document: {e}", exc_info=True)
+        return f"Error editing document: {str(e)}"

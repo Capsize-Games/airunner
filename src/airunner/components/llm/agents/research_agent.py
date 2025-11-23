@@ -150,10 +150,10 @@ compare_sources(sources) - Compare different viewpoints
 EXAMPLE WORKFLOW:
 ═══════════════════════════════════════════════════════════════════════════
 
-User: "research recent decisions by trump regarding syria's president"
+User: "research recent decisions by a national administration regarding energy security"
 
-Step 1: search_news("Trump Syria president Ahmad al-Sharaa White House")
-Step 2: search_news("Trump lift sanctions Syria al-Sharaa")
+Step 1: search_news("energy security White House cabinet meeting")
+Step 2: search_news("energy sanctions policy briefing")
 Step 3: scrape_website(url1_from_results)
 Step 4: scrape_website(url2_from_results)
 Step 5: scrape_website(url3_from_results)

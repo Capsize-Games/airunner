@@ -41,17 +41,66 @@ class RAGSearchMixin:
             query_bundle = QueryBundle(query_str=query)
             nodes = self.retriever.retrieve(query_bundle)
 
+            self.logger.debug(f"Retrieved {len(nodes)} nodes from retriever")
+
             # Convert LlamaIndex nodes to LangChain-style documents
             results = []
-            for node in nodes[:k]:  # Limit to k results
-                doc = Document(
-                    page_content=node.node.text,
-                    metadata=node.node.metadata or {},
-                )
-                results.append(doc)
+            for i, node_with_score in enumerate(
+                nodes[:k]
+            ):  # Limit to k results
+                try:
+                    # NodeWithScore has a .node property containing the actual BaseNode
+                    # Try different ways to get the text content
+                    text = None
+                    node = None
+
+                    # First get the underlying node
+                    if hasattr(node_with_score, "node"):
+                        node = node_with_score.node
+                    else:
+                        # It might already be a node
+                        node = node_with_score
+
+                    # Now try to get text from the node
+                    # Check both existence AND non-emptiness
+                    if hasattr(node, "text") and node.text:
+                        text = node.text
+                    elif hasattr(node, "get_text"):
+                        text = node.get_text()
+                    elif hasattr(node, "get_content"):
+                        text = node.get_content()
+
+                    # Get metadata
+                    metadata = {}
+                    if hasattr(node, "metadata") and node.metadata:
+                        metadata = node.metadata
+
+                    self.logger.debug(
+                        f"Node {i+1}: type={type(node_with_score).__name__}, "
+                        f"node_type={type(node).__name__ if node else 'None'}, "
+                        f"text_len={len(text) if text else 0}, "
+                        f"has_metadata={bool(metadata)}"
+                    )
+
+                    if not text:
+                        self.logger.warning(
+                            f"Node {i+1} has no text content. "
+                            f"Node attrs: {[attr for attr in dir(node) if not attr.startswith('_')][:15]}"
+                        )
+
+                    doc = Document(
+                        page_content=text or "",
+                        metadata=metadata,
+                    )
+                    results.append(doc)
+
+                except Exception as e:
+                    self.logger.error(f"Error processing node {i+1}: {e}")
+                    continue
 
             self.logger.info(
-                f"Search for '{query}' returned {len(results)} results"
+                f"Search for '{query[:100]}' returned {len(results)} results, "
+                f"{sum(1 for r in results if r.page_content)} with content"
             )
 
             return results
