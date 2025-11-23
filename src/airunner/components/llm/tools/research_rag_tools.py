@@ -32,7 +32,7 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 def search_document_chunks(
     query: Annotated[
         str,
-        "What to search for (e.g., 'sanctions timeline', 'Trump meetings')",
+        "What to search for (e.g., 'sanctions timeline', 'cabinet meetings')",
     ],
     document_path: Annotated[str, "Absolute path to the document to search"],
     max_results: Annotated[int, "Maximum number of chunks to return"] = 5,

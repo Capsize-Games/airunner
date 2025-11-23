@@ -354,11 +354,11 @@ VALIDATION APPROACH - BALANCED FILTER:
    - DIFFERENT first name (John ≠ Joe, unless it's clearly a nickname/alias)
    - Different last name (completely different person)
    - Obviously unrelated content (CAPTCHA, error pages, generic directories)
-   - Different person entirely (e.g., John Curlee the musician when searching for Joe Curlee the engineer)
+   - Different person entirely (e.g., John Smith the musician when searching for Joe Smith the engineer)
 
 3. **BORDERLINE CASES** (be generous):
-   - Joe vs Joey vs Joseph with SAME last name → ACCEPT (likely related, let synthesis distinguish)
-   - Username/handle that might be the person → ACCEPT (w4ffl35 for Joe Curlee)
+   - John vs Johnny vs Jon with SAME last name → ACCEPT (likely related, let synthesis distinguish)
+   - Username/handle that might be the person → ACCEPT (f00bfff for John Smith)
    - Related companies/projects mentioned in other sources → ACCEPT
    - Same name, different age/location → ACCEPT (synthesis will note multiple people)
 

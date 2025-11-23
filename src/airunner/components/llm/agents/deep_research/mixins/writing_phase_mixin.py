@@ -5,6 +5,7 @@ Handles Phase 1C and 1D: creating outline and synthesizing research document.
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 from airunner.components.llm.tools.research_document_tools import (
     update_research_section,
@@ -16,12 +17,126 @@ logger = logging.getLogger(__name__)
 class WritingPhaseMixin:
     """Provides Phase 1C and 1D writing and synthesis methods."""
 
+    def _load_notes_into_rag(self, notes_path: str) -> bool:
+        """Load research notes file into RAG for querying during synthesis.
+
+        Args:
+            notes_path: Path to the research notes file
+
+        Returns:
+            True if successfully loaded, False otherwise
+        """
+        if not notes_path or not Path(notes_path).exists():
+            logger.warning(f"[RAG] Notes file does not exist: {notes_path}")
+            return False
+
+        try:
+            # API IS the RAG manager (LLMModelManager inherits from RAGMixin)
+            rag_manager = self._api if self._api else None
+
+            if not rag_manager or not hasattr(
+                rag_manager, "ensure_indexed_files"
+            ):
+                logger.warning(
+                    "[RAG] No RAG manager available, will use direct notes reading"
+                )
+                return False
+
+            # Check if already loaded
+            loaded_docs = getattr(rag_manager, "_loaded_doc_ids", [])
+            if notes_path in loaded_docs:
+                logger.info(f"[RAG] Notes already loaded: {notes_path}")
+                return True
+
+            # Load the notes file into RAG
+            logger.info(f"[RAG] Loading research notes into RAG: {notes_path}")
+            success = rag_manager.ensure_indexed_files([notes_path])
+
+            if success:
+                logger.info(f"[RAG] Successfully loaded notes into RAG")
+                return True
+            else:
+                logger.warning(f"[RAG] Failed to load notes into RAG")
+                return False
+
+        except Exception as e:
+            logger.error(
+                f"[RAG] Error loading notes into RAG: {e}", exc_info=True
+            )
+            return False
+
+    def _query_rag_for_section(
+        self, section_name: str, topic: str, max_results: int = 5
+    ) -> Optional[str]:
+        """Query RAG for section-specific context from research notes.
+
+        Args:
+            section_name: Name of the section being written
+            topic: Research topic
+            max_results: Maximum number of RAG chunks to retrieve
+
+        Returns:
+            Retrieved context string or None if RAG unavailable
+        """
+        try:
+            # API IS the RAG manager (LLMModelManager inherits from RAGMixin)
+            rag_manager = self._api if self._api else None
+
+            if not rag_manager or not hasattr(rag_manager, "search"):
+                return None
+
+            # Build section-specific query
+            query = f"{topic} {section_name}"
+
+            logger.info(
+                f"[RAG] Querying for section '{section_name}': {query}"
+            )
+
+            # Use the RAG search method
+            results = rag_manager.search(query, k=max_results)
+
+            if not results:
+                logger.warning(
+                    f"[RAG] No results for section '{section_name}'"
+                )
+                return None
+
+            # Combine results into context
+            context_parts = []
+            for i, doc in enumerate(results, 1):
+                content = doc.page_content.strip()
+                if content:
+                    context_parts.append(f"[Source {i}]\n{content}\n")
+
+            context = "\n".join(context_parts)
+            logger.info(
+                f"[RAG] Retrieved {len(results)} chunks ({len(context)} chars) "
+                f"for section '{section_name}'"
+            )
+
+            return context
+
+        except Exception as e:
+            logger.error(
+                f"[RAG] Error querying RAG for section '{section_name}': {e}"
+            )
+            return None
+
     def _phase1c_outline(self, state) -> dict:
         """Phase 1C: Generate custom outline based on collected notes using LLM."""
         topic = state.get("research_topic", "")
         notes_path = state.get("notes_path", "")
 
         logger.info(f"[Phase 1C] Creating LLM-generated outline for: {topic}")
+
+        # Load notes into RAG for synthesis phase
+        notes_rag_loaded = self._load_notes_into_rag(notes_path)
+        if notes_rag_loaded:
+            logger.info("[Phase 1C] Notes loaded into RAG for synthesis")
+        else:
+            logger.warning(
+                "[Phase 1C] Could not load notes into RAG, will use direct reading"
+            )
 
         # Read the collected notes
         notes_content = self._read_notes_file(notes_path)
@@ -48,6 +163,7 @@ class WritingPhaseMixin:
             "messages": state.get("messages", []),
             "outline": outline,
             "thesis_statement": thesis_from_state,
+            "notes_rag_loaded": notes_rag_loaded,  # Track RAG load status
             "current_phase": "phase1d",
         }
 

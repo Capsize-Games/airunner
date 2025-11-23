@@ -6,7 +6,7 @@ Handles Phase 1B: analyzing collected notes and formulating a central thesis sta
 import logging
 from pathlib import Path
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +93,18 @@ class AnalysisPhaseMixin:
         )
 
         try:
+            messages = [HumanMessage(content=prompt)]
+            system_prompt = (
+                self._get_synthesis_system_prompt()
+                if hasattr(self, "_get_synthesis_system_prompt")
+                else getattr(self, "_synthesis_system_prompt", None)
+            )
+            if not system_prompt:
+                system_prompt = getattr(self, "_system_prompt", None)
+            if system_prompt:
+                messages.insert(0, SystemMessage(content=system_prompt))
             response = self._base_model.invoke(
-                [HumanMessage(content=prompt)],
+                messages,
                 temperature=0.3,
                 max_new_tokens=256,
                 repetition_penalty=1.1,

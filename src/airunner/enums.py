@@ -55,6 +55,8 @@ class SignalCode(Enum):
     NEW_DOCUMENT = "new_document_signal"
     OPEN_RESEARCH_DOCUMENT = "open_research_document_signal"
     UNLOCK_RESEARCH_DOCUMENT = "unlock_research_document_signal"
+    UPDATE_DOCUMENT_CONTENT = "update_document_content_signal"
+    STREAM_TO_DOCUMENT = "stream_to_document_signal"
     SAVE_STATE = "save_state_signal"
     RUN_SCRIPT = "run_script_signal"
     UPATE_LOCALE = "update_locale_signal"

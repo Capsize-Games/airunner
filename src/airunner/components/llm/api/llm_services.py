@@ -25,6 +25,7 @@ class LLMAPIService(APIServiceBase):
         node_id: Optional[str] = None,
         request_id: Optional[str] = None,
         callback: Optional[callable] = None,
+        conversation_id: Optional[int] = None,
         **kwargs,
     ):
         """Send an LLM generation request.
@@ -38,6 +39,7 @@ class LLMAPIService(APIServiceBase):
             node_id: Optional node identifier
             request_id: Optional unique request identifier for correlation
             callback: Optional callback function for responses
+            conversation_id: Optional conversation ID to associate with the request
         """
         # Use action-optimized defaults if no explicit request provided
         # Accept backwards-compatible extra kwargs such as 'system_prompt'
@@ -67,6 +69,8 @@ class LLMAPIService(APIServiceBase):
                 "do_tts_reply": do_tts_reply,
             },
         }
+        if conversation_id is not None:
+            data["conversation_id"] = conversation_id
         if node_id is not None:
             data["node_id"] = node_id
 

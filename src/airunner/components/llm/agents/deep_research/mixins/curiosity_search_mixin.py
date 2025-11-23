@@ -43,15 +43,7 @@ class CuriositySearchMixin:
             w for w in words if w and len(w) > 2 and w not in stopwords
         ]
 
-        # Add variations for proper nouns
-        extended_keywords = keywords.copy()
-        for kw in keywords:
-            if kw == "syria":
-                extended_keywords.extend(["syrian", "damascus"])
-            elif kw == "trump":
-                extended_keywords.extend(["donald", "president"])
-
-        return extended_keywords
+        return keywords
 
     def _read_notes_content(self, notes_path: str) -> str:
         """Read notes file content."""
