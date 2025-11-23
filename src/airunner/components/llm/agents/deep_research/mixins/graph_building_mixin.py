@@ -27,7 +27,7 @@ class GraphBuildingMixin:
 
         Removes meta-instructions and command words that shouldn't be
         treated as literal search terms. Prevents issues like treating
-        "Tell Me What is Going" as a platform name.
+        "Tell Me What is Going" as a platform name. Also fixes common typos.
 
         Args:
             user_prompt: Raw user input
@@ -36,6 +36,24 @@ class GraphBuildingMixin:
             Cleaned research topic suitable for searches
         """
         cleaned = user_prompt.strip()
+
+        # Fix common typos before processing
+        common_typos = {
+            r"\bhist\b": "his",
+            r"\bteh\b": "the",
+            r"\bfro\b": "for",
+            r"\badn\b": "and",
+            r"\btaht\b": "that",
+            r"\bwoudl\b": "would",
+            r"\bshoudl\b": "should",
+            r"\bcoudl\b": "could",
+        }
+
+        for typo_pattern, correction in common_typos.items():
+            cleaned = re.sub(
+                typo_pattern, correction, cleaned, flags=re.IGNORECASE
+            )
+
         lower = cleaned.lower()
 
         command_prefixes = [

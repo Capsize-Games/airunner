@@ -175,9 +175,9 @@ class WorkflowManager(
         # The class-level _checkpoint_state dict persists across instances
         # and must be cleared to prevent contamination from previous conversations
         if hasattr(self._memory, "clear_checkpoints"):
-            self._memory.clear_checkpoints()
+            self._memory.clear_checkpoints(clear_history=False)
             self.logger.info(
-                f"Cleared checkpoint state for conversation {conversation_id}"
+                f"Cleared checkpoint cache for conversation {conversation_id}"
             )
 
         self._build_and_compile_workflow()

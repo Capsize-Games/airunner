@@ -388,12 +388,20 @@ class WebContentExtractor:
             )
             return None
 
-        # Check cache first (only if we want summarized content - raw content changes)
-        if use_cache and summarize:
+        # Check cache first (metadata includes both raw and summarized)
+        if use_cache:
             cached_metadata = WebContentExtractor.get_cached_metadata(url)
             if cached_metadata:
-                logger.debug(f"Using cached metadata for {url}")
-                return cached_metadata
+                # If cache has the content type we need, return it
+                if summarize and "content" in cached_metadata:
+                    logger.debug(f"Using cached summarized metadata for {url}")
+                    return cached_metadata
+                elif not summarize and "raw_content" in cached_metadata:
+                    logger.debug(f"Using cached raw metadata for {url}")
+                    # Return with raw content as 'content'
+                    result = cached_metadata.copy()
+                    result["content"] = result.pop("raw_content")
+                    return result
 
         try:
             # Fetch raw HTML with browser-like headers to avoid blocking
@@ -430,12 +438,9 @@ class WebContentExtractor:
             # Extract metadata
             metadata = trafilatura.extract_metadata(html_content)
 
-            # Optionally summarize the text
-            content_text = (
-                WebContentExtractor._summarize_text(main_text)
-                if summarize
-                else main_text
-            )
+            # Store both raw and summarized content
+            summarized_text = WebContentExtractor._summarize_text(main_text)
+            content_text = summarized_text if summarize else main_text
 
             result = {
                 "content": content_text,
@@ -447,10 +452,17 @@ class WebContentExtractor:
                 ),
             }
 
-            # Cache the result for future use (only cache summarized)
-            if use_cache and summarize:
-                WebContentExtractor.set_metadata_cache(url, result)
-                logger.debug(f"Cached metadata for {url}")
+            # Cache both versions for future use
+            if use_cache:
+                cache_entry = result.copy()
+                cache_entry["raw_content"] = main_text  # Store raw for later
+                cache_entry["content"] = (
+                    summarized_text  # Default to summarized
+                )
+                WebContentExtractor.set_metadata_cache(url, cache_entry)
+                logger.debug(
+                    f"Cached both raw and summarized content for {url}"
+                )
 
             return result
 

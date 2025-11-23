@@ -33,7 +33,7 @@ def test_classifier():
         ("hi there", []),
         ("how are you?", []),
         (
-            "scrape joecurlee.com",
+            "scrape example.com",
             ["search"],
         ),  # search category contains web scraping tools
         ("fetch content from https://example.com", ["search"]),

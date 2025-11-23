@@ -6,10 +6,11 @@ from typing import Dict, Optional
 import os
 from PySide6.QtCore import QThread, QTimer
 
-from airunner.enums import ModelService
+from airunner.enums import ModelService, SignalCode, LLMActionType
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
+from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.workers.mixins import (
     RAGIndexingMixin,
@@ -61,7 +62,11 @@ class LLMGenerateWorker(
         self._last_request_time: Optional[float] = None
         self._inactivity_timer: Optional[QTimer] = None
         self._inactivity_timeout = 300  # 5 minutes in seconds
-        self._auto_unload_enabled = True  # Can be configured
+        # DISABLED: QTimer cannot be used in worker threads - causes Qt crash
+        # "QObject::killTimer: Timers cannot be stopped from another thread"
+        self._auto_unload_enabled = (
+            False  # Disabled to prevent Qt threading crash
+        )
 
         # Register download completion handler
         from airunner.enums import SignalCode
@@ -71,8 +76,8 @@ class LLMGenerateWorker(
             self.on_huggingface_download_complete_signal,
         )
 
-        # Start inactivity monitoring timer
-        self._start_inactivity_timer()
+        # Auto-unload timer is DISABLED - QTimer cannot work in worker threads
+        # self._start_inactivity_timer()
 
     @property
     def use_openrouter(self) -> bool:
@@ -484,6 +489,29 @@ class LLMGenerateWorker(
                     "Request completed successfully, clearing pending request"
                 )
                 self._pending_llm_request = None
+
+                # Get action from request
+                action = request_data.get("action", LLMActionType.CHAT)
+                if isinstance(action, str):
+                    try:
+                        action = LLMActionType(action)
+                    except ValueError:
+                        action = LLMActionType.CHAT
+
+                # Emit completion signal with the result
+                llm_response = LLMResponse(
+                    message=response_text,
+                    is_end_of_message=True,
+                    action=action,
+                    request_id=message.get("request_id"),
+                )
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    {"response": llm_response},
+                )
+                self.logger.info(
+                    f"Emitted completion signal with action {action} for request {message.get('request_id')}"
+                )
             else:
                 self.logger.info(
                     f"Request failed with error, keeping pending request for retry after download"

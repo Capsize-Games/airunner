@@ -407,9 +407,15 @@ class GenerationMixin:
             self.logger.info(
                 "Deep Research mode detected - routing to DeepResearchAgent"
             )
+
+            # CRITICAL: Do NOT pass system_prompt for deep research
+            # The DeepResearchAgent has its own clean, focused system prompt
+            # that excludes mood/personality/conversational instructions.
+            # Passing the workflow manager's conversational prompt causes
+            # contamination with mood instructions like "Current mood: neutral 😐"
             return self._handle_deep_research(
                 prompt=prompt,
-                system_prompt=system_prompt,
+                system_prompt=None,  # Let agent use its own default
                 llm_request=llm_request,
             )
 

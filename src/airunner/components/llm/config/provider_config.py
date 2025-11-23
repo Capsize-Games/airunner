@@ -62,7 +62,7 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": True,
             "tool_calling_mode": "json",  # Structured JSON output (Hermes-style compatible)
-            "context_length": 32768,
+            "context_length": 131072,  # 128K tokens (full context with YaRN scaling)
             "vram_2bit_gb": 4,
             "vram_4bit_gb": 7,
             "vram_8bit_gb": 14,

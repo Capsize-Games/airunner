@@ -5,7 +5,7 @@ Provides document formatting and enhancement methods for research documents.
 
 import re
 import logging
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +98,18 @@ REQUIREMENTS:
 Write the abstract now:"""
 
         try:
+            messages = [HumanMessage(content=prompt)]
+            system_prompt = (
+                self._get_synthesis_system_prompt()
+                if hasattr(self, "_get_synthesis_system_prompt")
+                else getattr(self, "_synthesis_system_prompt", None)
+            )
+            if not system_prompt:
+                system_prompt = getattr(self, "_system_prompt", None)
+            if system_prompt:
+                messages.insert(0, SystemMessage(content=system_prompt))
             response = self._base_model.invoke(
-                [HumanMessage(content=prompt)],
+                messages,
                 temperature=0.2,
                 max_new_tokens=512,
                 repetition_penalty=1.2,
@@ -131,11 +141,22 @@ Write the abstract now:"""
             return doc_content, revisions
 
         section_headers = re.findall(r"^## (.+)$", doc_content, re.MULTILINE)
-        sections = [
-            s
-            for s in section_headers
-            if s not in ["Abstract", "Table of Contents"]
-        ]
+
+        # Filter out duplicates while preserving order
+        seen_sections = set()
+        sections = []
+        for s in section_headers:
+            # Skip Abstract, TOC
+            if s in ["Abstract", "Table of Contents"]:
+                continue
+
+            # If we see "Sources" more than once, only include it once in TOC
+            if s == "Sources" and "Sources" in seen_sections:
+                continue
+
+            if s not in seen_sections:
+                sections.append(s)
+                seen_sections.add(s)
 
         if not sections:
             return doc_content, revisions
@@ -213,3 +234,87 @@ Write the abstract now:"""
             logger.info(f"[Phase 1F] Added source count to title")
 
         return doc_content, revisions
+
+    def _deduplicate_sections(self, doc_content: str) -> tuple[str, list]:
+        """Remove duplicate sections from document.
+
+        Args:
+            doc_content: Current document content
+
+        Returns:
+            Tuple of (updated_content, revisions_applied)
+        """
+        revisions = []
+
+        # Find all section headers
+        section_headers = list(
+            re.finditer(r"^## (.+)$", doc_content, re.MULTILINE)
+        )
+
+        if not section_headers:
+            return doc_content, revisions
+
+        seen_sections = set()
+        sections_to_remove = []
+
+        # Identify duplicates (keep the LAST occurrence as it's likely the most updated/corrected one)
+        # We iterate in reverse to easily identify which ones to keep
+        for match in reversed(section_headers):
+            section_name = match.group(1).strip()
+
+            if section_name in seen_sections:
+                # This is a duplicate (and since we're reversing, it's an earlier one)
+                # We should remove it
+                sections_to_remove.append(match)
+            else:
+                seen_sections.add(section_name)
+
+        if not sections_to_remove:
+            return doc_content, revisions
+
+        # Remove duplicates
+        # We need to be careful about ranges. Since we're modifying the string,
+        # it's safer to split by sections and rebuild, or use string replacement carefully.
+        # Given the structure, splitting by "## " might be safer.
+
+        parts = re.split(r"(^## .+)", doc_content, flags=re.MULTILINE)
+        # parts[0] is preamble (title etc)
+        # parts[1] is header 1, parts[2] is content 1
+        # parts[3] is header 2, parts[4] is content 2
+
+        new_parts = [parts[0]]
+        seen_headers = set()
+
+        # Process sections in reverse order to keep the last one
+        # But we need to reconstruct in forward order
+
+        # Let's collect all sections first
+        sections = []
+        for i in range(1, len(parts), 2):
+            header = parts[i]
+            content = parts[i + 1] if i + 1 < len(parts) else ""
+            sections.append((header, content))
+
+        # Filter duplicates (keeping last)
+        unique_sections = []
+        seen_headers_set = set()
+
+        for header, content in reversed(sections):
+            header_clean = header.replace("## ", "").strip()
+            if header_clean not in seen_headers_set:
+                unique_sections.insert(0, (header, content))
+                seen_headers_set.add(header_clean)
+            else:
+                revisions.append(f"Removed duplicate section: {header_clean}")
+
+        # Reconstruct document
+        new_content = new_parts[0]
+        for header, content in unique_sections:
+            new_content += header + content
+
+        if revisions:
+            logger.info(
+                f"[Phase 1F] Removed {len(revisions)} duplicate sections"
+            )
+
+        return new_content, revisions

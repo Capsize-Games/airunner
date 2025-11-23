@@ -40,6 +40,8 @@ class DocumentEditorContainerWidget(BaseWidget):
             SignalCode.NEW_DOCUMENT: self.handle_new_document_signal,
             SignalCode.OPEN_RESEARCH_DOCUMENT: self.handle_open_research_document,
             SignalCode.UNLOCK_RESEARCH_DOCUMENT: self.handle_unlock_research_document,
+            SignalCode.UPDATE_DOCUMENT_CONTENT: self.handle_update_document_content,
+            SignalCode.STREAM_TO_DOCUMENT: self.handle_stream_to_document,
         }
         super().__init__(*args, **kwargs)
         # Register a Ctrl+W shortcut at the container level so closing a
@@ -307,6 +309,121 @@ class DocumentEditorContainerWidget(BaseWidget):
                         return
                 except Exception:
                     pass
+
+    def handle_update_document_content(self, data: Dict) -> None:
+        """Update document content in memory without saving to disk.
+
+        This allows live updating of documents during research/generation.
+        The autosave mechanism will save to disk automatically.
+
+        Args:
+            data: Dict containing:
+                - path: str - File path of document to update
+                - content: str - New content to set (replaces current content)
+                - append: bool - If True, append instead of replace (default: False)
+        """
+        file_path = data.get("path")
+        content = data.get("content", "")
+        append = data.get("append", False)
+
+        if not file_path:
+            return
+
+        # Normalize path
+        try:
+            target = os.path.abspath(file_path)
+        except Exception:
+            target = file_path
+
+        # Find the editor tab
+        for i in range(self.ui.documents.count()):
+            w = self.ui.documents.widget(i)
+            candidate = None
+            if hasattr(w, "file_path") and callable(getattr(w, "file_path")):
+                try:
+                    candidate = w.file_path()
+                except Exception:
+                    candidate = None
+            else:
+                candidate = getattr(w, "current_file_path", None) or getattr(
+                    w, "file_path", None
+                )
+
+            if candidate:
+                try:
+                    if os.path.abspath(candidate) == target:
+                        # Update the editor content
+                        editor = getattr(w, "editor", w)
+                        if hasattr(editor, "toPlainText"):
+                            if append:
+                                # Append to existing content
+                                current = editor.toPlainText()
+                                editor.setPlainText(current + content)
+                            else:
+                                # Replace content
+                                editor.setPlainText(content)
+                        return
+                except Exception as e:
+                    self.logger.exception(
+                        f"Failed to update document content: {e}"
+                    )
+
+    def handle_stream_to_document(self, data: Dict) -> None:
+        """Stream content to document (append text chunk by chunk).
+
+        This is used for streaming LLM responses directly to research documents.
+
+        Args:
+            data: Dict containing:
+                - path: str - File path of document to stream to
+                - chunk: str - Text chunk to append
+        """
+        file_path = data.get("path")
+        chunk = data.get("chunk", "")
+
+        if not file_path or not chunk:
+            return
+
+        # Normalize path
+        try:
+            target = os.path.abspath(file_path)
+        except Exception:
+            target = file_path
+
+        # Find the editor tab
+        for i in range(self.ui.documents.count()):
+            w = self.ui.documents.widget(i)
+            candidate = None
+            if hasattr(w, "file_path") and callable(getattr(w, "file_path")):
+                try:
+                    candidate = w.file_path()
+                except Exception:
+                    candidate = None
+            else:
+                candidate = getattr(w, "current_file_path", None) or getattr(
+                    w, "file_path", None
+                )
+
+            if candidate:
+                try:
+                    if os.path.abspath(candidate) == target:
+                        # Append chunk to editor
+                        editor = getattr(w, "editor", w)
+                        if hasattr(editor, "insertPlainText"):
+                            # Move cursor to end and insert
+                            cursor = editor.textCursor()
+                            cursor.movePosition(cursor.End)
+                            editor.setTextCursor(cursor)
+                            editor.insertPlainText(chunk)
+                        elif hasattr(editor, "toPlainText") and hasattr(
+                            editor, "setPlainText"
+                        ):
+                            # Fallback: append via get+set
+                            current = editor.toPlainText()
+                            editor.setPlainText(current + chunk)
+                        return
+                except Exception as e:
+                    self.logger.exception(f"Failed to stream to document: {e}")
 
     def _append_process_output(self, process: QProcess) -> None:
         data = process.readAllStandardOutput().data().decode("utf-8")
