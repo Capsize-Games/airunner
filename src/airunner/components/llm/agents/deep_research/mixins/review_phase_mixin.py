@@ -3,9 +3,11 @@
 Handles Phase 1E and 1F: reviewing document quality, applying corrections, and finalizing.
 """
 
+import math
 import os
 import re
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import TypedDict
 from datetime import datetime
@@ -15,6 +17,34 @@ from airunner.components.llm.tools.research_document_tools import (
 )
 
 logger = logging.getLogger(__name__)
+
+STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "this",
+    "to",
+    "with",
+    "was",
+    "were",
+    "which",
+    "will",
+}
 
 
 class DeepResearchState(TypedDict):
@@ -124,6 +154,19 @@ class ReviewPhaseMixin:
 
         # Fact-check (systematic chunk-by-chunk review)
         review_notes.extend(self._fact_check_systematic(doc_content, thesis))
+
+        # Detect leaked instruction text or prompt artifacts
+        review_notes.extend(self._check_instruction_artifacts(doc_content))
+
+        # Analyze repetition and readability for each section
+        review_notes.extend(self._analyze_word_repetition(doc_content))
+        review_notes.extend(self._evaluate_readability(doc_content))
+        review_notes.extend(self._detect_section_overlap(doc_content))
+
+        # Verify named officials/titles against notes to prevent hallucinated roles
+        review_notes.extend(
+            self._check_titles_against_notes(doc_content, notes_path)
+        )
 
         return review_notes
 
@@ -306,6 +349,276 @@ class ReviewPhaseMixin:
                 review_notes.extend(citation_warnings)
 
         return review_notes
+
+    def _check_instruction_artifacts(self, doc_content: str) -> list:
+        """Detect stray instruction text that should never appear in final prose."""
+
+        issues = []
+        instruction_patterns = [
+            r"Use the present tense when",
+            r"Use the past tense when",
+            r"Use the future tense when",
+            r"Use the present perfect tense",
+            r"Use the past perfect tense",
+            r"Use the present continuous tense",
+            r"Use the past continuous tense",
+            r"Use the subjunctive",
+            r"DISAMBIGUATE",
+            r"CRITICAL:\s+DISAMBIGUATE",
+            r"Please revise the given text",
+            r"Please revise the text",
+            r"Here is the requested section",
+            r"next section",
+            r"timeline is unclear",
+        ]
+
+        for pattern in instruction_patterns:
+            match = re.search(pattern, doc_content, re.IGNORECASE)
+            if match:
+                snippet = doc_content[match.start() : match.start() + 120]
+                issues.append(
+                    f"INSTRUCTION ARTIFACT: Found prompt text leaking into prose ('{snippet.strip()}')."
+                )
+
+        # Detect bullet blocks of instructions (3 or more consecutive '- Use ...' lines)
+        bullet_pattern = re.compile(
+            r"(?:^|\n)(?:[A-Z][^\n]*?:)?\s*(?:-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain)[^\n]*\n){3,}",
+            re.IGNORECASE,
+        )
+        for match in bullet_pattern.finditer(doc_content):
+            snippet = (
+                doc_content[match.start() : match.end()]
+                .strip()
+                .split("\n")[:3]
+            )
+            issues.append(
+                f"INSTRUCTION ARTIFACT: Remove instructional bullet list starting with '{' '.join(snippet)}'."
+            )
+
+        return issues
+
+    def _detect_section_overlap(self, doc_content: str) -> list:
+        """Detect sections that substantially duplicate one another."""
+
+        issues = []
+        section_pattern = re.compile(r"## (.+?)\n(.*?)(?=\n##|\Z)", re.DOTALL)
+        parsed_sections = []
+
+        for match in section_pattern.finditer(doc_content):
+            section_name = match.group(1).strip()
+            section_text = match.group(2)
+            tokens = re.findall(r"[A-Za-z']+", section_text.lower())
+            filtered = [
+                tok for tok in tokens if tok not in STOPWORDS and len(tok) > 3
+            ]
+
+            if len(filtered) < 120:
+                continue
+
+            vector = Counter(filtered)
+            norm = math.sqrt(sum(count * count for count in vector.values()))
+            if norm == 0:
+                continue
+
+            parsed_sections.append(
+                {
+                    "name": section_name,
+                    "vector": vector,
+                    "norm": norm,
+                }
+            )
+
+        for idx, current in enumerate(parsed_sections):
+            for other in parsed_sections[idx + 1 :]:
+                dot = sum(
+                    current["vector"].get(word, 0)
+                    * other["vector"].get(word, 0)
+                    for word in current["vector"]
+                )
+                similarity = dot / (current["norm"] * other["norm"])
+
+                if similarity >= 0.78:
+                    issues.append(
+                        "STRUCTURE ISSUE: Sections "
+                        f"'{current['name']}' and '{other['name']}' overlap heavily "
+                        f"(similarity {similarity:.0%}). Merge them or assign distinct angles."
+                    )
+
+        return issues
+
+    def _analyze_word_repetition(self, doc_content: str) -> list:
+        """Identify sections where a single word dominates, suggesting repetitive prose."""
+
+        issues = []
+        section_pattern = re.compile(r"## (.+?)\n(.*?)(?=\n##|\Z)", re.DOTALL)
+
+        for match in section_pattern.finditer(doc_content):
+            section_name = match.group(1).strip()
+            section_text = match.group(2)
+            words = re.findall(r"[A-Za-z']+", section_text.lower())
+            filtered = [w for w in words if w not in STOPWORDS and len(w) > 3]
+
+            if len(filtered) < 80:  # skip short sections
+                continue
+
+            freq = Counter(filtered)
+            top_word, count = freq.most_common(1)[0]
+            ratio = count / len(filtered)
+
+            if count >= 8 and ratio >= 0.08:
+                issues.append(
+                    f"WRITING QUALITY: '{section_name}' repeats '{top_word}' {count} times ({ratio:.0%} of meaningful words). Consider varying language."
+                )
+
+        return issues
+
+    def _evaluate_readability(self, doc_content: str) -> list:
+        """Compute readability heuristics to flag dense or overly complex sections."""
+
+        issues = []
+        section_pattern = re.compile(r"## (.+?)\n(.*?)(?=\n##|\Z)", re.DOTALL)
+
+        for match in section_pattern.finditer(doc_content):
+            section_name = match.group(1).strip()
+            section_text = match.group(2).strip()
+            if len(section_text.split()) < 120:  # skip short blocks
+                continue
+
+            score = self._calculate_flesch_reading_ease(section_text)
+            if score is None:
+                continue
+
+            if score < 20:
+                issues.append(
+                    f"WRITING QUALITY: '{section_name}' readability score {score:.1f} (very dense). Consider simplifying sentences."
+                )
+            elif score > 80:
+                issues.append(
+                    f"WRITING QUALITY: '{section_name}' readability score {score:.1f} (overly simple for research tone). Consider enriching detail."
+                )
+
+        return issues
+
+    def _calculate_flesch_reading_ease(self, text: str) -> float | None:
+        """Compute Flesch Reading Ease using lightweight heuristics."""
+
+        sentences = re.split(r"[.!?]+", text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if not sentences:
+            return None
+
+        words = re.findall(r"[A-Za-z']+", text)
+        if not words:
+            return None
+
+        syllables = sum(self._estimate_syllables(w) for w in words)
+
+        sentence_count = max(len(sentences), 1)
+        word_count = max(len(words), 1)
+        syllable_count = max(syllables, 1)
+
+        asl = word_count / sentence_count
+        asw = syllable_count / word_count
+
+        return 206.835 - (1.015 * asl) - (84.6 * asw)
+
+    @staticmethod
+    def _estimate_syllables(word: str) -> int:
+        """Very rough syllable estimate for readability metrics."""
+
+        word = word.lower()
+        if len(word) <= 3:
+            return 1
+
+        vowels = "aeiouy"
+        syllables = 0
+        prev_char_was_vowel = False
+
+        for char in word:
+            is_vowel = char in vowels
+            if is_vowel and not prev_char_was_vowel:
+                syllables += 1
+            prev_char_was_vowel = is_vowel
+
+        if word.endswith("e") and syllables > 1:
+            syllables -= 1
+
+        if syllables == 0:
+            syllables = 1
+
+        return syllables
+
+    def _check_titles_against_notes(
+        self, doc_content: str, notes_path: str
+    ) -> list:
+        """Ensure people+title pairs in the document exist within the research notes."""
+
+        if not notes_path or not os.path.exists(notes_path):
+            return []
+
+        try:
+            notes_content = Path(notes_path).read_text(encoding="utf-8")
+        except Exception as exc:
+            logger.warning(
+                f"[Phase 1E] Could not read notes for title verification: {exc}"
+            )
+            return []
+
+        doc_excerpt = doc_content[:8000]
+        notes_excerpt = notes_content[:8000]
+
+        prompt = f"""You are verifying that every person referenced with a FORMAL TITLE in the research document is supported by the research notes. Titles include roles such as President, Vice President, Governor, Secretary, Attorney General, Senator, Representative, Chair, Director, etc.
+
+Rules:
+- Use ONLY the research notes as ground truth. Ignore any prior knowledge, world knowledge, or assumptions about current office holders.
+- If the notes describe a person with a different title than the document, flag it as a mismatch.
+- If the document assigns a title to someone who never appears in the notes, flag it as unsupported.
+- If the document omits a title that is required for clarity, DO NOT flag it.
+- Output each issue on its own line using the format: ROLE ISSUE: <short description>.
+- If everything is supported, respond with: No unsupported titles found.
+
+RESEARCH NOTES (ground truth, truncated to 8000 chars):
+{notes_excerpt}
+
+DOCUMENT EXCERPT (first 8000 chars):
+{doc_excerpt}
+
+Identify unsupported or conflicting title assignments:"""
+
+        try:
+            from langchain_core.messages import HumanMessage
+
+            response = self._base_model.invoke(
+                [HumanMessage(content=prompt)],
+                temperature=0.1,
+                max_new_tokens=512,
+            )
+        except Exception as exc:
+            logger.error(
+                f"[Phase 1E] Failed to run title verification check: {exc}"
+            )
+            return []
+
+        if not getattr(response, "content", "").strip():
+            return []
+
+        result = response.content.strip()
+        if "no unsupported" in result.lower():
+            return []
+
+        issues = []
+        for line in result.split("\n"):
+            clean_line = line.strip().lstrip("- ")
+            if not clean_line:
+                continue
+            issues.append(f"ROLE ISSUE: {clean_line}")
+
+        if issues:
+            logger.warning(
+                f"[Phase 1E] Title verification found {len(issues)} potential issue(s)"
+            )
+
+        return issues[:8]
 
     def _validate_citations_against_notes(
         self, source_urls: set, notes_path: str
