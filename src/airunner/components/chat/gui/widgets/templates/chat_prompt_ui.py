@@ -16,9 +16,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
-    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSplitter, QTabWidget,
-    QWidget)
+    QLabel, QPlainTextEdit, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
+    QTabWidget, QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
 from airunner.components.llm.gui.widgets.llm_history_widget import LLMHistoryWidget
@@ -137,7 +137,12 @@ class Ui_chat_prompt(object):
         self.prompt.setMinimumSize(QSize(0, 150))
         self.prompt.setMaximumSize(QSize(16777215, 16777215))
 
-        self.gridLayout.addWidget(self.prompt, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.prompt, 1, 0, 1, 1)
+
+        self.token_count = QLabel(self.prompt_container)
+        self.token_count.setObjectName(u"token_count")
+
+        self.gridLayout.addWidget(self.token_count, 0, 0, 1, 1)
 
         self.splitter.addWidget(self.prompt_container)
 
@@ -266,6 +271,7 @@ class Ui_chat_prompt(object):
         self.settings_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Settings", None))
 #endif // QT_CONFIG(tooltip)
         self.settings_button.setText("")
+        self.token_count.setText(QCoreApplication.translate("chat_prompt", u"TextLabel", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("chat_prompt", u"Tab 1", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("chat_prompt", u"Tab 2", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("chat_prompt", u"Page", None))

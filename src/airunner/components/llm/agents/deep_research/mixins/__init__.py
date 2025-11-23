@@ -4,6 +4,7 @@ from .content_validation_mixin import ContentValidationMixin
 from .content_parsing_mixin import ContentParsingMixin
 from .content_extraction_mixin import ContentExtractionMixin
 from .result_ranking_mixin import ResultRankingMixin
+from .output_cleaning_mixin import OutputCleaningMixin
 from .section_synthesis_mixin import SectionSynthesisMixin
 from .planning_phase_mixin import PlanningPhaseMixin
 from .search_gather_mixin import SearchGatherMixin
@@ -25,6 +26,7 @@ __all__ = [
     "ContentParsingMixin",
     "ContentExtractionMixin",
     "ResultRankingMixin",
+    "OutputCleaningMixin",
     "SectionSynthesisMixin",
     "PlanningPhaseMixin",
     "SearchGatherMixin",

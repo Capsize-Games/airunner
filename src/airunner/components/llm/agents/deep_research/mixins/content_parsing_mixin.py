@@ -35,7 +35,12 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
             "curiosity_topics": [],
         }
 
-        source_sections = re.split(r"\n(?=###\s+https?://)", notes_content)
+        notes_body = (
+            notes_content.split("## Notes", 1)[1]
+            if "## Notes" in notes_content
+            else notes_content
+        )
+        source_sections = self._split_source_sections(notes_body)
 
         for section in source_sections:
             if not section.strip():
@@ -59,6 +64,28 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
         parsed["top_themes"] = self._get_top_themes(parsed["themes"])
         return parsed
 
+    def _split_source_sections(self, notes_body: str) -> list[str]:
+        """Split notes into per-source sections regardless of header format."""
+
+        if not notes_body:
+            return []
+
+        pattern = re.compile(r"(###\s+.+?)(?=\n###\s+|\Z)", re.DOTALL)
+        sections = []
+
+        for match in pattern.finditer(notes_body):
+            block = match.group(1).strip()
+            if not block:
+                continue
+            if "http" not in block.lower():
+                continue
+            sections.append(block)
+
+        if not sections and notes_body.strip():
+            sections.append(notes_body.strip())
+
+        return sections
+
     def _parse_single_source(self, section: str) -> dict:
         """Parse a single source section."""
         curiosity_match = re.search(
@@ -81,15 +108,46 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
 
     def _extract_url(self, section: str) -> str:
         """Extract URL from section."""
+        # Try markdown link format first: [text](url)
+        url_match = re.search(r"\[.+?\]\((https?://[^\)]+)\)", section)
+        if url_match:
+            return url_match.group(1)
+
+        # Try direct URL in header: ### https://...
         url_match = re.search(r"###\s+(https?://\S+)", section)
-        if not url_match:
-            url_match = re.search(r"URL:\s+(https?://\S+)", section)
+        if url_match:
+            return url_match.group(1)
+
+        # Try "URL:" label
+        url_match = re.search(r"URL:\s+(https?://\S+)", section)
+        if url_match:
+            return url_match.group(1)
+
+        # Last resort: any URL in the section
+        url_match = re.search(r"(https?://\S+)", section)
         return url_match.group(1) if url_match else "Unknown"
 
     def _extract_title(self, section: str) -> str:
         """Extract title from section."""
+        # Try "Title:" label first
         title_match = re.search(r"Title:\s+(.+?)(?:\n|$)", section)
-        return title_match.group(1).strip() if title_match else None
+        if title_match:
+            return title_match.group(1).strip()
+
+        # Try extracting from ### header (everything before URL in brackets)
+        header_match = re.search(r"###\s+(.+?)\s+\[", section)
+        if header_match:
+            return header_match.group(1).strip()
+
+        # Try just the ### line
+        header_match = re.search(r"###\s+(.+?)(?:\n|$)", section)
+        if header_match:
+            # Clean up any remaining markdown link syntax
+            title = header_match.group(1).strip()
+            title = re.sub(r"\[.+?\]\(.+?\)", "", title).strip()
+            return title if title else None
+
+        return None
 
     def _extract_content(self, section: str) -> str:
         """Extract content from section."""
@@ -223,6 +281,9 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
             title = source.get("title") or self._get_domain_name(url)
 
             sources_list.append(f"- [{title}]({url})")
+
+        if not sources_list:
+            return "## Sources\n\nNo sources available."
 
         sources_text = "\n".join(sources_list)
         return f"## Sources\n\n{sources_text}"

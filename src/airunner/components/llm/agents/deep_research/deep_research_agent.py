@@ -22,6 +22,7 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.llm.agents.deep_research.mixins import (
     ContentValidationMixin,
     ContentParsingMixin,
+    OutputCleaningMixin,
     SectionSynthesisMixin,
     PlanningPhaseMixin,
     SearchGatherMixin,
@@ -61,11 +62,14 @@ class DeepResearchState(TypedDict):
         outline: Document outline structure
         document_path: Path where final document will be saved
         rag_loaded: Whether RAG documents have been loaded
+        notes_rag_loaded: Whether research notes have been loaded into RAG
         sources_scraped: Number of sources scraped
         scraped_urls: List of URLs already scraped (prevents duplicates)
         sections_written: List of section names written
         thesis_statement: Central thesis/argument for the paper
         previous_sections: Dict mapping section names to their content
+        review_notes: List of quality/fact-check issues found in Phase 1E
+        revisions_applied: List of revisions applied in Phase 1F
         error: Error message if research failed (e.g., no sources found)
     """
 
@@ -79,11 +83,14 @@ class DeepResearchState(TypedDict):
     outline: NotRequired[str]
     document_path: NotRequired[str]
     rag_loaded: NotRequired[bool]
+    notes_rag_loaded: NotRequired[bool]
     sources_scraped: NotRequired[int]
     scraped_urls: NotRequired[List[str]]
     sections_written: NotRequired[List[str]]
     thesis_statement: NotRequired[str]
     previous_sections: NotRequired[Dict[str, str]]
+    review_notes: NotRequired[List[str]]
+    revisions_applied: NotRequired[List[str]]
     error: NotRequired[str]
 
 
@@ -92,6 +99,7 @@ class DeepResearchAgent(
     ResearchSummaryMixin,
     ContentValidationMixin,
     ContentParsingMixin,
+    OutputCleaningMixin,  # NEW: Clean LLM outputs
     SectionSynthesisMixin,
     PlanningPhaseMixin,
     SearchGatherMixin,
@@ -122,6 +130,7 @@ class DeepResearchAgent(
         chat_model: Any,
         research_path: str,
         system_prompt: str = None,
+        synthesis_system_prompt: Optional[str] = None,
         api: Any = None,
     ):
         """
@@ -139,6 +148,9 @@ class DeepResearchAgent(
         self._research_path = Path(research_path)
         self._research_path.mkdir(parents=True, exist_ok=True)
         self._system_prompt = system_prompt or self._default_system_prompt()
+        self._synthesis_system_prompt = (
+            synthesis_system_prompt or self._default_synthesis_system_prompt()
+        )
         self._api = api
         self._tools = self._get_research_tools()
 
@@ -204,3 +216,17 @@ IMPORTANT INSTRUCTIONS:
         return """You are a research AI assistant. You complete tasks by calling the available tools.
 
 IMPORTANT: Respond ONLY with tool calls. Do not include any explanatory text."""
+
+    def _default_synthesis_system_prompt(self) -> str:
+        """Get the default system prompt for prose-oriented generations."""
+        return (
+            "You are a meticulous research writer. Produce polished, factual sections in plain Markdown, "
+            "drawing only from the provided context. Do not describe tool calls or output JSON—respond with "
+            "fluent paragraphs that read like a finished report."
+        )
+
+    def _get_synthesis_system_prompt(self) -> Optional[str]:
+        """Return the system prompt to use for prose synthesis tasks."""
+        return getattr(self, "_synthesis_system_prompt", None) or getattr(
+            self, "_system_prompt", None
+        )

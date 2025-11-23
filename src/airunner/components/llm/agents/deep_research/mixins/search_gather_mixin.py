@@ -11,6 +11,7 @@ import re
 import math
 from datetime import datetime
 from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from airunner.components.llm.tools.research_document_tools import (
     create_research_document,
@@ -392,49 +393,152 @@ Return only one of these words (lowercase) and nothing else."""
         already_scraped: set,
         topic: str,
     ) -> int:
-        """Scrape filtered sources and append LLM-extracted facts to notes."""
-        scraped_count = 0
+        """Scrape filtered sources in parallel and append LLM-extracted facts to notes."""
+        # Prepare URLs to scrape
+        urls_to_scrape = []
+        items_by_url = {}
 
         for item in filtered:
-            if scraped_count >= max_sources:
+            if len(urls_to_scrape) >= max_sources:
                 break
-
             url = item.get("link") or item.get("url")
-            if not url or url in already_scraped:
-                continue
+            if url and url not in already_scraped:
+                urls_to_scrape.append(url)
+                items_by_url[url] = item
 
-            if self._scrape_single_source(
-                url, item, notes_path, topic, already_scraped
-            ):
-                scraped_count += 1
-                self._emit_progress(
-                    "Phase 1A",
-                    f"Scraped {scraped_count}/{max_sources} sources",
+        if not urls_to_scrape:
+            return 0
+
+        logger.info(
+            f"[Phase 1A] Scraping {len(urls_to_scrape)} URLs in parallel (max_workers=5)"
+        )
+
+        # PHASE 1: Parallel scraping - collect all raw content
+        scraped_data = []
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            # Submit all scraping tasks
+            future_to_url = {
+                executor.submit(
+                    self._scrape_content_only,
+                    url,
+                    items_by_url[url],
+                    topic,
+                ): url
+                for url in urls_to_scrape
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_url):
+                url = future_to_url[future]
+                try:
+                    scrape_result = future.result()
+                    if scrape_result:
+                        scraped_data.append(scrape_result)
+                        self._emit_progress(
+                            "Phase 1A",
+                            f"Scraped {len(scraped_data)}/{len(urls_to_scrape)} sources",
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"[Phase 1A] Scraping future failed for {url}: {e}"
+                    )
+
+        if not scraped_data:
+            logger.warning("[Phase 1A] No content scraped successfully")
+            return 0
+
+        # PHASE 2: Individual LLM extraction - process each source separately for better quality
+        self._emit_progress(
+            "Phase 1A", "Extracting facts from scraped content..."
+        )
+
+        extracted_notes = []
+        for idx, item in enumerate(scraped_data, 1):
+            logger.info(
+                f"[Phase 1A] Extracting facts from source {idx}/{len(scraped_data)}: {item['title']}"
+            )
+            try:
+                facts = self._extract_facts_with_llm(
+                    item["content"],
+                    topic,
+                    item["url"],
+                    item["title"],
+                    item["metadata"],
+                )
+                if facts:
+                    extracted_notes.append(
+                        {
+                            "url": item["url"],
+                            "title": item["title"],
+                            "facts": facts,
+                            "metadata": item["metadata"],
+                        }
+                    )
+                    self._emit_progress(
+                        "Phase 1A",
+                        f"Extracted facts from {len(extracted_notes)}/{len(scraped_data)} sources",
+                    )
+                else:
+                    logger.info(
+                        f"[Phase 1A] No relevant facts found in {item['url']}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"[Phase 1A] Extraction failed for {item['url']}: {e}"
                 )
 
+        if not extracted_notes:
+            logger.warning(
+                "[Phase 1A] No facts extracted from scraped content"
+            )
+            return 0
+
+        # PHASE 3: Write all notes at once
+        logger.info(
+            f"[Phase 1A] Writing {len(extracted_notes)} notes to {notes_path}"
+        )
+        scraped_count = 0
+        for note_data in extracted_notes:
+            try:
+                self._save_structured_note(
+                    notes_path,
+                    note_data["title"],
+                    note_data["url"],
+                    note_data["facts"],
+                    note_data["metadata"],
+                )
+                already_scraped.add(note_data["url"])
+                scraped_count += 1
+            except Exception as e:
+                logger.error(
+                    f"[Phase 1A] Failed to save note for {note_data['url']}: {e}"
+                )
+
+        logger.info(
+            f"[Phase 1A] Processing completed: {scraped_count} notes saved"
+        )
         return scraped_count
 
-    def _scrape_single_source(
-        self,
-        url: str,
-        item: dict,
-        notes_path: str,
-        topic: str,
-        already_scraped: set,
-    ) -> bool:
-        """Scrape a single source and append to notes.
+    def _scrape_content_only(
+        self, url: str, item: dict, topic: str
+    ) -> dict | None:
+        """Scrape a single URL and return raw content without LLM extraction.
+
+        Args:
+            url: URL to scrape
+            item: Search result item with metadata
+            topic: Research topic for validation
 
         Returns:
-            True if successfully scraped and added
+            Dict with scraped content and metadata, or None if scraping failed
         """
         try:
-
             result = WebContentExtractor.fetch_and_extract_with_metadata_raw(
                 url, use_cache=True, summarize=False
             )
 
             if not self._validate_scrape_result(result, url):
-                return False
+                return None
 
             raw_content = result["content"]
             page_title = result.get("title") or item.get("title", "")
@@ -443,39 +547,196 @@ Return only one of these words (lowercase) and nothing else."""
             # Validate content
             if self._is_structured_data(raw_content):
                 logger.info(f"[Phase 1A] Skipping structured data from {url}")
-                return False
+                return None
 
             if not self._is_content_quality_acceptable(raw_content):
                 logger.warning(f"[Phase 1A] Content quality too low for {url}")
                 WebContentExtractor._add_to_blocklist(url)
-                return False
+                return None
 
-            # Check cross-reference for person research (LLM-based validation)
+            # Check cross-reference (LLM validation)
             if not self._check_cross_reference_llm(raw_content, topic, url):
                 logger.info(
-                    f"[Phase 1A] No cross-reference to '{topic}' in {url} - likely unrelated"
+                    f"[Phase 1A] No cross-reference to '{topic}' in {url}"
                 )
-                return False
+                return None
 
-            # Extract facts
-            extracted_facts = self._extract_facts_with_llm(
-                raw_content, topic, url, page_title, metadata
-            )
-
-            if not extracted_facts:
-                logger.info(f"[Phase 1A] No relevant facts in {url}")
-                return False
-
-            # Save note
-            self._save_structured_note(
-                notes_path, page_title, url, extracted_facts, metadata
-            )
-            already_scraped.add(url)
-            return True
+            # Return raw data for batch processing
+            return {
+                "url": url,
+                "title": page_title,
+                "content": raw_content,
+                "metadata": metadata,
+            }
 
         except Exception as e:
             logger.warning(f"[Phase 1A] Scrape failed for {url}: {e}")
-            return False
+            return None
+
+    def _batch_extract_facts(self, scraped_data: list, topic: str) -> list:
+        """Extract facts from multiple sources using batched LLM calls.
+
+        Args:
+            scraped_data: List of dicts with url, title, content, metadata
+            topic: Research topic
+
+        Returns:
+            List of dicts with url, title, facts, metadata
+        """
+        extracted_notes = []
+        batch_size = 3  # Process 3 sources per LLM call
+
+        for batch_idx in range(0, len(scraped_data), batch_size):
+            batch = scraped_data[batch_idx : batch_idx + batch_size]
+            logger.info(
+                f"[Phase 1A] Batch extracting facts from sources {batch_idx+1}-{batch_idx+len(batch)}"
+            )
+
+            try:
+                # Build batch prompt with multiple sources
+                batch_results = self._extract_facts_batch(batch, topic)
+                extracted_notes.extend(batch_results)
+
+            except Exception as e:
+                logger.error(f"[Phase 1A] Batch extraction failed: {e}")
+                # Fall back to individual extraction for this batch
+                for item in batch:
+                    try:
+                        facts = self._extract_facts_with_llm(
+                            item["content"],
+                            topic,
+                            item["url"],
+                            item["title"],
+                            item["metadata"],
+                        )
+                        if facts:
+                            extracted_notes.append(
+                                {
+                                    "url": item["url"],
+                                    "title": item["title"],
+                                    "facts": facts,
+                                    "metadata": item["metadata"],
+                                }
+                            )
+                    except Exception as e2:
+                        logger.error(
+                            f"[Phase 1A] Individual extraction failed for {item['url']}: {e2}"
+                        )
+
+        return extracted_notes
+
+    def _extract_facts_batch(self, batch: list, topic: str) -> list:
+        """Extract facts from multiple sources in a single LLM call.
+
+        Args:
+            batch: List of 2-3 dicts with url, title, content, metadata
+            topic: Research topic
+
+        Returns:
+            List of dicts with extracted facts for each source
+        """
+        from langchain_core.messages import HumanMessage
+
+        # Build combined prompt
+        sources_text = ""
+        for i, item in enumerate(batch, 1):
+            content_sample = item["content"][
+                :8000
+            ]  # Increased from 4000 to capture more detail
+            sources_text += f"""
+### SOURCE {i}
+Title: {item['title']}
+URL: {item['url']}
+Content:
+{content_sample}
+
+"""
+
+        prompt = f"""Extract comprehensive, detailed facts from these {len(batch)} sources about: "{topic}"
+
+{sources_text}
+
+For EACH source, extract ALL relevant information including:
+- Key facts, claims, and statements
+- Statistics, data points, and numbers
+- Quotes from officials or experts (with attribution)
+- Policy details, plans, and proposals
+- Dates, timelines, and context
+- Opposing viewpoints and criticisms
+- Background information and explanations
+
+Be thorough and detailed. Format as bullet points:
+
+SOURCE 1:
+- [detailed fact 1]
+- [detailed fact 2]
+- [detailed fact 3]
+[... continue with ALL relevant facts ...]
+
+SOURCE 2:
+- [detailed fact 1]
+- [detailed fact 2]
+[... continue with ALL relevant facts ...]
+
+If a source has NO relevant facts, write "SOURCE N: No relevant facts."
+
+Extract ALL relevant facts in detail now:"""
+
+        try:
+            response = self._base_model.invoke([HumanMessage(content=prompt)])
+            result_text = response.content.strip()
+
+            logger.info(
+                f"[Phase 1A] Batch LLM response length: {len(result_text)} chars"
+            )
+            logger.debug(
+                f"[Phase 1A] First 500 chars of response: {result_text[:500]}"
+            )
+
+            # Parse results by source
+            results = []
+            source_pattern = r"SOURCE (\d+):\s*\n(.*?)(?=\nSOURCE \d+:|$)"
+            import re
+
+            matches = re.findall(source_pattern, result_text, re.DOTALL)
+
+            logger.info(
+                f"[Phase 1A] Regex found {len(matches)} source matches in batch response"
+            )
+
+            for source_num_str, facts_text in matches:
+                source_idx = int(source_num_str) - 1
+                if 0 <= source_idx < len(batch):
+                    facts = facts_text.strip()
+                    if facts and "no relevant facts" not in facts.lower():
+                        logger.info(
+                            f"[Phase 1A] Extracted {len(facts)} chars from SOURCE {source_num_str}"
+                        )
+                        results.append(
+                            {
+                                "url": batch[source_idx]["url"],
+                                "title": batch[source_idx]["title"],
+                                "facts": facts,
+                                "metadata": batch[source_idx]["metadata"],
+                            }
+                        )
+                    else:
+                        logger.info(
+                            f"[Phase 1A] SOURCE {source_num_str} marked as no relevant facts"
+                        )
+                else:
+                    logger.warning(
+                        f"[Phase 1A] SOURCE {source_num_str} index out of range (batch size: {len(batch)})"
+                    )
+
+            logger.info(
+                f"[Phase 1A] Batch extracted facts from {len(results)}/{len(batch)} sources"
+            )
+            return results
+
+        except Exception as e:
+            logger.error(f"[Phase 1A] Batch LLM extraction failed: {e}")
+            raise
 
     def _validate_scrape_result(self, result: dict, url: str) -> bool:
         """Validate scraping result."""

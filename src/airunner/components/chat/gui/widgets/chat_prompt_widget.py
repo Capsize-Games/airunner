@@ -1,8 +1,10 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QTextCursor
+
+from langchain_core.messages.utils import count_tokens_approximately
 
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
@@ -13,6 +15,7 @@ from airunner.enums import (
     LLMActionType,
     ModelType,
     ModelStatus,
+    ModelService,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.conversations.conversation_history_manager import (
@@ -28,6 +31,7 @@ from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
     SLASH_COMMANDS,
 )
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 
 
 class ChatPromptWidget(BaseWidget):
@@ -47,6 +51,8 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_text_generate_request_signal,
+            SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
         }
         self._splitters = ["chat_prompt_splitter"]
         self._default_splitter_settings_applied = False
@@ -68,6 +74,7 @@ class ChatPromptWidget(BaseWidget):
         self.chat_loaded = False
         self.ui.action.blockSignals(True)
         self.ui.action.clear()
+        self._model_context_tokens: Optional[int] = None
         # Put Chat first as the default for simple conversations (no tools)
         # Users can select Auto for tool access when needed
         action_map = [
@@ -103,6 +110,9 @@ class ChatPromptWidget(BaseWidget):
         self._llm_history_widget = None
         self.ui.chat_history_widget.setVisible(False)
         self.ui.tabWidget.tabBar().hide()
+        self._model_context_tokens = self._resolve_model_context_length()
+        if hasattr(self.ui, "token_count"):
+            self._set_token_count_label(0, self._model_context_tokens)
 
     def _apply_default_splitter_settings(self):
         if hasattr(self, "ui") and self.ui is not None:
@@ -136,6 +146,7 @@ class ChatPromptWidget(BaseWidget):
             # Update GUI state
             self.conversation_id = new_conversation.id
             self.conversation = new_conversation
+            self._set_api_conversation_id(new_conversation.id)
             # Clear the display
             if hasattr(self.ui, "conversation"):
                 self.ui.conversation.clear_conversation()
@@ -237,6 +248,14 @@ class ChatPromptWidget(BaseWidget):
             return
         self.generating = True
 
+        conversation_id = self._ensure_conversation_context()
+        if conversation_id is None:
+            self.logger.error(
+                "Aborting chat request - unable to determine conversation ID"
+            )
+            self.generating = False
+            return
+
         self.clear_prompt()
         self.start_progress_bar()
         # Create LLMRequest optimized for the action type
@@ -245,6 +264,7 @@ class ChatPromptWidget(BaseWidget):
             llm_request=LLMRequest.for_action(self.action),
             action=self.action,
             do_tts_reply=False,
+            conversation_id=conversation_id,
         )
 
     def showEvent(self, event):
@@ -287,14 +307,11 @@ class ChatPromptWidget(BaseWidget):
         """Handle changes to the prompt text and highlight slash commands if present."""
         prompt = self.ui.prompt.toPlainText()
         self.prompt = prompt.strip()
+        self._update_token_count_label(self.prompt)
         self.highlight_slash_command(prompt)
 
     def highlight_slash_command(self, prompt: str) -> None:
-        """Highlight the slash command in the prompt.
-
-        Args:
-            command (str): The slash command to highlight.
-        """
+        """Highlight the slash command prefix (if any) in the prompt."""
         command = None
         if prompt.startswith("/"):
             candidate = prompt[1:].split(" ")[0]
@@ -334,6 +351,111 @@ class ChatPromptWidget(BaseWidget):
             cursor.setCharFormat(fmt)
 
         prompt_widget.blockSignals(False)
+
+    def _update_token_count_label(self, prompt: str) -> None:
+        """Refresh the token count label with the latest approximation."""
+        if not hasattr(self.ui, "token_count"):
+            return
+        token_count = self._estimate_token_count(prompt)
+        self._set_token_count_label(token_count, self._model_context_tokens)
+
+    def _estimate_token_count(self, prompt: str) -> int:
+        """Estimate the number of tokens the current prompt will consume."""
+        if not prompt:
+            return 0
+        try:
+            return count_tokens_approximately(prompt)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            self.logger.debug("Token estimation failed: %s", exc)
+            return (len(prompt) + 3) // 4
+
+    def _set_token_count_label(
+        self, token_count: int, context_limit: Optional[int]
+    ) -> None:
+        """Apply a consistent, human-friendly label value."""
+        if not hasattr(self.ui, "token_count"):
+            return
+        if context_limit and context_limit > 0:
+            remaining = max(context_limit - token_count, 0)
+            self.ui.token_count.setText(
+                f"~{token_count:,} / {context_limit:,} tokens ({remaining:,} left)"
+            )
+        else:
+            self.ui.token_count.setText(f"~{token_count:,} tokens")
+
+    def _resolve_model_context_length(self) -> Optional[int]:
+        settings = getattr(self, "llm_generator_settings", None)
+        if not settings:
+            return None
+
+        model_service = getattr(settings, "model_service", None)
+        model_version = getattr(settings, "model_version", "") or ""
+        model_path = getattr(settings, "model_path", "") or ""
+
+        if model_service == ModelService.LOCAL.value:
+            context = self._lookup_local_model_context(model_version)
+            if context is not None:
+                return context
+            return self._lookup_local_model_context(model_path)
+
+        return None
+
+    def _lookup_local_model_context(self, source: str) -> Optional[int]:
+        if not source:
+            return None
+        normalized_source = str(source).strip().lower()
+        if not normalized_source:
+            return None
+
+        for model_info in LLMProviderConfig.LOCAL_MODELS.values():
+            name = (model_info.get("name") or "").strip().lower()
+            repo_id = (model_info.get("repo_id") or "").strip().lower()
+
+            if name and (
+                normalized_source == name
+                or name in normalized_source
+                or normalized_source in name
+            ):
+                return model_info.get("context_length")
+            if repo_id and (
+                normalized_source == repo_id
+                or repo_id in normalized_source
+                or normalized_source in repo_id
+            ):
+                return model_info.get("context_length")
+
+        return None
+
+    def _refresh_model_context_tokens(self) -> None:
+        self._model_context_tokens = self._resolve_model_context_length()
+
+    def on_llm_model_changed(self, data: Dict):
+        self._refresh_model_context_tokens()
+        prompt_text = (
+            self.ui.prompt.toPlainText().strip()
+            if hasattr(self.ui, "prompt")
+            else self.prompt
+        )
+        self._update_token_count_label(prompt_text)
+
+    def on_application_settings_changed(self, data: Dict):
+        if (
+            not isinstance(data, dict)
+            or data.get("setting_name") != "llm_generator_settings"
+        ):
+            return
+
+        column = data.get("column_name")
+        if column not in {"model_version", "model_service", "model_path"}:
+            return
+
+        self._refresh_model_context_tokens()
+        prompt_text = (
+            self.ui.prompt.toPlainText().strip()
+            if hasattr(self.ui, "prompt")
+            else self.prompt
+        )
+        self._update_token_count_label(prompt_text)
 
     def clear_prompt(self):
         self.ui.prompt.setPlainText("")
@@ -415,8 +537,10 @@ class ChatPromptWidget(BaseWidget):
                 self.ui.conversation.clear_conversation()
             self.conversation = None
             self.conversation_id = None
+            self._set_api_conversation_id(None)
             return
         self.conversation_id = conversation_id
+        self._set_api_conversation_id(conversation_id)
 
         conversation = Conversation.objects.filter_by_first(id=conversation_id)
         self.conversation = conversation
@@ -450,6 +574,7 @@ class ChatPromptWidget(BaseWidget):
                 self.ui.conversation.clear_conversation()
             self.conversation = None
             self.conversation_id = None
+            self._set_api_conversation_id(None)
 
     def _clear_conversation(self, skip_update: bool = False):
         pass
@@ -471,3 +596,35 @@ class ChatPromptWidget(BaseWidget):
 
     def register_web_channel(self, channel):
         pass
+
+    def _ensure_conversation_context(self) -> Optional[int]:
+        """Ensure we have a valid conversation ID before sending a request."""
+        if self.conversation_id is not None:
+            return self.conversation_id
+
+        conversation = (
+            self._conversation_history_manager.get_current_conversation()
+        )
+        if conversation is not None:
+            self.conversation = conversation
+            self.conversation_id = conversation.id
+            self._set_api_conversation_id(conversation.id)
+            return self.conversation_id
+
+        conversation = Conversation.create()
+        if conversation is None:
+            self.logger.error("Failed to create a new conversation")
+            return None
+
+        Conversation.make_current(conversation.id)
+        self.conversation = conversation
+        self.conversation_id = conversation.id
+        self._set_api_conversation_id(conversation.id)
+        if hasattr(self.ui, "conversation"):
+            self.ui.conversation.clear_conversation()
+        return conversation.id
+
+    def _set_api_conversation_id(self, conversation_id: Optional[int]) -> None:
+        api = getattr(self, "api", None)
+        if api is not None:
+            setattr(api, "current_conversation_id", conversation_id)

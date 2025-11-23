@@ -5,7 +5,8 @@ using LLM-generated content.
 """
 
 import logging
-from langchain_core.messages import HumanMessage
+import re
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
@@ -38,18 +39,96 @@ class SectionSynthesisMixin:
 
         if is_person:
             return """
-🔍 CRITICAL: DISAMBIGUATE MULTIPLE PEOPLE
-If research notes contain information about DIFFERENT people with similar names:
-- Clearly identify each person as a SEPARATE individual
-- State distinguishing facts (occupation, age, location, dates)
-- DO NOT conflate facts from different people into one biography
-- Example: "Joe Curlee (software engineer, active 2025)" vs "Joseph 'Joey' Curlee (farmer, died 2023)"
-- Use the exact names and details from the sources to keep them distinct
+🔍 CRITICAL: DISAMBIGUATE INDIVIDUALS
+- Treat every person with a similar name as a separate individual
+- Include distinguishing facts (role, organization, timeframe, geography)
+- Never merge biographies or attributes unless sources explicitly do so
+- Use titles that match the timeframe being described; avoid guessing current roles
+
+🔍 TIMELINE ACCURACY
+- Anchor statements to the evidence provided (dates, elections, appointments)
+- If the timeframe is unclear, describe the action relative to the cited source rather than to "now"
 """
         else:
             return """
-🔍 Note: If sources contain information about different entities with similar names, distinguish them clearly.
+🔍 CRITICAL: DISAMBIGUATE ENTITIES
+- Distinguish organizations, agencies, or locations that share similar names
+- Note jurisdiction, mission, or geography to keep them separate
+- Avoid blending facts from different entities into one description
 """
+
+    def _prepend_synthesis_system_prompt(self, messages: list) -> None:
+        """Insert the prose-writing system prompt ahead of user instructions."""
+
+        prompt = (
+            self._get_synthesis_system_prompt()
+            if hasattr(self, "_get_synthesis_system_prompt")
+            else getattr(self, "_synthesis_system_prompt", None)
+        )
+        if not prompt:
+            prompt = getattr(self, "_system_prompt", None)
+        if prompt:
+            messages.insert(0, SystemMessage(content=prompt))
+
+    @staticmethod
+    def _writing_rules() -> str:
+        """Return shared guardrails for synthesis prompts."""
+
+        return """RULES:
+- Use only facts supported by the provided research notes or context.
+- Keep tone neutral, analytical, and timeless (avoid 'currently', 'recently').
+- Never invent organizations, people, numbers, or relationships.
+    - Only assign titles/roles (President, Vice President, Governor, etc.) to people if that exact pairing appears in the notes; otherwise describe them generically or acknowledge the uncertainty.
+- If information is missing, acknowledge the gap instead of speculating.
+- Quote or paraphrase carefully—every claim must be traceable to the notes.
+- Align conclusions with the cited evidence (e.g., refusing to sign a safety pledge is evidence of opposition to regulation, not support for it).
+- Do not narrate the writing process (avoid phrases like "here is the section" or "next section")."""
+
+    def _format_previous_section_summaries(
+        self,
+        previous_sections: dict | None,
+        max_sections: int = 3,
+        max_chars: int = 220,
+    ) -> str:
+        """Return short summaries of prior sections to discourage repetition."""
+
+        if not previous_sections:
+            return ""
+
+        summaries = []
+        items = list(previous_sections.items())[-max_sections:]
+        for name, text in items:
+            snippet = self._extract_section_snippet(text, max_chars)
+            if snippet:
+                summaries.append(f"- {name}: {snippet}")
+
+        if not summaries:
+            return ""
+
+        summary_block = "\n".join(summaries)
+        return (
+            "PREVIOUSLY COVERED (avoid repeating these points):\n"
+            f"{summary_block}\n\n"
+        )
+
+    @staticmethod
+    def _extract_section_snippet(text: str, max_chars: int) -> str:
+        """Pull the first sentence or two from a section for prompt context."""
+
+        if not text:
+            return ""
+
+        clean = re.sub(r"\s+", " ", text.strip())
+        if not clean:
+            return ""
+
+        sentences = re.split(r"(?<=[\.!?])\s+", clean)
+        snippet = sentences[0] if sentences else clean
+
+        if len(snippet) > max_chars:
+            snippet = snippet[: max_chars - 3].rstrip() + "..."
+
+        return snippet
 
     def _extract_relevant_notes(
         self, notes_content: str, max_chars: int = 8000
@@ -100,16 +179,30 @@ If research notes contain information about DIFFERENT people with similar names:
             thesis: The thesis statement (optional)
             previous_sections: Previously written sections (optional)
             word_count: Target word count (default: 500)
-            notes_content: Full notes content for context
+            notes_content: Full notes content for context (fallback if RAG unavailable)
             research_summary: High-level research summary
 
         Returns:
             Synthesized introduction text
         """
-        # Extract relevant notes for context
-        relevant_notes = self._extract_relevant_notes(
-            notes_content, max_chars=6000
+        # Try to get context from RAG first
+        rag_context = self._query_rag_for_section(
+            "introduction", topic, max_results=8
         )
+
+        if rag_context:
+            logger.info(
+                f"[Synthesis] Using RAG context for introduction ({len(rag_context)} chars)"
+            )
+            relevant_notes = rag_context
+        else:
+            # Fallback to direct notes extraction
+            logger.info(
+                "[Synthesis] RAG unavailable, using direct notes for introduction"
+            )
+            relevant_notes = self._extract_relevant_notes(
+                notes_content, max_chars=6000
+            )
 
         # Convert sets to lists if necessary
         entities = parsed_notes.get("entities", [])
@@ -129,45 +222,31 @@ If research notes contain information about DIFFERENT people with similar names:
 
 """
 
-        prompt = f"""Write a comprehensive introduction for a research report on: {topic}
+        rules = self._writing_rules()
+        prompt = f"""Write an introduction (~{word_count} words) for a research report on {topic}.
 
-{f"THESIS: {thesis}" if thesis else ""}
+    {f'THESIS: {thesis}\n' if thesis else ''}{summary_section}RESEARCH NOTES:
+    {relevant_notes}
 
-{summary_section}RESEARCH NOTES (use these for context and facts):
-{relevant_notes}
+    Key entities: {", ".join(entities[:5])}
+    Main themes: {", ".join(themes[:3])}
+    {disambiguation}
+    {rules}
 
-Key entities: {", ".join(entities[:5])}
-Main themes: {", ".join(themes[:3])}
-{disambiguation}
-❌ ABSOLUTE PROHIBITIONS - VIOLATING THESE IS UNACCEPTABLE:
-1. NEVER invent companies, employers, job titles, or work history not in notes
-2. NEVER confuse projects/games created with companies worked for
-3. NEVER use inflated language like "prominent figure", "renowned expert", "leading authority"
-4. NEVER claim accomplishments, awards, or recognition not explicitly in notes
-5. NEVER invent mentorship relationships, collaborations, or associations
-6. NEVER fabricate names of people, places, or organizations
+    Structure:
+    1. Opening sentence that frames the topic and stakes.
+    2. 2-3 sentences summarizing the most relevant verified facts tied to the thesis.
+    3. Closing sentence that previews the report's scope.
 
-✅ REQUIRED PRACTICES:
-1. ONLY state facts that appear VERBATIM in the research notes
-2. Use NEUTRAL, FACTUAL language - no marketing speak or hyperbole
-3. If a game/project is mentioned, state: "created [project name]" or "developed [project name]"
-4. If employment is mentioned, use EXACT company names and titles from notes
-5. Be SPECIFIC to the individual - avoid generic industry background
-6. HANDLE FICTION: May mention creative works (e.g., "published story 'X'") but don't treat plot as fact
-7. If uncertain or lacking info, write LESS rather than inventing details
-8. FACT-CHECK: Before writing each sentence, verify it against the notes
-
-STRUCTURE (CONCISE - ~{word_count} words total):
-1. Opening (1 sentence): Identify who/what without inflated claims
-2. Key Facts (2-3 sentences): Most important VERIFIED facts from notes
-3. Scope (1-2 sentences): What this research covers
-4. Transition (1 sentence): Bridge to next section
-
-Write ONLY the introduction content. No labels, headers, or markers."""
+    Return only the introduction text—no labels or extra commentary."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            intro = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            intro = self._clean_llm_output(
+                response.content.strip(), "Introduction"
+            )
 
             # Validate the introduction
             if len(intro.split()) < word_count // 2:
@@ -216,6 +295,23 @@ Write ONLY the introduction content. No labels, headers, or markers."""
         Returns:
             Synthesized background text
         """
+        # Query RAG for background-specific context
+        rag_context = self._query_rag_for_section(
+            "background", topic, max_results=8
+        )
+
+        if rag_context:
+            logger.info(
+                f"[Synthesis] Using RAG context for background ({len(rag_context)} chars)"
+            )
+            context_section = f"""RESEARCH NOTES (use these for context and facts):
+{rag_context}
+
+"""
+        else:
+            logger.info("[Synthesis] RAG unavailable for background section")
+            context_section = ""
+
         # Convert sets to lists if necessary
         entities = parsed_notes.get("entities", [])
         if isinstance(entities, set):
@@ -226,39 +322,28 @@ Write ONLY the introduction content. No labels, headers, or markers."""
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
-        prompt = f"""Write a detailed background section for a research report on: {topic}
+        rules = self._writing_rules()
+        prompt = f"""Write a concise background section for a research report on {topic}.
 
-Key entities: {", ".join(entities[:10])}
-Main themes: {", ".join(themes)}
-{disambiguation}
-❌ ABSOLUTE PROHIBITIONS:
-1. NEVER write generic industry/field history unless directly tied to the subject
-2. NEVER invent projects, products, companies, or affiliations
-3. NEVER use inflated language like "prominent", "renowned", "leading", "major contributor"
-4. NEVER fabricate employment history, collaborations, or partnerships
-5. NEVER confuse projects created with companies worked for
-6. If researching a PERSON: NEVER write generic "software engineering background" - be SPECIFIC
+    {context_section}Key entities: {", ".join(entities[:10])}
+    Main themes: {", ".join(themes)}
+    {disambiguation}
+    {rules}
 
-✅ REQUIRED PRACTICES:
-1. Write ONLY about the SPECIFIC subject being researched
-2. Use EXACT names and details from research notes
-3. State projects as "created [X]" or "developed [X]", NOT "worked at [X]"
-4. Be CONCRETE and SPECIFIC - avoid generic filler
-5. Use neutral, factual language - no marketing speak
-6. FACT-CHECK each sentence against notes before writing it
+    Focus on:
+    - Core context that explains why the topic matters.
+    - Brief definitions only when essential for understanding.
+    - A final sentence that transitions toward analysis.
 
-STRUCTURE (CONCISE):
-1. Core Context (1-2 paragraphs): Specific background of the subject
-2. Key Definitions (1 paragraph, IF NEEDED): Define terms only if essential
-3. Transition (1 sentence): Bridge to analysis
-
-For PERSON topics: Focus entirely on the individual - skip all generic background.
-
-Write ONLY the background content. No labels or headers."""
+    Return only the background text without headers."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            background = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            background = self._clean_llm_output(
+                response.content.strip(), "Background"
+            )
             return self._normalize_temporal_references(background)
         except Exception as e:
             logger.error(f"Failed to synthesize background: {e}")
@@ -282,6 +367,23 @@ Write ONLY the background content. No labels or headers."""
         Returns:
             Synthesized analysis text
         """
+        # Query RAG for analysis-specific context
+        rag_context = self._query_rag_for_section(
+            "analysis", topic, max_results=8
+        )
+
+        if rag_context:
+            logger.info(
+                f"[Synthesis] Using RAG context for analysis ({len(rag_context)} chars)"
+            )
+            context_section = f"""RESEARCH NOTES (use these for context and facts):
+{rag_context}
+
+"""
+        else:
+            logger.info("[Synthesis] RAG unavailable for analysis section")
+            context_section = ""
+
         # Convert sets to lists if necessary
         entities = parsed_notes.get("entities", [])
         if isinstance(entities, set):
@@ -292,36 +394,38 @@ Write ONLY the background content. No labels or headers."""
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
-        prompt = f"""Write a comprehensive analysis section for a research report on: {topic}
+        previous_summary = self._format_previous_section_summaries(
+            previous_sections
+        )
 
-Key entities to analyze: {", ".join(entities[:10])}
-Themes to explore: {", ".join(themes)}
-{disambiguation}
-❌ ABSOLUTE PROHIBITIONS:
-1. NEVER invent companies, employers, job titles, or work history
-2. NEVER use inflated claims like "major contributor", "significant impact", "widely recognized"
-3. NEVER fabricate statistics, studies, partnerships, or collaborations
-4. NEVER confuse projects created with employment
-5. NEVER claim mentorship, influence, or reach not documented in notes
+        differentiation_rules = """DIFFERENTIATION RULES:
+- Lead with a claim unique to this section and tie it to new evidence.
+- Mention earlier material only to contrast or escalate the stakes.
+- Close by pointing to the next unresolved tension or decision."""
 
-✅ REQUIRED PRACTICES:
-1. Analyze ONLY facts explicitly stated in notes
-2. State projects as "created [X]" or "developed [X]"
-3. Use neutral, evidence-based language
-4. Acknowledge limitations and gaps in evidence
-5. HANDLE FICTION: May mention creative works but don't analyze plot as real events
-6. FACT-CHECK: Verify each claim against notes before writing
+        rules = self._writing_rules()
+        prompt = f"""Write an analysis section for a research report on {topic}.
 
-STRUCTURE (CONCISE):
-1. Key Findings (1-2 paragraphs): Most important verifiable discoveries
-2. Patterns (1 paragraph): Observable connections or themes (if any)
-3. Limitations (1 paragraph): Gaps, uncertainties, or missing information
+    {context_section}{previous_summary}Key entities to analyze: {", ".join(entities[:10])}
+    Themes to explore: {", ".join(themes)}
+    {disambiguation}
+    {rules}
+    {differentiation_rules}
 
-Write ONLY the analysis content. No labels or headers."""
+    Structure:
+    1. Key findings grounded in the notes.
+    2. Patterns or tensions that emerge from those findings.
+    3. Limitations or unanswered questions.
+
+    Return only the analysis text without extra commentary."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            analysis = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            analysis = self._clean_llm_output(
+                response.content.strip(), "Analysis"
+            )
             return self._normalize_temporal_references(analysis)
         except Exception as e:
             logger.error(f"Failed to synthesize analysis: {e}")
@@ -345,38 +449,60 @@ Write ONLY the analysis content. No labels or headers."""
         Returns:
             Synthesized implications text
         """
+        # Query RAG for implications-specific context
+        rag_context = self._query_rag_for_section(
+            "implications", topic, max_results=6
+        )
+
+        if rag_context:
+            logger.info(
+                f"[Synthesis] Using RAG context for implications ({len(rag_context)} chars)"
+            )
+            context_section = f"""RESEARCH NOTES (use these for context and facts):
+{rag_context}
+
+"""
+        else:
+            logger.info("[Synthesis] RAG unavailable for implications section")
+            context_section = ""
+
         # Use top_themes (list) instead of themes (dict)
         themes = parsed_notes.get("top_themes", [])
 
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
-        prompt = f"""Write a comprehensive implications section for a research report on: {topic}
+        previous_summary = self._format_previous_section_summaries(
+            previous_sections
+        )
 
-Main themes: {", ".join(themes)}
-{disambiguation}
-❌ ABSOLUTE PROHIBITIONS:
-1. NEVER invent scenarios, predictions, or impacts not supported by evidence
-2. NEVER use inflated language about significance or impact
-3. NEVER make broad industry claims not supported by research
-4. NEVER fabricate contributions, influence, or outcomes
+        differentiation_rules = """DIFFERENTIATION RULES:
+- Extract new consequences or stakeholder impacts rather than repeating earlier observations.
+- Each paragraph should link evidence to a clear implication for policy, markets, or society.
+- End with a forward-looking signal about what decision or risk remains."""
 
-✅ REQUIRED PRACTICES:
-1. Discuss ONLY implications supported by documented findings
-2. Use neutral, evidence-based language
-3. Be SPECIFIC to the subject - avoid generic speculation
-4. For PERSON topics: Focus on documented work, not inflated claims
-5. Acknowledge limitations and uncertainty
+        rules = self._writing_rules()
+        prompt = f"""Write an implications section for a research report on {topic}.
 
-STRUCTURE (CONCISE):
-1. Significance (1 paragraph): Why findings matter (based on evidence only)
-2. Key Takeaways (1 paragraph): Most important supported implications
+    {context_section}{previous_summary}Main themes: {", ".join(themes)}
+    {disambiguation}
+    {rules}
+    {differentiation_rules}
 
-Write ONLY the implications content. No labels or headers."""
+    Focus on:
+    - Evidence-backed significance of the findings.
+    - Concrete takeaways for policy, industry, or stakeholders.
+    - Any constraints or uncertainties the reader should keep in mind.
+
+    Return only the implications text—no headers."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            implications = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            implications = self._clean_llm_output(
+                response.content.strip(), "Implications"
+            )
             return self._normalize_temporal_references(implications)
         except Exception as e:
             logger.error(f"Failed to synthesize implications: {e}")
@@ -406,33 +532,27 @@ Write ONLY the implications content. No labels or headers."""
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
-        prompt = f"""Write a comprehensive conclusion for a research report on: {topic}
+        rules = self._writing_rules()
+        prompt = f"""Write a conclusion for a research report on {topic}.
 
-Main themes covered: {", ".join(themes)}
-{disambiguation}
-❌ ABSOLUTE PROHIBITIONS:
-1. NEVER introduce new information, claims, or details not in the research
-2. NEVER invent companies, employers, projects, affiliations, or accomplishments
-3. NEVER use inflated language like "significant contribution", "major impact"
-4. NEVER fabricate collaborations, mentorship, or partnerships
+    Main themes covered: {", ".join(themes)}
+    {disambiguation}
+    {rules}
 
-✅ REQUIRED PRACTICES:
-1. Summarize ONLY findings explicitly documented in research
-2. Use neutral, factual language - no marketing speak
-3. Be SPECIFIC to the subject - avoid generic conclusions
-4. Acknowledge what was NOT found or remains uncertain
-5. FACT-CHECK: Verify each statement against research before writing
+    Structure:
+    1. Brief synthesis of the verified findings.
+    2. Explicit mention of gaps or limitations.
+    3. A closing sentence that reinforces the report's purpose without introducing new facts.
 
-STRUCTURE (CONCISE):
-1. Summary (1-2 paragraphs): Synthesize verified findings
-2. Limitations (1 paragraph): Gaps, uncertainties, missing information
-3. Closing (1-2 sentences): Final thought
-
-Write ONLY the conclusion content. No labels or headers."""
+    Return only the conclusion text."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            conclusion = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            conclusion = self._clean_llm_output(
+                response.content.strip(), "Conclusion"
+            )
             return self._normalize_temporal_references(conclusion)
         except Exception as e:
             logger.error(f"Failed to synthesize conclusion: {e}")
@@ -488,8 +608,12 @@ The abstract should:
 Write ONLY the abstract content, no labels or section headers."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            abstract = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            abstract = self._clean_llm_output(
+                response.content.strip(), "Abstract"
+            )
             return self._normalize_temporal_references(abstract)
         except Exception as e:
             logger.error(f"Failed to synthesize abstract: {e}")
@@ -515,6 +639,25 @@ Write ONLY the abstract content, no labels or section headers."""
         Returns:
             Synthesized section text
         """
+        # Query RAG for section-specific context
+        rag_context = self._query_rag_for_section(
+            section_name, topic, max_results=8
+        )
+
+        if rag_context:
+            logger.info(
+                f"[Synthesis] Using RAG context for '{section_name}' ({len(rag_context)} chars)"
+            )
+            context_section = f"""RESEARCH NOTES (use these for context and facts):
+{rag_context}
+
+"""
+        else:
+            logger.info(
+                f"[Synthesis] RAG unavailable for '{section_name}' section"
+            )
+            context_section = ""
+
         themes = parsed_notes.get("top_themes", [])
         entities = parsed_notes.get("entities", [])
         if isinstance(entities, set):
@@ -523,36 +666,77 @@ Write ONLY the abstract content, no labels or section headers."""
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
-        # Build context from previous sections
-        previous_context = ""
-        if previous_sections:
-            prev_names = list(previous_sections.keys())[:3]
-            previous_context = (
-                f"Previous sections covered: {', '.join(prev_names)}"
-            )
+        previous_summary = self._format_previous_section_summaries(
+            previous_sections
+        )
 
-        prompt = f"""Write a comprehensive section titled "{section_name}" for a research report on: {topic}
+        differentiation_rules = """DIFFERENTIATION RULES:
+- Start with the tension or question unique to this section title.
+- Introduce at least one piece of evidence not fully explored earlier (see summaries above).
+- Use transitions that show progress (cause → effect, action → response) instead of restating context.
+- Finish with a sentence that tees up the next unresolved thread or implication."""
 
-Main themes: {", ".join(themes[:5])}
-Key entities: {", ".join(entities[:8])}
-{previous_context}
-{disambiguation}
-The section should:
-- Address the topic indicated by the section title: "{section_name}"
-- Be well-researched and detailed (500-800 words)
-- Use clear, professional language
-- Include relevant facts and analysis from the research
-- Be structured with clear progression of ideas
-- Avoid claiming current events or dates
-- Use timeless language
-- Build naturally on previous sections
+        rules = self._writing_rules()
+        prompt = f"""Write a {section_name} section (target 500-800 words) for a research report on {topic}.
 
-Write ONLY the section content, no labels or section headers."""
+    {context_section}{previous_summary}Main themes: {", ".join(themes[:5])}
+    Key entities: {", ".join(entities[:8])}
+    {disambiguation}
+    {rules}
+    {differentiation_rules}
+
+    Guidance:
+    - Address the focus implied by "{section_name}" and tie every claim to the notes.
+    - Organize the section with a clear beginning, middle, and end so ideas flow naturally.
+    - Reference earlier sections only when it adds clarity; otherwise keep the section self-contained.
+
+    Return only the section text (no extra labels)."""
 
         try:
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
-            content = response.content.strip()
+            messages = [HumanMessage(content=prompt)]
+            self._prepend_synthesis_system_prompt(messages)
+            response = self._base_model.invoke(messages)
+            content = self._clean_llm_output(
+                response.content.strip(), section_name
+            )
             return self._normalize_temporal_references(content)
         except Exception as e:
             logger.error(f"Failed to synthesize {section_name}: {e}")
             return f"Analysis of {section_name.lower()} related to {topic}."
+
+    def _synthesize_sources(self, parsed_notes: dict) -> str:
+        """Synthesize Sources section from parsed notes.
+
+        Args:
+            parsed_notes: Parsed research notes containing source URLs
+
+        Returns:
+            Formatted sources section with numbered list of URLs
+        """
+        # Extract unique source URLs from parsed notes
+        sources = parsed_notes.get("sources", [])
+
+        if not sources:
+            logger.warning("[Synthesis] No sources found in parsed notes")
+            return "No sources were recorded during research."
+
+        # Format sources as numbered list
+        source_lines = []
+        for i, source in enumerate(sources, 1):
+            # Handle both string URLs and dict objects
+            if isinstance(source, dict):
+                url = source.get("url", "")
+                title = source.get("title", "")
+                if title:
+                    source_lines.append(f"{i}. [{title}]({url})")
+                else:
+                    source_lines.append(f"{i}. {url}")
+            else:
+                source_lines.append(f"{i}. {source}")
+
+        sources_text = "\n".join(source_lines)
+        logger.info(
+            f"[Synthesis] Generated sources list with {len(sources)} entries"
+        )
+
+        return sources_text
