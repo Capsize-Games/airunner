@@ -35,7 +35,12 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
             "curiosity_topics": [],
         }
 
-        source_sections = re.split(r"\n(?=###\s+https?://)", notes_content)
+        notes_body = (
+            notes_content.split("## Notes", 1)[1]
+            if "## Notes" in notes_content
+            else notes_content
+        )
+        source_sections = self._split_source_sections(notes_body)
 
         for section in source_sections:
             if not section.strip():
@@ -58,6 +63,28 @@ CRITICAL CONSTRAINTS - FOLLOW THESE STRICTLY:
 
         parsed["top_themes"] = self._get_top_themes(parsed["themes"])
         return parsed
+
+    def _split_source_sections(self, notes_body: str) -> list[str]:
+        """Split notes into per-source sections regardless of header format."""
+
+        if not notes_body:
+            return []
+
+        pattern = re.compile(r"(###\s+.+?)(?=\n###\s+|\Z)", re.DOTALL)
+        sections = []
+
+        for match in pattern.finditer(notes_body):
+            block = match.group(1).strip()
+            if not block:
+                continue
+            if "http" not in block.lower():
+                continue
+            sections.append(block)
+
+        if not sections and notes_body.strip():
+            sections.append(notes_body.strip())
+
+        return sections
 
     def _parse_single_source(self, section: str) -> dict:
         """Parse a single source section."""

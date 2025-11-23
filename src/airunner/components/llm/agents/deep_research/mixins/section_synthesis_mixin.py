@@ -5,6 +5,7 @@ using LLM-generated content.
 """
 
 import logging
+import re
 from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,57 @@ class SectionSynthesisMixin:
 - Use only facts supported by the provided research notes or context.
 - Keep tone neutral, analytical, and timeless (avoid 'currently', 'recently').
 - Never invent organizations, people, numbers, or relationships.
+    - Only assign titles/roles (President, Vice President, Governor, etc.) to people if that exact pairing appears in the notes; otherwise describe them generically or acknowledge the uncertainty.
 - If information is missing, acknowledge the gap instead of speculating.
-- Quote or paraphrase carefully—every claim must be traceable to the notes."""
+- Quote or paraphrase carefully—every claim must be traceable to the notes.
+- Align conclusions with the cited evidence (e.g., refusing to sign a safety pledge is evidence of opposition to regulation, not support for it).
+- Do not narrate the writing process (avoid phrases like "here is the section" or "next section")."""
+
+    def _format_previous_section_summaries(
+        self,
+        previous_sections: dict | None,
+        max_sections: int = 3,
+        max_chars: int = 220,
+    ) -> str:
+        """Return short summaries of prior sections to discourage repetition."""
+
+        if not previous_sections:
+            return ""
+
+        summaries = []
+        items = list(previous_sections.items())[-max_sections:]
+        for name, text in items:
+            snippet = self._extract_section_snippet(text, max_chars)
+            if snippet:
+                summaries.append(f"- {name}: {snippet}")
+
+        if not summaries:
+            return ""
+
+        summary_block = "\n".join(summaries)
+        return (
+            "PREVIOUSLY COVERED (avoid repeating these points):\n"
+            f"{summary_block}\n\n"
+        )
+
+    @staticmethod
+    def _extract_section_snippet(text: str, max_chars: int) -> str:
+        """Pull the first sentence or two from a section for prompt context."""
+
+        if not text:
+            return ""
+
+        clean = re.sub(r"\s+", " ", text.strip())
+        if not clean:
+            return ""
+
+        sentences = re.split(r"(?<=[\.!?])\s+", clean)
+        snippet = sentences[0] if sentences else clean
+
+        if len(snippet) > max_chars:
+            snippet = snippet[: max_chars - 3].rstrip() + "..."
+
+        return snippet
 
     def _extract_relevant_notes(
         self, notes_content: str, max_chars: int = 8000
@@ -344,13 +394,23 @@ class SectionSynthesisMixin:
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
+        previous_summary = self._format_previous_section_summaries(
+            previous_sections
+        )
+
+        differentiation_rules = """DIFFERENTIATION RULES:
+- Lead with a claim unique to this section and tie it to new evidence.
+- Mention earlier material only to contrast or escalate the stakes.
+- Close by pointing to the next unresolved tension or decision."""
+
         rules = self._writing_rules()
         prompt = f"""Write an analysis section for a research report on {topic}.
 
-    {context_section}Key entities to analyze: {", ".join(entities[:10])}
+    {context_section}{previous_summary}Key entities to analyze: {", ".join(entities[:10])}
     Themes to explore: {", ".join(themes)}
     {disambiguation}
     {rules}
+    {differentiation_rules}
 
     Structure:
     1. Key findings grounded in the notes.
@@ -412,12 +472,22 @@ class SectionSynthesisMixin:
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
+        previous_summary = self._format_previous_section_summaries(
+            previous_sections
+        )
+
+        differentiation_rules = """DIFFERENTIATION RULES:
+- Extract new consequences or stakeholder impacts rather than repeating earlier observations.
+- Each paragraph should link evidence to a clear implication for policy, markets, or society.
+- End with a forward-looking signal about what decision or risk remains."""
+
         rules = self._writing_rules()
         prompt = f"""Write an implications section for a research report on {topic}.
 
-    {context_section}Main themes: {", ".join(themes)}
+    {context_section}{previous_summary}Main themes: {", ".join(themes)}
     {disambiguation}
     {rules}
+    {differentiation_rules}
 
     Focus on:
     - Evidence-backed significance of the findings.
@@ -596,22 +666,24 @@ Write ONLY the abstract content, no labels or section headers."""
         # Get disambiguation instructions
         disambiguation = self._get_disambiguation_instructions(topic)
 
-        # Build context from previous sections
-        previous_context = ""
-        if previous_sections:
-            prev_names = list(previous_sections.keys())[:3]
-            previous_context = (
-                f"Previous sections covered: {', '.join(prev_names)}"
-            )
+        previous_summary = self._format_previous_section_summaries(
+            previous_sections
+        )
+
+        differentiation_rules = """DIFFERENTIATION RULES:
+- Start with the tension or question unique to this section title.
+- Introduce at least one piece of evidence not fully explored earlier (see summaries above).
+- Use transitions that show progress (cause → effect, action → response) instead of restating context.
+- Finish with a sentence that tees up the next unresolved thread or implication."""
 
         rules = self._writing_rules()
         prompt = f"""Write a {section_name} section (target 500-800 words) for a research report on {topic}.
 
-    {context_section}Main themes: {", ".join(themes[:5])}
+    {context_section}{previous_summary}Main themes: {", ".join(themes[:5])}
     Key entities: {", ".join(entities[:8])}
-    {previous_context}
     {disambiguation}
     {rules}
+    {differentiation_rules}
 
     Guidance:
     - Address the focus implied by "{section_name}" and tie every claim to the notes.

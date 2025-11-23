@@ -78,6 +78,30 @@ class OutputCleaningMixin:
                 pattern, "", content, flags=re.IGNORECASE | re.DOTALL
             )
 
+        # Remove one-line meta instructions that sometimes slip through prompts
+        meta_line_patterns = [
+            r"^(?:next|previous|following) section.*$",
+            r"^here is the requested section.*$",
+            r"^here is the section.*$",
+            r"^timeline is unclear.*$",
+            r"^highlights? the significance of the findings.*$",
+        ]
+        for pattern in meta_line_patterns:
+            content = re.sub(
+                pattern,
+                "",
+                content,
+                flags=re.IGNORECASE | re.MULTILINE,
+            )
+
+        # Remove blocks of instructional bullet points (e.g., "- Use the ..." guidelines)
+        content = re.sub(
+            r"(?:^|\n)(?:[A-Z][^\n]*?:)?\s*(?:-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain|Remember)[^\n]*\n){3,}",
+            "\n\n",
+            content,
+            flags=re.IGNORECASE,
+        )
+
         # Remove meta-commentary at the end
         content = re.sub(
             r"\n+(?:Note|Disclaimer|Warning):.*?$",

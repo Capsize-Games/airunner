@@ -586,6 +586,11 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
                         return None  # Reject - LLM didn't follow instructions
 
                 cleaned = revised.strip()
+                if self._contains_editorial_instructions(cleaned):
+                    logger.error(
+                        f"[Phase 1F] LLM output for {section_name} still contains editing instructions; rejecting revision"
+                    )
+                    return None
                 logger.info(
                     f"[Phase 1F] Cleaned revision for {section_name}, final {len(cleaned)} chars"
                 )
@@ -601,6 +606,57 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
             )
 
         return None
+
+    def _contains_editorial_instructions(self, text: str) -> bool:
+        """Detect whether text still contains meta instructions from the editor prompts."""
+
+        if not text:
+            return False
+
+        lowered = text.lower()
+        instruction_markers = [
+            "please revise the given text",
+            "please revise the text",
+            "please revise",
+            "please correct the issues",
+            "begin revised section",
+            "begin revised text",
+            "use the first person",
+            "use the third person",
+            "use the present tense",
+            "use the past tense",
+            "use the present perfect tense",
+            "use the past perfect tense",
+            "use the future tense",
+            "use the future perfect tense",
+            "use the present continuous tense",
+            "use the past continuous tense",
+            "disambiguate industry leaders",
+            "disambiguate quotes",
+            "sources\n- use",
+            "- use the",
+            "- ensure ",
+            "- do not ",
+        ]
+
+        if any(marker in lowered for marker in instruction_markers):
+            return True
+
+        # Detect fully-capitalized CRITICAL directives that leak into prose
+        if re.search(r"\*\*CRITICAL:[^\n]+\*\*", text):
+            return True
+
+        if re.search(r"\bCRITICAL:[^\n]+", text) and "CRITICAL:" in text:
+            return True
+
+        # Detect long runs of instruction-like bullet lines even if wording differs
+        if re.search(
+            r"(?:^|\n)\s*-\s*(?:use|ensure|avoid|keep|maintain|remember)[^\n]*\n\s*-\s*(?:use|ensure|avoid|keep|maintain|remember)",
+            lowered,
+        ):
+            return True
+
+        return False
 
     def _query_rag_for_section_revision(
         self, section_name: str, section_content: str, notes_path: str
