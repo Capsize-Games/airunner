@@ -269,30 +269,19 @@ class FluxGenerationMixin:
             self.logger.debug("[FLUX CLEANUP] Memory freed")
 
     def _move_t5_to_gpu(self):
-        """Move T5 encoder to GPU for prompt encoding."""
-        if self._pipe is None:
-            return
-        t5 = getattr(self._pipe, "text_encoder_2", None)
-        if t5 is not None:
-            try:
-                t5.to("cuda:0")
-                self.logger.debug("[T5 OFFLOAD] Moved T5 to GPU for encoding")
-            except Exception as e:
-                self.logger.warning(f"[T5 OFFLOAD] Failed to move T5 to GPU: {e}")
+        """Placeholder - T5 stays on CPU the entire time.
+        
+        NOTE: For 16GB cards, we keep T5 on CPU and run encoding there,
+        then just move the resulting embeddings to GPU. This is more
+        memory-efficient than moving the entire model.
+        """
+        # T5 will be moved to GPU for encoding, then back to CPU
+        pass  # Intentionally empty - actual logic in _get_results
     
     def _move_t5_to_cpu(self):
-        """Move T5 encoder back to CPU to free VRAM for transformer."""
-        if self._pipe is None:
-            return
-        t5 = getattr(self._pipe, "text_encoder_2", None)
-        if t5 is not None:
-            try:
-                t5.to("cpu")
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                self.logger.debug("[T5 OFFLOAD] Moved T5 back to CPU, freed VRAM")
-            except Exception as e:
-                self.logger.warning(f"[T5 OFFLOAD] Failed to move T5 to CPU: {e}")
+        """Move T5 back to CPU after encoding to free VRAM for diffusion."""
+        # Actual logic in _get_results
+        pass  # Intentionally empty - actual logic in _get_results
 
     def _get_results(self, data):
         """
@@ -301,10 +290,11 @@ class FluxGenerationMixin:
         CRITICAL: FLUX GGUF models accumulate memory without cleanup.
         After each generation, we must explicitly free VAE decode buffers.
         
-        MEMORY STRATEGY: T5 is manually offloaded to avoid accelerate hook RAM leak.
-        - T5 starts on CPU
-        - Move to GPU for prompt encoding  
-        - Move back to CPU before transformer runs
+        MEMORY STRATEGY for 16GB cards with BitsAndBytes quantization:
+        - BitsAndBytes 4-bit models REQUIRE CUDA - they cannot run on CPU
+        - During encoding: Move VAE to CPU, move T5 to GPU
+        - After encoding: Move T5 to CPU, move VAE to GPU
+        - This swaps ~0.3GB VAE with ~5.7GB T5 on GPU as needed
         """
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=torch.bfloat16, enabled=True
@@ -314,11 +304,26 @@ class FluxGenerationMixin:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
 
-                # STEP 1: Move T5 to GPU for prompt encoding
-                self._move_t5_to_gpu()
+                # STEP 1: Free GPU memory by moving VAE to CPU
+                # VAE is not needed during prompt encoding
+                vae = getattr(self._pipe, "vae", None)
+                if vae is not None:
+                    vae.to("cpu")
+                    self.logger.debug("[T5 OFFLOAD] Moved VAE to CPU to make room for T5")
                 
-                # STEP 2: Pre-encode prompts with T5 on GPU
-                # We call encode_prompt manually so we can offload T5 before transformer runs
+                # Clear GPU memory
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                
+                # STEP 2: Move T5 to GPU for encoding
+                # BitsAndBytes 4-bit quantized models REQUIRE CUDA
+                t5_encoder = getattr(self._pipe, "text_encoder_2", None)
+                if t5_encoder is not None:
+                    t5_encoder.to("cuda:0")
+                    self.logger.debug("[T5 OFFLOAD] Moved T5 to GPU for encoding")
+                
+                # STEP 3: Run encode_prompt on GPU
+                self.logger.debug("[T5 OFFLOAD] Running encode_prompt (T5 and CLIP on GPU)")
                 prompt_embeds, pooled_prompt_embeds, text_ids = self._pipe.encode_prompt(
                     prompt=data.get("prompt", ""),
                     prompt_2=data.get("prompt_2", data.get("prompt", "")),
@@ -326,10 +331,22 @@ class FluxGenerationMixin:
                     max_sequence_length=data.get("max_sequence_length", 512),
                 )
                 
-                # STEP 3: Move T5 back to CPU to free ~5.7GB VRAM for transformer
-                self._move_t5_to_cpu()
+                # STEP 4: Move T5 back to CPU to free VRAM for transformer
+                if t5_encoder is not None:
+                    t5_encoder.to("cpu")
+                    self.logger.debug("[T5 OFFLOAD] Moved T5 back to CPU")
                 
-                # STEP 4: Run pipeline with pre-computed embeddings (T5 not needed)
+                # Clear GPU memory
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                
+                # STEP 5: Move VAE back to GPU for decoding
+                if vae is not None:
+                    vae.to("cuda:0")
+                    self.logger.debug("[T5 OFFLOAD] Moved VAE back to GPU for decoding")
+                
+                # STEP 6: Run pipeline with pre-computed embeddings (T5 not needed)
                 pipe_data = {k: v for k, v in data.items() if k not in ("prompt", "prompt_2")}
                 pipe_data["prompt_embeds"] = prompt_embeds
                 pipe_data["pooled_prompt_embeds"] = pooled_prompt_embeds

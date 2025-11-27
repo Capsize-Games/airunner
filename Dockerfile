@@ -65,6 +65,8 @@ RUN apt-get update && apt-get install -y \
     libcups2 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
+    # Clipboard support
+    xclip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python 3.13 from deadsnakes PPA
