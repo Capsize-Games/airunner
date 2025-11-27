@@ -14,6 +14,11 @@ try:  # Accelerate<1.8 does not expose get_state_dict
 except ImportError:  # pragma: no cover - optional dependency path
     _accelerate_get_state_dict = None
 
+try:
+    from accelerate.hooks import remove_hook_from_module
+except ImportError:
+    remove_hook_from_module = None
+
 from safetensors.torch import load_file
 from transformers import (
     BitsAndBytesConfig as TransformersBitsAndBytesConfig,
@@ -67,22 +72,82 @@ class FluxPipelineLoadingMixin:
                 result[key] = value
         return result
 
+    def _materialize_offloaded_module(
+        self, module: torch.nn.Module
+    ) -> torch.nn.Module:
+        """Materialize a module that may have offloaded hooks.
+        
+        When using device_map="auto" with accelerate, modules get AlignDevicesHook
+        attached which lazily moves tensors. We need to remove these hooks and
+        force the tensors to CPU before we can save them.
+        """
+        if remove_hook_from_module is None:
+            return module
+            
+        try:
+            # Remove accelerate hooks that keep tensors on meta device
+            remove_hook_from_module(module, recurse=True)
+            
+            # Move the entire module to CPU to materialize all tensors
+            module = module.to("cpu")
+            
+            self.logger.debug("Successfully materialized offloaded module to CPU")
+            return module
+        except Exception as exc:
+            self.logger.debug(
+                "Could not materialize module: %s", exc
+            )
+            return module
+
     def _collect_state_dict(
         self, module: torch.nn.Module
     ) -> Tuple[Dict[str, torch.Tensor], int]:
-        """Return CPU state dict along with the number of meta tensors skipped."""
+        """Return CPU state dict along with the number of meta tensors skipped.
+        
+        This method attempts multiple strategies to extract the state dict:
+        1. Use accelerate's get_state_dict with cpu destination
+        2. Remove hooks and move to CPU to materialize lazy tensors  
+        3. Fall back to standard state_dict()
+        """
         raw_state_dict: Optional[Dict[str, torch.Tensor]] = None
+        
+        # Strategy 1: Use accelerate's get_state_dict
         if _accelerate_get_state_dict is not None:
             try:
                 raw_state_dict = _accelerate_get_state_dict(
                     module, destination="cpu"
                 )
+                # Check if we got meta tensors
+                meta_in_result = sum(
+                    1 for t in raw_state_dict.values() 
+                    if isinstance(t, torch.Tensor) and t.device.type == "meta"
+                )
+                if meta_in_result > 0:
+                    self.logger.debug(
+                        "accelerate.get_state_dict returned %d meta tensors, "
+                        "trying hook removal strategy",
+                        meta_in_result,
+                    )
+                    raw_state_dict = None
             except Exception as exc:  # noqa: BLE001 - best effort fallback
                 self.logger.debug(
-                    "accelerate.get_state_dict failed (%s); falling back to module.state_dict()",
+                    "accelerate.get_state_dict failed (%s); trying hook removal",
                     exc,
                 )
 
+        # Strategy 2: Remove hooks and materialize on CPU
+        if raw_state_dict is None:
+            try:
+                # Make a copy reference before modifying
+                materialized = self._materialize_offloaded_module(module)
+                raw_state_dict = materialized.state_dict()
+            except Exception as exc:
+                self.logger.debug(
+                    "Hook removal strategy failed (%s); using standard state_dict",
+                    exc,
+                )
+
+        # Strategy 3: Standard state_dict (may have meta tensors)
         if raw_state_dict is None:
             raw_state_dict = module.state_dict()
 
@@ -105,31 +170,47 @@ class FluxPipelineLoadingMixin:
         expected_tensors: int,
         component_dir: Path,
     ) -> bool:
-        """Ensure cached module has fully materialized tensors and expected count."""
+        """Ensure cached module has fully materialized tensors and expected count.
+        
+        NOTE: This validation is non-destructive - it does NOT move modules to CPU.
+        We only check that the module loaded successfully and has parameters.
+        """
         if module is None:
             return False
 
-        clean_state, meta_count = self._collect_state_dict(module)
-        if meta_count > 0:
-            self.logger.warning(
-                "Cached %s contains %d meta tensors; deleting cache",
+        # Simple validation: check module has parameters and they're not on meta device
+        try:
+            first_param = next(module.parameters(), None)
+            if first_param is None:
+                self.logger.warning(
+                    "Cached %s has no parameters; deleting cache",
+                    module_name,
+                )
+                self._cleanup_component_dir(component_dir)
+                return False
+            
+            if first_param.device.type == "meta":
+                self.logger.warning(
+                    "Cached %s has meta tensors; deleting cache",
+                    module_name,
+                )
+                self._cleanup_component_dir(component_dir)
+                return False
+                
+            self.logger.debug(
+                "Validated %s - has parameters on device %s",
                 module_name,
-                meta_count,
+                first_param.device,
+            )
+            return True
+        except Exception as e:
+            self.logger.warning(
+                "Failed to validate cached %s: %s; deleting cache",
+                module_name,
+                e,
             )
             self._cleanup_component_dir(component_dir)
             return False
-
-        if expected_tensors and len(clean_state) != expected_tensors:
-            self.logger.warning(
-                "Cached %s tensor count mismatch (expected %d, found %d); deleting cache",
-                module_name,
-                expected_tensors,
-                len(clean_state),
-            )
-            self._cleanup_component_dir(component_dir)
-            return False
-
-        return True
 
     def _load_pipeline_from_cache(
         self,
@@ -268,32 +349,65 @@ class FluxPipelineLoadingMixin:
     ) -> bool:
         """Return True if an on-disk quantized pipeline was loaded."""
         quantized_path = self._get_quantized_model_path(str(model_path))
-        if self._quantized_model_exists(str(model_path)):
+        self.logger.debug(
+            "Checking for quantized model at %s", quantized_path
+        )
+        
+        # First try to load a full quantized pipeline if it exists
+        full_pipeline_exists = self._quantized_model_exists(str(model_path))
+        component_cache_exists = self._component_cache_exists(quantized_path)
+        
+        self.logger.info(
+            "Quantized model check: full_pipeline=%s, component_cache=%s",
+            full_pipeline_exists, component_cache_exists
+        )
+        
+        if full_pipeline_exists:
             self.logger.info(
-                "Found existing quantized model at %s, loading directly...",
+                "Found existing full quantized pipeline at %s, loading directly...",
                 quantized_path,
             )
             self.emit_signal(
                 SignalCode.UPDATE_DOWNLOAD_LOG,
-                {"message": "Loading pre-quantized model from disk..."},
+                {"message": "Loading pre-quantized pipeline from disk..."},
             )
-            self._pipe = pipeline_class.from_pretrained(
-                str(quantized_path),
-                torch_dtype=data.get("torch_dtype", torch.bfloat16),
-                local_files_only=True,
-            )
-            self.logger.info("✓ Pre-quantized model loaded from disk")
-            return True
+            try:
+                self._pipe = pipeline_class.from_pretrained(
+                    str(quantized_path),
+                    torch_dtype=data.get("torch_dtype", torch.bfloat16),
+                    local_files_only=True,
+                )
+                self.logger.info("✓ Pre-quantized full pipeline loaded from disk")
+                return True
+            except Exception as e:
+                self.logger.warning(
+                    "Failed to load full pipeline from %s: %s. "
+                    "Falling back to component cache...",
+                    quantized_path, e
+                )
 
-        if self._component_cache_exists(quantized_path):
+        # Fall back to component cache (e.g., just transformer saved)
+        if component_cache_exists:
             return self._load_pipeline_from_component_cache(
                 quantized_path, pipeline_class, data
             )
-
+        
+        self.logger.info("No quantized cache found, will quantize from scratch")
         return False
 
     def _component_cache_exists(self, quantized_path: Path) -> bool:
         """Return True if a component-level quantized cache exists."""
+        # Check for direct transformer save (new format)
+        transformer_dir = quantized_path / "transformer"
+        if transformer_dir.exists() and (
+            list(transformer_dir.glob("*.safetensors")) or 
+            list(transformer_dir.glob("*.bin"))
+        ):
+            # Check for model_index.json marker
+            if (quantized_path / "model_index.json").exists():
+                return True
+        
+        # Check for components subdirectory format (legacy)
         manifest = self._read_component_manifest(
             quantized_path, suppress_errors=True
         )
@@ -310,22 +424,38 @@ class FluxPipelineLoadingMixin:
         data: Dict,
     ) -> bool:
         """Load pipeline using cached quantized components."""
+        self.logger.info(
+            "Attempting to load pipeline from component cache at %s",
+            quantized_path,
+        )
+        
+        # Check for direct transformer save first (new format)
+        transformer_dir = quantized_path / "transformer"
+        has_direct_format = transformer_dir.exists() and (
+            list(transformer_dir.glob("*.safetensors")) or 
+            list(transformer_dir.glob("*.bin"))
+        )
+        
+        # Check for legacy manifest format
         manifest = self._read_component_manifest(quantized_path)
-        if manifest.get("schema") != "component-cache/v2":
+        has_manifest_format = manifest.get("schema") == "component-cache/v2"
+        
+        if not has_direct_format and not has_manifest_format:
             self.logger.info(
-                "Component cache at %s uses deprecated schema; ignoring",
-                quantized_path,
-            )
-            self._cleanup_component_dir(quantized_path / "components")
-            return False
-
-        transformer_manifest = manifest.get("transformer", {})
-        if not transformer_manifest.get("saved"):
-            self.logger.warning(
-                "Component cache at %s missing transformer entry",
+                "No valid component cache found at %s",
                 quantized_path,
             )
             return False
+        
+        if has_manifest_format:
+            transformer_manifest = manifest.get("transformer", {})
+            if not transformer_manifest.get("saved"):
+                if not has_direct_format:
+                    self.logger.warning(
+                        "Component cache at %s missing transformer entry",
+                        quantized_path,
+                    )
+                    return False
 
         base_model = self._base_flux_model_path()
         self._current_flux_base_model_path = base_model
@@ -339,34 +469,53 @@ class FluxPipelineLoadingMixin:
             {"message": "Loading quantized components from cache..."},
         )
 
-        text_manifest = manifest.get("text_encoder_2", {})
+        # Try loading T5 encoder from cache, fall back to fresh quantized load
+        text_manifest = manifest.get("text_encoder_2", {}) if has_manifest_format else {}
         cached_t5 = None
-        if text_manifest.get("saved"):
+        t5_dir = quantized_path / "text_encoder_2"
+        t5_components_dir = quantized_path / "components" / "text_encoder_2"
+        
+        if t5_dir.exists() or (text_manifest.get("saved") and t5_components_dir.exists()):
             cached_t5 = self._load_cached_quantized_t5(quantized_path)
-            if not self._validate_cached_module(
+            validation_dir = t5_dir if t5_dir.exists() else t5_components_dir
+            if cached_t5 and not self._validate_cached_module(
                 "text_encoder_2",
                 cached_t5,
                 text_manifest.get("tensor_count", 0),
-                quantized_path / "components" / "text_encoder_2",
+                validation_dir,
             ):
                 cached_t5 = None
+        
+        # If no cached T5 available, load fresh with quantization
+        if cached_t5 is None:
+            self.logger.info("Loading fresh quantized T5 encoder...")
+            cached_t5 = self._load_quantized_t5(base_model)
 
+        # Skip loading the base transformer since we'll use the cached quantized one
+        # This saves ~6-12GB of RAM
         self._load_base_pipeline_with_t5(
-            base_model, pipeline_class, data, cached_t5
+            base_model, pipeline_class, data, cached_t5, skip_transformer=True
         )
 
         transformer = self._load_cached_quantized_transformer(quantized_path)
+        
+        # Determine validation directory
+        transformer_components_dir = quantized_path / "components" / "transformer"
+        validation_dir = transformer_dir if transformer_dir.exists() else transformer_components_dir
+        
+        transformer_manifest = manifest.get("transformer", {}) if has_manifest_format else {}
         if not self._validate_cached_module(
             "transformer",
             transformer,
             transformer_manifest.get("tensor_count", 0),
-            quantized_path / "components",
+            validation_dir,
         ):
             self.logger.warning(
                 "Cached transformer at %s is invalid; re-quantizing",
                 quantized_path,
             )
             self._cleanup_component_dir(quantized_path / "components")
+            self._cleanup_component_dir(quantized_path / "transformer")
             return False
 
         self._finalize_quantized_unet(transformer)
@@ -378,39 +527,42 @@ class FluxPipelineLoadingMixin:
     def _load_cached_quantized_t5(
         self, quantized_path: Path
     ) -> Optional[T5EncoderModel]:
-        """Load a cached quantized T5 encoder if present."""
-        cache_dir = quantized_path / "components" / "text_encoder_2"
-        if not cache_dir.exists():
-            return None
-
+        """Load a cached quantized T5 encoder if present.
+        
+        NOTE: BitsAndBytes quantized models cannot be saved/loaded properly.
+        save_pretrained() on a quantized model saves dequantized full-precision
+        weights. So we skip T5 caching entirely and always load fresh.
+        """
+        # T5 caching doesn't work with BitsAndBytes - skip it
+        # The "cached" files are actually full-precision and ~9GB
         self.logger.info(
-            "Loading cached quantized T5 encoder from %s", cache_dir
+            "Skipping T5 cache (BitsAndBytes models can't be cached properly)"
         )
-        max_memory = self._quantized_t5_max_memory()
-        return T5EncoderModel.from_pretrained(
-            str(cache_dir),
-            torch_dtype=torch.float16,
-            device_map="auto",
-            max_memory=max_memory,
-            local_files_only=True,
-        )
+        return None
 
     def _load_cached_quantized_transformer(
         self, quantized_path: Path
     ) -> FluxTransformer2DModel:
         """Load cached quantized transformer from disk."""
-        cache_dir = quantized_path / "components" / "transformer"
+        # Check both possible locations: direct and components subdirectory
+        cache_dir = quantized_path / "transformer"
+        if not cache_dir.exists():
+            cache_dir = quantized_path / "components" / "transformer"
         self.logger.info(
             "Loading cached quantized transformer from %s", cache_dir
         )
-        return FluxTransformer2DModel.from_pretrained(
+        # Load directly to GPU - quantized transformer is ~5-6GB which fits
+        quant_config = self._transformer_quantization_config()
+        model = FluxTransformer2DModel.from_pretrained(
             str(cache_dir),
+            quantization_config=quant_config,
             torch_dtype=torch.float16,
-            device_map="auto",
-            max_memory=self._transformer_max_memory(),
+            device_map={"": 0},  # Force to GPU 0
             low_cpu_mem_usage=True,
             local_files_only=True,
         )
+        self.logger.info("Transformer loaded to GPU")
+        return model
 
     def _handle_quantized_save_failure(
         self, quantized_path: Path, exc: Exception
@@ -512,18 +664,51 @@ class FluxPipelineLoadingMixin:
         export_dir.mkdir(parents=True, exist_ok=True)
 
         try:
+            # First try using save_pretrained which handles bitsandbytes models properly
+            try:
+                self.logger.info(
+                    "Saving quantized transformer using save_pretrained..."
+                )
+                transformer.save_pretrained(
+                    str(export_dir), 
+                    safe_serialization=True
+                )
+                # Verify save worked by checking for essential files
+                if (export_dir / "config.json").exists():
+                    model_files = list(export_dir.glob("*.safetensors"))
+                    if model_files:
+                        self.logger.info(
+                            "✓ Exported quantized transformer to %s using save_pretrained",
+                            export_dir,
+                        )
+                        return True, len(model_files)
+            except Exception as save_exc:
+                self.logger.debug(
+                    "save_pretrained failed (%s), trying manual state dict export",
+                    save_exc,
+                )
+            
+            # Fallback to manual state dict export
             clean_state_dict, meta_count = self._collect_state_dict(
                 transformer
             )
 
-            if meta_count > 0:
+            if meta_count > 0 and len(clean_state_dict) == 0:
                 self.logger.debug(
-                    "Skipping transformer cache export - %d meta tensors present "
+                    "Skipping transformer cache export - all %d tensors are meta "
                     "(expected for single-file quantized loads)",
                     meta_count,
                 )
                 self._cleanup_component_dir(export_dir)
                 return False, 0
+            
+            if meta_count > 0:
+                self.logger.warning(
+                    "Exporting partial transformer cache - %d meta tensors skipped, "
+                    "%d tensors saved. Model may need re-quantization on next load.",
+                    meta_count,
+                    len(clean_state_dict),
+                )
 
             # Save config as JSON (transformer.config is a FrozenDict)
             config_dict = self._config_to_json_serializable(
@@ -557,56 +742,17 @@ class FluxPipelineLoadingMixin:
     def _export_quantized_text_encoder(
         self, cache_dir: Path
     ) -> Tuple[bool, int]:
-        """Export the quantized T5 encoder to disk if present."""
-        text_encoder = getattr(self._pipe, "text_encoder_2", None)
-        if text_encoder is None:
-            return False, 0
-
-        export_dir = cache_dir / "text_encoder_2"
-        export_dir.mkdir(parents=True, exist_ok=True)
-
-        try:
-            clean_state_dict, meta_count = self._collect_state_dict(
-                text_encoder
-            )
-
-            if meta_count > 0:
-                self.logger.debug(
-                    "Skipping T5 encoder cache export - %d meta tensors present "
-                    "(expected for single-file quantized loads)",
-                    meta_count,
-                )
-                self._cleanup_component_dir(export_dir)
-                return False, 0
-
-            # Save config as JSON
-            config_dict = self._config_to_json_serializable(
-                text_encoder.config.to_dict()
-            )
-            with (export_dir / "config.json").open("w") as f:
-                json.dump(config_dict, f, indent=2)
-
-            # Save state dict
-            from safetensors.torch import save_file
-
-            save_file(
-                clean_state_dict,
-                str(export_dir / "model.safetensors"),
-            )
-
-            self.logger.info(
-                "✓ Exported quantized T5 encoder to %s (%d tensors, %d meta skipped)",
-                export_dir,
-                len(clean_state_dict),
-                meta_count,
-            )
-            return True, len(clean_state_dict)
-        except Exception as exc:  # noqa: BLE001 - best effort
-            self.logger.warning(
-                "Failed to save quantized T5 encoder for cache: %s", exc
-            )
-            self._cleanup_component_dir(export_dir)
-            return False, 0
+        """Export the quantized T5 encoder to disk if present.
+        
+        NOTE: BitsAndBytes quantized models cannot be saved properly.
+        save_pretrained() saves dequantized full-precision weights (~9GB).
+        We skip T5 caching entirely to avoid wasting disk space and loading
+        unquantized models.
+        """
+        self.logger.info(
+            "Skipping T5 encoder cache (BitsAndBytes models can't be saved quantized)"
+        )
+        return False, 0
 
     def _base_flux_model_path(self) -> str:
         """Return path to the base FLUX model directory."""
@@ -717,21 +863,27 @@ class FluxPipelineLoadingMixin:
         quant_config: TransformersBitsAndBytesConfig,
         max_memory: Dict[Any, str],
     ) -> T5EncoderModel:
-        """Instantiate the quantized T5 encoder."""
+        """Instantiate the quantized T5 encoder.
+        
+        CRITICAL: Load T5 to CPU initially for manual offload strategy.
+        T5 will be moved to GPU only during prompt encoding, then back to CPU
+        to free VRAM for the transformer. This avoids accelerate hook RAM leaks.
+        """
+        # Load to CPU - we'll manually move to GPU during prompt encoding
         return T5EncoderModel.from_pretrained(
             base_model,
             subfolder="text_encoder_2",
             quantization_config=quant_config,
             torch_dtype=torch.float16,
-            device_map="auto",
-            max_memory=max_memory,
+            device_map={"": "cpu"},  # Start on CPU for manual offload
+            low_cpu_mem_usage=True,
         )
 
     def _log_t5_memory(self, encoder: T5EncoderModel) -> None:
         """Log memory footprint for the quantized T5 encoder."""
         memory_gb = encoder.get_memory_footprint() / (1024**3)
         self.logger.info(
-            "✓ T5 text encoder loaded (4-bit) - Memory: %.2f GB",
+            "✓ T5 text encoder loaded to CPU (4-bit) - Memory: %.2f GB",
             memory_gb,
         )
 
@@ -741,31 +893,63 @@ class FluxPipelineLoadingMixin:
         pipeline_class: Any,
         data: Dict,
         text_encoder_2: Optional[T5EncoderModel],
+        skip_transformer: bool = False,
     ) -> None:
-        """Load the base pipeline, optionally injecting a quantized T5 encoder."""
+        """Load the base pipeline, optionally injecting a quantized T5 encoder.
+        
+        Args:
+            skip_transformer: If True, don't load the transformer (we'll load
+                it separately from cache). This saves significant RAM.
+        """
         kwargs = {
             "torch_dtype": data.get("torch_dtype", torch.bfloat16),
             "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
         }
         if text_encoder_2 is not None:
             kwargs["text_encoder_2"] = text_encoder_2
+        if skip_transformer:
+            # Pass None to skip loading the transformer - we'll load it from cache
+            kwargs["transformer"] = None
+            self.logger.info("Skipping base transformer load (will use cached quantized version)")
 
         self._pipe = pipeline_class.from_pretrained(base_model, **kwargs)
-        self.logger.info("✓ Base model loaded with quantized T5 text encoder")
+        if skip_transformer:
+            self.logger.info("✓ Base model loaded (no transformer) with quantized T5 text encoder")
+        else:
+            self.logger.info("✓ Base model loaded with quantized T5 text encoder")
 
     def _create_quantized_transformer(
         self,
         model_path: Path,
         base_model: str,
     ) -> FluxTransformer2DModel:
-        """Instantiate a quantized transformer and load custom weights."""
+        """Instantiate a quantized transformer and load custom weights.
+        
+        Loads directly to GPU with device_map={"": 0}.
+        """
         self._announce_transformer_load(model_path)
         state_dict = self._load_transformer_state_dict(model_path)
         quant_config = self._transformer_quantization_config()
         max_memory = self._transformer_max_memory()
-
+        config_path = os.path.join(base_model, "transformer")
+        
+        # Check if we need to save the quantized model
+        quantized_path = self._get_quantized_model_path(str(model_path))
+        need_to_save = not self._quantized_model_exists(str(model_path))
+        
+        if need_to_save:
+            # Load with quantization, save to cache, then return directly
+            transformer = self._load_and_save_for_cache(
+                config_path, quant_config, state_dict, quantized_path
+            )
+            if transformer is not None:
+                # Successfully saved - return the model directly (no need to reload)
+                self._log_transformer_memory(transformer)
+                return transformer
+        
+        # Normal path: load to GPU for inference
         transformer = self._instantiate_quantized_transformer(
-            os.path.join(base_model, "transformer"),
+            config_path,
             quant_config,
             max_memory,
         )
@@ -773,6 +957,83 @@ class FluxPipelineLoadingMixin:
             "Loading custom weights into quantized transformer..."
         )
         transformer.load_state_dict(state_dict, strict=False)
+        self._log_transformer_memory(transformer)
+        return transformer
+
+    def _load_and_save_for_cache(
+        self,
+        config_path: str,
+        quant_config: DiffusersBitsAndBytesConfig,
+        state_dict: Dict[str, torch.Tensor],
+        quantized_path: Path,
+    ) -> Optional[FluxTransformer2DModel]:
+        """Load transformer with quantization, save, then return for use.
+        
+        Strategy: Load WITH quantization to save the quantized weights,
+        then return the model for use (avoiding a second load).
+        """
+        try:
+            self.logger.info(
+                "Loading transformer with quantization for caching..."
+            )
+            # Load with quantization directly to GPU
+            transformer = FluxTransformer2DModel.from_pretrained(
+                config_path,
+                quantization_config=quant_config,
+                torch_dtype=torch.float16,
+                device_map={"": 0},  # Force to GPU 0
+                low_cpu_mem_usage=True,
+            )
+            self.logger.info("Loading custom weights into quantized transformer...")
+            transformer.load_state_dict(state_dict, strict=False)
+            
+            # Now save the quantized weights
+            transformer_path = quantized_path / "transformer"
+            transformer_path.mkdir(parents=True, exist_ok=True)
+            self.logger.info("Saving quantized transformer to %s", transformer_path)
+            transformer.save_pretrained(str(transformer_path), safe_serialization=True)
+            
+            # Create marker file
+            import json
+            marker_path = quantized_path / "model_index.json"
+            marker_data = {
+                "_class_name": "FluxPipeline",
+                "_diffusers_version": "0.31.0",
+                "components_cached": ["transformer"],
+            }
+            with marker_path.open("w") as f:
+                json.dump(marker_data, f, indent=2)
+            
+            self.logger.info("✓ Quantized transformer cached successfully")
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {"message": "✓ Quantized transformer cached for faster future loads"}
+            )
+            return transformer
+            
+        except Exception as e:
+            self.logger.warning(
+                "Failed to cache transformer (will load directly): %s", e
+            )
+            return None
+
+    def _load_from_cache(
+        self,
+        quantized_path: Path,
+        quant_config: DiffusersBitsAndBytesConfig,
+        max_memory: Dict[Any, str],
+    ) -> FluxTransformer2DModel:
+        """Load the transformer from the cached quantized version."""
+        transformer_path = quantized_path / "transformer"
+        self.logger.info("Loading cached quantized transformer from %s", transformer_path)
+        # Load directly to GPU
+        transformer = FluxTransformer2DModel.from_pretrained(
+            str(transformer_path),
+            quantization_config=quant_config,
+            torch_dtype=torch.float16,
+            device_map={"": 0},  # Force to GPU 0
+            low_cpu_mem_usage=True,
+        )
         self._log_transformer_memory(transformer)
         return transformer
 
@@ -814,14 +1075,14 @@ class FluxPipelineLoadingMixin:
     ) -> FluxTransformer2DModel:
         """Create a quantized transformer instance."""
         self.logger.info(
-            "Creating quantized transformer (4-bit NF4) with CPU offload..."
+            "Creating quantized transformer (4-bit NF4)..."
         )
+        # Load directly to GPU
         return FluxTransformer2DModel.from_pretrained(
             config_path,
             quantization_config=quant_config,
             torch_dtype=torch.float16,
-            device_map="auto",
-            max_memory=max_memory,
+            device_map={"": 0},  # Force to GPU 0
             low_cpu_mem_usage=True,
         )
 
@@ -839,8 +1100,27 @@ class FluxPipelineLoadingMixin:
         self,
         transformer: FluxTransformer2DModel,
     ) -> None:
-        """Attach the quantized transformer and emit completion signal."""
+        """Attach the quantized transformer and emit completion signal.
+        
+        CRITICAL: Explicitly delete the old transformer to free memory.
+        Just reassigning the reference doesn't free the GPU/CPU memory.
+        """
+        import gc
+        
+        # Get reference to old transformer before replacing
+        old_transformer = getattr(self._pipe, 'transformer', None)
+        
+        # Replace with new quantized transformer
         self._pipe.transformer = transformer
+        
+        # Explicitly delete old transformer to free memory
+        if old_transformer is not None:
+            self.logger.debug("Deleting old base transformer to free memory")
+            del old_transformer
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        
         self.logger.info("✓ Custom transformer loaded and swapped")
         self.emit_signal(
             SignalCode.UPDATE_DOWNLOAD_LOG,

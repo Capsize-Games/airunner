@@ -176,10 +176,7 @@ class ActiveGridArea(DraggablePixmap):
                 getattr(view, "canvas_offset_x", 0.0),
                 getattr(view, "canvas_offset_y", 0.0),
             ),
-            grid_compensation=QPointF(
-                getattr(view, "grid_compensation_x", 0.0),
-                getattr(view, "grid_compensation_y", 0.0),
-            ),
+            grid_compensation=getattr(view, "grid_compensation_offset", QPointF(0.0, 0.0)),
         )
 
         # Use manager to convert display position to absolute position
@@ -207,10 +204,7 @@ class ActiveGridArea(DraggablePixmap):
                 getattr(view, "canvas_offset_x", 0.0),
                 getattr(view, "canvas_offset_y", 0.0),
             ),
-            grid_compensation=QPointF(
-                getattr(view, "grid_compensation_x", 0.0),
-                getattr(view, "grid_compensation_y", 0.0),
-            ),
+            grid_compensation=getattr(view, "grid_compensation_offset", QPointF(0.0, 0.0)),
         )
 
         # Use manager to calculate drag position
@@ -253,10 +247,7 @@ class ActiveGridArea(DraggablePixmap):
                 getattr(view, "canvas_offset_x", 0.0),
                 getattr(view, "canvas_offset_y", 0.0),
             ),
-            grid_compensation=QPointF(
-                getattr(view, "grid_compensation_x", 0.0),
-                getattr(view, "grid_compensation_y", 0.0),
-            ),
+            grid_compensation=getattr(view, "grid_compensation_offset", QPointF(0.0, 0.0)),
         )
 
         manager = CanvasPositionManager()

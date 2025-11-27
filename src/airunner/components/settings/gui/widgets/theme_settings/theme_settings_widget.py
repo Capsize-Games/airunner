@@ -19,7 +19,7 @@ class ThemeSettingsWidget(BaseWidget):
         self.ui.theme_combobox.addItems([e.value for e in TemplateName])
         self.ui.theme_combobox.blockSignals(False)
         settings = get_qsettings()
-        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme = settings.value("theme", TemplateName.DARK.value)
         self.ui.theme_combobox.setCurrentText(theme)
 
     @Slot(str)

@@ -5,11 +5,14 @@ Handles LLM-based fact extraction from web content.
 
 import logging
 from langchain_core.messages import HumanMessage
+from airunner.components.llm.agents.deep_research.mixins.content_validation_mixin import (
+    ContentValidationMixin,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class ContentExtractionMixin:
+class ContentExtractionMixin(ContentValidationMixin):
     """Provides LLM-based content extraction methods."""
 
     def _extract_facts_with_llm(
@@ -36,6 +39,15 @@ class ContentExtractionMixin:
         content_sample = (
             raw_content[:8000] if len(raw_content) > 8000 else raw_content
         )
+
+        # Security Check: Scan for malicious instructions/prompt injection
+        if ContentValidationMixin._contains_malicious_instructions(
+            content_sample
+        ):
+            logger.warning(
+                f"[Security] Content from {url} contains malicious instructions. Skipping extraction."
+            )
+            return ""
 
         # Build source context and prompt
         source_context = self._build_source_context(url, title, metadata)

@@ -1,12 +1,6 @@
-import os
 from typing import List
 from PySide6.QtCore import Qt
 from airunner.utils.settings import get_qsettings
-
-
-def _is_running_in_docker():
-    """Check if the application is running inside a Docker container."""
-    return os.path.exists("/.dockerenv")
 
 
 def load_splitter_settings(
@@ -18,7 +12,6 @@ def load_splitter_settings(
 ):
     """
     Load the state of splitter widgets from PySide6 application settings.
-    Skips loading from disk if running in a Docker container.
     Applies default sizes if no settings are found, with an option to maximize a specific panel.
     """
     if orientations is None:
@@ -26,10 +19,7 @@ def load_splitter_settings(
     if default_maximize_config is None:  # Initialize new parameter
         default_maximize_config = {}
 
-    running_in_docker = _is_running_in_docker()
-    settings = None
-    if not running_in_docker:
-        settings = get_qsettings()
+    settings = get_qsettings()
 
     for splitter_name in splitters:
         try:
@@ -46,14 +36,14 @@ def load_splitter_settings(
         current_orientation = splitter.orientation()
 
         splitter_state = None
-        if not running_in_docker and settings:
+        if settings:
             # Retrieve the splitter state from application settings
             splitter_state = settings.value(
                 f"{namespace}/{splitter_name}", None
             )
 
-        # Attempt to restore state if available and not in Docker
-        if splitter_state and not running_in_docker:
+        # Attempt to restore state if available
+        if splitter_state:
             try:
                 splitter.restoreState(splitter_state)
             except Exception as e:
@@ -62,8 +52,8 @@ def load_splitter_settings(
                 )
                 splitter_state = None  # Mark as if no state was found to trigger default sizing
 
-        # Apply default sizes if no state was restored, or if in Docker
-        if not splitter_state or running_in_docker:
+        # Apply default sizes if no state was restored
+        if not splitter_state:
             min_sensible_size_for_panels = (
                 50  # A general minimum for any panel
             )

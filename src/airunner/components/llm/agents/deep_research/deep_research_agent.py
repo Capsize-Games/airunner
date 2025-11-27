@@ -97,7 +97,6 @@ class DeepResearchState(TypedDict):
 class DeepResearchAgent(
     MediatorMixin,
     ResearchSummaryMixin,
-    ContentValidationMixin,
     ContentParsingMixin,
     OutputCleaningMixin,  # NEW: Clean LLM outputs
     SectionSynthesisMixin,
@@ -153,6 +152,8 @@ class DeepResearchAgent(
         )
         self._api = api
         self._tools = self._get_research_tools()
+        self._tool_status_id: Optional[str] = None
+        self._tool_status_prompt: str = ""
 
         # Keep reference to base model WITHOUT tools (for synthesis)
         # CRITICAL: Use LOW TEMPERATURE for factual synthesis to prevent hallucination
@@ -185,6 +186,14 @@ class DeepResearchAgent(
             )
         else:
             self._chat_model = chat_model
+
+    def set_tool_status_context(
+        self, tool_status_id: Optional[str], prompt: Optional[str]
+    ) -> None:
+        """Store tool status metadata for downstream UI updates."""
+
+        self._tool_status_id = tool_status_id
+        self._tool_status_prompt = prompt or ""
 
     def _initialize_phase_messages(self, topic: str) -> list:
         """Initialize fresh conversation messages for a phase.

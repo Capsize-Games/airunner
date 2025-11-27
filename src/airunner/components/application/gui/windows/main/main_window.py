@@ -41,6 +41,7 @@ from PySide6.QtCore import (
     Signal,
     QProcess,
     QTimer,
+    Qt,
 )
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
@@ -293,6 +294,12 @@ class MainWindow(
         super().__init__()
         self.logger.debug("Starting AI Runnner")
         enable_wayland_window_decorations(self)
+        
+        # Fix for black background flash during window drag on Linux
+        # This ensures the window has a proper background brush during move/resize
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        
         self.update_application_settings(
             sd_enabled=False,
             llm_enabled=False,
@@ -929,7 +936,7 @@ class MainWindow(
             f.write(message)
 
     def on_theme_changed_signal(self, data: Dict):
-        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        template = data.get("template", TemplateName.DARK)
         self.set_stylesheet(
             template=template,
         )
@@ -1256,6 +1263,10 @@ class MainWindow(
             self.ui.center_tab_container.currentIndex(),
         )
         self.qsettings.endGroup()
+        
+        # Ensure settings are written to disk before exit
+        self.qsettings.sync()
+        
         save_splitter_settings(self.ui, ["main_window_splitter"], "MainWindow")
 
         # Save canvas offset for all canvas views
@@ -1662,3 +1673,4 @@ class MainWindow(
         self.qsettings.beginGroup("window_settings")
         self.qsettings.setValue("active_main_tab_index", index)
         self.qsettings.endGroup()
+        self.qsettings.sync()

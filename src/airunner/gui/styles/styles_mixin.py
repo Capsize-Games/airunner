@@ -29,7 +29,7 @@ class StylesMixin:
         settings = get_qsettings()
         if template is None:
             template_val = settings.value(
-                "theme", TemplateName.SYSTEM_DEFAULT.value
+                "theme", TemplateName.DARK.value
             )
             template = TemplateName(template_val)
 

@@ -273,6 +273,7 @@ function handleToolStatusUpdate(toolId, toolName, query, status, details) {
 
     if (status === 'starting') {
         console.log('[TOOL STATUS DEBUG] Creating tool status element');
+        removeToolStatusesForTool(toolName, toolElementId);
         // Create new tool status element
         if (!toolElement) {
             toolElement = document.createElement('div');
@@ -281,22 +282,35 @@ function handleToolStatusUpdate(toolId, toolName, query, status, details) {
             container.appendChild(toolElement);
             console.log('[TOOL STATUS DEBUG] Appended new tool status element to container');
         }
+        toolElement.dataset.toolName = toolName;
 
         // Format the "starting" message
         const displayName = getToolDisplayName(toolName);
         const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
-        toolElement.innerHTML = `
+        let html = `
             <div class="tool-status-line">
                 <span class="tool-spinner">⏳</span>
                 <span class="tool-text">${displayName} for "${queryPreview}"</span>
             </div>
         `;
 
+        if (details && details.trim()) {
+            html += `
+                <div class="tool-status-line">
+                    <span class="tool-spinner">⏳</span>
+                    <span class="tool-text tool-details">${details}</span>
+                </div>
+            `;
+        }
+
+        toolElement.innerHTML = html;
+
         if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
     } else if (status === 'completed') {
         console.log('[TOOL STATUS DEBUG] Updating tool status to completed');
         // Update to "completed" status
         if (toolElement) {
+            toolElement.dataset.toolName = toolName;
             const displayName = getToolDisplayName(toolName);
             const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
 
@@ -312,7 +326,7 @@ function handleToolStatusUpdate(toolId, toolName, query, status, details) {
                 html += `
                     <div class="tool-status-line tool-status-completed">
                         <span class="tool-checkmark">✅</span>
-                        <span class="tool-text tool-details">Analyzed results (${details})</span>
+                        <span class="tool-text tool-details">${details}</span>
                     </div>
                 `;
             }
@@ -325,6 +339,23 @@ function handleToolStatusUpdate(toolId, toolName, query, status, details) {
             console.log('[TOOL STATUS DEBUG] Tool element not found for completed status');
         }
     }
+}
+
+function removeToolStatusesForTool(toolName, activeElementId) {
+    if (!toolName) return;
+    const container = document.getElementById('conversation-container');
+    if (!container) return;
+
+    const existingStatuses = container.querySelectorAll('.tool-status');
+    existingStatuses.forEach(statusEl => {
+        if (
+            statusEl.dataset &&
+            statusEl.dataset.toolName === toolName &&
+            statusEl.id !== activeElementId
+        ) {
+            statusEl.remove();
+        }
+    });
 }
 
 function clearMessagesKeepToolStatus() {

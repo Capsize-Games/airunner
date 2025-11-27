@@ -62,7 +62,7 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
     def _update_visibility_icon(self):
         """Update the visibility icon based on layer state."""
         settings = get_qsettings()
-        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme = settings.value("theme", TemplateName.DARK.value)
         theme_name = theme.lower().replace(" ", "_")
         self.icons[0] = (
             "eye" if self.layer.visible else "eye-off",

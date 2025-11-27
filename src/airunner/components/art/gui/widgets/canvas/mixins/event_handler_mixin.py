@@ -252,9 +252,21 @@ class EventHandlerMixin:
 
             self._initialized = True
 
-            # Align canvas items to the viewport now that restoration is complete
-            # (this will calculate center_pos if it wasn't loaded from settings)
-            self.align_canvas_items_to_viewport()
+            # If canvas_offset is (0,0), the user had clicked "center" before closing.
+            # We need to recenter for the current viewport, but viewport size may not be 
+            # correct yet during showEvent. Store a flag and do it in the delayed callback.
+            self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
+            
+            if self._needs_recenter_on_show:
+                self.logger.info(
+                    "[SHOW] Canvas offset is (0,0) - will recenter after window settles"
+                )
+                # Clear cached positions so they get recalculated
+                if self.scene and hasattr(self.scene, "original_item_positions"):
+                    self.scene.original_item_positions = {}
+            else:
+                # Non-zero offset means user panned - restore exact positions
+                self.align_canvas_items_to_viewport()
 
             # Use a longer delay to allow the window to fully settle (including main window showEvent)
             # before re-enabling resize compensation. The main window's showEvent can fire up to 1 second
@@ -300,9 +312,40 @@ class EventHandlerMixin:
         final_offset = QPointF(float(x), float(y))
         self.canvas_offset = final_offset
 
-        # Update positions one final time
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
+        # Check if we need to recenter (user had clicked center before closing)
+        if getattr(self, "_needs_recenter_on_show", False):
+            self._needs_recenter_on_show = False
+            self.logger.info(
+                "[FINISH] Recentering for current viewport (delayed)"
+            )
+            
+            # Now viewport should have correct size - recenter everything
+            self.center_pos = QPointF(0, 0)
+            
+            # Calculate center_pos for current viewport
+            pos_x, pos_y = self.get_recentered_position(
+                self.application_settings.working_width,
+                self.application_settings.working_height,
+            )
+            self.center_pos = QPointF(pos_x, pos_y)
+            self.logger.info(
+                f"[FINISH] Calculated center_pos: x={pos_x}, y={pos_y}"
+            )
+            
+            # Update active grid settings and position
+            self.update_active_grid_settings(pos_x=pos_x, pos_y=pos_y)
+            self.update_active_grid_area_position()
+            
+            # Recenter layer positions for the current viewport and apply them
+            layer_positions = self.recenter_layer_positions()
+            self.updateImagePositions(layer_positions)
+            # Store the new positions so future updates use the correct values
+            if self.scene:
+                self.scene.original_item_positions.update(layer_positions)
+        else:
+            # Normal restoration - update positions from saved values
+            self.update_active_grid_area_position()
+            self.updateImagePositions()
 
         self.logger.debug(
             f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"

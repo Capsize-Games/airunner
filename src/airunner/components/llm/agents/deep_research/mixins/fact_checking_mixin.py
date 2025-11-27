@@ -21,6 +21,35 @@ logger = logging.getLogger(__name__)
 class FactCheckingMixin:
     """Provides fact-checking and correction methods."""
 
+    def _get_fact_check_system_prompt(self) -> str:
+        """Return the base system prompt for fact-checking tasks."""
+
+        prompt = getattr(self, "_fact_check_system_prompt", None)
+        if prompt:
+            return prompt
+
+        return (
+            "You are the Deep Research fact-checking expert. Identify factual errors, timeline issues, and unsupported "
+            "claims using only the artifacts provided in the user content. Follow the requested output format exactly and "
+            "answer 'No factual errors detected.' when everything is correct."
+        )
+
+    def _build_fact_check_messages(
+        self, user_prompt: str, *, extra_system_rules: str | None = None
+    ) -> list:
+        """Create a [System, Human] pair for fact-check prompts."""
+
+        system_prompt = self._get_fact_check_system_prompt()
+        if extra_system_rules:
+            system_prompt = (
+                f"{system_prompt}\n\nTASK RULES:\n{extra_system_rules.strip()}"
+            )
+
+        return [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+
     def _fact_check_document(
         self, document_content: str, thesis: str
     ) -> List[str]:
@@ -34,45 +63,39 @@ class FactCheckingMixin:
         Returns:
             List of factual errors or concerns found
         """
-        # Extract key factual claims for review
-        prompt = f"""You are a fact-checking expert reviewing a research paper. Carefully examine the following document for FACTUAL ERRORS, especially:
-
-1. Incorrect dates or timelines
-2. Wrong job titles or positions (e.g., calling current officials "former")
-3. Misattributed quotes or actions
-4. Contradictory statements
-5. Anachronisms (events described as past that haven't happened yet)
-
-DOCUMENT EXCERPT (first 3000 chars):
-{document_content[:3000]}
-
-THESIS BEING ARGUED:
-{thesis}
-
-TODAY'S DATE: {datetime.now().strftime('%B %d, %Y')}
-
-INSTRUCTIONS:
-1. Verify all dates, titles, and facts against TODAY'S DATE above
-2. Check if people are described with correct current titles (e.g., "former" vs "current")
-   - Critical: Source documents such as notes may contain results from past events; establish a timeline based on TODAY'S DATE and determine where the sources fit.
-   - When establishing timelines, consider the context of topic at hand such as political events, elections, or appointments.
-   - Be aware of potential biases in source documents; cross-reference with multiple sources when possible.
-   - Look for anachronisms (describing future events as if they already happened, or past events as if they're current)
-   - Verify job titles match the timeframe being discussed
-   - Check if timelines and sequences of events are logically consistent
-   - IMPORTANT: If a source is dated in the past (e.g., 2024) but the current date is 2025, DO NOT flag it as "not yet published" or "irrelevant". It is a past source.
-   - IMPORTANT: If a source discusses a "future" event that is now in the past relative to TODAY'S DATE, treat it as a historical record of that prediction/plan.
-3. Ensure all claims are supported by credible sources
-   - Rank the credibility of sources if possible
-   - Cross-check facts against multiple sources to ensure accuracy
-
-List any factual errors or concerns you find. If none, respond with "No factual errors detected."
-
-Fact-check results:"""
+        priorities = (
+            "1. Incorrect dates or timelines\n"
+            "2. Wrong job titles or positions (e.g., calling current officials 'former')\n"
+            "3. Misattributed quotes or actions\n"
+            "4. Contradictory statements\n"
+            "5. Anachronisms (events described as past that have not happened)"
+        )
+        instructions = (
+            "1. Verify all dates, titles, and facts against TODAY'S DATE provided in the user prompt.\n"
+            "2. Ensure titles match the timeframe being discussed and watch for anachronisms or timeline errors.\n"
+            "3. Cross-reference claims within the provided material and note credibility gaps.\n"
+            "4. Treat historical sources appropriately: past-dated sources remain valid evidence.\n"
+            "5. Only use the supplied context—do not inject outside knowledge."
+        )
+        payload = (
+            "DOCUMENT EXCERPT (first 3000 chars):\n"
+            f"{document_content[:3000]}\n\n"
+            "THESIS BEING ARGUED:\n"
+            f"{thesis}\n\n"
+            f"TODAY'S DATE: {datetime.now().strftime('%B %d, %Y')}\n\n"
+            "List any factual errors or concerns you find. Fact-check results:"
+        )
+        messages = self._build_fact_check_messages(
+            payload,
+            extra_system_rules=(
+                "Priority Checklist:\n"
+                f"{priorities}\n\nINSTRUCTIONS:\n{instructions}\n\nRespond with 'No factual errors detected.' when everything is correct."
+            ),
+        )
 
         try:
             response = self._base_model.invoke(
-                [HumanMessage(content=prompt)],
+                messages,
                 temperature=0.1,  # Very low for factual analysis
                 max_new_tokens=512,
             )
@@ -190,8 +213,19 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
 
     def _generate_corrections_with_llm(self, prompt: str) -> str | None:
         """Generate corrections using LLM."""
+        messages = [HumanMessage(content=prompt)]
+        system_prompt = (
+            self._get_synthesis_system_prompt()
+            if hasattr(self, "_get_synthesis_system_prompt")
+            else getattr(self, "_synthesis_system_prompt", None)
+        )
+        if not system_prompt:
+            system_prompt = getattr(self, "_system_prompt", None)
+        if system_prompt:
+            messages.insert(0, SystemMessage(content=system_prompt))
+
         response = self._base_model.invoke(
-            [HumanMessage(content=prompt)],
+            messages,
             temperature=0.1,
             max_new_tokens=2048,
             repetition_penalty=1.1,
@@ -379,7 +413,10 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
 
         # Build revision prompt with RAG context
         try:
-            revision_prompt = self._build_section_revision_prompt(
+            (
+                revision_prompt,
+                normalized_issues,
+            ) = self._build_section_revision_prompt(
                 section_name, section_content, issues, rag_context
             )
             logger.info(
@@ -534,7 +571,7 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
                 # If it still doesn't start with the section title or substantial content,
                 # try to find where the real content starts
                 if not revised.strip().startswith(
-                    ("During", "In ", "The ", "President", "According")
+                    ("During", "In ", "The ", "According", "As ")
                 ):
                     # Look for the first substantial paragraph (3+ words starting with capital)
                     match = re.search(
@@ -561,6 +598,12 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
                 if revised.count("FACTUAL ERROR") > 2:
                     logger.error(
                         f"[Phase 1F] LLM output contains repeated 'FACTUAL ERROR' markers for {section_name}, rejecting"
+                    )
+                    return None
+
+                if self._has_issue_leak(revised, normalized_issues):
+                    logger.error(
+                        f"[Phase 1F] Revised section for {section_name} echoed issue descriptions, rejecting"
                     )
                     return None
 
@@ -656,6 +699,21 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
         ):
             return True
 
+        return False
+
+    def _has_issue_leak(self, revised: str, issues: List[str]) -> bool:
+        """Check whether the revised text repeats issue descriptions verbatim."""
+
+        if not revised or not issues:
+            return False
+
+        normalized_body = re.sub(r"\s+", " ", revised.strip().lower())
+        for issue in issues:
+            cleaned = re.sub(r"\s+", " ", issue.strip().lower())
+            if len(cleaned) < 25:
+                continue
+            if cleaned and cleaned in normalized_body:
+                return True
         return False
 
     def _query_rag_for_section_revision(
@@ -777,7 +835,7 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
         section_content: str,
         issues: List[str],
         rag_context: str,
-    ) -> str:
+    ) -> Tuple[str, List[str]]:
         """Build prompt for revising a single section.
 
         Args:
@@ -787,7 +845,7 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
             rag_context: Context from RAG
 
         Returns:
-            Revision prompt
+            Tuple of (revision prompt, normalized issues)
         """
         # Clean issues list - remove metadata prefixes like "FACTUAL ERROR in 'Section':"
         cleaned_issues = []
@@ -807,19 +865,21 @@ Focus ONLY on factual corrections. If you cannot find an error in the excerpt, n
 
         issues_text = "\n".join(
             [
-                f"{i+1}. {issue}"
+                f"ISSUE_{i+1}: {issue}"
                 for i, issue in enumerate(cleaned_issues)
                 if issue
             ]
         )
 
-        return f"""Fix the issues in this section and return ONLY the corrected text.
+        prompt = f"""Fix the issues in this section and return ONLY the corrected text.
 
 SECTION TO REVISE:
 {section_content}
 
-ISSUES TO FIX:
+ISSUES TO FIX (DO NOT QUOTE THESE IN THE OUTPUT):
+<issues>
 {issues_text}
+</issues>
 
 RESEARCH CONTEXT:
 {rag_context}
@@ -828,12 +888,16 @@ CRITICAL RULES:
 1. Return ONLY the revised section text - NO explanations, NO notes, NO preambles
 2. Do NOT say "Here is the revised section" or similar - just return the text itself
 3. Do NOT list what you changed - just return the corrected content
-4. Preserve historical titles and dates - if something was "Former President" in 2024, keep it that way
-5. Fix only actual factual errors, not style or temporal context
-6. Start your response with the actual section content, not with meta-commentary
+4. Preserve historical titles and dates exactly as written in the supporting evidence (e.g., keep "Former [Title]" phrasing when it appears in the notes)
+5. ADDRESS ALL ISSUES: You must fix every factual error, style issue, and repetition flagged above.
+6. IMPROVE FLOW: Ensure the revised text flows naturally and avoids repetitive sentence starts.
+7. Start your response with the actual section content, not with meta-commentary
+8. The text inside <issues> is for your planning ONLY. NEVER copy or paraphrase any sentence from <issues> into the section.
 
 BEGIN REVISED SECTION BELOW (text only, no preamble):
 """
+
+        return prompt, cleaned_issues
 
     def _apply_section_revisions(
         self,
@@ -931,16 +995,22 @@ BEGIN REVISED SECTION BELOW (text only, no preamble):
         # Extract key patterns from original issues to check if they're fixed
         remaining_issues = []
 
+        doc_lower = doc_content.lower()
         for issue in original_issues:
             issue_lower = issue.lower()
 
             # Check for specific common issues that can be validated
-            if (
-                "former president" in issue_lower
-                and "former president" in doc_content.lower()
-            ):
-                # Issue claimed "former" is wrong, but it's still there
-                remaining_issues.append(issue)
+            if "former " in issue_lower:
+                flagged_phrases = {
+                    phrase.strip()
+                    for phrase in re.findall(
+                        r"former\s+[a-z]+(?:\s+[a-z]+){0,3}", issue_lower
+                    )
+                }
+                if any(phrase in doc_lower for phrase in flagged_phrases):
+                    # Issue claimed a "former" qualifier was wrong, but it's still present
+                    remaining_issues.append(issue)
+                    continue
             elif "missing section" in issue_lower:
                 # Check if the section was added
                 section_match = re.search(

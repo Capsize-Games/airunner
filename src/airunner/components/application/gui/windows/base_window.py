@@ -52,7 +52,7 @@ class BaseWindow(
             self.exec()
 
     def on_theme_changed_signal(self, data: Dict):
-        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        template = data.get("template", TemplateName.DARK)
         self.set_stylesheet(
             template=template,
         )

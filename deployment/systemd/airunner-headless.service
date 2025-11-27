@@ -1,0 +1,41 @@
+[Unit]
+Description=AI Runner Headless LLM Server
+After=network.target
+
+[Service]
+Type=simple
+User=joe
+Group=joe
+WorkingDirectory=/home/joe/Projects/airunner
+Environment="AIRUNNER_HEADLESS=1"
+Environment="AIRUNNER_LLM_ON=1"
+Environment="QT_QPA_PLATFORM=offscreen"
+Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=false"
+Environment="AIRUNNER_LOG_LEVEL=DEBUG"
+Environment="AIRUNNER_LOG_FILE=/var/log/airunner/headless.log"
+Environment="AIRUNNER_SAVE_LOG_TO_FILE=1"
+Environment="DEV_ENV=0"
+Environment="PATH=/home/joe/Projects/airunner/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Create log directory before starting
+ExecStartPre=/bin/mkdir -p /var/log/airunner
+ExecStartPre=/bin/chown joe:joe /var/log/airunner
+ExecStartPre=/bin/chmod 755 /var/log/airunner
+
+ExecStart=/home/joe/Projects/airunner/.venv/bin/python -m airunner.headless_server
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+# Python logging handles file output, systemd just captures for journalctl
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=airunner-headless
+
+# Performance and security settings
+LimitNOFILE=65536
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target
