@@ -128,11 +128,33 @@ class EventHandlerMixin:
     def keyPressEvent(self, event) -> None:
         """Handle keyboard events.
 
-        Supports Delete key for removing selected text items.
+        Supports:
+        - Delete key for removing selected text items
+        - Ctrl+C for copying image to clipboard
+        - Ctrl+V for pasting image from clipboard
+        - Ctrl+X for cutting image
 
         Args:
             event: Qt keyboard event.
         """
+        # Handle Ctrl+C (copy)
+        if event.key() == Qt.Key.Key_C and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.api.art.canvas.copy_image()
+            event.accept()
+            return
+        
+        # Handle Ctrl+V (paste)
+        if event.key() == Qt.Key.Key_V and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.api.art.canvas.paste_image()
+            event.accept()
+            return
+        
+        # Handle Ctrl+X (cut)
+        if event.key() == Qt.Key.Key_X and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.api.art.canvas.cut_image()
+            event.accept()
+            return
+        
         # Support Delete key to remove selected text items from the canvas
         if event.key() == Qt.Key.Key_Delete:
             # Collect selected text items

@@ -23,13 +23,21 @@ class FluxGGUFLoadingMixin:
     """Handles GGUF-specific model loading for FLUX."""
 
     def _load_gguf_transformer(
-        self, model_path: Path, config_path: Path
+        self, model_path: Path, base_model_path: str
     ) -> FluxTransformer2DModel:
-        """Load GGUF quantized transformer."""
+        """Load GGUF quantized transformer.
+        
+        Args:
+            model_path: Path to the GGUF file
+            base_model_path: Path to the base FLUX model for config
+        """
         self.logger.info(f"Loading GGUF FLUX transformer from: {model_path}")
+        self.logger.info(f"Using config from: {base_model_path}")
+        
         transformer = FluxTransformer2DModel.from_single_file(
             str(model_path),
-            config=str(config_path),
+            config=base_model_path,
+            subfolder="transformer",
             quantization_config=GGUFQuantizationConfig(
                 compute_dtype=torch.bfloat16
             ),
@@ -100,24 +108,39 @@ class FluxGGUFLoadingMixin:
         )
 
     def _load_gguf_model(self, model_path: Path, pipeline_class: Any) -> None:
-        """Load GGUF FLUX model with all components."""
+        """Load GGUF FLUX model with all components.
+        
+        Uses the diffusers pattern:
+        1. Load transformer from GGUF with base model config
+        2. Load full pipeline from base model
+        3. Swap in the GGUF transformer
+        """
         self.logger.info(f"Loading GGUF FLUX model: {model_path}")
         self.emit_signal(
             SignalCode.UPDATE_DOWNLOAD_LOG,
             {"message": "Loading GGUF FLUX model (already quantized)..."},
         )
 
-        companion_dir = Path(model_path).parent
-        config_path = companion_dir / "transformer" / "config.json"
+        model_path = Path(model_path)
+        
+        # Get the base FLUX model path for config and companion files
+        base_model = self._base_flux_model_path()
+        self.logger.info(f"Using base FLUX model: {base_model}")
 
-        # Load transformer
-        transformer = self._load_gguf_transformer(model_path, config_path)
+        # Load transformer from GGUF using base model for config
+        transformer = self._load_gguf_transformer(model_path, base_model)
 
-        # Load other components
-        components = self._load_pipeline_components(companion_dir)
+        # Load the full pipeline from base model
+        self.logger.info("Loading pipeline from base model...")
+        self._pipe = pipeline_class.from_pretrained(
+            base_model,
+            transformer=transformer,
+            torch_dtype=torch.bfloat16,
+            local_files_only=True,
+        )
 
-        # Create pipeline
-        self._pipe = pipeline_class(transformer=transformer, **components)
+        # Enable CPU offload for memory efficiency
+        self._pipe.enable_model_cpu_offload()
 
         # CRITICAL: Ensure VAE is in float32 for proper decoding
         self._force_vae_fp32()

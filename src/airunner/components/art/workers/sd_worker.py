@@ -446,7 +446,10 @@ class SDWorker(Worker):
                     err = "You must select a model before generating images."
                 self.send_missing_model_alert(err)
             except Exception as e:
-                self.handle_error(f"Unexpected error: {str(e)}")
+                import traceback
+                tb = traceback.format_exc()
+                error_msg = str(e) if str(e) else f"{type(e).__name__}"
+                self.handle_error(f"Unexpected error: {error_msg}\n{tb}")
                 self.send_missing_model_alert(
                     "An unexpected error occurred during image generation. Please check logs."
                 )

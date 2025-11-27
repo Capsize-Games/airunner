@@ -6,6 +6,9 @@ __all__ = [
     "LLMSettings",
     "TrainingMixin",
     "OpenrouterMistralRequest",
+    "FaraModelManager",
+    "FaraController",
+    "DualLLMRouter",
 ]
 
 
@@ -46,4 +49,22 @@ def __getattr__(name):
         )
 
         return OpenrouterMistralRequest
+    elif name == "FaraModelManager":
+        from airunner.components.llm.managers.fara_model_manager import (
+            FaraModelManager,
+        )
+
+        return FaraModelManager
+    elif name == "FaraController":
+        from airunner.components.llm.managers.fara_controller import (
+            FaraController,
+        )
+
+        return FaraController
+    elif name == "DualLLMRouter":
+        from airunner.components.llm.managers.dual_llm_router import (
+            DualLLMRouter,
+        )
+
+        return DualLLMRouter
     raise AttributeError(f"module {__name__} has no attribute {name}")

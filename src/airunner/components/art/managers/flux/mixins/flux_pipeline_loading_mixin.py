@@ -1,5 +1,6 @@
 """FLUX pipeline loading mixin."""
 
+import gc
 import json
 import os
 import shutil
@@ -41,6 +42,18 @@ from airunner.settings import (
 from airunner.components.art.utils.safetensors_inspector import (
     SafeTensorsInspector,
 )
+
+
+def _clear_gpu_memory() -> None:
+    """Aggressively clear GPU memory.
+    
+    Call this between loading stages to minimize peak VRAM usage.
+    """
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+    gc.collect()  # Second pass for released references
 
 
 class FluxPipelineLoadingMixin:
@@ -324,21 +337,87 @@ class FluxPipelineLoadingMixin:
         pipeline_class: Any,
         data: Dict,
     ) -> None:
-        """Load a UNet-only checkpoint and quantize components as needed."""
+        """Load a UNet-only checkpoint, preferring GGUF format.
+        
+        Memory optimization: This method prefers GGUF format which loads
+        pre-quantized weights directly without VRAM spikes. Falls back to
+        BitsAndBytes if GGUF is not available.
+        
+        Loading priority:
+        1. Try GGUF version (no VRAM spike, loads pre-quantized)
+        2. Try cached quantized pipeline
+        3. Fall back to BitsAndBytes (causes temporary VRAM spike)
+        """
+        # Priority 1: Try GGUF format (best for VRAM)
+        if self._try_load_as_gguf(model_path, pipeline_class):
+            return
+        
+        # Priority 2: Try cached quantized pipeline
         if self._try_load_quantized_pipeline(model_path, pipeline_class, data):
             return
 
+        # Priority 3: Fall back to BitsAndBytes quantization
+        self.logger.info("Using BitsAndBytes quantization (will cause brief VRAM spike)")
+        self._load_with_bitsandbytes(model_path, pipeline_class, data)
+    
+    def _try_load_as_gguf(
+        self,
+        model_path: Path,
+        pipeline_class: Any,
+    ) -> bool:
+        """Try to load or convert to GGUF format.
+        
+        Returns True if successfully loaded as GGUF.
+        """
+        # Check if we have GGUF conversion capability
+        if not hasattr(self, '_should_use_gguf') or not self._should_use_gguf(str(model_path)):
+            self.logger.debug("GGUF not available for this model")
+            return False
+        
+        # Get or create GGUF file
+        gguf_path = self._get_or_create_gguf(str(model_path))
+        if gguf_path is None:
+            self.logger.debug("GGUF conversion failed or not possible")
+            return False
+        
+        # Load using GGUF
+        try:
+            self.logger.info(f"Loading GGUF model: {gguf_path}")
+            self._load_gguf_model(gguf_path, pipeline_class)
+            self.logger.info("✓ Loaded model via GGUF (no VRAM spike)")
+            return True
+        except Exception as e:
+            self.logger.warning(f"GGUF loading failed: {e}. Falling back to BitsAndBytes.")
+            return False
+    
+    def _load_with_bitsandbytes(
+        self,
+        model_path: Path,
+        pipeline_class: Any,
+        data: Dict,
+    ) -> None:
+        """Load using BitsAndBytes quantization (fallback method).
+        
+        This causes a temporary VRAM spike to ~99% during quantization.
+        """
         base_model = self._base_flux_model_path()
         self._current_flux_base_model_path = base_model
         self._ensure_base_model_available(base_model)
+        
+        # Stage 1: Load T5 to CPU (quantization happens during load)
         text_encoder_2 = self._load_quantized_t5(base_model)
+        
+        # Stage 2: Load base pipeline with T5 (no transformer yet)
         self._load_base_pipeline_with_t5(
             base_model, pipeline_class, data, text_encoder_2
         )
 
+        # Stage 3: Load and quantize transformer
         transformer = self._create_quantized_transformer(
             model_path, base_model
         )
+        
+        # Stage 4: Swap transformer into pipeline (frees old transformer memory)
         self._finalize_quantized_unet(transformer)
 
     def _try_load_quantized_pipeline(
@@ -543,15 +622,29 @@ class FluxPipelineLoadingMixin:
     def _load_cached_quantized_transformer(
         self, quantized_path: Path
     ) -> FluxTransformer2DModel:
-        """Load cached quantized transformer from disk."""
+        """Load cached transformer from disk and quantize.
+        
+        NOTE: BitsAndBytes save_pretrained() saves DEQUANTIZED weights.
+        This means we must re-quantize on load, causing a temporary VRAM spike.
+        This is a known limitation of BitsAndBytes - the only way to avoid it
+        is to use GGUF format which stores pre-quantized weights.
+        
+        Memory optimization: Clear GPU cache before loading.
+        """
+        # Clear GPU memory before loading transformer
+        _clear_gpu_memory()
+        self.logger.debug("Cleared GPU cache before cached transformer loading")
+        
         # Check both possible locations: direct and components subdirectory
         cache_dir = quantized_path / "transformer"
         if not cache_dir.exists():
             cache_dir = quantized_path / "components" / "transformer"
         self.logger.info(
-            "Loading cached quantized transformer from %s", cache_dir
+            "Loading transformer from %s (will quantize - BitsAndBytes limitation)", 
+            cache_dir
         )
-        # Load directly to GPU - quantized transformer is ~5-6GB which fits
+        
+        # Must use quantization_config because BitsAndBytes saves dequantized weights
         quant_config = self._transformer_quantization_config()
         model = FluxTransformer2DModel.from_pretrained(
             str(cache_dir),
@@ -561,7 +654,7 @@ class FluxPipelineLoadingMixin:
             low_cpu_mem_usage=True,
             local_files_only=True,
         )
-        self.logger.info("Transformer loaded to GPU")
+        self.logger.info("✓ Transformer loaded and quantized to GPU")
         return model
 
     def _handle_quantized_save_failure(
@@ -868,7 +961,14 @@ class FluxPipelineLoadingMixin:
         CRITICAL: Load T5 to CPU initially for manual offload strategy.
         T5 will be moved to GPU only during prompt encoding, then back to CPU
         to free VRAM for the transformer. This avoids accelerate hook RAM leaks.
+        
+        Memory optimization: Clear GPU cache before loading to ensure maximum
+        available VRAM for the quantization process.
         """
+        # Clear GPU memory before T5 quantization to prevent OOM during loading
+        _clear_gpu_memory()
+        self.logger.debug("Cleared GPU cache before T5 loading")
+        
         # Load to CPU - we'll manually move to GPU during prompt encoding
         return T5EncoderModel.from_pretrained(
             base_model,
@@ -900,10 +1000,18 @@ class FluxPipelineLoadingMixin:
         Args:
             skip_transformer: If True, don't load the transformer (we'll load
                 it separately from cache). This saves significant RAM.
+        
+        Memory optimization: Clear GPU cache before loading to ensure maximum
+        available VRAM. Also use low_cpu_mem_usage to reduce memory footprint.
         """
+        # Clear GPU memory before pipeline loading
+        _clear_gpu_memory()
+        self.logger.debug("Cleared GPU cache before base pipeline loading")
+        
         kwargs = {
             "torch_dtype": data.get("torch_dtype", torch.bfloat16),
             "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
+            "low_cpu_mem_usage": True,  # Reduce memory during loading
         }
         if text_encoder_2 is not None:
             kwargs["text_encoder_2"] = text_encoder_2
@@ -926,7 +1034,14 @@ class FluxPipelineLoadingMixin:
         """Instantiate a quantized transformer and load custom weights.
         
         Loads directly to GPU with device_map={"": 0}.
+        
+        Memory optimization: Clear GPU cache before loading transformer to
+        ensure maximum available VRAM.
         """
+        # Clear GPU memory before transformer loading to prevent OOM
+        _clear_gpu_memory()
+        self.logger.debug("Cleared GPU cache before transformer loading")
+        
         self._announce_transformer_load(model_path)
         state_dict = self._load_transformer_state_dict(model_path)
         quant_config = self._transformer_quantization_config()
@@ -957,6 +1072,11 @@ class FluxPipelineLoadingMixin:
             "Loading custom weights into quantized transformer..."
         )
         transformer.load_state_dict(state_dict, strict=False)
+        
+        # Free state_dict memory immediately after loading
+        del state_dict
+        gc.collect()
+        
         self._log_transformer_memory(transformer)
         return transformer
 
@@ -971,8 +1091,14 @@ class FluxPipelineLoadingMixin:
         
         Strategy: Load WITH quantization to save the quantized weights,
         then return the model for use (avoiding a second load).
+        
+        Memory optimization: Clear GPU cache before loading.
         """
         try:
+            # Clear GPU memory before loading
+            _clear_gpu_memory()
+            self.logger.debug("Cleared GPU cache before transformer caching")
+            
             self.logger.info(
                 "Loading transformer with quantization for caching..."
             )
@@ -986,6 +1112,10 @@ class FluxPipelineLoadingMixin:
             )
             self.logger.info("Loading custom weights into quantized transformer...")
             transformer.load_state_dict(state_dict, strict=False)
+            
+            # Free the state_dict memory now that it's loaded
+            del state_dict
+            gc.collect()
             
             # Now save the quantized weights
             transformer_path = quantized_path / "transformer"
@@ -1023,10 +1153,19 @@ class FluxPipelineLoadingMixin:
         quant_config: DiffusersBitsAndBytesConfig,
         max_memory: Dict[Any, str],
     ) -> FluxTransformer2DModel:
-        """Load the transformer from the cached quantized version."""
+        """Load transformer from cache and quantize.
+        
+        NOTE: BitsAndBytes save_pretrained() saves DEQUANTIZED weights.
+        We must re-quantize on load, causing a temporary VRAM spike.
+        """
         transformer_path = quantized_path / "transformer"
-        self.logger.info("Loading cached quantized transformer from %s", transformer_path)
-        # Load directly to GPU
+        self.logger.info(
+            "Loading transformer from %s (will quantize)", transformer_path
+        )
+        
+        # Clear GPU memory before loading
+        _clear_gpu_memory()
+        
         transformer = FluxTransformer2DModel.from_pretrained(
             str(transformer_path),
             quantization_config=quant_config,
@@ -1034,6 +1173,7 @@ class FluxPipelineLoadingMixin:
             device_map={"": 0},  # Force to GPU 0
             low_cpu_mem_usage=True,
         )
+        
         self._log_transformer_memory(transformer)
         return transformer
 
@@ -1047,7 +1187,15 @@ class FluxPipelineLoadingMixin:
     def _load_transformer_state_dict(
         self, model_path: Path
     ) -> Dict[str, torch.Tensor]:
-        """Load the transformer weights from a safetensors file."""
+        """Load the transformer weights from a safetensors file.
+        
+        Memory optimization: Clear GPU cache before loading weights to ensure
+        maximum available memory. Safetensors uses mmap by default which is
+        already memory efficient.
+        """
+        # Clear GPU memory before loading large state dict
+        _clear_gpu_memory()
+        
         self.logger.info("Loading weights from safetensors file...")
         return load_file(str(model_path))
 
@@ -1104,9 +1252,10 @@ class FluxPipelineLoadingMixin:
         
         CRITICAL: Explicitly delete the old transformer to free memory.
         Just reassigning the reference doesn't free the GPU/CPU memory.
-        """
-        import gc
         
+        Memory optimization: Aggressively clear both GPU and CPU memory
+        after swapping transformers to ensure clean state.
+        """
         # Get reference to old transformer before replacing
         old_transformer = getattr(self._pipe, 'transformer', None)
         
@@ -1116,10 +1265,16 @@ class FluxPipelineLoadingMixin:
         # Explicitly delete old transformer to free memory
         if old_transformer is not None:
             self.logger.debug("Deleting old base transformer to free memory")
+            # Try to move to CPU first if on GPU (helps with some memory issues)
+            try:
+                if hasattr(old_transformer, 'to'):
+                    old_transformer.to('cpu')
+            except Exception:
+                pass
             del old_transformer
-            gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        
+        # Aggressive memory cleanup
+        _clear_gpu_memory()
         
         self.logger.info("✓ Custom transformer loaded and swapped")
         self.emit_signal(
@@ -1128,7 +1283,6 @@ class FluxPipelineLoadingMixin:
                 "message": "✓ UNet-only model loaded: Transformer (4-bit) + T5 encoder (4-bit) with aggressive CPU offload"
             },
         )
-
     def _load_pretrained_model(
         self,
         model_path: Path,
