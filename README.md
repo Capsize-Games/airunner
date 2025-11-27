@@ -101,9 +101,7 @@ As the **developer** of AI Runner, we have a duty of care to inform our users ab
 
 For more information, we recommend reviewing the text of the [Colorado AI Act](https://leg.colorado.gov/bills/sb24-205).
 
-## 💾 Installation Quick Start
-
-### ⚙️ System Requirements
+## ⚙️ System Requirements
 
 | Specification       | Minimum                              | Recommended                          |
 |---------------------|--------------------------------------------|--------------------------------------------|
@@ -114,8 +112,17 @@ For more information, we recommend reviewing the text of the [Colorado AI Act](h
 | **Network** | Broadband (used to download models)        | Broadband (used to download models)        |
 | **Storage** | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
 
+## 💾 Installation Quick Start
 
 ### 🔧 Installation Steps
+
+#### Docker
+
+```bash
+docker componse run --rm airunner-gui
+```
+
+#### Manual Installation (Ubuntu/Debian)
 
 1. **Install system requirements**
    ```bash
