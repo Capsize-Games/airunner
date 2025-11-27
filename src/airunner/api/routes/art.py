@@ -17,8 +17,8 @@ from airunner.utils.job_tracker import JobTracker, JobStatus as JobState
 from airunner.components.model_management.model_registry import (
     ModelRegistry,
 )
-from airunner.components.art.data.stable_diffusion_generator_settings import (
-    StableDiffusionGeneratorSettings,
+from airunner.components.art.data.generator_settings import (
+    GeneratorSettings,
 )
 from airunner.components.art.api.art_services import ARTAPIService
 from airunner.enums import SignalCode
@@ -302,7 +302,7 @@ async def list_models(req: Request):
     """
     try:
         # Get current model from settings
-        settings = StableDiffusionGeneratorSettings.objects.first()
+        settings = GeneratorSettings.objects.first()
         current_model = settings.model_version if settings else None
 
         # Get available models from ModelRegistry

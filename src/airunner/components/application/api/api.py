@@ -383,7 +383,7 @@ class API(App):
         )
 
     def refresh_stylesheet(
-        self, template: TemplateName = TemplateName.SYSTEM_DEFAULT
+        self, template: TemplateName = TemplateName.DARK
     ):
         self.emit_signal(
             SignalCode.REFRESH_STYLESHEET_SIGNAL,

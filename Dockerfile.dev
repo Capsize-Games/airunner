@@ -1,0 +1,68 @@
+# Dockerfile for airunner in development mode
+# Uses Ubuntu 24.04 with Python 3.13 from deadsnakes PPA
+
+FROM nvidia/cuda:12.9.1-devel-ubuntu24.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies (including sentencepiece build deps)
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    curl \
+    wget \
+    git \
+    build-essential \
+    cmake \
+    pkg-config \
+    libprotobuf-dev \
+    protobuf-compiler \
+    mecab \
+    libmecab-dev \
+    mecab-ipadic-utf8 \
+    ffmpeg \
+    libsndfile1 \
+    portaudio19-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python 3.13 from deadsnakes PPA
+RUN add-apt-repository ppa:deadsnakes/ppa -y && \
+    apt-get update && \
+    apt-get install -y \
+    python3.13 \
+    python3.13-venv \
+    python3.13-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pip for Python 3.13
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13
+
+# Create virtual environment with Python 3.13
+RUN python3.13 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip
+RUN pip install --upgrade pip setuptools wheel
+
+# Set working directory
+WORKDIR /app/airunner
+
+# Copy only requirements first for better caching
+COPY setup.py pyproject.toml README.md ./
+COPY src/ ./src/
+
+# Install airunner in editable mode with all dev dependencies
+RUN pip install -e ".[all_dev]"
+
+# Environment variables for headless operation
+ENV PYTHONUNBUFFERED=1
+ENV AIRUNNER_HEADLESS=1
+ENV AIRUNNER_ENVIRONMENT=production
+ENV HF_HOME=/data/huggingface
+ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# Expose the API port
+EXPOSE 8080
+
+# Default command: run headless server
+CMD ["airunner-headless", "--host", "0.0.0.0", "--port", "8080"]

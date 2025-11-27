@@ -6,21 +6,12 @@ Handles initial search, filtering, and source gathering for research.
 import logging
 from pathlib import Path
 from typing import TypedDict
-import json
-import re
-import math
 from datetime import datetime
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from airunner.components.llm.tools.research_document_tools import (
     create_research_document,
-    append_research_notes,
-)
-from airunner.components.llm.tools.web_tools import (
-    search_web,
-    search_news,
-    scrape_website,
 )
 from airunner.components.tools.search_tool import AggregatedSearchTool
 from langchain_core.messages import HumanMessage

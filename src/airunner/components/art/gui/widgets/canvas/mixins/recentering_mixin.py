@@ -112,5 +112,9 @@ class RecenteringMixin:
 
         # Update all image positions with the new centered positions
         self.updateImagePositions(new_positions)
+        
+        # Store the new positions for future updates
+        if hasattr(self.scene, "original_item_positions"):
+            self.scene.original_item_positions.update(new_positions)
 
         self.logger.info("[RECENTER] Recenter grid signal processing complete")

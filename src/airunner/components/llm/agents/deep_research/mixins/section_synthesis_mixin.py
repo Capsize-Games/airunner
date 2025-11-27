@@ -38,20 +38,18 @@ class SectionSynthesisMixin:
         )
 
         if is_person:
-            return """
-🔍 CRITICAL: DISAMBIGUATE INDIVIDUALS
+            return """CRITICAL: DISAMBIGUATE INDIVIDUALS
 - Treat every person with a similar name as a separate individual
 - Include distinguishing facts (role, organization, timeframe, geography)
 - Never merge biographies or attributes unless sources explicitly do so
 - Use titles that match the timeframe being described; avoid guessing current roles
 
-🔍 TIMELINE ACCURACY
+TIMELINE ACCURACY:
 - Anchor statements to the evidence provided (dates, elections, appointments)
 - If the timeframe is unclear, describe the action relative to the cited source rather than to "now"
 """
         else:
-            return """
-🔍 CRITICAL: DISAMBIGUATE ENTITIES
+            return """CRITICAL: DISAMBIGUATE ENTITIES
 - Distinguish organizations, agencies, or locations that share similar names
 - Note jurisdiction, mission, or geography to keep them separate
 - Avoid blending facts from different entities into one description
@@ -78,11 +76,15 @@ class SectionSynthesisMixin:
 - Use only facts supported by the provided research notes or context.
 - Keep tone neutral, analytical, and timeless (avoid 'currently', 'recently').
 - Never invent organizations, people, numbers, or relationships.
-    - Only assign titles/roles (President, Vice President, Governor, etc.) to people if that exact pairing appears in the notes; otherwise describe them generically or acknowledge the uncertainty.
+    - Only assign formal titles or offices to people if that exact pairing appears in the notes; otherwise describe them generically or acknowledge the uncertainty.
 - If information is missing, acknowledge the gap instead of speculating.
 - Quote or paraphrase carefully—every claim must be traceable to the notes.
 - Align conclusions with the cited evidence (e.g., refusing to sign a safety pledge is evidence of opposition to regulation, not support for it).
-- Do not narrate the writing process (avoid phrases like "here is the section" or "next section")."""
+- Each section must advance the argument with at least one NEW stake, data point, or perspective; mention earlier material only to show contrast or consequence.
+- Vary diction—reuse of the same descriptive word more than a few times per section is discouraged.
+- AVOID REPETITIVE STARTS: Do not start paragraphs with "The administration's stance", "This approach", "The current administration", or similar phrases. Vary your sentence structures (e.g., start with a preposition, a dependent clause, or the subject of the action).
+- AVOID TITLE ECHO: Do not overuse words from the research topic (e.g., if the topic is "National Housing Agenda", avoid repeating "agenda" constantly). Use synonyms like "position", "perspective", "policy", "viewpoint".
+- Never narrate the writing process (omit phrases such as "here is the section" or "next section")."""
 
     def _format_previous_section_summaries(
         self,
@@ -243,7 +245,11 @@ class SectionSynthesisMixin:
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=1024,
+            )
             intro = self._clean_llm_output(
                 response.content.strip(), "Introduction"
             )
@@ -340,7 +346,11 @@ class SectionSynthesisMixin:
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=1536,
+            )
             background = self._clean_llm_output(
                 response.content.strip(), "Background"
             )
@@ -422,7 +432,11 @@ class SectionSynthesisMixin:
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=1536,
+            )
             analysis = self._clean_llm_output(
                 response.content.strip(), "Analysis"
             )
@@ -499,7 +513,11 @@ class SectionSynthesisMixin:
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=1536,
+            )
             implications = self._clean_llm_output(
                 response.content.strip(), "Implications"
             )
@@ -549,7 +567,11 @@ class SectionSynthesisMixin:
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=1024,
+            )
             conclusion = self._clean_llm_output(
                 response.content.strip(), "Conclusion"
             )
@@ -610,7 +632,11 @@ Write ONLY the abstract content, no labels or section headers."""
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=512,
+            )
             abstract = self._clean_llm_output(
                 response.content.strip(), "Abstract"
             )
@@ -695,7 +721,11 @@ Write ONLY the abstract content, no labels or section headers."""
         try:
             messages = [HumanMessage(content=prompt)]
             self._prepend_synthesis_system_prompt(messages)
-            response = self._base_model.invoke(messages)
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.3,
+                max_new_tokens=1536,
+            )
             content = self._clean_llm_output(
                 response.content.strip(), section_name
             )

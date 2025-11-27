@@ -15,7 +15,7 @@ import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.api.routes import health, llm, art, tts, stt
+from airunner.api.routes import health, llm, art, tts, stt, vision
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -90,6 +90,21 @@ def create_app(
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
+    app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
+
+    # Legacy routes for backwards compatibility (fastsearch uses /vision/*)
+    app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
+
+    # Root health check for simple health probes
+    @app.get("/health")
+    async def root_health():
+        """Root-level health check for container health probes."""
+        return {"status": "ready"}
+
+    @app.get("/")
+    async def root():
+        """Root endpoint."""
+        return {"status": "ready", "service": "airunner"}
 
     # Global exception handler
     @app.exception_handler(Exception)
