@@ -1,6 +1,10 @@
 # Dockerfile for AI Runner - supports both headless server and GUI modes
 # Provides HTTP API for LLM, Art generation, TTS, STT, and Vision
 # Can also run full PySide6 GUI with X11 forwarding
+#
+# Usage:
+#   GUI mode:      docker compose run --rm airunner
+#   Headless mode: docker compose run --rm airunner --headless
 
 FROM nvidia/cuda:12.9.1-devel-ubuntu24.04
 
@@ -92,19 +96,25 @@ COPY src/ ./src/
 # Install airunner with all dependencies
 RUN pip install -e ".[all_dev]"
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV AIRUNNER_HEADLESS=1
 ENV AIRUNNER_ENVIRONMENT=production
 ENV HF_HOME=/data/huggingface
 ENV AIRUNNER_DATA_DIR=/data/airunner
 
-# Expose the API port
+# Expose the API port (used in headless mode)
 EXPOSE 8080
 
-# Health check
+# Health check for headless mode (will fail gracefully in GUI mode)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:8080/health || exit 0
 
-# Default command
-CMD ["airunner-headless", "--host", "0.0.0.0", "--port", "8080"]
+# Use entrypoint script to handle GUI vs headless
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Default to GUI mode (no arguments = GUI)
+CMD []
