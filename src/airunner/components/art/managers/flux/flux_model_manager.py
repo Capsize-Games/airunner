@@ -269,14 +269,17 @@ class FluxModelManager(
     def _move_pipe_to_device(self):
         """Override device movement for FLUX models with CPU offloading."""
         self.logger.debug(
-            "Skipping _move_pipe_to_device for FLUX (CPU offloading manages devices)"
+            "Skipping _move_pipe_to_device for FLUX (memory mixin handles device placement)"
         )
 
     @property
     def generator(self) -> torch.Generator:
-        """Get PyTorch random generator for FLUX models with CPU offloading."""
+        """Get PyTorch random generator for FLUX models.
+        
+        Generator must be on CPU when using enable_model_cpu_offload().
+        """
         if self._generator is None:
-            self.logger.debug("Loading generator on CPU for FLUX CPU offload")
+            self.logger.debug("Loading generator on CPU")
             self._generator = torch.Generator(device="cpu")
         return self._generator
 

@@ -708,6 +708,7 @@ Based on the search results above, provide a clear, conversational answer to the
             max_tokens=self._max_tokens,
             strategy="last",
             token_counter=self._token_counter,
+            # Preserve system/phase instructions so later nodes don't lose guardrails
             include_system=True,
             allow_partial=False,
             start_on="human",

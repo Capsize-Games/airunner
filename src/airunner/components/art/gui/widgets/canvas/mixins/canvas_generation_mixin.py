@@ -35,21 +35,29 @@ class CanvasGenerationMixin:
         Args:
             data: Dict containing 'image_response' with generated images
         """
+        self.logger.info(f"[CANVAS DEBUG] on_send_image_to_canvas_signal called with data keys: {data.keys() if data else 'None'}")
         if data is None:
+            self.logger.warning("[CANVAS DEBUG] data is None, returning early")
             return
 
         image_response = data.get("image_response")
+        self.logger.info(f"[CANVAS DEBUG] image_response: {image_response}")
         self.cached_send_image_to_canvas = None
         if not image_response or not image_response.images:
+            self.logger.warning(f"[CANVAS DEBUG] No images in response. image_response={image_response}, images={getattr(image_response, 'images', 'NO ATTR')}")
             return
 
+        self.logger.info(f"[CANVAS DEBUG] Got {len(image_response.images)} images, first image: {image_response.images[0]}")
         image = image_response.images[0]
 
         # Get the current selected layer for the generated image
         layer_id = self._add_image_to_undo()
+        self.logger.info(f"[CANVAS DEBUG] layer_id from _add_image_to_undo: {layer_id}")
 
         # Load the image to the scene (mark as generated for proper positioning)
+        self.logger.info(f"[CANVAS DEBUG] Calling _load_image_from_object with image={image}, generated=True")
         self._load_image_from_object(image=image, generated=True)
+        self.logger.info(f"[CANVAS DEBUG] _load_image_from_object completed")
 
         # Persist the image to the database
         try:

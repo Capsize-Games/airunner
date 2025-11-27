@@ -45,3 +45,35 @@ class ZoomHandler(
         transform = QTransform()
         transform.scale(zoom_level, zoom_level)
         return transform
+
+    def wheelEvent(self, event) -> QTransform:
+        """Handle mouse wheel events for zooming.
+
+        Args:
+            event: Qt wheel event containing delta and position.
+
+        Returns:
+            QTransform with the new zoom level applied.
+        """
+        # Get the scroll delta (positive = zoom in, negative = zoom out)
+        delta = event.angleDelta().y()
+
+        current_zoom = self.zoom_level
+
+        if delta > 0:
+            # Zoom in
+            new_zoom = current_zoom + self.zoom_in_step
+        else:
+            # Zoom out
+            new_zoom = current_zoom - self.zoom_out_step
+
+        # Clamp zoom level to reasonable bounds
+        new_zoom = max(0.1, min(new_zoom, 10.0))
+
+        # Update the zoom level in settings
+        self.zoom_level = new_zoom
+
+        # Create and return the transform
+        transform = QTransform()
+        transform.scale(new_zoom, new_zoom)
+        return transform

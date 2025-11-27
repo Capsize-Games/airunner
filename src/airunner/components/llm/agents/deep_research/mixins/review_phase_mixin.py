@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import TypedDict
 from datetime import datetime
 
+from langchain_core.messages import HumanMessage, SystemMessage
+
 from airunner.components.llm.tools.research_document_tools import (
     finalize_research_document,
 )
@@ -64,6 +66,34 @@ class DeepResearchState(TypedDict):
 
 class ReviewPhaseMixin:
     """Provides Phase 1E and 1F review, revision, and finalization methods."""
+
+    def _get_review_system_prompt(self) -> str:
+        """Return the base system prompt for review-side LLM tasks."""
+
+        prompt = getattr(self, "_review_system_prompt", None)
+        if prompt:
+            return prompt
+
+        return (
+            "You are the Deep Research quality reviewer. Rely only on the artifacts supplied in the user "
+            "message, flag concrete issues succinctly, and follow any format instructions provided."
+        )
+
+    def _build_review_messages(
+        self, user_prompt: str, *, task_context: str = ""
+    ) -> list:
+        """Construct a [System, Human] message pair for review checks."""
+
+        system_prompt = self._get_review_system_prompt()
+        if task_context:
+            system_prompt = (
+                f"{system_prompt}\n\nTASK FOCUS:\n{task_context.strip()}"
+            )
+
+        return [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
 
     def _phase1e_review(self, state: DeepResearchState) -> dict:
         """Phase 1E: Review and validate document quality."""
@@ -160,15 +190,102 @@ class ReviewPhaseMixin:
 
         # Analyze repetition and readability for each section
         review_notes.extend(self._analyze_word_repetition(doc_content))
+        review_notes.extend(self._identify_global_repetitions(doc_content))
+        review_notes.extend(self._detect_repeated_sentences(doc_content))
+        review_notes.extend(self._detect_repetitive_starts(doc_content))
         review_notes.extend(self._evaluate_readability(doc_content))
         review_notes.extend(self._detect_section_overlap(doc_content))
+        review_notes.extend(self._detect_duplicate_headers(doc_content))
+        review_notes.extend(self._detect_thin_sections(doc_content))
 
         # Verify named officials/titles against notes to prevent hallucinated roles
         review_notes.extend(
             self._check_titles_against_notes(doc_content, notes_path)
         )
 
+        # Check for potential bias or loaded language
+        review_notes.extend(self._detect_bias(doc_content))
+
         return review_notes
+
+    def _detect_bias(self, doc_content: str) -> list:
+        """Detect potential bias, loaded language, or subjective intensifiers."""
+
+        issues = []
+
+        # 1. Subjective Intensifiers (words that claim truth without proof)
+        intensifiers = [
+            "clearly",
+            "obviously",
+            "undoubtedly",
+            "undeniably",
+            "unquestionably",
+            "absolutely",
+            "certainly",
+            "definitely",
+            "without a doubt",
+        ]
+
+        # 2. Loaded/Emotional Language (words that imply judgment)
+        loaded_words = [
+            "disastrous",
+            "catastrophic",
+            "miraculous",
+            "incredible",
+            "shocking",
+            "shameful",
+            "disgraceful",
+            "appalling",
+            "horrific",
+            "wonderful",
+            "fantastic",
+            "amazing",
+            "terrible",
+            "awful",
+            "radical",
+            "extremist",
+            "fanatical",
+            "corrupt",
+            "crooked",
+            "incompetent",
+        ]
+
+        # 3. Generalizations
+        generalizations = [
+            "everyone knows",
+            "no one believes",
+            "always",
+            "never",
+            "all people",
+            "every citizen",
+        ]
+
+        # Check for these patterns
+        for word in intensifiers:
+            if re.search(
+                r"\b" + re.escape(word) + r"\b", doc_content, re.IGNORECASE
+            ):
+                issues.append(
+                    f"BIAS CHECK: Found subjective intensifier '{word}'. Ensure this is supported by facts or attribute it to a source."
+                )
+
+        for word in loaded_words:
+            if re.search(
+                r"\b" + re.escape(word) + r"\b", doc_content, re.IGNORECASE
+            ):
+                issues.append(
+                    f"BIAS CHECK: Found loaded language '{word}'. Use neutral, descriptive terms instead."
+                )
+
+        for phrase in generalizations:
+            if re.search(
+                r"\b" + re.escape(phrase) + r"\b", doc_content, re.IGNORECASE
+            ):
+                issues.append(
+                    f"BIAS CHECK: Found generalization '{phrase}'. Be specific about who holds this view."
+                )
+
+        return issues
 
     def _check_required_sections(self, doc_content: str) -> list:
         """Check for required sections."""
@@ -212,7 +329,7 @@ class ReviewPhaseMixin:
         return bool(re.search(r"###\s+https?://", doc_content))
 
     def _check_temporal_references(self, doc_content: str) -> list:
-        """Check for inappropriate temporal references like 'former president' for historical roles.
+        """Check for inappropriate temporal references without hardcoding job titles.
 
         CRITICAL: Research documents should use timeless language. When describing actions
         that occurred while someone held a specific office, refer to that role directly unless
@@ -223,29 +340,29 @@ class ReviewPhaseMixin:
         # Common temporal issues
         temporal_patterns = [
             (
-                r"former [Pp]resident",
-                "Use 'President' (timeless in historical context)",
+                r"\bformer\s+(?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,}))*",
+                "Avoid 'former' qualifiers unless contrasting time periods explicitly",
+                0,
             ),
             (
-                r"former [Pp]rime [Mm]inister",
-                "Use 'Prime Minister' (timeless in historical context)",
+                r"\bformer\s+[a-z]+(?:\s+[a-z]+){0,2}(?=\s+[A-Z])",
+                "Remove 'former' before titles when the surrounding context already establishes timing",
+                re.IGNORECASE,
             ),
             (
-                r"former [Gg]overnor",
-                "Use 'Governor' (timeless in historical context)",
+                r"\bcurrently\b|\bat present\b|\bright now\b|\bthese days\b",
+                "Avoid temporal markers—describe facts relative to the events instead",
+                re.IGNORECASE,
             ),
             (
-                r"currently|at present|right now|these days",
-                "Avoid temporal markers - use timeless language",
-            ),
-            (
-                r"recently announced|just released|has just",
-                "Use past tense without temporal markers",
+                r"\brecently\s+(?:announced|released|introduced|completed)|has\s+just",
+                "Use concrete timing instead of 'recently/just' phrasing",
+                re.IGNORECASE,
             ),
         ]
 
-        for pattern, issue in temporal_patterns:
-            matches = re.findall(pattern, doc_content, re.IGNORECASE)
+        for pattern, issue, flags in temporal_patterns:
+            matches = re.findall(pattern, doc_content, flags)
             if matches:
                 review_notes.append(
                     f"TEMPORAL ISSUE: {issue} (found {len(matches)} instance(s))"
@@ -257,30 +374,16 @@ class ReviewPhaseMixin:
         return review_notes
 
     def _fix_temporal_references(self, doc_content: str) -> str:
-        """Apply global fixes for temporal reference issues.
+        """Apply global fixes for temporal reference issues without naming specific roles."""
 
-        This directly fixes common temporal issues like 'former President'
-        that should be 'President' in historical research context.
-        """
-        # Fix 'former President' -> 'President' (preserving capitalization)
-        doc_content = re.sub(
-            r"\bformer President(?=\s+[A-Z])", "President", doc_content
-        )
-        doc_content = re.sub(
-            r"\bformer president(?=\s+[A-Z])", "president", doc_content
-        )
+        def _strip_former(match: re.Match) -> str:
+            # Keep the title text but drop the "former" qualifier
+            return match.group(1)
 
-        # Fix 'former Prime Minister' -> 'Prime Minister'
-        doc_content = re.sub(
-            r"\bformer Prime Minister(?=\s+[A-Z])",
-            "Prime Minister",
-            doc_content,
+        title_pattern = re.compile(
+            r"\bformer\s+((?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,}))*)(?=\s+[A-Z])"
         )
-
-        # Fix 'former Governor' -> 'Governor'
-        doc_content = re.sub(
-            r"\bformer Governor(?=\s+[A-Z])", "Governor", doc_content
-        )
+        doc_content = title_pattern.sub(_strip_former, doc_content)
 
         logger.info("[Phase 1F] Applied temporal reference fixes")
         return doc_content
@@ -370,6 +473,10 @@ class ReviewPhaseMixin:
             r"Here is the requested section",
             r"next section",
             r"timeline is unclear",
+            r"avoid making claims that",
+            r"paraphrased statement should be supported",
+            r"reference the evidence;",
+            r"cite the evidence rather than",
         ]
 
         for pattern in instruction_patterns:
@@ -380,9 +487,9 @@ class ReviewPhaseMixin:
                     f"INSTRUCTION ARTIFACT: Found prompt text leaking into prose ('{snippet.strip()}')."
                 )
 
-        # Detect bullet blocks of instructions (3 or more consecutive '- Use ...' lines)
+        # Detect bullet blocks of instructions (2 or more consecutive '- Use ...' lines)
         bullet_pattern = re.compile(
-            r"(?:^|\n)(?:[A-Z][^\n]*?:)?\s*(?:-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain)[^\n]*\n){3,}",
+            r"(?:^|\n)(?:[A-Z][^\n]*?:)?\s*(?:-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain)[^\n]*\n){2,}",
             re.IGNORECASE,
         )
         for match in bullet_pattern.finditer(doc_content):
@@ -446,6 +553,40 @@ class ReviewPhaseMixin:
 
         return issues
 
+    def _detect_duplicate_headers(self, doc_content: str) -> list:
+        """Flag repeated headers such as '## Title' followed by a setext version."""
+
+        issues = []
+        pattern = re.compile(
+            r"(##\s+([^\n]+))\n+(?:\s*\n)*\s*\2\s*\n[=-]{3,}",
+            re.IGNORECASE,
+        )
+
+        for match in pattern.finditer(doc_content):
+            header_text = match.group(2).strip()
+            issues.append(
+                f"STRUCTURE ISSUE: Section '{header_text}' includes duplicate headers (H2 plus underlined repeat). Remove the redundant title before finalizing."
+            )
+
+        return issues
+
+    def _detect_thin_sections(self, doc_content: str) -> list:
+        """Warn when a section contains only a sentence or two."""
+
+        issues = []
+        section_pattern = re.compile(r"## (.+?)\n(.*?)(?=\n##|\Z)", re.DOTALL)
+
+        for match in section_pattern.finditer(doc_content):
+            section_name = match.group(1).strip()
+            section_text = match.group(2).strip()
+            word_count = len(section_text.split())
+            if word_count and word_count < 80:
+                issues.append(
+                    f"CONTENT GAP: '{section_name}' is only {word_count} words. Expand it with evidence-backed analysis or merge it with an adjacent section."
+                )
+
+        return issues
+
     def _analyze_word_repetition(self, doc_content: str) -> list:
         """Identify sections where a single word dominates, suggesting repetitive prose."""
 
@@ -458,17 +599,122 @@ class ReviewPhaseMixin:
             words = re.findall(r"[A-Za-z']+", section_text.lower())
             filtered = [w for w in words if w not in STOPWORDS and len(w) > 3]
 
-            if len(filtered) < 80:  # skip short sections
+            if len(filtered) < 60:  # skip short sections
                 continue
 
             freq = Counter(filtered)
             top_word, count = freq.most_common(1)[0]
             ratio = count / len(filtered)
 
-            if count >= 8 and ratio >= 0.08:
+            if count >= 6 and ratio >= 0.06:
                 issues.append(
                     f"WRITING QUALITY: '{section_name}' repeats '{top_word}' {count} times ({ratio:.0%} of meaningful words). Consider varying language."
                 )
+
+        return issues
+
+    def _identify_global_repetitions(self, doc_content: str) -> list:
+        """Surface words that dominate the entire document."""
+
+        words = re.findall(r"[A-Za-z']+", doc_content.lower())
+        filtered = [w for w in words if w not in STOPWORDS and len(w) > 3]
+        if not filtered:
+            return []
+
+        freq = Counter(filtered)
+        issues = []
+        # Increased to top 10 to catch more issues
+        for word, count in freq.most_common(10):
+            # Lowered threshold to 6 for very frequent words in short docs,
+            # but let's keep 8 as a safe baseline for now, maybe scale with doc length?
+            # If doc is long, 8 is fine. If short, 8 is a lot.
+            # Let's stick to 8 but make the message stronger.
+            if count < 8:
+                break
+            issues.append(
+                f"WORD CHOICE: '{word}' appears {count} times overall. This is excessive. Use synonyms or restructure sentences to avoid this word."
+            )
+
+        return issues
+
+    def _detect_repetitive_starts(self, doc_content: str) -> list:
+        """Flag paragraphs that start with the same phrase."""
+
+        issues = []
+        # Split into paragraphs
+        paragraphs = [
+            p.strip() for p in doc_content.split("\n\n") if len(p.strip()) > 50
+        ]
+
+        starts = []
+        for p in paragraphs:
+            # Get first 4 words
+            words = p.split()[:4]
+            if len(words) >= 3:
+                starts.append(" ".join(words).lower())
+
+        start_freq = Counter(starts)
+        for phrase, count in start_freq.items():
+            if count >= 2:
+                issues.append(
+                    f"REPETITIVE PHRASING: {count} paragraphs start with '{phrase}...'. Vary your sentence structures."
+                )
+
+        return issues
+
+    def _detect_repeated_sentences(self, doc_content: str) -> list:
+        """Flag sentences that appear verbatim multiple times in the paper."""
+
+        sentences = re.split(r"(?<=[.!?])\s+", doc_content)
+        normalized = []
+        for sentence in sentences:
+            clean = sentence.strip()
+            if not clean or "##" in clean or len(clean) < 40:
+                continue
+            normalized.append(clean)
+
+        freq = Counter(normalized)
+        issues = []
+        for sentence, count in freq.most_common():
+            if count < 2:
+                break
+            preview = sentence[:160] + ("..." if len(sentence) > 160 else "")
+            issues.append(
+                f"STRUCTURE ISSUE: The sentence '{preview}' appears {count} times. Merge or rewrite to keep each section distinct."
+            )
+            if len(issues) >= 5:
+                break
+
+        return issues
+
+    def _detect_repetitive_starts(self, doc_content: str) -> list:
+        """Detect sections or sentences that repetitively start with the same few words."""
+
+        issues = []
+        section_pattern = re.compile(r"## (.+?)\n(.*?)(?=\n##|\Z)", re.DOTALL)
+
+        for match in section_pattern.finditer(doc_content):
+            section_name = match.group(1).strip()
+            section_text = match.group(2)
+            sentences = re.split(r"(?<=[.!?])\s+", section_text)
+            normalized = []
+            for sentence in sentences:
+                clean = sentence.strip()
+                if not clean or "##" in clean or len(clean) < 40:
+                    continue
+                normalized.append(clean)
+
+            if len(normalized) < 3:
+                continue
+
+            # Check first few words of each sentence
+            start_words = [s[:30] for s in normalized]
+            freq = Counter(start_words)
+            for words, count in freq.most_common():
+                if count > 1:
+                    issues.append(
+                        f"STRUCTURE ISSUE: Section '{section_name}' repetitively starts with the same words: '{words.strip()}'. Vary the openings to enhance engagement."
+                    )
 
         return issues
 
@@ -567,29 +813,23 @@ class ReviewPhaseMixin:
         doc_excerpt = doc_content[:8000]
         notes_excerpt = notes_content[:8000]
 
-        prompt = f"""You are verifying that every person referenced with a FORMAL TITLE in the research document is supported by the research notes. Titles include roles such as President, Vice President, Governor, Secretary, Attorney General, Senator, Representative, Chair, Director, etc.
-
-Rules:
-- Use ONLY the research notes as ground truth. Ignore any prior knowledge, world knowledge, or assumptions about current office holders.
-- If the notes describe a person with a different title than the document, flag it as a mismatch.
-- If the document assigns a title to someone who never appears in the notes, flag it as unsupported.
-- If the document omits a title that is required for clarity, DO NOT flag it.
-- Output each issue on its own line using the format: ROLE ISSUE: <short description>.
-- If everything is supported, respond with: No unsupported titles found.
-
-RESEARCH NOTES (ground truth, truncated to 8000 chars):
-{notes_excerpt}
-
-DOCUMENT EXCERPT (first 8000 chars):
-{doc_excerpt}
-
-Identify unsupported or conflicting title assignments:"""
+        task_context = (
+            "Verify that every person referenced with a formal title in the document is supported by the research "
+            "notes. Use ONLY the notes as ground truth, flag mismatches as 'ROLE ISSUE: <detail>', and if everything "
+            "is supported respond with 'No unsupported titles found.'"
+        )
+        user_prompt = (
+            "RESEARCH NOTES (truncated to 8000 chars):\n"
+            f"{notes_excerpt}\n\n"
+            "DOCUMENT EXCERPT (first 8000 chars):\n"
+            f"{doc_excerpt}\n\nIdentify unsupported or conflicting title assignments:"
+        )
 
         try:
-            from langchain_core.messages import HumanMessage
-
             response = self._base_model.invoke(
-                [HumanMessage(content=prompt)],
+                self._build_review_messages(
+                    user_prompt, task_context=task_context
+                ),
                 temperature=0.1,
                 max_new_tokens=512,
             )
@@ -750,25 +990,29 @@ Identify unsupported or conflicting title assignments:"""
                 f"\n\n### SECTION {i+1}: {section_name}\n{section_content}\n"
             )
 
-        prompt = f"""You are a fact-checking expert reviewing a research paper. Carefully examine the following sections for FACTUAL ERRORS.
-
-THESIS: {thesis}
-TODAY'S DATE: {datetime.now().strftime('%B %d, %Y')}
-
-SECTIONS TO CHECK:{sections_text}
-
-For EACH section with errors, format your response as:
-SECTION [number]: [error description]
-
-If a section has no errors, skip it. If ALL sections are error-free, respond with "No factual errors detected."
-
-Fact-check results:"""
+        today = datetime.now().strftime("%B %d, %Y")
+        task_rules = (
+            "Review each provided section for factual errors. When you find an issue write 'SECTION [number]: <issue>'. "
+            "Skip clean sections, and if every section is correct respond exactly with 'No factual errors detected.'"
+        )
+        user_prompt = (
+            f"THESIS: {thesis}\n"
+            f"TODAY'S DATE: {today}\n\n"
+            "SECTIONS TO CHECK:\n"
+            f"{sections_text}\n\nProvide the fact-check findings now."
+        )
 
         try:
-            from langchain_core.messages import HumanMessage
+            messages_builder = getattr(
+                self, "_build_fact_check_messages", None
+            )
+            if not messages_builder:
+                raise AttributeError(
+                    "ReviewPhaseMixin requires _build_fact_check_messages to dispatch fact-checking prompts"
+                )
 
             response = self._base_model.invoke(
-                [HumanMessage(content=prompt)],
+                messages_builder(user_prompt, extra_system_rules=task_rules),
                 temperature=0.1,
                 max_new_tokens=1024,  # More tokens for batch
             )

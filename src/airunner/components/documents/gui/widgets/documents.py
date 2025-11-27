@@ -215,6 +215,7 @@ class DocumentsWidget(BaseWidget):
 
     @property
     def documents_path(self) -> str:
+        # base_path now auto-resolves via hybrid_property
         return os.path.join(
             os.path.expanduser(self.path_settings.base_path),
             "text/other/documents",

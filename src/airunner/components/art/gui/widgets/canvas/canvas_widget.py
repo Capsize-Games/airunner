@@ -995,6 +995,11 @@ class CanvasWidget(BaseWidget):
 
     @staticmethod
     def _initialize_layer_defaults(layer_id: int) -> None:
+        """Initialize default settings for a new layer.
+
+        Args:
+            layer_id: The ID of the layer to initialize settings for.
+        """
         try:
             if not DrawingPadSettings.objects.filter_by(layer_id=layer_id):
                 DrawingPadSettings.objects.create(layer_id=layer_id)

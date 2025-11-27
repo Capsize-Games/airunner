@@ -175,9 +175,19 @@ class WritingPhaseMixin:
         prompt = self._build_outline_prompt(topic, notes_sample)
 
         try:
-            from langchain_core.messages import HumanMessage
+            from langchain_core.messages import HumanMessage, SystemMessage
 
-            response = self._base_model.invoke([HumanMessage(content=prompt)])
+            messages = [HumanMessage(content=prompt)]
+            # Add system prompt for outline generation
+            system_prompt = getattr(self, "_system_prompt", None)
+            if system_prompt:
+                messages.insert(0, SystemMessage(content=system_prompt))
+
+            response = self._base_model.invoke(
+                messages,
+                temperature=0.2,
+                max_new_tokens=1024,
+            )
             outline = response.content.strip()
 
             # Log and validate outline

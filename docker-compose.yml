@@ -1,0 +1,92 @@
+# Docker Compose for AI Runner
+#
+# Usage:
+#   GUI mode:   xhost +local:docker && docker compose run --rm airunner-gui
+#   Headless:   docker compose up airunner
+#
+# This file uses relative paths so airunner can be located anywhere.
+
+services:
+  # Headless API server mode
+  airunner:
+    build:
+      context: .
+      dockerfile: Dockerfile.headless
+    container_name: airunner_headless
+    volumes:
+      # Mount local airunner data folder (models, database, etc.)
+      - ~/.local/share/airunner:/root/.local/share/airunner
+      # Mount local huggingface cache
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Mount source code for live development
+      - ./src:/app/src:ro
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_HOME=/root/.cache/huggingface
+      - AIRUNNER_DATA_DIR=/root/.local/share/airunner
+      - AIRUNNER_HEADLESS=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    command: [ "airunner-headless", "--host", "0.0.0.0", "--port", "8080" ]
+
+  # GUI mode - runs PySide6 application on host display
+  # Usage: xhost +local:docker && docker compose run --rm airunner-gui
+  airunner-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile.headless
+    container_name: airunner_gui
+    volumes:
+      # Mount local airunner data folder (models, database, etc.)
+      - ~/.local/share/airunner:/root/.local/share/airunner
+      # Mount local huggingface cache
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Mount source code for live development
+      - ./src:/app/src:ro
+      # X11 socket for GUI display
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # X11 authorization
+      - ~/.Xauthority:/root/.Xauthority:ro
+      # PulseAudio for audio
+      - ${XDG_RUNTIME_DIR:-/run/user/1000}/pulse/native:/tmp/pulse/native:rw
+      - ~/.config/pulse/cookie:/tmp/pulse/cookie:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_HOME=/root/.cache/huggingface
+      - AIRUNNER_DATA_DIR=/root/.local/share/airunner
+      # GUI mode - not headless
+      - AIRUNNER_HEADLESS=0
+      # X11 display
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/root/.Xauthority
+      - QT_X11_NO_MITSHM=1
+      # QtWebEngine sandbox fix for running as root in container
+      - QTWEBENGINE_DISABLE_SANDBOX=1
+      - QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox
+      # PulseAudio
+      - PULSE_SERVER=unix:/tmp/pulse/native
+      - PULSE_COOKIE=/tmp/pulse/cookie
+      # NVIDIA
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Run the GUI application
+    command: [ "airunner" ]
+    # Interactive mode for GUI
+    stdin_open: true
+    tty: true

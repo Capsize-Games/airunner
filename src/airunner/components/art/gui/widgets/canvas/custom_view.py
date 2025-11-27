@@ -181,6 +181,9 @@ class CustomGraphicsView(
         self.logger.info(
             f"[SAVE] Center pos saved: x={self.center_pos.x()}, y={self.center_pos.y()}"
         )
+        
+        # Ensure settings are written to disk immediately
+        self.settings.sync()
 
     @property
     def scene(self) -> Optional[CustomScene]:
