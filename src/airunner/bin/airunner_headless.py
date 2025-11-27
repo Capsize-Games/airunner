@@ -38,9 +38,6 @@ import argparse
 import sys
 import os
 
-from airunner.settings import AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
-
 
 def main():
     """Main entry point for headless AI Runner server."""
@@ -66,12 +63,20 @@ def main():
 
     args = parser.parse_args()
 
-    # Configure logging
-    logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
-
-    # Set environment variables from args
+    # Set environment variables from args BEFORE importing settings
+    # AIRUNNER_HEADLESS_SERVER_HOST/PORT are used by settings.py at import time
+    os.environ["AIRUNNER_HEADLESS_SERVER_HOST"] = args.host
+    os.environ["AIRUNNER_HEADLESS_SERVER_PORT"] = str(args.port)
+    # Also set the old names for backwards compatibility
     os.environ["AIRUNNER_HTTP_HOST"] = args.host
     os.environ["AIRUNNER_HTTP_PORT"] = str(args.port)
+
+    # Now import settings after environment is configured
+    from airunner.settings import AIRUNNER_LOG_LEVEL
+    from airunner.utils.application import get_logger
+
+    # Configure logging
+    logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
     # Default to LLM-only in headless mode (can be overridden by env vars)
     os.environ.setdefault("AIRUNNER_LLM_ON", "1")
