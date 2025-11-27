@@ -5,7 +5,6 @@ Handles LLM-based fact extraction for curiosity research.
 
 import logging
 
-from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 

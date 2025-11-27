@@ -163,12 +163,11 @@ class LayerItemManagementMixin:
                 )
                 continue
 
-            # Calculate new centered position
-            item_rect = scene_item.boundingRect()
-            image_width = item_rect.width()
-            image_height = item_rect.height()
+            # Calculate new centered position - use the working area (active grid) position
+            # so all layers align with the active grid, not centered based on their own size
             pos_x, pos_y = self.get_recentered_position(
-                int(image_width), int(image_height)
+                self.application_settings.working_width,
+                self.application_settings.working_height,
             )
 
             # Save the new position to database

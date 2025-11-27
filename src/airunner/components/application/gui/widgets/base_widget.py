@@ -116,7 +116,7 @@ class BaseWidget(AbstractBaseWidget):
     @property
     def template_context(self) -> Dict:
         settings = get_qsettings()
-        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme = settings.value("theme", TemplateName.DARK.value)
         return {
             "theme": theme.lower().replace(" ", "_"),
         }
@@ -125,7 +125,7 @@ class BaseWidget(AbstractBaseWidget):
         if not self.web_engine_view or not self.template:
             return
         settings = get_qsettings()
-        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme = settings.value("theme", TemplateName.DARK.value)
         theme_name = theme.lower().replace(" ", "_")
         try:
             # Pass theme variable to Jinja2 template for correct CSS links
@@ -143,7 +143,7 @@ class BaseWidget(AbstractBaseWidget):
             )
 
     def on_theme_changed_signal(self, data: Dict):
-        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        template = data.get("template", TemplateName.DARK)
         self.set_stylesheet(
             template=template,
         )

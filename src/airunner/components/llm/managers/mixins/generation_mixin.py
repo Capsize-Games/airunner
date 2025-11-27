@@ -10,8 +10,11 @@ This mixin handles:
 """
 
 import os
-import traceback
 import random
+import traceback
+import uuid
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import torch
@@ -40,6 +43,32 @@ except ImportError:
 
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
+
+    def _emit_deep_research_tool_status(
+        self,
+        tool_id: str,
+        prompt: str,
+        status: str,
+        details: Optional[str] = None,
+    ) -> None:
+        """Emit standardized tool status updates for Deep Research phases."""
+
+        conversation_id = None
+        api = getattr(self, "api", None)
+        if api is not None and hasattr(api, "current_conversation_id"):
+            conversation_id = getattr(api, "current_conversation_id")
+
+        payload = {
+            "tool_id": tool_id,
+            "tool_name": "deep_research",
+            "query": prompt,
+            "status": status,
+            "details": details,
+            "conversation_id": conversation_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        self.emit_signal(SignalCode.LLM_TOOL_STATUS_SIGNAL, payload)
 
     def _setup_generation_workflow(
         self,
@@ -250,8 +279,25 @@ class GenerationMixin:
             Dictionary with 'response' key containing result message and document path
         """
         try:
+            tool_status_id = (
+                getattr(self, "_current_request_id", None)
+                or f"deep-research-{uuid.uuid4().hex}"
+            )
+            self._emit_deep_research_tool_status(
+                tool_status_id,
+                prompt,
+                "starting",
+                details="planning ▸ research ▸ writing",
+            )
+
             # Get research folder path
             if not PATH_SETTINGS_AVAILABLE:
+                self._emit_deep_research_tool_status(
+                    tool_status_id,
+                    prompt,
+                    "completed",
+                    details="error: path settings",
+                )
                 return {
                     "response": "Error: Cannot access path settings for Deep Research mode.",
                     "error": "PathSettings unavailable",
@@ -259,6 +305,12 @@ class GenerationMixin:
 
             path_settings = PathSettings.objects.first()
             if not path_settings or not path_settings.base_path:
+                self._emit_deep_research_tool_status(
+                    tool_status_id,
+                    prompt,
+                    "completed",
+                    details="error: path settings",
+                )
                 return {
                     "response": "Error: Path settings not configured.",
                     "error": "PathSettings not configured",
@@ -275,26 +327,14 @@ class GenerationMixin:
                 system_prompt=system_prompt,
                 api=self,  # Pass self as API for tool access
             )
+            if hasattr(agent, "set_tool_status_context"):
+                agent.set_tool_status_context(tool_status_id, prompt)
 
             # Compile the agent graph
             compiled_graph = agent.compile()
 
             # Run the deep research workflow
             self.logger.info(f"Starting Deep Research: '{prompt}'")
-
-            # Emit status message to show research has started
-            if llm_request:
-                status_response = LLMResponse(
-                    message="🔬 **Starting Deep Research workflow...**\n\nThis will perform comprehensive multi-phase research including:\n- RAG document search\n- Web search and news gathering\n- Source analysis and note-taking\n- Document creation and writing\n\nThis may take several minutes. A locked research document will be created and updated as research progresses.",
-                    is_first_message=True,
-                    is_end_of_message=True,
-                    action=LLMActionType.DEEP_RESEARCH,
-                    request_id=getattr(llm_request, "request_id", None),
-                )
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    {"response": status_response},
-                )
 
             # Create initial message for the agent
             initial_state = {
@@ -335,12 +375,42 @@ class GenerationMixin:
                 f"Deep Research complete. Document: {document_path}"
             )
 
+            details = None
+            if document_path:
+                try:
+                    details = f"report saved: {Path(document_path).name}"
+                except OSError:
+                    details = "report saved"
+            else:
+                details = "report ready"
+
+            self._emit_deep_research_tool_status(
+                tool_status_id,
+                prompt,
+                "completed",
+                details=details,
+            )
+
+            if hasattr(agent, "set_tool_status_context"):
+                agent.set_tool_status_context(None, None)
+
             return {
                 "response": response_text,
                 "document_path": document_path,
             }
         except Exception as e:
             self.logger.error(f"Deep Research failed: {e}", exc_info=True)
+            error_detail = str(e)[:80] if e else "unknown error"
+            self._emit_deep_research_tool_status(
+                tool_status_id,
+                prompt,
+                "completed",
+                details=f"error: {error_detail}",
+            )
+            if "agent" in locals() and hasattr(
+                agent, "set_tool_status_context"
+            ):
+                agent.set_tool_status_context(None, None)
             return {
                 "response": f"Deep Research encountered an error: {str(e)}",
                 "error": str(e),

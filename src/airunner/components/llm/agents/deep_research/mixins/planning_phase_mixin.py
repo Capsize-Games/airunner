@@ -191,6 +191,29 @@ class PlanningPhaseMixin:
             except Exception as e:
                 logger.warning(f"Failed to emit progress: {e}")
 
+        self._emit_phase_status_tool_update(phase, message)
+
+    def _emit_phase_status_tool_update(self, phase: str, message: str) -> None:
+        """Mirror phase progress into the tool status indicator when available."""
+
+        api = getattr(self, "_api", None)
+        tool_id = getattr(self, "_tool_status_id", None)
+        tool_prompt = getattr(self, "_tool_status_prompt", "")
+        if not api or not tool_id or not tool_prompt:
+            return
+
+        emitter = getattr(api, "_emit_deep_research_tool_status", None)
+        if not callable(emitter):
+            return
+
+        detail_text = f"{phase}: {message}".strip()
+        try:
+            emitter(tool_id, tool_prompt, "starting", details=detail_text)
+        except Exception as exc:
+            logger.debug(
+                f"Failed to emit tool status update for {phase}: {exc}"
+            )
+
     def _phase0_rag_check(self, state: DeepResearchState) -> dict:
         """Phase 0: Check for relevant RAG documents in knowledge base."""
         topic = state.get("research_topic", "")

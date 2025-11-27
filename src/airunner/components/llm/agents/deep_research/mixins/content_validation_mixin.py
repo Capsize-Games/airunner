@@ -6,7 +6,6 @@ This mixin provides URL and content quality validation methods.
 import re
 import logging
 from urllib.parse import urlparse
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +107,6 @@ class ContentValidationMixin:
             parsed = urlparse(url)
             path = parsed.path.lower()
 
-            # Check if any irrelevant segment is in the path
             for segment in ContentValidationMixin.IRRELEVANT_PATH_SEGMENTS:
                 if segment in path:
                     return True
@@ -116,6 +114,52 @@ class ContentValidationMixin:
             return False
         except Exception:
             return False
+
+    @staticmethod
+    def _contains_malicious_instructions(content: str) -> bool:
+        """Check for potential prompt injection or malicious instructions.
+
+        Args:
+            content: Raw text content
+
+        Returns:
+            True if malicious patterns are found
+        """
+        if not content:
+            return False
+
+        # Patterns that suggest an attempt to override the system
+        injection_patterns = [
+            r"ignore (?:all )?previous instructions",
+            r"ignore (?:all )?directions",
+            r"forget (?:all )?previous instructions",
+            r"system prompt:",
+            r"you are now (?:a|an)",
+            r"your new persona is",
+            r"override (?:system|safety) (?:protocols|rules)",
+            r"jailbreak mode",
+            r"developer mode (?:on|enabled)",
+            r"DAN mode",
+            r"do anything now",
+            r"repeat the following text forever",
+            r"delete (?:all )?files",
+            r"format your hard drive",
+            r"install (?:malware|virus)",
+        ]
+
+        # Check first 2000 chars (most injections are at the top) and last 2000 chars
+        # But for safety, let's check the whole thing if it's not huge, or chunks.
+        # Content can be large, so let's limit to a reasonable scan.
+        scan_text = content[:5000] + "\n" + content[-5000:]
+
+        for pattern in injection_patterns:
+            if re.search(pattern, scan_text, re.IGNORECASE):
+                logger.warning(
+                    f"[Security] Blocked content matching injection pattern: '{pattern}'"
+                )
+                return True
+
+        return False
 
     @staticmethod
     def _is_content_quality_acceptable(content: str) -> bool:
@@ -430,7 +474,6 @@ Your response:"""
 
             # Check if URL path contains a name pattern with DIFFERENT first name
             # Pattern: look for common variations like /FirstLast, /first-last, etc.
-            import string
 
             # Extract potential name patterns from URL path
             # e.g., /JohnSmith.htm, /john-smith/, ?user=johnsmith

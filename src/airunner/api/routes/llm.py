@@ -281,12 +281,12 @@ async def list_models(req: Request):
     Returns:
         List of available models
     """
-        # Get current model from settings
-        settings = LLMGeneratorSettings.objects.first()
-        current_model = settings.model_version if settings else None
+    # Get current model from settings
+    settings = LLMGeneratorSettings.objects.first()
+    current_model = settings.model_version if settings else None
 
-        # Get available models from ModelRegistry if possible
-        try:
+    # Get available models from ModelRegistry if possible
+    try:
         registry = ModelRegistry()
         models = []
 

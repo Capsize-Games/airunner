@@ -378,7 +378,7 @@ class ChatPromptWidget(BaseWidget):
         if context_limit and context_limit > 0:
             remaining = max(context_limit - token_count, 0)
             self.ui.token_count.setText(
-                f"~{token_count:,} / {context_limit:,} tokens ({remaining:,} left)"
+                f"~{token_count:,} tokens ({remaining:,} remain)"
             )
         else:
             self.ui.token_count.setText(f"~{token_count:,} tokens")

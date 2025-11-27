@@ -283,7 +283,6 @@ Write the abstract now:"""
         # parts[3] is header 2, parts[4] is content 2
 
         new_parts = [parts[0]]
-        seen_headers = set()
 
         # Process sections in reverse order to keep the last one
         # But we need to reconstruct in forward order

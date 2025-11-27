@@ -1,6 +1,7 @@
 LLM_FILE_BOOTSTRAP_DATA = {
     "meta-llama/Llama-3.1-8B-Instruct": {
         "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
         "files": [
             "config.json",
             "generation_config.json",
@@ -16,6 +17,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     },
     "Qwen/Qwen2.5-7B-Instruct": {
         "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
         "files": [
             "config.json",
             "generation_config.json",
@@ -32,6 +34,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     },
     "CohereForAI/c4ai-command-r-08-2024": {
         "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
         "files": [
             "config.json",
             "generation_config.json",
@@ -48,6 +51,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     },
     "mistralai/Ministral-8B-Instruct-2410": {
         "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
         "files": [
             "config.json",
             "generation_config.json",
@@ -65,6 +69,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     },
     "w4ffl35/Ministral-8B-Instruct-2410-doublequant": {
         "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
         "files": [
             "config.json",
             "generation_config.json",
@@ -80,6 +85,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     },
     "sentence-transformers/sentence-t5-large": {
         "path_settings": "sentence_transformers_path",
+        "context_length": 512,
         "files": [
             "1_Pooling/config.json",
             "2_Dense/config.json",
@@ -96,6 +102,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     },
     "meta-llama/Meta-Llama-3-8B-Instruct": {
         "path_settings": "llm_causallm_model_path",
+        "context_length": 8192,
         "files": [
             "config.json",
             "generation_config.json",

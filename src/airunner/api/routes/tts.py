@@ -13,12 +13,6 @@ from pydantic import BaseModel
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.components.model_management.model_registry import (
-    ModelRegistry,
-)
-from airunner.components.tts.data.tts_generator_settings import (
-    TTSGeneratorSettings,
-)
 from airunner.enums import SignalCode
 from airunner.utils.application.signal_mediator import SignalMediator
 
@@ -149,9 +143,10 @@ async def list_models(req: Request):
         List of available models
     """
     try:
-        # Get current model from settings
-        settings = TTSGeneratorSettings.objects.first()
-        current_model = settings.model_version if settings else None
+        # Import here to avoid circular imports
+        from airunner.components.model_management.model_registry import (
+            ModelRegistry,
+        )
 
         # Get available models from ModelRegistry
         registry = ModelRegistry()
@@ -163,7 +158,7 @@ async def list_models(req: Request):
                     ModelInfo(
                         id=model_id,
                         name=model_spec.name,
-                        loaded=(model_id == current_model),
+                        loaded=False,  # TODO: Get actual loaded state
                     )
                 )
 

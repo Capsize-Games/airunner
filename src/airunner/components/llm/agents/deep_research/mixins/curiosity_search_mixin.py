@@ -8,7 +8,6 @@ import logging
 from pathlib import Path
 from typing import List
 
-from airunner.components.tools.web_content_extractor import WebContentExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +57,6 @@ class CuriositySearchMixin:
 
     def _search_curiosity_topic(self, curiosity_topic: str) -> list:
         """Search for curiosity topic and return results."""
-        from airunner.components.llm.tools.web_tools import (
-            search_web,
-            search_news,
-        )
 
         logger.info(
             f"[Phase 1A-Curiosity] Searching curiosity topic: {curiosity_topic}"

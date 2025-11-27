@@ -1,5 +1,6 @@
 """FLUX generation preparation mixin."""
 
+import gc
 from typing import Dict, Any
 import torch
 from airunner.components.application.exceptions import (
@@ -107,53 +108,147 @@ class FluxGenerationMixin:
 
         CRITICAL: FLUX uses 'transformer' not 'unet', so we must explicitly
         delete it. The base class only deletes unet/vae/text_encoder.
+        
+        This method properly handles accelerate's CPU offload hooks to prevent
+        memory leaks. When enable_model_cpu_offload() is used, components are
+        cached in CPU RAM during generation. We must explicitly remove these
+        hooks and their CPU memory buffers.
         """
         self.logger.info("=== FLUX _unload_pipe CALLED ===")
         self.logger.debug("Unloading FLUX pipe")
-        if self._pipe is not None:
-            # CRITICAL: Remove Accelerate hooks first to prevent CPU cache retention
+        
+        if self._pipe is None:
+            return
+            
+        try:
+            # Try to use accelerate's official hook removal if available
             try:
-                if hasattr(self._pipe, "_all_hooks"):
-                    self.logger.debug("Removing Accelerate hooks")
-                    for hook in self._pipe._all_hooks:
+                from accelerate.hooks import remove_hook_from_module
+                has_accelerate_hooks = True
+            except ImportError:
+                has_accelerate_hooks = False
+                self.logger.debug("accelerate.hooks not available, using manual cleanup")
+            
+            # CRITICAL: Remove Accelerate hooks first to prevent CPU cache retention
+            if hasattr(self._pipe, "_all_hooks"):
+                self.logger.debug("Removing Accelerate _all_hooks")
+                for hook in list(self._pipe._all_hooks):
+                    try:
                         hook.remove()
-                    self._pipe._all_hooks.clear()
+                    except Exception as e:
+                        self.logger.debug(f"Error removing hook: {e}")
+                self._pipe._all_hooks.clear()
 
-                # Also check for model cpu offload hooks
-                for component_name in [
-                    "transformer",
-                    "vae",
-                    "text_encoder",
-                    "text_encoder_2",
-                    "scheduler",
-                ]:
-                    component = getattr(self._pipe, component_name, None)
-                    if component is not None and hasattr(
-                        component, "_hf_hook"
-                    ):
-                        self.logger.debug(
-                            f"Removing hook from {component_name}"
-                        )
+            # List of all FLUX components to clean up
+            component_names = [
+                "transformer",
+                "vae", 
+                "text_encoder",
+                "text_encoder_2",
+                "scheduler",
+                "tokenizer",
+                "tokenizer_2",
+            ]
+
+            # Remove hooks from each component and delete them
+            for component_name in component_names:
+                component = getattr(self._pipe, component_name, None)
+                if component is None:
+                    continue
+                    
+                # Remove accelerate hooks using official API if available
+                if has_accelerate_hooks and hasattr(component, "_hf_hook"):
+                    try:
+                        remove_hook_from_module(component, recurse=True)
+                        self.logger.debug(f"Removed hooks from {component_name} via accelerate")
+                    except Exception as e:
+                        self.logger.debug(f"Error removing hooks from {component_name}: {e}")
+                
+                # Manual hook cleanup as fallback
+                if hasattr(component, "_hf_hook"):
+                    try:
                         if hasattr(component._hf_hook, "offload"):
                             component._hf_hook.offload(component)
                         delattr(component, "_hf_hook")
+                    except Exception as e:
+                        self.logger.debug(f"Error in manual hook cleanup for {component_name}: {e}")
+                
+                # Move component to CPU to free VRAM, then delete
+                try:
+                    if hasattr(component, "to"):
+                        component.to("cpu")
+                except Exception:
+                    pass
+                    
+                # Clear internal state dicts and buffers
+                try:
+                    if hasattr(component, "_parameters"):
+                        component._parameters.clear()
+                    if hasattr(component, "_buffers"):
+                        component._buffers.clear()
+                    if hasattr(component, "_modules"):
+                        component._modules.clear()
+                except Exception:
+                    pass
+                
+                # Explicitly delete the component
+                try:
+                    setattr(self._pipe, component_name, None)
+                    del component
+                except Exception as e:
+                    self.logger.debug(f"Error deleting {component_name}: {e}")
+                    
+            # Clear any cached offload state
+            if hasattr(self._pipe, "_offload_gpu_id"):
+                self._pipe._offload_gpu_id = None
+            if hasattr(self._pipe, "_execution_device"):
+                self._pipe._execution_device = None
+                    
+        except Exception as e:
+            self.logger.debug(f"Error removing Accelerate hooks: {e}")
 
-                    if component is not None and hasattr(
-                        self._pipe, component_name
-                    ):
-                        print("Deleting component:", component_name)
-                        delattr(self._pipe, component_name)
-                        setattr(self._pipe, component_name, None)
-            except Exception as e:
-                self.logger.debug(f"Error removing Accelerate hooks: {e}")
-
-            # Delete the pipeline itself
+        # Delete the pipeline itself
+        try:
             del self._pipe
-            self._pipe = None
+        except Exception:
+            pass
+        self._pipe = None
 
-            clear_memory()
+        # Aggressive memory cleanup
+        gc.collect()
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            
+        # Additional gc passes to break circular references
+        gc.collect()
+        gc.collect()
+        
+        clear_memory()
 
-            self.logger.info("✓ FLUX pipeline unloaded and memory freed")
+        self.logger.info("✓ FLUX pipeline unloaded and memory freed")
+
+    def _clear_pipeline_caches(self):
+        """Clear internal pipeline caches to free RAM without unloading models.
+        
+        With sequential CPU offload, we don't have the same caching issues
+        as model CPU offload. Just do basic cleanup.
+        """
+        if self._pipe is None:
+            return
+        
+        self.logger.debug("Clearing pipeline caches to free RAM")
+        
+        # Force garbage collection - multiple passes to break circular refs
+        gc.collect()
+        gc.collect()
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            
+        gc.collect()
 
     def _generate(self):
         """
@@ -168,9 +263,36 @@ class FluxGenerationMixin:
         finally:
             # CRITICAL: Clean up after ALL image processing is complete
             # This happens after images are sent to canvas and export worker
+            self._clear_pipeline_caches()
             clear_memory()
 
             self.logger.debug("[FLUX CLEANUP] Memory freed")
+
+    def _move_t5_to_gpu(self):
+        """Move T5 encoder to GPU for prompt encoding."""
+        if self._pipe is None:
+            return
+        t5 = getattr(self._pipe, "text_encoder_2", None)
+        if t5 is not None:
+            try:
+                t5.to("cuda:0")
+                self.logger.debug("[T5 OFFLOAD] Moved T5 to GPU for encoding")
+            except Exception as e:
+                self.logger.warning(f"[T5 OFFLOAD] Failed to move T5 to GPU: {e}")
+    
+    def _move_t5_to_cpu(self):
+        """Move T5 encoder back to CPU to free VRAM for transformer."""
+        if self._pipe is None:
+            return
+        t5 = getattr(self._pipe, "text_encoder_2", None)
+        if t5 is not None:
+            try:
+                t5.to("cpu")
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                self.logger.debug("[T5 OFFLOAD] Moved T5 back to CPU, freed VRAM")
+            except Exception as e:
+                self.logger.warning(f"[T5 OFFLOAD] Failed to move T5 to CPU: {e}")
 
     def _get_results(self, data):
         """
@@ -178,6 +300,11 @@ class FluxGenerationMixin:
 
         CRITICAL: FLUX GGUF models accumulate memory without cleanup.
         After each generation, we must explicitly free VAE decode buffers.
+        
+        MEMORY STRATEGY: T5 is manually offloaded to avoid accelerate hook RAM leak.
+        - T5 starts on CPU
+        - Move to GPU for prompt encoding  
+        - Move back to CPU before transformer runs
         """
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=torch.bfloat16, enabled=True
@@ -187,9 +314,43 @@ class FluxGenerationMixin:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
 
-                # Generate
-                results = self._pipe(**data)
+                # STEP 1: Move T5 to GPU for prompt encoding
+                self._move_t5_to_gpu()
+                
+                # STEP 2: Pre-encode prompts with T5 on GPU
+                # We call encode_prompt manually so we can offload T5 before transformer runs
+                prompt_embeds, pooled_prompt_embeds, text_ids = self._pipe.encode_prompt(
+                    prompt=data.get("prompt", ""),
+                    prompt_2=data.get("prompt_2", data.get("prompt", "")),
+                    device="cuda:0",
+                    max_sequence_length=data.get("max_sequence_length", 512),
+                )
+                
+                # STEP 3: Move T5 back to CPU to free ~5.7GB VRAM for transformer
+                self._move_t5_to_cpu()
+                
+                # STEP 4: Run pipeline with pre-computed embeddings (T5 not needed)
+                pipe_data = {k: v for k, v in data.items() if k not in ("prompt", "prompt_2")}
+                pipe_data["prompt_embeds"] = prompt_embeds
+                pipe_data["pooled_prompt_embeds"] = pooled_prompt_embeds
+                
+                pipeline_output = self._pipe(**pipe_data)
+                
+                # Convert pipeline output to dict format expected by base class
+                # FluxPipelineOutput has .images attribute, base expects {"images": [...]}
+                results = {"images": pipeline_output.images}
                 yield results
+                
+                # CRITICAL: Clean up after each generation to prevent RAM growth
+                # The pipeline keeps intermediate tensors that must be freed
+                del pipeline_output
+                del results
+                del prompt_embeds
+                del pooled_prompt_embeds
+                del text_ids
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
                 if not self.image_request.generate_infinite_images:
                     total += 1

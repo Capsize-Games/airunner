@@ -26,7 +26,7 @@ class OutputCleaningMixin:
         if not content:
             return content
 
-        original_length = len(content)
+        len(content)
 
         # Remove markdown code fences
         content = re.sub(r"^```(?:markdown)?\n", "", content)
@@ -85,6 +85,11 @@ class OutputCleaningMixin:
             r"^here is the section.*$",
             r"^timeline is unclear.*$",
             r"^highlights? the significance of the findings.*$",
+            r"^unclear,? use phrases? like.*$",
+            r"^background:? unclear.*$",
+            r"^literature review:? unclear.*$",
+            r"^methodology:? unclear.*$",
+            r"^his previous term.*to refer to.*$",
         ]
         for pattern in meta_line_patterns:
             content = re.sub(
@@ -94,90 +99,121 @@ class OutputCleaningMixin:
                 flags=re.IGNORECASE | re.MULTILINE,
             )
 
-        # Remove blocks of instructional bullet points (e.g., "- Use the ..." guidelines)
+        # Remove emoji markers (🔍, etc.) and their following instruction lines
         content = re.sub(
-            r"(?:^|\n)(?:[A-Z][^\n]*?:)?\s*(?:-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain|Remember)[^\n]*\n){3,}",
-            "\n\n",
-            content,
-            flags=re.IGNORECASE,
-        )
-
-        # Remove meta-commentary at the end
-        content = re.sub(
-            r"\n+(?:Note|Disclaimer|Warning):.*?$",
+            r"[🔍✅❌⚠️🚨]\s*(?:CRITICAL:?)?\s*[A-Z][^\n]*",
             "",
             content,
-            flags=re.IGNORECASE | re.DOTALL,
         )
 
-        # Remove paragraph-level duplication (more than 2 consecutive identical paragraphs)
-        content = OutputCleaningMixin._remove_duplicate_paragraphs(content)
+        # Remove standalone instruction phrases that appear as content
+        content = re.sub(
+            r"^\s*(?:SOURCES|AVOID ASSUMPTIONS|VERIFY|TIMELINE ACCURACY)\s*$",
+            "",
+            content,
+            flags=re.MULTILINE,
+        )
 
-        # Clean up whitespace
-        content = content.strip()
-
-        # Log if significant cleaning occurred
-        cleaned_length = len(content)
-        if original_length - cleaned_length > 100:
-            logger.info(
-                f"[Cleaning] Removed {original_length - cleaned_length} chars of artifacts "
-                f"from {section_name or 'output'}"
+        # Remove single-line reminders that explicitly instruct on citing evidence
+        instructional_line_phrases = [
+            "paraphrased statement should be supported",
+            "avoid making claims that",  # e.g., "avoid making claims that aren't supported..."
+            "reference the evidence;",
+            "cite the evidence rather than",
+        ]
+        for phrase in instructional_line_phrases:
+            content = re.sub(
+                rf"^.*{re.escape(phrase)}.*$",
+                "",
+                content,
+                flags=re.IGNORECASE | re.MULTILINE,
             )
 
-        return content
+        content = OutputCleaningMixin._remove_duplicate_headers(content)
+
+        # Remove single instructional bullet points
+        content = re.sub(
+            r"(?:^|\n)\s*-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain|Write|Include|Focus)\b[^\n]*\n",
+            "\n",
+            content,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        # Remove blocks of instructional bullet points (e.g., "- Use the ..." guidelines)
+        # Expanded to catch 2+ bullets and more keywords
+        content = re.sub(
+            r"(?:^|\n)(?:[A-Z][^\n]*?:)?\s*(?:-\s*(?:Use|Ensure|Avoid|Do not|Keep|Maintain|Write|Include|Focus)[^\n]*\n){2,}",
+            "\n",
+            content,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        # Remove isolated instruction lines like "objective, and informative."
+        content = re.sub(
+            r"^\s*(?:objective|informative|professional|comprehensive)(?:, (?:objective|informative|professional|comprehensive))*\.\s*$",
+            "",
+            content,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
+
+        # Remove sections that are effectively empty (just punctuation or very short)
+        # We do this by finding headers and checking the content until the next header
+        content = OutputCleaningMixin._remove_empty_sections(content)
+
+        return content.strip()
 
     @staticmethod
-    def _remove_duplicate_paragraphs(content: str) -> str:
-        """Remove consecutive duplicate paragraphs.
+    def _remove_empty_sections(content: str) -> str:
+        """Remove sections that have no meaningful content."""
 
-        Args:
-            content: Text content with potential duplicates
+        # Split by headers
+        # We use a capture group to keep the delimiter
+        parts = re.split(r"(^## .+?$)", content, flags=re.MULTILINE)
 
-        Returns:
-            Content with duplicates removed
-        """
-        # Split into paragraphs
-        paragraphs = re.split(r"\n\n+", content)
-
-        if len(paragraphs) <= 2:
+        if len(parts) < 2:
             return content
 
-        # Track consecutive duplicates
-        cleaned_paragraphs = []
-        prev_para = None
-        consecutive_count = 0
+        new_content = [parts[0]]  # Keep preamble
 
-        for para in paragraphs:
-            para_normalized = para.strip()
+        i = 1
+        while i < len(parts):
+            header = parts[i]
+            if i + 1 < len(parts):
+                section_body = parts[i + 1]
+                # Check if body is empty or just whitespace/punctuation
+                clean_body = re.sub(r"[\s\.\-\*]+", "", section_body)
+                if len(clean_body) < 10:  # Threshold for "empty"
+                    # Skip this section (header and body)
+                    logger.warning(f"Removing empty section: {header.strip()}")
+                    i += 2
+                    continue
 
-            if not para_normalized:
-                continue
-
-            # Check if this is a duplicate of the previous paragraph
-            if para_normalized == prev_para:
-                consecutive_count += 1
-                # Keep first two occurrences, remove rest
-                if consecutive_count <= 1:
-                    cleaned_paragraphs.append(para)
+                new_content.append(header)
+                new_content.append(section_body)
+                i += 2
             else:
-                # New paragraph
-                cleaned_paragraphs.append(para)
-                prev_para = para_normalized
-                consecutive_count = 0
+                # Last header without body?
+                new_content.append(header)
+                i += 1
 
-        # Rejoin with double newlines
-        cleaned = "\n\n".join(cleaned_paragraphs)
+        return "".join(new_content)
 
-        # Log if significant deduplication occurred
-        original_paras = len(paragraphs)
-        cleaned_paras = len(cleaned_paragraphs)
-        if original_paras - cleaned_paras > 2:
-            logger.warning(
-                f"[Cleaning] Removed {original_paras - cleaned_paras} duplicate paragraphs "
-                f"({original_paras} → {cleaned_paras})"
-            )
+    @staticmethod
+    def _remove_duplicate_headers(content: str) -> str:
+        """Collapse patterns like '## Title' followed by a setext version of the same title."""
 
-        return cleaned
+        if not content:
+            return content
+
+        pattern = re.compile(
+            r"(##\s+([^\n]+))\n+(?:\s*\n)*\s*\2\s*\n[=-]{3,}",
+            re.IGNORECASE,
+        )
+
+        def _replace(match: re.Match) -> str:
+            return match.group(1)
+
+        return re.sub(pattern, _replace, content)
 
     @staticmethod
     def _detect_incomplete_generation(content: str) -> bool:

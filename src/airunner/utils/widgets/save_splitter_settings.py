@@ -16,3 +16,6 @@ def save_splitter_settings(
         settings.setValue(
             f"{splitter_name_space}/{splitter_name}", splitter_state
         )
+    
+    # Ensure settings are written to disk
+    settings.sync()
