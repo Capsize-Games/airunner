@@ -70,19 +70,13 @@ class NodeFunctionsMixin:
             f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
         )
 
-        # Generate response based on tool results
-        response_content = self._generate_forced_response(
+        # Generate response based on tool results - this returns the full AIMessage
+        forced_message = self._generate_forced_response_message(
             all_tool_content, tool_name, user_question, generation_kwargs
         )
 
-        # Create AIMessage with NO tool_calls
-        forced_message = AIMessage(
-            content=response_content,
-            tool_calls=[],  # Explicitly set to empty list
-        )
-
         self.logger.info(
-            f"✓ Force response node: Replaced tool call with {len(response_content)} char conversational response (tool_calls=[])"
+            f"✓ Force response node: Generated {len(forced_message.content) if forced_message.content else 0} char response"
         )
 
         # Return dict with new message for LangGraph to merge via add_messages reducer
@@ -144,6 +138,41 @@ class NodeFunctionsMixin:
                 all_tool_content += "\n"
         return all_tool_content
 
+    def _generate_forced_response_message(
+        self,
+        tool_content: str,
+        tool_name: str,
+        user_question: str,
+        generation_kwargs: Optional[Dict] = None,
+    ) -> AIMessage:
+        """Generate a full AIMessage response from tool results.
+
+        This preserves thinking_content and other additional_kwargs.
+
+        Args:
+            tool_content: Combined content from tool executions
+            tool_name: Name of the tool that was called
+            user_question: Original user's question
+            generation_kwargs: Optional generation parameters for streaming control
+
+        Returns:
+            Complete AIMessage with content and additional_kwargs
+        """
+        try:
+            response_message = self._generate_response_message_from_results(
+                tool_content, tool_name, user_question, generation_kwargs
+            )
+            if response_message:
+                return response_message
+        except Exception as e:
+            self.logger.error(f"Failed to generate forced response: {e}")
+        
+        # Fallback
+        fallback = "I found some information but encountered an issue generating a complete response."
+        if self._token_callback:
+            self._token_callback(fallback)
+        return AIMessage(content=fallback, tool_calls=[])
+
     def _generate_forced_response(
         self,
         tool_content: str,
@@ -179,6 +208,65 @@ class NodeFunctionsMixin:
             if self._token_callback:
                 self._token_callback(fallback)
             return fallback
+
+    def _generate_response_message_from_results(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str = "",
+        generation_kwargs: Optional[Dict] = None,
+    ) -> Optional[AIMessage]:
+        """Generate full AIMessage from tool results (preserving thinking_content).
+
+        Args:
+            all_tool_content: Combined tool results
+            tool_name: Name of the tool
+            user_question: Original user question
+            generation_kwargs: Optional generation parameters for streaming control
+
+        Returns:
+            Complete AIMessage with content and additional_kwargs, or None on error
+        """
+        self.logger.info(
+            f"Forcing model to answer based on {tool_name} results (preserving thinking)..."
+        )
+
+        try:
+            # Build prompt with explicit user question and strong no-tool instructions
+            question_context = (
+                f"User's question: {user_question}\n\n"
+                if user_question
+                else ""
+            )
+
+            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
+
+{question_context}Search results:
+{all_tool_content}
+
+Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
+
+            # Convert to message format
+            simple_prompt = [HumanMessage(content=simple_prompt_text)]
+
+            # Stream response - returns full AIMessage with thinking_content
+            response_message = self._stream_model_response(
+                simple_prompt, generation_kwargs
+            )
+
+            if response_message:
+                # Ensure tool_calls is empty
+                return AIMessage(
+                    content=response_message.content or "",
+                    additional_kwargs=getattr(response_message, "additional_kwargs", {}),
+                    tool_calls=[],
+                )
+
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Failed to generate forced response message: {e}")
+            return None
 
     def _generate_response_from_results(
         self,
@@ -221,9 +309,14 @@ Based on the search results above, provide a clear, conversational answer to the
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
 
             # Stream response with generation kwargs for token-by-token streaming
-            response_content = self._stream_model_response(
+            response_message = self._stream_model_response(
                 simple_prompt, generation_kwargs
             )
+
+            # Extract content from the response message
+            response_content = ""
+            if response_message and hasattr(response_message, "content"):
+                response_content = response_message.content or ""
 
             self.logger.info(
                 f"Model streamed {len(response_content)} char answer"
@@ -279,10 +372,8 @@ Based on the search results above, provide a clear, conversational answer to the
                 prompt, generation_kwargs
             )
 
-            if response_message and hasattr(response_message, "content"):
-                return response_message.content
-
-            return ""
+            # Return the full AIMessage to preserve additional_kwargs including thinking_content
+            return response_message
         finally:
             if hasattr(chat_model, "tools"):
                 chat_model.tools = tools_backup
