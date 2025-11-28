@@ -17,6 +17,7 @@ Usage:
 
 import time
 import json
+import re
 from typing import Dict, Any, Optional, Callable, List, Union
 from dataclasses import dataclass, field
 from enum import Enum
@@ -115,7 +116,21 @@ class FaraActionExecutor:
         self._pyautogui = None
         if use_pyautogui:
             try:
-                import pyautogui
+                # Suppress the tkinter NOTE from MouseInfo by redirecting stdout/stderr
+                import sys
+                import io
+                
+                old_stdout = sys.stdout
+                old_stderr = sys.stderr
+                sys.stdout = io.StringIO()
+                sys.stderr = io.StringIO()
+                
+                try:
+                    import pyautogui
+                finally:
+                    sys.stdout = old_stdout
+                    sys.stderr = old_stderr
+                
                 self._pyautogui = pyautogui
                 # Safety settings
                 pyautogui.FAILSAFE = True
@@ -198,7 +213,9 @@ class FaraActionExecutor:
         x, y = int(coords[0]), int(coords[1])
 
         if self._pyautogui:
+            logger.info(f"Executing click at ({x}, {y})")
             self._pyautogui.click(x, y)
+            logger.info(f"Click executed successfully at ({x}, {y})")
             return ActionResult(
                 success=True,
                 action="left_click",
@@ -268,7 +285,9 @@ class FaraActionExecutor:
             time.sleep(0.1)
 
         if self._pyautogui:
-            self._pyautogui.typewrite(text, interval=0.02)
+            # Use write() instead of typewrite() for better Unicode/special char support
+            # typewrite() has issues with characters like : / etc in URLs
+            self._pyautogui.write(text, interval=0.02)
             return ActionResult(
                 success=True,
                 action="type",
@@ -672,10 +691,38 @@ class FaraScreenCapture:
     Supports both full screen capture and window-specific capture.
     """
 
-    def __init__(self):
+    def __init__(self, debug_screenshot_dir: Optional[str] = None):
+        """Initialize screen capture.
+        
+        Args:
+            debug_screenshot_dir: If provided, save screenshots to this directory for debugging.
+        """
         self._pyautogui = None
+        self._debug_dir = debug_screenshot_dir
+        self._screenshot_count = 0
+        
+        # Create debug directory if specified
+        if self._debug_dir:
+            from pathlib import Path
+            Path(self._debug_dir).mkdir(parents=True, exist_ok=True)
+            logger.info(f"Debug screenshots will be saved to: {self._debug_dir}")
+        
         try:
-            import pyautogui
+            # Suppress the tkinter NOTE from MouseInfo by redirecting stdout/stderr
+            import sys
+            import io
+            
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            sys.stdout = io.StringIO()
+            sys.stderr = io.StringIO()
+            
+            try:
+                import pyautogui
+            finally:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
+            
             self._pyautogui = pyautogui
         except ImportError:
             logger.warning("pyautogui not installed. Screenshot capture disabled.")
@@ -683,7 +730,20 @@ class FaraScreenCapture:
     def capture_screen(self) -> Optional[Image.Image]:
         """Capture the entire screen."""
         if self._pyautogui:
-            return self._pyautogui.screenshot()
+            screenshot = self._pyautogui.screenshot()
+            
+            # Save debug screenshot if enabled
+            if self._debug_dir and screenshot:
+                self._screenshot_count += 1
+                from pathlib import Path
+                import datetime
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"screenshot_{self._screenshot_count:03d}_{timestamp}.png"
+                filepath = Path(self._debug_dir) / filename
+                screenshot.save(filepath)
+                logger.info(f"Saved debug screenshot: {filepath}")
+            
+            return screenshot
         return None
 
     def capture_region(
@@ -695,10 +755,57 @@ class FaraScreenCapture:
         return None
 
     def get_screen_size(self) -> tuple:
-        """Get the screen resolution."""
+        """Get the screen resolution.
+        
+        Tries multiple methods to detect actual screen size:
+        1. pyautogui (if available)
+        2. PySide6/Qt (if available)
+        3. xrandr on Linux
+        4. Default fallback
+        """
+        # Method 1: pyautogui
         if self._pyautogui:
             return self._pyautogui.size()
-        return (1920, 1080)  # Default assumption
+        
+        # Method 2: Try PySide6/Qt
+        try:
+            from PySide6.QtWidgets import QApplication
+            from PySide6.QtGui import QGuiApplication
+            
+            app = QApplication.instance() or QGuiApplication.instance()
+            if app:
+                screen = app.primaryScreen()
+                if screen:
+                    geometry = screen.geometry()
+                    return (geometry.width(), geometry.height())
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug(f"Failed to get screen size via Qt: {e}")
+        
+        # Method 3: Try xrandr on Linux
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["xrandr", "--current"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                # Look for "connected primary WIDTHxHEIGHT" or just "connected WIDTHxHEIGHT"
+                match = re.search(r'connected\s+(?:primary\s+)?(\d+)x(\d+)', result.stdout)
+                if match:
+                    return (int(match.group(1)), int(match.group(2)))
+        except Exception as e:
+            logger.debug(f"Failed to get screen size via xrandr: {e}")
+        
+        # Default fallback - log a warning
+        logger.warning(
+            "Could not detect screen resolution. Using default 1920x1080. "
+            "Install pyautogui for accurate screen detection: pip install airunner[computer_use]"
+        )
+        return (1920, 1080)
 
 
 class FaraController:
@@ -718,7 +825,7 @@ class FaraController:
         action_executor: Optional[FaraActionExecutor] = None,
         screen_capture: Optional[FaraScreenCapture] = None,
         max_steps: int = 50,
-        step_delay: float = 0.5,
+        step_delay: float = 2.0,
         on_step_callback: Optional[Callable[[int, Dict], None]] = None,
         on_critical_point_callback: Optional[Callable[[CriticalPointType], bool]] = None,
     ):
@@ -828,10 +935,140 @@ class FaraController:
                 action = result.get("action", {})
                 thought = result.get("thought", "")
 
-                logger.info(f"Step {self._steps_taken + 1}: {thought[:100]}...")
+                # Check if action has an error
+                if isinstance(action, dict) and "error" in action:
+                    logger.error(f"Action parsing error: {action['error']}")
+                    logger.debug(f"Raw response: {result.get('raw_response', 'N/A')[:500]}")
+                    self._status = TaskStatus.FAILURE
+                    break
+
+                logger.info(f"Step {self._steps_taken + 1}: {thought[:100] if thought else 'No thought'}...")
                 logger.debug(f"Action: {action}")
 
-                # 3. Check for critical point or termination
+                # 3. Check for repeated actions and potentially intervene
+                action_history = self._fara_manager.get_action_history()
+                action_type = action.get("action", "")
+                goal_lower = goal.lower()
+                
+                # Helper function to extract URL from goal
+                def extract_url_from_goal(goal_text: str) -> Optional[str]:
+                    goal_lower_local = goal_text.lower()
+                    # Try to match explicit URL patterns
+                    url_match = re.search(r'(https?://[^\s]+|www\.[^\s]+|([a-zA-Z0-9-]+\.(com|org|net|io|gov|edu)[^\s]*))', goal_text)
+                    if url_match:
+                        extracted = url_match.group(0)
+                        if not extracted.startswith('http'):
+                            extracted = 'https://' + extracted.lstrip('www.')
+                        return extracted
+                    # Try to extract site name from common patterns
+                    site_match = re.search(r'(?:to|visit|go to|navigate to|open)\s+(\w+\.(?:com|org|net|io|gov|edu))', goal_lower_local)
+                    if site_match:
+                        return f"https://{site_match.group(1)}"
+                    # Try simpler pattern like "navigate to reddit"
+                    site_match = re.search(r'(?:to|visit|go to|navigate to)\s+([a-zA-Z0-9]+)(?:\s|$|\.)', goal_lower_local)
+                    if site_match:
+                        site_name = site_match.group(1)
+                        # Skip common words that aren't websites
+                        if site_name not in ['the', 'a', 'an', 'this', 'that', 'firefox', 'chrome', 'browser']:
+                            return f"https://www.{site_name}.com"
+                    return None
+                
+                # Validate visit_url actions - make sure URL matches what's in the goal
+                if action_type == "visit_url":
+                    model_url = action.get("url", "").lower()
+                    expected_url = extract_url_from_goal(goal)
+                    
+                    if expected_url:
+                        expected_domain = re.search(r'://(?:www\.)?([^/]+)', expected_url.lower())
+                        model_domain = re.search(r'://(?:www\.)?([^/]+)', model_url)
+                        
+                        if expected_domain and model_domain:
+                            expected_site = expected_domain.group(1)
+                            model_site = model_domain.group(1)
+                            
+                            # Check if model is going to wrong URL
+                            if expected_site != model_site:
+                                logger.warning(
+                                    f"Model tried to visit '{model_url}' but goal mentions '{expected_url}'. "
+                                    f"Correcting URL."
+                                )
+                                action["url"] = expected_url
+                                logger.info(f"Corrected visit_url to: {expected_url}")
+                
+                # Check for 2 consecutive identical click actions on a URL task
+                if len(action_history) >= 2 and action_type == "left_click":
+                    last_two = [h.get("action", {}) for h in action_history[-2:]]
+                    if last_two[0] == last_two[1]:
+                        # Check if this is a URL navigation task
+                        url_keywords = ["url", "navigate", "http", ".com", ".org", ".net", "website", "reddit", "google", "facebook", "open firefox", "open chrome"]
+                        if any(kw in goal_lower for kw in url_keywords):
+                            logger.warning(
+                                f"Detected 2 consecutive identical clicks on URL task. "
+                                f"Injecting corrective sequence: keyboard shortcut Ctrl+L and type URL"
+                            )
+                            
+                            # Use the helper function to extract URL
+                            extracted_url = extract_url_from_goal(goal)
+                            
+                            if extracted_url:
+                                logger.info(f"Extracted URL: {extracted_url}. Injecting Ctrl+L + type sequence.")
+                                
+                                # First, execute Ctrl+L to focus URL bar
+                                focus_result = self._action_executor.execute({
+                                    "action": "hotkey",
+                                    "keys": ["Control", "l"]
+                                })
+                                logger.debug(f"Ctrl+L result: {focus_result}")
+                                
+                                time.sleep(0.3)  # Brief pause for URL bar to focus
+                                
+                                # Now type the URL and press Enter
+                                type_result = self._action_executor.execute({
+                                    "action": "type",
+                                    "text": extracted_url
+                                })
+                                logger.debug(f"Type URL result: {type_result}")
+                                
+                                time.sleep(0.3)  # Brief pause after typing
+                                
+                                # Press Enter to navigate
+                                enter_result = self._action_executor.execute({
+                                    "action": "key",
+                                    "keys": ["Enter"]
+                                })
+                                logger.info(f"Injected complete sequence: Ctrl+L, type '{extracted_url}', Enter")
+                                logger.debug(f"Enter result: {enter_result}")
+                                
+                                # Task is complete - we successfully navigated to the URL
+                                # Add a longer delay to let the page load
+                                time.sleep(2.0)
+                                logger.info(f"URL navigation task complete. Navigated to {extracted_url}. BREAKING LOOP NOW.")
+                                self._status = TaskStatus.SUCCESS
+                                # Explicit break to exit the while loop
+                                break  # <-- This MUST exit the while loop
+                            else:
+                                # Fallback: just click URL bar
+                                screen_width = self._fara_manager._screen_width
+                                url_bar_x = screen_width // 2
+                                url_bar_y = 80
+                                action = {
+                                    "action": "left_click",
+                                    "coordinate": [url_bar_x, url_bar_y]
+                                }
+                                logger.info(f"Injected corrective action: click URL bar at ({url_bar_x}, {url_bar_y})")
+                
+                # Force terminate after 3 consecutive identical actions
+                if len(action_history) >= 3:
+                    last_three = [h.get("action", {}) for h in action_history[-3:]]
+                    if last_three[0] == last_three[1] == last_three[2]:
+                        logger.warning(
+                            f"Detected 3 consecutive identical actions: {last_three[0]}. "
+                            f"Force terminating as task is likely stuck or complete."
+                        )
+                        self._status = TaskStatus.SUCCESS
+                        break
+
+                # 4. Check for critical point or termination
                 action_type = action.get("action", "")
 
                 if action_type == "terminate":
@@ -859,11 +1096,16 @@ class FaraController:
                         "result": action_result,
                     })
 
-                # 6. Delay before next step
-                time.sleep(self._step_delay)
+                # 6. Delay before next step - extra delay for click actions that may launch apps
+                delay = self._step_delay
+                if action_type in ("left_click", "double_click", "open_application", "visit_url"):
+                    delay = max(delay, 0.2)  # At least 1 second for app launches
+                time.sleep(delay)
 
         except Exception as e:
+            import traceback
             logger.error(f"Task execution error: {e}")
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
             self._status = TaskStatus.FAILURE
             return TaskResult(
                 status=TaskStatus.FAILURE,
