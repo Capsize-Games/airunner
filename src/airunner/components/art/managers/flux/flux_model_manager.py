@@ -51,6 +51,9 @@ from airunner.components.art.managers.flux.mixins.flux_quantization_mixin import
 from airunner.components.art.managers.flux.mixins.flux_gguf_loading_mixin import (
     FluxGGUFLoadingMixin,
 )
+from airunner.components.art.managers.flux.mixins.flux_gguf_conversion_mixin import (
+    FluxGGUFConversionMixin,
+)
 from airunner.components.art.managers.flux.mixins.flux_pipeline_loading_mixin import (
     FluxPipelineLoadingMixin,
 )
@@ -65,6 +68,7 @@ from airunner.enums import ModelType, ModelStatus
 
 class FluxModelManager(
     FluxQuantizationMixin,
+    FluxGGUFConversionMixin,  # Must come before loading mixins
     FluxGGUFLoadingMixin,
     FluxPipelineLoadingMixin,
     FluxMemoryMixin,

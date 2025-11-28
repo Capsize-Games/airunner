@@ -1,6 +1,8 @@
 """FLUX memory management mixin."""
 
-from typing import Any
+import gc
+from contextlib import contextmanager
+from typing import Any, Generator
 
 import torch
 
@@ -14,6 +16,45 @@ except ImportError:
 
 class FluxMemoryMixin:
     """Handles memory optimization for FLUX models."""
+
+    @staticmethod
+    @contextmanager
+    def memory_optimized_loading() -> Generator[None, None, None]:
+        """Context manager for memory-optimized model loading.
+        
+        Clears GPU memory before and after loading to minimize VRAM spikes.
+        Use this around heavy model loading operations.
+        
+        Usage:
+            with self.memory_optimized_loading():
+                model = Model.from_pretrained(...)
+        """
+        # Clear before loading
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        
+        try:
+            yield
+        finally:
+            # Clear after loading to release any temporary allocations
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+
+    @staticmethod
+    def clear_gpu_memory() -> None:
+        """Aggressively clear GPU memory.
+        
+        Call this between loading stages to minimize peak VRAM usage.
+        """
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        gc.collect()  # Second pass for released references
 
     def _make_memory_efficient(self):
         """Apply memory optimizations for low VRAM systems."""
