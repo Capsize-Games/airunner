@@ -356,6 +356,15 @@ class ConversationWidget(BaseWidget):
             if msg.get("tool_usage"):
                 simplified_msg["tool_usage"] = msg["tool_usage"]
             
+            # Debug logging
+            self.logger.info(
+                f"[SET_CONVERSATION] Message {simplified_msg['id']}: "
+                f"is_bot={simplified_msg['is_bot']}, "
+                f"has_pre_tool_thinking={bool(simplified_msg.get('pre_tool_thinking'))}, "
+                f"has_thinking_content={bool(simplified_msg.get('thinking_content'))}, "
+                f"has_tool_usage={bool(simplified_msg.get('tool_usage'))}"
+            )
+            
             simplified_messages.append(simplified_msg)
 
         # Ensure _conversation_id is set if possible

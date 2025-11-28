@@ -240,6 +240,12 @@ async function appendMessage(msg, scroll = true) {
     const container = document.getElementById('conversation-container');
     if (!container) return;
 
+    // Debug logging
+    console.log(`[appendMessage] id=${msg.id}, is_bot=${msg.is_bot}, ` +
+        `pre_tool_thinking=${!!msg.pre_tool_thinking}, ` +
+        `tool_usage=${msg.tool_usage ? msg.tool_usage.length : 0}, ` +
+        `thinking_content=${!!msg.thinking_content}`);
+
     // For assistant messages, render widgets in the correct order:
     // 1. Pre-tool thinking (if present)
     // 2. Tool status widgets (if present)
@@ -249,12 +255,14 @@ async function appendMessage(msg, scroll = true) {
     if (msg.is_bot) {
         // 1. Render pre-tool thinking block first (thinking before tool use)
         if (msg.pre_tool_thinking) {
+            console.log(`[appendMessage] Rendering pre_tool_thinking for msg ${msg.id}`);
             const preThinkingElement = createThinkingElement(msg.pre_tool_thinking, `${msg.id}-pre`);
             container.appendChild(preThinkingElement);
         }
 
         // 2. Render tool status widgets
         if (msg.tool_usage && Array.isArray(msg.tool_usage)) {
+            console.log(`[appendMessage] Rendering ${msg.tool_usage.length} tool widgets for msg ${msg.id}`);
             for (const tool of msg.tool_usage) {
                 const toolElement = createToolStatusElement(
                     tool.tool_id || `saved-tool-${msg.id}-${tool.tool_name}`,
@@ -269,6 +277,7 @@ async function appendMessage(msg, scroll = true) {
 
         // 3. Render post-tool thinking block (thinking after tool results)
         if (msg.thinking_content) {
+            console.log(`[appendMessage] Rendering thinking_content for msg ${msg.id}`);
             const thinkingElement = createThinkingElement(msg.thinking_content, msg.id);
             container.appendChild(thinkingElement);
         }
