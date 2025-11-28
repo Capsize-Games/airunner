@@ -1110,7 +1110,7 @@ Based on the search results above, provide a clear, conversational answer to the
         has_streamed_content = False
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
-        self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
+        # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
             for chunk in self._chat_model.stream(
@@ -1137,14 +1137,14 @@ Based on the search results above, provide a clear, conversational answer to the
                 streamed_content.append(text)
                 
                 # Debug: Log every chunk
-                self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
+                # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
                 
                 # Detect thinking block boundaries
                 # Check for <think> opening tag - only if we haven't seen one yet
                 if "<think>" in text and not thinking_started:
                     in_thinking_block = True
                     thinking_started = True
-                    self.logger.debug("[THINKING] Detected <think> tag - starting thinking block")
+                    # self.logger.debug("[THINKING] Detected <think> tag - starting thinking block")
                     # Emit thinking started signal
                     if hasattr(self, "_signal_emitter") and self._signal_emitter:
                         self._signal_emitter.emit_signal(
@@ -1172,7 +1172,7 @@ Based on the search results above, provide a clear, conversational answer to the
                         # Mark thinking as complete
                         in_thinking_block = False
                         final_thinking_content = "".join(thinking_content)
-                        self.logger.debug(f"[THINKING] Complete thinking block in single chunk, content len={len(final_thinking_content)}")
+                        # self.logger.debug(f"[THINKING] Complete thinking block in single chunk, content len={len(final_thinking_content)}")
                         
                         if hasattr(self, "_signal_emitter") and self._signal_emitter:
                             self._signal_emitter.emit_signal(
@@ -1219,7 +1219,7 @@ Based on the search results above, provide a clear, conversational answer to the
                         
                         # Mark thinking as complete
                         in_thinking_block = False
-                        self.logger.debug(f"[THINKING] Detected </think> tag - ending thinking block, content len={len(''.join(thinking_content))}")
+                        # self.logger.debug(f"[THINKING] Detected </think> tag - ending thinking block, content len={len(''.join(thinking_content))}")
                         
                         # Save thinking content for DB persistence BEFORE clearing the list
                         final_thinking_content = "".join(thinking_content)
