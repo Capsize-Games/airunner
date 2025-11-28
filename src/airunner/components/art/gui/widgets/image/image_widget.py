@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
 )
-from PySide6.QtCore import Qt, Signal, QMimeData, QByteArray
+from PySide6.QtCore import Qt, Signal, QMimeData, QByteArray, QUrl
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from airunner.utils.image import load_metadata_from_image, delete_image
@@ -112,6 +112,9 @@ class ImageWidget(BaseWidget):
             mime_data.setData(
                 "application/x-qt-image-metadata", QByteArray(meta_data_bytes)
             )
+
+            # Also set the URL so standard drop handlers can use it
+            mime_data.setUrls([QUrl.fromLocalFile(self.image_path)])
 
             drag.setMimeData(mime_data)
 

@@ -61,6 +61,8 @@ class ModelFileChecker:
     ) -> Tuple[bool, List[str]]:
         """Check if all required files exist for a model.
 
+        Also checks for incomplete files by comparing actual size against expected size.
+
         Args:
             model_path: Path to the model directory or GGUF file
             model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
@@ -83,28 +85,44 @@ class ModelFileChecker:
             ".pt",
             ".pth",
         )
-        if (
+        is_single_file = (
             model_path.lower().endswith(single_file_extensions)
             and model_dir.is_file()
-        ):
+        )
+        if is_single_file:
             model_dir = model_dir.parent
 
         # For art models, use version; for others use model_id
         if model_type == "art":
-            required_files = ModelFileChecker.get_required_files(
+            required_files_data = ModelFileChecker.get_required_files(
                 model_type, version, version, pipeline_action
             )
         else:
             # For non-art models, model_id is the repo ID
             if not model_id:
                 model_id = model_path  # Try using path as model_id
-            required_files = ModelFileChecker.get_required_files(
+            required_files_data = ModelFileChecker.get_required_files(
                 model_type, model_id
             )
 
-        if required_files is None:
+        if required_files_data is None:
             # If no required files defined, assume all files exist
             return True, []
+
+        # Handle both dict format (art models with sizes) and list format (other models)
+        if isinstance(required_files_data, dict):
+            # New format: {filename: expected_size}
+            required_files = list(required_files_data.keys())
+            file_sizes = required_files_data
+        else:
+            # Old format: [filename, ...]
+            required_files = required_files_data
+            file_sizes = {}
+
+        # If using a single-file checkpoint, skip checking for large model weight files
+        # (transformer, unet, text_encoder weights) - only check for config files
+        if is_single_file and model_type == "art":
+            required_files = ModelFileChecker._filter_to_config_files_only(required_files)
 
         missing_files = []
 
@@ -112,9 +130,55 @@ class ModelFileChecker:
             full_path = model_dir / file_path
             if not full_path.exists():
                 missing_files.append(file_path)
+            elif file_sizes.get(file_path, 0) > 0:
+                # Check if file is incomplete (actual size < expected size)
+                actual_size = full_path.stat().st_size
+                expected_size = file_sizes[file_path]
+                if actual_size < expected_size:
+                    # File exists but is incomplete
+                    missing_files.append(file_path)
 
         all_exist = len(missing_files) == 0
         return all_exist, missing_files
+
+    @staticmethod
+    def _filter_to_config_files_only(files: List[str]) -> List[str]:
+        """Filter file list to skip transformer/unet weights when using single-file checkpoint.
+        
+        When using a single-file checkpoint (quantized safetensors), we don't need 
+        to download the original transformer/unet weights since the checkpoint 
+        contains those. However, we STILL need:
+        - Config files for all components
+        - Text encoder weights (not in single-file checkpoints)
+        - VAE weights (usually not in single-file checkpoints)
+        - Tokenizer files
+        
+        Args:
+            files: List of file paths
+            
+        Returns:
+            Filtered list excluding only transformer/unet weight files
+        """
+        # Only skip transformer and unet weight files - these are what the
+        # single-file checkpoint replaces
+        skip_patterns = (
+            "transformer/diffusion_pytorch_model",
+            "unet/diffusion_pytorch_model",
+        )
+        
+        filtered = []
+        for f in files:
+            # Skip transformer/unet weight files (but keep their configs)
+            should_skip = False
+            for pattern in skip_patterns:
+                if pattern in f and f.endswith((".safetensors", ".bin")):
+                    should_skip = True
+                    break
+            
+            if not should_skip:
+                filtered.append(f)
+        
+        return filtered
 
     @staticmethod
     def get_model_repo_id(model_path: str) -> Optional[str]:

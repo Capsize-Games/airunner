@@ -38,11 +38,12 @@ QComboBox:hover {
 
 QComboBox QAbstractItemView {
     background-color: #333;
-    color: #C8C8C8;
+    color: #2a2a2a;
 }
 
 QComboBox::item:hover {
     background-color: #000000;
+    color: #C8C8C8;
 }
 
 QComboBox::down-arrow {}

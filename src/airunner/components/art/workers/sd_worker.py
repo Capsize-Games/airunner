@@ -11,6 +11,9 @@ from airunner.components.art.managers.stablediffusion.x4_upscale_manager import 
 from airunner.components.art.managers.flux.flux_model_manager import (
     FluxModelManager,
 )
+from airunner.components.art.managers.zimage.zimage_model_manager import (
+    ZImageModelManager,
+)
 
 from airunner.enums import (
     QueueType,
@@ -37,6 +40,7 @@ class SDWorker(Worker):
         self.image_export_worker = image_export_worker
         self._sdxl: Optional[SDXLModelManager] = None
         self._flux: Optional[FluxModelManager] = None
+        self._zimage: Optional[ZImageModelManager] = None
         self._sd: Optional[SDModelManager] = None
         self._sdxl: Optional[SDXLModelManager] = None
         self._x4_upscaler: Optional[X4UpscaleManager] = None
@@ -77,6 +81,11 @@ class SDWorker(Worker):
             ):
                 self._model_manager = self.flux
             elif version in (
+                StableDiffusionVersion.Z_IMAGE_TURBO,
+                StableDiffusionVersion.Z_IMAGE_BASE,
+            ):
+                self._model_manager = self.zimage
+            elif version in (
                 StableDiffusionVersion.SDXL1_0,
                 StableDiffusionVersion.SDXL_TURBO,
                 StableDiffusionVersion.SDXL_LIGHTNING,
@@ -101,6 +110,13 @@ class SDWorker(Worker):
             self._flux = FluxModelManager()
             self._flux.image_export_worker = self.image_export_worker
         return self._flux
+
+    @property
+    def zimage(self):
+        if self._zimage is None:
+            self._zimage = ZImageModelManager()
+            self._zimage.image_export_worker = self.image_export_worker
+        return self._zimage
 
     @property
     def sdxl(self):

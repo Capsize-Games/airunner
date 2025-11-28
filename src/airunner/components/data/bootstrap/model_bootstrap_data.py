@@ -46,6 +46,17 @@ ai_art_models = [
         "model_type": "art",
         "is_default": True,
     },
+    {
+        "name": "Z-Image Turbo",
+        "path": "Tongyi-MAI/Z-Image-Turbo",
+        "branch": "main",
+        "version": "Z-Image Turbo",
+        "category": "zimage",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": False,
+    },
 ]
 
 llm_models = [
