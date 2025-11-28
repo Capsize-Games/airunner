@@ -58,6 +58,20 @@ art_pipline_data = [
         "classname": "transformers.AutoFeatureExtractor",
         "default": False,
     },
+    {
+        "pipeline_action": "txt2img",
+        "version": "Z-Image Turbo",
+        "category": "zimage",
+        "classname": "diffusers.ZImagePipeline",
+        "default": False,
+    },
+    {
+        "pipeline_action": "txt2img",
+        "version": "Z-Image Base",
+        "category": "zimage",
+        "classname": "diffusers.ZImagePipeline",
+        "default": False,
+    },
 ]
 
 llm_pipeline_data = [

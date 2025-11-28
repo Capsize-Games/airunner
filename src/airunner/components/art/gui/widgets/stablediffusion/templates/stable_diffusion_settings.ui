@@ -109,7 +109,7 @@
             </size>
            </property>
            <property name="label_text" stdset="0">
-            <string>Guidance Scale</string>
+            <string>Guidance Scale (CFG)</string>
            </property>
            <property name="current_value" stdset="0">
             <number>0</number>
@@ -499,7 +499,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Stable Diffusion</string>
+      <string>Art Model</string>
      </property>
     </widget>
    </item>

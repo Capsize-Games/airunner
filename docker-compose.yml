@@ -1,14 +1,12 @@
 # Docker Compose for AI Runner
 #
 # Usage:
-#   GUI mode:     xhost +SI:localuser:root && docker compose run --rm airunner
+#   GUI mode:     docker compose run --rm airunner
 #   Headless mode: docker compose run --rm --service-ports airunner --headless
 #
 # X11 Setup (required for GUI mode):
-#   1. Allow the container's root user to access your X server (most secure):
-#      xhost +SI:localuser:root
-#   2. Ensure DISPLAY and XAUTHORITY are set in your shell (usually automatic)
-#   3. After use, revoke access with: xhost -SI:localuser:root
+#   The container now runs as your user (via UID/GID), so X11 access works automatically.
+#   If you get X11 permission errors, run: xhost +SI:localuser:$USER
 #
 # Note: --service-ports is required for headless mode to expose port 8080
 #
@@ -20,17 +18,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Run as host user to avoid file permission issues
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       # Mount local airunner data folder (models, database, etc.)
-      - ~/.local/share/airunner:/root/.local/share/airunner
+      - ~/.local/share/airunner:/home/airunner/.local/share/airunner
       # Mount local huggingface cache
-      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ~/.cache/huggingface:/home/airunner/.cache/huggingface
       # Mount source code for live development
       - ./src:/app/src:ro
       # X11 socket for GUI display
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       # X11 authorization (use XAUTHORITY env var or common locations)
-      - ${XAUTHORITY:-/run/user/1000/gdm/Xauthority}:/root/.Xauthority:ro
+      - ${XAUTHORITY:-/run/user/1000/gdm/Xauthority}:/home/airunner/.Xauthority:ro
       # PulseAudio for audio
       - ${XDG_RUNTIME_DIR:-/run/user/1000}/pulse/native:/tmp/pulse/native:rw
       - ~/.config/pulse/cookie:/tmp/pulse/cookie:ro
@@ -45,13 +45,14 @@ services:
               capabilities: [ gpu ]
     environment:
       - PYTHONUNBUFFERED=1
-      - HF_HOME=/root/.cache/huggingface
-      - AIRUNNER_DATA_DIR=/root/.local/share/airunner
+      - HOME=/home/airunner
+      - HF_HOME=/home/airunner/.cache/huggingface
+      - AIRUNNER_DATA_DIR=/home/airunner/.local/share/airunner
       # X11 display (for GUI mode)
       - DISPLAY=${DISPLAY}
-      - XAUTHORITY=/root/.Xauthority
+      - XAUTHORITY=/home/airunner/.Xauthority
       - QT_X11_NO_MITSHM=1
-      # QtWebEngine sandbox fix for running as root in container
+      # QtWebEngine sandbox fix
       - QTWEBENGINE_DISABLE_SANDBOX=1
       - QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox
       # PulseAudio (for GUI mode with audio)

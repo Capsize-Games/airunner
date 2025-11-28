@@ -105,6 +105,16 @@ COPY src/ ./src/
 # Install airunner with all dependencies including computer_use
 RUN pip install -e ".[all_dev,computer_use]"
 
+# Create non-root user for running the container
+# The UID/GID will be overridden by docker-compose user: directive
+RUN groupadd -g 1000 airunner && \
+    useradd -u 1000 -g airunner -m -s /bin/bash airunner && \
+    mkdir -p /home/airunner/.local/share/airunner && \
+    mkdir -p /home/airunner/.cache/huggingface && \
+    chown -R airunner:airunner /home/airunner && \
+    chown -R airunner:airunner /app && \
+    chown -R airunner:airunner /opt/venv
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
@@ -112,8 +122,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV AIRUNNER_ENVIRONMENT=production
-ENV HF_HOME=/data/huggingface
-ENV AIRUNNER_DATA_DIR=/data/airunner
+ENV HOME=/home/airunner
+ENV HF_HOME=/home/airunner/.cache/huggingface
+ENV AIRUNNER_DATA_DIR=/home/airunner/.local/share/airunner
 
 # Expose the API port (used in headless mode)
 EXPOSE 8080

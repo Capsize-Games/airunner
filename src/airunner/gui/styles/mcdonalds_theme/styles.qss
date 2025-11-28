@@ -38,11 +38,12 @@ QComboBox:hover {
 
 QComboBox QAbstractItemView {
     background-color: #ffe599;
-    color: #fff9e6;
+    color: #222222;
 }
 
 QComboBox::item:hover {
     background-color: #ff8800;
+    color: #fff9e6;
 }
 
 QComboBox::down-arrow {}
@@ -1045,11 +1046,12 @@ QComboBox:hover {
 
 QComboBox QAbstractItemView {
     background-color: #ffe599;
-    color: #fff9e6;
+    color: #222222;
 }
 
 QComboBox::item:hover {
     background-color: #ff8800;
+    color: #fff9e6;
 }
 
 QComboBox::down-arrow {}

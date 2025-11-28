@@ -103,58 +103,54 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             {"message": f"Starting download: {repo_id}"},
         )
 
-        # Get list of files from HuggingFace API
-        try:
-            all_files = self.downloader.get_model_files(repo_id)
-        except Exception as e:
-            self.emit_signal(self._failed_signal, {"error": str(e)})
-            return
-
         # Filter files to download
         # If specific missing_files list is provided, use ONLY those files
         # Otherwise, use the comprehensive bootstrap data
         is_art_model = model_type == "art"
 
-        if missing_files:
-            # Use the explicitly provided missing files list
-            # This bypasses all skip logic (e.g., GGUF transformer skip)
-            self.logger.info(
-                f"Using explicitly provided missing_files list ({len(missing_files)} files)"
-            )
-            required_files = missing_files
-        elif is_art_model:
-            # Use the version parameter if provided, otherwise try FLUX versions
+        # For art models, use bootstrap data directly (no API call)
+        # For LLM models, we still need API to discover model shards
+        bootstrap_files = None  # Dict of {filename: expected_size} for art models
+        full_bootstrap_data = None  # Full bootstrap data for size lookups
+
+        # First, get the full bootstrap data if this is an art model
+        if is_art_model:
             version_names = []
             if version:
                 version_names.append(version)
-                self.logger.info(
-                    f"Using provided version for bootstrap data: {version}"
-                )
             else:
                 version_names = ["Flux.1 S", "FLUX"]
-                self.logger.warning(
-                    f"No version provided, trying fallback versions: {version_names}"
-                )
 
-            required_files = None
             for version_name in version_names:
-                self.logger.info(
-                    f"Trying to get required files for version: {version_name}, pipeline_action: {pipeline_action}"
-                )
-                required_files = get_required_files_for_model(
+                full_bootstrap_data = get_required_files_for_model(
                     "art", version_name, version_name, pipeline_action
                 )
-                if required_files:
+                if full_bootstrap_data:
                     self.logger.info(
-                        f"Found {len(required_files)} required files for {version_name}: {required_files[:5]}..."
+                        f"Found bootstrap data for {version_name} with {len(full_bootstrap_data)} files"
                     )
                     break
-                else:
-                    self.logger.warning(
-                        f"No required files found for {version_name} with pipeline_action {pipeline_action}"
-                    )
 
-            if required_files is None or len(required_files) == 0:
+        if missing_files:
+            # Use the explicitly provided missing files list
+            # Look up expected sizes from bootstrap data
+            self.logger.info(
+                f"Using explicitly provided missing_files list ({len(missing_files)} files)"
+            )
+            bootstrap_files = {}
+            for f in missing_files:
+                # Get expected size from full bootstrap data if available
+                expected_size = 0
+                if full_bootstrap_data and f in full_bootstrap_data:
+                    expected_size = full_bootstrap_data[f]
+                    self.logger.info(f"Missing file {f}: expected size {expected_size} (from bootstrap)")
+                else:
+                    self.logger.warning(f"Missing file {f}: no expected size found in bootstrap data")
+                bootstrap_files[f] = expected_size
+        elif is_art_model:
+            bootstrap_files = full_bootstrap_data
+
+            if bootstrap_files is None or len(bootstrap_files) == 0:
                 self.logger.error(
                     f"No bootstrap data found for {model_type} (version={version})! Cannot determine required files."
                 )
@@ -165,75 +161,133 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     },
                 )
                 return
+
+        # For art models with bootstrap data, use it directly without API call
+        if is_art_model and bootstrap_files:
+            files_to_download = []
+
+            for filename, expected_size in bootstrap_files.items():
+                # Check if file already exists and is complete
+                final_path = model_path / filename
+
+                if final_path.exists():
+                    actual_size = final_path.stat().st_size
+                    if expected_size > 0 and actual_size < expected_size:
+                        # File is incomplete - needs re-download
+                        self.logger.warning(
+                            f"File {filename} is incomplete: {actual_size} bytes vs expected {expected_size} bytes. "
+                            "Will re-download."
+                        )
+                        self.emit_signal(
+                            SignalCode.UPDATE_DOWNLOAD_LOG,
+                            {
+                                "message": f"Incomplete file detected: {filename} ({actual_size / (1024**2):.1f} MB / {expected_size / (1024**2):.1f} MB). Re-downloading..."
+                            },
+                        )
+                        # Delete incomplete file so it can be re-downloaded
+                        try:
+                            final_path.unlink()
+                        except Exception as e:
+                            self.logger.error(f"Failed to delete incomplete file {filename}: {e}")
+                            continue
+                    elif expected_size == 0 and actual_size < 1024:
+                        # No expected size known, but file is suspiciously small (< 1KB)
+                        # This likely means the download was interrupted very early
+                        self.logger.warning(
+                            f"File {filename} exists but is very small ({actual_size} bytes) with unknown expected size. "
+                            "Assuming incomplete and re-downloading."
+                        )
+                        try:
+                            final_path.unlink()
+                        except Exception as e:
+                            self.logger.error(f"Failed to delete suspicious file {filename}: {e}")
+                            continue
+                    else:
+                        # File exists and appears complete (or we can't verify)
+                        self.logger.debug(f"File {filename} exists ({actual_size} bytes), skipping")
+                        continue
+
+                # Skip transformer weights if using GGUF (only when not explicitly provided)
+                if (
+                    not missing_files
+                    and "transformer/diffusion_pytorch_model" in filename
+                    and filename.endswith(".safetensors")
+                ):
+                    self.logger.info(
+                        f"Skipping transformer weights (using GGUF): {filename}"
+                    )
+                    continue
+
+                files_to_download.append(
+                    {"filename": filename, "size": expected_size}
+                )
+
         else:
+            # For LLM models, get list of files from HuggingFace API
+            try:
+                all_files = self.downloader.get_model_files(repo_id)
+            except Exception as e:
+                self.emit_signal(self._failed_signal, {"error": str(e)})
+                return
+
             # For LLM models, use the minimal required files from downloader
             required_files = self.downloader.REQUIRED_FILES.get(
                 model_type, self.downloader.REQUIRED_FILES["llm"]
             )
 
-        files_to_download = []
+            files_to_download = []
 
-        for file_info in all_files:
-            filename = file_info.get("path", "")
+            for file_info in all_files:
+                filename = file_info.get("path", "")
+                expected_size = file_info.get("size", 0)
 
-            # Skip directories
-            if file_info.get("type") == "directory":
-                continue
+                # Skip directories
+                if file_info.get("type") == "directory":
+                    continue
 
-            # Skip if already exists
-            final_path = model_path / filename
-            if final_path.exists():
-                continue
-
-            # For art models with required_files list, check if file is in the list
-            if is_art_model and required_files:
-                # Check if filename matches any required file
-                if filename in required_files:
-                    # Skip transformer weights ONLY if we got files from bootstrap data
-                    # (not from explicit missing_files list) AND if GGUF exists
-                    # When missing_files is explicitly provided, download ALL requested files
-                    if (
-                        not missing_files  # Only skip if using bootstrap data
-                        and "transformer/diffusion_pytorch_model" in filename
-                        and filename.endswith(".safetensors")
-                    ):
-                        self.logger.info(
-                            f"Skipping transformer weights (using GGUF): {filename}"
+                # Check if file already exists and is complete
+                final_path = model_path / filename
+                if final_path.exists():
+                    actual_size = final_path.stat().st_size
+                    if expected_size > 0 and actual_size < expected_size:
+                        # File is incomplete - needs re-download
+                        self.logger.warning(
+                            f"File {filename} is incomplete: {actual_size} bytes vs expected {expected_size} bytes. "
+                            "Will re-download."
                         )
+                        self.emit_signal(
+                            SignalCode.UPDATE_DOWNLOAD_LOG,
+                            {
+                                "message": f"Incomplete file detected: {filename} ({actual_size / (1024**2):.1f} MB / {expected_size / (1024**2):.1f} MB). Re-downloading..."
+                            },
+                        )
+                        # Delete incomplete file so it can be re-downloaded
+                        try:
+                            final_path.unlink()
+                        except Exception as e:
+                            self.logger.error(f"Failed to delete incomplete file {filename}: {e}")
+                            continue
+                    else:
+                        # File exists and appears complete
                         continue
 
+                # Include required files (config, tokenizer files) for LLM models
+                if filename in required_files:
                     files_to_download.append(
-                        {
-                            "filename": filename,
-                            "size": file_info.get("size", 0),
-                        }
+                        {"filename": filename, "size": expected_size}
                     )
-                else:
-                    # File not in required_files, skip it for art models
-                    pass
-                continue
+                    continue
 
-            # Include required files (config, tokenizer files) for LLM models
-            if filename in required_files:
-                files_to_download.append(
-                    {"filename": filename, "size": file_info.get("size", 0)}
-                )
-                continue
+                # For LLM models: Include model shards and config files
+                # EXCLUDE consolidated.safetensors - we need individual shards for gradual loading
+                if filename == "consolidated.safetensors":
+                    continue
 
-            # For art models without specific required_files, skip everything
-            if is_art_model:
-                continue
-
-            # For LLM models: Include model shards and config files
-            # EXCLUDE consolidated.safetensors - we need individual shards for gradual loading
-            if filename == "consolidated.safetensors":
-                continue
-
-            # Include all config/tokenizer/model files (.json, .txt, .model, .safetensors)
-            if filename.endswith((".safetensors", ".json", ".txt", ".model")):
-                files_to_download.append(
-                    {"filename": filename, "size": file_info.get("size", 0)}
-                )
+                # Include all config/tokenizer/model files (.json, .txt, .model, .safetensors)
+                if filename.endswith((".safetensors", ".json", ".txt", ".model")):
+                    files_to_download.append(
+                        {"filename": filename, "size": expected_size}
+                    )
 
         if not files_to_download:
             self.emit_signal(
@@ -315,6 +369,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
     ):
         """Download a single file from HuggingFace (runs in Python thread).
 
+        Supports resuming partial downloads using HTTP Range headers.
+
         Args:
             repo_id: HuggingFace repository ID
             filename: Name of file to download
@@ -334,25 +390,71 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
+        # Check if we can resume a partial download
+        resume_from = 0
+        file_mode = "wb"
+        if temp_path.exists():
+            existing_size = temp_path.stat().st_size
+            if existing_size > 0 and existing_size < file_size:
+                # Attempt to resume from where we left off
+                resume_from = existing_size
+                file_mode = "ab"  # Append mode
+                headers["Range"] = f"bytes={existing_size}-"
+                self.logger.info(
+                    f"Resuming download of {filename} from byte {existing_size}"
+                )
+            elif existing_size >= file_size:
+                # File already complete in temp, just move it
+                self.logger.info(
+                    f"Temp file {filename} already complete, moving to final location"
+                )
+                try:
+                    final_path.parent.mkdir(parents=True, exist_ok=True)
+                    if final_path.exists():
+                        final_path.unlink()
+                    temp_path.rename(final_path)
+                    self._mark_file_complete(filename)
+                    return
+                except Exception as e:
+                    self.logger.error(f"Failed to move complete temp file {filename}: {e}")
+                    # Fall through to re-download
+
         try:
             with requests.get(
                 url, headers=headers, stream=True, timeout=30
             ) as response:
-                response.raise_for_status()
+                # Check if server supports range requests
+                if resume_from > 0:
+                    if response.status_code == 206:
+                        # Partial content - resume successful
+                        self.logger.info(f"Server accepted range request for {filename}")
+                    elif response.status_code == 200:
+                        # Server doesn't support range requests, start over
+                        self.logger.warning(
+                            f"Server doesn't support range requests for {filename}, restarting download"
+                        )
+                        resume_from = 0
+                        file_mode = "wb"
+                    else:
+                        response.raise_for_status()
+                else:
+                    response.raise_for_status()
 
                 content_length = response.headers.get("content-length")
                 if content_length:
-                    file_size = int(content_length)
+                    remaining_size = int(content_length)
+                    total_file_size = resume_from + remaining_size
                     with self._lock:
-                        self._file_sizes[filename] = file_size
+                        self._file_sizes[filename] = total_file_size
+                else:
+                    total_file_size = file_size
 
-                downloaded = 0
-                with open(temp_path, "wb") as f:
+                downloaded = resume_from
+                with open(temp_path, file_mode) as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if self.is_cancelled:
                             f.close()
-                            if temp_path.exists():
-                                temp_path.unlink()
+                            # Don't delete temp file on cancel - can resume later
                             return
 
                         if chunk:
@@ -361,10 +463,18 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
                             if downloaded % (1024 * 1024) < 8192:
                                 self._update_file_progress(
-                                    filename, downloaded, file_size
+                                    filename, downloaded, total_file_size
                                 )
 
-                self._update_file_progress(filename, downloaded, file_size)
+                self._update_file_progress(filename, downloaded, total_file_size)
+
+                # Verify download is complete
+                if downloaded < file_size:
+                    self.logger.error(
+                        f"Download incomplete for {filename}: {downloaded} bytes vs expected {file_size}"
+                    )
+                    self._mark_file_failed(filename)
+                    return
 
                 final_path.parent.mkdir(parents=True, exist_ok=True)
                 if final_path.exists():
@@ -376,9 +486,4 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         except Exception as e:
             self.logger.error(f"Failed to download {filename}: {e}")
             self._mark_file_failed(filename)
-
-            if temp_path.exists():
-                try:
-                    temp_path.unlink()
-                except Exception:
-                    pass
+            # Don't delete temp file - can resume later
