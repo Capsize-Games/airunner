@@ -63,6 +63,15 @@ from airunner.components.knowledge.data.knowledge_relationship import (
 )
 from airunner.components.video.data.video_project import VideoProject
 
+# Long-running agent project models
+from airunner.components.llm.long_running.data.project_state import (
+    ProjectState,
+    ProjectFeature,
+    ProgressEntry,
+    SessionState,
+    DecisionMemory,
+)
+
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 # this is the Alembic Config object, which provides
