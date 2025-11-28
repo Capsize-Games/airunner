@@ -1015,6 +1015,9 @@ Based on the search results above, provide a clear, conversational answer to the
         in_json_tool_call = False
         json_brace_depth = 0
         
+        # Track if we've streamed any content yet (for trimming leading whitespace)
+        has_streamed_content = False
+        
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
         self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
@@ -1197,8 +1200,14 @@ Based on the search results above, provide a clear, conversational answer to the
                         json_brace_depth = 0
                 
                 # Stream non-JSON content to GUI immediately
-                if text_to_stream and self._token_callback:
+                # Skip whitespace-only content to prevent creating empty assistant messages
+                if text_to_stream and text_to_stream.strip() and self._token_callback:
                     try:
+                        # Only strip leading whitespace on the FIRST content chunk
+                        # to avoid blank lines at start of assistant message
+                        if not has_streamed_content:
+                            text_to_stream = text_to_stream.lstrip()
+                            has_streamed_content = True
                         self._token_callback(text_to_stream)
                     except Exception as callback_error:
                         self.logger.error(
