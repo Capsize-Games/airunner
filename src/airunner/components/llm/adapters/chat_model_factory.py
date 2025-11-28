@@ -30,6 +30,7 @@ class ChatModelFactory:
         top_k: int = 50,
         repetition_penalty: float = 1.15,
         do_sample: bool = True,
+        enable_thinking: bool = True,
     ) -> ChatHuggingFaceLocal:
         """
         Create a ChatModel for locally-loaded HuggingFace models.
@@ -44,6 +45,7 @@ class ChatModelFactory:
             top_k: Top-k sampling parameter
             repetition_penalty: Penalty for repeating tokens
             do_sample: Whether to use sampling
+            enable_thinking: Enable Qwen3 thinking mode (<think>...</think>)
 
         Returns:
             ChatHuggingFaceLocal instance
@@ -58,6 +60,7 @@ class ChatModelFactory:
             top_k=top_k,
             repetition_penalty=repetition_penalty,
             do_sample=do_sample,
+            enable_thinking=enable_thinking,
         )
 
         # Initialize Mistral tokenizer if available
@@ -218,10 +221,26 @@ class ChatModelFactory:
                     "do_sample": getattr(chatbot, "do_sample", True),
                 }
 
+            # Get enable_thinking from database (LLMGeneratorSettings) first,
+            # then fall back to llm_settings dataclass, then default to True
+            from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
+            db_settings = LLMGeneratorSettings.objects.first()
+            enable_thinking = True  # Default
+            if db_settings is not None and hasattr(db_settings, "enable_thinking"):
+                db_value = getattr(db_settings, "enable_thinking", None)
+                if db_value is not None:
+                    enable_thinking = db_value
+                else:
+                    # Fall back to llm_settings dataclass
+                    enable_thinking = getattr(llm_settings, "enable_thinking", True)
+            else:
+                enable_thinking = getattr(llm_settings, "enable_thinking", True)
+
             return ChatModelFactory.create_local_model(
                 model=model,
                 tokenizer=tokenizer,
                 model_path=model_path,
+                enable_thinking=enable_thinking,
                 **params
             )
 

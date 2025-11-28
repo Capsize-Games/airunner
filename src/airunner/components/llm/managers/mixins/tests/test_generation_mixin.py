@@ -240,11 +240,11 @@ class TestHandleInterruptedGeneration:
             "Generation interrupted by user"
         )
 
-    def test_returns_interrupt_message(self, mixin, llm_request):
-        """Should return interrupt message."""
+    def test_returns_empty_string(self, mixin, llm_request):
+        """Should return empty string (no visible interrupt message)."""
         result = mixin._handle_interrupted_generation(llm_request, 5)
 
-        assert result == "\n\n[Generation interrupted]"
+        assert result == ""
 
     def test_sends_interrupt_signal(self, mixin, llm_request):
         """Should send interrupt signal with correct parameters."""
@@ -253,7 +253,7 @@ class TestHandleInterruptedGeneration:
         mixin.api.llm.send_llm_text_streamed_signal.assert_called_once()
         call_args = mixin.api.llm.send_llm_text_streamed_signal.call_args[0][0]
         assert isinstance(call_args, LLMResponse)
-        assert call_args.message == "\n\n[Generation interrupted]"
+        assert call_args.message == ""
         assert call_args.is_end_of_message is True
         assert call_args.sequence_number == 6  # counter + 1
 
@@ -261,7 +261,7 @@ class TestHandleInterruptedGeneration:
         """Should handle None request gracefully."""
         result = mixin._handle_interrupted_generation(None, 3)
 
-        assert result == "\n\n[Generation interrupted]"
+        assert result == ""
         call_args = mixin.api.llm.send_llm_text_streamed_signal.call_args[0][0]
         assert call_args.node_id is None
 
@@ -459,7 +459,8 @@ class TestDoGenerate:
 
         result = mixin._do_generate("Test", LLMActionType.CHAT)
 
-        assert "[Generation interrupted]" in result["response"]
+        # Interrupt should end cleanly without adding visible text
+        assert result["response"] == ""
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_handles_generation_error(self, mock_torch, mixin):

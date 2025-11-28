@@ -15,10 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
-    QLabel, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
-    QTabWidget, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
+    QHBoxLayout, QLabel, QPlainTextEdit, QProgressBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QSplitter, QTabWidget, QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
 from airunner.components.llm.gui.widgets.llm_history_widget import LLMHistoryWidget
@@ -201,6 +201,15 @@ class Ui_chat_prompt(object):
 
         self.horizontalLayout_2.addWidget(self.action)
 
+        self.thinking_checkbox = QCheckBox(self.footer_container)
+        self.thinking_checkbox.setObjectName(u"thinking_checkbox")
+        sizePolicy2.setHeightForWidth(self.thinking_checkbox.sizePolicy().hasHeightForWidth())
+        self.thinking_checkbox.setSizePolicy(sizePolicy2)
+        self.thinking_checkbox.setMinimumSize(QSize(0, 30))
+        self.thinking_checkbox.setChecked(True)
+
+        self.horizontalLayout_2.addWidget(self.thinking_checkbox)
+
         self.progressBar = QProgressBar(self.footer_container)
         self.progressBar.setObjectName(u"progressBar")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -250,6 +259,7 @@ class Ui_chat_prompt(object):
         self.retranslateUi(chat_prompt)
         self.action.currentTextChanged.connect(chat_prompt.llm_action_changed)
         self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
+        self.thinking_checkbox.toggled.connect(chat_prompt.thinking_toggled)
 
         self.tabWidget.setCurrentIndex(0)
 
@@ -275,6 +285,10 @@ class Ui_chat_prompt(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("chat_prompt", u"Tab 1", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("chat_prompt", u"Tab 2", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("chat_prompt", u"Page", None))
+#if QT_CONFIG(tooltip)
+        self.thinking_checkbox.setToolTip(QCoreApplication.translate("chat_prompt", u"Enable thinking mode (Qwen3). When enabled, the model will reason step-by-step before responding. Slower but more thoughtful responses.", None))
+#endif // QT_CONFIG(tooltip)
+        self.thinking_checkbox.setText(QCoreApplication.translate("chat_prompt", u"Thinking", None))
 #if QT_CONFIG(tooltip)
         self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
 #endif // QT_CONFIG(tooltip)

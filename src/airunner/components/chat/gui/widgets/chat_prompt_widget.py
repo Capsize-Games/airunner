@@ -75,25 +75,22 @@ class ChatPromptWidget(BaseWidget):
         self.ui.action.blockSignals(True)
         self.ui.action.clear()
         self._model_context_tokens: Optional[int] = None
-        # Put Chat first as the default for simple conversations (no tools)
-        # Users can select Auto for tool access when needed
-        action_map = [
-            ("Chat", LLMActionType.CHAT),
-            ("Auto", LLMActionType.APPLICATION_COMMAND),
-            ("RAG", LLMActionType.PERFORM_RAG_SEARCH),
-            ("Deep Research", LLMActionType.DEEP_RESEARCH),
-            ("Use Computer", LLMActionType.USE_COMPUTER),
-        ]
-        if AIRUNNER_ART_ENABLED:
-            action_map.append(("Image", LLMActionType.GENERATE_IMAGE))
-        for label, _ in action_map:
-            self.ui.action.addItem(label)
-        current_action = self.action
-        for idx, (_, action_type) in enumerate(action_map):
-            if current_action is action_type:
-                self.ui.action.setCurrentIndex(idx)
-                break
-        self.ui.action.blockSignals(False)
+        
+        # Update action dropdown based on model capabilities
+        self._update_action_dropdown()
+        
+        # Initialize thinking checkbox from settings
+        if hasattr(self.ui, "thinking_checkbox"):
+            self.ui.thinking_checkbox.blockSignals(True)
+            enable_thinking = getattr(self.llm_generator_settings, "enable_thinking", True)
+            # Handle None value from database (default to True)
+            if enable_thinking is None:
+                enable_thinking = True
+            self.ui.thinking_checkbox.setChecked(enable_thinking)
+            self.ui.thinking_checkbox.blockSignals(False)
+            # Update visibility based on whether model supports thinking
+            self._update_thinking_checkbox_visibility()
+        
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.ui.prompt.keyPressEvent = self.handle_key_press
         self.held_message = None
@@ -306,6 +303,15 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings(action=llm_action_value.name)
 
+    def thinking_toggled(self, checked: bool) -> None:
+        """Handle thinking checkbox toggle.
+        
+        When enabled, Qwen3 models will use <think>...</think> reasoning
+        before responding. This produces more thoughtful responses but
+        takes longer to generate.
+        """
+        self.update_llm_generator_settings(enable_thinking=checked)
+
     def prompt_text_changed(self) -> None:
         """Handle changes to the prompt text and highlight slash commands if present."""
         prompt = self.ui.prompt.toPlainText()
@@ -429,11 +435,222 @@ class ChatPromptWidget(BaseWidget):
 
         return None
 
+    def _model_supports_thinking(self) -> bool:
+        """Check if the current model supports thinking mode.
+        
+        Only Qwen3 models support the enable_thinking parameter with
+        <think>...</think> reasoning blocks.
+        
+        Returns:
+            True if the model supports thinking mode, False otherwise.
+        """
+        settings = getattr(self, "llm_generator_settings", None)
+        if not settings:
+            return False
+
+        model_service = getattr(settings, "model_service", None)
+        model_version = getattr(settings, "model_version", "") or ""
+        model_path = getattr(settings, "model_path", "") or ""
+
+        if model_service == ModelService.LOCAL.value:
+            # Check model_version first (e.g., "qwen3-8b")
+            if self._lookup_model_supports_thinking(model_version):
+                return True
+            # Fall back to model_path (e.g., "Qwen/Qwen3-8B" or local path)
+            return self._lookup_model_supports_thinking(model_path)
+
+        return False
+
+    def _lookup_model_supports_thinking(self, source: str) -> bool:
+        """Look up whether a model source supports thinking mode.
+        
+        Args:
+            source: Model identifier (name, repo_id, or path)
+            
+        Returns:
+            True if the model supports thinking, False otherwise.
+        """
+        if not source:
+            return False
+        normalized_source = str(source).strip().lower()
+        if not normalized_source:
+            return False
+
+        # Check LLMProviderConfig.LOCAL_MODELS
+        for model_info in LLMProviderConfig.LOCAL_MODELS.values():
+            name = (model_info.get("name") or "").strip().lower()
+            repo_id = (model_info.get("repo_id") or "").strip().lower()
+
+            if name and (
+                normalized_source == name
+                or name in normalized_source
+                or normalized_source in name
+            ):
+                return model_info.get("supports_thinking", False)
+            if repo_id and (
+                normalized_source == repo_id
+                or repo_id in normalized_source
+                or normalized_source in repo_id
+            ):
+                return model_info.get("supports_thinking", False)
+
+        # Fallback: Check for "qwen3" in the source name (covers custom paths)
+        if "qwen3" in normalized_source:
+            return True
+
+        return False
+
+    def _get_model_capabilities(self) -> Dict[str, bool]:
+        """Get the capabilities of the current model.
+        
+        Returns a dict with capability flags:
+        - function_calling: Can use tools/functions
+        - supports_thinking: Has thinking mode (<think>...</think>)
+        - rag_capable: Optimized for RAG workflows
+        - vision_capable: Can process images
+        - code_capable: Good at code generation
+        
+        Returns:
+            Dict with capability flags, defaults to conservative values.
+        """
+        default_caps = {
+            "function_calling": False,
+            "supports_thinking": False,
+            "rag_capable": True,  # Most models can do basic RAG
+            "vision_capable": False,
+            "code_capable": False,
+        }
+        
+        settings = getattr(self, "llm_generator_settings", None)
+        if not settings:
+            return default_caps
+
+        model_service = getattr(settings, "model_service", None)
+        model_version = getattr(settings, "model_version", "") or ""
+        model_path = getattr(settings, "model_path", "") or ""
+
+        if model_service == ModelService.LOCAL.value:
+            # Check model_version first, then model_path
+            caps = self._lookup_model_capabilities(model_version)
+            if caps is not None:
+                return caps
+            caps = self._lookup_model_capabilities(model_path)
+            if caps is not None:
+                return caps
+
+        return default_caps
+
+    def _lookup_model_capabilities(self, source: str) -> Optional[Dict[str, bool]]:
+        """Look up model capabilities from LLMProviderConfig.
+        
+        Args:
+            source: Model identifier (name, repo_id, or path)
+            
+        Returns:
+            Dict with capability flags or None if not found.
+        """
+        if not source:
+            return None
+        normalized_source = str(source).strip().lower()
+        if not normalized_source:
+            return None
+
+        for model_info in LLMProviderConfig.LOCAL_MODELS.values():
+            name = (model_info.get("name") or "").strip().lower()
+            repo_id = (model_info.get("repo_id") or "").strip().lower()
+
+            matched = False
+            if name and (
+                normalized_source == name
+                or name in normalized_source
+                or normalized_source in name
+            ):
+                matched = True
+            elif repo_id and (
+                normalized_source == repo_id
+                or repo_id in normalized_source
+                or normalized_source in repo_id
+            ):
+                matched = True
+
+            if matched:
+                return {
+                    "function_calling": model_info.get("function_calling", False),
+                    "supports_thinking": model_info.get("supports_thinking", False),
+                    "rag_capable": model_info.get("rag_capable", True),
+                    "vision_capable": model_info.get("vision_capable", False),
+                    "code_capable": model_info.get("code_capable", False),
+                }
+
+        return None
+
+    def _update_action_dropdown(self) -> None:
+        """Update the action dropdown based on current model capabilities.
+        
+        Actions are filtered based on what the model can actually do:
+        - Chat: Always available
+        - Auto/Deep Research/Use Computer: Requires function_calling=True
+        - RAG: Always available (basic RAG works with any model)
+        - Image: Based on AIRUNNER_ART_ENABLED setting
+        """
+        capabilities = self._get_model_capabilities()
+        has_tools = capabilities.get("function_calling", False)
+        
+        # Build the action map based on capabilities
+        action_map = [("Chat", LLMActionType.CHAT)]
+        
+        if has_tools:
+            action_map.append(("Auto", LLMActionType.APPLICATION_COMMAND))
+        
+        # RAG is always available - basic retrieval works with any model
+        action_map.append(("RAG", LLMActionType.PERFORM_RAG_SEARCH))
+        
+        if has_tools:
+            action_map.append(("Deep Research", LLMActionType.DEEP_RESEARCH))
+            action_map.append(("Use Computer", LLMActionType.USE_COMPUTER))
+        
+        if AIRUNNER_ART_ENABLED:
+            action_map.append(("Image", LLMActionType.GENERATE_IMAGE))
+        
+        # Store current selection before clearing
+        current_action = self.action
+        
+        self.ui.action.blockSignals(True)
+        self.ui.action.clear()
+        
+        for label, _ in action_map:
+            self.ui.action.addItem(label)
+        
+        # Try to restore previous selection, default to Chat if not available
+        selected_idx = 0
+        for idx, (_, action_type) in enumerate(action_map):
+            if current_action is action_type:
+                selected_idx = idx
+                break
+        
+        self.ui.action.setCurrentIndex(selected_idx)
+        self.ui.action.blockSignals(False)
+        
+        # If the action changed (previous action no longer available), update settings
+        new_action = action_map[selected_idx][1]
+        if new_action is not current_action:
+            self.update_llm_generator_settings(action=new_action.name)
+
+    def _update_thinking_checkbox_visibility(self) -> None:
+        """Update the visibility of the thinking checkbox based on model capability."""
+        if not hasattr(self.ui, "thinking_checkbox"):
+            return
+        
+        supports_thinking = self._model_supports_thinking()
+        self.ui.thinking_checkbox.setVisible(supports_thinking)
+
     def _refresh_model_context_tokens(self) -> None:
         self._model_context_tokens = self._resolve_model_context_length()
 
     def on_llm_model_changed(self, data: Dict):
         self._refresh_model_context_tokens()
+        self._update_thinking_checkbox_visibility()
+        self._update_action_dropdown()
         prompt_text = (
             self.ui.prompt.toPlainText().strip()
             if hasattr(self.ui, "prompt")
@@ -453,6 +670,8 @@ class ChatPromptWidget(BaseWidget):
             return
 
         self._refresh_model_context_tokens()
+        self._update_thinking_checkbox_visibility()
+        self._update_action_dropdown()
         prompt_text = (
             self.ui.prompt.toPlainText().strip()
             if hasattr(self.ui, "prompt")

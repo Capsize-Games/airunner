@@ -55,28 +55,22 @@ class WorkerManager(Worker):
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
             SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
             SignalCode.LOAD_CONVERSATION: self.on_llm_load_conversation,
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.llm_on_interrupt_process_signal,
+            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
             SignalCode.QUIT_APPLICATION: self.on_quit_application_signal,
             SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
             SignalCode.GENERATE_MASK: self.on_generate_mask_signal,
-            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_audio_capture_worker_response_signal,
+            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_stt_process_audio_signal,
             SignalCode.STT_STOP_CAPTURE_SIGNAL: self.on_stt_stop_capture_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.RECORDING_DEVICE_CHANGED: self.on_recording_device_changed_signal,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.update_properties,
             SignalCode.STT_UNLOAD_SIGNAL: self.on_stt_unload_signal,
-            SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_stt_process_audio_signal,
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
             SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
             SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
             SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.TTS_QUEUE_SIGNAL: self.on_add_to_queue_signal,
-            SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
-            SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.PLAYBACK_DEVICE_CHANGED: self.on_playback_device_changed_signal,
             SignalCode.IMAGE_EXPORTED: self.on_image_exported_signal,
             SignalCode.FARA_LOAD_SIGNAL: self.on_fara_load_signal,
@@ -868,10 +862,6 @@ class WorkerManager(Worker):
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_llm_load_conversation(data)
 
-    def llm_on_interrupt_process_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.llm_on_interrupt_process_signal(data)
-
     def on_quit_application_signal(self, data):
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_quit_application_signal(data)
@@ -917,6 +907,11 @@ class WorkerManager(Worker):
             self.stt_audio_processor_worker.on_stt_process_audio_signal(data)
 
     def on_interrupt_process_signal(self, data):
+        # Interrupt LLM generation
+        if self._llm_generate_worker is not None:
+            self.llm_generate_worker.llm_on_interrupt_process_signal(data)
+
+        # Interrupt TTS generation
         if self._tts_generator_worker is not None:
             self.tts_generator_worker.on_interrupt_process_signal(data)
 

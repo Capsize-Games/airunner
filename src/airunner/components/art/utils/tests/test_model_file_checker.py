@@ -235,7 +235,8 @@ class TestUnifiedModelFiles:
         )
 
         assert files is not None
-        assert isinstance(files, list)
+        # LLM files are now a dict of {filename: expected_size}
+        assert isinstance(files, dict)
         assert "config.json" in files
 
     def test_get_required_files_for_model_stt(self):

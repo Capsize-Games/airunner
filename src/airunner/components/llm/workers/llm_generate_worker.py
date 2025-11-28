@@ -385,8 +385,12 @@ class LLMGenerateWorker(
         self.add_to_queue(message)
         self.logger.info(f"Added request to queue")
 
-    def llm_on_interrupt_process_signal(self) -> None:
-        """Handle interrupt signal - stop ongoing generation and clear queue."""
+    def llm_on_interrupt_process_signal(self, data=None) -> None:
+        """Handle interrupt signal - stop ongoing generation and clear queue.
+        
+        Args:
+            data: Optional signal data (not used but required for signal handler signature)
+        """
         self._interrupted = True
         self.clear_queue()
         self.logger.info("Interrupted and cleared LLM generation queue")

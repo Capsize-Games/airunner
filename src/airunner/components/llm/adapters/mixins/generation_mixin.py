@@ -85,11 +85,13 @@ class GenerationMixin:
         if isinstance(prompt, list):
             return {"input_ids": torch.tensor([prompt]).to(self.model.device)}
         else:
+            # Get max length from model config, default to 131072 for modern LLMs
+            max_length = getattr(self.model.config, "max_position_embeddings", 131072)
             return self.tokenizer(
                 prompt,
                 return_tensors="pt",
                 truncation=True,
-                max_length=2048,
+                max_length=max_length,
             ).to(self.model.device)
 
     def _get_token_ids(self):
@@ -233,7 +235,9 @@ class GenerationMixin:
         Yields:
             ChatGenerationChunk objects with streamed content
         """
+        self.logger.debug("[STREAM DEBUG] _stream() called")
         prompt = self._messages_to_prompt(messages)
+        self.logger.debug(f"[STREAM DEBUG] Prompt length: {len(prompt)}")
         inputs = self._prepare_inputs(prompt)
 
         streamer = self._create_streamer()
@@ -250,6 +254,7 @@ class GenerationMixin:
         # If tools are enabled, buffer everything to yield a single complete message
         # Otherwise stream chunks in real-time
         should_buffer = bool(self.tools)
+        self.logger.debug(f"[STREAM DEBUG] should_buffer={should_buffer}, tools={len(self.tools) if self.tools else 0}")
 
         token_count = 0
         try:
@@ -260,10 +265,13 @@ class GenerationMixin:
                 if not should_buffer:
                     yield chunk
         finally:
+            self.logger.debug(f"[STREAM DEBUG] Joining thread, token_count={token_count}")
             thread.join()
+            self.logger.debug("[STREAM DEBUG] Thread joined")
 
         # Always yield a final complete message
         response_text = "".join(full_response)
+        self.logger.debug(f"[STREAM DEBUG] Full response length: {len(response_text)}")
 
         if self.tools:
             # Parse tool calls and get cleaned text
@@ -342,9 +350,21 @@ class GenerationMixin:
         Returns:
             Started thread object
         """
-        thread = threading.Thread(
-            target=self.model.generate, kwargs=generation_kwargs
-        )
+        def _generate_with_error_handling():
+            try:
+                self.logger.debug("[STREAM DEBUG] Generation thread starting")
+                self.model.generate(**generation_kwargs)
+                self.logger.debug("[STREAM DEBUG] Generation thread completed")
+            except Exception as e:
+                self.logger.error(f"[STREAM DEBUG] Generation thread error: {e}", exc_info=True)
+                # Signal the streamer that generation failed
+                if "streamer" in generation_kwargs:
+                    try:
+                        generation_kwargs["streamer"].text_queue.put(None)
+                    except:
+                        pass
+        
+        thread = threading.Thread(target=_generate_with_error_handling)
         thread.daemon = True
         thread.start()
         return thread
@@ -362,6 +382,8 @@ class GenerationMixin:
         """
         # Use the proper iterator protocol - don't access queue directly
         # This ensures TextIteratorStreamer handles EOS, tokenization, etc. correctly
+        self.logger.debug("[STREAM DEBUG] Starting to iterate over streamer")
+        token_count = 0
         for text in streamer:
             if self._interrupted:
                 self.logger.info("Stream interrupted - breaking immediately")
@@ -371,11 +393,16 @@ class GenerationMixin:
             if not text:
                 continue
 
+            token_count += 1
+            if token_count <= 5 or token_count % 50 == 0:
+                self.logger.debug(f"[STREAM DEBUG] Token {token_count}: '{text[:30]}...'")
             full_response.append(text)
             chunk = ChatGenerationChunk(message=AIMessageChunk(content=text))
             if run_manager:
                 run_manager.on_llm_new_token(text, chunk=chunk)
             yield chunk
+        
+        self.logger.debug(f"[STREAM DEBUG] Streamer iteration complete, total tokens: {token_count}")
 
     def _clear_streamer_queue(self, streamer):
         """Clear streamer queue to unblock generation thread.

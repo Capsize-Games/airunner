@@ -45,6 +45,7 @@ class ConversationWidget(BaseWidget):
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_text_generate_signal,
             SignalCode.LLM_TOOL_STATUS_SIGNAL: self.on_tool_status_update,
+            SignalCode.LLM_THINKING_SIGNAL: self.on_thinking_update,
         }
         self.ui_update_timer = QTimer(self)
         self.ui_update_timer.setInterval(50)
@@ -743,6 +744,22 @@ class ConversationWidget(BaseWidget):
             status,
             details or "",  # Ensure empty string instead of None
         )
+
+    def on_thinking_update(self, data: Dict[str, Any]):
+        """Handle thinking status updates from Qwen3 <think> blocks.
+
+        Args:
+            data: Thinking status data containing:
+                - status: "started", "streaming", or "completed"
+                - content: The thinking text content
+        """
+        status = data.get("status", "")
+        content = data.get("content", "")
+
+        self.logger.debug(f"[THINKING] Received signal: status={status}, content_len={len(content)}")
+
+        # Send to JavaScript for rendering
+        self._chat_bridge.updateThinkingStatus(status, content)
 
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
