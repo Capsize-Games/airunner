@@ -271,7 +271,7 @@ class Ui_stable_diffusion_settings_widget(object):
     def retranslateUi(self, stable_diffusion_settings_widget):
         stable_diffusion_settings_widget.setWindowTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Form", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Version", None))
-        self.scale_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Guidance Scale", None))
+        self.scale_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Guidance Scale (CFG)", None))
         self.steps_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
         self.seed_widget.setProperty(u"generator_section", "")
         self.seed_widget.setProperty(u"generator_name", "")
@@ -285,6 +285,6 @@ class Ui_stable_diffusion_settings_widget(object):
         self.browse_button.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Browse", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Scheduler", None))
         self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
-        self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Stable Diffusion", None))
+        self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Art Model", None))
     # retranslateUi
 

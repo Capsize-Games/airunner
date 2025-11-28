@@ -153,6 +153,20 @@ class StableDiffusionGeneratorForm(BaseWidget):
             or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
         )
 
+    @property
+    def uses_negative_prompt(self) -> bool:
+        """Check if the current model version uses negative prompts.
+
+        FLUX and Z-Image models don't use negative prompts.
+        """
+        no_negative_prompt_versions = (
+            StableDiffusionVersion.FLUX_DEV.value,
+            StableDiffusionVersion.FLUX_SCHNELL.value,
+            StableDiffusionVersion.Z_IMAGE_TURBO.value,
+            StableDiffusionVersion.Z_IMAGE_BASE.value,
+        )
+        return self._sd_version not in no_negative_prompt_versions
+
     @Slot()
     def on_generate_button_clicked(self):
         # Validate if generation can proceed
@@ -237,6 +251,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.ui.sdxl_settings_container.hide()
             self.ui.secondary_prompt.hide()
             self.ui.secondary_negative_prompt.hide()
+
+        # Toggle negative prompt visibility based on model version
+        self._toggle_negative_prompt_visibility()
+
+    def _toggle_negative_prompt_visibility(self):
+        """Show/hide negative prompt based on whether the model uses it.
+
+        FLUX and Z-Image models don't use negative prompts.
+        """
+        if self.uses_negative_prompt:
+            self.ui.layoutWidget1.show()
+        else:
+            self.ui.layoutWidget1.hide()
 
     @property
     def is_txt2img(self):

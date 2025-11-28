@@ -110,6 +110,10 @@ def set_default_schedulers():
                 display_name=Scheduler.DPM.value,
                 name="DPMSolverMultistepScheduler",
             ),
+            dict(
+                display_name=Scheduler.FLOW_MATCH_EULER.value,
+                name="FlowMatchEulerDiscreteScheduler",
+            ),
         ],
     )
 

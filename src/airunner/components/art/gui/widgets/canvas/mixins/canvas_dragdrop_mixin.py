@@ -5,6 +5,7 @@ the canvas from files, URLs, and clipboard sources.
 """
 
 import io
+import json
 import os
 from typing import Optional
 
@@ -13,11 +14,15 @@ from PIL import Image
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
 
 
+# Custom MIME type used by ImageWidget for drag operations
+IMAGE_METADATA_MIME_TYPE = "application/x-qt-image-metadata"
+
+
 class CanvasDragDropMixin:
     """Mixin for canvas drag-and-drop image operations.
 
     Handles dragging and dropping images from filesystem URLs, HTTP URLs,
-    and clipboard data onto the canvas scene.
+    clipboard data, and internal image panel widgets onto the canvas scene.
     """
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -26,8 +31,15 @@ class CanvasDragDropMixin:
         Args:
             event: Drag enter event containing potential image data.
         """
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
+        mime = event.mimeData()
+
+        # Accept internal image panel drags
+        if mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
+            event.acceptProposedAction()
+            return
+
+        if mime.hasUrls():
+            for url in mime.urls():
                 url_str = url.toString()
                 if url_str.lower().endswith(
                     (".png", ".jpg", ".jpeg", ".bmp", ".gif")
@@ -44,7 +56,8 @@ class CanvasDragDropMixin:
         Args:
             event: Drag move event containing potential image data.
         """
-        if event.mimeData().hasUrls():
+        mime = event.mimeData()
+        if mime.hasFormat(IMAGE_METADATA_MIME_TYPE) or mime.hasUrls():
             event.acceptProposedAction()
         else:
             super().dragMoveEvent(event)
@@ -52,9 +65,9 @@ class CanvasDragDropMixin:
     def dropEvent(self, event: QDropEvent) -> None:
         """Handle drop event for images.
 
-        Attempts to load dropped image from raw image data, URLs, or file
-        paths. Updates canvas with the loaded image and creates undo
-        history entry.
+        Attempts to load dropped image from internal image panel metadata,
+        raw image data, URLs, or file paths. Updates canvas with the loaded
+        image and creates undo history entry.
 
         Args:
             event: Drop event containing image data.
@@ -62,7 +75,12 @@ class CanvasDragDropMixin:
         mime = event.mimeData()
         self.logger.debug(f"Drop mime types: {mime.formats()}")
 
-        handled = self._handle_raw_image_drop(mime)
+        # First try internal image panel drag
+        handled = self._handle_image_metadata_drop(mime)
+
+        # Then try raw image data
+        if not handled:
+            handled = self._handle_raw_image_drop(mime)
 
         if not handled and mime.hasUrls():
             handled = self._handle_url_drop(mime)
@@ -71,6 +89,37 @@ class CanvasDragDropMixin:
             event.acceptProposedAction()
         else:
             super().dropEvent(event)
+
+    def _handle_image_metadata_drop(self, mime) -> bool:
+        """Handle drop from internal image panel widget.
+
+        Args:
+            mime: MIME data from drop event.
+
+        Returns:
+            True if image was successfully loaded, False otherwise.
+        """
+        if not mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
+            return False
+
+        try:
+            data = mime.data(IMAGE_METADATA_MIME_TYPE)
+            metadata_str = bytes(data.data()).decode("utf-8")
+            metadata = json.loads(metadata_str)
+            image_path = metadata.get("path")
+
+            if not image_path or not os.path.exists(image_path):
+                self.logger.warning(
+                    f"Image path not found in metadata or file missing: {image_path}"
+                )
+                return False
+
+            img = Image.open(image_path)
+            self._process_dropped_image(img)
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to load image from metadata: {e}")
+            return False
 
     def _handle_raw_image_drop(self, mime) -> bool:
         """Handle drop of raw image data.
@@ -114,17 +163,22 @@ class CanvasDragDropMixin:
         """
         for url in mime.urls():
             url_str = url.toString()
+            self.logger.debug(f"Attempting to load image from URL: {url_str}")
             img = self._load_image_from_url_or_file(url_str)
             if img is not None:
+                self.logger.debug(f"Successfully loaded image from URL string")
                 self._process_dropped_image(img)
                 return True
 
             path = url.toLocalFile()
+            self.logger.debug(f"Attempting to load image from local file: {path}")
             if path:
                 img = self._load_image_from_url_or_file(path)
                 if img is not None:
+                    self.logger.debug(f"Successfully loaded image from local file")
                     self._process_dropped_image(img)
                     return True
+        self.logger.debug("Failed to load image from any URL")
         return False
 
     def _process_dropped_image(self, img: Image.Image) -> None:
@@ -141,17 +195,32 @@ class CanvasDragDropMixin:
         self.current_active_image = img
 
         try:
+            self.logger.debug("Calling initialize_image with image size: %s", img.size if img else None)
             self.initialize_image(img)
-        except Exception:
-            pass
+            self.logger.debug("initialize_image completed successfully")
+        except Exception as e:
+            self.logger.error("Error in initialize_image: %s", e, exc_info=True)
 
         self._persist_dropped_image(img, layer_id)
         self._commit_layer_history_transaction(layer_id, "image")
 
+        # Defer layer display refresh to next event loop
+        # This allows the canvas image to display immediately
+        try:
+            from PySide6.QtCore import QTimer
+
+            QTimer.singleShot(0, self._refresh_layer_display)
+        except Exception as e:
+            self.logger.error(
+                f"Failed to schedule layer display refresh: {e}",
+                exc_info=True,
+            )
+
         try:
             self.api.art.canvas.image_updated()
-        except Exception:
-            pass
+            self.logger.debug("image_updated signal sent")
+        except Exception as e:
+            self.logger.error("Error sending image_updated signal: %s", e, exc_info=True)
 
     def _persist_dropped_image(self, img: Image.Image, layer_id: int) -> None:
         """Persist dropped image to database synchronously.
@@ -188,6 +257,7 @@ class CanvasDragDropMixin:
         Returns:
             PIL Image in RGBA mode, or None if loading failed.
         """
+        self.logger.debug(f"_load_image_from_url_or_file called with: {url_or_path}")
         if url_or_path.startswith("http://") or url_or_path.startswith(
             "https://"
         ):
@@ -200,6 +270,7 @@ class CanvasDragDropMixin:
                 return None
         elif url_or_path.startswith("file://"):
             path = url_or_path[7:]
+            self.logger.debug(f"Extracted path from file URL: {path}, exists: {os.path.exists(path)}")
             if os.path.exists(path):
                 try:
                     return Image.open(path).convert("RGBA")
@@ -207,7 +278,9 @@ class CanvasDragDropMixin:
                     self.logger.error(f"Failed to open file image: {e}")
             return None
         else:
-            if os.path.exists(url_or_path):
+            exists = os.path.exists(url_or_path)
+            self.logger.debug(f"Trying as plain path, exists: {exists}")
+            if exists:
                 try:
                     return Image.open(url_or_path).convert("RGBA")
                 except Exception as e:
