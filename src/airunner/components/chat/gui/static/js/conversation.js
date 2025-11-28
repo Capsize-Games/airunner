@@ -39,9 +39,9 @@ function initializeChatView() {
         chatBridge.setMessages.connect(function (msgs) {
             console.log(`[TOOL STATUS DEBUG] setMessages called with ${msgs.length} messages`);
 
-            // Always preserve tool statuses when setting messages
-            // Use clearMessages signal explicitly if you want to clear everything
-            clearMessagesKeepToolStatus();
+            // Clear everything when setting messages (loading from saved data)
+            // Tool status and thinking widgets will be recreated from saved message data
+            clearMessages();
 
             enableAutoScroll();
             const renderPromises = msgs.map(m => appendMessage(m, false));
