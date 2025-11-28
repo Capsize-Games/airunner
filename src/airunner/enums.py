@@ -407,6 +407,7 @@ class Scheduler(Enum):
     DEIS = "DEIS"
     DPM_2M_SDE_K = "DPM 2M SDE Karras"
     PLMS = "PLMS"
+    FLOW_MATCH_EULER = "Flow Match Euler"
     # DDIMInverse = "DDIM Inverse"
     # IPNM = "IPNM"
     # REPAINT = "RePaint"
@@ -481,6 +482,7 @@ class CanvasToolName(Enum):
 class ImageGenerator(Enum):
     STABLEDIFFUSION = "stablediffusion"
     FLUX = "flux"
+    ZIMAGE = "zimage"
 
 
 class GeneratorSection(Enum):
@@ -500,6 +502,8 @@ class StableDiffusionVersion(Enum):
     X4_UPSCALER = "x4-upscaler"
     FLUX_DEV = "FLUX.1-dev"
     FLUX_SCHNELL = "Flux.1 S"
+    Z_IMAGE_TURBO = "Z-Image Turbo"
+    Z_IMAGE_BASE = "Z-Image Base"
 
 
 class Language(Enum):

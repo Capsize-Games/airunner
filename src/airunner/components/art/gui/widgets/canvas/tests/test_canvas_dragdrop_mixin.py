@@ -65,6 +65,7 @@ class TestCanvasDragDropMixin(unittest.TestCase):
         mock_event = Mock()
         mock_url = Mock()
         mock_url.toString = Mock(return_value="file:///test.txt")
+        mock_event.mimeData().hasFormat = Mock(return_value=False)
         mock_event.mimeData().hasUrls = Mock(return_value=True)
         mock_event.mimeData().urls = Mock(return_value=[mock_url])
 

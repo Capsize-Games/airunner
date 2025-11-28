@@ -259,6 +259,17 @@ class CanvasLayerMixin:
             item.setVisible(data["visible"])
             item.setOpacity(data["opacity"])
             item.setZValue(data["order"])
+
+            # Reload image from database in case it changed (e.g., from drop/paste)
+            drawing_pad = DrawingPadSettings.objects.filter_by_first(
+                layer_id=layer_id
+            )
+            if drawing_pad and drawing_pad.image:
+                image = convert_binary_to_image(drawing_pad.image)
+                if image is not None:
+                    qimage = pil_to_qimage(image)
+                    if qimage is not None:
+                        item.updateImage(qimage)
         except RuntimeError as e:
             if "Internal C++ object" in str(e) and "already deleted" in str(e):
                 del self._layer_items[layer_id]

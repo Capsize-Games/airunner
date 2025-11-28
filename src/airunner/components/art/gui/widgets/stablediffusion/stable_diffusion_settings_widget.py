@@ -17,6 +17,7 @@ from airunner.enums import (
     GeneratorSection,
     ImageGenerator,
     StableDiffusionVersion,
+    Scheduler,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import (
@@ -32,6 +33,38 @@ from airunner.utils.model_utils.model_utils import (
 )
 import threading
 import os
+
+
+# Versions that use FlowMatchEulerDiscreteScheduler (FLUX and Z-Image)
+FLOW_MATCH_VERSIONS = (
+    StableDiffusionVersion.FLUX_DEV.value,
+    StableDiffusionVersion.FLUX_SCHNELL.value,
+    StableDiffusionVersion.Z_IMAGE_TURBO.value,
+    StableDiffusionVersion.Z_IMAGE_BASE.value,
+)
+
+# Scheduler constraints: only FlowMatchEuler for FLUX/Z-Image
+FLOW_MATCH_SCHEDULER_NAME = Scheduler.FLOW_MATCH_EULER.value
+
+# Version-specific parameter constraints
+VERSION_CONSTRAINTS = {
+    StableDiffusionVersion.Z_IMAGE_TURBO.value: {
+        "guidance_scale_max": 5.0,
+        "steps_max": 10,
+    },
+    StableDiffusionVersion.Z_IMAGE_BASE.value: {
+        "guidance_scale_max": 5.0,
+        "steps_max": 50,
+    },
+    StableDiffusionVersion.FLUX_DEV.value: {
+        "guidance_scale_max": 3.5,
+        "steps_max": 50,
+    },
+    StableDiffusionVersion.FLUX_SCHNELL.value: {
+        "guidance_scale_max": 3.5,
+        "steps_max": 4,
+    },
+}
 
 
 class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
@@ -101,14 +134,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             if AIRUNNER_ART_ENABLED:
                 self.logger.error(f"Error updating compel: {e}")
 
+        # Toggle Compel visibility based on model version
+        self._toggle_compel_visibility()
+        
+        # Update version-dependent UI (pipeline visibility, constraints, schedulers)
+        self._update_version_dependent_ui()
+
         if self.generator_settings.model is None:
             self._update_model_id()
-
-        if (
-            self.generator_settings.version
-            == StableDiffusionVersion.FLUX_SCHNELL.value
-        ):
-            self.ui.groupBox_5.hide()
 
     @Slot(bool)
     def on_use_compel_toggled(self, val: bool):
@@ -118,6 +151,49 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self.ui.clip_skip_slider_widget.hide()
         else:
             self.ui.clip_skip_slider_widget.show()
+
+    def _toggle_compel_visibility(self):
+        """Show/hide Compel checkbox based on whether the model supports it.
+
+        FLUX and Z-Image models don't support Compel prompt weighting.
+        """
+        version = self.generator_settings.version
+        if version in FLOW_MATCH_VERSIONS:
+            self.ui.use_compel.hide()
+        else:
+            self.ui.use_compel.show()
+
+    def _update_version_dependent_ui(self):
+        """Update UI elements based on the current version.
+        
+        This handles:
+        - Showing/hiding pipeline dropdown (FLUX/Z-Image don't have inpaint/outpaint)
+        - Updating guidance scale and steps constraints
+        - Updating scheduler dropdown
+        """
+        version = self.generator_settings.version
+        
+        # Hide pipeline dropdown for FLUX/Z-Image (they only support txt2img currently)
+        if version in FLOW_MATCH_VERSIONS:
+            self.ui.groupBox_3.hide()  # Pipeline groupbox
+        else:
+            self.ui.groupBox_3.show()
+        
+        # Update parameter constraints based on version
+        constraints = VERSION_CONSTRAINTS.get(version, {})
+        
+        # Update guidance scale max (default 100.0 for other versions)
+        guidance_max = constraints.get("guidance_scale_max", 100.0)
+        self.ui.scale_widget.setProperty("spinbox_maximum", guidance_max)
+        self.ui.scale_widget.setProperty("slider_maximum", int(guidance_max * 100))
+        
+        # Update steps max (default 200 for other versions)
+        steps_max = constraints.get("steps_max", 200)
+        self.ui.steps_widget.setProperty("spinbox_maximum", float(steps_max))
+        self.ui.steps_widget.setProperty("slider_maximum", steps_max)
+        
+        # Reload schedulers to filter based on version
+        self._load_schedulers_combobox()
 
     @Slot()
     def on_browse_button_clicked(self):
@@ -376,11 +452,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             chosen_pipeline,
             chosen_model_id,
         )
-        (
-            self.ui.groupBox_5.hide()
-            if val == StableDiffusionVersion.FLUX_SCHNELL.value
-            else self.ui.groupBox_5.show()
-        )
+        self._toggle_compel_visibility()
+        self._update_version_dependent_ui()
         self._load_models_combobox()
         self.api.art.model_changed(
             model=chosen_model_id, version=val, pipeline=chosen_pipeline
@@ -465,7 +538,11 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self.action = self.generator_settings.pipeline_action
             self.version = self.generator_settings.version
 
-            image_generator = ImageGenerator.FLUX.value
+            # Determine the correct category based on version
+            from airunner.components.application.workers.model_scanner_worker import (
+                get_category_for_version,
+            )
+            image_generator = get_category_for_version(self.version)
 
             pipeline_actions = [GeneratorSection.TXT2IMG.value]
 
@@ -509,11 +586,25 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
     @property
     def schedulers(self):
-        return Schedulers.objects.all()
+        """Get schedulers filtered by version.
+        
+        FLUX and Z-Image models only support FlowMatchEulerDiscreteScheduler.
+        Other versions support all schedulers.
+        """
+        all_schedulers = Schedulers.objects.all()
+        version = self.generator_settings.version
+        
+        if version in FLOW_MATCH_VERSIONS:
+            # Only return FlowMatchEuler for FLUX/Z-Image
+            return [s for s in all_schedulers if s.display_name == FLOW_MATCH_SCHEDULER_NAME]
+        
+        # For other versions, return all schedulers except FlowMatchEuler
+        return [s for s in all_schedulers if s.display_name != FLOW_MATCH_SCHEDULER_NAME]
 
     def _load_schedulers_combobox(self):
         self.ui.scheduler.blockSignals(True)
-        scheduler_names = [s.display_name for s in self.schedulers]
+        schedulers = self.schedulers
+        scheduler_names = [s.display_name for s in schedulers]
         self.ui.scheduler.clear()
         self.ui.scheduler.addItems(scheduler_names)
 

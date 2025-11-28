@@ -48,11 +48,12 @@ def get_required_files_for_model(
         pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
     Returns:
-        List of required file paths, or None if not found
+        For art models: Dict[str, int] mapping filename to expected size in bytes
+        For other models: List of required file paths, or None if not found
 
     Examples:
         >>> get_required_files_for_model("art", "Flux.1 S", "SDXL 1.0", "txt2img")
-        ["scheduler/scheduler_config.json", ...]
+        {"scheduler/scheduler_config.json": 479, ...}
         >>> get_required_files_for_model("stt", "openai/whisper-tiny")
         ["config.json", "model.safetensors", ...]
         >>> get_required_files_for_model("llm", "meta-llama/Llama-3.1-8B-Instruct")
@@ -64,6 +65,7 @@ def get_required_files_for_model(
     data = UNIFIED_MODEL_FILES[model_type]
 
     # Art models use version + pipeline_action lookup
+    # Returns dict of {filename: expected_size}
     if model_type == "art":
         if not version or not pipeline_action:
             return None
