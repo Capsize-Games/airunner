@@ -100,18 +100,31 @@ class ToolExecutor:
         """
         Convert tool to llama_index FunctionTool.
 
+        Includes input_examples in the description if available,
+        to improve parameter accuracy.
+
         Args:
             tool_info: Tool metadata
 
         Returns:
             Configured FunctionTool instance
         """
+        import json
+        
         wrapped = self.wrap_tool(tool_info)
+        
+        # Enhance description with examples if present
+        description = tool_info.description
+        if tool_info.input_examples:
+            examples_str = "\n\nExamples:\n" + "\n".join(
+                f"  {json.dumps(ex)}" for ex in tool_info.input_examples
+            )
+            description = description + examples_str
 
         return FunctionTool.from_defaults(
             fn=wrapped,
             name=tool_info.name,
-            description=tool_info.description,
+            description=description,
             return_direct=tool_info.return_direct,
         )
 

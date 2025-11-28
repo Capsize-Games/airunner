@@ -127,12 +127,17 @@ class ToolManager(
 
         return wrapped
 
-    def get_all_tools(self) -> List[Callable]:
+    def get_all_tools(self, include_deferred: bool = True) -> List[Callable]:
         """Get all available tools.
 
         Returns tools from both:
         1. Old mixin-based tools (not yet migrated)
         2. New ToolRegistry decorated tools
+
+        Args:
+            include_deferred: If True, include all tools. If False, only
+                immediate tools (defer_loading=False). Default is True for
+                backward compatibility.
 
         Returns:
             List of all tool functions
@@ -177,8 +182,14 @@ class ToolManager(
         ]
 
         # Add new ToolRegistry decorated tools with dependency injection
+        # Get either all tools or just immediate ones based on include_deferred
+        if include_deferred:
+            registry_tools = ToolRegistry.all()
+        else:
+            registry_tools = ToolRegistry.get_immediate_tools()
+
         # Wrap tools to inject api and agent parameters
-        for tool_info in ToolRegistry.all().values():
+        for tool_info in registry_tools.values():
             wrapped_func = self._wrap_tool_with_dependencies(tool_info)
             # Add .name and .description attributes like LangChain tools
             wrapped_func.name = tool_info.name
@@ -192,6 +203,17 @@ class ToolManager(
         tools.extend(self._load_custom_tools())
 
         return tools
+
+    def get_immediate_tools(self) -> List[Callable]:
+        """Get only immediately-available tools (defer_loading=False).
+
+        Use this for reduced context size. Tools with defer_loading=True
+        can be discovered via search_tools.
+
+        Returns:
+            List of immediate tool functions
+        """
+        return self.get_all_tools(include_deferred=False)
 
     def _load_custom_tools(self) -> List[Callable]:
         """Load custom tools created by the agent from database.

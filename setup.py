@@ -59,6 +59,8 @@ extras_require = {
         "libzim==3.7.0",
         # Mistral native function calling and Mistral3 tokenization
         "mistral_common>=1.8.5",
+        # Tool search (BM25 ranking for on-demand tool discovery)
+        "rank-bm25>=0.2.2",
         # llama-index (for RAG only)
         "llama-index-core>=0.13",
         "llama-index-readers-file>=0.5.0",
