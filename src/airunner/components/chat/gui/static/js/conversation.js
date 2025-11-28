@@ -240,6 +240,19 @@ async function appendMessage(msg, scroll = true) {
     const container = document.getElementById('conversation-container');
     if (!container) return;
 
+    // If this is an assistant message with tool usage, render tool status widgets first
+    if (msg.is_bot && msg.tool_usage && Array.isArray(msg.tool_usage)) {
+        for (const tool of msg.tool_usage) {
+            const toolElement = createToolStatusElement(
+                tool.tool_id || `saved-tool-${msg.id}-${tool.tool_name}`,
+                tool.tool_name,
+                tool.query,
+                'completed'  // Saved tool usages are always completed
+            );
+            container.appendChild(toolElement);
+        }
+    }
+
     // If this is an assistant message with thinking content, render thinking block first
     if (msg.is_bot && msg.thinking_content) {
         const thinkingElement = createThinkingElement(msg.thinking_content, msg.id);
@@ -282,6 +295,34 @@ function createThinkingElement(thinkingContent, messageId) {
     `;
 
     return thinkingElement;
+}
+
+/**
+ * Create a tool status element for displaying saved tool usage.
+ * @param {string} toolId - The tool ID
+ * @param {string} toolName - The tool name
+ * @param {string} query - The query used with the tool
+ * @param {string} status - The status ('completed', 'starting', etc.)
+ * @returns {HTMLElement} The tool status element
+ */
+function createToolStatusElement(toolId, toolName, query, status) {
+    const toolElement = document.createElement('div');
+    toolElement.id = `tool-status-${toolId}`;
+    toolElement.className = 'tool-status tool-status-completed';
+    toolElement.dataset.toolName = toolName;
+
+    const displayName = getToolDisplayName(toolName);
+    const queryPreview = query && query.length > 50 ? query.substring(0, 50) + '...' : (query || '');
+
+    let html = `
+        <div class="tool-status-line tool-status-completed">
+            <span class="tool-checkmark">✅</span>
+            <span class="tool-text">${displayName}${queryPreview ? ` for "${queryPreview}"` : ''}</span>
+        </div>
+    `;
+
+    toolElement.innerHTML = html;
+    return toolElement;
 }
 
 /**

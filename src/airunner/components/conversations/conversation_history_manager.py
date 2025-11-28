@@ -19,6 +19,27 @@ class ConversationHistoryManager:
         """Initializes the ConversationHistoryManager."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+    def _extract_query_from_tool_call(self, tool_call: Dict[str, Any]) -> str:
+        """Extract a user-friendly query string from a tool call.
+
+        Args:
+            tool_call: Tool call dictionary with 'args' field
+
+        Returns:
+            Query string for display
+        """
+        args = tool_call.get("args", {})
+        if isinstance(args, dict):
+            # Try common query field names
+            for key in ("query", "search_query", "prompt", "input", "question"):
+                if key in args:
+                    return str(args[key])
+            # Fallback: return first string value
+            for value in args.values():
+                if isinstance(value, str) and value:
+                    return value
+        return ""
+
     def get_current_conversation(self) -> Optional[Conversation]:
         """Fetches the current conversation.
 
@@ -116,12 +137,29 @@ class ConversationHistoryManager:
 
             # Track URLs from tool results for citation
             pending_citations: List[str] = []
+            
+            # Track tool calls to attach to subsequent assistant message
+            pending_tool_usage: List[Dict[str, Any]] = []
 
             formatted_messages: List[Dict[str, Any]] = []
             for msg_idx, msg_obj in enumerate(raw_messages):
                 if not isinstance(msg_obj, dict):
                     self.logger.warning(
                         f"Skipping invalid message object (not a dict) in conversation {conversation_id}: {msg_obj}"
+                    )
+                    continue
+
+                # Collect tool call metadata to attach to next assistant message
+                if msg_obj.get("metadata_type") == "tool_calls":
+                    tool_calls = msg_obj.get("tool_calls", [])
+                    for tc in tool_calls:
+                        pending_tool_usage.append({
+                            "tool_id": tc.get("id", ""),
+                            "tool_name": tc.get("name", "unknown"),
+                            "query": self._extract_query_from_tool_call(tc),
+                        })
+                    self.logger.debug(
+                        f"Collected {len(tool_calls)} tool calls for next assistant message"
                     )
                     continue
 
@@ -209,6 +247,11 @@ class ConversationHistoryManager:
                 # Include thinking content for assistant messages if present
                 if is_bot and msg_obj.get("thinking_content"):
                     formatted_msg["thinking_content"] = msg_obj["thinking_content"]
+                
+                # Include tool usage for assistant messages if we have pending tool calls
+                if is_bot and pending_tool_usage:
+                    formatted_msg["tool_usage"] = pending_tool_usage.copy()
+                    pending_tool_usage.clear()
 
                 # If this is an assistant message and we have pending citations, append them
                 if is_bot and pending_citations:

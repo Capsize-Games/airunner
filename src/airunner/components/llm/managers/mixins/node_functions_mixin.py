@@ -1201,14 +1201,19 @@ Based on the search results above, provide a clear, conversational answer to the
                 
                 # Stream non-JSON content to GUI immediately
                 # Skip whitespace-only content to prevent creating empty assistant messages
-                if text_to_stream and text_to_stream.strip() and self._token_callback:
+                if text_to_stream and self._token_callback:
                     try:
-                        # Only strip leading whitespace on the FIRST content chunk
-                        # to avoid blank lines at start of assistant message
+                        # Keep stripping leading whitespace until we find non-blank content
+                        # This handles cases where multiple chunks contain only whitespace
                         if not has_streamed_content:
                             text_to_stream = text_to_stream.lstrip()
-                            has_streamed_content = True
-                        self._token_callback(text_to_stream)
+                            # Only mark as streamed if we have actual content after stripping
+                            if text_to_stream:
+                                has_streamed_content = True
+                        
+                        # Only call callback if we have content to stream
+                        if text_to_stream:
+                            self._token_callback(text_to_stream)
                     except Exception as callback_error:
                         self.logger.error(
                             "Token callback failed: %s",
