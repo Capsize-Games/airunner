@@ -250,11 +250,10 @@ class GenerationMixin:
         thread = self._start_generation_thread(generation_kwargs)
         full_response = []
 
-        # Collect all streamed tokens
-        # If tools are enabled, buffer everything to yield a single complete message
-        # Otherwise stream chunks in real-time
-        should_buffer = bool(self.tools)
-        self.logger.debug(f"[STREAM DEBUG] should_buffer={should_buffer}, tools={len(self.tools) if self.tools else 0}")
+        # Always stream tokens in real-time for GUI responsiveness
+        # We still accumulate full_response for tool parsing at the end
+        has_tools = bool(self.tools)
+        self.logger.debug(f"[STREAM DEBUG] has_tools={has_tools}, tools={len(self.tools) if self.tools else 0}")
 
         token_count = 0
         try:
@@ -262,18 +261,19 @@ class GenerationMixin:
                 streamer, run_manager, full_response
             ):
                 token_count += 1
-                if not should_buffer:
-                    yield chunk
+                # Always yield chunks for real-time streaming
+                yield chunk
         finally:
             self.logger.debug(f"[STREAM DEBUG] Joining thread, token_count={token_count}")
             thread.join()
             self.logger.debug("[STREAM DEBUG] Thread joined")
 
-        # Always yield a final complete message
-        response_text = "".join(full_response)
-        self.logger.debug(f"[STREAM DEBUG] Full response length: {len(response_text)}")
-
-        if self.tools:
+        # If tools are enabled, yield a final message with tool_calls
+        # This allows the workflow to detect and execute tool calls
+        if has_tools:
+            response_text = "".join(full_response)
+            self.logger.debug(f"[STREAM DEBUG] Full response length: {len(response_text)}")
+            
             # Parse tool calls and get cleaned text
             tool_calls = self._parse_stream_tool_calls(response_text, kwargs)
             _, cleaned_text = self._parse_tool_calls_if_enabled(
@@ -282,16 +282,14 @@ class GenerationMixin:
 
             if tool_calls:
                 tool_calls = self._deduplicate_tool_calls(tool_calls)
-
-            # Yield single complete message with both content and tool_calls
-            message = AIMessageChunk(
-                content=cleaned_text, tool_calls=tool_calls or []
-            )
-            chunk = ChatGenerationChunk(message=message)
-
-            yield chunk
-        # DON'T yield final chunk if we already yielded chunks during the loop
-        # (this would cause duplication since node_functions_mixin appends all chunks)
+                # Only yield final message with tool_calls if we found any
+                # Use empty content since we already streamed the text
+                message = AIMessageChunk(
+                    content="", tool_calls=tool_calls
+                )
+                chunk = ChatGenerationChunk(message=message)
+                self.logger.debug(f"[STREAM DEBUG] Yielding tool_calls chunk with {len(tool_calls)} tool calls")
+                yield chunk
 
     def _create_streamer(self):
         """Create text iterator streamer.
