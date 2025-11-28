@@ -306,6 +306,27 @@ class ConversationHistoryManager:
                     if key in msg_obj:
                         formatted_msg[key] = msg_obj[key]
                 formatted_messages.append(formatted_msg)
+            
+            # If there are pending tool calls or thinking that weren't attached to an assistant message
+            # (conversation was interrupted), create a synthetic assistant message to display them
+            if pending_tool_usage or pending_pre_tool_thinking:
+                self.logger.info(
+                    f"Creating synthetic assistant message for pending tool data: "
+                    f"{len(pending_tool_usage)} tools, "
+                    f"thinking={pending_pre_tool_thinking is not None}"
+                )
+                synthetic_msg = {
+                    "name": getattr(conversation, "chatbot_name", None) or "Bot",
+                    "content": "",  # Empty content - just showing widgets
+                    "is_bot": True,
+                    "id": len(formatted_messages),
+                }
+                if pending_pre_tool_thinking:
+                    synthetic_msg["thinking_content"] = pending_pre_tool_thinking
+                if pending_tool_usage:
+                    synthetic_msg["tool_usage"] = pending_tool_usage.copy()
+                formatted_messages.append(synthetic_msg)
+            
             self.logger.info(
                 f"Successfully loaded {len(formatted_messages)} messages for conversation ID: {conversation_id}"
             )

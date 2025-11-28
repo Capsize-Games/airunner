@@ -336,22 +336,27 @@ class ConversationWidget(BaseWidget):
             # Format content for MathJax compatibility
             fmt = FormatterExtended.format_content(content)
 
-            # All content types are now handled by MathJax in the main template
-            simplified_messages.append(
-                {
-                    **msg,
-                    "content": fmt[
-                        "content"
-                    ],  # MathJax will handle all formatting
-                    "content_type": fmt["type"],  # Keep for debugging/logging
-                    "id": msg.get("id", len(simplified_messages)),
-                    "timestamp": msg.get("timestamp", ""),
-                    "name": msg.get("name")
-                    or msg.get("sender")
-                    or ("Assistant" if msg.get("is_bot") else "User"),
-                    "is_bot": msg.get("is_bot", False),
-                }
-            )
+            # Build the message dict preserving important fields
+            simplified_msg = {
+                "content": fmt["content"],  # MathJax will handle all formatting
+                "content_type": fmt["type"],  # Keep for debugging/logging
+                "id": msg.get("id", len(simplified_messages)),
+                "timestamp": msg.get("timestamp", ""),
+                "name": msg.get("name")
+                or msg.get("sender")
+                or ("Assistant" if msg.get("is_bot") else "User"),
+                "is_bot": msg.get("is_bot", False),
+            }
+            
+            # Preserve thinking and tool usage fields for assistant messages
+            if msg.get("thinking_content"):
+                simplified_msg["thinking_content"] = msg["thinking_content"]
+            if msg.get("pre_tool_thinking"):
+                simplified_msg["pre_tool_thinking"] = msg["pre_tool_thinking"]
+            if msg.get("tool_usage"):
+                simplified_msg["tool_usage"] = msg["tool_usage"]
+            
+            simplified_messages.append(simplified_msg)
 
         # Ensure _conversation_id is set if possible
         if self._conversation_id is None and self._conversation is not None:
