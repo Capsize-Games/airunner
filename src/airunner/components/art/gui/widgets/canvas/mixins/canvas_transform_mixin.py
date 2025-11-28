@@ -5,11 +5,13 @@ resizing, copy, and cut operations for the canvas scene.
 """
 
 import io
-import subprocess
 from typing import Optional
 
 from PIL import Image
 import PIL.Image
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QImage, QClipboard
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice
 
 
 class CanvasTransformMixin:
@@ -78,10 +80,35 @@ class CanvasTransformMixin:
         """
         return self._move_pixmap_to_clipboard(image)
 
+    def _pil_to_qimage(self, pil_image: Image.Image) -> QImage:
+        """Convert PIL Image to QImage.
+        
+        Args:
+            pil_image: PIL Image to convert.
+            
+        Returns:
+            QImage equivalent of the PIL Image.
+        """
+        # Ensure image is in RGBA format
+        if pil_image.mode != "RGBA":
+            pil_image = pil_image.convert("RGBA")
+        
+        # Get image data
+        data = pil_image.tobytes("raw", "RGBA")
+        width, height = pil_image.size
+        
+        # Create QImage from raw data
+        qimage = QImage(data, width, height, QImage.Format.Format_RGBA8888)
+        # Make a copy since the data buffer needs to persist
+        return qimage.copy()
+
     def _move_pixmap_to_clipboard(
         self, image: Optional[Image.Image]
     ) -> Optional[Image.Image]:
-        """Move image pixmap to system clipboard using xclip.
+        """Move image pixmap to system clipboard using Qt's clipboard.
+
+        Uses Qt's QClipboard which works properly with X11 forwarding in Docker
+        containers and doesn't require external tools like xclip.
 
         Args:
             image: PIL Image to copy to clipboard.
@@ -96,19 +123,47 @@ class CanvasTransformMixin:
             self.logger.warning("Invalid image type.")
             return None
 
-        data = io.BytesIO()
-        image.save(data, format="png")
-        data = data.getvalue()
-
         try:
-            subprocess.Popen(
-                ["xclip", "-selection", "clipboard", "-t", "image/png"],
-                stdin=subprocess.PIPE,
-            ).communicate(data)
-        except FileNotFoundError:
-            self.logger.error(
-                "xclip not found. Cannot copy image to clipboard."
-            )
+            # Convert PIL Image to QImage
+            qimage = self._pil_to_qimage(image)
+            
+            # Get the system clipboard
+            clipboard = QApplication.clipboard()
+            
+            if clipboard is None:
+                self.logger.error("Could not access system clipboard")
+                return None
+            
+            # Set the image on the clipboard
+            clipboard.setImage(qimage, QClipboard.Mode.Clipboard)
+            
+            # Verify the copy worked by checking if clipboard has image
+            if clipboard.mimeData() and clipboard.mimeData().hasImage():
+                self.logger.info(f"Image copied to clipboard ({image.width}x{image.height})")
+            else:
+                self.logger.warning("Clipboard copy may have failed - no image detected after copy")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to copy image to clipboard: {e}")
+            # Try fallback with xclip if Qt clipboard fails
+            try:
+                import subprocess
+                import io
+                data = io.BytesIO()
+                image.save(data, format="png")
+                data = data.getvalue()
+                subprocess.Popen(
+                    ["xclip", "-selection", "clipboard", "-t", "image/png"],
+                    stdin=subprocess.PIPE,
+                ).communicate(data)
+                self.logger.info(f"Image copied to clipboard using xclip fallback ({image.width}x{image.height})")
+            except FileNotFoundError:
+                self.logger.error("xclip fallback also failed - xclip not found")
+                return None
+            except Exception as e2:
+                self.logger.error(f"xclip fallback also failed: {e2}")
+                return None
+            
         return image
 
     def _cut_image(

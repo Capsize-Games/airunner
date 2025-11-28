@@ -82,6 +82,7 @@ class ChatPromptWidget(BaseWidget):
             ("Auto", LLMActionType.APPLICATION_COMMAND),
             ("RAG", LLMActionType.PERFORM_RAG_SEARCH),
             ("Deep Research", LLMActionType.DEEP_RESEARCH),
+            ("Use Computer", LLMActionType.USE_COMPUTER),
         ]
         if AIRUNNER_ART_ENABLED:
             action_map.append(("Image", LLMActionType.GENERATE_IMAGE))
@@ -299,6 +300,8 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.DEEP_RESEARCH
         elif val == "Auto":
             llm_action_value = LLMActionType.APPLICATION_COMMAND
+        elif val == "Use Computer":
+            llm_action_value = LLMActionType.USE_COMPUTER
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings(action=llm_action_value.name)

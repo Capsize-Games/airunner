@@ -144,6 +144,13 @@ extras_require = {
         "scrapy==2.13.1",
         "trafilatura==2.0.0",
     ],
+    "computer_use": [  # Computer use / desktop automation dependencies
+        "pyautogui>=0.9.54",
+        "pillow>=12.0.0",  # Already in install_requires, but listed for clarity
+        "pyscreeze>=1.0.1",  # Screenshot backend for pyautogui
+        "python-xlib>=0.33;platform_system=='Linux'",  # X11 support on Linux
+        "pygetwindow>=0.0.9",  # Window management
+    ],
 }
 
 extras_require["all"] = []
