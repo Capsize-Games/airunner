@@ -19,6 +19,27 @@ class ConversationHistoryManager:
         """Initializes the ConversationHistoryManager."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+    def _extract_query_from_tool_call(self, tool_call: Dict[str, Any]) -> str:
+        """Extract a user-friendly query string from a tool call.
+
+        Args:
+            tool_call: Tool call dictionary with 'args' field
+
+        Returns:
+            Query string for display
+        """
+        args = tool_call.get("args", {})
+        if isinstance(args, dict):
+            # Try common query field names
+            for key in ("query", "search_query", "prompt", "input", "question"):
+                if key in args:
+                    return str(args[key])
+            # Fallback: return first string value
+            for value in args.values():
+                if isinstance(value, str) and value:
+                    return value
+        return ""
+
     def get_current_conversation(self) -> Optional[Conversation]:
         """Fetches the current conversation.
 
@@ -116,6 +137,13 @@ class ConversationHistoryManager:
 
             # Track URLs from tool results for citation
             pending_citations: List[str] = []
+            
+            # Track tool calls to attach to subsequent assistant message
+            pending_tool_usage: List[Dict[str, Any]] = []
+            # Track tool results to get details (domains, etc.)
+            pending_tool_results: Dict[str, str] = {}  # tool_call_id -> details
+            # Track pre-tool thinking content to attach to assistant message
+            pending_pre_tool_thinking: Optional[str] = None
 
             formatted_messages: List[Dict[str, Any]] = []
             for msg_idx, msg_obj in enumerate(raw_messages):
@@ -125,26 +153,58 @@ class ConversationHistoryManager:
                     )
                     continue
 
-                # Skip tool call metadata messages (for debugging only, not for display)
-                if msg_obj.get("metadata_type") in (
-                    "tool_calls",
-                    "tool_result",
-                ):
-                    # Extract URLs from tool_result messages for citations
-                    if msg_obj.get("metadata_type") == "tool_result":
-                        content_text = msg_obj.get("content", "")
-                        # Extract URLs using regex (matches http:// and https://)
-                        import re
-
-                        urls = re.findall(
-                            r'https?://[^\s<>"{}|\\^`\[\]]+', content_text
+                # Collect tool call metadata to attach to next assistant message
+                if msg_obj.get("metadata_type") == "tool_calls":
+                    tool_calls = msg_obj.get("tool_calls", [])
+                    for tc in tool_calls:
+                        pending_tool_usage.append({
+                            "tool_id": tc.get("id", ""),
+                            "tool_name": tc.get("name", "unknown"),
+                            "query": self._extract_query_from_tool_call(tc),
+                            "details": None,  # Will be filled from tool_result
+                        })
+                    # Also capture pre-tool thinking content
+                    if msg_obj.get("thinking_content"):
+                        pending_pre_tool_thinking = msg_obj["thinking_content"]
+                        self.logger.debug(
+                            f"Captured pre-tool thinking: {len(pending_pre_tool_thinking)} chars"
                         )
-
-                        pending_citations.extend(urls)
-
                     self.logger.debug(
-                        f"Skipping tool metadata message: {msg_obj.get('role')}"
+                        f"Collected {len(tool_calls)} tool calls for next assistant message"
                     )
+                    continue
+
+                # Process tool_result to extract details (domains) for display
+                if msg_obj.get("metadata_type") == "tool_result":
+                    content_text = msg_obj.get("content", "")
+                    tool_call_id = msg_obj.get("tool_call_id", "")
+                    
+                    # Extract URLs using regex (matches http:// and https://)
+                    import re
+                    urls = re.findall(
+                        r'https?://[^\s<>"{}|\\^`\[\]]+', content_text
+                    )
+                    pending_citations.extend(urls)
+                    
+                    # Extract domain names for tool details
+                    if urls:
+                        domains = [url.split("/")[2] for url in urls[:3]]  # Top 3 domains
+                        details = ", ".join(domains)
+                        # Store details keyed by tool_call_id
+                        if tool_call_id:
+                            pending_tool_results[tool_call_id] = details
+                        # Also update any pending tool_usage entries
+                        for tu in pending_tool_usage:
+                            if tu.get("tool_id") == tool_call_id:
+                                tu["details"] = details
+                    
+                    self.logger.debug(
+                        f"Processed tool result: {tool_call_id}, details: {pending_tool_results.get(tool_call_id)}"
+                    )
+                    continue
+
+                # Skip tool_calls metadata (already processed above)
+                if msg_obj.get("metadata_type") == "tool_calls":
                     continue
 
                 # Also skip by role for backward compatibility
@@ -205,18 +265,27 @@ class ConversationHistoryManager:
                     "is_bot": is_bot,
                     "id": msg_idx,  # Simple index within this loaded history
                 }
+                
+                # Include thinking content for assistant messages
+                # Pre-tool thinking goes in pre_tool_thinking, post-tool in thinking_content
+                if is_bot:
+                    post_tool_thinking = msg_obj.get("thinking_content")
+                    if pending_pre_tool_thinking:
+                        # Pre-tool thinking always goes in pre_tool_thinking field
+                        formatted_msg["pre_tool_thinking"] = pending_pre_tool_thinking
+                        pending_pre_tool_thinking = None
+                    if post_tool_thinking:
+                        # Post-tool thinking goes in thinking_content field
+                        formatted_msg["thinking_content"] = post_tool_thinking
+                
+                # Include tool usage for assistant messages if we have pending tool calls
+                if is_bot and pending_tool_usage:
+                    formatted_msg["tool_usage"] = pending_tool_usage.copy()
+                    pending_tool_usage.clear()
 
-                # If this is an assistant message and we have pending citations, append them
+                # Clear pending citations without appending them
+                # (sources are shown in tool status details instead)
                 if is_bot and pending_citations:
-                    # Remove duplicates while preserving order
-                    unique_citations = list(dict.fromkeys(pending_citations))
-
-                    # Format citations as markdown links
-                    citation_text = "\n\n---\n\n**Sources:**\n\n"
-                    for i, url in enumerate(unique_citations, 1):
-                        citation_text += f"{i}. [{url}]({url})\n"
-
-                    formatted_msg["content"] = content + citation_text
                     pending_citations.clear()
 
                 # Pass through mood/emoji fields if present
@@ -224,6 +293,28 @@ class ConversationHistoryManager:
                     if key in msg_obj:
                         formatted_msg[key] = msg_obj[key]
                 formatted_messages.append(formatted_msg)
+            
+            # If there are pending tool calls or thinking that weren't attached to an assistant message
+            # (conversation was interrupted), create a synthetic assistant message to display them
+            if pending_tool_usage or pending_pre_tool_thinking:
+                self.logger.info(
+                    f"Creating synthetic assistant message for pending tool data: "
+                    f"{len(pending_tool_usage)} tools, "
+                    f"thinking={pending_pre_tool_thinking is not None}"
+                )
+                synthetic_msg = {
+                    "name": getattr(conversation, "chatbot_name", None) or "Bot",
+                    "content": "",  # Empty content - just showing widgets
+                    "is_bot": True,
+                    "id": len(formatted_messages),
+                }
+                if pending_pre_tool_thinking:
+                    # Use pre_tool_thinking so it renders BEFORE tool widgets
+                    synthetic_msg["pre_tool_thinking"] = pending_pre_tool_thinking
+                if pending_tool_usage:
+                    synthetic_msg["tool_usage"] = pending_tool_usage.copy()
+                formatted_messages.append(synthetic_msg)
+            
             self.logger.info(
                 f"Successfully loaded {len(formatted_messages)} messages for conversation ID: {conversation_id}"
             )

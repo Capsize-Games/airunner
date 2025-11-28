@@ -14,6 +14,10 @@ class LLMProviderConfig:
             "model_type": "mistral",
             "function_calling": True,
             "tool_calling_mode": "native",  # Uses tekken.json tokenizer
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
             "context_length": 128000,
             "vram_2bit_gb": 4,
             "vram_4bit_gb": 8,
@@ -26,6 +30,10 @@ class LLMProviderConfig:
             "model_type": "mistral",
             "function_calling": True,
             "tool_calling_mode": "native",  # Uses tekken.json tokenizer
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": True,  # Has multimodal/vision support
+            "code_capable": True,
             "context_length": 128000,
             "vram_2bit_gb": 7,
             "vram_4bit_gb": 14,
@@ -38,6 +46,10 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": False,
             "tool_calling_mode": "react",  # Fallback pattern only
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": False,
             "context_length": 128000,
             "vram_2bit_gb": 2,
             "vram_4bit_gb": 3,
@@ -50,6 +62,10 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": True,
             "tool_calling_mode": "json",  # Structured JSON output
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
             "context_length": 128000,
             "vram_2bit_gb": 3,
             "vram_4bit_gb": 5,
@@ -62,11 +78,31 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": True,
             "tool_calling_mode": "json",  # Structured JSON output (Hermes-style compatible)
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
             "context_length": 131072,  # 128K tokens (full context with YaRN scaling)
             "vram_2bit_gb": 4,
             "vram_4bit_gb": 7,
             "vram_8bit_gb": 14,
             "description": "Qwen 2.5 7B with Hermes-style JSON tool calling",
+        },
+        "qwen3-8b": {
+            "name": "Qwen3-8B",
+            "repo_id": "Qwen/Qwen3-8B",
+            "model_type": "llm",
+            "function_calling": True,
+            "tool_calling_mode": "json",  # Structured JSON output
+            "supports_thinking": True,  # Qwen3 thinking mode (<think>...</think>)
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
+            "context_length": 32768,  # 32K native, 131K with YaRN
+            "vram_2bit_gb": 5,
+            "vram_4bit_gb": 8,
+            "vram_8bit_gb": 16,
+            "description": "Qwen3 8B with built-in reasoning (thinking mode) and superior agent capabilities",
         },
         "llama-4-maverick-17b": {
             "name": "Llama-4-Maverick-17B-128E-Instruct",
@@ -74,6 +110,10 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": True,
             "tool_calling_mode": "json",  # Structured JSON output
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": True,  # Multimodal
+            "code_capable": True,
             "context_length": 1000000,
             "vram_2bit_gb": 6,
             "vram_4bit_gb": 12,
@@ -86,6 +126,10 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": False,
             "tool_calling_mode": "react",  # Auto-detect or fallback
+            "supports_thinking": False,
+            "rag_capable": True,  # Assume basic RAG works
+            "vision_capable": False,
+            "code_capable": False,
             "context_length": 0,
             "vram_2bit_gb": 0,
             "vram_4bit_gb": 0,

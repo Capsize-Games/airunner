@@ -45,6 +45,7 @@ class ConversationWidget(BaseWidget):
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_text_generate_signal,
             SignalCode.LLM_TOOL_STATUS_SIGNAL: self.on_tool_status_update,
+            SignalCode.LLM_THINKING_SIGNAL: self.on_thinking_update,
         }
         self.ui_update_timer = QTimer(self)
         self.ui_update_timer.setInterval(50)
@@ -193,8 +194,8 @@ class ConversationWidget(BaseWidget):
             )
         )
         self.set_conversation_widgets(messages, skip_scroll=True)
-        # Restore tool statuses from database when loading a conversation
-        self._restore_tool_statuses()
+        # Tool statuses are now attached to messages as tool_usage and rendered by JS
+        # No need to restore separately - this was causing duplicate widgets
 
     def clear_conversation(self) -> None:
         """Clear all conversation state and UI."""
@@ -335,22 +336,36 @@ class ConversationWidget(BaseWidget):
             # Format content for MathJax compatibility
             fmt = FormatterExtended.format_content(content)
 
-            # All content types are now handled by MathJax in the main template
-            simplified_messages.append(
-                {
-                    **msg,
-                    "content": fmt[
-                        "content"
-                    ],  # MathJax will handle all formatting
-                    "content_type": fmt["type"],  # Keep for debugging/logging
-                    "id": msg.get("id", len(simplified_messages)),
-                    "timestamp": msg.get("timestamp", ""),
-                    "name": msg.get("name")
-                    or msg.get("sender")
-                    or ("Assistant" if msg.get("is_bot") else "User"),
-                    "is_bot": msg.get("is_bot", False),
-                }
+            # Build the message dict preserving important fields
+            simplified_msg = {
+                "content": fmt["content"],  # MathJax will handle all formatting
+                "content_type": fmt["type"],  # Keep for debugging/logging
+                "id": msg.get("id", len(simplified_messages)),
+                "timestamp": msg.get("timestamp", ""),
+                "name": msg.get("name")
+                or msg.get("sender")
+                or ("Assistant" if msg.get("is_bot") else "User"),
+                "is_bot": msg.get("is_bot", False),
+            }
+            
+            # Preserve thinking and tool usage fields for assistant messages
+            if msg.get("thinking_content"):
+                simplified_msg["thinking_content"] = msg["thinking_content"]
+            if msg.get("pre_tool_thinking"):
+                simplified_msg["pre_tool_thinking"] = msg["pre_tool_thinking"]
+            if msg.get("tool_usage"):
+                simplified_msg["tool_usage"] = msg["tool_usage"]
+            
+            # Debug logging
+            self.logger.info(
+                f"[SET_CONVERSATION] Message {simplified_msg['id']}: "
+                f"is_bot={simplified_msg['is_bot']}, "
+                f"has_pre_tool_thinking={bool(simplified_msg.get('pre_tool_thinking'))}, "
+                f"has_thinking_content={bool(simplified_msg.get('thinking_content'))}, "
+                f"has_tool_usage={bool(simplified_msg.get('tool_usage'))}"
             )
+            
+            simplified_messages.append(simplified_msg)
 
         # Ensure _conversation_id is set if possible
         if self._conversation_id is None and self._conversation is not None:
@@ -743,6 +758,22 @@ class ConversationWidget(BaseWidget):
             status,
             details or "",  # Ensure empty string instead of None
         )
+
+    def on_thinking_update(self, data: Dict[str, Any]):
+        """Handle thinking status updates from Qwen3 <think> blocks.
+
+        Args:
+            data: Thinking status data containing:
+                - status: "started", "streaming", or "completed"
+                - content: The thinking text content
+        """
+        status = data.get("status", "")
+        content = data.get("content", "")
+
+        self.logger.debug(f"[THINKING] Received signal: status={status}, content_len={len(content)}")
+
+        # Send to JavaScript for rendering
+        self._chat_bridge.updateThinkingStatus(status, content)
 
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""

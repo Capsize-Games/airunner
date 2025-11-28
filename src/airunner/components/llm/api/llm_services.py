@@ -117,6 +117,7 @@ class LLMAPIService(APIServiceBase):
         )
 
     def interrupt(self):
+        print("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
     def delete_messages_after_id(self, message_id: int):

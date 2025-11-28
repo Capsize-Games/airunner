@@ -174,20 +174,20 @@ class GenerationMixin:
             sequence_counter: Current sequence number
 
         Returns:
-            Interruption message
+            Empty string (no visible message for interruption)
         """
         self.logger.info("Generation interrupted by user")
-        interrupt_msg = "\n\n[Generation interrupted]"
+        # Send end-of-message signal without adding visible text
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
-                message=interrupt_msg,
+                message="",
                 is_end_of_message=True,
                 sequence_number=sequence_counter + 1,
                 request_id=getattr(self, "_current_request_id", None),
             )
         )
-        return interrupt_msg
+        return ""
 
     def _handle_generation_error(
         self, exc: Exception, llm_request: Optional[Any]

@@ -52,3 +52,6 @@ class LLMGeneratorSettings(BaseModel):
     use_mode_routing = Column(Boolean, default=False)
     mode_override = Column(String, nullable=True)
     enable_trajectory_logging = Column(Boolean, default=False)
+
+    # Qwen3 thinking mode (enables <think>...</think> reasoning)
+    enable_thinking = Column(Boolean, default=True)

@@ -435,6 +435,117 @@ mjx-container[display="true"] {
     font-size: 0.95em;
 }
 
+/* Thinking block styling for Qwen3 reasoning */
+.thinking-block {
+    margin: 8px 0;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 0.85em;
+    background: var(--line-color);
+    border-left: 3px solid #9333ea;
+    /* Purple for thinking */
+    display: flex;
+    flex-direction: column;
+}
+
+.thinking-active {
+    background: rgba(147, 51, 234, 0.1);
+    /* Light purple */
+}
+
+.thinking-done {
+    background: rgba(147, 51, 234, 0.05);
+    /* Very light purple when done */
+    border-left-color: #a855f7;
+    /* Lighter purple when done */
+}
+
+.thinking-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.thinking-header:hover {
+    background: rgba(147, 51, 234, 0.15);
+}
+
+.thinking-icon {
+    font-size: 1.1em;
+}
+
+.thinking-header-text {
+    color: var(--light-color);
+    flex: 1;
+    font-weight: 500;
+}
+
+.thinking-active .thinking-header-text {
+    animation: thinking-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.thinking-expand-icon {
+    color: var(--dim-color);
+    font-size: 0.8em;
+    transition: transform 0.2s;
+}
+
+.thinking-block.expanded .thinking-expand-icon {
+    transform: rotate(0deg);
+}
+
+.thinking-content {
+    padding: 8px 12px 12px 12px;
+    border-top: 1px solid rgba(147, 51, 234, 0.2);
+    color: var(--dim-color);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(147, 51, 234, 0.5) rgba(147, 51, 234, 0.1);
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.thinking-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.thinking-content::-webkit-scrollbar-track {
+    background: rgba(147, 51, 234, 0.1);
+    border-radius: 3px;
+}
+
+.thinking-content::-webkit-scrollbar-thumb {
+    background: rgba(147, 51, 234, 0.5);
+    border-radius: 3px;
+}
+
+.thinking-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(147, 51, 234, 0.7);
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
     background: var(--dark-color);

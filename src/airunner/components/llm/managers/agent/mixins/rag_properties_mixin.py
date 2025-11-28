@@ -233,14 +233,23 @@ class RAGPropertiesMixin:
             )
             return False
 
-        # Check which required files are missing
+        # Check which required files are missing or incomplete
+        # files is a dict of {filename: expected_size}
         required_files = LLM_FILE_BOOTSTRAP_DATA[repo_id]["files"]
         missing_files = []
 
-        for required_file in required_files:
+        for required_file, expected_size in required_files.items():
             file_path = os.path.join(model_path, required_file)
             if not os.path.exists(file_path):
                 missing_files.append(required_file)
+            elif expected_size > 0:
+                # Check if file is complete by comparing size
+                actual_size = os.path.getsize(file_path)
+                if actual_size < expected_size:
+                    self.logger.warning(
+                        f"File {required_file} is incomplete: {actual_size} bytes vs expected {expected_size} bytes"
+                    )
+                    missing_files.append(required_file)
 
         if not missing_files:
             # All files exist
