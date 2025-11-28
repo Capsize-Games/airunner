@@ -194,8 +194,8 @@ class ConversationWidget(BaseWidget):
             )
         )
         self.set_conversation_widgets(messages, skip_scroll=True)
-        # Restore tool statuses from database when loading a conversation
-        self._restore_tool_statuses()
+        # Tool statuses are now attached to messages as tool_usage and rendered by JS
+        # No need to restore separately - this was causing duplicate widgets
 
     def clear_conversation(self) -> None:
         """Clear all conversation state and UI."""
