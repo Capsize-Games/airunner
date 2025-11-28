@@ -30,6 +30,27 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
     ),
     return_direct=False,
     requires_api=True,
+    keywords=["remember", "memory", "fact", "store", "save", "learn"],
+    input_examples=[
+        {
+            "fact": "User's name is John and he lives in Seattle",
+            "category": "user_identity",
+            "tags": "name,location",
+            "confidence": 1.0,
+        },
+        {
+            "fact": "User prefers dark mode and minimal interfaces",
+            "category": "user_preferences",
+            "tags": "ui,preferences",
+            "confidence": 0.9,
+        },
+        {
+            "fact": "User has a meeting every Monday at 9am",
+            "category": "temporal_schedule",
+            "tags": "meeting,recurring,monday",
+            "confidence": 0.95,
+        },
+    ],
 )
 def record_knowledge(
     fact: Annotated[

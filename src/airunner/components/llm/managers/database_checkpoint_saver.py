@@ -103,43 +103,26 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                         f"🔵 Last message type: {last_msg_type}, content preview: '{last_msg_content}'"
                     )
 
-                # Check if we need to update
-                existing_messages = self.message_history.messages
-                needs_update = False
-
-                if len(messages) != len(existing_messages):
-                    needs_update = True
-                    self.logger.info(
-                        f"🟢 Message count changed: {len(existing_messages)} -> {len(messages)}"
-                    )
-                elif len(messages) > 0 and len(existing_messages) > 0:
-                    # Same count - check if last message content differs
-                    # This handles cases where we replace messages (e.g., forced responses)
-                    last_new = messages[-1]
-                    last_existing = existing_messages[-1]
-
-                    new_content = getattr(last_new, "content", "")
-                    existing_content = getattr(last_existing, "content", "")
-
-                    if new_content != existing_content:
-                        needs_update = True
-                        self.logger.info(
-                            f"🟢 Last message content changed (preview): '{existing_content[:50]}...' -> '{new_content[:50]}...'"
-                        )
-
-                if needs_update:
-                    # Clear and re-add all messages
-                    self.logger.info(
-                        "🟢 Clearing and re-adding messages to database..."
-                    )
+                # CRITICAL FIX: Use the raw conversation value count, not the filtered
+                # messages property. The messages property filters out tool_calls and
+                # tool_result entries, which causes mismatches with LangGraph state.
+                raw_conv = self.message_history._conversation
+                raw_db_count = len(raw_conv.value) if raw_conv and raw_conv.value else 0
+                checkpoint_count = len(messages)
+                
+                self.logger.info(
+                    f"🔵 Comparing: raw DB has {raw_db_count} entries, checkpoint has {checkpoint_count} messages"
+                )
+                
+                # Simple approach: clear and replace on any difference
+                # This is safer than trying to diff/append with different message types
+                if checkpoint_count > 0:
+                    # Clear existing and save all messages from checkpoint
                     self.message_history.clear()
                     self.message_history.add_messages(messages)
                     self.logger.info(
                         f"✅ Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
                     )
-
-                    # Store full checkpoint state (including ToolMessages)
-                    # Update cache with ALL messages (including ToolMessages)
                 # CRITICAL: Use conversation_id as thread_id to prevent contamination
                 # between different conversations (e.g., in tests)
                 if messages:

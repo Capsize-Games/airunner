@@ -496,13 +496,18 @@ class GenerationMixin:
         Returns:
             Filtered tool call list
         """
+        import json
         seen = set()
         deduped = []
         for call in tool_calls:
-            signature = (
-                call.get("name"),
-                tuple(sorted(call.get("args", {}).items())),
-            )
+            # Use JSON serialization to create a hashable signature
+            # This handles nested lists/dicts in args that can't be directly hashed
+            try:
+                args_str = json.dumps(call.get("args", {}), sort_keys=True)
+                signature = (call.get("name"), args_str)
+            except (TypeError, ValueError):
+                # If JSON serialization fails, use repr as fallback
+                signature = (call.get("name"), repr(call.get("args", {})))
             if signature in seen:
                 continue
             seen.add(signature)
