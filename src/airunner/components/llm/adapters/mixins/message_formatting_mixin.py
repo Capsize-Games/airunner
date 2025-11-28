@@ -32,6 +32,43 @@ class MessageFormattingMixin:
     - Applying chat templates
     """
 
+    def _check_model_supports_thinking(self) -> bool:
+        """Check if the current model supports thinking mode.
+        
+        Currently only Qwen3 models support the enable_thinking parameter
+        with <think>...</think> reasoning blocks.
+        
+        Returns:
+            True if the model supports thinking mode, False otherwise.
+        """
+        # Check model_path attribute
+        model_path = getattr(self, "model_path", None)
+        if not model_path:
+            return False
+        
+        model_path_lower = str(model_path).lower()
+        
+        # Check LLMProviderConfig.LOCAL_MODELS for supports_thinking
+        from airunner.components.llm.config.provider_config import LLMProviderConfig
+        
+        for model_config in LLMProviderConfig.LOCAL_MODELS.values():
+            repo_id = model_config.get("repo_id", "")
+            if not repo_id:
+                continue
+            
+            # Extract model name from repo_id
+            model_name = repo_id.split("/")[-1].lower()
+            
+            # Match if model name appears in path
+            if model_name in model_path_lower or model_path_lower in model_name:
+                return model_config.get("supports_thinking", False)
+        
+        # Fallback: Check for "qwen3" in the model path (covers custom paths)
+        if "qwen3" in model_path_lower:
+            return True
+        
+        return False
+
     def _messages_to_prompt(self, messages: List[BaseMessage]) -> str:
         """Convert LangChain messages to prompt text.
 
@@ -129,6 +166,24 @@ class MessageFormattingMixin:
             and self.tool_calling_mode == "json"
         ):
             template_kwargs["tools"] = self.tools
+
+        # Enable thinking mode ONLY for models that support it (Qwen3)
+        # This enables <think>...</think> reasoning blocks
+        # Only pass enable_thinking if the model actually uses it to avoid template warnings
+        model_supports_thinking = self._check_model_supports_thinking()
+        if model_supports_thinking:
+            # Read from database for real-time toggle support
+            from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
+            db_settings = LLMGeneratorSettings.objects.first()
+            user_wants_thinking = True  # Default to enabled
+            if db_settings is not None:
+                user_val = getattr(db_settings, "enable_thinking", None)
+                if user_val is not None:
+                    user_wants_thinking = user_val
+            
+            # Use the user's preference for thinking mode
+            template_kwargs["enable_thinking"] = user_wants_thinking
+            self.logger.debug(f"[THINKING] enable_thinking={user_wants_thinking} (from DB setting)")
 
         return self.tokenizer.apply_chat_template(
             chat_messages, **template_kwargs

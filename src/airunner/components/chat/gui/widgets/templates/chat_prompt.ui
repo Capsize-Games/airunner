@@ -394,6 +394,31 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="thinking_checkbox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Enable thinking mode (Qwen3). When enabled, the model will reason step-by-step before responding. Slower but more thoughtful responses.</string>
+           </property>
+           <property name="text">
+            <string>Thinking</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QProgressBar" name="progressBar">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
@@ -540,10 +565,27 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>thinking_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>thinking_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>200</x>
+     <y>689</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>200</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>message_type_text_changed(QString)</slot>
   <slot>prompt_text_changed()</slot>
   <slot>llm_action_changed(QString)</slot>
+  <slot>thinking_toggled(bool)</slot>
  </slots>
 </ui>

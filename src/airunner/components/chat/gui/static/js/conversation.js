@@ -59,7 +59,7 @@ function initializeChatView() {
             if (!container) return;
 
             // Find all message divs (exclude tool status)
-            const messages = container.querySelectorAll('.message:not(.tool-status)');
+            const messages = container.querySelectorAll('.message:not(.tool-status):not(.thinking-block)');
             if (messages.length === 0) return;
 
             const lastMessage = messages[messages.length - 1];
@@ -79,6 +79,7 @@ function initializeChatView() {
                 smoothScrollToBottom();
             }
         });
+        chatBridge.thinkingStatusUpdate.connect(handleThinkingStatusUpdate);
         window.isChatReady = true;
         if (window.chatReadyResolve) {
             window.chatReadyResolve();
@@ -238,12 +239,81 @@ function sanitizeContent(html) {
 async function appendMessage(msg, scroll = true) {
     const container = document.getElementById('conversation-container');
     if (!container) return;
+
+    // If this is an assistant message with thinking content, render thinking block first
+    if (msg.is_bot && msg.thinking_content) {
+        const thinkingElement = createThinkingElement(msg.thinking_content, msg.id);
+        container.appendChild(thinkingElement);
+    }
+
     const messageElement = createMessageElement(msg);
     container.appendChild(messageElement);
     if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
         try { await window.MathJax.typesetPromise([messageElement]); } catch { }
     }
     if (scroll && window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+}
+
+/**
+ * Create a thinking block element for displaying saved thinking content.
+ * @param {string} thinkingContent - The thinking content to display
+ * @param {number|string} messageId - The associated message ID
+ * @returns {HTMLElement} The thinking block element
+ */
+function createThinkingElement(thinkingContent, messageId) {
+    const thinkingElement = document.createElement('div');
+    thinkingElement.className = 'thinking-block thinking-done';
+    thinkingElement.dataset.messageId = messageId;
+
+    // Escape HTML in thinking content
+    const escapedContent = thinkingContent
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
+    thinkingElement.innerHTML = `
+        <div class="thinking-header" onclick="toggleThinkingBlockById(this)">
+            <span class="thinking-icon">🧠</span>
+            <span class="thinking-header-text">Thought</span>
+            <span class="thinking-expand-icon">▶</span>
+        </div>
+        <div class="thinking-content" style="display: none;">${escapedContent}</div>
+    `;
+
+    return thinkingElement;
+}
+
+/**
+ * Toggle a thinking block by clicking its header.
+ * Works for both saved thinking blocks (with data-message-id) and active ones.
+ * @param {HTMLElement} headerElement - The clicked header element
+ */
+function toggleThinkingBlockById(headerElement) {
+    const thinkingElement = headerElement.closest('.thinking-block');
+    if (!thinkingElement) return;
+
+    const contentDiv = thinkingElement.querySelector('.thinking-content');
+    const expandIcon = thinkingElement.querySelector('.thinking-expand-icon');
+
+    if (!contentDiv || !expandIcon) return;
+
+    const isExpanded = thinkingElement.classList.contains('expanded');
+
+    if (isExpanded) {
+        // Collapse
+        contentDiv.style.display = 'none';
+        expandIcon.textContent = '▶';
+        thinkingElement.classList.remove('expanded');
+    } else {
+        // Expand
+        contentDiv.style.display = 'block';
+        expandIcon.textContent = '▼';
+        thinkingElement.classList.add('expanded');
+
+        // Scroll to show the content
+        if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+    }
 }
 
 function getToolDisplayName(toolName) {
@@ -257,6 +327,117 @@ function getToolDisplayName(toolName) {
         'load_data': 'Loading data',
     };
     return names[toolName] || `Using ${toolName}`;
+}
+
+// Track thinking animation state
+let thinkingAnimationInterval = null;
+let thinkingDotCount = 0;
+
+function startThinkingAnimation(element) {
+    if (thinkingAnimationInterval) {
+        clearInterval(thinkingAnimationInterval);
+    }
+    thinkingDotCount = 0;
+    const textSpan = element.querySelector('.thinking-header-text');
+    if (!textSpan) return;
+
+    thinkingAnimationInterval = setInterval(() => {
+        thinkingDotCount = (thinkingDotCount + 1) % 4;
+        const dots = '.'.repeat(thinkingDotCount);
+        textSpan.textContent = `Thinking${dots}`;
+    }, 400);
+}
+
+function stopThinkingAnimation() {
+    if (thinkingAnimationInterval) {
+        clearInterval(thinkingAnimationInterval);
+        thinkingAnimationInterval = null;
+    }
+}
+
+function handleThinkingStatusUpdate(status, content) {
+    console.log('[THINKING DEBUG] handleThinkingStatusUpdate called:', { status, contentLen: content.length });
+
+    const container = document.getElementById('conversation-container');
+    if (!container) {
+        console.log('[THINKING DEBUG] Container not found');
+        return;
+    }
+
+    const thinkingElementId = 'thinking-block-current';
+    let thinkingElement = document.getElementById(thinkingElementId);
+
+    if (status === 'started') {
+        // Remove any existing thinking block
+        if (thinkingElement) {
+            thinkingElement.remove();
+        }
+
+        // Create new thinking block (collapsed by default)
+        thinkingElement = document.createElement('div');
+        thinkingElement.id = thinkingElementId;
+        thinkingElement.className = 'thinking-block thinking-active';
+        thinkingElement.innerHTML = `
+            <div class="thinking-header" onclick="toggleThinkingBlockById(this)">
+                <span class="thinking-icon">🧠</span>
+                <span class="thinking-header-text">Thinking</span>
+                <span class="thinking-expand-icon">▶</span>
+            </div>
+            <div class="thinking-content" style="display: none;"></div>
+        `;
+        container.appendChild(thinkingElement);
+        startThinkingAnimation(thinkingElement);
+
+        if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+
+    } else if (status === 'streaming') {
+        // Append content to the thinking block
+        if (thinkingElement) {
+            const contentDiv = thinkingElement.querySelector('.thinking-content');
+            if (contentDiv) {
+                // Escape HTML and preserve whitespace
+                const escapedContent = content
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\n/g, '<br>');
+                contentDiv.innerHTML += escapedContent;
+            }
+        }
+
+        // Only scroll if the thinking content is expanded
+        if (thinkingElement && thinkingElement.classList.contains('expanded') && window.autoScrollEnabled) {
+            setTimeout(smoothScrollToBottom, 0);
+        }
+
+    } else if (status === 'completed') {
+        stopThinkingAnimation();
+
+        if (thinkingElement) {
+            // Update header to show "Thought" instead of "Thinking..."
+            const textSpan = thinkingElement.querySelector('.thinking-header-text');
+            if (textSpan) {
+                textSpan.textContent = 'Thought';
+            }
+
+            // Mark as completed - remove the ID so it doesn't get confused with new thinking blocks
+            thinkingElement.className = 'thinking-block thinking-done';
+            thinkingElement.removeAttribute('id');
+        }
+
+        if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+    }
+}
+
+// Keep for backwards compatibility but use toggleThinkingBlockById
+function toggleThinkingBlock() {
+    const thinkingElement = document.getElementById('thinking-block-current');
+    if (!thinkingElement) return;
+
+    const header = thinkingElement.querySelector('.thinking-header');
+    if (header) {
+        toggleThinkingBlockById(header);
+    }
 }
 
 function handleToolStatusUpdate(toolId, toolName, query, status, details) {
@@ -365,14 +546,17 @@ function clearMessagesKeepToolStatus() {
         return;
     }
 
-    // Preserve tool status elements
+    // Preserve tool status elements only (NOT thinking blocks - they'll be recreated from saved thinking_content)
     const toolStatuses = Array.from(container.querySelectorAll('.tool-status'));
     console.log(`[TOOL STATUS DEBUG] Found ${toolStatuses.length} tool status elements to preserve`);
+
+    // Stop any running thinking animation since we're clearing
+    stopThinkingAnimation();
 
     // Clear all content
     container.innerHTML = '';
 
-    // Re-add tool statuses at the beginning
+    // Re-add tool statuses
     toolStatuses.forEach(toolStatus => {
         console.log('[TOOL STATUS DEBUG] Re-adding tool status:', toolStatus.textContent);
         container.appendChild(toolStatus);
@@ -381,6 +565,8 @@ function clearMessagesKeepToolStatus() {
 
 function clearMessages() {
     console.log('[TOOL STATUS DEBUG] clearMessages called - clearing everything');
+    // Also stop thinking animation if running
+    stopThinkingAnimation();
     const container = document.getElementById('conversation-container');
     if (container) container.innerHTML = '';
 }

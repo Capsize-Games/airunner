@@ -72,6 +72,7 @@ class ChatHuggingFaceLocal(
     repetition_penalty: float = 1.15
     do_sample: bool = True
     tools: Optional[List[Any]] = None
+    enable_thinking: bool = True  # Qwen3 thinking mode
     _interrupted: bool = False
     _mistral_tokenizer: Optional[Any] = None
 

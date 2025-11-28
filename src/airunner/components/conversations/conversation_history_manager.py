@@ -205,6 +205,10 @@ class ConversationHistoryManager:
                     "is_bot": is_bot,
                     "id": msg_idx,  # Simple index within this loaded history
                 }
+                
+                # Include thinking content for assistant messages if present
+                if is_bot and msg_obj.get("thinking_content"):
+                    formatted_msg["thinking_content"] = msg_obj["thinking_content"]
 
                 # If this is an assistant message and we have pending citations, append them
                 if is_bot and pending_citations:

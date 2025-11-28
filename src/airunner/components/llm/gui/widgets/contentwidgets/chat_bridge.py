@@ -16,6 +16,9 @@ class ChatBridge(QObject):
     toolStatusUpdate = Signal(
         str, str, str, str, str
     )  # tool_id, tool_name, query, status, details
+    thinkingStatusUpdate = Signal(
+        str, str
+    )  # status, content - for Qwen3 <think> blocks
 
     @Slot(list)
     def set_messages(self, messages):
@@ -72,3 +75,13 @@ class ChatBridge(QObject):
             details: Optional details (e.g., URLs)
         """
         self.toolStatusUpdate.emit(tool_id, tool_name, query, status, details)
+
+    @Slot(str, str)
+    def updateThinkingStatus(self, status, content):
+        """Emit thinking status update to JavaScript.
+
+        Args:
+            status: "started", "streaming", or "completed"
+            content: The thinking text content
+        """
+        self.thinkingStatusUpdate.emit(status, content)
