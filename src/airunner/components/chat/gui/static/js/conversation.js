@@ -240,23 +240,38 @@ async function appendMessage(msg, scroll = true) {
     const container = document.getElementById('conversation-container');
     if (!container) return;
 
-    // If this is an assistant message with tool usage, render tool status widgets first
-    if (msg.is_bot && msg.tool_usage && Array.isArray(msg.tool_usage)) {
-        for (const tool of msg.tool_usage) {
-            const toolElement = createToolStatusElement(
-                tool.tool_id || `saved-tool-${msg.id}-${tool.tool_name}`,
-                tool.tool_name,
-                tool.query,
-                'completed'  // Saved tool usages are always completed
-            );
-            container.appendChild(toolElement);
-        }
-    }
+    // For assistant messages, render widgets in the correct order:
+    // 1. Pre-tool thinking (if present)
+    // 2. Tool status widgets (if present)
+    // 3. Post-tool thinking (if present, or regular thinking)
+    // 4. Message content
 
-    // If this is an assistant message with thinking content, render thinking block first
-    if (msg.is_bot && msg.thinking_content) {
-        const thinkingElement = createThinkingElement(msg.thinking_content, msg.id);
-        container.appendChild(thinkingElement);
+    if (msg.is_bot) {
+        // 1. Render pre-tool thinking block first (thinking before tool use)
+        if (msg.pre_tool_thinking) {
+            const preThinkingElement = createThinkingElement(msg.pre_tool_thinking, `${msg.id}-pre`);
+            container.appendChild(preThinkingElement);
+        }
+
+        // 2. Render tool status widgets
+        if (msg.tool_usage && Array.isArray(msg.tool_usage)) {
+            for (const tool of msg.tool_usage) {
+                const toolElement = createToolStatusElement(
+                    tool.tool_id || `saved-tool-${msg.id}-${tool.tool_name}`,
+                    tool.tool_name,
+                    tool.query,
+                    'completed',  // Saved tool usages are always completed
+                    tool.details || null  // Include details (domains) if present
+                );
+                container.appendChild(toolElement);
+            }
+        }
+
+        // 3. Render post-tool thinking block (thinking after tool results)
+        if (msg.thinking_content) {
+            const thinkingElement = createThinkingElement(msg.thinking_content, msg.id);
+            container.appendChild(thinkingElement);
+        }
     }
 
     const messageElement = createMessageElement(msg);
@@ -303,9 +318,10 @@ function createThinkingElement(thinkingContent, messageId) {
  * @param {string} toolName - The tool name
  * @param {string} query - The query used with the tool
  * @param {string} status - The status ('completed', 'starting', etc.)
+ * @param {string|null} details - Optional details (e.g., domain names)
  * @returns {HTMLElement} The tool status element
  */
-function createToolStatusElement(toolId, toolName, query, status) {
+function createToolStatusElement(toolId, toolName, query, status, details = null) {
     const toolElement = document.createElement('div');
     toolElement.id = `tool-status-${toolId}`;
     toolElement.className = 'tool-status tool-status-completed';
@@ -320,6 +336,16 @@ function createToolStatusElement(toolId, toolName, query, status) {
             <span class="tool-text">${displayName}${queryPreview ? ` for "${queryPreview}"` : ''}</span>
         </div>
     `;
+
+    // Add details line if present (e.g., domain names from search results)
+    if (details && details.trim()) {
+        html += `
+            <div class="tool-status-line tool-status-completed">
+                <span class="tool-checkmark">✅</span>
+                <span class="tool-text tool-details">${details}</span>
+            </div>
+        `;
+    }
 
     toolElement.innerHTML = html;
     return toolElement;

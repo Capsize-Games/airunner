@@ -184,6 +184,16 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 self.logger.debug(
                     f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
                 )
+                
+                # Extract thinking content from the AIMessage that has tool_calls
+                # This captures the "thinking before tool use" phase
+                thinking_content = None
+                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
+                    thinking_content = message.additional_kwargs.get("thinking_content")
+                if not thinking_content and message.content:
+                    from airunner.components.llm.utils.thinking_parser import extract_thinking_and_response
+                    thinking_content, _ = extract_thinking_and_response(message.content)
+                
                 # Store tool call request in metadata
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_calls_dict = {
@@ -206,6 +216,12 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     "tool_calls": message.tool_calls,  # Store actual tool call data
                     "metadata_type": "tool_calls",  # Mark as metadata for filtering
                 }
+                
+                # Store thinking content if present (pre-tool thinking)
+                if thinking_content:
+                    tool_calls_dict["thinking_content"] = thinking_content
+                    self.logger.debug(f"[THINKING SAVE] Saved pre-tool thinking: {len(thinking_content)} chars")
+                
                 if self._conversation.value is None:
                     self._conversation.value = []
                 self._conversation.value.append(tool_calls_dict)
