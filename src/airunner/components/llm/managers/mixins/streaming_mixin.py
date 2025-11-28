@@ -154,8 +154,10 @@ class StreamingMixin:
         Returns:
             Initial state dictionary
         """
-        input_messages = [HumanMessage(user_input)]
-        initial_state = {"messages": input_messages}
+        # The checkpointer handles loading existing messages from the database.
+        # We only need to provide the new user message here - the add_messages
+        # reducer will merge it with any existing messages from the checkpoint.
+        initial_state = {"messages": [HumanMessage(user_input)]}
 
         if generation_kwargs:
             initial_state["generation_kwargs"] = generation_kwargs

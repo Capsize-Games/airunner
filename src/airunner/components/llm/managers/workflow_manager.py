@@ -171,14 +171,10 @@ class WorkflowManager(
             conversation_id, ephemeral=ephemeral
         )
 
-        # CRITICAL: Clear checkpoint state after creating new memory instance
-        # The class-level _checkpoint_state dict persists across instances
-        # and must be cleared to prevent contamination from previous conversations
-        if hasattr(self._memory, "clear_checkpoints"):
-            self._memory.clear_checkpoints(clear_history=False)
-            self.logger.info(
-                f"Cleared checkpoint cache for conversation {conversation_id}"
-            )
+        # NOTE: We do NOT clear checkpoints here. The checkpoint saver loads
+        # messages from the database when get() is called, which merges
+        # existing history with new messages via the add_messages reducer.
+        # Clearing would wipe in-flight state from other conversations.
 
         self._build_and_compile_workflow()
 
