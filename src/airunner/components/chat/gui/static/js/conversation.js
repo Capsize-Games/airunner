@@ -385,7 +385,21 @@ function handleThinkingStatusUpdate(status, content) {
             </div>
             <div class="thinking-content" style="display: none;"></div>
         `;
-        container.appendChild(thinkingElement);
+
+        // Find the last assistant message and insert BEFORE it
+        // This ensures thinking block appears before the response
+        const messages = container.querySelectorAll('.message:not(.tool-status):not(.thinking-block)');
+        const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+        if (lastMessage && lastMessage.classList.contains('assistant')) {
+            // Insert before the last assistant message
+            container.insertBefore(thinkingElement, lastMessage);
+            console.log('[THINKING DEBUG] Inserted thinking block BEFORE last assistant message');
+        } else {
+            // No assistant message yet, append to container
+            container.appendChild(thinkingElement);
+            console.log('[THINKING DEBUG] Appended thinking block to container');
+        }
         startThinkingAnimation(thinkingElement);
 
         if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
