@@ -460,8 +460,21 @@ function handleToolStatusUpdate(toolId, toolName, query, status, details) {
             toolElement = document.createElement('div');
             toolElement.id = toolElementId;
             toolElement.className = 'tool-status tool-status-active';
-            container.appendChild(toolElement);
-            console.log('[TOOL STATUS DEBUG] Appended new tool status element to container');
+
+            // Find the last assistant message and insert BEFORE it
+            // This ensures tool status appears before the response that uses the tool
+            const messages = container.querySelectorAll('.message:not(.tool-status):not(.thinking-block)');
+            const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+            if (lastMessage && lastMessage.classList.contains('assistant')) {
+                // Insert before the last assistant message
+                container.insertBefore(toolElement, lastMessage);
+                console.log('[TOOL STATUS DEBUG] Inserted tool status BEFORE last assistant message');
+            } else {
+                // No assistant message yet, append to container
+                container.appendChild(toolElement);
+                console.log('[TOOL STATUS DEBUG] Appended tool status to container');
+            }
         }
         toolElement.dataset.toolName = toolName;
 
