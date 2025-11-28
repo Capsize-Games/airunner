@@ -365,7 +365,10 @@ class SliderWidget(BaseWidget):
     def set_slider_and_spinbox_values(self, val):
         if val is None:
             val = 0
-        normalized = val / self.slider_maximum
+        if self.slider_maximum == 0:
+            normalized = 0
+        else:
+            normalized = val / self.slider_maximum
         spinbox_val = normalized * self.spinbox_maximum
         spinbox_val = round(spinbox_val, 2)
 

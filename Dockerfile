@@ -67,15 +67,22 @@ RUN apt-get update && apt-get install -y \
     libatk-bridge2.0-0 \
     # Clipboard support
     xclip \
+    # pyautogui dependencies for computer use / desktop automation
+    python3-tk \
+    python3-dev \
+    scrot \
+    xdotool \
+    gnome-screenshot \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python 3.13 from deadsnakes PPA
+# Install Python 3.13 from deadsnakes PPA (including tkinter for pyautogui)
 RUN add-apt-repository ppa:deadsnakes/ppa -y && \
     apt-get update && \
     apt-get install -y \
     python3.13 \
     python3.13-venv \
     python3.13-dev \
+    python3.13-tk \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pip for Python 3.13
@@ -95,8 +102,8 @@ WORKDIR /app
 COPY setup.py pyproject.toml README.md ./
 COPY src/ ./src/
 
-# Install airunner with all dependencies
-RUN pip install -e ".[all_dev]"
+# Install airunner with all dependencies including computer_use
+RUN pip install -e ".[all_dev,computer_use]"
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

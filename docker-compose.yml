@@ -1,8 +1,14 @@
 # Docker Compose for AI Runner
 #
 # Usage:
-#   GUI mode:     xhost +local:docker && docker compose run --rm airunner
+#   GUI mode:     xhost +SI:localuser:root && docker compose run --rm airunner
 #   Headless mode: docker compose run --rm --service-ports airunner --headless
+#
+# X11 Setup (required for GUI mode):
+#   1. Allow the container's root user to access your X server (most secure):
+#      xhost +SI:localuser:root
+#   2. Ensure DISPLAY and XAUTHORITY are set in your shell (usually automatic)
+#   3. After use, revoke access with: xhost -SI:localuser:root
 #
 # Note: --service-ports is required for headless mode to expose port 8080
 #
@@ -23,8 +29,8 @@ services:
       - ./src:/app/src:ro
       # X11 socket for GUI display
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      # X11 authorization
-      - ~/.Xauthority:/root/.Xauthority:ro
+      # X11 authorization (use XAUTHORITY env var or common locations)
+      - ${XAUTHORITY:-/run/user/1000/gdm/Xauthority}:/root/.Xauthority:ro
       # PulseAudio for audio
       - ${XDG_RUNTIME_DIR:-/run/user/1000}/pulse/native:/tmp/pulse/native:rw
       - ~/.config/pulse/cookie:/tmp/pulse/cookie:ro
