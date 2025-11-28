@@ -969,6 +969,25 @@ Based on the search results above, provide a clear, conversational answer to the
         else:
             return self._generate_invoke_response(formatted_prompt)
 
+    def _is_tool_call_json(self, text: str) -> bool:
+        """Check if text looks like a JSON tool call definition.
+        
+        Args:
+            text: Text to check
+            
+        Returns:
+            True if text appears to be a tool call JSON
+        """
+        stripped = text.strip()
+        # Check for JSON tool call patterns
+        if stripped.startswith('{') and ('"name"' in stripped or '"tool"' in stripped):
+            # Looks like start of a tool call JSON
+            return True
+        if '"arguments"' in stripped or '"query"' in stripped:
+            # Contains argument-like content
+            return True
+        return False
+
     def _generate_streaming_response(
         self, formatted_prompt, generation_kwargs: Dict
     ) -> Optional[AIMessage]:
@@ -990,6 +1009,11 @@ Based on the search results above, provide a clear, conversational answer to the
         thinking_started = False  # Track if we've already seen <think>
         thinking_content = []
         final_thinking_content = None  # Store completed thinking content for DB persistence
+        
+        # Track JSON tool call buffering - don't stream tool call JSON to GUI
+        json_buffer = []
+        in_json_tool_call = False
+        json_brace_depth = 0
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
         self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
@@ -1133,10 +1157,49 @@ Based on the search results above, provide a clear, conversational answer to the
                         thinking_content.append(text)
                     continue  # Don't stream thinking to main callback
                 
-                # Stream each chunk to GUI immediately (non-thinking content only)
-                if text and self._token_callback:
+                # Detect JSON tool call patterns and buffer them instead of streaming
+                # This prevents tool call JSON from appearing in the chat UI
+                text_to_stream = text
+                
+                # Check if we're starting a JSON tool call
+                if not in_json_tool_call and '{' in text:
+                    # Check if this looks like a tool call JSON
+                    remaining = text[text.index('{'):]
+                    if self._is_tool_call_json(remaining) or ('"name"' in text and '"arguments"' in text):
+                        in_json_tool_call = True
+                        # Stream any text before the '{'
+                        before_json = text[:text.index('{')]
+                        if before_json.strip():
+                            text_to_stream = before_json
+                        else:
+                            text_to_stream = ""
+                        # Start buffering the JSON part
+                        json_buffer.append(text[text.index('{'):])
+                        json_brace_depth = text.count('{') - text.count('}')
+                
+                # If we're in a JSON tool call, buffer it
+                if in_json_tool_call and text_to_stream == text:
+                    json_buffer.append(text)
+                    json_brace_depth += text.count('{') - text.count('}')
+                    text_to_stream = ""
+                    
+                    # Check if JSON is complete
+                    if json_brace_depth <= 0:
+                        in_json_tool_call = False
+                        # Check if there's text after the closing brace
+                        buffered = "".join(json_buffer)
+                        if '}' in buffered:
+                            last_brace = buffered.rfind('}')
+                            after_json = buffered[last_brace + 1:]
+                            if after_json.strip():
+                                text_to_stream = after_json
+                        json_buffer = []
+                        json_brace_depth = 0
+                
+                # Stream non-JSON content to GUI immediately
+                if text_to_stream and self._token_callback:
                     try:
-                        self._token_callback(text)
+                        self._token_callback(text_to_stream)
                     except Exception as callback_error:
                         self.logger.error(
                             "Token callback failed: %s",
