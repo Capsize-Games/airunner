@@ -62,6 +62,7 @@ class ToolCategory(Enum):
     GENERATION = (
         "generation"  # Direct text generation without conversational wrappers
     )
+    PROJECT = "project"  # Long-running project management
 
     # Legacy categories (for backward compatibility)
     SEARCH = "search"  # Use RESEARCH or QA instead

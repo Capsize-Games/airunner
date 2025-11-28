@@ -705,6 +705,10 @@ class LLMModelManager(
         ):
             selected_categories.append("conversation")
 
+        # Long-running project keywords - add PROJECT category for complex tasks
+        if self._should_use_harness(prompt):
+            selected_categories.append("project")
+
         # If no specific tools detected, return empty list (no tools needed)
         # This makes simple chat like "hello" fast
         if not selected_categories:
@@ -717,6 +721,37 @@ class LLMModelManager(
             f"Auto mode: Selected {len(selected_categories)} categories: {selected_categories}"
         )
         return selected_categories
+
+    def _should_use_harness(self, prompt: str) -> bool:
+        """Check if a prompt should use the long-running harness.
+
+        The harness is used for:
+        - Multi-step tasks (e.g., "implement these 5 features")
+        - Complex coding projects (e.g., "refactor and add tests")
+        - Multi-topic research (e.g., "research 5 papers on X")
+
+        Args:
+            prompt: User's input text
+
+        Returns:
+            True if the harness should be used
+        """
+        try:
+            from airunner.components.llm.long_running import should_use_harness
+
+            use_harness, analysis = should_use_harness(prompt)
+            if use_harness and analysis:
+                self.logger.info(
+                    f"Harness recommended: {analysis.task_type.value} "
+                    f"(confidence: {analysis.confidence:.2f}) - {analysis.reason}"
+                )
+            return use_harness
+        except ImportError:
+            self.logger.debug("Long-running harness not available")
+            return False
+        except Exception as e:
+            self.logger.warning(f"Error checking harness applicability: {e}")
+            return False
 
     def _restore_all_tools(self) -> None:
         """Restore all tools to workflow manager (called after filtered request)."""
