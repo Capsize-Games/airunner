@@ -267,20 +267,15 @@ class ConversationHistoryManager:
                 }
                 
                 # Include thinking content for assistant messages
-                # Combine pre-tool thinking with post-tool thinking if both exist
+                # Pre-tool thinking goes in pre_tool_thinking, post-tool in thinking_content
                 if is_bot:
                     post_tool_thinking = msg_obj.get("thinking_content")
-                    if pending_pre_tool_thinking and post_tool_thinking:
-                        # Both exist - combine them
+                    if pending_pre_tool_thinking:
+                        # Pre-tool thinking always goes in pre_tool_thinking field
                         formatted_msg["pre_tool_thinking"] = pending_pre_tool_thinking
-                        formatted_msg["thinking_content"] = post_tool_thinking
                         pending_pre_tool_thinking = None
-                    elif pending_pre_tool_thinking:
-                        # Only pre-tool thinking
-                        formatted_msg["thinking_content"] = pending_pre_tool_thinking
-                        pending_pre_tool_thinking = None
-                    elif post_tool_thinking:
-                        # Only post-tool thinking
+                    if post_tool_thinking:
+                        # Post-tool thinking goes in thinking_content field
                         formatted_msg["thinking_content"] = post_tool_thinking
                 
                 # Include tool usage for assistant messages if we have pending tool calls
@@ -288,17 +283,9 @@ class ConversationHistoryManager:
                     formatted_msg["tool_usage"] = pending_tool_usage.copy()
                     pending_tool_usage.clear()
 
-                # If this is an assistant message and we have pending citations, append them
+                # Clear pending citations without appending them
+                # (sources are shown in tool status details instead)
                 if is_bot and pending_citations:
-                    # Remove duplicates while preserving order
-                    unique_citations = list(dict.fromkeys(pending_citations))
-
-                    # Format citations as markdown links
-                    citation_text = "\n\n---\n\n**Sources:**\n\n"
-                    for i, url in enumerate(unique_citations, 1):
-                        citation_text += f"{i}. [{url}]({url})\n"
-
-                    formatted_msg["content"] = content + citation_text
                     pending_citations.clear()
 
                 # Pass through mood/emoji fields if present
@@ -322,7 +309,8 @@ class ConversationHistoryManager:
                     "id": len(formatted_messages),
                 }
                 if pending_pre_tool_thinking:
-                    synthetic_msg["thinking_content"] = pending_pre_tool_thinking
+                    # Use pre_tool_thinking so it renders BEFORE tool widgets
+                    synthetic_msg["pre_tool_thinking"] = pending_pre_tool_thinking
                 if pending_tool_usage:
                     synthetic_msg["tool_usage"] = pending_tool_usage.copy()
                 formatted_messages.append(synthetic_msg)
