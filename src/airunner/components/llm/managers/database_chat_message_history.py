@@ -11,6 +11,7 @@ from langchain_core.messages import (
 )
 
 from airunner.components.llm.data.conversation import Conversation
+from airunner.components.llm.utils.thinking_parser import strip_thinking_tags, extract_thinking_and_response
 from airunner.utils.application.get_logger import get_logger
 
 
@@ -183,6 +184,16 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 self.logger.debug(
                     f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
                 )
+                
+                # Extract thinking content from the AIMessage that has tool_calls
+                # This captures the "thinking before tool use" phase
+                thinking_content = None
+                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
+                    thinking_content = message.additional_kwargs.get("thinking_content")
+                if not thinking_content and message.content:
+                    from airunner.components.llm.utils.thinking_parser import extract_thinking_and_response
+                    thinking_content, _ = extract_thinking_and_response(message.content)
+                
                 # Store tool call request in metadata
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_calls_dict = {
@@ -205,6 +216,12 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     "tool_calls": message.tool_calls,  # Store actual tool call data
                     "metadata_type": "tool_calls",  # Mark as metadata for filtering
                 }
+                
+                # Store thinking content if present (pre-tool thinking)
+                if thinking_content:
+                    tool_calls_dict["thinking_content"] = thinking_content
+                    self.logger.debug(f"[THINKING SAVE] Saved pre-tool thinking: {len(thinking_content)} chars")
+                
                 if self._conversation.value is None:
                     self._conversation.value = []
                 self._conversation.value.append(tool_calls_dict)
@@ -229,13 +246,34 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
 
             now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+            # Extract thinking content for AI messages
+            # First check additional_kwargs (from streaming), then try to extract from content
+            content = message.content
+            thinking_content = None
+            if isinstance(message, AIMessage):
+                # Check if thinking_content was stored in additional_kwargs during streaming
+                if hasattr(message, "additional_kwargs") and message.additional_kwargs:
+                    thinking_content = message.additional_kwargs.get("thinking_content")
+                    self.logger.debug(f"[THINKING SAVE] Found thinking_content in additional_kwargs: {bool(thinking_content)}")
+                
+                # If not found, try to extract from content (for non-streaming or fallback)
+                if not thinking_content:
+                    thinking_content, content = extract_thinking_and_response(content)
+                    self.logger.debug(f"[THINKING SAVE] Extracted from content: {bool(thinking_content)}")
+                
+                self.logger.debug(f"[THINKING SAVE] Final thinking_content length: {len(thinking_content) if thinking_content else 0}")
+
             message_dict = {
                 "role": role,
                 "name": name,
-                "content": message.content,
+                "content": content,
                 "timestamp": now,
-                "blocks": [{"block_type": "text", "text": message.content}],
+                "blocks": [{"block_type": "text", "text": content}],
             }
+            
+            # Add thinking content if present
+            if thinking_content:
+                message_dict["thinking_content"] = thinking_content
 
             # Add metadata if present
             if (

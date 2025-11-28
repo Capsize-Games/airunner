@@ -66,6 +66,9 @@ class LLMSettings:
     use_ollama: bool = False
     use_openai: bool = False
 
+    # Qwen3 thinking mode (enables <think>...</think> reasoning)
+    enable_thinking: bool = True
+
     # Ollama settings
     ollama_model: str = "llama2"
     ollama_base_url: str = "http://localhost:11434"

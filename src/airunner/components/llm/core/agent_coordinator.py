@@ -92,6 +92,7 @@ class AgentCoordinator(MediatorMixin, SettingsMixin):
                 ToolCategory.CHAT,
                 ToolCategory.CONVERSATION,
                 ToolCategory.SYSTEM,
+                ToolCategory.PROJECT,  # Long-running project tools
             ],
             LLMActionType.GENERATE_IMAGE: [
                 ToolCategory.IMAGE,

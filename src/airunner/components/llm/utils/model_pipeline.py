@@ -82,6 +82,19 @@ class ModelPipeline(
             },
             "recommended_bits": 4,
         },
+        "qwen3-8b": {
+            "repo_id": "Qwen/Qwen3-8B",
+            "model_type": "llm",
+            "supports_function_calling": True,
+            "supports_thinking": True,
+            "context_length": 32768,
+            "vram_requirements_gb": {
+                "full": 32,
+                "4bit": 8,
+                "2bit": 5,
+            },
+            "recommended_bits": 4,
+        },
     }
 
     def __init__(self, base_path: Optional[str] = None):

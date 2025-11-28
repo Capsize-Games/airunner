@@ -15,6 +15,8 @@ from langchain_core.messages import (
     trim_messages,
 )
 
+from airunner.components.llm.utils.thinking_parser import strip_thinking_tags, has_thinking_content
+from airunner.enums import SignalCode
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW,
@@ -68,19 +70,13 @@ class NodeFunctionsMixin:
             f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
         )
 
-        # Generate response based on tool results
-        response_content = self._generate_forced_response(
+        # Generate response based on tool results - this returns the full AIMessage
+        forced_message = self._generate_forced_response_message(
             all_tool_content, tool_name, user_question, generation_kwargs
         )
 
-        # Create AIMessage with NO tool_calls
-        forced_message = AIMessage(
-            content=response_content,
-            tool_calls=[],  # Explicitly set to empty list
-        )
-
         self.logger.info(
-            f"✓ Force response node: Replaced tool call with {len(response_content)} char conversational response (tool_calls=[])"
+            f"✓ Force response node: Generated {len(forced_message.content) if forced_message.content else 0} char response"
         )
 
         # Return dict with new message for LangGraph to merge via add_messages reducer
@@ -142,6 +138,41 @@ class NodeFunctionsMixin:
                 all_tool_content += "\n"
         return all_tool_content
 
+    def _generate_forced_response_message(
+        self,
+        tool_content: str,
+        tool_name: str,
+        user_question: str,
+        generation_kwargs: Optional[Dict] = None,
+    ) -> AIMessage:
+        """Generate a full AIMessage response from tool results.
+
+        This preserves thinking_content and other additional_kwargs.
+
+        Args:
+            tool_content: Combined content from tool executions
+            tool_name: Name of the tool that was called
+            user_question: Original user's question
+            generation_kwargs: Optional generation parameters for streaming control
+
+        Returns:
+            Complete AIMessage with content and additional_kwargs
+        """
+        try:
+            response_message = self._generate_response_message_from_results(
+                tool_content, tool_name, user_question, generation_kwargs
+            )
+            if response_message:
+                return response_message
+        except Exception as e:
+            self.logger.error(f"Failed to generate forced response: {e}")
+        
+        # Fallback
+        fallback = "I found some information but encountered an issue generating a complete response."
+        if self._token_callback:
+            self._token_callback(fallback)
+        return AIMessage(content=fallback, tool_calls=[])
+
     def _generate_forced_response(
         self,
         tool_content: str,
@@ -177,6 +208,65 @@ class NodeFunctionsMixin:
             if self._token_callback:
                 self._token_callback(fallback)
             return fallback
+
+    def _generate_response_message_from_results(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str = "",
+        generation_kwargs: Optional[Dict] = None,
+    ) -> Optional[AIMessage]:
+        """Generate full AIMessage from tool results (preserving thinking_content).
+
+        Args:
+            all_tool_content: Combined tool results
+            tool_name: Name of the tool
+            user_question: Original user question
+            generation_kwargs: Optional generation parameters for streaming control
+
+        Returns:
+            Complete AIMessage with content and additional_kwargs, or None on error
+        """
+        self.logger.info(
+            f"Forcing model to answer based on {tool_name} results (preserving thinking)..."
+        )
+
+        try:
+            # Build prompt with explicit user question and strong no-tool instructions
+            question_context = (
+                f"User's question: {user_question}\n\n"
+                if user_question
+                else ""
+            )
+
+            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
+
+{question_context}Search results:
+{all_tool_content}
+
+Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
+
+            # Convert to message format
+            simple_prompt = [HumanMessage(content=simple_prompt_text)]
+
+            # Stream response - returns full AIMessage with thinking_content
+            response_message = self._stream_model_response(
+                simple_prompt, generation_kwargs
+            )
+
+            if response_message:
+                # Ensure tool_calls is empty
+                return AIMessage(
+                    content=response_message.content or "",
+                    additional_kwargs=getattr(response_message, "additional_kwargs", {}),
+                    tool_calls=[],
+                )
+
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Failed to generate forced response message: {e}")
+            return None
 
     def _generate_response_from_results(
         self,
@@ -219,9 +309,14 @@ Based on the search results above, provide a clear, conversational answer to the
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
 
             # Stream response with generation kwargs for token-by-token streaming
-            response_content = self._stream_model_response(
+            response_message = self._stream_model_response(
                 simple_prompt, generation_kwargs
             )
+
+            # Extract content from the response message
+            response_content = ""
+            if response_message and hasattr(response_message, "content"):
+                response_content = response_message.content or ""
 
             self.logger.info(
                 f"Model streamed {len(response_content)} char answer"
@@ -277,10 +372,8 @@ Based on the search results above, provide a clear, conversational answer to the
                 prompt, generation_kwargs
             )
 
-            if response_message and hasattr(response_message, "content"):
-                return response_message.content
-
-            return ""
+            # Return the full AIMessage to preserve additional_kwargs including thinking_content
+            return response_message
         finally:
             if hasattr(chat_model, "tools"):
                 chat_model.tools = tools_backup
@@ -967,6 +1060,25 @@ Based on the search results above, provide a clear, conversational answer to the
         else:
             return self._generate_invoke_response(formatted_prompt)
 
+    def _is_tool_call_json(self, text: str) -> bool:
+        """Check if text looks like a JSON tool call definition.
+        
+        Args:
+            text: Text to check
+            
+        Returns:
+            True if text appears to be a tool call JSON
+        """
+        stripped = text.strip()
+        # Check for JSON tool call patterns
+        if stripped.startswith('{') and ('"name"' in stripped or '"tool"' in stripped):
+            # Looks like start of a tool call JSON
+            return True
+        if '"arguments"' in stripped or '"query"' in stripped:
+            # Contains argument-like content
+            return True
+        return False
+
     def _generate_streaming_response(
         self, formatted_prompt, generation_kwargs: Dict
     ) -> Optional[AIMessage]:
@@ -982,6 +1094,23 @@ Based on the search results above, provide a clear, conversational answer to the
         streamed_content: List[str] = []
         last_chunk_message: Optional[BaseMessage] = None
         collected_tool_calls: List = []  # Collect tool_calls from ALL chunks
+        
+        # Track thinking state for Qwen3 <think>...</think> blocks
+        in_thinking_block = False
+        thinking_started = False  # Track if we've already seen <think>
+        thinking_content = []
+        final_thinking_content = None  # Store completed thinking content for DB persistence
+        
+        # Track JSON tool call buffering - don't stream tool call JSON to GUI
+        json_buffer = []
+        in_json_tool_call = False
+        json_brace_depth = 0
+        
+        # Track if we've streamed any content yet (for trimming leading whitespace)
+        has_streamed_content = False
+        
+        has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
+        # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
             for chunk in self._chat_model.stream(
@@ -1006,11 +1135,176 @@ Based on the search results above, provide a clear, conversational answer to the
                     continue
 
                 streamed_content.append(text)
-
-                # Stream each chunk to GUI immediately
-                if text and self._token_callback:
+                
+                # Debug: Log every chunk
+                # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
+                
+                # Detect thinking block boundaries
+                # Check for <think> opening tag - only if we haven't seen one yet
+                if "<think>" in text and not thinking_started:
+                    in_thinking_block = True
+                    thinking_started = True
+                    # self.logger.debug("[THINKING] Detected <think> tag - starting thinking block")
+                    # Emit thinking started signal
+                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                        self._signal_emitter.emit_signal(
+                            SignalCode.LLM_THINKING_SIGNAL,
+                            {"status": "started", "content": ""}
+                        )
+                    # Don't stream the <think> tag itself to the thinking content
+                    # Extract any text after <think> in this chunk
+                    after_think = text.split("<think>", 1)[1] if "<think>" in text else ""
+                    
+                    # Check if </think> is also in this chunk (entire thinking block in one chunk)
+                    if "</think>" in after_think:
+                        # Both tags in same chunk - extract thinking and remaining content
+                        before_close = after_think.split("</think>", 1)[0]
+                        after_close = after_think.split("</think>", 1)[1]
+                        
+                        if before_close:
+                            thinking_content.append(before_close)
+                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                self._signal_emitter.emit_signal(
+                                    SignalCode.LLM_THINKING_SIGNAL,
+                                    {"status": "streaming", "content": before_close}
+                                )
+                        
+                        # Mark thinking as complete
+                        in_thinking_block = False
+                        final_thinking_content = "".join(thinking_content)
+                        # self.logger.debug(f"[THINKING] Complete thinking block in single chunk, content len={len(final_thinking_content)}")
+                        
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "completed", "content": final_thinking_content}
+                            )
+                        thinking_content = []
+                        
+                        # Stream any content after </think> to the main callback
+                        if after_close and self._token_callback:
+                            try:
+                                self._token_callback(after_close)
+                            except Exception as callback_error:
+                                self.logger.error(
+                                    "Token callback failed: %s",
+                                    callback_error,
+                                    exc_info=True,
+                                )
+                    elif after_think:
+                        # Only <think> in this chunk, stream content to thinking
+                        thinking_content.append(after_think)
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "streaming", "content": after_think}
+                            )
+                    continue  # Skip normal processing for this chunk
+                
+                # If we're in a thinking block, emit thinking content
+                if in_thinking_block:
+                    # Check for </think> closing tag first
+                    if "</think>" in text:
+                        # Extract text before </think>
+                        before_close = text.split("</think>", 1)[0]
+                        after_close = text.split("</think>", 1)[1] if "</think>" in text else ""
+                        
+                        if before_close:
+                            thinking_content.append(before_close)
+                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                self._signal_emitter.emit_signal(
+                                    SignalCode.LLM_THINKING_SIGNAL,
+                                    {"status": "streaming", "content": before_close}
+                                )
+                        
+                        # Mark thinking as complete
+                        in_thinking_block = False
+                        # self.logger.debug(f"[THINKING] Detected </think> tag - ending thinking block, content len={len(''.join(thinking_content))}")
+                        
+                        # Save thinking content for DB persistence BEFORE clearing the list
+                        final_thinking_content = "".join(thinking_content)
+                        
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "completed", "content": final_thinking_content}
+                            )
+                        thinking_content = []
+                        
+                        # Stream any content after </think> to the main callback
+                        if after_close and self._token_callback:
+                            try:
+                                self._token_callback(after_close)
+                            except Exception as callback_error:
+                                self.logger.error(
+                                    "Token callback failed: %s",
+                                    callback_error,
+                                    exc_info=True,
+                                )
+                    else:
+                        # Stream thinking content to GUI
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "streaming", "content": text}
+                            )
+                        thinking_content.append(text)
+                    continue  # Don't stream thinking to main callback
+                
+                # Detect JSON tool call patterns and buffer them instead of streaming
+                # This prevents tool call JSON from appearing in the chat UI
+                text_to_stream = text
+                
+                # Check if we're starting a JSON tool call
+                if not in_json_tool_call and '{' in text:
+                    # Check if this looks like a tool call JSON
+                    remaining = text[text.index('{'):]
+                    if self._is_tool_call_json(remaining) or ('"name"' in text and '"arguments"' in text):
+                        in_json_tool_call = True
+                        # Stream any text before the '{'
+                        before_json = text[:text.index('{')]
+                        if before_json.strip():
+                            text_to_stream = before_json
+                        else:
+                            text_to_stream = ""
+                        # Start buffering the JSON part
+                        json_buffer.append(text[text.index('{'):])
+                        json_brace_depth = text.count('{') - text.count('}')
+                
+                # If we're in a JSON tool call, buffer it
+                if in_json_tool_call and text_to_stream == text:
+                    json_buffer.append(text)
+                    json_brace_depth += text.count('{') - text.count('}')
+                    text_to_stream = ""
+                    
+                    # Check if JSON is complete
+                    if json_brace_depth <= 0:
+                        in_json_tool_call = False
+                        # Check if there's text after the closing brace
+                        buffered = "".join(json_buffer)
+                        if '}' in buffered:
+                            last_brace = buffered.rfind('}')
+                            after_json = buffered[last_brace + 1:]
+                            if after_json.strip():
+                                text_to_stream = after_json
+                        json_buffer = []
+                        json_brace_depth = 0
+                
+                # Stream non-JSON content to GUI immediately
+                # Skip whitespace-only content to prevent creating empty assistant messages
+                if text_to_stream and self._token_callback:
                     try:
-                        self._token_callback(text)
+                        # Keep stripping leading whitespace until we find non-blank content
+                        # This handles cases where multiple chunks contain only whitespace
+                        if not has_streamed_content:
+                            text_to_stream = text_to_stream.lstrip()
+                            # Only mark as streamed if we have actual content after stripping
+                            if text_to_stream:
+                                has_streamed_content = True
+                        
+                        # Only call callback if we have content to stream
+                        if text_to_stream:
+                            self._token_callback(text_to_stream)
                     except Exception as callback_error:
                         self.logger.error(
                             "Token callback failed: %s",
@@ -1020,8 +1314,12 @@ Based on the search results above, provide a clear, conversational answer to the
 
             # Return message if we have content or tool_calls
             if streamed_content or last_chunk_message:
+                # Use final_thinking_content if available (from completed thinking block)
+                # Otherwise fall back to current thinking_content list (for incomplete thinking)
+                thinking_to_save = final_thinking_content or ("".join(thinking_content) if thinking_content else None)
+                self.logger.debug(f"[THINKING STREAM] Collected thinking_content length: {len(thinking_to_save) if thinking_to_save else 0}")
                 return self._create_streamed_message(
-                    streamed_content, last_chunk_message, collected_tool_calls
+                    streamed_content, last_chunk_message, collected_tool_calls, thinking_to_save
                 )
 
         except Exception as exc:
@@ -1036,6 +1334,7 @@ Based on the search results above, provide a clear, conversational answer to the
         streamed_content: List[str],
         last_chunk_message: Optional[BaseMessage],
         collected_tool_calls: Optional[List] = None,
+        thinking_content: Optional[str] = None,
     ) -> AIMessage:
         """Create AIMessage from streamed content.
 
@@ -1043,6 +1342,7 @@ Based on the search results above, provide a clear, conversational answer to the
             streamed_content: List of content chunks
             last_chunk_message: Last chunk message
             collected_tool_calls: Tool calls collected from all chunks
+            thinking_content: Thinking content from <think> blocks (optional)
 
         Returns:
             Complete AIMessage
@@ -1061,12 +1361,24 @@ Based on the search results above, provide a clear, conversational answer to the
                 )
 
         complete_content = "".join(streamed_content)
+        
+        # Strip <think>...</think> blocks from Qwen3 responses
+        # The thinking is useful for reasoning but shouldn't be in final output
+        complete_content = strip_thinking_tags(complete_content)
+        
+        # Store thinking content in additional_kwargs so it can be saved to DB
+        if thinking_content:
+            additional_kwargs = dict(additional_kwargs)  # Make a copy to avoid mutating
+            additional_kwargs["thinking_content"] = thinking_content
+            self.logger.debug(f"[THINKING MSG] Stored thinking_content in additional_kwargs: {len(thinking_content)} chars")
 
         response_message = AIMessage(
             content=complete_content,
             additional_kwargs=additional_kwargs,
             tool_calls=tool_calls or [],
         )
+        
+        self.logger.debug(f"[THINKING MSG] Created AIMessage with additional_kwargs keys: {list(additional_kwargs.keys())}")
 
         return response_message
 
@@ -1080,6 +1392,16 @@ Based on the search results above, provide a clear, conversational answer to the
             AIMessage response
         """
         response_message = self._chat_model.invoke(formatted_prompt)
+
+        # Strip <think>...</think> blocks from Qwen3 responses
+        if hasattr(response_message, "content") and response_message.content:
+            cleaned_content = strip_thinking_tags(response_message.content)
+            if cleaned_content != response_message.content:
+                response_message = AIMessage(
+                    content=cleaned_content,
+                    additional_kwargs=getattr(response_message, "additional_kwargs", {}),
+                    tool_calls=getattr(response_message, "tool_calls", []) or [],
+                )
 
         if (
             self._token_callback

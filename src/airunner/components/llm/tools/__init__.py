@@ -57,6 +57,9 @@ from airunner.components.llm.tools import (
     # Phase 3: Code generation tools
     code_generation_tools,
 )
+
+# Long-running project management tools
+from airunner.components.llm.long_running import tools as project_tools
 from airunner.components.calendar.tools import (
     calendar_tools as langchain_calendar_tools,
 )
@@ -97,4 +100,6 @@ __all__ = [
     "code_tools",
     "research_tools",
     "qa_tools",
+    # Long-running project tools
+    "project_tools",
 ]
