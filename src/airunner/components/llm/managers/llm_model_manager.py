@@ -690,6 +690,30 @@ class LLMModelManager(
         ):
             selected_categories.append("search")
 
+        # Image generation keywords
+        if any(
+            word in prompt_lower
+            for word in [
+                "generate an image",
+                "generate image",
+                "create an image",
+                "create image",
+                "make an image",
+                "make image",
+                "draw",
+                "picture of",
+                "photo of",
+                "illustration of",
+                "render",
+                "visualize",
+                "image of",
+                "artwork",
+                "painting of",
+                "sketch of",
+            ]
+        ):
+            selected_categories.append("image")
+
         # Conversation management keywords
         if any(
             word in prompt_lower

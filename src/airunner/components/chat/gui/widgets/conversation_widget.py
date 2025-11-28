@@ -114,7 +114,9 @@ class ConversationWidget(BaseWidget):
         self.ui.stage.page().setWebChannel(self._web_channel)
 
     def navigate(self, url: str):
-        self.api.navigate(url)
+        """Open a URL in the system's default browser."""
+        import webbrowser
+        webbrowser.open(url)
 
     @property
     def conversation(self) -> Optional[Conversation]:

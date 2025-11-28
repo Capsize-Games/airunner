@@ -29,6 +29,12 @@ _SEARCH_COOLDOWN = 2.0  # seconds between searches
     ),
     return_direct=False,
     requires_api=False,
+    keywords=["internet", "google", "duckduckgo", "online", "web", "find"],
+    input_examples=[
+        {"query": "latest news about artificial intelligence"},
+        {"query": "how to install Python on Ubuntu"},
+        {"query": "weather forecast for New York"},
+    ],
 )
 def search_web(
     query: Annotated[str, "Search query to look up on the internet"],

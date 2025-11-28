@@ -30,6 +30,12 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
     ),
     return_direct=False,
     requires_api=True,  # API injection provides access to rag_manager
+    keywords=["document", "search", "knowledge", "memory", "loaded"],
+    input_examples=[
+        {"query": "What is the main topic discussed in chapter 3?"},
+        {"query": "Find information about machine learning algorithms"},
+        {"query": "Summary of the introduction section"},
+    ],
 )
 def rag_search(
     query: Annotated[

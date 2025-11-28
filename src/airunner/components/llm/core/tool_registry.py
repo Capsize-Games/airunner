@@ -5,9 +5,9 @@ This module provides a clean way to register and discover LLM tools using decora
 Tools are automatically discovered and routed based on their metadata.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import importlib
-from typing import Callable, Dict, Optional, List
+from typing import Callable, Dict, Optional, List, Any
 from enum import Enum
 
 from airunner.utils.application import get_logger
@@ -72,7 +72,24 @@ class ToolCategory(Enum):
 
 @dataclass
 class ToolInfo:
-    """Metadata about a registered tool."""
+    """Metadata about a registered tool.
+    
+    Attributes:
+        func: The tool function
+        name: Unique tool identifier
+        category: Tool category for organization
+        description: Human-readable description
+        return_direct: Whether tool returns directly to user
+        requires_agent: Whether tool needs agent instance
+        requires_api: Whether tool needs API access
+        defer_loading: If True, tool is not loaded into initial context.
+            Use search_tools to discover deferred tools on-demand.
+        keywords: Additional search keywords for tool discovery
+        allowed_callers: List of caller contexts that can invoke this tool.
+            Empty list means callable from anywhere.
+            ["code_execution"] means only callable from code sandbox.
+        input_examples: Example input dicts showing proper parameter usage
+    """
 
     func: Callable
     name: str
@@ -81,6 +98,10 @@ class ToolInfo:
     return_direct: bool = False
     requires_agent: bool = False
     requires_api: bool = False
+    defer_loading: bool = False
+    keywords: List[str] = field(default_factory=list)
+    allowed_callers: List[str] = field(default_factory=list)
+    input_examples: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class ToolRegistry:
@@ -103,6 +124,10 @@ class ToolRegistry:
         return_direct: bool = False,
         requires_agent: bool = False,
         requires_api: bool = False,
+        defer_loading: bool = False,
+        keywords: Optional[List[str]] = None,
+        allowed_callers: Optional[List[str]] = None,
+        input_examples: Optional[List[Dict[str, Any]]] = None,
     ) -> Callable:
         """
         Register a tool with metadata.
@@ -114,6 +139,10 @@ class ToolRegistry:
             return_direct: Whether tool returns directly to user
             requires_agent: Whether tool needs agent instance
             requires_api: Whether tool needs API access
+            defer_loading: If True, not loaded into initial context
+            keywords: Additional search keywords for discovery
+            allowed_callers: Contexts allowed to invoke this tool
+            input_examples: Example input dicts for parameter guidance
 
         Returns:
             Decorator function that registers the tool
@@ -128,6 +157,10 @@ class ToolRegistry:
                 return_direct=return_direct,
                 requires_agent=requires_agent,
                 requires_api=requires_api,
+                defer_loading=defer_loading,
+                keywords=keywords or [],
+                allowed_callers=allowed_callers or [],
+                input_examples=input_examples or [],
             )
             cls._tools[name] = info
 
@@ -157,6 +190,31 @@ class ToolRegistry:
         """Retrieve all registered tools."""
         cls._ensure_default_tools_loaded()
         return dict(cls._tools)
+
+    @classmethod
+    def get_immediate_tools(cls) -> Dict[str, ToolInfo]:
+        """Get tools that should be loaded immediately (defer_loading=False).
+        
+        These tools are always available in the initial context.
+        
+        Returns:
+            Dict mapping tool names to ToolInfo for immediate tools
+        """
+        cls._ensure_default_tools_loaded()
+        return {k: v for k, v in cls._tools.items() if not v.defer_loading}
+
+    @classmethod
+    def get_deferred_tools(cls) -> Dict[str, ToolInfo]:
+        """Get tools that can be loaded on-demand (defer_loading=True).
+        
+        These tools are not included in the initial context to save tokens.
+        Use search_tools to discover them when needed.
+        
+        Returns:
+            Dict mapping tool names to ToolInfo for deferred tools
+        """
+        cls._ensure_default_tools_loaded()
+        return {k: v for k, v in cls._tools.items() if v.defer_loading}
 
     @classmethod
     def clear(cls):
@@ -237,6 +295,9 @@ class ToolRegistry:
                 "airunner.components.llm.tools.research_rag_tools",
                 "airunner.components.llm.tools.qa_tools",
                 "airunner.components.llm.tools.code_generation_tools",
+                # Advanced tool use features
+                "airunner.components.llm.tools.tool_search_tool",
+                "airunner.components.llm.tools.code_execution_tool",
             ]
             for module_name in modules_to_reload:
                 try:
@@ -269,6 +330,10 @@ def tool(
     return_direct: bool = False,
     requires_agent: bool = False,
     requires_api: bool = False,
+    defer_loading: bool = False,
+    keywords: Optional[List[str]] = None,
+    allowed_callers: Optional[List[str]] = None,
+    input_examples: Optional[List[Dict[str, Any]]] = None,
 ) -> Callable:
     """
     Decorator to register an LLM tool.
@@ -280,6 +345,10 @@ def tool(
             description="Generate an image from a text prompt",
             return_direct=True,
             requires_api=True,
+            keywords=["picture", "art", "create"],
+            input_examples=[
+                {"prompt": "A sunset over mountains", "width": 512, "height": 512},
+            ],
         )
         def generate_image(prompt: str, width: int, height: int) -> str:
             # Implementation
@@ -292,6 +361,10 @@ def tool(
         return_direct: Whether to return result directly
         requires_agent: Whether tool needs agent instance
         requires_api: Whether tool needs API access
+        defer_loading: If True, not in initial context (use search_tools)
+        keywords: Additional search keywords for discovery
+        allowed_callers: Contexts allowed to invoke this tool
+        input_examples: Example input dicts for parameter guidance
 
     Returns:
         Registered function
@@ -303,4 +376,8 @@ def tool(
         return_direct=return_direct,
         requires_agent=requires_agent,
         requires_api=requires_api,
+        defer_loading=defer_loading,
+        keywords=keywords,
+        allowed_callers=allowed_callers,
+        input_examples=input_examples,
     )
