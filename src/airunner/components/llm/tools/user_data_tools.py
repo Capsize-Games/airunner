@@ -24,9 +24,15 @@ from airunner.components.user.data.user import User
 
 @tool(
     name="store_user_data",
-    category=ToolCategory.SYSTEM,
+    category=ToolCategory.KNOWLEDGE,
     description="Store user information in the database by key-value pairs",
     requires_api=False,
+    keywords=["save", "store", "user", "data", "remember", "profile", "setting"],
+    input_examples=[
+        {"key": "name", "value": "Alice"},
+        {"key": "email", "value": "alice@example.com"},
+        {"key": "timezone", "value": "America/New_York"},
+    ],
 )
 def store_user_data(key: str, value: str) -> str:
     """Store user information in the database.
@@ -65,9 +71,15 @@ def store_user_data(key: str, value: str) -> str:
 
 @tool(
     name="get_user_data",
-    category=ToolCategory.SYSTEM,
+    category=ToolCategory.KNOWLEDGE,
     description="Retrieve user information from the database by key",
     requires_api=False,
+    keywords=["get", "retrieve", "user", "data", "recall", "profile", "setting"],
+    input_examples=[
+        {"key": "name"},
+        {"key": "email"},
+        {"key": "preferences"},
+    ],
 )
 def get_user_data(key: str) -> str:
     """Retrieve user information from the database.

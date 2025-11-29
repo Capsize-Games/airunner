@@ -1,14 +1,10 @@
-"""Knowledge data models."""
+"""Knowledge data - now using daily markdown files.
 
-# Database models
-from airunner.components.knowledge.data.models import KnowledgeFact
-from airunner.components.knowledge.data.knowledge_relationship import (
-    KnowledgeRelationship,
-)
+The old KnowledgeFact and KnowledgeRelationship database models
+have been removed in favor of daily markdown files stored in:
+  ~/.local/share/airunner/text/knowledge/YYYY-MM-DD.md
 
-# Python dataclasses (re-export from parent data.py)
-# These are imported via the parent module's data.py file
-# To avoid circular imports, we don't re-export them here
-# Import directly from airunner.components.knowledge.data (file) instead
+See airunner.components.knowledge.knowledge_base for the new system.
+"""
 
-__all__ = ["KnowledgeFact", "KnowledgeRelationship"]
+__all__ = []

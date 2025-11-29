@@ -68,7 +68,17 @@ class GenerationMixin:
         if tool_calls:
             tool_calls = self._deduplicate_tool_calls(tool_calls)
 
-        message = AIMessage(content=cleaned_text, tool_calls=tool_calls or [])
+        # CRITICAL: Generate a stable message ID based on tool_calls for proper deduplication
+        # LangGraph's add_messages reducer deduplicates by message ID - without a consistent ID,
+        # the same tool call message can be added multiple times to the checkpoint state.
+        message_id = None
+        if tool_calls:
+            # Use the first tool_call's ID as the basis for the message ID
+            first_tool_id = tool_calls[0].get("id", "")
+            if first_tool_id:
+                message_id = f"ai-tool-{first_tool_id}"
+
+        message = AIMessage(content=cleaned_text, tool_calls=tool_calls or [], id=message_id)
         generation = ChatGeneration(message=message)
 
         return ChatResult(generations=[generation])

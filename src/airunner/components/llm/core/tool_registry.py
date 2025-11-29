@@ -36,6 +36,7 @@ class ToolCategory(Enum):
     - MOOD: Emotional analysis and tracking
     - ANALYSIS: General analysis tools
     - WORKFLOW: Workflow and process management
+    - KNOWLEDGE: User/conversation memory and fact storage
 
     Legacy categories (being phased out or reorganized):
     - SEARCH: Being split into RESEARCH and QA
@@ -63,6 +64,7 @@ class ToolCategory(Enum):
         "generation"  # Direct text generation without conversational wrappers
     )
     PROJECT = "project"  # Long-running project management
+    KNOWLEDGE = "knowledge"  # User/conversation memory and fact storage
 
     # Legacy categories (for backward compatibility)
     SEARCH = "search"  # Use RESEARCH or QA instead
