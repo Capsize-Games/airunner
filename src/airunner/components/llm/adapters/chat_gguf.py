@@ -44,11 +44,94 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
+class PromptTemplate:
+    """Prompt templates for different model architectures."""
+    
+    # ChatML format (Qwen, Qwen2, Qwen2.5, Qwen3, many fine-tunes)
+    CHATML = {
+        "system_start": "<|im_start|>system\n",
+        "system_end": "<|im_end|>\n",
+        "user_start": "<|im_start|>user\n",
+        "user_end": "<|im_end|>\n",
+        "assistant_start": "<|im_start|>assistant\n",
+        "assistant_end": "<|im_end|>\n",
+        "stop_tokens": ["<|im_end|>", "<|endoftext|>"],
+    }
+    
+    # Llama 3/3.1/3.2/4 format
+    LLAMA3 = {
+        "system_start": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n",
+        "system_end": "<|eot_id|>",
+        "user_start": "<|start_header_id|>user<|end_header_id|>\n\n",
+        "user_end": "<|eot_id|>",
+        "assistant_start": "<|start_header_id|>assistant<|end_header_id|>\n\n",
+        "assistant_end": "<|eot_id|>",
+        "stop_tokens": ["<|eot_id|}}", "<|end_of_text|>"],
+    }
+    
+    # Mistral/Ministral/Magistral format (v3 tokenizer)
+    MISTRAL = {
+        "system_start": "[INST] ",
+        "system_end": "\n",
+        "user_start": "",
+        "user_end": " [/INST]",
+        "assistant_start": "",
+        "assistant_end": "</s>",
+        "stop_tokens": ["</s>", "[INST]"],
+    }
+    
+    # Mistral v7 (Nemo/newer) format with system support
+    MISTRAL_V7 = {
+        "system_start": "<s>[SYSTEM_PROMPT] ",
+        "system_end": " [/SYSTEM_PROMPT]",
+        "user_start": "[INST] ",
+        "user_end": " [/INST]",
+        "assistant_start": "",
+        "assistant_end": "</s>",
+        "stop_tokens": ["</s>", "[INST]"],
+    }
+
+
+def detect_model_template(model_path: str) -> dict:
+    """Detect the appropriate prompt template based on model filename.
+    
+    Args:
+        model_path: Path to the GGUF model file
+        
+    Returns:
+        Prompt template dictionary
+    """
+    path_lower = model_path.lower()
+    
+    # Llama 3.x detection (Llama 4 models are too large for single-file GGUF)
+    if any(x in path_lower for x in ["llama-3", "llama3", "meta-llama-3"]):
+        return PromptTemplate.LLAMA3
+    
+    # Mistral/Ministral/Magistral detection
+    if any(x in path_lower for x in ["mistral", "ministral", "magistral"]):
+        # Newer Mistral models (Nemo, v7+) use different format
+        if any(x in path_lower for x in ["nemo", "magistral"]):
+            return PromptTemplate.MISTRAL_V7
+        return PromptTemplate.MISTRAL
+    
+    # Qwen models (all versions use ChatML)
+    if "qwen" in path_lower:
+        return PromptTemplate.CHATML
+    
+    # Default to ChatML (most compatible)
+    return PromptTemplate.CHATML
+
+
 class ChatGGUF(BaseChatModel):
     """LangChain ChatModel adapter for GGUF models via llama-cpp-python.
 
     This adapter provides a unified interface for GGUF model inference,
     compatible with existing LangGraph workflows and tool calling.
+    
+    Supports multiple model architectures with automatic template detection:
+    - Qwen/Qwen2/Qwen2.5/Qwen3 (ChatML format)
+    - Llama 3/3.1/3.2/4 (Llama format)
+    - Mistral/Ministral/Magistral (Mistral format)
 
     Attributes:
         model_path: Path to the GGUF model file
@@ -62,6 +145,7 @@ class ChatGGUF(BaseChatModel):
         repeat_penalty: Penalty for repeating tokens
         tools: Bound tools for function calling
         enable_thinking: Whether to enable thinking mode (Qwen3-style)
+        prompt_template: Override auto-detected prompt template
     """
 
     model_path: str
@@ -76,8 +160,10 @@ class ChatGGUF(BaseChatModel):
     flash_attn: bool = True  # Use flash attention to reduce VRAM
     tools: Optional[List[Any]] = None
     enable_thinking: bool = True
+    prompt_template: Optional[Dict[str, Any]] = None  # Auto-detected if None
     _interrupted: bool = False
     _llama: Optional[Any] = None  # Llama instance from llama-cpp-python
+    _template: Optional[Dict[str, Any]] = None  # Cached template
 
     class Config:
         """Pydantic configuration."""
@@ -113,6 +199,11 @@ class ChatGGUF(BaseChatModel):
     def model_post_init(self, __context: Any) -> None:
         """Initialize the llama-cpp-python model after Pydantic init."""
         super().model_post_init(__context)
+        # Detect prompt template based on model filename
+        if self.prompt_template is not None:
+            self._template = self.prompt_template
+        else:
+            self._template = detect_model_template(self.model_path)
         self._load_model()
 
     def _load_model(self) -> None:
@@ -128,8 +219,17 @@ class ChatGGUF(BaseChatModel):
                 "Install with: pip install llama-cpp-python"
             )
 
+        # Log detected template type
+        template_name = "ChatML"
+        if self._template == PromptTemplate.LLAMA3:
+            template_name = "Llama3"
+        elif self._template == PromptTemplate.MISTRAL:
+            template_name = "Mistral"
+        elif self._template == PromptTemplate.MISTRAL_V7:
+            template_name = "Mistral-v7"
+        
         self.logger.info(f"Loading GGUF model from {self.model_path}")
-        self.logger.info(f"  n_ctx={self.n_ctx}, n_gpu_layers={self.n_gpu_layers}, flash_attn={self.flash_attn}")
+        self.logger.info(f"  Template: {template_name}, n_ctx={self.n_ctx}, n_gpu_layers={self.n_gpu_layers}")
 
         self._llama = Llama(
             model_path=self.model_path,
@@ -155,22 +255,93 @@ class ChatGGUF(BaseChatModel):
     def _messages_to_prompt(self, messages: List[BaseMessage]) -> str:
         """Convert LangChain messages to a prompt string.
 
-        Uses ChatML format which is widely supported by GGUF models.
+        Uses auto-detected template based on model architecture:
+        - ChatML for Qwen models
+        - Llama format for Llama 3/3.1/3.2/4 models  
+        - Mistral format for Mistral/Ministral/Magistral models
+        
+        CRITICAL: If tools are bound, injects tool instructions into the system
+        message so the model knows what tools are available and how to use them.
         """
+        t = self._template
         prompt_parts = []
+        system_content = None
 
+        # For Mistral format, we need to handle system differently
+        # (it gets prepended to the first user message)
+        is_mistral = t == PromptTemplate.MISTRAL
+        
         for message in messages:
             if isinstance(message, SystemMessage):
-                prompt_parts.append(f"<|im_start|>system\n{message.content}<|im_end|>")
+                content = message.content
+                # Inject tool instructions into system message if tools are bound
+                if self.tools:
+                    content = self._inject_tool_instructions(content)
+                if is_mistral:
+                    # Store system for prepending to first user message
+                    system_content = content
+                else:
+                    prompt_parts.append(
+                        f"{t['system_start']}{content}{t['system_end']}"
+                    )
             elif isinstance(message, HumanMessage):
-                prompt_parts.append(f"<|im_start|>user\n{message.content}<|im_end|>")
+                content = message.content
+                if is_mistral and system_content:
+                    # Prepend system to first user message for Mistral
+                    content = f"{system_content}\n\n{content}"
+                    system_content = None
+                prompt_parts.append(
+                    f"{t['user_start']}{content}{t['user_end']}"
+                )
             elif isinstance(message, AIMessage):
-                prompt_parts.append(f"<|im_start|>assistant\n{message.content}<|im_end|>")
+                prompt_parts.append(
+                    f"{t['assistant_start']}{message.content}{t['assistant_end']}"
+                )
 
         # Add assistant prefix for generation
-        prompt_parts.append("<|im_start|>assistant\n")
+        prompt_parts.append(t['assistant_start'])
 
-        return "\n".join(prompt_parts)
+        return "".join(prompt_parts)
+
+    def _inject_tool_instructions(self, system_content: str) -> str:
+        """Inject tool instructions into the system message.
+
+        Args:
+            system_content: The original system message content.
+
+        Returns:
+            System content with tool instructions appended.
+        """
+        tool_schemas_text = self.get_tool_schemas_text()
+        if not tool_schemas_text:
+            return system_content
+
+        tool_instructions = f"""
+
+## Available Tools
+
+You have access to the following tools:
+
+{tool_schemas_text}
+
+## Tool Usage Instructions
+
+When you need to use a tool, respond with a tool call in this EXACT format:
+<tool_call>{{"name": "tool_name", "arguments": {{"arg1": "value1", "arg2": "value2"}}}}</tool_call>
+
+CRITICAL RULES:
+1. ALWAYS use the exact tool_call format shown above - do NOT invent your own format
+2. NEVER hallucinate or make up tool results - you MUST call the tool and wait for real results
+3. If you need information from the internet, USE the search_web tool - do NOT pretend to have results
+4. After calling a tool, WAIT for the actual results before responding to the user
+5. You can call multiple tools if needed, one at a time
+6. Only respond with your final answer AFTER receiving real tool results"""
+
+        return system_content + tool_instructions
+
+    def _get_stop_tokens(self) -> List[str]:
+        """Get stop tokens for the current model template."""
+        return self._template.get("stop_tokens", ["<|im_end|>", "<|endoftext|>"])
 
     def _generate(
         self,
@@ -192,7 +363,7 @@ class ChatGGUF(BaseChatModel):
         """
         prompt = self._messages_to_prompt(messages)
 
-        stop_sequences = stop or ["<|im_end|>", "<|endoftext|>"]
+        stop_sequences = stop or self._get_stop_tokens()
 
         response = self._llama(
             prompt,
@@ -237,7 +408,7 @@ class ChatGGUF(BaseChatModel):
             ChatGenerationChunk objects with streamed content
         """
         prompt = self._messages_to_prompt(messages)
-        stop_sequences = stop or ["<|im_end|>", "<|endoftext|>"]
+        stop_sequences = stop or self._get_stop_tokens()
 
         self._interrupted = False
         full_response = []
@@ -333,7 +504,9 @@ class ChatGGUF(BaseChatModel):
                         "name": call_data["name"],
                         "args": call_data.get("arguments", call_data.get("args", {})),
                     }]
-                    return tool_calls, response_text
+                    # Clean the JSON from the response text
+                    cleaned = response_text.replace(json_match.group(), "").strip()
+                    return tool_calls, cleaned
         except (json.JSONDecodeError, KeyError):
             pass
 

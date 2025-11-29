@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Optional
 
 from PySide6.QtCore import Slot, Qt
@@ -72,12 +73,27 @@ class ChatPromptWidget(BaseWidget):
         self.action_menu_displayed = None
         self.messages_spacer = None
         self.chat_loaded = False
-        self.ui.action.blockSignals(True)
-        self.ui.action.clear()
         self._model_context_tokens: Optional[int] = None
         
-        # Update action dropdown based on model capabilities
-        self._update_action_dropdown()
+        # Token tracking for sent/received messages
+        self._tokens_sent_last: int = 0
+        self._tokens_received_last: int = 0
+        self._tokens_sent_total: int = 0
+        self._tokens_received_total: int = 0
+        self._current_response_tokens: int = 0  # Accumulator for streaming response
+        
+        # Initialize provider dropdown
+        self._populate_provider_dropdown()
+        
+        # Initialize model dropdown
+        self._populate_model_dropdown()
+        
+        # Connect model dropdown edit signal for custom model entry
+        if hasattr(self.ui, "model_dropdown"):
+            self.ui.model_dropdown.lineEdit().returnPressed.connect(self._on_custom_model_entered)
+        
+        # Hardcode action to AUTO - we don't use the dropdown anymore
+        self.update_llm_generator_settings(action=LLMActionType.APPLICATION_COMMAND.name)
         
         # Initialize thinking checkbox from settings
         if hasattr(self.ui, "thinking_checkbox"):
@@ -93,6 +109,11 @@ class ChatPromptWidget(BaseWidget):
         
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.ui.prompt.keyPressEvent = self.handle_key_press
+        
+        # Add margins to prompt text area to prevent overlap with token labels
+        # Top margin for token_count label, bottom margin for last/total labels
+        self.ui.prompt.setViewportMargins(24, 24, 24, 24)
+        
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -111,6 +132,9 @@ class ChatPromptWidget(BaseWidget):
         self._model_context_tokens = self._resolve_model_context_length()
         if hasattr(self.ui, "token_count"):
             self._set_token_count_label(0, self._model_context_tokens)
+        
+        # Initialize token tracking labels
+        self._update_token_tracking_labels()
 
     def _apply_default_splitter_settings(self):
         if hasattr(self, "ui") and self.ui is not None:
@@ -133,6 +157,14 @@ class ChatPromptWidget(BaseWidget):
     @Slot()
     def on_clear_conversation_button_clicked(self):
         """Create a new conversation and clear the display."""
+        # Reset token counters for new conversation
+        self._tokens_sent_last = 0
+        self._tokens_received_last = 0
+        self._tokens_sent_total = 0
+        self._tokens_received_total = 0
+        self._current_response_tokens = 0
+        self._update_token_tracking_labels()
+        
         # Create a new conversation in the database
         new_conversation = Conversation.create()
         if new_conversation:
@@ -186,7 +218,8 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def action(self) -> LLMActionType:
-        return LLMActionType[self.llm_generator_settings.action]
+        # Action is always AUTO (APPLICATION_COMMAND) - handles everything automatically
+        return LLMActionType.APPLICATION_COMMAND
 
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:
@@ -256,6 +289,15 @@ class ChatPromptWidget(BaseWidget):
 
         self.clear_prompt()
         self.start_progress_bar()
+        
+        # Track sent tokens
+        sent_tokens = self._estimate_token_count(prompt)
+        self._tokens_sent_last = sent_tokens
+        self._tokens_sent_total += sent_tokens
+        self._tokens_received_last = 0
+        self._current_response_tokens = 0
+        self._update_token_tracking_labels()
+        
         # Create LLMRequest optimized for the action type
         self.api.llm.send_request(
             prompt=prompt,
@@ -287,21 +329,8 @@ class ChatPromptWidget(BaseWidget):
             self.loading = False
 
     def llm_action_changed(self, val: str):
-        if val == "Chat":
-            llm_action_value = LLMActionType.CHAT
-        elif val == "Image":
-            llm_action_value = LLMActionType.GENERATE_IMAGE
-        elif val == "RAG":
-            llm_action_value = LLMActionType.PERFORM_RAG_SEARCH
-        elif val == "Deep Research":
-            llm_action_value = LLMActionType.DEEP_RESEARCH
-        elif val == "Auto":
-            llm_action_value = LLMActionType.APPLICATION_COMMAND
-        elif val == "Use Computer":
-            llm_action_value = LLMActionType.USE_COMPUTER
-        else:
-            llm_action_value = LLMActionType.APPLICATION_COMMAND
-        self.update_llm_generator_settings(action=llm_action_value.name)
+        # Deprecated - action is now always AUTO
+        pass
 
     def thinking_toggled(self, checked: bool) -> None:
         """Handle thinking checkbox toggle.
@@ -391,6 +420,17 @@ class ChatPromptWidget(BaseWidget):
             )
         else:
             self.ui.token_count.setText(f"~{token_count:,} tokens")
+
+    def _update_token_tracking_labels(self) -> None:
+        """Update the sent/received token tracking labels."""
+        if hasattr(self.ui, "last_message_tokens"):
+            self.ui.last_message_tokens.setText(
+                f"Last: ↑{self._tokens_sent_last:,} ↓{self._tokens_received_last:,}"
+            )
+        if hasattr(self.ui, "total_tokens"):
+            self.ui.total_tokens.setText(
+                f"Total: ↑{self._tokens_sent_total:,} ↓{self._tokens_received_total:,}"
+            )
 
     def _resolve_model_context_length(self) -> Optional[int]:
         settings = getattr(self, "llm_generator_settings", None)
@@ -585,56 +625,8 @@ class ChatPromptWidget(BaseWidget):
         return None
 
     def _update_action_dropdown(self) -> None:
-        """Update the action dropdown based on current model capabilities.
-        
-        Actions are filtered based on what the model can actually do:
-        - Chat: Always available
-        - Auto/Deep Research/Use Computer: Requires function_calling=True
-        - RAG: Always available (basic RAG works with any model)
-        - Image: Based on AIRUNNER_ART_ENABLED setting
-        """
-        capabilities = self._get_model_capabilities()
-        has_tools = capabilities.get("function_calling", False)
-        
-        # Build the action map based on capabilities
-        action_map = [("Chat", LLMActionType.CHAT)]
-        
-        if has_tools:
-            action_map.append(("Auto", LLMActionType.APPLICATION_COMMAND))
-        
-        # RAG is always available - basic retrieval works with any model
-        action_map.append(("RAG", LLMActionType.PERFORM_RAG_SEARCH))
-        
-        if has_tools:
-            action_map.append(("Deep Research", LLMActionType.DEEP_RESEARCH))
-            action_map.append(("Use Computer", LLMActionType.USE_COMPUTER))
-        
-        if AIRUNNER_ART_ENABLED:
-            action_map.append(("Image", LLMActionType.GENERATE_IMAGE))
-        
-        # Store current selection before clearing
-        current_action = self.action
-        
-        self.ui.action.blockSignals(True)
-        self.ui.action.clear()
-        
-        for label, _ in action_map:
-            self.ui.action.addItem(label)
-        
-        # Try to restore previous selection, default to Chat if not available
-        selected_idx = 0
-        for idx, (_, action_type) in enumerate(action_map):
-            if current_action is action_type:
-                selected_idx = idx
-                break
-        
-        self.ui.action.setCurrentIndex(selected_idx)
-        self.ui.action.blockSignals(False)
-        
-        # If the action changed (previous action no longer available), update settings
-        new_action = action_map[selected_idx][1]
-        if new_action is not current_action:
-            self.update_llm_generator_settings(action=new_action.name)
+        """Deprecated - action is always AUTO now."""
+        pass
 
     def _update_thinking_checkbox_visibility(self) -> None:
         """Update the visibility of the thinking checkbox based on model capability."""
@@ -729,9 +721,22 @@ class ChatPromptWidget(BaseWidget):
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
-        if llm_response is not None and getattr(
-            llm_response, "is_first_message", False
-        ):
+        if llm_response is None:
+            return
+            
+        # Track received tokens from streaming response
+        message = getattr(llm_response, "message", "") or ""
+        if message:
+            chunk_tokens = self._estimate_token_count(message)
+            self._current_response_tokens += chunk_tokens
+        
+        # Update labels when response is complete
+        if getattr(llm_response, "is_end_of_message", False):
+            self._tokens_received_last = self._current_response_tokens
+            self._tokens_received_total += self._current_response_tokens
+            self._update_token_tracking_labels()
+        
+        if getattr(llm_response, "is_first_message", False):
             self.stop_progress_bar()
             self.enable_generate()
 
@@ -850,3 +855,312 @@ class ChatPromptWidget(BaseWidget):
         api = getattr(self, "api", None)
         if api is not None:
             setattr(api, "current_conversation_id", conversation_id)
+
+    def _populate_model_dropdown(self) -> None:
+        """Populate the model dropdown with available models for current provider."""
+        if not hasattr(self.ui, "model_dropdown"):
+            return
+        
+        self.ui.model_dropdown.blockSignals(True)
+        self.ui.model_dropdown.clear()
+        
+        # Get current provider from dropdown or settings
+        provider = ModelService.LOCAL.value
+        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
+            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        
+        # Make dropdown editable for custom model entry
+        self.ui.model_dropdown.setEditable(True)
+        self.ui.model_dropdown.setInsertPolicy(self.ui.model_dropdown.InsertPolicy.NoInsert)
+        
+        # Get models based on provider
+        if provider == ModelService.LOCAL.value:
+            # HuggingFace/Local models - show from LOCAL_MODELS config
+            models = LLMProviderConfig.get_models_for_provider("local")
+            for model_id in models:
+                if model_id == "custom":
+                    continue
+                model_info = LLMProviderConfig.get_model_info("local", model_id)
+                if model_info:
+                    display_name = model_info.get("name", model_id)
+                    self.ui.model_dropdown.addItem(display_name, model_id)
+            
+            # Add custom option at end
+            self.ui.model_dropdown.addItem("-- Custom Path --", "custom")
+            
+        elif provider == ModelService.OLLAMA.value:
+            # Ollama models
+            models = LLMProviderConfig.get_models_for_provider("ollama")
+            for model_id in models:
+                if model_id == "custom":
+                    continue
+                self.ui.model_dropdown.addItem(model_id, model_id)
+            
+            # Add custom option
+            self.ui.model_dropdown.addItem("-- Custom Model --", "custom")
+            
+        elif provider == ModelService.OPENROUTER.value:
+            # OpenRouter models
+            models = LLMProviderConfig.get_models_for_provider("openrouter")
+            for model_id in models:
+                if model_id == "custom":
+                    continue
+                self.ui.model_dropdown.addItem(model_id, model_id)
+            
+            # Add custom option
+            self.ui.model_dropdown.addItem("-- Custom Model --", "custom")
+        
+        # Try to restore current selection
+        self._restore_model_selection(provider)
+        
+        self.ui.model_dropdown.blockSignals(False)
+    
+    def _restore_model_selection(self, provider: str) -> None:
+        """Restore model selection based on saved settings."""
+        if provider == ModelService.LOCAL.value:
+            # For HuggingFace, match by model path
+            current_path = getattr(self.llm_generator_settings, "model_path", "") or ""
+            if current_path:
+                for i in range(self.ui.model_dropdown.count()):
+                    model_id = self.ui.model_dropdown.itemData(i)
+                    if model_id == "custom":
+                        continue
+                    model_info = LLMProviderConfig.get_model_info("local", model_id)
+                    if model_info:
+                        model_name = model_info.get("name", "")
+                        if model_name and model_name in current_path:
+                            self.ui.model_dropdown.setCurrentIndex(i)
+                            self._update_model_tooltip(model_id)
+                            return
+        else:
+            # For Ollama/OpenRouter, match by model_version
+            current_model = getattr(self.llm_generator_settings, "model_version", "") or ""
+            if current_model:
+                for i in range(self.ui.model_dropdown.count()):
+                    model_id = self.ui.model_dropdown.itemData(i)
+                    if model_id == current_model or self.ui.model_dropdown.itemText(i) == current_model:
+                        self.ui.model_dropdown.setCurrentIndex(i)
+                        return
+                # If not found in list, it might be custom - set as text
+                self.ui.model_dropdown.setEditText(current_model)
+
+    def _update_model_tooltip(self, model_id: str) -> None:
+        """Update the model dropdown tooltip with model metadata."""
+        if not hasattr(self.ui, "model_dropdown"):
+            return
+        
+        # Get current provider
+        provider = ModelService.LOCAL.value
+        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
+            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        
+        if model_id == "custom":
+            if provider == ModelService.LOCAL.value:
+                self.ui.model_dropdown.setToolTip("Enter a custom model path or HuggingFace repo ID")
+            elif provider == ModelService.OLLAMA.value:
+                self.ui.model_dropdown.setToolTip("Enter any Ollama model name (e.g., llama3.2:latest)")
+            else:
+                self.ui.model_dropdown.setToolTip("Enter any OpenRouter model ID (e.g., anthropic/claude-3-sonnet)")
+            return
+        
+        if provider == ModelService.LOCAL.value:
+            # HuggingFace models - show full metadata
+            model_info = LLMProviderConfig.get_model_info("local", model_id)
+            if not model_info:
+                self.ui.model_dropdown.setToolTip("Select LLM model")
+                return
+            
+            vram_gb = model_info.get("vram_4bit_gb", "?")
+            context_length = model_info.get("context_length", 0)
+            context_k = f"{context_length // 1000}K" if context_length >= 1000 else str(context_length)
+            
+            tool_mode = model_info.get("tool_calling_mode", "none")
+            tool_str = tool_mode.upper() if tool_mode != "none" else "None"
+            
+            gguf_file = model_info.get("gguf_filename", "")
+            gguf_str = gguf_file if gguf_file else "Not available"
+            
+            description = model_info.get("description", "")
+            
+            tooltip = f"~{vram_gb}GB VRAM | {context_k} context | Tools: {tool_str}\n"
+            tooltip += f"GGUF: {gguf_str}"
+            if description:
+                tooltip += f"\n{description}"
+            
+            self.ui.model_dropdown.setToolTip(tooltip)
+            
+        elif provider == ModelService.OLLAMA.value:
+            # Ollama - simpler tooltip
+            self.ui.model_dropdown.setToolTip(f"Ollama model: {model_id}\nRequires Ollama running locally")
+            
+        elif provider == ModelService.OPENROUTER.value:
+            # OpenRouter - show model ID
+            self.ui.model_dropdown.setToolTip(f"OpenRouter model: {model_id}\nRequires OpenRouter API key")
+
+    def _populate_provider_dropdown(self) -> None:
+        """Populate the provider dropdown with available providers."""
+        if not hasattr(self.ui, "provider_dropdown"):
+            return
+        
+        self.ui.provider_dropdown.blockSignals(True)
+        self.ui.provider_dropdown.clear()
+        
+        # Provider options with display name -> ModelService value mapping
+        providers = [
+            ("HuggingFace", ModelService.LOCAL.value),
+            ("Ollama", ModelService.OLLAMA.value),
+            ("OpenRouter", ModelService.OPENROUTER.value),
+        ]
+        
+        for display_name, service_value in providers:
+            self.ui.provider_dropdown.addItem(display_name, service_value)
+        
+        # Set current selection based on saved settings
+        current_service = getattr(self.llm_generator_settings, "model_service", ModelService.LOCAL.value)
+        for i in range(self.ui.provider_dropdown.count()):
+            if self.ui.provider_dropdown.itemData(i) == current_service:
+                self.ui.provider_dropdown.setCurrentIndex(i)
+                break
+        
+        self.ui.provider_dropdown.blockSignals(False)
+
+    @Slot(int)
+    def on_provider_changed(self, index: int) -> None:
+        """Handle provider selection change from dropdown."""
+        if index < 0:
+            return
+        
+        provider = self.ui.provider_dropdown.itemData(index)
+        if not provider:
+            return
+        
+        # Update settings with new provider
+        self.update_llm_generator_settings(model_service=provider)
+        
+        # Repopulate model dropdown for new provider
+        self._populate_model_dropdown()
+
+    @Slot(int)
+    def on_model_changed(self, index: int) -> None:
+        """Handle model selection change from dropdown."""
+        if index < 0:
+            return
+        
+        model_id = self.ui.model_dropdown.itemData(index)
+        model_text = self.ui.model_dropdown.currentText()
+        
+        # Get current provider
+        provider = ModelService.LOCAL.value
+        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
+            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        
+        # Handle custom model entry
+        if model_id == "custom" or not model_id:
+            # User is entering custom model - use the text they typed
+            custom_model = model_text if model_text and not model_text.startswith("--") else ""
+            if custom_model:
+                self._handle_custom_model(provider, custom_model)
+            return
+        
+        # Update tooltip with model metadata
+        self._update_model_tooltip(model_id)
+        
+        if provider == ModelService.LOCAL.value:
+            # HuggingFace/Local model
+            model_info = LLMProviderConfig.get_model_info("local", model_id)
+            if not model_info:
+                return
+            
+            model_name = model_info.get("name", model_id)
+            base_path = os.path.expanduser(
+                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+            )
+            model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
+            
+            self.update_llm_generator_settings(
+                model_path=model_path,
+                model_version=model_name,
+            )
+            
+            # Emit signal that model changed (will trigger reload/download)
+            self.emit_signal(
+                SignalCode.LLM_MODEL_CHANGED,
+                {"model_path": model_path, "model_name": model_name},
+            )
+        else:
+            # Ollama or OpenRouter - just update model_version
+            self.update_llm_generator_settings(
+                model_version=model_id,
+                model_path="",  # Not used for remote providers
+            )
+            
+            # Emit signal
+            self.emit_signal(
+                SignalCode.LLM_MODEL_CHANGED,
+                {"model_path": "", "model_name": model_id},
+            )
+        
+        # Update thinking checkbox visibility based on new model
+        self._update_thinking_checkbox_visibility()
+        
+        # Update context tokens
+        self._refresh_model_context_tokens()
+
+    def _handle_custom_model(self, provider: str, custom_model: str) -> None:
+        """Handle custom model entry for any provider."""
+        if provider == ModelService.LOCAL.value:
+            # Could be a path or HuggingFace repo ID
+            if "/" in custom_model and not os.path.exists(custom_model):
+                # Likely a HuggingFace repo ID
+                base_path = os.path.expanduser(
+                    getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                )
+                # Extract model name from repo ID (e.g., "mistralai/Mistral-7B" -> "Mistral-7B")
+                model_name = custom_model.split("/")[-1]
+                model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
+            else:
+                # Assume it's a local path
+                model_path = custom_model
+                model_name = os.path.basename(custom_model)
+            
+            self.update_llm_generator_settings(
+                model_path=model_path,
+                model_version=model_name,
+            )
+            self.emit_signal(
+                SignalCode.LLM_MODEL_CHANGED,
+                {"model_path": model_path, "model_name": model_name},
+            )
+        else:
+            # Ollama or OpenRouter - just set the model name
+            self.update_llm_generator_settings(
+                model_version=custom_model,
+                model_path="",
+            )
+            self.emit_signal(
+                SignalCode.LLM_MODEL_CHANGED,
+                {"model_path": "", "model_name": custom_model},
+            )
+
+    def _on_custom_model_entered(self) -> None:
+        """Handle when user presses Enter after typing a custom model."""
+        if not hasattr(self.ui, "model_dropdown"):
+            return
+        
+        custom_text = self.ui.model_dropdown.currentText()
+        if not custom_text or custom_text.startswith("--"):
+            return
+        
+        # Check if this is already a known model
+        for i in range(self.ui.model_dropdown.count()):
+            if self.ui.model_dropdown.itemText(i) == custom_text:
+                # It's a known model, don't treat as custom
+                return
+        
+        # Get current provider
+        provider = ModelService.LOCAL.value
+        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
+            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        
+        # Handle as custom model
+        self._handle_custom_model(provider, custom_text)
