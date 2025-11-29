@@ -1,6 +1,7 @@
 __all__ = [
     "create_worker",
     "get_lat_lon",
+    "get_model_optimizer",
     "get_torch_device",
     "get_version",
     "open_file_path",
@@ -20,6 +21,7 @@ __all__ = [
     "replace_numbers_with_words",
     "replace_misc_with_words",
     "roman_to_int",
+    "ModelOptimizer",
 ]
 
 
@@ -108,4 +110,12 @@ def __getattr__(name):
         from airunner.components.llm.utils.text_preprocessing import roman_to_int
 
         return roman_to_int
+    elif name == "get_model_optimizer":
+        from airunner.utils.model_optimizer import get_model_optimizer
+
+        return get_model_optimizer
+    elif name == "ModelOptimizer":
+        from airunner.utils.model_optimizer import ModelOptimizer
+
+        return ModelOptimizer
     raise AttributeError(f"module {__name__} has no attribute {name}")

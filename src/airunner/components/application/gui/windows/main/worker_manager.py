@@ -799,10 +799,88 @@ class WorkerManager(Worker):
             self.llm_generate_worker.on_llm_model_changed_signal(data)
 
     def on_llm_model_download_required_signal(self, data):
+        self.logger.info(f"WorkerManager received LLM_MODEL_DOWNLOAD_REQUIRED: {data}")
         if self._llm_generate_worker is not None:
+            self.logger.info("Forwarding to llm_generate_worker")
             self.llm_generate_worker.on_llm_model_download_required_signal(
                 data
             )
+        else:
+            # Handle download directly without LLM worker
+            self.logger.info("LLM worker not available, handling download directly")
+            self._handle_llm_download_directly(data)
+
+    def _handle_llm_download_directly(self, data):
+        """Handle LLM model download when LLM worker is not available.
+        
+        This allows downloading models from settings before the LLM is loaded.
+        """
+        from PySide6.QtWidgets import QApplication
+        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+            HuggingFaceDownloadDialog,
+        )
+        from airunner.components.llm.managers.download_huggingface import (
+            DownloadHuggingFaceModel,
+        )
+        
+        model_path = data.get("model_path", "")
+        model_name = data.get("model_name", "Unknown Model")
+        repo_id = data.get("repo_id", "")
+        model_type = data.get("model_type", "llm")
+        gguf_filename = data.get("gguf_filename")
+        
+        if not repo_id:
+            self.logger.error("No repo_id provided in download request")
+            return
+        
+        # Get main window
+        main_window = None
+        app = QApplication.instance()
+        for widget in app.topLevelWidgets():
+            if widget.__class__.__name__ == "MainWindow":
+                main_window = widget
+                break
+        
+        if not main_window:
+            self.logger.error("Cannot show download dialog - main window not found")
+            return
+        
+        is_gguf = model_type == "gguf" or gguf_filename is not None
+        dialog_model_name = f"{model_name} (GGUF)" if is_gguf else model_name
+        
+        # Create and show download dialog
+        self._download_dialog = HuggingFaceDownloadDialog(
+            parent=main_window,
+            model_name=dialog_model_name,
+            model_path=model_path,
+        )
+        
+        # Create download worker
+        self._huggingface_download_worker = create_worker(DownloadHuggingFaceModel)
+        
+        if is_gguf and gguf_filename:
+            self.logger.info(f"Starting GGUF download: {repo_id}/{gguf_filename}")
+            self._huggingface_download_worker.download(
+                repo_id=repo_id,
+                model_type="gguf",
+                output_dir=model_path,
+                setup_quantization=False,
+                quantization_bits=0,
+                missing_files=None,
+                gguf_filename=gguf_filename,
+            )
+        else:
+            self.logger.info(f"Starting standard download: {repo_id}")
+            self._huggingface_download_worker.download(
+                repo_id=repo_id,
+                model_type=model_type,
+                output_dir=model_path,
+                setup_quantization=True,
+                quantization_bits=data.get("quantization_bits", 4),
+                missing_files=data.get("missing_files"),
+            )
+        
+        self._download_dialog.show()
 
     def on_huggingface_download_complete_signal(self, data):
         if self._llm_generate_worker is not None:

@@ -37,8 +37,6 @@ function initializeChatView() {
         chatBridge.clearMessages.connect(clearMessages);
         chatBridge.toolStatusUpdate.connect(handleToolStatusUpdate);
         chatBridge.setMessages.connect(function (msgs) {
-            console.log(`[TOOL STATUS DEBUG] setMessages called with ${msgs.length} messages`);
-
             // Clear everything when setting messages (loading from saved data)
             // Tool status and thinking widgets will be recreated from saved message data
             clearMessages();
@@ -103,8 +101,6 @@ function initializeChatView() {
             // Only auto-scroll when the user hasn't manually scrolled up
             if (window.autoScrollEnabled) {
                 setTimeout(smoothScrollToBottom, 0);
-            } else {
-                if (console && console.debug) console.debug('[conversation.js] auto-scroll suppressed because user scrolled up');
             }
         }
         if (needsTypeset && window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
@@ -720,8 +716,6 @@ function stopThinkingAnimation() {
 }
 
 function handleThinkingStatusUpdate(status, content) {
-    console.log('[THINKING DEBUG] handleThinkingStatusUpdate called:', { status, contentLen: content.length });
-
     if (status === 'started') {
         currentThinkingContent = '';
         addStatusItem({
@@ -756,8 +750,6 @@ function toggleThinkingBlock() {
 }
 
 function handleToolStatusUpdate(toolId, toolName, query, status, details) {
-    console.log('[TOOL STATUS DEBUG] handleToolStatusUpdate called:', { toolId, toolName, query, status, details });
-
     const displayName = getToolDisplayName(toolName);
     const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
     const text = `${displayName} for "${queryPreview}"`;

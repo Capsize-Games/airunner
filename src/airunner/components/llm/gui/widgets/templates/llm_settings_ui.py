@@ -447,6 +447,7 @@ class Ui_llm_settings_widget(object):
         self.quantization_dropdown.addItem("")
         self.quantization_dropdown.addItem("")
         self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
         self.quantization_dropdown.setObjectName(u"quantization_dropdown")
         self.quantization_dropdown.setEnabled(False)
         self.quantization_dropdown.setFont(font1)
@@ -597,6 +598,7 @@ class Ui_llm_settings_widget(object):
         self.quantization_dropdown.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"2-bit (50% VRAM, -15% quality)", None))
         self.quantization_dropdown.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"4-bit (balanced, recommended)", None))
         self.quantization_dropdown.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"8-bit (200% VRAM, best quality)", None))
+        self.quantization_dropdown.setItemText(3, QCoreApplication.translate("llm_settings_widget", u"GGUF Q4_K_M (smallest, fastest)", None))
 
         self.model_info_label.setText(QCoreApplication.translate("llm_settings_widget", u"VRAM: -- GB | Context: -- tokens | Tool Calling: --", None))
         self.download_model_button.setText(QCoreApplication.translate("llm_settings_widget", u"Download Model from HuggingFace", None))

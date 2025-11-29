@@ -772,8 +772,6 @@ class ConversationWidget(BaseWidget):
         status = data.get("status", "")
         content = data.get("content", "")
 
-        self.logger.debug(f"[THINKING] Received signal: status={status}, content_len={len(content)}")
-
         # Send to JavaScript for rendering
         self._chat_bridge.updateThinkingStatus(status, content)
 

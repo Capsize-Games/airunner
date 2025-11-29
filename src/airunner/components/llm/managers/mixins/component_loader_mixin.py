@@ -27,7 +27,10 @@ class ComponentLoaderMixin:
         """Create the appropriate LangChain ChatModel based on settings.
 
         Sets self._chat_model to the created ChatModel instance or None if
-        creation fails. Also initializes RAG system if available.
+        creation fails.
+        
+        NOTE: RAG initialization is now lazy - embedding model only loads
+        when RAG is actually used (rag_files provided in request).
         """
         if self._chat_model is not None:
             return
@@ -45,13 +48,9 @@ class ComponentLoaderMixin:
                 f"ChatModel created: {type(self._chat_model).__name__}"
             )
 
-            # Now that chat model is loaded, initialize RAG system
-            # RAGMixin._setup_rag() checks if llm is available
-            if hasattr(self, "_setup_rag"):
-                self.logger.info(
-                    "Initializing RAG system now that LLM is loaded"
-                )
-                self._setup_rag()
+            # NOTE: RAG system initialization is now LAZY
+            # Embedding model (~650MB fp16) only loads when rag_files are used
+            # This saves VRAM when RAG isn't needed
 
         except Exception as e:
             self.logger.error(f"Error creating ChatModel: {e}")

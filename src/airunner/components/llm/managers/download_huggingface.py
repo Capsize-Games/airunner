@@ -40,16 +40,19 @@ class DownloadHuggingFaceModel(Worker):
         setup_quantization: bool = True,
         quantization_bits: int = 4,
         missing_files: Optional[list] = None,
+        gguf_filename: Optional[str] = None,
     ):
         """
         Download a HuggingFace model.
 
         Args:
             repo_id: HuggingFace repo ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
-            model_type: "mistral" or "llm" (determines required files)
+            model_type: "mistral", "llm", or "gguf" (determines required files)
             output_dir: Optional output directory (default: ~/.local/share/airunner/text/models/llm/causallm)
             setup_quantization: Ignored - quantization handled separately
             quantization_bits: Ignored - quantization handled separately
+            missing_files: Optional list of specific files to download
+            gguf_filename: For GGUF downloads, the specific .gguf file to download
         """
         # Cancel any existing download
         if self.download_worker and self.download_worker.running:
@@ -65,6 +68,7 @@ class DownloadHuggingFaceModel(Worker):
                 "model_type": model_type,
                 "output_dir": output_dir,
                 "missing_files": missing_files,
+                "gguf_filename": gguf_filename,
             }
         )
 

@@ -106,6 +106,7 @@ class StatusManagementMixin:
 
         Helps diagnose loading issues by reporting which specific
         components (model, tokenizer, chat model, workflow) failed.
+        For GGUF models, model and tokenizer are not required.
         """
         if not self._chat_model:
             self.logger.error("ChatModel failed to load")
@@ -114,12 +115,17 @@ class StatusManagementMixin:
             self.logger.error("Workflow manager failed to load")
 
         if self.llm_settings.use_local_llm:
-            if not self._model:
-                self.logger.error("Model failed to load")
+            # For GGUF models, _model and _tokenizer are not used
+            # Check if GGUF is selected via the validation mixin method
+            is_gguf = getattr(self, '_is_gguf_quantization_selected', lambda: False)()
+            
+            if not is_gguf:
+                if not self._model:
+                    self.logger.error("Model failed to load")
 
-            is_mistral3 = self._is_mistral3_model()
-            if not self._tokenizer and not is_mistral3:
-                self.logger.error("Tokenizer failed to load")
+                is_mistral3 = self._is_mistral3_model()
+                if not self._tokenizer and not is_mistral3:
+                    self.logger.error("Tokenizer failed to load")
 
     def _update_model_status(self: "LLMModelManager") -> None:
         """Update model loading status based on loaded components.

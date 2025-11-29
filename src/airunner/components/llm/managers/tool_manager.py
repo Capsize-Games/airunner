@@ -402,43 +402,14 @@ class ToolManager(
 
         filtered_tools = []
         category_set = set(categories)
-        print(
-            f"[TOOL MANAGER DEBUG] Filtering for categories: {category_set}",
-            flush=True,
-        )
-        print(
-            f"[TOOL MANAGER DEBUG] Total tools in registry: {len(ToolRegistry.all())}",
-            flush=True,
-        )
 
         for tool_info in ToolRegistry.all().values():
-            print(
-                f"[TOOL MANAGER DEBUG] Checking tool {tool_info.name} (category={tool_info.category})",
-                flush=True,
-            )
             if tool_info.category in category_set:
-                print(
-                    f"[TOOL MANAGER DEBUG] Category MATCH! Getting tool function...",
-                    flush=True,
-                )
                 # Get the actual tool function
                 tool_func = self._get_tool_by_name(tool_info.name)
                 if tool_func:
-                    print(
-                        f"[TOOL MANAGER DEBUG] Added tool: {tool_info.name}",
-                        flush=True,
-                    )
                     filtered_tools.append(tool_func)
-                else:
-                    print(
-                        f"[TOOL MANAGER DEBUG] Tool function NOT FOUND for {tool_info.name}",
-                        flush=True,
-                    )
 
-        print(
-            f"[TOOL MANAGER DEBUG] Filtered result: {len(filtered_tools)} tools",
-            flush=True,
-        )
         self.logger.info(
             f"Filtered to {len(filtered_tools)} tools from "
             f"categories: {[c.value for c in categories]}"
@@ -468,10 +439,6 @@ class ToolManager(
                     tool_info = t
                     break
         if tool_info:
-            print(
-                f"[TOOL MANAGER DEBUG] Found NEW tool in registry: {name}",
-                flush=True,
-            )
             # CRITICAL: Wrap with dependencies (API/Agent injection)
             wrapped_func = self._wrap_tool_with_dependencies(tool_info)
 
@@ -495,10 +462,6 @@ class ToolManager(
 
         getter = tool_getters.get(name)
         if getter:
-            print(
-                f"[TOOL MANAGER DEBUG] Found OLD mixin tool: {name}",
-                flush=True,
-            )
             return getter()
 
         self.logger.warning(f"Tool getter not found for: {name}")

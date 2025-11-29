@@ -448,14 +448,15 @@ mjx-container[display="true"] {
     transform: rotate(90deg);
 }
 
-/* Visible items container - shows 1-2 items */
+/* Visible items container - hidden by default, only header shows */
 .unified-status-visible {
-    position: relative;
-    overflow: hidden;
+    display: none;
 }
 
-.unified-status-visible:empty {
-    display: none;
+.unified-status-widget.expanded .unified-status-visible {
+    display: block;
+    position: relative;
+    overflow: hidden;
 }
 
 /* History container - shown when expanded */

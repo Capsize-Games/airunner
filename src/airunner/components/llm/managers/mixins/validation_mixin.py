@@ -7,11 +7,13 @@ loading verification for the LLM model manager.
 import os
 from typing import TYPE_CHECKING, List
 
+from airunner.components.llm.adapters import is_gguf_model
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
 from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.llm_model_manager import (
@@ -31,6 +33,10 @@ class ValidationMixin:
 
         Uses llm_file_bootstrap_data.py as the source of truth for required files.
         Only files listed in that configuration are considered essential.
+        
+        For GGUF models (when GGUF quantization is selected), checks for GGUF files
+        instead of safetensors. This allows using GGUF models even when safetensor
+        files have been deleted.
 
         Returns:
             True if model exists with required files, False otherwise.
@@ -42,8 +48,29 @@ class ValidationMixin:
         if not os.path.exists(model_path):
             self.logger.info(f"Model path does not exist: {model_path}")
             self._missing_files = None  # Full download needed
+            self._missing_gguf = False
             return False
 
+        # Check if GGUF quantization is selected (quantization_bits == 0 is GGUF)
+        gguf_selected = self._is_gguf_quantization_selected()
+        
+        if gguf_selected:
+            # GGUF mode: check for GGUF file instead of safetensors
+            if is_gguf_model(model_path):
+                self.logger.info(f"GGUF model found at {model_path}")
+                self._missing_files = None
+                self._missing_gguf = False
+                return True
+            else:
+                # GGUF selected but no GGUF file - trigger GGUF download
+                self.logger.info(
+                    f"GGUF quantization selected but no GGUF file found at {model_path}"
+                )
+                self._missing_files = None
+                self._missing_gguf = True
+                return False
+
+        # Normal mode: check safetensors using bootstrap data
         # Get repo_id for this model
         repo_id = self._get_repo_id_for_model()
         if not repo_id:
@@ -52,6 +79,7 @@ class ValidationMixin:
                 f"No repo_id found for {self.model_name} - using basic file validation"
             )
             self._missing_files = None
+            self._missing_gguf = False
             return self._verify_model_files(model_path)
 
         # Use llm_file_bootstrap_data as source of truth
@@ -64,6 +92,7 @@ class ValidationMixin:
                 f"Model {repo_id} not in LLM_FILE_BOOTSTRAP_DATA - using basic file validation"
             )
             self._missing_files = None
+            self._missing_gguf = False
             return self._verify_model_files(model_path)
 
         # Check which required files are missing or incomplete
@@ -86,13 +115,32 @@ class ValidationMixin:
 
         if missing_files:
             self._missing_files = missing_files
+            self._missing_gguf = False
             self.logger.info(
                 f"Model incomplete - missing or incomplete {len(missing_files)} files: {missing_files[:5]}..."
             )
             return False
 
         self._missing_files = None
+        self._missing_gguf = False
         return True
+    
+    def _is_gguf_quantization_selected(self: "LLMModelManager") -> bool:
+        """Check if GGUF quantization is selected in QSettings.
+        
+        GGUF uses quantization_bits == 0 as a sentinel value.
+        
+        Returns:
+            True if GGUF quantization is selected.
+        """
+        try:
+            qs = get_qsettings()
+            saved = qs.value("llm_settings/quantization_bits", None)
+            if saved is not None:
+                return int(saved) == 0
+        except Exception as e:
+            self.logger.warning(f"Error reading quantization setting: {e}")
+        return False
 
     def _verify_model_files(self: "LLMModelManager", model_path: str) -> bool:
         """Verify essential model files exist in directory.
@@ -203,6 +251,7 @@ class ValidationMixin:
         """Trigger model download via signal.
 
         Emits signal to download manager to fetch model from HuggingFace.
+        For GGUF models (when _missing_gguf is True), triggers GGUF-specific download.
 
         Returns:
             False to indicate model is not yet available.
@@ -211,12 +260,75 @@ class ValidationMixin:
             f"Model not found at {self.model_path}, triggering download"
         )
 
+        # Check if we need to download GGUF
+        if hasattr(self, "_missing_gguf") and self._missing_gguf:
+            return self._trigger_gguf_download()
+
         repo_id = self._get_repo_id_for_model()
         if not repo_id:
             return False
 
         self._emit_download_signal(repo_id)
         return False
+    
+    def _trigger_gguf_download(self: "LLMModelManager") -> bool:
+        """Trigger GGUF model download via signal.
+        
+        Gets GGUF info from provider config and emits download signal.
+        
+        Returns:
+            False to indicate model is not yet available.
+        """
+        # Get model_id for this model
+        model_id = self._get_model_id_for_model()
+        if not model_id:
+            self.logger.error(
+                f"Could not find model_id for model: {self.model_name}"
+            )
+            return False
+        
+        # Get GGUF info
+        gguf_info = LLMProviderConfig.get_gguf_info("local", model_id)
+        if not gguf_info:
+            self.logger.error(
+                f"Model {model_id} does not have GGUF support configured"
+            )
+            return False
+        
+        self.logger.info(
+            f"Triggering GGUF download: {gguf_info['repo_id']} / {gguf_info['filename']}"
+        )
+        
+        # Emit GGUF download signal
+        signal_data = {
+            "model_path": self.model_path,
+            "model_name": self.model_name,
+            "repo_id": gguf_info["repo_id"],
+            "gguf_filename": gguf_info["filename"],
+            "model_type": "gguf",
+            "quantization_bits": 0,
+        }
+        
+        self.emit_signal(
+            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+            signal_data,
+        )
+        return False
+    
+    def _get_model_id_for_model(self: "LLMModelManager") -> str:
+        """Get model ID for current model.
+
+        Returns:
+            Model ID string, or empty string if not found.
+        """
+        for model_id, model_info in LLMProviderConfig.LOCAL_MODELS.items():
+            if model_info["name"] == self.model_name:
+                return model_id
+
+        self.logger.error(
+            f"Could not find model_id for model: {self.model_name}"
+        )
+        return ""
 
     def _get_repo_id_for_model(self: "LLMModelManager") -> str:
         """Get HuggingFace repo ID for current model.
@@ -362,10 +474,20 @@ class ValidationMixin:
         """Check if required components are loaded for local mode.
 
         Local mode requires model, tokenizer, chat model, and workflow manager.
+        For GGUF models, only chat model and workflow manager are required
+        since GGUF handles model/tokenizer internally.
 
         Returns:
             True if all required components are loaded.
         """
+        # Check if GGUF mode - only need chat_model and workflow_manager
+        if self._is_gguf_quantization_selected():
+            return (
+                self._chat_model is not None
+                and self._workflow_manager is not None
+            )
+        
+        # Standard HuggingFace mode - need all components
         return (
             self._model is not None
             and self._tokenizer is not None

@@ -308,6 +308,59 @@ class HuggingFaceDownloader(
         print(f"Model downloaded to: {local_dir}")
         return local_dir
 
+    def download_gguf_model(
+        self,
+        repo_id: str,
+        filename: str,
+        local_dir: Optional[str] = None,
+        revision: str = "main",
+        progress_callback: Optional[Callable[[str, int, int], None]] = None,
+    ) -> Path:
+        """
+        Download a GGUF model file from HuggingFace.
+
+        GGUF models are single files, so this is simpler than download_model().
+        The model will be stored in: local_dir/filename
+
+        Args:
+            repo_id: GGUF repository ID (e.g., "Qwen/Qwen3-8B-GGUF")
+            filename: GGUF filename (e.g., "Qwen3-8B-Q4_K_M.gguf")
+            local_dir: Local directory (default: cache_dir/model_name)
+            revision: Git revision/branch
+            progress_callback: Optional callback(filename, downloaded_bytes, total_bytes)
+
+        Returns:
+            Path to the downloaded .gguf file
+        """
+        # Extract model name from filename (remove .gguf extension and quant suffix)
+        model_name = filename.replace(".gguf", "")
+        # Remove common quant suffixes for cleaner folder names
+        for suffix in ["-Q4_K_M", "-Q4_K_S", "-Q5_K_M", "-Q8_0", "-q4_k_m", "-q4_k_s", "-q5_k_m", "-q8_0"]:
+            model_name = model_name.replace(suffix, "")
+
+        if local_dir is None:
+            local_dir = self.cache_dir / model_name
+        else:
+            local_dir = Path(local_dir)
+
+        local_dir.mkdir(parents=True, exist_ok=True)
+
+        def file_progress(downloaded, total):
+            if progress_callback:
+                progress_callback(filename, downloaded, total)
+
+        # Download the GGUF file
+        gguf_path = self.download_file(
+            repo_id,
+            filename,
+            str(local_dir),
+            revision,
+            file_progress,
+        )
+
+        print(f"GGUF model downloaded to: {gguf_path}")
+        return gguf_path
+
     @staticmethod
     def _match_pattern(filename: str, pattern: str) -> bool:
         """Simple pattern matching (supports * wildcard)."""

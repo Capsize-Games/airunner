@@ -246,9 +246,7 @@ class GenerationMixin:
         Yields:
             ChatGenerationChunk objects with streamed content
         """
-        self.logger.debug("[STREAM DEBUG] _stream() called")
         prompt = self._messages_to_prompt(messages)
-        self.logger.debug(f"[STREAM DEBUG] Prompt length: {len(prompt)}")
         inputs = self._prepare_inputs(prompt)
 
         streamer = self._create_streamer()
@@ -264,7 +262,6 @@ class GenerationMixin:
         # Always stream tokens in real-time for GUI responsiveness
         # We still accumulate full_response for tool parsing at the end
         has_tools = bool(self.tools)
-        self.logger.debug(f"[STREAM DEBUG] has_tools={has_tools}, tools={len(self.tools) if self.tools else 0}")
 
         token_count = 0
         try:
@@ -275,15 +272,12 @@ class GenerationMixin:
                 # Always yield chunks for real-time streaming
                 yield chunk
         finally:
-            self.logger.debug(f"[STREAM DEBUG] Joining thread, token_count={token_count}")
             thread.join()
-            self.logger.debug("[STREAM DEBUG] Thread joined")
 
         # If tools are enabled, yield a final message with tool_calls
         # This allows the workflow to detect and execute tool calls
         if has_tools:
             response_text = "".join(full_response)
-            self.logger.debug(f"[STREAM DEBUG] Full response length: {len(response_text)}")
             
             # Parse tool calls and get cleaned text
             tool_calls = self._parse_stream_tool_calls(response_text, kwargs)
@@ -299,7 +293,6 @@ class GenerationMixin:
                     content="", tool_calls=tool_calls
                 )
                 chunk = ChatGenerationChunk(message=message)
-                self.logger.debug(f"[STREAM DEBUG] Yielding tool_calls chunk with {len(tool_calls)} tool calls")
                 yield chunk
 
     def _create_streamer(self):
@@ -362,11 +355,8 @@ class GenerationMixin:
         """
         def _generate_with_error_handling():
             try:
-                self.logger.debug("[STREAM DEBUG] Generation thread starting")
                 self.model.generate(**generation_kwargs)
-                self.logger.debug("[STREAM DEBUG] Generation thread completed")
             except Exception as e:
-                self.logger.error(f"[STREAM DEBUG] Generation thread error: {e}", exc_info=True)
                 # Signal the streamer that generation failed
                 if "streamer" in generation_kwargs:
                     try:
@@ -392,7 +382,6 @@ class GenerationMixin:
         """
         # Use the proper iterator protocol - don't access queue directly
         # This ensures TextIteratorStreamer handles EOS, tokenization, etc. correctly
-        self.logger.debug("[STREAM DEBUG] Starting to iterate over streamer")
         token_count = 0
         for text in streamer:
             if self._interrupted:
@@ -404,15 +393,11 @@ class GenerationMixin:
                 continue
 
             token_count += 1
-            if token_count <= 5 or token_count % 50 == 0:
-                self.logger.debug(f"[STREAM DEBUG] Token {token_count}: '{text[:30]}...'")
             full_response.append(text)
             chunk = ChatGenerationChunk(message=AIMessageChunk(content=text))
             if run_manager:
                 run_manager.on_llm_new_token(text, chunk=chunk)
             yield chunk
-        
-        self.logger.debug(f"[STREAM DEBUG] Streamer iteration complete, total tokens: {token_count}")
 
     def _clear_streamer_queue(self, streamer):
         """Clear streamer queue to unblock generation thread.

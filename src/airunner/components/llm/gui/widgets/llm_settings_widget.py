@@ -148,15 +148,51 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             self.logger.error(f"No repo_id found for model: {model_id}")
             return
 
-        # Get quantization bits from dropdown
+        # Get quantization type from dropdown
         quant_index = self.ui.quantization_dropdown.currentIndex()
+        
+        # Check if GGUF is selected (index 3)
+        if quant_index == 3:
+            # GGUF download - check if GGUF is available for this model
+            if not LLMProviderConfig.has_gguf_support(provider, model_id):
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self,
+                    "GGUF Not Available",
+                    f"GGUF format is not available for {model_info['name']}.\n\n"
+                    "Please select a different quantization option.",
+                )
+                return
+            
+            gguf_info = LLMProviderConfig.get_gguf_info(provider, model_id)
+            model_name = model_info["name"]
+            model_path = os.path.join(
+                os.path.expanduser(self.settings.base_path),
+                f"text/models/llm/causallm/{model_name}",
+            )
+            
+            # Emit signal for GGUF download
+            self.emit_signal(
+                SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+                {
+                    "model_name": model_name,
+                    "model_path": model_path,
+                    "repo_id": gguf_info["repo_id"],
+                    "model_type": "gguf",  # Special type for GGUF
+                    "gguf_filename": gguf_info["filename"],
+                    "quantization_bits": 0,  # Not used for GGUF
+                },
+            )
+            return
+
+        # Standard HuggingFace download
         index_to_quant = {0: 2, 1: 4, 2: 8}
         quantization_bits = index_to_quant.get(quant_index, 4)
 
         model_name = model_info["name"]
         model_path = os.path.join(
             os.path.expanduser(self.settings.base_path),
-            f"/text/models/llm/causallm/{model_name}",
+            f"text/models/llm/causallm/{model_name}",
         )
 
         # Emit signal to show download dialog (same as when model is required during chat)
@@ -173,11 +209,98 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     @Slot()
     def on_start_quantize_button_clicked(self):
-        """Handle manual quantize button click - start disk-based quantization."""
+        """Handle manual quantize button click - start disk-based quantization or GGUF download."""
         from PySide6.QtWidgets import QMessageBox
 
         model_path = self.ui.model_path.text()
 
+        # Get selected quantization level
+        quant_index = self.ui.quantization_dropdown.currentIndex()
+        self.logger.info(f"Quantization button clicked, quant_index={quant_index}")
+        
+        # Check if GGUF is selected (index 3)
+        if quant_index == 3:
+            # GGUF requires downloading a pre-quantized model, not local quantization
+            # Trigger download flow instead
+            provider = self.ui.model_service.currentText()
+            current_index = self.ui.model_dropdown.currentIndex()
+            self.logger.info(f"GGUF selected: provider={provider}, current_index={current_index}")
+            
+            if current_index < 0:
+                QMessageBox.warning(
+                    self,
+                    "GGUF Download",
+                    "Please select a model first.",
+                )
+                return
+            
+            model_id = self.ui.model_dropdown.itemData(current_index)
+            self.logger.info(f"GGUF model_id={model_id}")
+            if not model_id or model_id == "custom":
+                QMessageBox.warning(
+                    self,
+                    "GGUF Download",
+                    "GGUF format is only available for predefined models.\n"
+                    "Custom models cannot be converted to GGUF locally.",
+                )
+                return
+            
+            # Check if GGUF is available for this model
+            # Use "local" as provider since model_service shows display name like "Local"
+            provider_key = "local"
+            has_gguf = LLMProviderConfig.has_gguf_support(provider_key, model_id)
+            self.logger.info(f"has_gguf_support({provider_key}, {model_id}) = {has_gguf}")
+            if not has_gguf:
+                QMessageBox.warning(
+                    self,
+                    "GGUF Not Available",
+                    f"GGUF format is not available for this model.\n\n"
+                    "Please select a different quantization option.",
+                )
+                return
+            
+            # Confirm GGUF download
+            gguf_info = LLMProviderConfig.get_gguf_info(provider_key, model_id)
+            model_info = LLMProviderConfig.get_model_info(provider_key, model_id)
+            self.logger.info(f"GGUF info: {gguf_info}, model_info: {model_info.get('name', 'N/A')}")
+            
+            reply = QMessageBox.question(
+                self,
+                "Download GGUF Model",
+                f"This will download the GGUF version of {model_info.get('name', model_id)}.\n\n"
+                f"GGUF models are pre-quantized and smaller than BitsAndBytes quantization.\n"
+                f"File: {gguf_info['filename']}\n\n"
+                f"Continue with GGUF download?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                self.logger.info("GGUF download cancelled by user")
+                return
+            
+            # Trigger GGUF download
+            model_name = model_info["name"]
+            download_path = os.path.join(
+                os.path.expanduser(self.path_settings.base_path),
+                f"text/models/llm/causallm/{model_name}",
+            )
+            
+            self.logger.info(f"Emitting LLM_MODEL_DOWNLOAD_REQUIRED for GGUF: {model_name} -> {download_path}")
+            self.emit_signal(
+                SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+                {
+                    "model_name": model_name,
+                    "model_path": download_path,
+                    "repo_id": gguf_info["repo_id"],
+                    "model_type": "gguf",
+                    "gguf_filename": gguf_info["filename"],
+                    "quantization_bits": 0,
+                },
+            )
+            return
+
+        # Standard BitsAndBytes quantization flow
         if not model_path or not self._check_safetensors_exist(model_path):
             QMessageBox.warning(
                 self,
@@ -186,8 +309,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             )
             return
 
-        # Get selected quantization level
-        quant_index = self.ui.quantization_dropdown.currentIndex()
         index_to_bits = {0: "2bit", 1: "4bit", 2: "8bit"}
         bits = index_to_bits.get(quant_index, "4bit")
 
@@ -488,8 +609,8 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def _setup_quantization_dropdown(self):
         """Setup quantization dropdown with current value and enable it."""
-        # Map quantization bits to dropdown index
-        quant_to_index = {2: 0, 4: 1, 8: 2}
+        # Map quantization bits to dropdown index (0=2-bit, 1=4-bit, 2=8-bit, 3=GGUF)
+        quant_to_index = {2: 0, 4: 1, 8: 2, 0: 3}  # 0 = GGUF
         # Prefer saved value from QSettings, fallback to llm_generator_settings
         qs = get_qsettings()
         try:
@@ -516,8 +637,9 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     @Slot(int)
     def on_quantization_changed(self, index: int):
         """Handle quantization selection change."""
-        # Map dropdown index to bits
-        index_to_quant = {0: 2, 1: 4, 2: 8}
+        # Map dropdown index to bits (0=2-bit, 1=4-bit, 2=8-bit, 3=GGUF)
+        # For GGUF (index 3), use 0 as a sentinel value
+        index_to_quant = {0: 2, 1: 4, 2: 8, 3: 0}
         quantization_bits = index_to_quant.get(index, 4)
 
         # Update settings
