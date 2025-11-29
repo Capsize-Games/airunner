@@ -490,8 +490,9 @@ class LLMModelManager(
         )
 
     # Categories that are ALWAYS included regardless of filtering
-    # This ensures the LLM always has access to memory/knowledge tools
-    ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
+    # This ensures the LLM always has access to memory/knowledge and search tools
+    # Search is included so the model can always access the internet when needed
+    ALWAYS_INCLUDE_CATEGORIES = {"knowledge", "search"}
 
     def _apply_tool_filter(
         self, tool_categories: List[str], action=None

@@ -259,6 +259,9 @@ class ChatGGUF(BaseChatModel):
         - ChatML for Qwen models
         - Llama format for Llama 3/3.1/3.2/4 models  
         - Mistral format for Mistral/Ministral/Magistral models
+        
+        CRITICAL: If tools are bound, injects tool instructions into the system
+        message so the model knows what tools are available and how to use them.
         """
         t = self._template
         prompt_parts = []
@@ -270,12 +273,16 @@ class ChatGGUF(BaseChatModel):
         
         for message in messages:
             if isinstance(message, SystemMessage):
+                content = message.content
+                # Inject tool instructions into system message if tools are bound
+                if self.tools:
+                    content = self._inject_tool_instructions(content)
                 if is_mistral:
                     # Store system for prepending to first user message
-                    system_content = message.content
+                    system_content = content
                 else:
                     prompt_parts.append(
-                        f"{t['system_start']}{message.content}{t['system_end']}"
+                        f"{t['system_start']}{content}{t['system_end']}"
                     )
             elif isinstance(message, HumanMessage):
                 content = message.content
@@ -295,6 +302,42 @@ class ChatGGUF(BaseChatModel):
         prompt_parts.append(t['assistant_start'])
 
         return "".join(prompt_parts)
+
+    def _inject_tool_instructions(self, system_content: str) -> str:
+        """Inject tool instructions into the system message.
+
+        Args:
+            system_content: The original system message content.
+
+        Returns:
+            System content with tool instructions appended.
+        """
+        tool_schemas_text = self.get_tool_schemas_text()
+        if not tool_schemas_text:
+            return system_content
+
+        tool_instructions = f"""
+
+## Available Tools
+
+You have access to the following tools:
+
+{tool_schemas_text}
+
+## Tool Usage Instructions
+
+When you need to use a tool, respond with a tool call in this EXACT format:
+<tool_call>{{"name": "tool_name", "arguments": {{"arg1": "value1", "arg2": "value2"}}}}</tool_call>
+
+CRITICAL RULES:
+1. ALWAYS use the exact tool_call format shown above - do NOT invent your own format
+2. NEVER hallucinate or make up tool results - you MUST call the tool and wait for real results
+3. If you need information from the internet, USE the search_web tool - do NOT pretend to have results
+4. After calling a tool, WAIT for the actual results before responding to the user
+5. You can call multiple tools if needed, one at a time
+6. Only respond with your final answer AFTER receiving real tool results"""
+
+        return system_content + tool_instructions
 
     def _get_stop_tokens(self) -> List[str]:
         """Get stop tokens for the current model template."""
@@ -461,7 +504,9 @@ class ChatGGUF(BaseChatModel):
                         "name": call_data["name"],
                         "args": call_data.get("arguments", call_data.get("args", {})),
                     }]
-                    return tool_calls, response_text
+                    # Clean the JSON from the response text
+                    cleaned = response_text.replace(json_match.group(), "").strip()
+                    return tool_calls, cleaned
         except (json.JSONDecodeError, KeyError):
             pass
 
