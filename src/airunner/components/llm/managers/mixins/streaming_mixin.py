@@ -117,11 +117,6 @@ class StreamingMixin:
                         1 for msg in messages if isinstance(msg, AIMessage)
                     )
 
-                    print(
-                        f"[STREAM DEBUG] Total messages: {len(messages)}, AI messages: {ai_message_count}, Already yielded: {last_yielded_count}",
-                        flush=True,
-                    )
-
                     # If there are more AIMessages than we've yielded, yield the new ones
                     if ai_message_count > last_yielded_count:
                         # Get all AIMessages
@@ -136,10 +131,6 @@ class StreamingMixin:
                                 ai_messages[i].content[:100]
                                 if ai_messages[i].content
                                 else "(empty)"
-                            )
-                            print(
-                                f"[STREAM DEBUG] Yielding AI message #{i+1}: {content_preview}",
-                                flush=True,
                             )
                             # Attach current mood to AI message for system prompt retrieval
                             # Use getattr with defaults to avoid AttributeError
@@ -257,20 +248,10 @@ class StreamingMixin:
                 in mood analysis (so we analyze the message that triggered this check)
         """
         try:
-            self.logger.info(
-                "[AUTO MOOD DEBUG] _check_and_update_mood_if_needed() called"
-            )
 
             # Get llm_settings from parent class
             if not hasattr(self, "llm_settings"):
-                self.logger.info(
-                    "[AUTO MOOD DEBUG] No llm_settings attribute - exiting"
-                )
                 return
-
-            self.logger.info(
-                f"[AUTO MOOD DEBUG] use_chatbot_mood={self.llm_settings.use_chatbot_mood}"
-            )
 
             # Check if mood tracking is enabled
             if not (
@@ -280,22 +261,13 @@ class StreamingMixin:
                 and hasattr(self.chatbot, "use_mood")
                 and self.chatbot.use_mood
             ):
-                self.logger.info(
-                    "[AUTO MOOD DEBUG] Mood tracking not enabled - exiting"
-                )
                 return
 
             # Get turn interval from settings
             turn_interval = self.llm_settings.update_mood_after_n_turns
-            self.logger.info(
-                f"[AUTO MOOD DEBUG] turn_interval={turn_interval}"
-            )
 
             # Get current conversation history
             if not hasattr(self, "_memory") or not self._memory:
-                self.logger.info(
-                    "[AUTO MOOD DEBUG] No _memory attribute - exiting"
-                )
                 return
 
             # Count user messages in history (each user message = 1 turn)
@@ -306,32 +278,20 @@ class StreamingMixin:
                 if hasattr(self._memory, "get_tuple")
                 else None
             )
-            self.logger.info(
-                f"[AUTO MOOD DEBUG] history={history is not None}, history[1]={history[1] if history else None}"
-            )
 
             if history and history[1]:
                 # Get messages from the checkpoint structure
                 channel_values = history[1].get("channel_values", {})
                 messages = channel_values.get("messages", [])
-                self.logger.info(
-                    f"[AUTO MOOD DEBUG] Found {len(messages)} total messages"
-                )
 
                 user_message_count = sum(
                     1
                     for msg in messages
                     if hasattr(msg, "type") and msg.type == "human"
                 )
-                self.logger.info(
-                    f"[AUTO MOOD DEBUG] user_message_count={user_message_count}"
-                )
 
                 # Update mood on EVERY user message
                 if user_message_count > 0:
-                    self.logger.info(
-                        f"[AUTO MOOD] Turn {user_message_count}: Analyzing conversation mood..."
-                    )
                     self._auto_update_mood(messages, current_user_message)
 
         except Exception as e:
@@ -413,19 +373,13 @@ class StreamingMixin:
             self._current_emoji = emoji
 
             # Regenerate system prompt with updated mood
-            self.logger.info(
-                f"[AUTO MOOD DEBUG] Checking attributes: update_system_prompt={hasattr(self, 'update_system_prompt')}, system_prompt={hasattr(self, 'system_prompt')}"
-            )
             if hasattr(self, "update_system_prompt") and hasattr(
                 self, "system_prompt"
             ):
-                self.logger.info(
-                    "[AUTO MOOD DEBUG] Calling update_system_prompt() to regenerate with new mood"
-                )
                 self.update_system_prompt(self.system_prompt)
             else:
                 self.logger.warning(
-                    "[AUTO MOOD DEBUG] Cannot update system prompt - missing attributes"
+                    "Cannot update system prompt - missing attributes"
                 )
 
             self.logger.info(

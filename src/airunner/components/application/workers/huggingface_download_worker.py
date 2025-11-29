@@ -44,23 +44,30 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         version: str = None,
         pipeline_action: str = "txt2img",
         missing_files: list = None,
+        gguf_filename: str = None,
     ):
         """Download model files from HuggingFace.
 
         Args:
             repo_id: HuggingFace repository ID (e.g., "black-forest-labs/FLUX.1-dev")
-            model_type: Type of model (llm, flux, etc.)
+            model_type: Type of model (llm, flux, gguf, etc.)
             output_dir: Directory to save the model
             version: Version name for bootstrap data lookup (e.g., "SDXL 1.0", "Flux.1 S")
             pipeline_action: Pipeline action (txt2img, inpaint, etc.)
             missing_files: Specific list of files to download (if provided, only these files will be downloaded)
+            gguf_filename: For GGUF downloads, the specific .gguf file to download
 
         """
         self.logger.info(
             f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
             f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}, "
-            f"missing_files={missing_files}"
+            f"missing_files={missing_files}, gguf_filename={gguf_filename}"
         )
+
+        # Handle GGUF downloads specially - just download the single file
+        if model_type == "gguf" and gguf_filename:
+            self._download_gguf_model(repo_id, output_dir, gguf_filename)
+            return
 
         settings = get_qsettings()
         api_key = settings.value("huggingface/api_key", "")
@@ -350,6 +357,102 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # Wait for completion
         if not self._wait_for_completion(len(files_to_download)):
+            return
+
+        self._cleanup_temp_files()
+        self.emit_signal(
+            self._complete_signal,
+            {"model_path": str(model_path), "repo_id": repo_id},
+        )
+
+    def _download_gguf_model(
+        self,
+        repo_id: str,
+        output_dir: str,
+        gguf_filename: str,
+    ):
+        """Download a single GGUF model file from HuggingFace.
+
+        GGUF models are pre-quantized and don't need additional processing.
+        We just download the single .gguf file directly.
+
+        Args:
+            repo_id: HuggingFace repository ID (e.g., "bartowski/Ministral-8B-Instruct-2410-GGUF")
+            output_dir: Directory to save the model
+            gguf_filename: The .gguf file to download (e.g., "Ministral-8B-Instruct-2410-Q4_K_M.gguf")
+        """
+        settings = get_qsettings()
+        api_key = settings.value("huggingface/api_key", "")
+
+        model_path = Path(output_dir)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Initialize download state
+        self.is_cancelled = False
+        self._completed_files.clear()
+        self._failed_files.clear()
+        self._file_progress.clear()
+        self._file_sizes.clear()
+        self._file_threads.clear()
+        self._total_downloaded = 0
+        self._total_size = 0
+
+        temp_dir = model_path / ".downloading"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        self._model_path = model_path
+        self._temp_dir = temp_dir
+
+        self.emit_signal(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            {"message": f"Starting GGUF download: {repo_id}/{gguf_filename}"},
+        )
+
+        # Get file size from HuggingFace API
+        url = f"https://huggingface.co/{repo_id}/resolve/main/{gguf_filename}"
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        try:
+            head_response = requests.head(url, headers=headers, allow_redirects=True, timeout=30)
+            head_response.raise_for_status()
+            file_size = int(head_response.headers.get("Content-Length", 0))
+        except requests.RequestException as e:
+            self.logger.error(f"Failed to get GGUF file size: {e}")
+            # Continue without size - progress will be approximate
+            file_size = 0
+
+        self._total_size = file_size
+        self._file_sizes[gguf_filename] = file_size
+
+        self.logger.info(
+            f"Downloading GGUF file: {gguf_filename} ({file_size / (1024**3):.2f} GB)"
+        )
+
+        self.emit_signal(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            {"message": f"Downloading: {gguf_filename} ({file_size / (1024**3):.2f} GB)"},
+        )
+
+        # Start download in thread
+        thread = threading.Thread(
+            target=self._download_file,
+            kwargs={
+                "repo_id": repo_id,
+                "filename": gguf_filename,
+                "file_size": file_size,
+                "temp_dir": temp_dir,
+                "model_path": model_path,
+                "api_key": api_key,
+            },
+            daemon=True,
+        )
+        self._file_threads[gguf_filename] = thread
+        thread.start()
+
+        # Wait for completion
+        if not self._wait_for_completion(1):
             return
 
         self._cleanup_temp_files()

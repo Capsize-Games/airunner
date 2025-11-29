@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 from transformers import (
@@ -40,6 +41,7 @@ from airunner.enums import (
     LLMActionType,
     ModelType,
     ModelStatus,
+    SignalCode,
 )
 from airunner.utils.memory import clear_memory
 from airunner.components.llm.managers.llm_settings import LLMSettings
@@ -120,8 +122,20 @@ class LLMModelManager(
         self._current_request_id = None
 
     def _load_local_llm_components(self) -> None:
-        """Load tokenizer and model for local LLM."""
+        """Load tokenizer and model for local LLM.
+        
+        For GGUF models, we skip loading the HuggingFace model and tokenizer
+        since ChatLlamaCpp (via ChatGGUF) handles everything internally.
+        """
         if self.llm_settings.use_local_llm:
+            # Check if this is a GGUF model - if so, skip HF loading
+            from airunner.components.llm.adapters import is_gguf_model
+            if is_gguf_model(self.model_path):
+                self.logger.info(
+                    f"GGUF model detected at {self.model_path}, "
+                    "skipping HuggingFace model/tokenizer loading"
+                )
+                return
             self._load_tokenizer()
             self._load_model()
 
@@ -329,8 +343,34 @@ class LLMModelManager(
             self.logger.info(
                 "Auto mode: Analyzing prompt to select relevant tool categories"
             )
+            # Emit status signal for UI feedback during classification
+            self.emit_signal(
+                SignalCode.LLM_TOOL_STATUS_SIGNAL,
+                {
+                    "tool_id": "tool_classification",
+                    "tool_name": "tool_analyzer",
+                    "query": data["request_data"]["prompt"][:100],
+                    "status": "starting",
+                    "details": "Analyzing prompt to select tools...",
+                    "conversation_id": getattr(self, "_conversation_id", None),
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            )
             selected_categories = self._classify_prompt_for_tools(
                 data["request_data"]["prompt"]
+            )
+            # Emit completion status
+            self.emit_signal(
+                SignalCode.LLM_TOOL_STATUS_SIGNAL,
+                {
+                    "tool_id": "tool_classification",
+                    "tool_name": "tool_analyzer",
+                    "query": data["request_data"]["prompt"][:100],
+                    "status": "completed",
+                    "details": f"Selected: {', '.join(selected_categories) if selected_categories else 'none'}",
+                    "conversation_id": getattr(self, "_conversation_id", None),
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
             self.logger.info(
                 f"Auto mode selected categories: {selected_categories}"
@@ -617,33 +657,16 @@ class LLMModelManager(
         
         available_categories = [cat.value for cat in ToolCategory]
         
-        classification_prompt = f"""You are a tool category classifier. Given a user's message, determine which tool categories would be needed to help them.
+        # Concise classification prompt - faster than verbose version
+        # Add /no_think instruction for Qwen3 models to disable thinking mode
+        classification_prompt = f"""/no_think
+Classify which tool categories are needed for this user message.
 
-Available tool categories:
-- search: Web search, news search, scraping websites, finding current information online
-- math: Mathematical calculations, equations, numerical computations
-- file: Reading/writing files, file system operations
-- system: Calendar, scheduling, TTS, application control, agent management
-- rag: Searching user's loaded documents, document retrieval
-- code: Writing code, debugging, programming tasks
-- author: Creative writing, editing, proofreading, improving text
-- research: Research papers, citations, synthesizing sources
-- analysis: Analyzing data, categorizing, reasoning step-by-step
-- image: Generating images, creating artwork
-- conversation: Managing chat history, switching conversations
-- knowledge: Remembering facts about the user, recalling stored information
-- mood: Tracking emotions, mood updates
-- qa: Question answering, fact verification
-- generation: Generating descriptions, summaries
-- project: Complex multi-step projects
+Categories: {', '.join(available_categories)}
 
-User message: "{prompt}"
+Message: "{prompt[:500]}"
 
-Respond with ONLY a comma-separated list of category names that would help answer this query.
-If no tools are needed (just casual chat), respond with: none
-If unsure, include "search" to allow web lookup.
-
-Categories:"""
+Reply with ONLY category names (comma-separated) or "none":"""
 
         try:
             # Use the workflow manager's chat model for classification
@@ -657,14 +680,30 @@ Categories:"""
                     if hasattr(chat_model, 'enable_thinking'):
                         chat_model.enable_thinking = False
                     
+                    # Use lower temperature for more deterministic classification
+                    original_temp = getattr(chat_model, 'temperature', 0.7)
+                    if hasattr(chat_model, 'temperature'):
+                        chat_model.temperature = 0.1
+                    
                     try:
                         response = chat_model.invoke([HumanMessage(content=classification_prompt)])
                     finally:
-                        # Restore original thinking setting
+                        # Restore original settings
                         if hasattr(chat_model, 'enable_thinking'):
                             chat_model.enable_thinking = original_thinking
+                        if hasattr(chat_model, 'temperature'):
+                            chat_model.temperature = original_temp
                     
                     response_text = response.content if hasattr(response, 'content') else str(response)
+                    
+                    # Strip any thinking tags that might have leaked through
+                    if '<think>' in response_text:
+                        # Extract content after </think> if present
+                        if '</think>' in response_text:
+                            response_text = response_text.split('</think>')[-1]
+                        else:
+                            # No closing tag - try to get first line after think
+                            response_text = response_text.split('<think>')[0]
                     
                     # Parse the response
                     response_text = response_text.strip().lower()

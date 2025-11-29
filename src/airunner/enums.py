@@ -693,6 +693,7 @@ class Quantize(enum.Enum):
     NONE = "None"
     EIGHT_BIT = "8-bit"
     FOUR_BIT = "4-bit"
+    GGUF_Q4_K_M = "GGUF Q4_K_M"
 
 
 def _get_available_templates():
