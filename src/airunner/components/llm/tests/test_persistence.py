@@ -228,6 +228,14 @@ class TestDatabaseCheckpointSaver(DatabaseTestCase):
     def setUp(self):
         """Set up test with database."""
         super().setUp()
+        # Clear all checkpoint state before each test to prevent contamination
+        DatabaseCheckpointSaver.clear_all_checkpoint_state()
+
+    def tearDown(self):
+        """Clean up after each test."""
+        # Clear all checkpoint state after each test
+        DatabaseCheckpointSaver.clear_all_checkpoint_state()
+        super().tearDown()
 
     def test_init(self):
         """Test initialization of checkpoint saver."""

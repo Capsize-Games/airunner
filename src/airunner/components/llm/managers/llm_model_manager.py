@@ -449,6 +449,10 @@ class LLMModelManager(
             skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
         )
 
+    # Categories that are ALWAYS included regardless of filtering
+    # This ensures the LLM always has access to memory/knowledge tools
+    ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
+
     def _apply_tool_filter(
         self, tool_categories: List[str], action=None
     ) -> None:
@@ -458,6 +462,10 @@ class LLMModelManager(
             tool_categories: List of allowed category names. Empty list = no tools.
                            None = all tools (handled by caller).
                            Supports aliases like "USER_DATA" -> "SYSTEM", "KNOWLEDGE" -> "RAG"
+                           
+        Note:
+            Categories in ALWAYS_INCLUDE_CATEGORIES are always added regardless
+            of the filter. This ensures knowledge/memory tools are always available.
         """
         self.logger.info(
             f"[TOOL FILTER] ENTER _apply_tool_filter with categories: {tool_categories}"
@@ -471,15 +479,21 @@ class LLMModelManager(
             )
             return
 
+        # Import here to avoid circular imports
+        from airunner.components.llm.core.tool_registry import ToolCategory
+
         if tool_categories is not None and len(tool_categories) == 0:
-            # Empty list means: disable ALL tools for this request
+            # Empty list means: only include ALWAYS_INCLUDE_CATEGORIES
             self.logger.info(
-                "tool_categories=[] - disabling all tools for this request"
+                "tool_categories=[] - including only always-available tools (knowledge)"
             )
-            self._workflow_manager.update_tools([])
+            always_tools = self._tool_manager.get_tools_by_categories(
+                [ToolCategory(cat) for cat in self.ALWAYS_INCLUDE_CATEGORIES]
+            )
+            self._workflow_manager.update_tools(always_tools)
             self._workflow_manager._build_and_compile_workflow()
             self.logger.info(
-                "Tools disabled successfully - workflow rebuilt with 0 tools"
+                f"Always-available tools enabled - workflow rebuilt with {len(always_tools)} tools"
             )
             return
 
@@ -501,10 +515,10 @@ class LLMModelManager(
 
         # Category alias mapping for common names
         CATEGORY_ALIASES = {
-            "user_data": "system",  # USER_DATA -> SYSTEM (user data tools in SYSTEM)
-            "knowledge": "rag",  # KNOWLEDGE -> RAG (knowledge tools in RAG)
+            "user_data": "knowledge",  # USER_DATA -> KNOWLEDGE (user data tools moved to KNOWLEDGE)
             "agent": "system",  # AGENT -> SYSTEM (agent tools in SYSTEM)
             "agents": "system",  # AGENTS -> SYSTEM
+            "memory": "knowledge",  # MEMORY -> KNOWLEDGE (memory tools in KNOWLEDGE)
         }
 
         allowed_categories = set()
@@ -540,6 +554,16 @@ class LLMModelManager(
                 "No valid tool categories specified - using all tools"
             )
             return
+
+        # Always add ALWAYS_INCLUDE_CATEGORIES to the allowed categories
+        for always_cat in self.ALWAYS_INCLUDE_CATEGORIES:
+            try:
+                category = ToolCategory(always_cat)
+                if category not in allowed_categories:
+                    allowed_categories.add(category)
+                    self.logger.info(f"Added always-include category: {category.value}")
+            except ValueError:
+                pass
 
         self.logger.info(
             f"[TOOL FILTER] Getting tools by categories: {list(allowed_categories)}",
@@ -577,10 +601,10 @@ class LLMModelManager(
 
     def _classify_prompt_for_tools(self, prompt: str) -> list:
         """
-        Analyze a prompt and intelligently select which tool categories are needed.
+        Analyze a prompt using the LLM to intelligently select which tool categories are needed.
 
-        Uses keyword matching and pattern detection to quickly classify intent
-        without making an LLM call. This keeps Auto mode fast.
+        Uses the LLM itself to understand user intent and select appropriate tool categories.
+        This provides much better accuracy than keyword matching.
 
         Args:
             prompt: User's input text
@@ -588,163 +612,91 @@ class LLMModelManager(
         Returns:
             List of tool category strings (empty list if no tools needed)
         """
-        prompt_lower = prompt.lower()
-        selected_categories = []
+        # Get available categories from ToolCategory enum
+        from airunner.components.llm.core.tool_registry import ToolCategory
+        
+        available_categories = [cat.value for cat in ToolCategory]
+        
+        classification_prompt = f"""You are a tool category classifier. Given a user's message, determine which tool categories would be needed to help them.
 
-        # Web/scraping keywords → Maps to "search" category
-        if any(
-            word in prompt_lower
-            for word in [
-                "scrape",
-                "fetch",
-                "download",
-                "crawl",
-                "extract from",
-                "get content",
-                "webpage",
-                "website",
-                "url",
-                "http",
-            ]
-        ):
-            selected_categories.append(
-                "search"
-            )  # Web scraping tools are in SEARCH category        # Math/calculation keywords - be more specific to avoid false positives
-        has_math_word = any(
-            word in prompt_lower
-            for word in [
-                "calculate",
-                "compute",
-                "solve",
-                " what is ",  # Space-bounded to avoid matching "what issue"
-                "how much",
-                "equation",
-                " math",
-                "addition",
-                "subtract",
-                "multiply",
-                "divide",
-                " sum ",  # Space-bounded to avoid matching "sum" in "summarize"
-                "total",
-            ]
-        )
-        # Only check for operators if there's no URL in the prompt
-        has_url = "http" in prompt_lower or "www." in prompt_lower
-        has_math_operator = not has_url and (
-            any(op in prompt_lower for op in ["+", "*", "/", "="])
-            or "-" in prompt_lower
-        )
+Available tool categories:
+- search: Web search, news search, scraping websites, finding current information online
+- math: Mathematical calculations, equations, numerical computations
+- file: Reading/writing files, file system operations
+- system: Calendar, scheduling, TTS, application control, agent management
+- rag: Searching user's loaded documents, document retrieval
+- code: Writing code, debugging, programming tasks
+- author: Creative writing, editing, proofreading, improving text
+- research: Research papers, citations, synthesizing sources
+- analysis: Analyzing data, categorizing, reasoning step-by-step
+- image: Generating images, creating artwork
+- conversation: Managing chat history, switching conversations
+- knowledge: Remembering facts about the user, recalling stored information
+- mood: Tracking emotions, mood updates
+- qa: Question answering, fact verification
+- generation: Generating descriptions, summaries
+- project: Complex multi-step projects
 
-        if has_math_word or has_math_operator:
-            selected_categories.append("math")
+User message: "{prompt}"
 
-        # File operations keywords
-        if any(
-            word in prompt_lower
-            for word in [
-                "read file",
-                "write file",
-                "save to",
-                "open file",
-                "create file",
-                "delete file",
-                "list files",
-                "directory",
-            ]
-        ):
-            selected_categories.append("file")
+Respond with ONLY a comma-separated list of category names that would help answer this query.
+If no tools are needed (just casual chat), respond with: none
+If unsure, include "search" to allow web lookup.
 
-        # Time/date keywords
-        if any(
-            word in prompt_lower
-            for word in [
-                "time",
-                "date",
-                "today",
-                "tomorrow",
-                "yesterday",
-                "schedule",
-                "calendar",
-                "when is",
-                "what day",
-            ]
-        ):
-            selected_categories.append("time")
+Categories:"""
 
-        # Search/research keywords (added common question patterns like 'what is', 'who is')
-        if any(
-            word in prompt_lower
-            for word in [
-                "search",
-                "find",
-                "look up",
-                "research",
-                "information about",
-                "tell me about",
-                "what do you know",
-                "explain",
-                "what is",
-                "who is",
-                "what are",
-            ]
-        ):
-            selected_categories.append("search")
-
-        # Image generation keywords
-        if any(
-            word in prompt_lower
-            for word in [
-                "generate an image",
-                "generate image",
-                "create an image",
-                "create image",
-                "make an image",
-                "make image",
-                "draw",
-                "picture of",
-                "photo of",
-                "illustration of",
-                "render",
-                "visualize",
-                "image of",
-                "artwork",
-                "painting of",
-                "sketch of",
-            ]
-        ):
-            selected_categories.append("image")
-
-        # Conversation management keywords
-        if any(
-            word in prompt_lower
-            for word in [
-                "clear history",
-                "clear conversation",
-                "new conversation",
-                "switch conversation",
-                "list conversations",
-                "delete conversation",
-                "conversation history",
-            ]
-        ):
-            selected_categories.append("conversation")
-
-        # Long-running project keywords - add PROJECT category for complex tasks
-        if self._should_use_harness(prompt):
-            selected_categories.append("project")
-
-        # If no specific tools detected, return empty list (no tools needed)
-        # This makes simple chat like "hello" fast
-        if not selected_categories:
-            self.logger.info(
-                f"Auto mode: No tools needed for prompt: '{prompt[:50]}...'"
-            )
-            return []
-
-        self.logger.info(
-            f"Auto mode: Selected {len(selected_categories)} categories: {selected_categories}"
-        )
-        return selected_categories
+        try:
+            # Use the workflow manager's chat model for classification
+            if self._workflow_manager and hasattr(self._workflow_manager, '_original_chat_model'):
+                chat_model = self._workflow_manager._original_chat_model
+                if chat_model:
+                    from langchain_core.messages import HumanMessage
+                    
+                    # Temporarily disable thinking for fast classification
+                    original_thinking = getattr(chat_model, 'enable_thinking', True)
+                    if hasattr(chat_model, 'enable_thinking'):
+                        chat_model.enable_thinking = False
+                    
+                    try:
+                        response = chat_model.invoke([HumanMessage(content=classification_prompt)])
+                    finally:
+                        # Restore original thinking setting
+                        if hasattr(chat_model, 'enable_thinking'):
+                            chat_model.enable_thinking = original_thinking
+                    
+                    response_text = response.content if hasattr(response, 'content') else str(response)
+                    
+                    # Parse the response
+                    response_text = response_text.strip().lower()
+                    self.logger.info(f"LLM classification response: {response_text}")
+                    
+                    if response_text == "none" or not response_text:
+                        self.logger.info("Auto mode: LLM determined no tools needed")
+                        return []
+                    
+                    # Parse comma-separated categories
+                    selected_categories = []
+                    for cat in response_text.split(","):
+                        cat = cat.strip()
+                        if cat in available_categories:
+                            selected_categories.append(cat)
+                    
+                    # Always include search for questions that might need current info
+                    # The LLM should have included it, but ensure it's there for safety
+                    if not selected_categories:
+                        self.logger.info("Auto mode: No valid categories parsed, defaulting to search")
+                        selected_categories = ["search"]
+                    
+                    self.logger.info(
+                        f"Auto mode (LLM): Selected {len(selected_categories)} categories: {selected_categories}"
+                    )
+                    return selected_categories
+        except Exception as e:
+            self.logger.warning(f"LLM classification failed: {e}, falling back to all tools")
+        
+        # Fallback: provide all common categories if LLM classification fails
+        self.logger.info("Auto mode: Classification unavailable, providing broad tool access")
+        return ["search", "knowledge", "system", "math"]
 
     def _should_use_harness(self, prompt: str) -> bool:
         """Check if a prompt should use the long-running harness.

@@ -95,7 +95,8 @@ def rag_search(
         if not results:
             msg = (
                 f"No relevant information found for '{query}' in loaded "
-                f"documents. Try search_web instead to find information online."
+                f"documents. ⚠️ Try search_web('{query}') instead to find information online, "
+                f"then use record_knowledge() to save useful facts."
             )
             logger.info(msg)
             return msg
@@ -373,7 +374,8 @@ def search_knowledge_base_documents(
                 )
                 return (
                     "No documents found in knowledge base. "
-                    "Please index some documents first."
+                    "⚠️ Try search_web() to search the internet instead, "
+                    "then use record_knowledge() to save any useful facts."
                 )
 
             # If no files were found with standard paths, attempt to discover
@@ -546,8 +548,9 @@ def search_knowledge_base_documents(
 
                 if not top_docs:
                     return (
-                        f"No documents found matching '{query}'. "
-                        f"Try different search terms or provide relevant files."
+                        f"No documents found matching '{query}' in the knowledge base. "
+                        f"⚠️ Try search_web('{query}') to search the internet instead, "
+                        f"then use record_knowledge() to save any useful facts you find."
                     )
 
             # Format response

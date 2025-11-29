@@ -144,16 +144,32 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
 
         try:
             import datetime
+            
+            # CRITICAL: Reload conversation from database to get latest state
+            # This ensures deduplication checks against the most current data
+            self._load_conversation()
 
             # Track tool calls and tool messages for debugging, but store them separately
             # These won't appear as regular conversation messages but will be logged
 
             # Handle ToolMessages (results from tool execution)
             if message.__class__.__name__ == "ToolMessage":
+                tool_call_id = getattr(message, "tool_call_id", None)
                 self.logger.debug(
                     f"Tool result: {message.content[:100]}... "
-                    f"(tool_call_id: {getattr(message, 'tool_call_id', 'unknown')})"
+                    f"(tool_call_id: {tool_call_id or 'unknown'})"
                 )
+                
+                # DEDUPLICATION: Check if tool_result with same tool_call_id already exists
+                if self._conversation.value and tool_call_id:
+                    for existing in self._conversation.value:
+                        if (existing.get("metadata_type") == "tool_result" and 
+                            existing.get("tool_call_id") == tool_call_id):
+                            self.logger.debug(
+                                f"Skipping duplicate tool_result for tool_call_id: {tool_call_id}"
+                            )
+                            return
+                
                 # Store tool result in a separate metadata entry
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_result_dict = {
@@ -164,7 +180,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     "blocks": [
                         {"block_type": "text", "text": message.content}
                     ],
-                    "tool_call_id": getattr(message, "tool_call_id", None),
+                    "tool_call_id": tool_call_id,
                     "metadata_type": "tool_result",  # Mark as metadata for filtering
                 }
                 if self._conversation.value is None:
@@ -184,6 +200,22 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 self.logger.debug(
                     f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
                 )
+                
+                # DEDUPLICATION: Check if tool_calls with same IDs already exist
+                # Get all tool_call IDs from the incoming message
+                incoming_tool_ids = set(
+                    tc.get("id") for tc in message.tool_calls if tc.get("id")
+                )
+                if self._conversation.value and incoming_tool_ids:
+                    for existing in self._conversation.value:
+                        if existing.get("metadata_type") == "tool_calls":
+                            existing_tool_calls = existing.get("tool_calls", [])
+                            for tc in existing_tool_calls:
+                                if tc.get("id") in incoming_tool_ids:
+                                    self.logger.debug(
+                                        f"Skipping duplicate tool_calls - tool_call_id already exists: {tc.get('id')}"
+                                    )
+                                    return
                 
                 # Extract thinking content from the AIMessage that has tool_calls
                 # This captures the "thinking before tool use" phase
@@ -281,6 +313,21 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 and message.additional_kwargs
             ):
                 message_dict.update(message.additional_kwargs)
+
+            # DEDUPLICATION: Check for duplicate user/assistant messages
+            # Skip if the same role + content already exists as the last message of that role
+            if self._conversation.value:
+                # Find the last message with the same role
+                for existing in reversed(self._conversation.value):
+                    if existing.get("role") == role:
+                        existing_content = existing.get("content", "")
+                        if existing_content == content:
+                            self.logger.debug(
+                                f"Skipping duplicate {role} message: {content[:50]}..."
+                            )
+                            return
+                        # Only compare against the most recent message of this role
+                        break
 
             # Append to conversation
             if self._conversation.value is None:

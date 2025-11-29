@@ -155,6 +155,17 @@ body {
     margin-top: 0;
 }
 
+/* Hide empty paragraphs and divs that can cause unwanted whitespace */
+.message .content p:empty,
+.message .content div:empty {
+    display: none;
+}
+
+/* Collapse margins for first visible element */
+.message .content>*:first-child {
+    margin-top: 0 !important;
+}
+
 .message .content p:last-child {
     margin-bottom: 0;
 }
@@ -373,39 +384,177 @@ mjx-container[display="true"] {
     margin: 1em 0 !important;
 }
 
-/* Tool status indicators */
-.tool-status {
-    margin: 8px 0;
-    padding: 8px 12px;
+/* Unified Status Widget - combines thinking and tool status */
+.unified-status-widget {
+    margin: 8px 0 12px 0;
     border-radius: 6px;
     font-size: 0.85em;
     background: var(--line-color);
     border-left: 3px solid var(--primary-color);
+    overflow: hidden;
+    /* Ensure the widget displays in the flex flow properly */
+    flex-shrink: 0;
+    /* Ensure proper stacking */
+    z-index: 1;
 }
 
-.tool-status-active {
-    background: rgba(var(--primary-color-rgb, 59, 130, 246), 0.1);
+/* Ensure messages following status widgets have proper spacing */
+.unified-status-widget+.message {
+    margin-top: 0;
 }
 
-.tool-status-done {
-    background: rgba(var(--success-color-rgb, 34, 197, 94), 0.1);
-    border-left-color: var(--success-color, #22c55e);
+.unified-status-widget.has-thinking {
+    border-left-color: #9333ea;
 }
 
-.tool-status-line {
+.unified-status-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 2px 0;
+    padding: 6px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    background: rgba(0, 0, 0, 0.1);
 }
 
-.tool-status-completed {
-    opacity: 1;
+.unified-status-header:hover {
+    background: rgba(0, 0, 0, 0.2);
 }
 
-.tool-spinner {
-    font-size: 1.1em;
-    animation: pulse 1.5s ease-in-out infinite;
+.unified-status-icon {
+    font-size: 0.9em;
+}
+
+.unified-status-title {
+    color: var(--light-color);
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.unified-status-count {
+    color: var(--dim-color);
+    font-size: 0.8em;
+    margin-left: auto;
+}
+
+.unified-status-expand {
+    color: var(--dim-color);
+    font-size: 0.7em;
+    transition: transform 0.2s;
+}
+
+.unified-status-widget.expanded .unified-status-expand {
+    transform: rotate(90deg);
+}
+
+/* Visible items container - shows 1-2 items */
+.unified-status-visible {
+    position: relative;
+    overflow: hidden;
+}
+
+.unified-status-visible:empty {
+    display: none;
+}
+
+/* History container - shown when expanded */
+.unified-status-history {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.unified-status-history:empty {
+    display: none;
+}
+
+.unified-status-widget.expanded .unified-status-history {
+    max-height: 400px;
+    overflow-y: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Individual status item */
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.status-item.new-item {
+    animation: slideIn 0.3s ease;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-item.exiting {
+    animation: slideOut 0.3s ease forwards;
+}
+
+.status-item-icon {
+    font-size: 1em;
+    flex-shrink: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    display: none;
+    /* Hide individual item icons - header shows the main icon */
+}
+
+.status-item-icon.spinning {
+    animation: iconPulse 1.2s ease-in-out infinite;
+}
+
+.status-item-text {
+    color: var(--light-color);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-item.thinking-item {
+    background: rgba(147, 51, 234, 0.05);
+}
+
+.status-item.tool-item {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.status-item.completed {
+    opacity: 0.7;
+}
+
+.status-item.completed .status-item-icon {
+    animation: none;
+}
+
+/* Slide animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
 }
 
 @keyframes pulse {
@@ -420,130 +569,111 @@ mjx-container[display="true"] {
     }
 }
 
-.tool-checkmark {
-    font-size: 1.1em;
-}
-
-.tool-text {
-    color: var(--light-color);
-    flex: 1;
-}
-
-.tool-details {
-    font-style: italic;
-    opacity: 0.8;
-    font-size: 0.95em;
-}
-
-/* Thinking block styling for Qwen3 reasoning */
-.thinking-block {
-    margin: 8px 0;
-    padding: 0;
-    border-radius: 6px;
-    font-size: 0.85em;
-    background: var(--line-color);
-    border-left: 3px solid #9333ea;
-    /* Purple for thinking */
-    display: flex;
-    flex-direction: column;
-}
-
-.thinking-active {
-    background: rgba(147, 51, 234, 0.1);
-    /* Light purple */
-}
-
-.thinking-done {
-    background: rgba(147, 51, 234, 0.05);
-    /* Very light purple when done */
-    border-left-color: #a855f7;
-    /* Lighter purple when done */
-}
-
-.thinking-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-    user-select: none;
-    transition: background-color 0.2s;
-}
-
-.thinking-header:hover {
-    background: rgba(147, 51, 234, 0.15);
-}
-
-.thinking-icon {
-    font-size: 1.1em;
-}
-
-.thinking-header-text {
-    color: var(--light-color);
-    flex: 1;
-    font-weight: 500;
-}
-
-.thinking-active .thinking-header-text {
-    animation: thinking-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes thinking-pulse {
+@keyframes iconPulse {
 
     0%,
     100% {
         opacity: 1;
+        transform: scale(1);
     }
 
     50% {
         opacity: 0.6;
+        transform: scale(1.15);
     }
 }
 
-.thinking-expand-icon {
-    color: var(--dim-color);
+/* Header icon pulsing */
+.unified-status-icon.pulsing {
+    animation: iconPulse 1.2s ease-in-out infinite;
+}
+
+/* Animated dots for "Thinking" text */
+.unified-status-title.animated-dots::after {
+    content: '';
+    animation: dotPulse 1.5s infinite;
+}
+
+@keyframes dotPulse {
+    0% {
+        content: '';
+    }
+
+    25% {
+        content: '.';
+    }
+
+    50% {
+        content: '..';
+    }
+
+    75% {
+        content: '...';
+    }
+
+    100% {
+        content: '';
+    }
+}
+
+/* Thinking preview line - shows streaming content */
+.thinking-preview-line {
+    display: none;
+    padding: 4px 12px 8px 12px;
     font-size: 0.8em;
-    transition: transform 0.2s;
+    color: var(--dim-color);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    border-top: 1px solid rgba(147, 51, 234, 0.2);
+    background: rgba(147, 51, 234, 0.03);
+    animation: fadeSlideIn 0.2s ease;
 }
 
-.thinking-block.expanded .thinking-expand-icon {
-    transform: rotate(0deg);
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.thinking-content {
-    padding: 8px 12px 12px 12px;
+/* Thinking content expandable */
+.thinking-content-wrapper {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+/* Show thinking content when widget is expanded */
+.unified-status-widget.expanded .thinking-content-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.thinking-content-inner {
+    padding: 8px 12px;
     border-top: 1px solid rgba(147, 51, 234, 0.2);
     color: var(--dim-color);
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
-    font-size: 0.9em;
-    line-height: 1.5;
+    font-size: 0.85em;
+    line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: 300px;
+    max-height: 180px;
     overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(147, 51, 234, 0.5) rgba(147, 51, 234, 0.1);
-    flex-shrink: 0;
-    box-sizing: border-box;
 }
 
-.thinking-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.thinking-content::-webkit-scrollbar-track {
-    background: rgba(147, 51, 234, 0.1);
-    border-radius: 3px;
-}
-
-.thinking-content::-webkit-scrollbar-thumb {
-    background: rgba(147, 51, 234, 0.5);
-    border-radius: 3px;
-}
-
-.thinking-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(147, 51, 234, 0.7);
+/* Legacy support - keep old classes working */
+.tool-status,
+.thinking-block {
+    display: none;
 }
 
 /* Scrollbar styling */
