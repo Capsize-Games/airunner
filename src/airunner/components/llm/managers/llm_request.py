@@ -50,7 +50,7 @@ class LLMRequest:
         1.15  # Penalize token repetition (was 1.0 = disabled)
     )
     temperature: float = 1.0
-    top_k: int = 50
+    top_k: int = 20  # Qwen3 recommended value
     top_p: float = 0.9
     use_cache: bool = True
     do_tts_reply: bool = True
@@ -424,7 +424,7 @@ class OpenrouterMistralRequest(LLMRequest):
     temperature: float = 0.1
     seed: int = 42
     top_p: float = 0.9
-    top_k: int = 50
+    top_k: int = 20  # Qwen3 recommended value
     frequency_penalty: float = 0  # Range: [-2, 2]
     presence_penalty: float = 0  # Range: [-2, 2]
     repetition_penalty: float = 0  # Range: [-2, 2]

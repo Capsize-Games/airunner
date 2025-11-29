@@ -38,7 +38,7 @@ class LLMGeneratorSettings(BaseModel):
         Integer, default=7000
     )  # Changed from 1000 -> 0.7 for natural conversation
     ngram_size = Column(Integer, default=0)
-    top_k = Column(Integer, default=10)
+    top_k = Column(Integer, default=20)  # Qwen3 recommended value
     eta_cutoff = Column(Integer, default=10)
     sequences = Column(Integer, default=1)
     decoder_start_token_id = Column(Integer, nullable=True)
