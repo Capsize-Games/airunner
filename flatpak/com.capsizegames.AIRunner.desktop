@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AI Runner
+GenericName=AI Model Runner
+Comment=Run local AI models for chat, image generation, text-to-speech, and more
+Icon=com.capsizegames.AIRunner
+Exec=airunner
+Terminal=false
+Categories=Graphics;Utility;Science;ArtificialIntelligence;
+Keywords=AI;LLM;Stable Diffusion;ChatBot;Image Generation;TTS;Speech;
+StartupWMClass=airunner
+StartupNotify=true

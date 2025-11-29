@@ -55,14 +55,22 @@ class RAGLifecycleMixin:
         self._doc_indexes_cache: Dict[str, VectorStoreIndex] = {}
         self._loaded_doc_ids: List[str] = []
 
-        self._setup_rag()
+        # NOTE: _setup_rag() is NOT called here anymore.
+        # Embedding model loading is deferred until RAG is actually used
+        # to avoid loading ~1.3GB into VRAM when RAG isn't needed.
+        self._rag_initialized = False
 
     def _setup_rag(self):
         """Setup RAG components.
 
         This method is safe to call multiple times - it will only initialize once.
-        It can be called during __init__() or deferred until after model loading.
+        It should be called lazily when RAG is actually needed (e.g., when
+        rag_files are provided in a request), not during __init__.
         """
+        # Skip if already initialized
+        if getattr(self, "_rag_initialized", False):
+            return
+
         try:
             # If the parent/manager has requested to skip agent/RAG load (for
             # example during finetune preparation to conserve GPU memory), then
@@ -89,6 +97,7 @@ class RAGLifecycleMixin:
 
             # Check for old unified index and migrate if needed
             self._detect_and_migrate_old_index()
+            self._rag_initialized = True
             self.logger.info("RAG system initialized successfully")
         except Exception as e:
             self.logger.error(f"Error setting up RAG: {str(e)}", exc_info=True)

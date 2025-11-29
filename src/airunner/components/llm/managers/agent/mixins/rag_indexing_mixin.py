@@ -170,10 +170,16 @@ class RAGIndexingMixin:
         are not already present. It returns True if at least one file was
         indexed or all files were already indexed. It returns False only if
         one or more indexing operations failed.
+        
+        NOTE: This triggers lazy RAG initialization if not already done.
         """
         if not file_paths:
             self.logger.debug("No file paths provided to ensure_indexed_files")
             return True
+
+        # Lazy initialize RAG system (loads embedding model)
+        if hasattr(self, "_setup_rag"):
+            self._setup_rag()
 
         success = True
         for path in file_paths:

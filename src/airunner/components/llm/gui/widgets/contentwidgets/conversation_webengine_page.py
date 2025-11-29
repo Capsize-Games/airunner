@@ -30,13 +30,9 @@ class ConversationWebEnginePage(QWebEnginePage):
                 QWebEngineSettings.JavascriptCanAccessClipboard, True
             )
             settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
-            print(
-                "[ConversationPage] WebEngine settings configured for local file access"
-            )
 
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
         """Capture JavaScript console messages for debugging"""
-        print(f"[ConversationPage JS] {message} (line {lineNumber})")
         super().javaScriptConsoleMessage(level, message, lineNumber, sourceID)
 
     def acceptNavigationRequest(

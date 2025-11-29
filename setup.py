@@ -51,6 +51,9 @@ extras_require = {
         "pyttsx3==2.91",
         "cryptography==44.0.3",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
+        # GGUF model support via llama.cpp (smaller, faster than BitsAndBytes)
+        # Note: For GPU support, install with: CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
+        "llama-cpp-python>=0.3.0",
         # Summarizations (basic)
         "sumy==0.11.0",
         "sentencepiece==0.2.0",
@@ -252,6 +255,7 @@ setup(
             "airunner-quality-report=airunner.bin.code_quality_report:main",
             "airunner-remove-unused-imports=airunner.bin.remove_unused_imports:main",
             "airunner-migrate-knowledge=airunner.bin.airunner_migrate_knowledge:main",
+            "airunner-cleanup-llm-models=airunner.bin.cleanup_llm_models:main",
         ],
     },
 )

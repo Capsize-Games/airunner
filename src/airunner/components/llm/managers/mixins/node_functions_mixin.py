@@ -834,10 +834,6 @@ Based on the search results above, provide a clear, conversational answer to the
             escaped_system_prompt, trimmed_messages
         )
 
-        # Debug logging
-        self.logger.debug("Full system prompt being sent to model:")
-        self.logger.debug("%s...", escaped_system_prompt[:1000])
-
         # Build prompt template
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -1345,7 +1341,6 @@ Based on the search results above, provide a clear, conversational answer to the
                 # Use final_thinking_content if available (from completed thinking block)
                 # Otherwise fall back to current thinking_content list (for incomplete thinking)
                 thinking_to_save = final_thinking_content or ("".join(thinking_content) if thinking_content else None)
-                self.logger.debug(f"[THINKING STREAM] Collected thinking_content length: {len(thinking_to_save) if thinking_to_save else 0}")
                 return self._create_streamed_message(
                     streamed_content, last_chunk_message, collected_tool_calls, thinking_to_save
                 )
@@ -1398,15 +1393,12 @@ Based on the search results above, provide a clear, conversational answer to the
         if thinking_content:
             additional_kwargs = dict(additional_kwargs)  # Make a copy to avoid mutating
             additional_kwargs["thinking_content"] = thinking_content
-            self.logger.debug(f"[THINKING MSG] Stored thinking_content in additional_kwargs: {len(thinking_content)} chars")
 
         response_message = AIMessage(
             content=complete_content,
             additional_kwargs=additional_kwargs,
             tool_calls=tool_calls or [],
         )
-        
-        self.logger.debug(f"[THINKING MSG] Created AIMessage with additional_kwargs keys: {list(additional_kwargs.keys())}")
 
         return response_message
 

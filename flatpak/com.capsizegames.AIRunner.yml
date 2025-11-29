@@ -1,0 +1,129 @@
+app-id: com.capsizegames.AIRunner
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+
+command: airunner
+
+finish-args:
+  # X11 + Wayland display access
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=fallback-x11
+  
+  # GPU access (OpenGL, Vulkan, CUDA)
+  - --device=dri
+  - --device=all  # Required for CUDA/GPU compute
+  
+  # Audio access (PulseAudio)
+  - --socket=pulseaudio
+  
+  # Network access (for model downloads, API calls)
+  - --share=network
+  
+  # File system access
+  - --filesystem=home  # Access to user's home for models/data
+  - --filesystem=xdg-documents  # For saving generated content
+  - --filesystem=xdg-pictures  # For image generation output
+  
+  # D-Bus access for system integration
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  
+  # Environment variables
+  - --env=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+  - --env=QT_QPA_PLATFORM=xcb
+  - --env=AIRUNNER_FLATPAK=1
+
+modules:
+  # Python 3.13 build
+  - name: python313
+    buildsystem: autotools
+    sources:
+      - type: archive
+        url: https://www.python.org/ftp/python/3.13.3/Python-3.13.3.tgz
+        sha256: 988d735a6d33568cbaff1384a65cb22a1fb18a9ecb73d43ef868000193ce23ed
+    config-opts:
+      - --enable-optimizations
+      - --with-lto
+      - --enable-shared
+      - --with-system-ffi
+      - --with-ensurepip=install
+    post-install:
+      - ln -s python3.13 /app/bin/python3
+      - ln -s python3.13 /app/bin/python
+      - ln -s pip3.13 /app/bin/pip3
+      - ln -s pip3.13 /app/bin/pip
+
+  # PortAudio for audio I/O (required for pyaudio)
+  - name: portaudio
+    buildsystem: cmake-ninja
+    sources:
+      - type: archive
+        url: https://github.com/PortAudio/portaudio/archive/refs/tags/v19.7.0.tar.gz
+        sha256: 5af29ba58bbdbb7bbcefaaecc77ec8fc413f0db6f4c4e286c40c3e1b83174fa0
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+
+  # AI Runner application
+  - name: airunner
+    buildsystem: simple
+    sources:
+      - type: dir
+        path: ..
+    build-commands:
+      # Create virtual environment
+      - python3.13 -m venv /app/venv
+      
+      # Upgrade pip
+      - /app/venv/bin/pip install --upgrade pip setuptools wheel
+      
+      # Install PyTorch with CUDA support
+      # Note: Flatpak users need NVIDIA drivers on host + flatpak NVIDIA runtime
+      - /app/venv/bin/pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+      
+      # Install AI Runner (without Japanese TTS to avoid MeCab dependency)
+      - /app/venv/bin/pip install ".[all]"
+      
+      # Create wrapper script
+      - |
+        cat > /app/bin/airunner << 'EOF'
+        #!/bin/bash
+        export PATH="/app/venv/bin:$PATH"
+        export PYTHONPATH="/app/venv/lib/python3.13/site-packages:$PYTHONPATH"
+        export LD_LIBRARY_PATH="/app/lib:$LD_LIBRARY_PATH"
+        exec /app/venv/bin/python -m airunner "$@"
+        EOF
+      - chmod +x /app/bin/airunner
+      
+      # Create setup wrapper
+      - |
+        cat > /app/bin/airunner-setup << 'EOF'
+        #!/bin/bash
+        export PATH="/app/venv/bin:$PATH"
+        export PYTHONPATH="/app/venv/lib/python3.13/site-packages:$PYTHONPATH"
+        exec /app/venv/bin/python -m airunner.bin.airunner_setup "$@"
+        EOF
+      - chmod +x /app/bin/airunner-setup
+
+  # Desktop integration files
+  - name: desktop-files
+    buildsystem: simple
+    sources:
+      - type: file
+        path: com.capsizegames.AIRunner.desktop
+      - type: file
+        path: com.capsizegames.AIRunner.metainfo.xml
+      - type: file
+        path: icons/airunner-128.png
+      - type: file
+        path: icons/airunner-256.png
+      - type: file
+        path: icons/airunner-512.png
+    build-commands:
+      - install -Dm644 com.capsizegames.AIRunner.desktop /app/share/applications/com.capsizegames.AIRunner.desktop
+      - install -Dm644 com.capsizegames.AIRunner.metainfo.xml /app/share/metainfo/com.capsizegames.AIRunner.metainfo.xml
+      - install -Dm644 airunner-128.png /app/share/icons/hicolor/128x128/apps/com.capsizegames.AIRunner.png
+      - install -Dm644 airunner-256.png /app/share/icons/hicolor/256x256/apps/com.capsizegames.AIRunner.png
+      - install -Dm644 airunner-512.png /app/share/icons/hicolor/512x512/apps/com.capsizegames.AIRunner.png

@@ -194,15 +194,6 @@ class ToolCallingMixin:
         Returns:
             Tuple of (tool_calls list or None, cleaned response text)
         """
-        print(
-            f"[JSON PARSE DEBUG] Parsing response of length {len(response_text)}",
-            flush=True,
-        )
-        print(
-            f"[JSON PARSE DEBUG] First 500 chars: {response_text[:500]}",
-            flush=True,
-        )
-
         # Try extracting JSON from <tool_call> XML tags first
         parsed = self._try_parse_tool_call_tags(response_text)
         if parsed:
@@ -237,10 +228,6 @@ class ToolCallingMixin:
             Text with fixed quotes
         """
         if "{'tool'" in text or '{"tool":' not in text:
-            print(
-                "[JSON PARSE DEBUG] Attempting to fix single-quote JSON...",
-                flush=True,
-            )
             text_fixed = (
                 text.replace("':", '":')
                 .replace(": '", ': "')
@@ -248,10 +235,6 @@ class ToolCallingMixin:
                 .replace("'}", '"}')
             )
             if text_fixed != text:
-                print(
-                    "[JSON PARSE DEBUG] Fixed some single quotes, retrying parse...",
-                    flush=True,
-                )
                 return text_fixed
         return text
 
@@ -324,31 +307,18 @@ class ToolCallingMixin:
             (tool_calls, cleaned_text) tuple or None if parsing failed
         """
         try:
-            print(
-                "[JSON PARSE DEBUG] Attempting to parse entire response as JSON...",
-                flush=True,
-            )
             data = json.loads(response_text.strip())
 
             if isinstance(data, dict) and ("tool" in data or "name" in data):
                 tool_calls = [self._extract_tool_call(data)]
-                print(
-                    f"[JSON PARSE DEBUG] ✓ Parsed entire response as JSON tool call: {tool_calls[0]['name']}",
-                    flush=True,
-                )
                 return (tool_calls, "")
 
             elif isinstance(data, list):
                 tool_calls = self._extract_tool_calls_from_list(data)
                 if tool_calls:
-                    print(
-                        f"[JSON PARSE DEBUG] ✓ Parsed {len(tool_calls)} tool calls from array",
-                        flush=True,
-                    )
                     return (tool_calls, "")
 
         except json.JSONDecodeError as e:
-            print(f"[JSON PARSE DEBUG] JSON parse failed: {e}", flush=True)
             # Try Python literal_eval fallback
             return self._try_python_literal_eval(response_text)
 
@@ -365,25 +335,16 @@ class ToolCallingMixin:
         Returns:
             (tool_calls, cleaned_text) tuple or None if parsing failed
         """
-        print(
-            "[JSON PARSE DEBUG] Attempting Python ast.literal_eval fallback...",
-            flush=True,
-        )
         try:
             import ast
 
             data = ast.literal_eval(response_text.strip())
             if isinstance(data, dict) and ("tool" in data or "name" in data):
                 tool_calls = [self._extract_tool_call(data)]
-                print(
-                    f"[JSON PARSE DEBUG] ✓ Parsed Python-style dict as tool call: {tool_calls[0]['name']}",
-                    flush=True,
-                )
                 return (tool_calls, "")
         except (ValueError, SyntaxError) as ast_error:
-            print(
-                f"[JSON PARSE DEBUG] Python literal_eval also failed: {ast_error}",
-                flush=True,
+            self.logger.error(
+                f"Failed to parse response with literal_eval: {ast_error}"
             )
         return None
 
@@ -452,11 +413,8 @@ class ToolCallingMixin:
                 data = json.loads(match)
                 if "tool" in data or "name" in data:
                     tool_calls.append(self._extract_tool_call(data))
-                    print(
-                        f"✓ Parsed JSON block tool call: {tool_calls[-1]['name']}"
-                    )
             except json.JSONDecodeError as e:
-                print(f"⚠ Failed to parse JSON block: {e}")
+                self.logger.error(f"Failed to parse JSON block: {e}")
                 continue
 
         if tool_calls:
@@ -522,11 +480,6 @@ class ToolCallingMixin:
         )
         react_matches = re.findall(react_pattern, response_text, re.DOTALL)
 
-        print(
-            f"[TOOL PARSING DEBUG] Found {len(react_matches)} ReAct tool calls",
-            flush=True,
-        )
-
         for tool_name, json_input in react_matches:
             try:
                 args = json.loads(json_input)
@@ -538,43 +491,20 @@ class ToolCallingMixin:
                         "type": "tool_call",
                     }
                 )
-                print(
-                    f"[TOOL PARSING DEBUG] Parsed tool: {tool_name} with args: {args}",
-                    flush=True,
-                )
             except json.JSONDecodeError as e:
-                print(
-                    f"[TOOL PARSING DEBUG] Failed to parse JSON: {e}",
-                    flush=True,
-                )
+                self.logger.error(f"Failed to parse JSON: {e}")
                 continue
 
         # Strip out ReAct format blocks from the response
         if react_matches:
-            print(
-                f"[TOOL PARSING DEBUG] Original text length: {len(response_text)}",
-                flush=True,
-            )
             # Remove Action: and Action Input: lines
             cleaned_text = re.sub(
                 react_pattern, "", response_text, flags=re.DOTALL
             ).strip()
-            print(
-                f"[TOOL PARSING DEBUG] After Action removal: {len(cleaned_text)} chars",
-                flush=True,
-            )
             # Also remove any Observation: placeholder lines (LLM sometimes generates these)
             cleaned_text = re.sub(
                 r"\n?Observation:\s*\[.*?\]", "", cleaned_text, flags=re.DOTALL
             ).strip()
-            print(
-                f"[TOOL PARSING DEBUG] After Observation removal: {len(cleaned_text)} chars",
-                flush=True,
-            )
-            print(
-                f"[TOOL PARSING DEBUG] Cleaned text: '{cleaned_text}'",
-                flush=True,
-            )
 
         # Also try JSON code blocks as fallback
         json_pattern = r"```json\s*(\{[^`]+\})\s*```"
