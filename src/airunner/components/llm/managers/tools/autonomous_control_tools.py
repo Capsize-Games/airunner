@@ -486,18 +486,14 @@ class AutonomousControlTools(BaseTool):
                 }
 
                 # Store in knowledge base for learning
-                from airunner.components.knowledge.knowledge_memory_manager import (
-                    KnowledgeMemoryManager,
+                from airunner.components.knowledge.knowledge_base import (
+                    get_knowledge_base,
                 )
 
-                km = KnowledgeMemoryManager()
-                km.add_fact(
-                    text=f"Decision: {decision}. Reasoning: {reasoning}",
-                    category="agent_decisions",
-                    tags=["decision", "autonomous"],
-                    confidence=confidence,
-                    source="agent",
-                    verified=True,
+                kb = get_knowledge_base()
+                kb.add_fact(
+                    fact=f"Decision: {decision}. Reasoning: {reasoning}",
+                    section="Notes",
                 )
 
                 self.logger.info(f"Agent decision logged: {decision}")

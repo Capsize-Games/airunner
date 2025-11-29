@@ -96,6 +96,12 @@ def search_web(
                 formatted += f"   {snippet}...\n"
             formatted += "\n"
 
+        # Add explicit instructions to answer the question
+        formatted += "\n" + "="*60 + "\n"
+        formatted += "📝 NOW: Use these results to answer the user's question directly.\n"
+        formatted += "If more details are needed, use scrape_website on a relevant URL.\n"
+        formatted += "="*60 + "\n"
+
         logger.info(f"✓ Formatted {len(ddg_results[:5])} search results")
         return {"results": ddg_results, "summary": formatted}
     except Exception as e:
@@ -184,6 +190,12 @@ def search_news(
                 formatted += f"   {snippet}...\n"
             formatted += "\n"
 
+        # Add explicit instructions to answer the question
+        formatted += "\n" + "="*60 + "\n"
+        formatted += "📝 NOW: Use these news results to answer the user's question directly.\n"
+        formatted += "If more details are needed, use scrape_website on a relevant URL.\n"
+        formatted += "="*60 + "\n"
+
         logger.info(f"✓ Formatted {len(results[:7])} news results")
         return {"results": results, "summary": formatted}
     except Exception as e:
@@ -238,6 +250,11 @@ def scrape_website(
                 f"✓ Extracted {len(result['content'])} characters from {url}"
             )
             logger.info(f"  Title: {result.get('title', 'N/A')}")
+            # Add explicit instructions to answer the user's question
+            result["_instructions"] = (
+                "📝 IMPORTANT: Use this content to answer the user's original question. "
+                "Optionally, use record_knowledge() to save key facts for future reference."
+            )
             return result
         else:
             return {

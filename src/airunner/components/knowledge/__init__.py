@@ -1,51 +1,25 @@
 """
 Knowledge management system for long-term memory.
 
-This package provides persistent knowledge storage beyond conversation history,
-including:
-- User-specific facts and preferences
-- Document summaries and key concepts
-- Web content caching
-- Semantic indexing for retrieval
+Facts are stored in daily markdown files under:
+  ~/.local/share/airunner/text/knowledge/YYYY-MM-DD.md
 
-Knowledge is stored in human-readable formats (markdown) and indexed
-with RAG for efficient retrieval.
+Each file has sections, and facts within sections are separated by blank lines.
+All files are indexed into RAG for semantic retrieval during responses.
+
+Key components:
+- KnowledgeBase: Daily markdown file storage with CRUD operations
+- get_knowledge_base(): Singleton accessor
 """
 
-# Global instances (initialized on first import)
-_extraction_worker = None
-_auto_handler = None
-
-
-def initialize_knowledge_system():
-    """
-    Initialize the knowledge extraction system.
-
-    This creates the extraction worker and auto-extraction handler,
-    which will listen for signals and automatically extract knowledge
-    from conversations when enabled.
-
-    Should be called once during application startup.
-    """
-    global _extraction_worker, _auto_handler
-
-    # Lazy imports to avoid circular dependencies during Alembic migrations
-    from airunner.components.knowledge.workers.knowledge_extraction_worker import (
-        KnowledgeExtractionWorker,
-    )
-    from airunner.components.knowledge.auto_extraction_handler import (
-        AutoExtractionHandler,
-    )
-
-    if _extraction_worker is None:
-        _extraction_worker = KnowledgeExtractionWorker()
-
-    if _auto_handler is None:
-        _auto_handler = AutoExtractionHandler()
-
-    return _extraction_worker, _auto_handler
-
+from airunner.components.knowledge.knowledge_base import (
+    KnowledgeBase,
+    get_knowledge_base,
+    KNOWLEDGE_DIR,
+)
 
 __all__ = [
-    "initialize_knowledge_system",
+    "KnowledgeBase",
+    "get_knowledge_base",
+    "KNOWLEDGE_DIR",
 ]

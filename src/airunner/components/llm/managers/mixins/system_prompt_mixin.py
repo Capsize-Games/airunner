@@ -7,6 +7,7 @@ This mixin provides:
 - Timestamp inclusion
 - Mood system integration (disabled for precision tools)
 - Context-aware prompt selection (precision vs conversational)
+- Automatic memory context injection (user facts)
 """
 
 from datetime import datetime
@@ -48,6 +49,40 @@ Focus entirely on solving the problem correctly using the available tools when n
 
 class SystemPromptMixin:
     """Mixin for LLM system prompt generation."""
+
+    def _get_memory_context(self, user_query: Optional[str] = None) -> str:
+        """Get relevant memory context about the user from knowledge base.
+        
+        Uses the daily markdown knowledge files to get context about the user.
+        Knowledge is stored in ~/.local/share/airunner/text/knowledge/
+        
+        Args:
+            user_query: Optional user message for RAG semantic search
+            
+        Returns:
+            Memory context string, or empty string if no knowledge
+        """
+        try:
+            from airunner.components.knowledge.knowledge_base import get_knowledge_base
+            kb = get_knowledge_base()
+            
+            # If we have a query, use RAG search for relevant facts
+            if user_query:
+                results = kb.search_rag(user_query, k=10)
+                if results:
+                    context = "## Relevant Knowledge\n\n"
+                    for r in results:
+                        context += f"- {r}\n"
+                    return context
+            
+            # Otherwise return general context
+            context = kb.get_context(max_chars=2000)
+            if context:
+                return context
+        except Exception as e:
+            # Fail silently - memory is optional
+            pass
+        return ""
 
     def _get_prompt_mode(self, tool_categories: Optional[List] = None) -> str:
         """Determine which system prompt mode to use based on tool categories.
@@ -175,6 +210,13 @@ class SystemPromptMixin:
         # Add style guidelines to encourage more expressive, human-sounding responses
         parts.append(self._get_style_guidelines())
 
+        # Add memory/knowledge instructions (how to use record_knowledge proactively)
+        parts.append(self._get_memory_instructions())
+
+        # NOTE: Memory context is NOT injected here anymore.
+        # Knowledge should be accessed via RAG tools (recall_knowledge, rag_search)
+        # to avoid polluting every conversation with potentially irrelevant stored facts.
+
         return "\n\n".join(parts)
 
     def _get_current_mood(self) -> dict:
@@ -241,6 +283,8 @@ class SystemPromptMixin:
                 "\nFocus on natural conversation. You may use conversation management tools "
                 "(clear_conversation, toggle_tts) and data storage tools as needed, but avoid "
                 "image generation or RAG search unless explicitly requested by the user."
+                "\n\n**CRITICAL:** Always stay focused on the user's current question. "
+                "If you receive irrelevant information from tools, ignore it and focus on what's relevant."
             )
 
         elif action == LLMActionType.GENERATE_IMAGE:
@@ -284,6 +328,15 @@ class SystemPromptMixin:
                 "\nYou have access to all tools and should autonomously determine which tools "
                 "to use based on the user's request. Analyze the intent and choose the most "
                 "appropriate tools to fulfill the user's needs."
+                "\n\n**CRITICAL CONVERSATION RULES:**"
+                "\n1. ALWAYS focus on answering the user's CURRENT question - do not get distracted"
+                "\n2. If tool results contain irrelevant information, IGNORE IT - focus only on relevant data"
+                "\n3. If recall_knowledge returns unrelated facts, you MUST use search_news or search_web to find the answer"
+                "\n4. NEVER make tool calls that don't directly address the user's question"
+                "\n5. After gathering information, answer the user's question directly - do not ask follow-up questions unless truly necessary"
+                "\n6. When the user asks about topic X, don't suddenly respond about topic Y from old context"
+                "\n7. NEVER tell the user to 'check elsewhere' or 'search online' - YOU have search tools, USE THEM"
+                "\n8. For news/current events, ALWAYS use search_news first"
             )
 
         return base_prompt
@@ -302,4 +355,41 @@ class SystemPromptMixin:
             "- Prefer concrete, specific phrasing over generic platitudes; use first-person (I) and second-person (you).\n"
             "- Keep responses concise but not curt; prioritize clarity, then warmth.\n"
             "- Never claim to have real feelings; you can express empathy and understanding."
+        )
+
+    def _get_memory_instructions(self) -> str:
+        """Instructions for proactive memory use.
+        
+        Returns:
+            Instructions telling the LLM to use record_knowledge proactively.
+        """
+        return (
+            "\n\n**MEMORY & KNOWLEDGE INSTRUCTIONS**:\n"
+            "You have access to memory tools that let you remember facts across conversations.\n\n"
+            "**CRITICAL: You MUST use record_knowledge when the user shares:**\n"
+            "1. Personal preferences (favorite books, authors, music, food, etc.)\n"
+            "2. Information about themselves (name, job, hobbies, interests)\n"
+            "3. Information about their relationships (family, friends, pets)\n"
+            "4. Goals, plans, or projects they're working on\n"
+            "5. Health or wellness information\n"
+            "6. ANY facts worth remembering for future conversations\n\n"
+            "**SECTIONS to use:**\n"
+            "- 'Identity' - user's name, job, location\n"
+            "- 'Interests & Hobbies' - favorite books, authors, music, hobbies, activities\n"
+            "- 'Preferences' - likes/dislikes, preferences, favorites\n"
+            "- 'Work & Projects' - job, projects, professional info\n"
+            "- 'Relationships' - family, friends, pets\n"
+            "- 'Health & Wellness' - health conditions, fitness goals\n"
+            "- 'Goals' - aspirations, plans, objectives\n"
+            "- 'Notes' - general facts, search results\n\n"
+            "**EXAMPLES:**\n"
+            "- 'I love Ray Bradbury' → record_knowledge(fact='User loves Ray Bradbury (author)', section='Interests & Hobbies')\n"
+            "- 'My favorite books are...' → record_knowledge(fact='User\\'s favorite authors include X, Y, Z', section='Interests & Hobbies')\n"
+            "- 'My wife is Krystal' → record_knowledge(fact='User has a wife named Krystal', section='Relationships')\n"
+            "- After web search → record_knowledge(fact='Key finding from search', section='Notes')\n\n"
+            "**IMPORTANT:**\n"
+            "- Record facts IMMEDIATELY when the user shares them\n"
+            "- Be concise but complete in what you record\n"
+            "- The knowledge base automatically deduplicates, so don't worry about duplicates\n"
+            "- After any search, record the key findings"
         )

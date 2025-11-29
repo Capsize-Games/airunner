@@ -59,7 +59,7 @@ from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.components.splash_screen.splash_screen import SplashScreen
 
 # NOTE: set_api, APIServerThread, and MainWindow imports are inline to avoid circular dependency with API class
-from airunner.components.knowledge import initialize_knowledge_system
+from airunner.components.knowledge import get_knowledge_base
 from airunner.utils.application.create_worker import create_worker
 from airunner.components.application.gui.windows.main import (
     WorkerManager,
@@ -67,7 +67,6 @@ from airunner.components.application.gui.windows.main import (
     LLMGeneratorSettings,
 )
 from airunner.components.data.session_manager import session_scope
-from airunner.bin.airunner_migrate_knowledge import KnowledgeMigrator
 from airunner.app_installer import AppInstaller
 from airunner.utils.application.logging_utils import configure_headless_logging
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
@@ -357,17 +356,18 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
 
     def _initialize_knowledge_system(self):
-        """Initialize the automatic knowledge extraction system."""
+        """Initialize the markdown-based knowledge system."""
         # Skip if knowledge system is disabled (e.g., in headless mode)
         if os.environ.get("AIRUNNER_KNOWLEDGE_ON", "1") == "0":
             self.logger.info("Knowledge system disabled")
             return
 
         try:
-            initialize_knowledge_system()
-            self.logger.info("Knowledge extraction system initialized")
+            # Initialize the knowledge base (creates directory if needed)
+            kb = get_knowledge_base()
+            self.logger.info(f"Knowledge system initialized: {kb.knowledge_dir}")
 
-            # Run one-time knowledge migration if needed
+            # Run one-time knowledge migration if needed (from old JSON to markdown)
             self._run_knowledge_migration_if_needed()
         except Exception as e:
             self.logger.error(
@@ -539,7 +539,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
 
     def _run_knowledge_migration_if_needed(self):
-        """Run one-time migration from JSON to database if not already done.
+        """Run one-time migration from JSON to markdown if not already done.
 
         Uses database-level locking to prevent race conditions when multiple
         instances start simultaneously.
@@ -591,26 +591,13 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
                 # Run migration (outside transaction to avoid long locks)
                 self.logger.info(
-                    "Running one-time knowledge migration from JSON to database..."
+                    "Running one-time knowledge migration from JSON to markdown..."
                 )
 
             # Migration runs outside the locked transaction
-            migrator = KnowledgeMigrator(json_path=json_path)
-            stats = migrator.migrate_all(dry_run=False, skip_backup=False)
+            self._migrate_json_to_markdown(json_path)
 
-            # Only mark complete if migration was successful
-            if stats["errors"] > 0:
-                self.logger.error(
-                    f"Knowledge migration completed with {stats['errors']} errors. "
-                    f"Migration NOT marked complete - will retry on next startup."
-                )
-                return
-
-            self.logger.info(
-                f"Knowledge migration successful: {stats['migrated']} facts migrated"
-            )
-
-            # Mark migration as complete (only if no errors)
+            # Mark migration as complete
             self._mark_migration_complete()
 
         except Exception as e:
@@ -619,6 +606,65 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 f"Migration NOT marked complete - will retry on next startup.",
                 exc_info=True,
             )
+
+    def _migrate_json_to_markdown(self, json_path: Path):
+        """Migrate legacy JSON facts to new markdown format.
+        
+        Args:
+            json_path: Path to the legacy user_facts.json file
+        """
+        import json
+        
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            kb = get_knowledge_base()
+            migrated = 0
+            
+            # Handle different JSON formats
+            facts = data if isinstance(data, list) else data.get('facts', [])
+            
+            for fact_data in facts:
+                if isinstance(fact_data, str):
+                    fact_text = fact_data
+                    category = "Notes"
+                elif isinstance(fact_data, dict):
+                    fact_text = fact_data.get('text', fact_data.get('content', ''))
+                    category = fact_data.get('category', 'Notes')
+                else:
+                    continue
+                
+                if fact_text:
+                    # Map old categories to new sections
+                    section_map = {
+                        'identity': 'Identity',
+                        'personal': 'Identity',
+                        'work': 'Work & Projects',
+                        'project': 'Work & Projects',
+                        'hobby': 'Interests & Hobbies',
+                        'interest': 'Interests & Hobbies',
+                        'preference': 'Preferences',
+                        'health': 'Health & Wellness',
+                        'relationship': 'Relationships',
+                        'goal': 'Goals',
+                        'other': 'Notes',
+                        'notes': 'Notes',
+                    }
+                    section = section_map.get(category.lower(), 'Notes')
+                    kb.add_fact(fact_text, section=section)
+                    migrated += 1
+            
+            self.logger.info(f"Knowledge migration successful: {migrated} facts migrated to markdown")
+            
+            # Rename the old file to mark as migrated
+            backup_path = json_path.with_suffix('.json.migrated')
+            json_path.rename(backup_path)
+            self.logger.info(f"Legacy JSON backed up to: {backup_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during JSON to markdown migration: {e}")
+            raise
 
     def _mark_migration_complete(self):
         """Mark knowledge migration as complete in settings."""

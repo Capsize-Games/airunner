@@ -26,6 +26,19 @@ class StreamingMixin:
         self._current_mood = "neutral"
         self._current_emoji = "😐"
 
+    def _auto_learn_from_message(self, user_input: str) -> None:
+        """Previously auto-extracted facts - now handled via LLM tools.
+        
+        The LLM now explicitly decides when to record knowledge using the
+        record_knowledge tool, which provides better control over what
+        gets stored and avoids duplicate facts.
+        
+        Args:
+            user_input: The user's message (unused)
+        """
+        # Automatic extraction disabled - LLM uses tools to record knowledge
+        pass
+
     def invoke(self, user_input: str) -> Dict[str, Any]:
         """Invoke the workflow with user input.
 
@@ -67,6 +80,9 @@ class StreamingMixin:
         """
         # Reset executed tools list for this invocation
         self._executed_tools = []
+
+        # Automatically learn facts from user message (non-blocking)
+        self._auto_learn_from_message(user_input)
 
         # Check if we need to automatically update mood before processing
         # Pass the current user input so mood can be analyzed immediately
