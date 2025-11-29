@@ -25,7 +25,10 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.download_manager = None
         self.quantization_dialog = None
         self.initialize_form()
-        self._update_model_dropdown_visibility()
+        
+        # Hide model/provider controls - they're now in the chat prompt widget
+        self._hide_model_provider_controls()
+        
         self.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self.on_download_complete,
@@ -49,8 +52,22 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self._setup_adapters_table()
         self._load_adapters()
         self._setup_quantization_dropdown()
-        self._update_model_info_label()
         self._update_quantize_button_state()  # Initialize button state
+
+    def _hide_model_provider_controls(self) -> None:
+        """Hide model and provider controls since they're now in chat prompt widget."""
+        # Hide provider group box (contains model_service)
+        if hasattr(self.ui, "groupBox"):
+            self.ui.groupBox.setVisible(False)
+        # Hide model selection group (contains model_dropdown, model_path, etc.)
+        if hasattr(self.ui, "model_selection_group"):
+            self.ui.model_selection_group.setVisible(False)
+        # Hide the LLM Settings title since this panel now only has advanced settings
+        if hasattr(self.ui, "llm_settings_title"):
+            self.ui.llm_settings_title.setVisible(False)
+        # Hide the line separator below title
+        if hasattr(self.ui, "line_2"):
+            self.ui.line_2.setVisible(False)
 
     @Slot(str)
     def on_model_path_textChanged(self, val: str):
@@ -608,43 +625,39 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.ui.tabWidget.setCurrentIndex(index)
 
     def _setup_quantization_dropdown(self):
-        """Setup quantization dropdown with current value and enable it."""
-        # Map quantization bits to dropdown index (0=2-bit, 1=4-bit, 2=8-bit, 3=GGUF)
-        quant_to_index = {2: 0, 4: 1, 8: 2, 0: 3}  # 0 = GGUF
-        # Prefer saved value from QSettings, fallback to llm_generator_settings
+        """Setup quantization dropdown - GGUF only mode.
+        
+        We hide quantization options and always use GGUF for simplicity.
+        GGUF is the best choice for consumer hardware: efficient, single-file,
+        supports CPU+GPU hybrid inference.
+        """
+        # Hide quantization UI - we're GGUF-only now
+        if hasattr(self.ui, "quantization_label"):
+            self.ui.quantization_label.setVisible(False)
+        if hasattr(self.ui, "quantization_dropdown"):
+            self.ui.quantization_dropdown.setVisible(False)
+        if hasattr(self.ui, "start_quantize_button"):
+            self.ui.start_quantize_button.setVisible(False)
+        if hasattr(self.ui, "delete_safetensors_button"):
+            self.ui.delete_safetensors_button.setVisible(False)
+        if hasattr(self.ui, "delete_quantized_button"):
+            self.ui.delete_quantized_button.setVisible(False)
+        
+        # Always use GGUF (quantization_bits=0)
         qs = get_qsettings()
-        try:
-            saved = qs.value("llm_settings/quantization_bits", None)
-            current_quant = (
-                int(saved)
-                if saved is not None
-                else getattr(
-                    self.llm_generator_settings, "quantization_bits", 4
-                )
-            )
-        except Exception:
-            current_quant = getattr(
-                self.llm_generator_settings, "quantization_bits", 4
-            )
-        index = quant_to_index.get(current_quant, 1)  # Default to 4-bit
-        self.ui.quantization_dropdown.blockSignals(True)
-        self.ui.quantization_dropdown.setCurrentIndex(index)
-        self.ui.quantization_dropdown.setEnabled(
-            True
-        )  # Enable for download-time selection
-        self.ui.quantization_dropdown.blockSignals(False)
+        qs.setValue("llm_settings/quantization_bits", 0)
+        qs.sync()
+        self.update_llm_generator_settings(quantization_bits=0)
 
     @Slot(int)
     def on_quantization_changed(self, index: int):
-        """Handle quantization selection change."""
-        # Map dropdown index to bits (0=2-bit, 1=4-bit, 2=8-bit, 3=GGUF)
-        # For GGUF (index 3), use 0 as a sentinel value
-        index_to_quant = {0: 2, 1: 4, 2: 8, 3: 0}
-        quantization_bits = index_to_quant.get(index, 4)
+        """Handle quantization selection change - always use GGUF."""
+        # GGUF-only mode: ignore index, always use 0 (GGUF)
+        quantization_bits = 0
 
         # Update settings
         self.update_llm_generator_settings(quantization_bits=quantization_bits)
-        # Persist selection to QSettings so it's restored on next load
+        # Persist selection to QSettings
         try:
             qs = get_qsettings()
             qs.setValue("llm_settings/quantization_bits", quantization_bits)
@@ -678,14 +691,9 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             self.ui.model_info_label.setText("Model info not available")
             return
 
-        # Get current quantization
-        quant_index = self.ui.quantization_dropdown.currentIndex()
-        index_to_quant = {0: 2, 1: 4, 2: 8}
-        quantization_bits = index_to_quant.get(quant_index, 4)
-
-        # Get VRAM for this quantization
+        # GGUF mode: use 4-bit equivalent VRAM estimate (GGUF Q4_K_M is similar)
         vram = LLMProviderConfig.get_vram_for_quantization(
-            provider, model_id, quantization_bits
+            provider, model_id, 4  # Q4_K_M is roughly equivalent to 4-bit
         )
 
         # Get context length
@@ -720,8 +728,8 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         else:
             tool_info = "No"
 
-        # Build info string
-        info = f"VRAM: {vram} GB | Context: {context_str} tokens | Tool Calling: {tool_info}"
+        # Build info string (GGUF format)
+        info = f"~{vram} GB VRAM | {context_str} context | Tools: {tool_info}"
         self.ui.model_info_label.setText(info)
 
     def update_chatbot(self, key, val):
