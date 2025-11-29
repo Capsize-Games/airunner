@@ -150,6 +150,7 @@ class GenerationMixin:
                 do_sample=kwargs.get("do_sample", self.do_sample),
                 pad_token_id=pad_token_id,
                 eos_token_id=eos_token_id,
+                use_cache=True,  # Enable KV cache for faster generation
             )
 
     def _decode_response(self, outputs, inputs):
@@ -347,6 +348,7 @@ class GenerationMixin:
             "eos_token_id": eos_token_id,
             "streamer": streamer,
             "stopping_criteria": stopping_criteria,
+            "use_cache": True,  # Enable KV cache for faster generation
         }
 
     def _start_generation_thread(self, generation_kwargs):
