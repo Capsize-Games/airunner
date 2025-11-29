@@ -103,25 +103,45 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                         f"🔵 Last message type: {last_msg_type}, content preview: '{last_msg_content}'"
                     )
 
-                # CRITICAL FIX: Use the raw conversation value count, not the filtered
-                # messages property. The messages property filters out tool_calls and
-                # tool_result entries, which causes mismatches with LangGraph state.
+                # CRITICAL FIX: Only append NEW messages, don't clear existing ones.
+                # The database stores rich message format (blocks, metadata, etc.)
+                # that gets lost when we clear and re-save LangChain messages.
+                # 
+                # Strategy: Count existing LangChain-compatible messages (user/assistant)
+                # and only add messages beyond that count.
+                
+                # Refresh conversation from database to ensure we have latest state
+                self.message_history._load_conversation()
                 raw_conv = self.message_history._conversation
-                raw_db_count = len(raw_conv.value) if raw_conv and raw_conv.value else 0
+                existing_value = raw_conv.value if raw_conv and raw_conv.value else []
+                
+                # Count only user/assistant messages (what LangGraph sees)
+                existing_langchain_count = sum(
+                    1 for msg in existing_value 
+                    if msg.get("role") in ("user", "assistant", "bot")
+                    and msg.get("metadata_type") not in ("tool_calls", "tool_result")
+                )
                 checkpoint_count = len(messages)
                 
                 self.logger.info(
-                    f"🔵 Comparing: raw DB has {raw_db_count} entries, checkpoint has {checkpoint_count} messages"
+                    f"🔵 Comparing: DB has {existing_langchain_count} user/assistant msgs, "
+                    f"checkpoint has {checkpoint_count} messages"
                 )
                 
-                # Simple approach: clear and replace on any difference
-                # This is safer than trying to diff/append with different message types
-                if checkpoint_count > 0:
-                    # Clear existing and save all messages from checkpoint
-                    self.message_history.clear()
-                    self.message_history.add_messages(messages)
+                # Only add messages that are NEW (beyond what's already in DB)
+                if checkpoint_count > existing_langchain_count:
+                    new_messages = messages[existing_langchain_count:]
                     self.logger.info(
-                        f"✅ Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
+                        f"🔵 Adding {len(new_messages)} new messages to conversation"
+                    )
+                    for msg in new_messages:
+                        self.message_history.add_message(msg)
+                    self.logger.info(
+                        f"✅ Appended {len(new_messages)} new messages to conversation {self.message_history.conversation_id}"
+                    )
+                elif checkpoint_count == existing_langchain_count:
+                    self.logger.info(
+                        f"✅ No new messages to save (checkpoint matches DB count)"
                     )
                 # CRITICAL: Use conversation_id as thread_id to prevent contamination
                 # between different conversations (e.g., in tests)
@@ -308,10 +328,14 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                 drop LangGraph's cached checkpoints but want to keep the
                 existing database history intact.
         """
-        # Clear the class-level checkpoint state dictionary so new requests
-        # start with a clean LangGraph cache.
-        DatabaseCheckpointSaver._checkpoint_state.clear()
-        self.logger.info("Cleared all LangGraph checkpoint state")
+        # CRITICAL FIX: Only clear checkpoint state for THIS conversation's thread,
+        # not ALL conversations. The old code was wiping all checkpoint state globally.
+        thread_id = str(self.conversation_id) if self.conversation_id else None
+        if thread_id and thread_id in DatabaseCheckpointSaver._checkpoint_state:
+            del DatabaseCheckpointSaver._checkpoint_state[thread_id]
+            self.logger.info(f"Cleared checkpoint state for thread {thread_id}")
+        else:
+            self.logger.info(f"No checkpoint state to clear for thread {thread_id}")
 
         if clear_history:
             self.message_history.clear()
@@ -333,6 +357,18 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             self.logger.info(
                 f"Cleared checkpoint state for thread {thread_id}"
             )
+
+    @classmethod
+    def clear_all_checkpoint_state(cls) -> None:
+        """Clear ALL checkpoint state globally. Use only for testing cleanup.
+        
+        WARNING: This clears checkpoint state for ALL conversations, not just one.
+        Use clear_checkpoints() for normal per-conversation cleanup.
+        """
+        cls._checkpoint_state.clear()
+        get_logger(__name__, AIRUNNER_LOG_LEVEL).info(
+            "Cleared ALL global checkpoint state (test cleanup)"
+        )
 
     @classmethod
     def set_stateless_mode(cls, enabled: bool) -> None:

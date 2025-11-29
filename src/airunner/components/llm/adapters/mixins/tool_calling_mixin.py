@@ -155,11 +155,20 @@ class ToolCallingMixin:
                 calls = json.loads(match)
                 for call in calls:
                     if isinstance(call, dict) and "name" in call:
+                        # Generate deterministic ID if not provided
+                        if call.get("id"):
+                            tool_id = call["id"]
+                        else:
+                            import hashlib
+                            args = call.get("arguments", {})
+                            args_str = json.dumps(args, sort_keys=True)
+                            content_hash = hashlib.sha256(f"{call['name']}:{args_str}".encode()).hexdigest()[:16]
+                            tool_id = f"tc-{content_hash}"
                         tool_calls.append(
                             {
                                 "name": call["name"],
                                 "args": call.get("arguments", {}),
-                                "id": call.get("id", str(uuid.uuid4())),
+                                "id": tool_id,
                             }
                         )
             except json.JSONDecodeError:
@@ -381,6 +390,10 @@ class ToolCallingMixin:
     def _extract_tool_call(self, data: dict) -> dict:
         """Extract tool call from data dictionary.
 
+        Generates a deterministic tool_call_id based on the tool name and arguments.
+        This ensures that identical tool calls get the same ID, which is critical
+        for LangGraph's add_messages deduplication to work properly.
+
         Args:
             data: Dictionary with tool information
 
@@ -389,10 +402,19 @@ class ToolCallingMixin:
         """
         tool_name = data.get("tool") or data.get("name")
         tool_args = data.get("arguments", {})
+        
+        # Generate a deterministic ID based on tool name and arguments
+        # This ensures identical tool calls get the same ID for deduplication
+        import hashlib
+        import json as json_module
+        args_str = json_module.dumps(tool_args or {}, sort_keys=True)
+        content_hash = hashlib.sha256(f"{tool_name}:{args_str}".encode()).hexdigest()[:16]
+        tool_call_id = f"tc-{content_hash}"
+        
         return {
             "name": tool_name,
             "args": tool_args or {},
-            "id": str(uuid.uuid4()),
+            "id": tool_call_id,
         }
 
     def _extract_tool_calls_from_list(self, data: list) -> List[dict]:

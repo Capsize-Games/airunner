@@ -492,14 +492,19 @@ Based on the search results above, provide a clear, conversational answer to the
             tool_name = tool_call.get("name", "")
             self.logger.info(f"[ROUTE DEBUG] Checking tool: {tool_name}")
             if tool_name not in NO_RESPONSE_TOOLS:
-                # CRITICAL: For certain tools (RAG, search), we want to force response after first execution
-                # to prevent the model from looping and calling the same tool again
+                # CRITICAL: For search tools, we want to force response after execution
+                # to ensure the model synthesizes the results rather than potentially 
+                # ignoring them or calling more tools unnecessarily.
+                # 
+                # The force_response node has explicit prompts telling the model to 
+                # use the search results, which produces much better responses than
+                # letting the model go back through _call_model.
 
-                # Tools that should force response after execution (don't let model call again)
+                # Tools that should force response after execution
                 FORCE_RESPONSE_AFTER_EXECUTION = {
                     "rag_search",
                     "search_web",
-                    "search_news",
+                    "search_news", 
                     "scrape_website",
                     "search_knowledge_base_documents",
                 }
@@ -913,14 +918,37 @@ Based on the search results above, provide a clear, conversational answer to the
         """Escape curly braces in system prompt for LangChain.
 
         Returns:
-            Escaped system prompt
+            Escaped system prompt with memory context injected
         """
         # CRITICAL FIX: Always use _system_prompt (the stored value set by update_system_prompt),
         # NOT the system_prompt property which dynamically generates the chatbot prompt.
         # This ensures custom system prompts (e.g., for classification) are preserved.
         prompt_source = self._system_prompt
 
+        # NOTE: Memory context is NOT injected here anymore.
+        # Knowledge should be accessed via RAG tools (recall_knowledge, rag_search)
+        # to avoid polluting every conversation with potentially irrelevant stored facts.
+
         return prompt_source.replace("{", "{{").replace("}", "}}")
+
+    def _get_memory_context_for_prompt(self) -> str:
+        """Get memory context to inject into system prompt.
+        
+        Uses the daily markdown knowledge files for context.
+        
+        Returns:
+            Memory context string or empty string
+        """
+        try:
+            from airunner.components.knowledge.knowledge_base import get_knowledge_base
+            kb = get_knowledge_base()
+            context = kb.get_context(max_chars=2000)
+            if context:
+                self.logger.info(f"[MEMORY] Injecting {len(context)} chars of memory context")
+            return context
+        except Exception as e:
+            self.logger.debug(f"[MEMORY] Failed to get memory context: {e}")
+            return ""
 
     def _add_tool_instructions(self, system_prompt: str) -> str:
         """Add tool instructions to system prompt if tools available.
@@ -970,74 +998,74 @@ Based on the search results above, provide a clear, conversational answer to the
             msg.__class__.__name__ == "ToolMessage" for msg in trimmed_messages
         )
 
+        if not has_tool_results:
+            return system_prompt
+
         tool_calling_mode = getattr(
             self._chat_model, "tool_calling_mode", "react"
         )
 
-        if has_tool_results and tool_calling_mode == "json":
-            # Check if response format is explicitly set
-            response_format = getattr(self, "_response_format", None)
-            self.logger.info(
-                f"[POST-TOOL] response_format={response_format}, tool_calling_mode={tool_calling_mode}"
+        # Check if response format is explicitly set
+        response_format = getattr(self, "_response_format", None)
+        self.logger.info(
+            f"[POST-TOOL] response_format={response_format}, tool_calling_mode={tool_calling_mode}"
+        )
+
+        # Build instruction based on response format
+        if response_format == "json":
+            # Force JSON response even after tools
+            instruction = (
+                "\n\n=== CRITICAL RESPONSE FORMAT REQUIREMENT ===\n"
+                "You have tool results in the conversation above. "
+                "Now answer the user's question using that information.\n"
+                "YOU MUST respond ONLY with valid JSON in the EXACT format specified in the system prompt above.\n"
+                "Do NOT write conversational text. Do NOT explain or narrate. ONLY output the JSON object.\n"
+                "Your entire response must be parseable JSON - nothing else."
+            )
+        elif response_format is not None and response_format != "conversational":
+            # Custom format specified
+            instruction = (
+                f"\n\n=== CRITICAL: USE TOOL RESULTS ===\n"
+                f"You have tool results in the conversation above. "
+                f"Answer the user's question using that information. "
+                f"Respond in {response_format} format."
+            )
+        else:
+            # Default behavior - conversational (for both react and json mode)
+            instruction = (
+                "\n\n=== CRITICAL: USE TOOL RESULTS ===\n"
+                "Tool results are available in the conversation above.\n"
+                "IMPORTANT: You MUST use these tool results to answer the user's question.\n"
+                "Do NOT ignore the tool results. Do NOT give a generic greeting.\n"
+                "Synthesize the information from the tool results into a helpful, conversational response.\n"
+                "If the tool returned search results, summarize the key information for the user."
             )
 
-            if response_format == "json":
-                # Force JSON response even after tools
-                instruction = (
-                    "\n\n=== CRITICAL RESPONSE FORMAT REQUIREMENT ===\n"
-                    "You have tool results in the conversation above. "
-                    "Now answer the user's question using that information.\n"
-                    "YOU MUST respond ONLY with valid JSON in the EXACT format specified in the system prompt above.\n"
-                    "Do NOT write conversational text. Do NOT explain or narrate. ONLY output the JSON object.\n"
-                    "Your entire response must be parseable JSON - nothing else."
-                )
-            elif response_format == "conversational":
-                # Explicitly request conversational response
-                instruction = (
-                    "\n\nYou have tool results in the conversation above. "
-                    "Answer the user's question using that information. "
-                    "Respond conversationally, not in JSON."
-                )
-            elif response_format is None:
-                # Default behavior - conversational
-                instruction = (
-                    "\n\nYou have tool results in the conversation above. "
-                    "Answer the user's question using that information. "
-                    "Respond conversationally, not in JSON."
-                )
-            else:
-                # Custom format specified
-                instruction = (
-                    f"\n\nYou have tool results in the conversation above. "
-                    f"Answer the user's question using that information. "
-                    f"Respond in {response_format} format."
-                )
+        system_prompt += instruction
+        self.logger.info(
+            f"[POST-TOOL] Full instruction text:\n{instruction}"
+        )
 
-            system_prompt += instruction
+        # Log tool results for debugging
+        tool_msgs = [
+            m
+            for m in trimmed_messages
+            if m.__class__.__name__ == "ToolMessage"
+        ]
+
+        if tool_msgs:
             self.logger.info(
-                f"[POST-TOOL] Full instruction text:\n{instruction}"
+                f"Model has access to {len(tool_msgs)} tool result(s)"
             )
-
-            # After tool execution, instruct model to respond normally
-            tool_msgs = [
-                m
-                for m in trimmed_messages
-                if m.__class__.__name__ == "ToolMessage"
-            ]
-
-            if tool_msgs:
+            for i, tool_msg in enumerate(tool_msgs):
+                result_preview = (
+                    tool_msg.content[:200]
+                    if hasattr(tool_msg, "content")
+                    else "No content"
+                )
                 self.logger.info(
-                    f"Model has access to {len(tool_msgs)} tool result(s)"
+                    f"  Tool result {i+1} preview: {result_preview}..."
                 )
-                for i, tool_msg in enumerate(tool_msgs):
-                    result_preview = (
-                        tool_msg.content[:200]
-                        if hasattr(tool_msg, "content")
-                        else "No content"
-                    )
-                    self.logger.info(
-                        f"  Tool result {i+1} preview: {result_preview}..."
-                    )
 
         return system_prompt
 

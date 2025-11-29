@@ -52,15 +52,10 @@ from airunner.components.llm.data.target_directories import (
     TargetDirectories,
 )  # noqa: F401
 from airunner.components.documents.data.models.document import Document
-from airunner.components.knowledge.data.models import (
-    KnowledgeFact,
-    ConversationSummary,
-)
 
-# Import required for Alembic model detection - do not remove
-from airunner.components.knowledge.data.knowledge_relationship import (
-    KnowledgeRelationship,  # noqa: F401
-)
+# Knowledge system now uses markdown files instead of database tables
+# See: src/airunner/components/knowledge/knowledge_base.py
+
 from airunner.components.video.data.video_project import VideoProject
 
 # Long-running agent project models

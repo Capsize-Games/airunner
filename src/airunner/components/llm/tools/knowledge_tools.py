@@ -1,17 +1,18 @@
 """
-Knowledge management and memory tools.
+Knowledge management tools.
 
-Tools for recording facts, recalling knowledge, and managing long-term memory.
+Tools for recording, recalling, updating, and deleting facts from the
+knowledge base. Facts are stored in daily markdown files and indexed
+for semantic (RAG) retrieval.
+
+Knowledge files are stored in ~/.local/share/airunner/text/knowledge/
+with one file per day (YYYY-MM-DD.md format).
 """
 
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.enums import SignalCode
-from airunner.components.knowledge.enums import (
-    KnowledgeFactCategory,
-    KnowledgeSource,
-)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -20,313 +21,367 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 @tool(
     name="record_knowledge",
-    category=ToolCategory.RAG,
+    category=ToolCategory.KNOWLEDGE,
     description=(
-        "Record important facts about the user or conversation. "
-        "This builds the agent's long-term memory and helps personalize "
-        "future interactions. Use when user shares personal information, "
-        "preferences, health conditions, or any factual information "
-        "that would be useful to remember."
+        "Record a fact about the user or something learned. Facts are stored "
+        "in daily markdown files organized by section. Each fact is separated "
+        "by blank lines for easy reading and editing. "
+        "Sections: Identity, Work & Projects, Interests & Hobbies, "
+        "Preferences, Health & Wellness, Relationships, Goals, Notes."
     ),
     return_direct=False,
     requires_api=True,
-    keywords=["remember", "memory", "fact", "store", "save", "learn"],
+    keywords=["remember", "memory", "fact", "store", "save", "learn", "record", "note"],
     input_examples=[
-        {
-            "fact": "User's name is John and he lives in Seattle",
-            "category": "user_identity",
-            "tags": "name,location",
-            "confidence": 1.0,
-        },
-        {
-            "fact": "User prefers dark mode and minimal interfaces",
-            "category": "user_preferences",
-            "tags": "ui,preferences",
-            "confidence": 0.9,
-        },
-        {
-            "fact": "User has a meeting every Monday at 9am",
-            "category": "temporal_schedule",
-            "tags": "meeting,recurring,monday",
-            "confidence": 0.95,
-        },
+        {"fact": "User's name is Joe Curlee", "section": "Identity"},
+        {"fact": "User has chronic back pain", "section": "Health & Wellness"},
+        {"fact": "User is working on AI Runner project", "section": "Work & Projects"},
+        {"fact": "User prefers dark mode", "section": "Preferences"},
     ],
 )
 def record_knowledge(
-    fact: Annotated[
-        str, "The factual statement to remember (be specific and clear)"
-    ],
-    category: Annotated[
+    fact: Annotated[str, "The factual statement to remember"],
+    section: Annotated[
         str,
         (
-            "Category - one of: user_identity, user_location, "
-            "user_preferences, user_relationships, user_work, user_interests, "
-            "user_skills, user_goals, user_history, user_health, "
-            "world_knowledge, world_science, world_history, world_geography, "
-            "world_culture, temporal_event, temporal_schedule, "
-            "temporal_reminder, temporal_deadline, entity_person, "
-            "entity_place, entity_organization, entity_product, "
-            "entity_concept, relationship, other"
+            "Section: Identity, Work & Projects, Interests & Hobbies, "
+            "Preferences, Health & Wellness, Relationships, Goals, or Notes"
         ),
-    ] = "other",
-    tags: Annotated[
-        str,
-        "Comma-separated tags for organization (e.g., 'chronic,pain,back')",
-    ] = "",
-    confidence: Annotated[
-        float, "How confident you are in this fact (0.0-1.0)"
-    ] = 0.9,
+    ] = "Notes",
     api: Any = None,
 ) -> str:
-    """Record important facts about the user or conversation.
+    """Record a fact to the knowledge base.
 
-    Use this tool to remember important information that comes up in
-    conversations. This builds the agent's long-term memory and helps
-    personalize future interactions.
-
-    When to use:
-    - User shares personal information (name, location, preferences, etc.)
-    - User mentions health conditions, symptoms, or treatments
-    - User describes their work, hobbies, or interests
-    - User reveals goals, challenges, or important life events
-    - User confirms they've already tried something
-    - Any factual information that would be useful to remember
+    Facts are stored in today's knowledge file under the specified section.
+    Each fact is separated by blank lines for easy parsing.
 
     Args:
-        fact: The factual statement to remember
-        category: Category for organization
-        tags: Comma-separated tags
-        confidence: Confidence in this fact (0.0-1.0, default 0.9)
+        fact: The fact to record
+        section: Which section to add it to
         api: API instance (injected)
 
     Returns:
         Confirmation message
-
-    Examples:
-        record_knowledge("User's name is Sarah", "user_identity", "name", 1.0)
-        record_knowledge("User has chronic back pain", "user_health",
-                        "pain,back,chronic", 0.95)
-        record_knowledge("User already tried stretching for back pain",
-                        "user_history", "back,pain,tried", 0.9)
-        record_knowledge("User prefers direct communication style",
-                        "user_preferences", "communication", 0.85)
     """
     try:
-        from airunner.components.knowledge.knowledge_memory_manager import (
-            KnowledgeMemoryManager,
-        )
+        from airunner.components.knowledge.knowledge_base import get_knowledge_base
 
-        # Parse tags
-        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        kb = get_knowledge_base()
+        success = kb.add_fact(fact, section=section)
 
-        # Validate and map category
-        valid_categories = [cat.value for cat in KnowledgeFactCategory]
-        if category not in valid_categories:
-            # Try legacy category mapping
-            original_category = category
-            try:
-                mapped_cat = KnowledgeFactCategory.from_legacy_category(
-                    category
+        if success:
+            if api and hasattr(api, "emit_signal"):
+                api.emit_signal(
+                    SignalCode.KNOWLEDGE_FACT_ADDED,
+                    {"fact": fact, "section": section},
                 )
-                category = mapped_cat.value
-                logger.info(
-                    f"Mapped legacy category '{original_category}' to "
-                    f"'{mapped_cat.value}'"
-                )
-            except (ValueError, KeyError):
-                logger.warning(
-                    f"Invalid category '{original_category}', using 'other'"
-                )
-                category = KnowledgeFactCategory.OTHER.value
+            return f"✓ Recorded in {section}: {fact[:60]}{'...' if len(fact) > 60 else ''}"
+        else:
+            # Check if it's a duplicate vs section not found
+            if section in ["Identity", "Work & Projects", "Interests & Hobbies", 
+                          "Preferences", "Health & Wellness", "Relationships", 
+                          "Goals", "Notes"]:
+                return f"⚡ Already known (skipped duplicate): {fact[:50]}..."
+            return f"Failed to record fact. Section '{section}' may not exist."
 
-        # Get conversation ID if available
-        conversation_id = None
-        if api and hasattr(api, "current_conversation_id"):
-            conversation_id = api.current_conversation_id
-
-        # Create knowledge manager
-        km = KnowledgeMemoryManager()
-
-        # Add fact with proper source enum
-        km.add_fact(
-            text=fact,
-            category=category,
-            tags=tag_list if tag_list else None,
-            confidence=confidence,
-            source=KnowledgeSource.CONVERSATION.value,
-            conversation_id=conversation_id,
-            verified=False,
-        )
-
-        # Emit signal to refresh UI if API available
-        if api and hasattr(api, "emit_signal"):
-            api.emit_signal(
-                SignalCode.KNOWLEDGE_FACT_ADDED,
-                {"fact": fact, "category": category},
-            )
-
-        return f"✓ Recorded: {fact[:60]}{'...' if len(fact) > 60 else ''}"
     except Exception as e:
         logger.error(f"Error recording knowledge: {e}")
-        return f"Error recording knowledge: {str(e)}"
+        return f"Error: {str(e)}"
 
 
 @tool(
     name="recall_knowledge",
-    category=ToolCategory.RAG,
+    category=ToolCategory.KNOWLEDGE,
     description=(
-        "Recall relevant facts from long-term memory. "
-        "Use this to remember what you know about the user or past "
-        "conversations. Searches through all stored facts using "
-        "semantic similarity."
+        "Search the knowledge base for relevant facts. Uses semantic search "
+        "(RAG) to find facts related to the query across all stored knowledge."
     ),
     return_direct=False,
     requires_api=True,
+    keywords=["remember", "memory", "recall", "search", "find", "know", "what do I know"],
+    input_examples=[
+        {"query": "user's health conditions"},
+        {"query": "what projects is the user working on"},
+        {"query": "user's name and location"},
+        {"query": "user's hobbies"},
+    ],
 )
 def recall_knowledge(
-    query: Annotated[
-        str,
-        "What you're trying to remember (e.g., \"user's health issues\")",
-    ],
-    k: Annotated[int, "Number of facts to recall"] = 5,
+    query: Annotated[str, "What you're trying to remember or find"],
+    max_results: Annotated[int, "Maximum facts to return"] = 5,
     api: Any = None,
 ) -> str:
-    """Recall relevant facts from long-term memory.
+    """Search the knowledge base for relevant facts.
 
-    Use this tool to remember what you know about the user or past
-    conversations. This searches through all stored facts using semantic
-    similarity.
+    Uses semantic search to find facts matching the query across all
+    stored knowledge files.
 
     Args:
-        query: What you're trying to remember
-        k: Number of facts to recall (default 5)
+        query: What to search for
+        max_results: Max results to return
         api: API instance (injected)
 
     Returns:
-        Relevant facts or message if none found
-
-    Examples:
-        recall_knowledge("user's health conditions")
-        recall_knowledge("what has the user already tried for pain")
-        recall_knowledge("user's hobbies and interests")
+        Matching facts or "no results" message
     """
     try:
-        from airunner.components.knowledge.knowledge_memory_manager import (
-            KnowledgeMemoryManager,
-        )
+        from airunner.components.knowledge.knowledge_base import get_knowledge_base
 
-        # Create knowledge manager with embeddings
-        embeddings = None
-        if api:
-            rag_manager = getattr(api, "rag_manager", None)
-            if rag_manager and hasattr(rag_manager, "embeddings"):
-                embeddings = rag_manager.embeddings
-
-        km = KnowledgeMemoryManager(embeddings=embeddings)
-
-        # Recall facts
-        facts = km.recall_facts(query, k=k)
-
-        if not facts:
-            return f"No relevant knowledge found for: {query}"
-
-        # Format response
-        result_parts = [f"Recalled {len(facts)} relevant fact(s):\n"]
-        for i, fact in enumerate(facts, 1):
-            verified = "✓" if fact.verified else ""
-            confidence_pct = int(fact.confidence * 100)
-            result_parts.append(
-                f"{i}. {fact.text} {verified} ({confidence_pct}% confidence)"
+        kb = get_knowledge_base()
+        
+        # Try RAG search first - api is the agent with RAGMixin
+        agent = api if api and hasattr(api, 'search') else None
+        results = kb.search_rag(query, k=max_results, agent=agent)
+        
+        if not results:
+            # Fallback to keyword search
+            keyword_results = kb.search(query, max_results=max_results)
+            results = [r['line'] for r in keyword_results]
+        
+        if not results:
+            return (
+                f"No knowledge found for: '{query}'.\n\n"
+                "**ACTION REQUIRED:** You MUST now use search_news or search_web to find this information. "
+                "Do NOT tell the user to search elsewhere - use the tools available to you."
             )
-            if fact.tag_list:
-                result_parts.append(f"   Tags: {', '.join(fact.tag_list)}")
 
-        return "\n".join(result_parts)
+        output = f"Found {len(results)} relevant fact(s):\n\n"
+        for i, fact in enumerate(results, 1):
+            output += f"{i}. {fact}\n"
+        
+        output += (
+            "\n**IMPORTANT:** If these facts don't directly answer the user's question, "
+            "you MUST use search_news or search_web to find current information. "
+            "Do NOT tell the user to search elsewhere."
+        )
+        
+        return output
+
     except Exception as e:
         logger.error(f"Error recalling knowledge: {e}")
-        return f"Error recalling knowledge: {str(e)}"
+        return f"Error: {str(e)}"
 
 
 @tool(
-    name="recall_knowledge_by_category",
-    category=ToolCategory.RAG,
+    name="read_knowledge_file",
+    category=ToolCategory.KNOWLEDGE,
     description=(
-        "Recall facts by category type without semantic search. "
-        "Useful when you want to review all facts of a certain type. "
-        "Categories include: user, world, temporal, entity, or specific "
-        "subcategories like user_health, user_work, etc."
+        "Read a specific day's knowledge file or all recent knowledge. "
+        "Use this to review what's already recorded before adding new facts."
     ),
     return_direct=False,
     requires_api=False,
+    keywords=["read", "view", "show", "list", "knowledge", "file", "today"],
+    input_examples=[
+        {"date": None},  # Today
+        {"date": "2025-11-28"},  # Specific date
+        {"read_all": True},  # All recent files
+    ],
 )
-def recall_knowledge_by_category(
-    category_type: Annotated[
+def read_knowledge_file(
+    date: Annotated[
         str,
-        (
-            "Type of facts to recall - one of: user, world, temporal, entity, "
-            "user_health, user_work, temporal_event, etc."
-        ),
-    ] = "user",
-    limit: Annotated[int, "Maximum number of facts to return"] = 10,
+        "Date in YYYY-MM-DD format, or leave empty for today"
+    ] = None,
+    read_all: Annotated[
+        bool,
+        "If True, read all recent knowledge files combined"
+    ] = False,
 ) -> str:
-    """Recall facts by category type.
-
-    Use this to retrieve facts from specific categories without semantic
-    search. Useful when you want to review all facts of a certain type.
+    """Read knowledge from a specific date or all recent files.
 
     Args:
-        category_type: Type of facts to recall
-        limit: Maximum number of facts to return (default 10)
+        date: Specific date (YYYY-MM-DD) or None for today
+        read_all: If True, combine all recent knowledge files
 
     Returns:
-        Formatted list of facts or message if none found
-
-    Examples:
-        recall_knowledge_by_category("user")  # All user facts
-        recall_knowledge_by_category("user_health", 5)  # Up to 5 health facts
-        recall_knowledge_by_category("temporal")  # All temporal facts
-        recall_knowledge_by_category("world")  # All world knowledge
+        Knowledge file content
     """
     try:
-        from airunner.components.knowledge.knowledge_memory_manager import (
-            KnowledgeMemoryManager,
+        from airunner.components.knowledge.knowledge_base import get_knowledge_base
+
+        kb = get_knowledge_base()
+        
+        if read_all:
+            content = kb.read_all(max_files=30)
+        else:
+            content = kb.read_file(date)
+        
+        if not content or not content.strip():
+            if date:
+                return f"No knowledge file found for {date}"
+            else:
+                return "No knowledge recorded yet for today. Use record_knowledge to add facts."
+        
+        return content
+
+    except Exception as e:
+        logger.error(f"Error reading knowledge: {e}")
+        return f"Error: {str(e)}"
+
+
+@tool(
+    name="update_knowledge",
+    category=ToolCategory.KNOWLEDGE,
+    description=(
+        "Update or replace a fact in the knowledge base. "
+        "Finds text (or regex pattern) and replaces it with new text. "
+        "Searches all knowledge files unless a specific date is given."
+    ),
+    return_direct=False,
+    requires_api=True,
+    keywords=["update", "replace", "change", "modify", "edit", "fix", "correct"],
+    input_examples=[
+        {
+            "find_text": "User lives in Seattle",
+            "replace_text": "User lives in Portland",
+        },
+        {
+            "find_text": r"- User.*Seattle",
+            "replace_text": "- User relocated to Portland",
+            "is_regex": True,
+        },
+    ],
+)
+def update_knowledge(
+    find_text: Annotated[str, "Text or regex pattern to find"],
+    replace_text: Annotated[str, "Replacement text"],
+    date: Annotated[
+        str,
+        "Specific date (YYYY-MM-DD) or None to search all files"
+    ] = None,
+    is_regex: Annotated[bool, "Treat find_text as regex pattern"] = False,
+    api: Any = None,
+) -> str:
+    """Update a fact by find and replace.
+
+    Args:
+        find_text: Text to find
+        replace_text: New text
+        date: Specific date or None for all files
+        is_regex: Use regex matching
+        api: API instance
+
+    Returns:
+        Result message
+    """
+    try:
+        from airunner.components.knowledge.knowledge_base import get_knowledge_base
+
+        kb = get_knowledge_base()
+        success, count = kb.update_fact(
+            find_text, replace_text, date_str=date, is_regex=is_regex
         )
 
-        km = KnowledgeMemoryManager()
-
-        # Determine if this is a type filter or specific category
-        category_types = ["user", "world", "temporal", "entity"]
-
-        if category_type in category_types:
-            # Filter by category type
-            kwargs = {f"is_{category_type}": True}
-            facts = km.get_facts_by_category_type(**kwargs)
-
-            # Limit results
-            facts = facts[:limit] if facts else []
-            type_label = category_type.title()
+        if success:
+            if api and hasattr(api, "emit_signal"):
+                api.emit_signal(
+                    SignalCode.KNOWLEDGE_FACT_ADDED,
+                    {"updated": True, "count": count},
+                )
+            return f"✓ Updated {count} occurrence(s)"
         else:
-            # Filter by specific category
-            facts = km.get_all_facts(category=category_type, enabled_only=True)
-            facts = facts[:limit] if facts else []
-            type_label = category_type.replace("_", " ").title()
+            return f"Text not found: '{find_text}'"
 
-        if not facts:
-            return f"No {type_label} facts found"
-
-        # Format response
-        result_parts = [f"Found {len(facts)} {type_label} fact(s):\n"]
-        for i, fact in enumerate(facts, 1):
-            verified = "✓" if fact.verified else ""
-            confidence_pct = int(fact.confidence * 100)
-            result_parts.append(
-                f"{i}. [{fact.category}] {fact.text} {verified} "
-                f"({confidence_pct}% confidence)"
-            )
-            if fact.tag_list:
-                result_parts.append(f"   Tags: {', '.join(fact.tag_list)}")
-
-        return "\n".join(result_parts)
     except Exception as e:
-        logger.error(f"Error recalling knowledge by category: {e}")
-        return f"Error recalling knowledge by category: {str(e)}"
+        logger.error(f"Error updating knowledge: {e}")
+        return f"Error: {str(e)}"
+
+
+@tool(
+    name="delete_knowledge",
+    category=ToolCategory.KNOWLEDGE,
+    description=(
+        "Delete a fact from the knowledge base. "
+        "Removes lines containing the specified text (or regex match). "
+        "Searches all knowledge files unless a specific date is given."
+    ),
+    return_direct=False,
+    requires_api=True,
+    keywords=["delete", "remove", "forget", "erase", "clear"],
+    input_examples=[
+        {"text": "User lives in Seattle"},
+        {"text": r".*outdated fact.*", "is_regex": True},
+    ],
+)
+def delete_knowledge(
+    text: Annotated[str, "Text or regex pattern to find and delete"],
+    date: Annotated[
+        str,
+        "Specific date (YYYY-MM-DD) or None to search all files"
+    ] = None,
+    is_regex: Annotated[bool, "Treat text as regex pattern"] = False,
+    api: Any = None,
+) -> str:
+    """Delete facts containing the specified text.
+
+    Args:
+        text: Text to find and delete
+        date: Specific date or None for all files
+        is_regex: Use regex matching
+        api: API instance
+
+    Returns:
+        Result message
+    """
+    try:
+        from airunner.components.knowledge.knowledge_base import get_knowledge_base
+
+        kb = get_knowledge_base()
+        success, count = kb.delete_fact(text, date_str=date, is_regex=is_regex)
+
+        if success:
+            if api and hasattr(api, "emit_signal"):
+                api.emit_signal(
+                    SignalCode.KNOWLEDGE_FACT_ADDED,
+                    {"deleted": True, "count": count},
+                )
+            return f"✓ Deleted {count} fact(s)"
+        else:
+            return f"Text not found: '{text}'"
+
+    except Exception as e:
+        logger.error(f"Error deleting knowledge: {e}")
+        return f"Error: {str(e)}"
+
+
+@tool(
+    name="list_knowledge_files",
+    category=ToolCategory.KNOWLEDGE,
+    description=(
+        "List all knowledge files in the knowledge base. "
+        "Shows dates of stored knowledge, newest first."
+    ),
+    return_direct=False,
+    requires_api=False,
+    keywords=["list", "files", "dates", "history", "knowledge"],
+    input_examples=[],
+)
+def list_knowledge_files() -> str:
+    """List all knowledge files.
+
+    Returns:
+        List of knowledge file dates
+    """
+    try:
+        from airunner.components.knowledge.knowledge_base import get_knowledge_base
+
+        kb = get_knowledge_base()
+        files = kb.list_files()
+
+        if not files:
+            return "No knowledge files found. Use record_knowledge to start recording facts."
+
+        output = f"Knowledge files ({len(files)} total):\n\n"
+        for f in files[:20]:  # Show max 20
+            size = f.stat().st_size
+            output += f"• {f.stem} ({size} bytes)\n"
+        
+        if len(files) > 20:
+            output += f"\n... and {len(files) - 20} more files"
+
+        return output
+
+    except Exception as e:
+        logger.error(f"Error listing files: {e}")
+        return f"Error: {str(e)}"
