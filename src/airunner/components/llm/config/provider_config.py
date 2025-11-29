@@ -148,6 +148,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 12,
             "vram_8bit_gb": 24,
             "description": "Meta Llama 4 Maverick 17B with 128 experts, 1M context, multimodal, and JSON tool calling",
+            # GGUF variant (bartowski's quantization)
+            "gguf_repo_id": "bartowski/Llama-4-Maverick-17B-128E-Instruct-GGUF",
+            "gguf_filename": "Llama-4-Maverick-17B-128E-Instruct-Q4_K_M.gguf",
         },
         "custom": {
             "name": "Custom Local Path",
