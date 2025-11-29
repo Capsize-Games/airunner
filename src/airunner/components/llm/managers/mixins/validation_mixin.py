@@ -129,9 +129,10 @@ class ValidationMixin:
         """Check if GGUF quantization is selected in QSettings.
         
         GGUF uses quantization_bits == 0 as a sentinel value.
+        Since GGUF is the only supported format, this defaults to True.
         
         Returns:
-            True if GGUF quantization is selected.
+            True if GGUF quantization is selected (always True by default).
         """
         try:
             qs = get_qsettings()
@@ -140,7 +141,8 @@ class ValidationMixin:
                 return int(saved) == 0
         except Exception as e:
             self.logger.warning(f"Error reading quantization setting: {e}")
-        return False
+        # Default to GGUF - it's the only supported format
+        return True
 
     def _verify_model_files(self: "LLMModelManager", model_path: str) -> bool:
         """Verify essential model files exist in directory.

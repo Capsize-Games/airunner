@@ -1,35 +1,37 @@
 """Model optimization utility for converting models to efficient formats.
 
-This module provides intelligent model conversion based on user settings:
-- SafeTensors → GGUF conversion for LLMs (requires llama.cpp tools)
-- Automatic format detection and selection based on quantization_bits setting
+This module provides intelligent model format management:
 - GGUF file discovery and preference
+- SafeTensors → GGUF conversion for LLMs (requires llama.cpp tools)
+- Automatic format detection based on settings
 
-The utility checks existing settings and converts models to the most efficient
-format without requiring user intervention.
+IMPORTANT: BitsAndBytes quantized safetensors CANNOT be converted to GGUF.
+GGUF conversion requires original FP16/FP32 weights.
 
-GGUF Conversion Requirements:
-    To enable local SafeTensors → GGUF conversion, install llama.cpp:
-    
+For GGUF support, users have two options:
+1. Download pre-quantized GGUF from HuggingFace (automatic via UI)
+2. Convert original (non-quantized) safetensors using llama.cpp tools
+
+GGUF Conversion Requirements (for option 2):
     1. Clone llama.cpp:
        git clone https://github.com/ggerganov/llama.cpp ~/llama.cpp
     
-    2. The convert_hf_to_gguf.py script will be available at:
-       ~/llama.cpp/convert_hf_to_gguf.py
+    2. Build the quantize tool:
+       cd ~/llama.cpp && make quantize
     
     3. Install Python dependencies:
        pip install -r ~/llama.cpp/requirements.txt
     
-    Without these tools, the optimizer will:
-    - Use pre-converted GGUF files if available
-    - Fall back to SafeTensors with BitsAndBytes quantization
+    4. Convert and quantize:
+       python ~/llama.cpp/convert_hf_to_gguf.py /path/to/model --outtype f16
+       ~/llama.cpp/llama-quantize model-f16.gguf model-Q4_K_M.gguf Q4_K_M
 """
 
 import os
 import subprocess
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple, Literal
+from typing import Optional, Tuple, Literal, List
 from enum import Enum
 
 from airunner.settings import AIRUNNER_LOG_LEVEL

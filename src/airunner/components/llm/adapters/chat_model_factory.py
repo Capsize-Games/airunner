@@ -263,11 +263,27 @@ class ChatModelFactory:
             ValueError: If settings are invalid or required components missing
         """
         # Get quantization preference from settings
+        # Default to GGUF (0) - GGUF is the only supported quantization format
         from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
+        from airunner.utils.settings.get_qsettings import get_qsettings
+        
         db_settings = LLMGeneratorSettings.objects.first()
-        quantization_bits = 4  # Default
+        quantization_bits = 0  # Default to GGUF
+        
+        # Check QSettings first (UI preference)
+        try:
+            qs = get_qsettings()
+            saved = qs.value("llm_settings/quantization_bits", None)
+            if saved is not None:
+                quantization_bits = int(saved)
+        except Exception:
+            pass
+        
+        # Database setting overrides if present
         if db_settings is not None:
-            quantization_bits = getattr(db_settings, "quantization_bits", 4)
+            db_quant = getattr(db_settings, "quantization_bits", None)
+            if db_quant is not None:
+                quantization_bits = db_quant
         
         optimizer = get_model_optimizer()
         

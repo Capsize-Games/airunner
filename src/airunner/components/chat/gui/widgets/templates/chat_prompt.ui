@@ -256,33 +256,98 @@
                <property name="bottomMargin">
                 <number>10</number>
                </property>
-               <item row="1" column="0">
-                <widget class="QPlainTextEdit" name="prompt">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>150</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                </widget>
-               </item>
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item row="0" column="0">
-                <widget class="QLabel" name="token_count">
-                 <property name="text">
-                  <string>TextLabel</string>
-                 </property>
+                <widget class="QWidget" name="prompt_wrapper" native="true">
+                 <layout class="QGridLayout" name="prompt_wrapper_layout">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="spacing">
+                   <number>0</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QPlainTextEdit" name="prompt">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>16777215</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTop">
+                   <widget class="QLabel" name="token_count">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: transparent; color: rgba(255, 255, 255, 0.5); padding: 4px 24px; font-size: 11px;</string>
+                    </property>
+                    <property name="text">
+                     <string>~0 tokens</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignBottom">
+                   <widget class="QLabel" name="last_message_tokens">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: transparent; color: rgba(255, 255, 255, 0.5); padding: 4px 24px; font-size: 11px;</string>
+                    </property>
+                    <property name="text">
+                     <string></string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignBottom">
+                   <widget class="QLabel" name="total_tokens">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">background-color: transparent; color: rgba(255, 255, 255, 0.5); padding: 4px 24px; font-size: 11px;</string>
+                    </property>
+                    <property name="text">
+                     <string></string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
               </layout>
@@ -375,7 +440,7 @@
           <number>10</number>
          </property>
          <item>
-          <widget class="QComboBox" name="action">
+          <widget class="QComboBox" name="provider_dropdown">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -384,9 +449,34 @@
            </property>
            <property name="minimumSize">
             <size>
-             <width>100</width>
+             <width>110</width>
              <height>30</height>
             </size>
+           </property>
+           <property name="toolTip">
+            <string>Select LLM provider</string>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="model_dropdown">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>150</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Select LLM model</string>
            </property>
            <property name="sizeAdjustPolicy">
             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
@@ -419,23 +509,17 @@
           </widget>
          </item>
          <item>
-          <widget class="QProgressBar" name="progressBar">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+          <spacer name="footer_spacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
            </property>
-           <property name="minimumSize">
+           <property name="sizeHint" stdset="0">
             <size>
-             <width>0</width>
-             <height>30</height>
+             <width>40</width>
+             <height>20</height>
             </size>
            </property>
-           <property name="value">
-            <number>0</number>
-           </property>
-          </widget>
+          </spacer>
          </item>
          <item>
           <widget class="QPushButton" name="send_button">
@@ -507,6 +591,55 @@
      </layout>
     </widget>
    </item>
+   <item row="4" column="0">
+    <widget class="QWidget" name="progress_container" native="true">
+     <layout class="QHBoxLayout" name="progress_layout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>8</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>8</height>
+         </size>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="textVisible">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -534,10 +667,10 @@
  </resources>
  <connections>
   <connection>
-   <sender>action</sender>
-   <signal>currentTextChanged(QString)</signal>
+   <sender>provider_dropdown</sender>
+   <signal>currentIndexChanged(int)</signal>
    <receiver>chat_prompt</receiver>
-   <slot>llm_action_changed(QString)</slot>
+   <slot>on_provider_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>29</x>
@@ -545,6 +678,22 @@
     </hint>
     <hint type="destinationlabel">
      <x>47</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>model_dropdown</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>on_model_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>200</x>
+     <y>689</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>200</x>
      <y>2</y>
     </hint>
    </hints>
@@ -585,7 +734,8 @@
  <slots>
   <slot>message_type_text_changed(QString)</slot>
   <slot>prompt_text_changed()</slot>
-  <slot>llm_action_changed(QString)</slot>
+  <slot>on_provider_changed(int)</slot>
   <slot>thinking_toggled(bool)</slot>
+  <slot>on_model_changed(int)</slot>
  </slots>
 </ui>

@@ -133,22 +133,8 @@ class LLMProviderConfig:
             "gguf_repo_id": "Qwen/Qwen3-8B-GGUF",
             "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
         },
-        "llama-4-maverick-17b": {
-            "name": "Llama-4-Maverick-17B-128E-Instruct",
-            "repo_id": "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-            "model_type": "llm",
-            "function_calling": True,
-            "tool_calling_mode": "json",  # Structured JSON output
-            "supports_thinking": False,
-            "rag_capable": True,
-            "vision_capable": True,  # Multimodal
-            "code_capable": True,
-            "context_length": 1000000,
-            "vram_2bit_gb": 6,
-            "vram_4bit_gb": 12,
-            "vram_8bit_gb": 24,
-            "description": "Meta Llama 4 Maverick 17B with 128 experts, 1M context, multimodal, and JSON tool calling",
-        },
+        # NOTE: Llama 4 Maverick removed - GGUF is 243GB split across 5 files (impractical)
+        # The model has 401B parameters (128 experts) and no single-file GGUF exists
         "custom": {
             "name": "Custom Local Path",
             "repo_id": "",

@@ -1125,6 +1125,10 @@ Based on the search results above, provide a clear, conversational answer to the
         thinking_content = []
         final_thinking_content = None  # Store completed thinking content for DB persistence
         
+        # Track <tool_call> tag buffering - don't stream tool call tags to GUI
+        tool_call_tag_buffer = []
+        in_tool_call_tag = False
+        
         # Track JSON tool call buffering - don't stream tool call JSON to GUI
         json_buffer = []
         in_json_tool_call = False
@@ -1275,9 +1279,46 @@ Based on the search results above, provide a clear, conversational answer to the
                         thinking_content.append(text)
                     continue  # Don't stream thinking to main callback
                 
+                # Detect <tool_call> tags and buffer them instead of streaming
+                # This prevents tool call markup from appearing in the chat UI
+                text_to_stream = text
+                
+                # Check if we're starting a <tool_call> tag
+                if not in_tool_call_tag and '<tool_call>' in text:
+                    in_tool_call_tag = True
+                    # Stream any text before the tag
+                    before_tag = text.split('<tool_call>', 1)[0]
+                    if before_tag.strip():
+                        text_to_stream = before_tag
+                    else:
+                        text_to_stream = ""
+                    # Start buffering from the tag onwards
+                    tool_call_tag_buffer.append(text.split('<tool_call>', 1)[1] if '<tool_call>' in text else "")
+                    continue
+                
+                # If we're in a <tool_call> tag, buffer it
+                if in_tool_call_tag:
+                    if '</tool_call>' in text:
+                        # End of tool call tag - buffer content before closing tag
+                        before_close = text.split('</tool_call>', 1)[0]
+                        tool_call_tag_buffer.append(before_close)
+                        in_tool_call_tag = False
+                        # Stream any content after </tool_call>
+                        after_close = text.split('</tool_call>', 1)[1] if '</tool_call>' in text else ""
+                        if after_close.strip():
+                            text_to_stream = after_close
+                        else:
+                            text_to_stream = ""
+                        tool_call_tag_buffer = []
+                    else:
+                        # Still inside the tag, buffer everything
+                        tool_call_tag_buffer.append(text)
+                        text_to_stream = ""
+                    if not text_to_stream:
+                        continue
+                
                 # Detect JSON tool call patterns and buffer them instead of streaming
                 # This prevents tool call JSON from appearing in the chat UI
-                text_to_stream = text
                 
                 # Check if we're starting a JSON tool call
                 if not in_json_tool_call and '{' in text:
