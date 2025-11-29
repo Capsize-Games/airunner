@@ -242,10 +242,6 @@ class GenerationMixin:
             ]
         )
 
-        self.logger.info("=" * 100)
-        self.logger.info("extract final response: %s", final_messages)
-        self.logger.info("self.logger: %s", self.logger)
-
         if len(final_messages) > 0:
             final_content = final_messages[-1].content or ""
             if final_content:
@@ -574,21 +570,8 @@ class GenerationMixin:
                     if hasattr(message, "content") and message.content
                     else "(empty)"
                 )
-                print(
-                    f"[GENERATION MIXIN] Received message - content: '{content_preview}', has_tool_calls: {bool(has_tool_calls)}",
-                    flush=True,
-                )
                 if not has_tool_calls:
-                    print(
-                        f"[GENERATION MIXIN] ✓ Appending final message (no tool calls)",
-                        flush=True,
-                    )
                     result_messages.append(message)
-                else:
-                    print(
-                        f"[GENERATION MIXIN] ✗ Skipping intermediate message (has tool calls)",
-                        flush=True,
-                    )
 
             # Convert streamed messages to result format
             result = {"messages": result_messages}
@@ -617,16 +600,7 @@ class GenerationMixin:
         executed_tools = []
         if hasattr(self._workflow_manager, "get_executed_tools"):
             executed_tools = self._workflow_manager.get_executed_tools()
-            print(
-                f"[GENERATION MIXIN] get_executed_tools() returned: {executed_tools}",
-                flush=True,
-            )
-        else:
-            print(
-                "[GENERATION MIXIN] workflow_manager has no get_executed_tools method",
-                flush=True,
-            )
-
+            
         sequence_counter[0] += 1
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(

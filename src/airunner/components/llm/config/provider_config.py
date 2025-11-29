@@ -1,12 +1,23 @@
-"""Configuration for LLM providers and their available models."""
+"""Configuration for LLM providers and their available models.
 
-from typing import Dict, List
+GGUF Support:
+    Models can specify `gguf_repo_id` and `gguf_filename` for GGUF format downloads.
+    GGUF models are smaller and faster than BitsAndBytes quantized safetensors:
+    - Q4_K_M: ~4.1GB for 7B model (vs ~5.5GB for BnB 4-bit)
+    - Faster inference via optimized llama.cpp backend
+    
+    When a model has GGUF config and user selects GGUF quantization,
+    the downloader will fetch the single .gguf file instead of safetensors.
+"""
+
+from typing import Dict, List, Optional
 
 
 class LLMProviderConfig:
     """Available models for each LLM provider."""
 
     # Local HuggingFace models available for download
+    # Models can have optional GGUF variants via gguf_repo_id and gguf_filename
     LOCAL_MODELS = {
         "ministral-8b": {
             "name": "Ministral-8B-Instruct-2410",
@@ -23,6 +34,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 8,
             "vram_8bit_gb": 16,
             "description": "Mistral 8B with native function calling support",
+            # GGUF variant (bartowski's quantizations are high quality)
+            "gguf_repo_id": "bartowski/Ministral-8B-Instruct-2410-GGUF",
+            "gguf_filename": "Ministral-8B-Instruct-2410-Q4_K_M.gguf",
         },
         "magistral-small-24b": {
             "name": "Magistral-Small-2509",
@@ -39,6 +53,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 14,
             "vram_8bit_gb": 28,
             "description": "Mistral 24B reasoning model with multimodal support, vision, and native tool calling",
+            # GGUF variant
+            "gguf_repo_id": "bartowski/Magistral-Small-2509-GGUF",
+            "gguf_filename": "Magistral-Small-2509-Q4_K_M.gguf",
         },
         "llama-3.2-3b": {
             "name": "Llama-3.2-3B-Instruct",
@@ -55,6 +72,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 3,
             "vram_8bit_gb": 6,
             "description": "Meta Llama 3.2 3B (ReAct pattern only - for simple chat)",
+            # GGUF variant
+            "gguf_repo_id": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+            "gguf_filename": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
         },
         "llama-3.1-8b": {
             "name": "Llama-3.1-8B-Instruct",
@@ -71,6 +91,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 5,
             "vram_8bit_gb": 10,
             "description": "Meta Llama 3.1 8B with structured JSON tool calling",
+            # GGUF variant
+            "gguf_repo_id": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+            "gguf_filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
         },
         "qwen2.5-7b": {
             "name": "Qwen2.5-7B-Instruct",
@@ -87,6 +110,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 7,
             "vram_8bit_gb": 14,
             "description": "Qwen 2.5 7B with Hermes-style JSON tool calling",
+            # GGUF variant (official Qwen GGUF)
+            "gguf_repo_id": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+            "gguf_filename": "qwen2.5-7b-instruct-q4_k_m.gguf",
         },
         "qwen3-8b": {
             "name": "Qwen3-8B",
@@ -103,6 +129,9 @@ class LLMProviderConfig:
             "vram_4bit_gb": 8,
             "vram_8bit_gb": 16,
             "description": "Qwen3 8B with built-in reasoning (thinking mode) and superior agent capabilities",
+            # GGUF variant (official Qwen GGUF)
+            "gguf_repo_id": "Qwen/Qwen3-8B-GGUF",
+            "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
         },
         "llama-4-maverick-17b": {
             "name": "Llama-4-Maverick-17B-128E-Instruct",
@@ -254,3 +283,59 @@ class LLMProviderConfig:
             True if model needs download
         """
         return provider == "local" and model_id != "custom"
+
+    @classmethod
+    def has_gguf_support(cls, provider: str, model_id: str) -> bool:
+        """
+        Check if model has GGUF support for the given provider.
+
+        Args:
+            provider: Provider name
+            model_id: Model identifier
+
+        Returns:
+            True if GGUF variant is available
+        """
+        if provider == "local" and model_id in cls.LOCAL_MODELS:
+            model_info = cls.LOCAL_MODELS[model_id]
+            return bool(model_info.get("gguf_repo_id") and model_info.get("gguf_filename"))
+        return False
+
+    @classmethod
+    def has_gguf_variant(cls, model_id: str) -> bool:
+        """
+        Check if model has a GGUF variant available.
+
+        Args:
+            model_id: Model identifier
+
+        Returns:
+            True if GGUF variant is available
+        """
+        if model_id in cls.LOCAL_MODELS:
+            model_info = cls.LOCAL_MODELS[model_id]
+            return bool(model_info.get("gguf_repo_id") and model_info.get("gguf_filename"))
+        return False
+
+    @classmethod
+    def get_gguf_info(cls, provider: str, model_id: str) -> Optional[Dict[str, str]]:
+        """
+        Get GGUF download info for a model.
+
+        Args:
+            provider: Provider name
+            model_id: Model identifier
+
+        Returns:
+            Dict with repo_id and filename, or None
+        """
+        if provider == "local" and model_id in cls.LOCAL_MODELS:
+            model_info = cls.LOCAL_MODELS[model_id]
+            repo_id = model_info.get("gguf_repo_id")
+            filename = model_info.get("gguf_filename")
+            if repo_id and filename:
+                return {
+                    "repo_id": repo_id,
+                    "filename": filename,
+                }
+        return None

@@ -994,6 +994,11 @@
             <string>8-bit (200% VRAM, best quality)</string>
            </property>
           </item>
+          <item>
+           <property name="text">
+            <string>GGUF Q4_K_M (smallest, fastest)</string>
+           </property>
+          </item>
          </widget>
         </item>
        </layout>

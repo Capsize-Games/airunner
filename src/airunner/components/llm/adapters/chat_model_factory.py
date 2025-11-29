@@ -6,6 +6,12 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from airunner.components.llm.adapters.chat_huggingface_local import (
     ChatHuggingFaceLocal,
 )
+from airunner.components.llm.adapters.chat_gguf import (
+    ChatGGUF,
+    find_gguf_file,
+    is_gguf_model,
+)
+from airunner.utils.model_optimizer import get_model_optimizer
 
 
 class ChatModelFactory:
@@ -68,6 +74,64 @@ class ChatModelFactory:
             chat_model._init_mistral_tokenizer()
 
         return chat_model
+
+    @staticmethod
+    def create_gguf_model(
+        model_path: str,
+        n_ctx: int = 4096,
+        n_gpu_layers: int = -1,
+        n_batch: int = 512,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+        top_k: int = 20,
+        repeat_penalty: float = 1.15,
+        flash_attn: bool = True,
+        enable_thinking: bool = True,
+    ) -> ChatGGUF:
+        """
+        Create a ChatModel for GGUF models via llama-cpp-python.
+
+        GGUF models are smaller and faster than BitsAndBytes quantized models:
+        - Q4_K_M: ~4.1GB for 7B model (vs ~5.5GB for BnB 4-bit)
+        - Faster inference via optimized llama.cpp backend
+        - Native GPU acceleration via cuBLAS
+
+        Args:
+            model_path: Path to GGUF model file or directory containing GGUF
+            n_ctx: Context window size (default: 4096)
+            n_gpu_layers: Layers to offload to GPU (-1 for all)
+            n_batch: Batch size for prompt processing
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            top_p: Nucleus sampling parameter
+            top_k: Top-k sampling parameter
+            repeat_penalty: Penalty for repeating tokens
+            flash_attn: Use flash attention to reduce VRAM usage
+            enable_thinking: Enable thinking mode (Qwen3-style)
+
+        Returns:
+            ChatGGUF instance
+        """
+        # If model_path is a directory, find the GGUF file
+        gguf_file = find_gguf_file(model_path) if not model_path.endswith(".gguf") else model_path
+
+        if not gguf_file:
+            raise ValueError(f"No GGUF file found in {model_path}")
+
+        return ChatGGUF(
+            model_path=gguf_file,
+            n_ctx=n_ctx,
+            n_gpu_layers=n_gpu_layers,
+            n_batch=n_batch,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            repeat_penalty=repeat_penalty,
+            flash_attn=flash_attn,
+            enable_thinking=enable_thinking,
+        )
 
     @staticmethod
     def create_openrouter_model(
@@ -180,6 +244,11 @@ class ChatModelFactory:
         """
         Create appropriate ChatModel based on AI Runner settings.
 
+        This method intelligently selects the best model format:
+        - If quantization_bits=0 (GGUF), prefer GGUF format
+        - If GGUF file exists, use it even if not explicitly requested
+        - Otherwise, use SafeTensors with BitsAndBytes quantization
+
         Args:
             llm_settings: LLMSettings instance
             model: Pre-loaded HuggingFace model (for local mode)
@@ -193,6 +262,63 @@ class ChatModelFactory:
         Raises:
             ValueError: If settings are invalid or required components missing
         """
+        # Get quantization preference from settings
+        from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
+        db_settings = LLMGeneratorSettings.objects.first()
+        quantization_bits = 4  # Default
+        if db_settings is not None:
+            quantization_bits = getattr(db_settings, "quantization_bits", 4)
+        
+        optimizer = get_model_optimizer()
+        
+        # Check for GGUF model - either explicitly requested or already available
+        if model_path:
+            # User explicitly wants GGUF (quantization_bits=0)
+            use_gguf = quantization_bits == 0
+            
+            # Also check if GGUF is available even if not explicitly requested
+            existing_gguf = optimizer.find_existing_gguf(model_path)
+            
+            if use_gguf or existing_gguf or is_gguf_model(model_path):
+                # Determine which GGUF file to use
+                gguf_path = existing_gguf or model_path
+                
+                # If user wants GGUF but no GGUF exists, try to convert
+                if use_gguf and not existing_gguf and not is_gguf_model(model_path):
+                    quant_type = optimizer.bits_to_gguf_quantization(quantization_bits)
+                    converted = optimizer.ensure_gguf(model_path, quant_type)
+                    if converted:
+                        gguf_path = converted
+                    else:
+                        # Fall through to SafeTensors if conversion not possible
+                        pass
+                
+                # Only use GGUF if we have a valid path
+                if gguf_path and (is_gguf_model(gguf_path) or optimizer.find_existing_gguf(gguf_path)):
+                    # Get generation parameters from chatbot settings
+                    params = {}
+                    if chatbot:
+                        params = {
+                            "max_tokens": getattr(chatbot, "max_new_tokens", 4096),
+                            "temperature": getattr(chatbot, "temperature", 700) / 10000.0,
+                            "top_p": getattr(chatbot, "top_p", 900) / 1000.0,
+                            "top_k": getattr(chatbot, "top_k", 20),
+                            "repeat_penalty": getattr(chatbot, "repetition_penalty", 115) / 100.0,
+                        }
+
+                    # Get enable_thinking from database
+                    enable_thinking = True
+                    if db_settings is not None and hasattr(db_settings, "enable_thinking"):
+                        db_value = getattr(db_settings, "enable_thinking", None)
+                        if db_value is not None:
+                            enable_thinking = db_value
+
+                    return ChatModelFactory.create_gguf_model(
+                        model_path=gguf_path,
+                        enable_thinking=enable_thinking,
+                        **params
+                    )
+
         # Local HuggingFace model
         if getattr(llm_settings, "use_local_llm", True):
             if not model:

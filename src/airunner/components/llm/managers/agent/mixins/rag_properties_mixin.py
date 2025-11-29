@@ -128,13 +128,17 @@ class RAGPropertiesMixin:
                 # This can reduce memory usage significantly
                 # quantization_flag = device == "cpu"
 
+                # Use fp16 to reduce VRAM usage (~650MB vs ~1.3GB)
+                model_kwargs = {}
+                if device == "cuda":
+                    model_kwargs["torch_dtype"] = torch.float16
+
                 self._embedding = HuggingFaceEmbedding(
                     model_name=model_name,
                     device=device,
                     trust_remote_code=True,
-                    # embed_batch_size=self.embed_batch_size,
-                    # text_instruction=self.text_instruction,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    model_kwargs=model_kwargs,
                 )
 
                 self.logger.info("Embedding model initialized successfully")

@@ -25,6 +25,7 @@ class ModelDownloadMixin:
 
         Args:
             data: Dictionary containing model_path, model_name, repo_id, model_type
+                  For GGUF models, also contains gguf_filename
         """
         # Skip embedding model downloads - those are handled by RAGPropertiesMixin
         model_type = data.get("model_type", "llm")
@@ -43,9 +44,13 @@ class ModelDownloadMixin:
         model_path = data.get("model_path", "")
         model_name = data.get("model_name", "Unknown Model")
         repo_id = data.get("repo_id", "")
+        gguf_filename = data.get("gguf_filename")
+        
+        # Check if this is a GGUF download
+        is_gguf = model_type == "gguf" or gguf_filename is not None
 
         self.logger.info(
-            f"Model download required: {model_name} at {model_path}"
+            f"Model download required: {model_name} at {model_path} (GGUF: {is_gguf})"
         )
 
         if not repo_id:
@@ -59,6 +64,12 @@ class ModelDownloadMixin:
         model_info = self._get_model_info(repo_id)
         if not model_info:
             return
+
+        # Add GGUF info to model_info if this is a GGUF download
+        if is_gguf:
+            model_info = dict(model_info)  # Make a copy
+            model_info["is_gguf"] = True
+            model_info["gguf_filename"] = gguf_filename
 
         self._show_download_dialog(
             main_window,
@@ -123,7 +134,7 @@ class ModelDownloadMixin:
 
         Args:
             main_window: Parent window for dialog
-            model_info: Model configuration dictionary
+            model_info: Model configuration dictionary (may include is_gguf and gguf_filename)
             model_path: Path where model will be saved
             repo_id: HuggingFace repository ID
         """
@@ -139,22 +150,42 @@ class ModelDownloadMixin:
         self._download_dialog_showing = True
 
         try:
+            is_gguf = model_info.get("is_gguf", False)
+            gguf_filename = model_info.get("gguf_filename")
+            
+            dialog_model_name = model_info.get("name", repo_id)
+            if is_gguf:
+                dialog_model_name = f"{dialog_model_name} (GGUF)"
+            
             self._download_dialog = HuggingFaceDownloadDialog(
                 parent=main_window,
-                model_name=model_info.get("name", repo_id),
+                model_name=dialog_model_name,
                 model_path=model_path,
             )
 
             self.download_manager = create_worker(DownloadHuggingFaceModel)
 
-            self.download_manager.download(
-                repo_id=repo_id,
-                model_type=model_info.get("model_type", "llm"),
-                output_dir=os.path.dirname(model_path),
-                setup_quantization=model_info.get("setup_quantization", True),
-                quantization_bits=model_info.get("quantization_bits", 4),
-                missing_files=missing_files,
-            )
+            if is_gguf and gguf_filename:
+                # GGUF download - just download the single .gguf file
+                self.download_manager.download(
+                    repo_id=repo_id,
+                    model_type="gguf",
+                    output_dir=model_path,  # GGUF goes directly to model dir
+                    setup_quantization=False,  # GGUF is already quantized
+                    quantization_bits=0,
+                    missing_files=None,
+                    gguf_filename=gguf_filename,  # Specific file to download
+                )
+            else:
+                # Standard HuggingFace download
+                self.download_manager.download(
+                    repo_id=repo_id,
+                    model_type=model_info.get("model_type", "llm"),
+                    output_dir=os.path.dirname(model_path),
+                    setup_quantization=model_info.get("setup_quantization", True),
+                    quantization_bits=model_info.get("quantization_bits", 4),
+                    missing_files=missing_files,
+                )
 
             self._download_dialog.show()
         except Exception as e:
