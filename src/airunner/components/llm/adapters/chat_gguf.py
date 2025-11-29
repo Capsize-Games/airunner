@@ -103,8 +103,8 @@ def detect_model_template(model_path: str) -> dict:
     """
     path_lower = model_path.lower()
     
-    # Llama 3.x/4.x detection
-    if any(x in path_lower for x in ["llama-3", "llama3", "llama-4", "llama4", "maverick"]):
+    # Llama 3.x detection (Llama 4 models are too large for single-file GGUF)
+    if any(x in path_lower for x in ["llama-3", "llama3", "meta-llama-3"]):
         return PromptTemplate.LLAMA3
     
     # Mistral/Ministral/Magistral detection
