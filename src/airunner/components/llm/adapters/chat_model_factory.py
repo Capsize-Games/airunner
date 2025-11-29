@@ -27,7 +27,7 @@ class ChatModelFactory:
         max_new_tokens: int = 500,
         temperature: float = 0.7,
         top_p: float = 0.9,
-        top_k: int = 50,
+        top_k: int = 20,  # Qwen3 recommended value
         repetition_penalty: float = 1.15,
         do_sample: bool = True,
         enable_thinking: bool = True,

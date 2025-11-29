@@ -102,11 +102,11 @@ class QuantizationConfigMixin:
 
         config = BitsAndBytesConfig(
             load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_compute_dtype=torch.bfloat16,  # bfloat16 is faster and more stable than float16
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
         )
-        self.logger.info("Created 4-bit BitsAndBytes config")
+        self.logger.info("Created 4-bit BitsAndBytes config with bfloat16 compute")
         return config
 
     def _configure_quantization_memory(self, dtype: str) -> Dict[str, Any]:
