@@ -40,8 +40,6 @@ def polya_reasoning(
         step: Which step to execute
         context: Work from previous steps
 
-    Returns:
-        Guidance for the current step
     """
     step = step.lower().strip()
 
@@ -126,8 +124,6 @@ def chain_of_thought(
         problem: Problem to solve
         previous_thoughts: Previous reasoning to build on
 
-    Returns:
-        Prompt for next reasoning step
     """
     if not previous_thoughts:
         return f"""Problem: {problem}

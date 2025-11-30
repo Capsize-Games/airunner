@@ -62,8 +62,6 @@ def execute_code(
     Args:
         code: Python code to execute. Must store final output in 'result'.
         
-    Returns:
-        JSON string with result, stdout, and any errors
     """
     logger.info(f"🔧 Executing code in sandbox ({len(code)} chars)")
     
@@ -133,8 +131,6 @@ def execute_code_with_context(
         code: Python code to execute
         context: Dict of variables to make available in the sandbox
         
-    Returns:
-        JSON string with result and execution details
     """
     logger.info(f"🔧 Executing code with context ({len(code)} chars)")
     

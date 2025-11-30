@@ -64,6 +64,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,
+            os.path.join(airunner_path, "code"),  # Code generation workspace
             os.path.join(airunner_path, "data"),
             os.path.join(airunner_path, "text"),
             os.path.join(airunner_path, "text/other"),

@@ -44,8 +44,6 @@ def search_web(
     Args:
         query: Search query
 
-    Returns:
-        Formatted search results from DuckDuckGo
     """
     global _last_search_time
 
@@ -96,10 +94,13 @@ def search_web(
                 formatted += f"   {snippet}...\n"
             formatted += "\n"
 
-        # Add explicit instructions to answer the question
+        # Add instructions that support continued tool use
         formatted += "\n" + "="*60 + "\n"
-        formatted += "📝 NOW: Use these results to answer the user's question directly.\n"
-        formatted += "If more details are needed, use scrape_website on a relevant URL.\n"
+        formatted += "📝 NEXT STEPS: You can:\n"
+        formatted += "- Use `scrape_website` on a URL to get full article content\n"
+        formatted += "- Use `search_web` again with a different query for more info\n"
+        formatted += "- Use `create_research_document` to save findings\n"
+        formatted += "- Or respond directly if you have enough information\n"
         formatted += "="*60 + "\n"
 
         logger.info(f"✓ Formatted {len(ddg_results[:5])} search results")
@@ -138,8 +139,6 @@ def search_news(
     Args:
         query: News search query
 
-    Returns:
-        Formatted news results with sources and dates
     """
     global _last_search_time
 
@@ -190,10 +189,13 @@ def search_news(
                 formatted += f"   {snippet}...\n"
             formatted += "\n"
 
-        # Add explicit instructions to answer the question
+        # Add instructions that support continued tool use
         formatted += "\n" + "="*60 + "\n"
-        formatted += "📝 NOW: Use these news results to answer the user's question directly.\n"
-        formatted += "If more details are needed, use scrape_website on a relevant URL.\n"
+        formatted += "📝 NEXT STEPS: You can:\n"
+        formatted += "- Use `scrape_website` on a URL to get full article content\n"
+        formatted += "- Use `search_news` again with a different query for more info\n"
+        formatted += "- Use `create_research_document` to save findings\n"
+        formatted += "- Or respond directly if you have enough information\n"
         formatted += "="*60 + "\n"
 
         logger.info(f"✓ Formatted {len(results[:7])} news results")
@@ -230,8 +232,6 @@ def scrape_website(
     Args:
         url: Website URL to scrape (e.g., "https://example.com/article")
 
-    Returns:
-        Dictionary with content and metadata, or error dict if scraping fails
     """
     logger.info(f"Scraping: {url}")
 

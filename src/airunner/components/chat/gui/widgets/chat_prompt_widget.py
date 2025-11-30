@@ -1,9 +1,9 @@
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
-from PySide6.QtCore import Slot, Qt
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QTextCursor
+from PySide6.QtCore import Slot, Qt, QPoint
+from PySide6.QtWidgets import QApplication, QListWidget, QListWidgetItem, QFrame
+from PySide6.QtGui import QTextCursor, QFont
 
 from langchain_core.messages.utils import count_tokens_approximately
 
@@ -117,6 +117,10 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
+        
+        # Setup slash command autocomplete
+        self._setup_slash_command_completer()
+        
         self._llm_response_worker = create_worker(
             LLMResponseWorker, sleep_time_in_ms=1
         )
@@ -290,8 +294,24 @@ class ChatPromptWidget(BaseWidget):
         self.clear_prompt()
         self.start_progress_bar()
         
-        # Track sent tokens
-        sent_tokens = self._estimate_token_count(prompt)
+        # Parse slash command if present
+        self.logger.info(f"do_generate called with prompt: {prompt[:100] if prompt else 'None'}...")
+        slash_command, actual_prompt, action_override = self._parse_slash_command(prompt)
+        self.logger.info(f"Slash command parse result: command={slash_command}, action_override={action_override}")
+        
+        # Determine action type - use override from slash command if present
+        action = action_override if action_override else self.action
+        self.logger.info(f"Final action: {action}")
+        
+        # Get configuration from slash command
+        force_tool = None
+        if slash_command and slash_command in SLASH_COMMANDS:
+            cmd_config = SLASH_COMMANDS[slash_command]
+            force_tool = cmd_config.get("tool")
+            self.logger.info(f"Slash command /{slash_command} -> action={action}, force_tool={force_tool}")
+        
+        # Use actual_prompt (with slash command stripped) for token counting
+        sent_tokens = self._estimate_token_count(actual_prompt)
         self._tokens_sent_last = sent_tokens
         self._tokens_sent_total += sent_tokens
         self._tokens_received_last = 0
@@ -299,10 +319,19 @@ class ChatPromptWidget(BaseWidget):
         self._update_token_tracking_labels()
         
         # Create LLMRequest optimized for the action type
+        llm_request = LLMRequest.for_action(action)
+        
+        # Set force_tool if slash command specifies one
+        if force_tool:
+            llm_request.force_tool = force_tool
+            self.logger.info(f"Set force_tool={force_tool} on llm_request")
+        
+        self.logger.info(f"Sending request - action={action}, force_tool={llm_request.force_tool}, tool_categories={llm_request.tool_categories}")
+        
         self.api.llm.send_request(
-            prompt=prompt,
-            llm_request=LLMRequest.for_action(self.action),
-            action=self.action,
+            prompt=actual_prompt,
+            llm_request=llm_request,
+            action=action,
             do_tts_reply=False,
             conversation_id=conversation_id,
         )
@@ -389,6 +418,230 @@ class ChatPromptWidget(BaseWidget):
             cursor.setCharFormat(fmt)
 
         prompt_widget.blockSignals(False)
+
+    def _setup_slash_command_completer(self) -> None:
+        """Setup slash command popup for autocomplete."""
+        # Build command data with descriptions
+        self._slash_commands_data = []
+        for cmd, config in SLASH_COMMANDS.items():
+            self._slash_commands_data.append({
+                "command": f"/{cmd}",
+                "description": config.get("description", ""),
+            })
+        
+        # Create popup list widget - use ToolTip type so it doesn't steal focus
+        self._slash_popup = QListWidget()
+        self._slash_popup.setWindowFlags(
+            Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint
+        )
+        self._slash_popup.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._slash_popup.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self._slash_popup.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self._slash_popup.setMouseTracking(True)
+        self._slash_popup.setStyleSheet("""
+            QListWidget {
+                background-color: #1e1e1e;
+                color: #cccccc;
+                border: 1px solid #454545;
+                outline: none;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 13px;
+            }
+            QListWidget::item {
+                padding: 6px 12px;
+                border: none;
+            }
+            QListWidget::item:selected {
+                background-color: #094771;
+                color: white;
+            }
+            QListWidget::item:hover {
+                background-color: #2a2d2e;
+            }
+        """)
+        
+        # Connect click signal only (not activated - we handle Enter ourselves)
+        self._slash_popup.itemClicked.connect(self._on_slash_item_clicked)
+        
+        # Connect text change to check for slash
+        self.ui.prompt.textChanged.connect(self._check_slash_command_trigger)
+
+    def _populate_slash_popup(self, filter_text: str = "") -> None:
+        """Populate the popup with matching commands."""
+        self._slash_popup.clear()
+        
+        filter_lower = filter_text.lower()
+        for cmd_data in self._slash_commands_data:
+            cmd = cmd_data["command"]
+            desc = cmd_data["description"]
+            
+            # Filter by partial match
+            if filter_lower and not cmd.lower().startswith(filter_lower):
+                continue
+            
+            # Create item with command and description
+            item = QListWidgetItem()
+            item.setData(Qt.ItemDataRole.UserRole, cmd)
+            
+            # Format: /command                    description
+            display_text = f"{cmd:<20} {desc}"
+            item.setText(display_text)
+            
+            # Use monospace for command part
+            font = QFont("Consolas", 11)
+            item.setFont(font)
+            
+            self._slash_popup.addItem(item)
+        
+        # Select first item
+        if self._slash_popup.count() > 0:
+            self._slash_popup.setCurrentRow(0)
+
+    def _show_slash_popup(self) -> None:
+        """Show the slash command popup below the cursor."""
+        if self._slash_popup.count() == 0:
+            self._slash_popup.hide()
+            return
+        
+        # Calculate position - above the prompt widget
+        prompt_rect = self.ui.prompt.geometry()
+        global_pos = self.ui.prompt.mapToGlobal(QPoint(0, 0))
+        
+        # Size the popup
+        item_height = 28
+        visible_items = min(self._slash_popup.count(), 12)
+        popup_height = visible_items * item_height + 4
+        popup_width = 450
+        
+        # Position above the prompt
+        popup_x = global_pos.x()
+        popup_y = global_pos.y() - popup_height - 5
+        
+        self._slash_popup.setGeometry(popup_x, popup_y, popup_width, popup_height)
+        self._slash_popup.show()
+        self._slash_popup.raise_()
+
+    def _check_slash_command_trigger(self) -> None:
+        """Check if we should show the slash command popup."""
+        if not hasattr(self, '_slash_popup'):
+            return
+            
+        text = self.ui.prompt.toPlainText()
+        
+        if text.startswith("/"):
+            # Get the partial command (everything after / until space or end)
+            parts = text.split(" ", 1)
+            partial_cmd = parts[0] if parts else "/"
+            
+            # Only show popup if still typing the command (no space yet)
+            if len(parts) == 1:
+                self._populate_slash_popup(partial_cmd)
+                self._show_slash_popup()
+            else:
+                self._slash_popup.hide()
+        else:
+            self._slash_popup.hide()
+
+    def _on_slash_item_clicked(self, item: QListWidgetItem) -> None:
+        """Handle when a slash command is selected from the popup."""
+        cmd = item.data(Qt.ItemDataRole.UserRole)
+        
+        # Get current text after the partial command
+        current_text = self.ui.prompt.toPlainText()
+        space_idx = current_text.find(" ")
+        if space_idx > 0:
+            rest = current_text[space_idx:]
+        else:
+            rest = " "
+        
+        # Set the new text
+        self.ui.prompt.blockSignals(True)
+        self.ui.prompt.setPlainText(cmd + rest)
+        
+        # Move cursor to end
+        cursor = self.ui.prompt.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self.ui.prompt.setTextCursor(cursor)
+        self.ui.prompt.blockSignals(False)
+        
+        # Hide popup and update highlighting
+        self._slash_popup.hide()
+        self.highlight_slash_command(cmd + rest)
+        
+        # Focus back to prompt
+        self.ui.prompt.setFocus()
+
+    def _handle_slash_popup_navigation(self, key: int) -> bool:
+        """Handle keyboard navigation in slash popup. Returns True if handled.
+        
+        Only intercepts navigation keys (Up/Down/Tab/Escape).
+        All other keys pass through to allow normal typing.
+        """
+        if not hasattr(self, '_slash_popup') or not self._slash_popup.isVisible():
+            return False
+        
+        if key == Qt.Key.Key_Up:
+            current = self._slash_popup.currentRow()
+            if current > 0:
+                self._slash_popup.setCurrentRow(current - 1)
+            return True
+        elif key == Qt.Key.Key_Down:
+            current = self._slash_popup.currentRow()
+            if current < self._slash_popup.count() - 1:
+                self._slash_popup.setCurrentRow(current + 1)
+            return True
+        elif key == Qt.Key.Key_Tab:
+            # Tab selects the current item
+            item = self._slash_popup.currentItem()
+            if item:
+                self._on_slash_item_clicked(item)
+            return True
+        elif key == Qt.Key.Key_Escape:
+            self._slash_popup.hide()
+            return True
+        
+        # Let all other keys pass through (including Enter - user might want to submit)
+        # The popup will auto-hide if text no longer matches
+        return False
+
+    def _parse_slash_command(self, prompt: str) -> Tuple[Optional[str], str, Optional[LLMActionType]]:
+        """Parse a slash command from the prompt.
+        
+        Args:
+            prompt: The full prompt text
+            
+        Returns:
+            Tuple of (command_name, remaining_prompt, action_type_override)
+            - command_name: The slash command (e.g., "deepsearch") or None
+            - remaining_prompt: The prompt with the command stripped
+            - action_type_override: Optional LLMActionType to use instead of AUTO
+        """
+        if not prompt.startswith("/"):
+            return None, prompt, None
+        
+        parts = prompt[1:].split(" ", 1)
+        command = parts[0].lower()
+        
+        if command not in SLASH_COMMANDS:
+            # Unknown command, treat as regular prompt
+            return None, prompt, None
+        
+        # Get remaining prompt (everything after the command)
+        remaining = parts[1].strip() if len(parts) > 1 else ""
+        
+        # Get action type override if specified
+        cmd_config = SLASH_COMMANDS[command]
+        action_override = None
+        if "action" in cmd_config:
+            action_name = cmd_config["action"]
+            try:
+                action_override = LLMActionType[action_name]
+            except KeyError:
+                self.logger.warning(f"Unknown action type in slash command: {action_name}")
+        
+        return command, remaining, action_override
 
     def _update_token_count_label(self, prompt: str) -> None:
         """Refresh the token count label with the latest approximation."""
@@ -691,6 +944,11 @@ class ChatPromptWidget(BaseWidget):
         self._disabled = False
 
     def handle_key_press(self, event):
+        # Handle slash popup navigation first
+        if self._handle_slash_popup_navigation(event.key()):
+            event.accept()
+            return
+            
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             if (
                 not self._disabled

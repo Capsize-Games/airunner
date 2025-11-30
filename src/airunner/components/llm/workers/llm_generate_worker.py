@@ -155,8 +155,12 @@ class LLMGenerateWorker(
         """
         self.model_manager.on_conversation_deleted(data)
 
-    def on_section_changed_signal(self) -> None:
-        """Handle section change in UI."""
+    def on_section_changed_signal(self, data: Dict = None) -> None:
+        """Handle section change in UI.
+        
+        Args:
+            data: Optional signal data with section info
+        """
         self.model_manager.on_section_changed()
 
     def on_llm_model_changed_signal(self, data: Dict) -> None:

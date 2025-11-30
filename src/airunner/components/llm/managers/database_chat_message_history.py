@@ -223,7 +223,6 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 if hasattr(message, "additional_kwargs") and message.additional_kwargs:
                     thinking_content = message.additional_kwargs.get("thinking_content")
                 if not thinking_content and message.content:
-                    from airunner.components.llm.utils.thinking_parser import extract_thinking_and_response
                     thinking_content, _ = extract_thinking_and_response(message.content)
                 
                 # Store tool call request in metadata

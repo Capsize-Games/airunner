@@ -168,6 +168,11 @@ class ToolRegistry:
 
             if category not in cls._categories:
                 cls._categories[category] = []
+            
+            # Remove existing entry with same name to prevent duplicates on reload
+            cls._categories[category] = [
+                t for t in cls._categories[category] if t.name != name
+            ]
             cls._categories[category].append(info)
 
             return func
@@ -294,12 +299,19 @@ class ToolRegistry:
                 "airunner.components.llm.tools.code_tools",
                 "airunner.components.llm.tools.research_tools",
                 "airunner.components.llm.tools.research_document_tools",
+                "airunner.components.llm.tools.research_validation_tools",
                 "airunner.components.llm.tools.research_rag_tools",
                 "airunner.components.llm.tools.qa_tools",
                 "airunner.components.llm.tools.code_generation_tools",
+                # Document editor tools for code/document editing
+                "airunner.components.llm.tools.document_editor_tools",
                 # Advanced tool use features
                 "airunner.components.llm.tools.tool_search_tool",
                 "airunner.components.llm.tools.code_execution_tool",
+                # Dynamic tool creation
+                "airunner.components.llm.tools.dynamic_tool_tools",
+                # Workflow management tools
+                "airunner.components.llm.agents.workflow_tools",
             ]
             for module_name in modules_to_reload:
                 try:

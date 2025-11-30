@@ -38,8 +38,6 @@ def verify_answer(question: str, answer: str, context: str = "") -> str:
         answer: The answer to verify
         context: Optional context or retrieved facts to check against
 
-    Returns:
-        Verification report with confidence score
     """
     logger.info(f"Verifying answer for question: {question[:50]}...")
 
@@ -95,8 +93,6 @@ def score_answer_confidence(
         sources: Optional list of sources supporting the answer
         reasoning: Optional reasoning chain that led to the answer
 
-    Returns:
-        Confidence score and explanation
     """
     logger.info("Scoring answer confidence")
 
@@ -159,8 +155,6 @@ def extract_answer_from_context(question: str, context: str) -> str:
         question: The question to answer
         context: The context containing the answer
 
-    Returns:
-        Extracted answer with location in context
     """
     logger.info(f"Extracting answer for: {question[:50]}...")
 
@@ -207,8 +201,6 @@ def generate_clarifying_questions(query: str, num_questions: int = 3) -> str:
         query: The ambiguous query
         num_questions: Number of clarifying questions to generate
 
-    Returns:
-        List of clarifying questions
     """
     logger.info(f"Generating {num_questions} clarifying questions")
 
@@ -265,8 +257,6 @@ def rank_answer_candidates(question: str, candidates: List[str]) -> str:
         question: The question being answered
         candidates: List of candidate answers
 
-    Returns:
-        Ranked list of candidates with scores
     """
     logger.info(f"Ranking {len(candidates)} answer candidates")
 
@@ -317,8 +307,6 @@ def identify_answer_type(question: str) -> str:
     Args:
         question: The question to analyze
 
-    Returns:
-        Expected answer type and explanation
     """
     logger.info("Identifying answer type")
 

@@ -37,8 +37,6 @@ def generate_direct_response(
         prompt: The generation task to perform
         agent: The agent instance (automatically injected)
 
-    Returns:
-        Generated text without conversational formatting
     """
     if not agent:
         return "Error: Agent not available"
@@ -78,8 +76,6 @@ def generate_description(
         context: Context or content to base the description on
         agent: The agent instance (automatically injected)
 
-    Returns:
-        Direct description text (3-5 sentences, no preamble)
     """
     if not agent:
         return "Error: Agent not available"
@@ -120,8 +116,6 @@ def categorize(
         content: Content to analyze
         agent: The agent instance (automatically injected)
 
-    Returns:
-        Single category name
     """
     if not agent:
         return "Error: Agent not available"

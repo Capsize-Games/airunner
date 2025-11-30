@@ -59,8 +59,6 @@ def rag_search(
         query: Search query for finding relevant document content
         api: API instance (injected by ToolManager)
 
-    Returns:
-        Relevant excerpts from loaded documents or error message
     """
     logger.info(f"rag_search called with query: {query}")
 
@@ -163,8 +161,6 @@ def search_knowledge_base_documents(
         query: What topics/documents you're looking for
         k: Number of document paths to return (default 10)
 
-    Returns:
-        List of relevant document paths ranked by relevance
 
     Examples:
         search_knowledge_base_documents("machine learning tutorials")
@@ -640,8 +636,6 @@ def save_to_knowledge_base(
         category: Category for organization
         api: API instance (injected)
 
-    Returns:
-        Confirmation message
     """
     try:
         # Create a document file

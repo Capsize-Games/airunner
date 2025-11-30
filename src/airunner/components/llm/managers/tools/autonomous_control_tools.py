@@ -30,7 +30,7 @@ class AutonomousControlTools(BaseTool):
             Returns:
                 JSON-formatted application state
 
-            Example:
+            Usage:
                 get_application_state()
             """
             try:
@@ -147,7 +147,7 @@ class AutonomousControlTools(BaseTool):
             Returns:
                 Confirmation message
 
-            Example:
+            Usage:
                 set_application_mode("autonomous", auto_approve=True)
             """
             try:
@@ -247,7 +247,7 @@ class AutonomousControlTools(BaseTool):
             Returns:
                 Analysis summary with insights and recommendations
 
-            Example:
+            Usage:
                 analyze_user_behavior(days_back=7)
             """
             try:
@@ -358,7 +358,7 @@ class AutonomousControlTools(BaseTool):
             Returns:
                 Proposal status or execution result
 
-            Example:
+            Usage:
                 propose_action(
                     "organize_conversations",
                     "Group conversations by topic and add titles",
@@ -401,7 +401,7 @@ class AutonomousControlTools(BaseTool):
             Returns:
                 System health report
 
-            Example:
+            Usage:
                 monitor_system_health()
             """
             try:
@@ -468,7 +468,7 @@ class AutonomousControlTools(BaseTool):
             Returns:
                 Confirmation message
 
-            Example:
+            Usage:
                 log_agent_decision(
                     "Summarized old conversations",
                     "User has 50+ conversations, summarizing will improve search",

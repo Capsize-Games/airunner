@@ -49,8 +49,6 @@ def search_tools(
         query: Natural language query describing needed functionality
         limit: Maximum results to return (default 5)
         
-    Returns:
-        JSON string containing matching tool definitions with schemas
     """
     logger.info(f"🔍 Searching for tools: {query}")
     
@@ -96,8 +94,6 @@ def search_tools(
 def list_available_tools() -> str:
     """List all immediately available tools by category.
     
-    Returns:
-        JSON string with tools grouped by category
     """
     from airunner.components.llm.core.tool_registry import ToolRegistry
     

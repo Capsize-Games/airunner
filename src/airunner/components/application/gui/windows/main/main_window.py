@@ -727,6 +727,7 @@ class MainWindow(
     def _set_current_button_and_tab(self, button_name: str):
         """
         Set the current button and tab based on the button name and tab widget.
+        Also emits SECTION_CHANGED signal to notify LLM of UI context change.
         """
         buttons = self.buttons.keys()
         for btn in buttons:
@@ -735,6 +736,9 @@ class MainWindow(
             getattr(self.ui, btn).blockSignals(False)
         tab_widget = self.buttons[button_name]
         self._set_tab_index(tab_widget)
+        
+        # Emit section changed signal with button name for LLM context
+        self.emit_signal(SignalCode.SECTION_CHANGED, {"section": button_name})
 
     @Slot(bool)
     def on_home_button_toggled(self, active: bool):

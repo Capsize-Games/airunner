@@ -54,8 +54,6 @@ def create_research_document(
         topic: Research topic/title
         api: API instance (injected automatically)
 
-    Returns:
-        Absolute path to the created document
     """
     if not api:
         return "Error: API not available"
@@ -125,8 +123,6 @@ def create_research_notes(
         topic: Research topic (should match main document)
         api: API instance (injected automatically)
 
-    Returns:
-        Absolute path to the notes file
     """
     if not api:
         return "Error: API not available"
@@ -197,8 +193,6 @@ def append_research_notes(
         source_url: URL of source
         findings: Summary of findings
 
-    Returns:
-        Success/error message
     """
     try:
         # Build the entry
@@ -262,8 +256,6 @@ def update_research_section(
         content: New content
         api: API instance (injected automatically)
 
-    Returns:
-        Success/error message
     """
     try:
         # Read current document
@@ -358,8 +350,6 @@ def add_source_citation(
         url: Source URL
         author: Author name
 
-    Returns:
-        Success/error message
     """
     try:
         # Read current document
@@ -430,8 +420,6 @@ def finalize_research_document(
         document_path: Path to research document
         api: API instance
 
-    Returns:
-        Success message
     """
     if not api:
         return "Error: API not available"
@@ -498,10 +486,8 @@ def load_indexed_documents_into_rag(
         max_documents: Maximum number of documents to load (default 5)
         api: API instance (injected)
 
-    Returns:
-        Summary of loaded documents and any relevant excerpts
 
-    Example:
+    Usage:
         load_indexed_documents_into_rag("machine learning transformers", 3)
     """
     try:
@@ -669,8 +655,6 @@ def edit_document_find_replace(
         is_regex: Treat find_text as regex
         api: API instance
 
-    Returns:
-        Result message
     """
     import re
 

@@ -142,7 +142,7 @@ class ComponentLoaderMixin:
                 system_prompt=self.system_prompt,
                 chat_model=self._chat_model,
                 tools=tools_to_use,
-                max_tokens=2000,
+                max_history_tokens=8000,
                 conversation_id=None,
                 use_mode_routing=use_mode_routing,
                 mode_override=mode_override,

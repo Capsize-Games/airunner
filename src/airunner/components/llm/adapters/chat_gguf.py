@@ -1,17 +1,21 @@
 """LangChain adapter for GGUF models via llama-cpp-python.
 
 This adapter wraps llama-cpp-python for GGUF model inference,
-providing the same interface as ChatHuggingFaceLocal for compatibility
-with existing LangGraph workflows.
+using Qwen3's native tool calling format with <tool_call> XML tags.
 
 GGUF models are significantly smaller and faster than BitsAndBytes quantized
 safetensors:
 - Q4_K_M: ~4.1GB for 7B model (vs ~5.5GB for BnB 4-bit)
 - Faster inference via optimized llama.cpp backend
 - Native GPU acceleration via cuBLAS
+
+For Qwen3 models, this injects tool definitions in the system prompt and
+parses <tool_call> tags from responses (matching Qwen3's native format).
 """
 
-import os
+import json
+import re
+import uuid
 from pathlib import Path
 from typing import (
     Any,
@@ -21,7 +25,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Tuple,
     Union,
 )
 
@@ -34,6 +37,7 @@ from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
     SystemMessage,
+    ToolMessage,
 )
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.runnables import Runnable
@@ -44,126 +48,79 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
-class PromptTemplate:
-    """Prompt templates for different model architectures."""
-    
-    # ChatML format (Qwen, Qwen2, Qwen2.5, Qwen3, many fine-tunes)
-    CHATML = {
-        "system_start": "<|im_start|>system\n",
-        "system_end": "<|im_end|>\n",
-        "user_start": "<|im_start|>user\n",
-        "user_end": "<|im_end|>\n",
-        "assistant_start": "<|im_start|>assistant\n",
-        "assistant_end": "<|im_end|>\n",
-        "stop_tokens": ["<|im_end|>", "<|endoftext|>"],
-    }
-    
-    # Llama 3/3.1/3.2/4 format
-    LLAMA3 = {
-        "system_start": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n",
-        "system_end": "<|eot_id|>",
-        "user_start": "<|start_header_id|>user<|end_header_id|>\n\n",
-        "user_end": "<|eot_id|>",
-        "assistant_start": "<|start_header_id|>assistant<|end_header_id|>\n\n",
-        "assistant_end": "<|eot_id|>",
-        "stop_tokens": ["<|eot_id|}}", "<|end_of_text|>"],
-    }
-    
-    # Mistral/Ministral/Magistral format (v3 tokenizer)
-    MISTRAL = {
-        "system_start": "[INST] ",
-        "system_end": "\n",
-        "user_start": "",
-        "user_end": " [/INST]",
-        "assistant_start": "",
-        "assistant_end": "</s>",
-        "stop_tokens": ["</s>", "[INST]"],
-    }
-    
-    # Mistral v7 (Nemo/newer) format with system support
-    MISTRAL_V7 = {
-        "system_start": "<s>[SYSTEM_PROMPT] ",
-        "system_end": " [/SYSTEM_PROMPT]",
-        "user_start": "[INST] ",
-        "user_end": " [/INST]",
-        "assistant_start": "",
-        "assistant_end": "</s>",
-        "stop_tokens": ["</s>", "[INST]"],
-    }
-
-
-def detect_model_template(model_path: str) -> dict:
-    """Detect the appropriate prompt template based on model filename.
+def _detect_chat_format(model_path: str) -> str:
+    """Detect the appropriate chat format based on model filename.
     
     Args:
         model_path: Path to the GGUF model file
         
     Returns:
-        Prompt template dictionary
+        Chat format string for llama-cpp-python
     """
     path_lower = model_path.lower()
     
-    # Llama 3.x detection (Llama 4 models are too large for single-file GGUF)
-    if any(x in path_lower for x in ["llama-3", "llama3", "meta-llama-3"]):
-        return PromptTemplate.LLAMA3
-    
-    # Mistral/Ministral/Magistral detection
-    if any(x in path_lower for x in ["mistral", "ministral", "magistral"]):
-        # Newer Mistral models (Nemo, v7+) use different format
-        if any(x in path_lower for x in ["nemo", "magistral"]):
-            return PromptTemplate.MISTRAL_V7
-        return PromptTemplate.MISTRAL
-    
-    # Qwen models (all versions use ChatML)
+    # Qwen models use chatml
     if "qwen" in path_lower:
-        return PromptTemplate.CHATML
+        return "chatml"
     
-    # Default to ChatML (most compatible)
-    return PromptTemplate.CHATML
+    # Llama 3.x 
+    if any(x in path_lower for x in ["llama-3", "llama3", "meta-llama-3"]):
+        return "llama-3"
+    
+    # Mistral
+    if any(x in path_lower for x in ["mistral", "ministral", "magistral"]):
+        return "mistral-instruct"
+    
+    # Default to chatml (most compatible)
+    return "chatml"
 
 
 class ChatGGUF(BaseChatModel):
     """LangChain ChatModel adapter for GGUF models via llama-cpp-python.
 
-    This adapter provides a unified interface for GGUF model inference,
-    compatible with existing LangGraph workflows and tool calling.
+    This adapter uses llama-cpp-python's NATIVE function calling support
+    via create_chat_completion() with tools parameter. This is the proper
+    way to do tool calling with Qwen3 and other modern models.
     
-    Supports multiple model architectures with automatic template detection:
-    - Qwen/Qwen2/Qwen2.5/Qwen3 (ChatML format)
-    - Llama 3/3.1/3.2/4 (Llama format)
-    - Mistral/Ministral/Magistral (Mistral format)
+    Key features:
+    - Uses native chat completion API (not manual prompt building)
+    - Proper Hermes-style function calling (not ReAct)
+    - Automatic chat format detection from model name
+    - Full streaming support
+    - Thinking mode support for Qwen3
 
     Attributes:
         model_path: Path to the GGUF model file
-        n_ctx: Context window size (default: 8192 for modern models)
+        n_ctx: Context window size (32768 native for Qwen3, up to 131072 with YaRN)
         n_gpu_layers: Number of layers to offload to GPU (-1 for all)
-        n_batch: Batch size for prompt processing
-        max_tokens: Maximum tokens to generate
+        max_tokens: Maximum tokens to generate (32768 for Qwen3)
         temperature: Sampling temperature
-        top_p: Nucleus sampling parameter
-        top_k: Top-k sampling parameter
-        repeat_penalty: Penalty for repeating tokens
-        tools: Bound tools for function calling
+        tools: Bound tools for function calling (OpenAI format)
         enable_thinking: Whether to enable thinking mode (Qwen3-style)
-        prompt_template: Override auto-detected prompt template
+        chat_format: Override auto-detected chat format
+        use_yarn: Enable YaRN for extended context (requires more VRAM)
     """
 
     model_path: str
-    n_ctx: int = 4096  # Reduced from 8192 to save VRAM
-    n_gpu_layers: int = -1  # -1 = all layers on GPU
+    n_ctx: int = 32768  # Qwen3 native context (use YaRN for 131K)
+    n_gpu_layers: int = -1
     n_batch: int = 512
-    max_tokens: int = 4096
-    temperature: float = 0.7
-    top_p: float = 0.9
-    top_k: int = 20
+    max_tokens: int = 32768  # Qwen3 recommended output length
+    temperature: float = 0.6  # Qwen3 thinking mode recommended
+    top_p: float = 0.95  # Qwen3 thinking mode recommended  
+    top_k: int = 20  # Qwen3 recommended
+    min_p: float = 0.0  # Qwen3 recommended (disabled)
     repeat_penalty: float = 1.15
-    flash_attn: bool = True  # Use flash attention to reduce VRAM
-    tools: Optional[List[Any]] = None
+    flash_attn: bool = True
+    tools: Optional[List[Dict[str, Any]]] = None
+    tool_choice: Optional[str] = None  # "auto", "none", or specific tool name
     enable_thinking: bool = True
-    prompt_template: Optional[Dict[str, Any]] = None  # Auto-detected if None
+    chat_format: Optional[str] = None  # Auto-detected if None
+    use_yarn: bool = False  # Disabled by default - requires more VRAM
+    yarn_orig_ctx: int = 32768  # Qwen3 native context length
     _interrupted: bool = False
-    _llama: Optional[Any] = None  # Llama instance from llama-cpp-python
-    _template: Optional[Dict[str, Any]] = None  # Cached template
+    _llama: Optional[Any] = None
+    _detected_format: Optional[str] = None
 
     class Config:
         """Pydantic configuration."""
@@ -191,19 +148,21 @@ class ChatGGUF(BaseChatModel):
             "model_path": self.model_path,
             "n_ctx": self.n_ctx,
             "n_gpu_layers": self.n_gpu_layers,
-            "flash_attn": self.flash_attn,
+            "chat_format": self._detected_format,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
         }
 
+    @property 
+    def tool_calling_mode(self) -> str:
+        """Return tool calling mode for compatibility with workflow manager."""
+        # We use native function calling, not ReAct
+        return "native"
+
     def model_post_init(self, __context: Any) -> None:
         """Initialize the llama-cpp-python model after Pydantic init."""
         super().model_post_init(__context)
-        # Detect prompt template based on model filename
-        if self.prompt_template is not None:
-            self._template = self.prompt_template
-        else:
-            self._template = detect_model_template(self.model_path)
+        self._detected_format = self.chat_format or _detect_chat_format(self.model_path)
         self._load_model()
 
     def _load_model(self) -> None:
@@ -219,30 +178,53 @@ class ChatGGUF(BaseChatModel):
                 "Install with: pip install llama-cpp-python"
             )
 
-        # Log detected template type
-        template_name = "ChatML"
-        if self._template == PromptTemplate.LLAMA3:
-            template_name = "Llama3"
-        elif self._template == PromptTemplate.MISTRAL:
-            template_name = "Mistral"
-        elif self._template == PromptTemplate.MISTRAL_V7:
-            template_name = "Mistral-v7"
-        
         self.logger.info(f"Loading GGUF model from {self.model_path}")
-        self.logger.info(f"  Template: {template_name}, n_ctx={self.n_ctx}, n_gpu_layers={self.n_gpu_layers}")
-
-        self._llama = Llama(
-            model_path=self.model_path,
-            n_ctx=self.n_ctx,
-            n_gpu_layers=self.n_gpu_layers,
-            n_batch=self.n_batch,
-            flash_attn=self.flash_attn,
-            type_k=8,  # KV cache key quantization: Q8_0 to save VRAM
-            type_v=8,  # KV cache value quantization: Q8_0 to save VRAM
-            verbose=False,  # Reduce log verbosity
+        self.logger.info(
+            f"  chat_format={self._detected_format}, n_ctx={self.n_ctx}, "
+            f"n_gpu_layers={self.n_gpu_layers}"
         )
 
+        # Use standard chatml format - we handle tool calling via prompt injection
+        # and <tool_call> tag parsing (Qwen3 native format)
+        
+        # Build kwargs with optional YaRN support for extended context
+        llama_kwargs = {
+            "model_path": self.model_path,
+            "n_ctx": self.n_ctx,
+            "n_gpu_layers": self.n_gpu_layers,
+            "n_batch": self.n_batch,
+            "flash_attn": self.flash_attn,
+            "chat_format": self._detected_format,
+            "type_k": 8,  # KV cache quantization to save VRAM
+            "type_v": 8,
+            "verbose": False,
+        }
+        
+        # Add YaRN parameters for extended context (131K)
+        # YaRN (Yet another RoPE extensioN) allows extending context beyond native limit
+        if self.use_yarn and self.n_ctx > self.yarn_orig_ctx:
+            self.logger.info(
+                f"Enabling YaRN for extended context: {self.yarn_orig_ctx} -> {self.n_ctx}"
+            )
+            # rope_scaling_type: 2 = YARN in llama.cpp
+            llama_kwargs["rope_scaling_type"] = 2
+            llama_kwargs["yarn_orig_ctx"] = self.yarn_orig_ctx
+            # Calculate scaling factor: target_ctx / original_ctx
+            factor = self.n_ctx / self.yarn_orig_ctx
+            llama_kwargs["yarn_ext_factor"] = factor
+            llama_kwargs["yarn_attn_factor"] = 1.0
+            llama_kwargs["yarn_beta_fast"] = 32.0
+            llama_kwargs["yarn_beta_slow"] = 1.0
+        
+        self._llama = Llama(**llama_kwargs)
+
         self.logger.info("✓ GGUF model loaded successfully")
+
+    def _reload_with_tools(self) -> None:
+        """No-op: We don't need to reload for Qwen3's native tool format."""
+        # Qwen3 uses <tool_call> tags which we parse from output
+        # No special chat format needed
+        pass
 
     def set_interrupted(self, value: bool) -> None:
         """Set the interrupted flag for stopping generation."""
@@ -252,96 +234,125 @@ class ChatGGUF(BaseChatModel):
         """Check if generation should stop."""
         return self._interrupted
 
-    def _messages_to_prompt(self, messages: List[BaseMessage]) -> str:
-        """Convert LangChain messages to a prompt string.
-
-        Uses auto-detected template based on model architecture:
-        - ChatML for Qwen models
-        - Llama format for Llama 3/3.1/3.2/4 models  
-        - Mistral format for Mistral/Ministral/Magistral models
+    def _convert_messages(self, messages: List[BaseMessage]) -> List[Dict[str, Any]]:
+        """Convert LangChain messages to llama-cpp-python format.
         
-        CRITICAL: If tools are bound, injects tool instructions into the system
-        message so the model knows what tools are available and how to use them.
+        Args:
+            messages: LangChain message objects
+            
+        Returns:
+            List of message dicts for create_chat_completion
         """
-        t = self._template
-        prompt_parts = []
-        system_content = None
-
-        # For Mistral format, we need to handle system differently
-        # (it gets prepended to the first user message)
-        is_mistral = t == PromptTemplate.MISTRAL
+        converted = []
+        tool_instructions_added = False
         
-        for message in messages:
-            if isinstance(message, SystemMessage):
-                content = message.content
-                # Inject tool instructions into system message if tools are bound
-                if self.tools:
+        for msg in messages:
+            if isinstance(msg, SystemMessage):
+                content = msg.content
+                # Inject Qwen3-style tool instructions into system message
+                if self.tools and not tool_instructions_added:
                     content = self._inject_tool_instructions(content)
-                if is_mistral:
-                    # Store system for prepending to first user message
-                    system_content = content
-                else:
-                    prompt_parts.append(
-                        f"{t['system_start']}{content}{t['system_end']}"
-                    )
-            elif isinstance(message, HumanMessage):
-                content = message.content
-                if is_mistral and system_content:
-                    # Prepend system to first user message for Mistral
-                    content = f"{system_content}\n\n{content}"
-                    system_content = None
-                prompt_parts.append(
-                    f"{t['user_start']}{content}{t['user_end']}"
-                )
-            elif isinstance(message, AIMessage):
-                prompt_parts.append(
-                    f"{t['assistant_start']}{message.content}{t['assistant_end']}"
-                )
-
-        # Add assistant prefix for generation
-        prompt_parts.append(t['assistant_start'])
-
-        return "".join(prompt_parts)
+                    tool_instructions_added = True
+                converted.append({
+                    "role": "system",
+                    "content": content,
+                })
+            elif isinstance(msg, HumanMessage):
+                converted.append({
+                    "role": "user",
+                    "content": msg.content,
+                })
+            elif isinstance(msg, AIMessage):
+                msg_dict = {
+                    "role": "assistant",
+                    "content": msg.content or "",
+                }
+                converted.append(msg_dict)
+            elif isinstance(msg, ToolMessage):
+                # Format tool results as user messages with context
+                converted.append({
+                    "role": "user",
+                    "content": f"Tool result for {getattr(msg, 'name', 'tool')}:\n{msg.content}",
+                })
+        
+        # If no system message but we have tools, add one
+        if self.tools and not tool_instructions_added:
+            tool_system = self._inject_tool_instructions("")
+            converted.insert(0, {"role": "system", "content": tool_system})
+        
+        return converted
 
     def _inject_tool_instructions(self, system_content: str) -> str:
-        """Inject tool instructions into the system message.
-
+        """Inject Qwen3-style tool calling instructions into system prompt.
+        
         Args:
-            system_content: The original system message content.
-
+            system_content: Existing system prompt content
+            
         Returns:
-            System content with tool instructions appended.
+            System content with tool instructions appended
         """
-        tool_schemas_text = self.get_tool_schemas_text()
-        if not tool_schemas_text:
+        if not self.tools:
             return system_content
-
+        
+        # Respect tool_choice="none" - don't inject tool instructions
+        if self.tool_choice == "none":
+            return system_content
+            
+        # Build Qwen3-style tool definitions
+        tool_defs = []
+        for tool in self.tools:
+            tool_defs.append(json.dumps(tool))
+        
+        tools_json = "\n".join(tool_defs)
+        
         tool_instructions = f"""
 
-## Available Tools
+# Tools
 
-You have access to the following tools:
+You may call one or more functions to assist with the user query.
 
-{tool_schemas_text}
+You are provided with function signatures within <tools></tools> XML tags:
+<tools>
+{tools_json}
+</tools>
 
-## Tool Usage Instructions
-
-When you need to use a tool, respond with a tool call in this EXACT format:
-<tool_call>{{"name": "tool_name", "arguments": {{"arg1": "value1", "arg2": "value2"}}}}</tool_call>
-
-CRITICAL RULES:
-1. ALWAYS use the exact tool_call format shown above - do NOT invent your own format
-2. NEVER hallucinate or make up tool results - you MUST call the tool and wait for real results
-3. If you need information from the internet, USE the search_web tool - do NOT pretend to have results
-4. After calling a tool, WAIT for the actual results before responding to the user
-5. You can call multiple tools if needed, one at a time
-6. Only respond with your final answer AFTER receiving real tool results"""
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{{"name": "<function-name>", "arguments": <args-json-object>}}
+</tool_call>"""
 
         return system_content + tool_instructions
 
-    def _get_stop_tokens(self) -> List[str]:
-        """Get stop tokens for the current model template."""
-        return self._template.get("stop_tokens", ["<|im_end|>", "<|endoftext|>"])
+    def _parse_tool_calls(self, content: str) -> List[Dict[str, Any]]:
+        """Parse <tool_call> tags from model response.
+        
+        Args:
+            content: Model response text
+            
+        Returns:
+            List of tool call dicts with id, name, and args
+        """
+        tool_calls = []
+        
+        # Find all <tool_call>...</tool_call> blocks
+        pattern = r'<tool_call>\s*(.*?)\s*</tool_call>'
+        matches = re.findall(pattern, content, re.DOTALL)
+        
+        for match in matches:
+            try:
+                # Parse the JSON inside the tool_call tags
+                call_data = json.loads(match.strip())
+                tool_calls.append({
+                    "id": str(uuid.uuid4()),
+                    "name": call_data.get("name"),
+                    "args": call_data.get("arguments", {}),
+                    "type": "tool_call",
+                })
+            except json.JSONDecodeError as e:
+                self.logger.warning(f"Failed to parse tool call JSON: {e}")
+                continue
+                
+        return tool_calls
 
     def _generate(
         self,
@@ -350,7 +361,10 @@ CRITICAL RULES:
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> ChatResult:
-        """Generate response from messages.
+        """Generate response using native chat completion API.
+
+        For Qwen3 models, tools are injected into the system prompt and
+        tool calls are parsed from <tool_call> XML tags in the response.
 
         Args:
             messages: List of input messages
@@ -361,30 +375,62 @@ CRITICAL RULES:
         Returns:
             ChatResult with generated response
         """
-        prompt = self._messages_to_prompt(messages)
+        converted_messages = self._convert_messages(messages)
+        
+        # Build kwargs for create_chat_completion
+        # NOTE: We do NOT pass tools here - they are in the system prompt
+        # and the model will use <tool_call> tags which we parse ourselves
+        chat_kwargs = {
+            "messages": converted_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "min_p": self.min_p,
+            "repeat_penalty": self.repeat_penalty,
+            "stream": False,
+        }
+        
+        if stop:
+            chat_kwargs["stop"] = stop
 
-        stop_sequences = stop or self._get_stop_tokens()
-
-        response = self._llama(
-            prompt,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            top_k=self.top_k,
-            repeat_penalty=self.repeat_penalty,
-            stop=stop_sequences,
-        )
-
-        response_text = response["choices"][0]["text"]
-
-        # Parse tool calls if tools are bound
-        tool_calls = None
         if self.tools:
-            tool_calls, response_text = self._parse_tool_calls(response_text)
+            self.logger.debug(f"[TOOL CALL] {len(self.tools)} tools injected in system prompt")
+        else:
+            self.logger.debug("[TOOL CALL] No tools bound")
 
+        # Call native chat completion
+        self.logger.debug(f"[TOOL CALL] Calling create_chat_completion with chat_format={self._detected_format}")
+        response = self._llama.create_chat_completion(**chat_kwargs)
+        self.logger.debug(f"[TOOL CALL] Response: {response}")
+        
+        # Extract response
+        choice = response["choices"][0]
+        message_data = choice.get("message", {})
+        content = message_data.get("content", "") or ""
+        
+        # Handle thinking content (Qwen3)
+        thinking_content = None
+        if self.enable_thinking and hasattr(message_data, "get"):
+            thinking_content = message_data.get("reasoning_content")
+        
+        # Parse tool calls from <tool_call> tags in content (Qwen3 format)
+        tool_calls = self._parse_tool_calls(content)
+        
+        if tool_calls:
+            self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from response")
+            # Remove <tool_call> tags from content for cleaner display
+            content = re.sub(r'<tool_call>\s*.*?\s*</tool_call>', '', content, flags=re.DOTALL).strip()
+
+        # Build AIMessage
+        additional_kwargs = {}
+        if thinking_content:
+            additional_kwargs["thinking_content"] = thinking_content
+            
         message = AIMessage(
-            content=response_text,
-            tool_calls=tool_calls or [],
+            content=content,
+            tool_calls=tool_calls,
+            additional_kwargs=additional_kwargs,
         )
 
         return ChatResult(generations=[ChatGeneration(message=message)])
@@ -396,7 +442,10 @@ CRITICAL RULES:
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        """Stream response from messages.
+        """Stream response using native chat completion API.
+
+        For Qwen3 models, tools are in the system prompt and tool calls
+        are parsed from <tool_call> XML tags at the end of streaming.
 
         Args:
             messages: List of input messages
@@ -407,156 +456,111 @@ CRITICAL RULES:
         Yields:
             ChatGenerationChunk objects with streamed content
         """
-        prompt = self._messages_to_prompt(messages)
-        stop_sequences = stop or self._get_stop_tokens()
+        converted_messages = self._convert_messages(messages)
+        
+        # NOTE: We do NOT pass tools - they are in the system prompt
+        chat_kwargs = {
+            "messages": converted_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "min_p": self.min_p,
+            "repeat_penalty": self.repeat_penalty,
+            "stream": True,
+        }
+        
+        if stop:
+            chat_kwargs["stop"] = stop
 
         self._interrupted = False
-        full_response = []
+        full_content = []
 
-        for token in self._llama(
-            prompt,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            top_k=self.top_k,
-            repeat_penalty=self.repeat_penalty,
-            stop=stop_sequences,
-            stream=True,
-        ):
+        for chunk in self._llama.create_chat_completion(**chat_kwargs):
             if self._interrupted:
                 break
 
-            text = token["choices"][0]["text"]
-            full_response.append(text)
-
-            chunk = ChatGenerationChunk(
-                message=AIMessageChunk(content=text)
-            )
-
-            if run_manager:
-                run_manager.on_llm_new_token(text, chunk=chunk)
-
-            yield chunk
-
-        # Check for tool calls in final response
-        if self.tools:
-            response_text = "".join(full_response)
-            tool_calls, _ = self._parse_tool_calls(response_text)
-
-            if tool_calls:
-                # Yield final chunk with tool calls
-                yield ChatGenerationChunk(
-                    message=AIMessageChunk(
-                        content="",
-                        tool_calls=tool_calls,
-                    )
+            delta = chunk.get("choices", [{}])[0].get("delta", {})
+            
+            # Handle content
+            if "content" in delta and delta["content"]:
+                text = delta["content"]
+                full_content.append(text)
+                
+                chunk_msg = ChatGenerationChunk(
+                    message=AIMessageChunk(content=text)
                 )
+                
+                if run_manager:
+                    run_manager.on_llm_new_token(text, chunk=chunk_msg)
+                    
+                yield chunk_msg
 
-    def _parse_tool_calls(
-        self, response_text: str
-    ) -> Tuple[Optional[List[Dict]], str]:
-        """Parse tool calls from response text.
-
-        Supports multiple formats:
-        - JSON mode: {"name": "...", "arguments": {...}}
-        - Qwen style: <tool_call>...</tool_call>
-
-        Args:
-            response_text: The raw response text
-
-        Returns:
-            Tuple of (tool_calls list or None, cleaned response text)
-        """
-        import json
-        import re
-        import uuid
-
-        # Try Qwen-style tool call format
-        tool_call_pattern = r'<tool_call>\s*(\{.*?\})\s*</tool_call>'
-        matches = re.findall(tool_call_pattern, response_text, re.DOTALL)
-
-        if matches:
-            tool_calls = []
-            for match in matches:
-                try:
-                    call_data = json.loads(match)
-                    tool_calls.append({
-                        "id": str(uuid.uuid4()),
-                        "name": call_data.get("name"),
-                        "args": call_data.get("arguments", {}),
-                    })
-                except json.JSONDecodeError:
-                    continue
-
-            # Clean response text
-            cleaned = re.sub(tool_call_pattern, "", response_text).strip()
-            return tool_calls if tool_calls else None, cleaned
-
-        # Try JSON mode format (single tool call)
-        try:
-            # Look for JSON object in response
-            json_match = re.search(r'\{[^{}]*"name"[^{}]*\}', response_text)
-            if json_match:
-                call_data = json.loads(json_match.group())
-                if "name" in call_data:
-                    tool_calls = [{
-                        "id": str(uuid.uuid4()),
-                        "name": call_data["name"],
-                        "args": call_data.get("arguments", call_data.get("args", {})),
-                    }]
-                    # Clean the JSON from the response text
-                    cleaned = response_text.replace(json_match.group(), "").strip()
-                    return tool_calls, cleaned
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-        return None, response_text
+        # After streaming completes, parse <tool_call> tags from full content
+        full_text = "".join(full_content)
+        tool_calls = self._parse_tool_calls(full_text)
+        
+        if tool_calls:
+            self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from streamed response")
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(
+                    content="",
+                    tool_calls=tool_calls,
+                )
+            )
 
     def bind_tools(
         self,
         tools: Sequence[Union[Dict[str, Any], type, Callable, BaseTool]],
+        tool_choice: Optional[str] = None,
         **kwargs: Any,
     ) -> Runnable[LanguageModelInput, BaseMessage]:
         """Bind tools to this chat model.
 
-        IMPORTANT: This method reuses the existing loaded model to avoid
-        loading the GGUF file twice (which would double VRAM usage).
-
         Args:
-            tools: List of tools to bind
+            tools: List of tools to bind (will be converted to OpenAI format)
+            tool_choice: Tool selection strategy ("auto", "none", or tool name)
             **kwargs: Additional arguments
 
         Returns:
-            New instance with tools bound (shares the same llama model)
+            Self with tools bound
         """
+        # Convert tools to OpenAI format
         formatted_tools = [convert_to_openai_tool(tool) for tool in tools]
-
-        # Simply update tools on this instance and return self
-        # This avoids creating a new instance entirely, which is safe since
-        # tools don't affect the underlying llama model state
+        
         self.tools = formatted_tools
+        self.tool_choice = tool_choice
+        
+        # Reload model with function calling format if needed
+        self._reload_with_tools()
+        
         return self
 
     def get_tool_schemas_text(self) -> str:
-        """Get formatted tool schemas for injection into prompts."""
+        """Get formatted tool schemas for compatibility.
+        
+        Note: This is mainly for debugging/logging. The actual tool
+        formatting is handled by llama-cpp-python's chat format.
+        """
         if not self.tools:
             return ""
 
-        tool_descriptions = []
+        lines = []
         for tool in self.tools:
             func = tool.get("function", tool)
             name = func.get("name", "unknown")
             desc = func.get("description", "")
             params = func.get("parameters", {}).get("properties", {})
+            required = func.get("parameters", {}).get("required", [])
 
-            param_str = ", ".join(
-                f"{k}: {v.get('type', 'any')}"
-                for k, v in params.items()
-            )
+            param_strs = []
+            for k, v in params.items():
+                req = "*" if k in required else ""
+                param_strs.append(f"{k}{req}: {v.get('type', 'any')}")
 
-            tool_descriptions.append(f"- {name}({param_str}): {desc}")
+            lines.append(f"- {name}({', '.join(param_strs)}): {desc}")
 
-        return "\n".join(tool_descriptions)
+        return "\n".join(lines)
 
 
 def find_gguf_file(model_dir: str) -> Optional[str]:

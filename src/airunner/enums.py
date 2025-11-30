@@ -424,6 +424,82 @@ class Mode(Enum):
     MODEL_MANAGER = "Model Manager"
 
 
+class UISection(Enum):
+    """
+    UI sections in the main application window.
+    
+    Used to track which section of the application is active,
+    allowing the LLM to be contextually aware of the user's current focus.
+    """
+    HOME = "home"
+    ART = "art"  # Image generation and canvas manipulation
+    DOCUMENT_EDITOR = "document_editor"  # Code/document editing
+    CALENDAR = "calendar"
+    WORKFLOW_EDITOR = "workflow_editor"  # Agent workflow design
+    VISUALIZER = "visualizer"  # Audio/media visualization
+    VIDEO = "video"  # Video generation
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def from_button_name(cls, button_name: str) -> "UISection":
+        """Convert a button name to UISection enum.
+        
+        Args:
+            button_name: The button name (e.g., "art_editor_button")
+            
+        Returns:
+            Corresponding UISection enum value
+        """
+        mapping = {
+            "home_button": cls.HOME,
+            "art_editor_button": cls.ART,
+            "document_editor_button": cls.DOCUMENT_EDITOR,
+            "calendar_button": cls.CALENDAR,
+            "workflow_editor_button": cls.WORKFLOW_EDITOR,
+            "visualizer_button": cls.VISUALIZER,
+            "video_button": cls.VIDEO,
+        }
+        return mapping.get(button_name, cls.UNKNOWN)
+
+    def get_context_description(self) -> str:
+        """Get a human-readable description of the section for the LLM.
+        
+        Returns:
+            Description string for system prompt context
+        """
+        descriptions = {
+            UISection.HOME: "The user is on the home dashboard.",
+            UISection.ART: (
+                "The user is in the ART section with the image generation canvas. "
+                "They can generate images, manipulate them on a canvas, use drawing tools, "
+                "apply filters, and work with layers. Relevant tools include image generation, "
+                "canvas operations (clear, save, load), and drawing tools."
+            ),
+            UISection.DOCUMENT_EDITOR: (
+                "The user is in the DOCUMENT EDITOR section with a code/text editor. "
+                "They can create, edit, and run Python scripts or other text documents. "
+                "The editor supports syntax highlighting, line numbers, and script execution. "
+                "Relevant tools include code generation, file operations, and code validation."
+            ),
+            UISection.CALENDAR: (
+                "The user is in the CALENDAR section for scheduling and time management. "
+                "Relevant tools include calendar operations for creating, viewing, and managing events."
+            ),
+            UISection.WORKFLOW_EDITOR: (
+                "The user is in the WORKFLOW EDITOR section for designing agent workflows. "
+                "They can create and edit node-based workflows that chain LLM operations together."
+            ),
+            UISection.VISUALIZER: (
+                "The user is in the VISUALIZER section for audio/media visualization."
+            ),
+            UISection.VIDEO: (
+                "The user is in the VIDEO section for video generation and editing."
+            ),
+            UISection.UNKNOWN: "",
+        }
+        return descriptions.get(self, "")
+
+
 class LLMActionType(Enum):
     """
     The following action types are used by the LLM to process various user
