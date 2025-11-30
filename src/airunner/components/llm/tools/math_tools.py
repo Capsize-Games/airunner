@@ -80,8 +80,6 @@ def sympy_compute(
     Args:
         code: Python code using SymPy library
 
-    Returns:
-        String result of computation or error message
     """
     try:
         # Ensure sympy is imported
@@ -112,8 +110,6 @@ def numpy_compute(
     Args:
         code: Python code using NumPy/SciPy libraries
 
-    Returns:
-        String result of computation or error message
     """
     try:
         # Ensure numpy is imported
@@ -144,8 +140,6 @@ def python_compute(
     Args:
         code: Python code for mathematical calculation
 
-    Returns:
-        String result of computation or error message
     """
     try:
         result = _executor.execute(code)

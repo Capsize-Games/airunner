@@ -40,10 +40,16 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
-class WorkflowState(TypedDict):
-    """State schema for the workflow."""
+class WorkflowState(TypedDict, total=False):
+    """State schema for the workflow.
+    
+    Attributes:
+        messages: List of conversation messages (required)
+        workflow_continuation: Flag set when force_response should route back to model
+    """
 
     messages: Annotated[list[BaseMessage], add_messages]
+    workflow_continuation: bool
 
 
 class WorkflowManager(
@@ -69,7 +75,7 @@ class WorkflowManager(
         system_prompt: str,
         chat_model: Any,
         tools: Optional[List[Callable]] = None,
-        max_tokens: int = 2000,
+        max_history_tokens: int = 8000,
         conversation_id: Optional[int] = None,
         use_mode_routing: bool = False,
         mode_override: Optional[str] = None,
@@ -85,7 +91,7 @@ class WorkflowManager(
             chat_model: LangChain ChatModel instance
                 (ChatHuggingFaceLocal, ChatOllama, etc.)
             tools: List of LangChain tools
-            max_tokens: Maximum tokens for conversation history
+            max_history_tokens: Maximum tokens for conversation history trimming
             conversation_id: Optional conversation ID for persistence
             use_mode_routing: Enable mode-based routing
                 (author/code/research/qa/general)
@@ -104,11 +110,12 @@ class WorkflowManager(
         self._original_chat_model = chat_model  # Store original unbound model
         self._chat_model = chat_model
         self._tools = tools or []
-        self._max_tokens = max_tokens
+        self._max_history_tokens = max_history_tokens
         self._token_counter = lambda msgs: count_tokens_approximately(msgs)
         self._conversation_id = conversation_id
         self._memory = DatabaseCheckpointSaver(conversation_id)
         self._response_format = None  # Optional response format override (e.g., "json", "conversational")
+        self._force_tool = None  # Store forced tool for agentic research mode
 
         # Store settings for automatic mood tracking
         self.llm_settings = llm_settings
@@ -198,6 +205,18 @@ class WorkflowManager(
         """
         self._response_format = response_format
         self.logger.info(f"Response format set to: {response_format}")
+
+    def set_force_tool(self, force_tool: Optional[str]):
+        """Set the forced tool for agentic research mode.
+        
+        When set, post-tool instructions will encourage continuing research
+        instead of immediately answering the user's question.
+
+        Args:
+            force_tool: Tool name (e.g., "search_web") or None to disable
+        """
+        self._force_tool = force_tool
+        self.logger.info(f"Force tool set to: {force_tool}")
 
     def set_token_callback(
         self, callback: Optional[Callable[[str], None]]

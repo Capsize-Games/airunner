@@ -376,9 +376,11 @@ class LLMModelManager(
                 f"Auto mode selected categories: {selected_categories}"
             )
             action = data["request_data"].get("action")
+            force_tool = getattr(llm_request, "force_tool", None) if llm_request else None
             self._apply_tool_filter(
                 selected_categories,
                 action=action,
+                force_tool=force_tool,
             )
             tools_filtered = True
         elif llm_request and llm_request.tool_categories is not None:
@@ -389,7 +391,8 @@ class LLMModelManager(
                 f"Applying tool filter with categories: {llm_request.tool_categories}"
             )
             action = data["request_data"].get("action")
-            self._apply_tool_filter(llm_request.tool_categories, action=action)
+            force_tool = getattr(llm_request, "force_tool", None)
+            self._apply_tool_filter(llm_request.tool_categories, action=action, force_tool=force_tool)
             tools_filtered = True
         else:
             self.logger.info(
@@ -495,7 +498,7 @@ class LLMModelManager(
     ALWAYS_INCLUDE_CATEGORIES = {"knowledge", "search"}
 
     def _apply_tool_filter(
-        self, tool_categories: List[str], action=None
+        self, tool_categories: List[str], action=None, force_tool: Optional[str] = None
     ) -> None:
         """Apply tool category filter to workflow manager.
 
@@ -503,10 +506,15 @@ class LLMModelManager(
             tool_categories: List of allowed category names. Empty list = no tools.
                            None = all tools (handled by caller).
                            Supports aliases like "USER_DATA" -> "SYSTEM", "KNOWLEDGE" -> "RAG"
+            action: The LLMActionType for this request
+            force_tool: Optional tool name to force the LLM to call first
                            
         Note:
             Categories in ALWAYS_INCLUDE_CATEGORIES are always added regardless
             of the filter. This ensures knowledge/memory tools are always available.
+            
+            When force_tool is set, tool_choice will be configured to REQUIRE
+            that specific tool to be called first.
         """
         self.logger.info(
             f"[TOOL FILTER] ENTER _apply_tool_filter with categories: {tool_categories}"
@@ -529,7 +537,8 @@ class LLMModelManager(
                 "tool_categories=[] - including only always-available tools (knowledge)"
             )
             always_tools = self._tool_manager.get_tools_by_categories(
-                [ToolCategory(cat) for cat in self.ALWAYS_INCLUDE_CATEGORIES]
+                [ToolCategory(cat) for cat in self.ALWAYS_INCLUDE_CATEGORIES],
+                include_deferred=False,  # Only immediate tools
             )
             self._workflow_manager.update_tools(always_tools)
             self._workflow_manager._build_and_compile_workflow()
@@ -610,7 +619,8 @@ class LLMModelManager(
             f"[TOOL FILTER] Getting tools by categories: {list(allowed_categories)}",
         )
         filtered_tools = self._tool_manager.get_tools_by_categories(
-            list(allowed_categories)
+            list(allowed_categories),
+            include_deferred=False,  # Deferred tools discoverable via search_tools
         )
         # Debug: Log the filtered tools (names) for verification
         try:
@@ -632,10 +642,20 @@ class LLMModelManager(
         self.logger.info(
             f"[TOOL FILTER] Calling update_tools with {len(filtered_tools)} tools",
         )
-        # For RAG mode, force tool usage with tool_choice="any"
-        tool_choice = (
-            "any" if action == LLMActionType.PERFORM_RAG_SEARCH else None
-        )
+        # Determine tool_choice based on action and force_tool
+        tool_choice = None
+        if force_tool:
+            # Force a specific tool to be called first
+            # This uses LangChain's tool_choice format to require a specific function
+            tool_choice = {"type": "function", "function": {"name": force_tool}}
+            self.logger.info(f"[TOOL FILTER] Forcing tool: {force_tool}")
+        elif action == LLMActionType.PERFORM_RAG_SEARCH:
+            # For RAG mode, force at least one tool usage
+            tool_choice = "any"
+        elif action == LLMActionType.CODE:
+            # For CODE mode, require tool usage (start_workflow should be called)
+            tool_choice = "any"
+            
         self._workflow_manager.update_tools(
             filtered_tools, tool_choice=tool_choice
         )

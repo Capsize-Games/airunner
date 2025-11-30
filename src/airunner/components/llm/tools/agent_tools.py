@@ -70,8 +70,6 @@ def create_agent(
         template: Template category - coding, research, creative, calendar,
             or custom. Defaults to "custom"
 
-    Returns:
-        Success message with agent ID or error message
 
     Examples:
         >>> # Create a coding agent with template
@@ -184,8 +182,6 @@ def configure_agent(
         system_prompt: New system prompt (optional)
         tools: New tool list (optional)
 
-    Returns:
-        Success message listing changes or error message
 
     Examples:
         >>> # Update agent name
@@ -285,8 +281,6 @@ def list_agents(
         active_only: Only show active agents. Defaults to True
         template: Filter by template type (optional)
 
-    Returns:
-        Formatted list of agents or error message
 
     Examples:
         >>> # List all active agents
@@ -354,8 +348,6 @@ def delete_agent(agent_id: int) -> str:
     Args:
         agent_id: ID of agent to delete (required)
 
-    Returns:
-        Success message or error message
 
     Examples:
         >>> # Delete an agent
@@ -406,8 +398,6 @@ def get_agent(agent_id: int) -> str:
     Args:
         agent_id: ID of agent to retrieve (required)
 
-    Returns:
-        JSON formatted agent configuration or error message
 
     Examples:
         >>> # Get agent details
@@ -451,8 +441,6 @@ def list_agent_templates() -> str:
     recommended tools, and system prompts. Templates provide pre-configured
     starting points for creating specialized agents.
 
-    Returns:
-        Formatted list of templates or error message
 
     Examples:
         >>> # List all templates

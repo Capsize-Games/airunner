@@ -52,8 +52,6 @@ def create_calendar_event(
         category: Event category
         all_day: All-day event flag
 
-    Returns:
-        Success message with event ID or error message
     """
     try:
         from airunner.components.calendar.data.event import Event
@@ -115,8 +113,6 @@ def list_calendar_events(
         category: Filter by category
         limit: Maximum results
 
-    Returns:
-        Formatted list of events
     """
     try:
         with session_scope() as session:
@@ -218,8 +214,6 @@ def update_calendar_event(
         location: New location
         category: New category
 
-    Returns:
-        Success message or error message
     """
     try:
         from airunner.components.calendar.data.event import Event
@@ -270,8 +264,6 @@ def delete_calendar_event(
     Args:
         event_id: ID of event to delete
 
-    Returns:
-        Success message or error message
     """
     try:
         from airunner.components.calendar.data.event import Event

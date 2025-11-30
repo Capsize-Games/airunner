@@ -41,17 +41,15 @@ class LLMRequest:
     early_stopping: bool = True
     eta_cutoff: int = 200
     length_penalty: float = 1.0
-    max_new_tokens: int = 200
+    max_new_tokens: int = 8192  # Qwen2.5 generation limit, Qwen3 can do 32768
     min_length: int = 1
-    no_repeat_ngram_size: int = 3  # Block 3-word phrase repetition (was 2)
+    no_repeat_ngram_size: int = 3  # Block 3-word phrase repetition
     num_beams: int = 1
     num_return_sequences: int = 1
-    repetition_penalty: float = (
-        1.15  # Penalize token repetition (was 1.0 = disabled)
-    )
-    temperature: float = 1.0
+    repetition_penalty: float = 1.15  # Penalize token repetition
+    temperature: float = 0.7  # Qwen3 non-thinking mode recommended
     top_k: int = 20  # Qwen3 recommended value
-    top_p: float = 0.9
+    top_p: float = 0.8  # Qwen3 non-thinking mode recommended
     use_cache: bool = True
     do_tts_reply: bool = True
     node_id: Optional[str] = None
@@ -77,6 +75,9 @@ class LLMRequest:
     )
     mode_override: Optional[str] = (
         None  # Force specific mode instead of auto-classification
+    )
+    force_tool: Optional[str] = (
+        None  # Force a specific tool to be called (from slash commands)
     )
 
     def to_dict(self) -> Dict:
@@ -282,27 +283,36 @@ class LLMRequest:
         # Action-specific parameters
         if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
             # Chat: Conversational, coherent, natural
+            # Qwen3 non-thinking mode: temp=0.7, top_p=0.8, top_k=20
             return cls(
                 do_sample=True,
-                temperature=0.7,  # Balanced: coherent but natural (reduced from 0.8)
-                repetition_penalty=1.15,  # Moderate anti-repetition (reduced from 1.2)
+                temperature=0.7,  # Qwen3 non-thinking mode recommended
+                repetition_penalty=1.15,  # Moderate anti-repetition
                 no_repeat_ngram_size=3,  # Block phrase repetition
-                max_new_tokens=500,  # Reasonable conversation length
-                top_k=50,
-                top_p=0.9,
+                max_new_tokens=8192,  # Qwen2.5 generation limit
+                top_k=20,  # Qwen3 recommended
+                top_p=0.8,  # Qwen3 non-thinking mode recommended
                 tool_categories=[],  # No tools by default for chat - enable explicitly when needed
             )
 
         elif action == LLMActionType.CODE:
-            # Code: Precise, deterministic, structured
+            # Code: Precise, structured, with thinking enabled
+            # Enable CODE and WORKFLOW tools for TDD workflow
+            # Qwen3 thinking mode: temp=0.6, top_p=0.95, top_k=20
+            # max_new_tokens=32768 per Qwen3 docs for adequate thinking + tool calls
             return cls(
-                do_sample=False,  # Deterministic
-                temperature=0.1,  # Very precise
+                do_sample=True,  # Required for Qwen3 thinking mode
+                temperature=0.6,  # Qwen3 thinking mode recommended
                 repetition_penalty=1.05,  # Light penalty (code can repeat patterns)
                 no_repeat_ngram_size=0,  # Allow code patterns
-                max_new_tokens=2000,  # Longer code blocks
-                top_k=10,  # Focused on high-probability tokens
-                top_p=0.95,
+                max_new_tokens=32768,  # Qwen3 recommended for thinking + code
+                top_k=20,  # Qwen3 recommended
+                top_p=0.95,  # Qwen3 thinking mode recommended
+                tool_categories=[
+                    "CODE",
+                    "WORKFLOW",
+                    "SYSTEM",  # For file operations
+                ],
             )
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
@@ -356,31 +366,31 @@ class LLMRequest:
             LLMActionType.WORKFLOW,
             LLMActionType.WORKFLOW_INTERACTION,
         ):
-            # Commands/Decisions: Precise, deterministic
-            # NOTE: High max_new_tokens allows complete tool calls + explanations
-            # and multi-step reasoning without truncation
+            # Commands/Decisions: Precise with thinking for complex reasoning
+            # Use Qwen3 thinking mode for multi-step tool chains
             return cls(
-                do_sample=False,  # Deterministic
-                temperature=0.1,  # Very precise
+                do_sample=True,  # Required for Qwen3 thinking mode
+                temperature=0.6,  # Qwen3 thinking mode
                 repetition_penalty=1.0,  # No penalty needed
                 no_repeat_ngram_size=0,  # Allow any patterns
-                max_new_tokens=4096,  # Increased for complex reasoning tasks
-                top_k=5,  # Very focused
-                top_p=0.95,
+                max_new_tokens=32768,  # Full thinking + tool call budget
+                top_k=20,  # Qwen3 recommended
+                top_p=0.95,  # Qwen3 thinking mode
                 tool_categories=None,  # Enable all tools for commands/decisions
             )
 
         elif action == LLMActionType.DEEP_RESEARCH:
             # Deep Research: Comprehensive, creative, high token budget
             # Needs to generate long-form structured content with extensive tool use
+            # Use Qwen3 thinking mode for complex research tasks
             return cls(
-                do_sample=True,  # Creative research writing
-                temperature=0.7,  # Balanced - creative but factual
+                do_sample=True,  # Required for Qwen3 thinking mode
+                temperature=0.6,  # Qwen3 thinking mode
                 repetition_penalty=1.15,  # Avoid redundant phrasing
                 no_repeat_ngram_size=3,  # Some phrase blocking
-                max_new_tokens=8192,  # Very high for comprehensive documents
-                top_k=50,  # Broad vocabulary
-                top_p=0.9,  # Diverse but coherent
+                max_new_tokens=32768,  # Qwen3 recommended for complex reasoning
+                top_k=20,  # Qwen3 recommended
+                top_p=0.95,  # Qwen3 thinking mode
                 tool_categories=["RESEARCH", "SEARCH"],  # Research tools only
             )
 
