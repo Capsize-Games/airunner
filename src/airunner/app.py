@@ -123,6 +123,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         main_window_class: QWindow = None,
         window_class_params: Optional[Dict] = None,
         headless: bool = False,
+        launcher_splash=None,
+        launcher_app=None,
     ):
         """Initialize the application.
 
@@ -131,8 +133,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
             main_window_class: Custom main window class (GUI mode only)
             window_class_params: Parameters for main window (GUI mode only)
             headless: If True, run in headless mode (no GUI)
+            launcher_splash: Splash screen passed from launcher (already showing)
+            launcher_app: QApplication passed from launcher
         """
         self.headless = headless
+        self._launcher_splash = launcher_splash
+        self._launcher_app = launcher_app
         self._init_attributes(
             no_splash, main_window_class, window_class_params
         )
@@ -149,7 +155,31 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
     @property
     def static_dir(self) -> str:
-        """Get the static directory path."""
+        """Get the static directory path.
+        
+        Uses user data directory for writable static files (like MathJax),
+        falls back to package directory for bundled static assets.
+        """
+        # User-writable static directory
+        base_path = os.environ.get(
+            "AIRUNNER_DATA_DIR",
+            os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+        )
+        user_static = os.path.join(base_path, "static")
+        
+        # Package static directory (read-only, bundled assets)
+        pkg_static = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "static")
+        )
+        
+        # Return user static if it exists, otherwise package static
+        if os.path.isdir(user_static):
+            return user_static
+        return pkg_static
+
+    @property
+    def _package_static_dir(self) -> str:
+        """Get the package's bundled static directory (read-only)."""
         return os.path.abspath(
             os.path.join(os.path.dirname(__file__), "static")
         )
@@ -164,8 +194,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
             ),
             recursive=True,
         )
+        # Include both user static dir and package static dir
+        static_search_dirs = [self.static_dir]
+        if self._package_static_dir != self.static_dir:
+            static_search_dirs.append(self._package_static_dir)
+        static_search_dirs.extend(components_static_dirs)
         # Add user web dir if it exists
-        static_search_dirs = [self.static_dir] + components_static_dirs
         if os.path.isdir(self.user_web_dir):
             static_search_dirs.append(self.user_web_dir)
         return static_search_dirs
@@ -838,9 +872,14 @@ class App(MediatorMixin, SettingsMixin, QObject):
             Qt.ApplicationAttribute.AA_EnableHighDpiScaling
         )
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
-        self.app = QApplication.instance()
-        if self.app is None:
-            self.app = QApplication([])
+        
+        # Use launcher's QApplication if available, otherwise create new
+        if self._launcher_app is not None:
+            self.app = self._launcher_app
+        else:
+            self.app = QApplication.instance()
+            if self.app is None:
+                self.app = QApplication([])
         self.app.api = self
         # Set global tooltip style ONCE at startup
         set_global_tooltip_style()
@@ -857,7 +896,11 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.run_headless()
             return
 
-        if not self.no_splash and not self.splash:
+        # Use launcher's splash if available, otherwise create new
+        if self._launcher_splash is not None:
+            self.splash = self._launcher_splash
+            self.update_splash_message(self.splash, "Loading AI Runner...")
+        elif not self.no_splash and not self.splash:
             self.splash = self.display_splash_screen(self.app)
 
         QTimer.singleShot(50, self._post_splash_startup)
@@ -1134,8 +1177,13 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
     def _ensure_mathjax(self):
         # Only run setup if MathJax is not present
+        # Use user data directory instead of package directory (read-only in flatpak)
+        base_path = os.environ.get(
+            "AIRUNNER_DATA_DIR",
+            os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+        )
         mathjax_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
+            base_path,
             "static",
             "mathjax",
             f"MathJax-{MATHJAX_VERSION}",
@@ -1146,6 +1194,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if not os.path.exists(entry):
             print("MathJax not found, attempting to download and set up...")
             try:
+                # Set environment variable so setup script knows where to install
+                env = os.environ.copy()
+                env["MATHJAX_INSTALL_DIR"] = os.path.dirname(mathjax_dir)
                 subprocess.check_call(
                     [
                         sys.executable,
@@ -1154,7 +1205,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
                             "bin",
                             "setup_mathjax.py",
                         ),
-                    ]
+                    ],
+                    env=env,
                 )
             except Exception as e:
                 print("ERROR: MathJax setup failed:", e)

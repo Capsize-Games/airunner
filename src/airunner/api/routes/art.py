@@ -39,8 +39,8 @@ class GenerationRequest(BaseModel):
 
     prompt: str
     negative_prompt: Optional[str] = ""
-    width: int = 512
-    height: int = 512
+    width: int = 1024
+    height: int = 1024
     steps: int = 20
     cfg_scale: float = 7.5
     seed: Optional[int] = None

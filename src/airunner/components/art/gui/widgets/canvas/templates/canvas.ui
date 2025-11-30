@@ -482,38 +482,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="text_button">
-              <property name="minimumSize">
-               <size>
-                <width>30</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>30</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="cursor">
-               <cursorShape>PointingHandCursor</cursorShape>
-              </property>
-              <property name="toolTip">
-               <string>Toggle text tool</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="icon">
-               <iconset resource="../../../../../../gui/resources/feather.qrc">
-                <normaloff>:/light/icons/feather/light/type.svg</normaloff>:/light/icons/feather/light/type.svg</iconset>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QPushButton" name="filter_button">
               <property name="minimumSize">
                <size>
@@ -918,7 +886,7 @@
             </property>
             <property name="baseSize">
              <size>
-              <width>512</width>
+              <width>1024</width>
               <height>0</height>
              </size>
             </property>
@@ -991,7 +959,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>512</width>
+           <width>1024</width>
            <height>16777215</height>
           </size>
          </property>

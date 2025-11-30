@@ -75,12 +75,13 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         if not output_dir:
             output_dir = os.path.join(MODELS_DIR, "text/models/llm/causallm")
 
-        # For art models, don't create a subdirectory - use output_dir directly
-        # since it already points to the correct location (e.g., the GGUF file's directory)
-        if model_type == "art":
+        # For art/stt/tts models, don't create a subdirectory - use output_dir directly
+        # since it already points to the correct location
+        is_stt_tts = model_type in ("stt", "tts_speecht5", "tts_openvoice")
+        if model_type == "art" or is_stt_tts:
             model_path = Path(output_dir)
             self.logger.info(
-                f"Using output_dir directly for art model: {model_path}"
+                f"Using output_dir directly for {model_type} model: {model_path}"
             )
         else:
             model_name = repo_id.split("/")[-1]
@@ -114,10 +115,11 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # If specific missing_files list is provided, use ONLY those files
         # Otherwise, use the comprehensive bootstrap data
         is_art_model = model_type == "art"
+        is_stt_tts_model = model_type in ("stt", "tts_speecht5", "tts_openvoice")
 
-        # For art models, use bootstrap data directly (no API call)
+        # For art/stt/tts models, use bootstrap data directly (no API call)
         # For LLM models, we still need API to discover model shards
-        bootstrap_files = None  # Dict of {filename: expected_size} for art models
+        bootstrap_files = None  # Dict of {filename: expected_size} for art models, or list for stt/tts
         full_bootstrap_data = None  # Full bootstrap data for size lookups
 
         # First, get the full bootstrap data if this is an art model
@@ -137,6 +139,15 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                         f"Found bootstrap data for {version_name} with {len(full_bootstrap_data)} files"
                     )
                     break
+        elif is_stt_tts_model:
+            # For STT/TTS models, get the list of required files from bootstrap data
+            full_bootstrap_data = get_required_files_for_model(
+                model_type, repo_id
+            )
+            if full_bootstrap_data:
+                self.logger.info(
+                    f"Found bootstrap data for {model_type}/{repo_id} with {len(full_bootstrap_data)} files"
+                )
 
         if missing_files:
             # Use the explicitly provided missing files list
@@ -148,7 +159,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             for f in missing_files:
                 # Get expected size from full bootstrap data if available
                 expected_size = 0
-                if full_bootstrap_data and f in full_bootstrap_data:
+                if full_bootstrap_data and isinstance(full_bootstrap_data, dict) and f in full_bootstrap_data:
                     expected_size = full_bootstrap_data[f]
                     self.logger.info(f"Missing file {f}: expected size {expected_size} (from bootstrap)")
                 else:
@@ -168,9 +179,25 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     },
                 )
                 return
+        elif is_stt_tts_model:
+            # For STT/TTS models, bootstrap data is a list of filenames (no sizes)
+            # Convert to dict with size=0 (unknown) for compatibility
+            if full_bootstrap_data:
+                bootstrap_files = {f: 0 for f in full_bootstrap_data}
+            else:
+                self.logger.error(
+                    f"No bootstrap data found for {model_type}/{repo_id}! Cannot determine required files."
+                )
+                self.emit_signal(
+                    self._failed_signal,
+                    {
+                        "error": f"No bootstrap data found for {model_type}/{repo_id}"
+                    },
+                )
+                return
 
-        # For art models with bootstrap data, use it directly without API call
-        if is_art_model and bootstrap_files:
+        # For art/stt/tts models with bootstrap data, use it directly without API call
+        if (is_art_model or is_stt_tts_model) and bootstrap_files:
             files_to_download = []
 
             for filename, expected_size in bootstrap_files.items():

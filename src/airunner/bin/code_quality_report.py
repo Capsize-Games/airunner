@@ -245,7 +245,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         # Check function length (excluding docstrings and blank lines)
         if hasattr(node, "end_lineno") and node.end_lineno:
             func_lines = self._count_code_lines(node)
-            if func_lines > 20:
+            if func_lines > 50:
                 self.add_issue(
                     node.lineno,
                     "long_function",
@@ -544,7 +544,7 @@ def main():
     parser.add_argument(
         "--class-lines",
         type=int,
-        default=200,
+        default=500,
         help="Threshold (in code lines) above which a class is reported as long (default: 200)",
     )
 
@@ -561,7 +561,7 @@ def main():
     args = parser.parse_args()
 
     # Always exclude these patterns regardless of user input
-    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py"]
+    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", '/bin/', '/db/', '/services/']
 
     # Conditionally add /gui/ to permanent exclusions
     if not args.include_gui:

@@ -46,7 +46,7 @@
         <x>0</x>
         <y>0</y>
         <width>565</width>
-        <height>512</height>
+        <height>1024</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -75,8 +75,8 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>512</width>
-           <height>512</height>
+           <width>1024</width>
+           <height>1024</height>
           </size>
          </property>
         </widget>

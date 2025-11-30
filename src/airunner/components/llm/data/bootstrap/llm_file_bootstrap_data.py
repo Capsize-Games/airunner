@@ -63,7 +63,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "vocab.json": 2776833,
         },
     },
-    "Qwen/Qwen3-8B": {
+    "Qwen/Qwen3-8B-GGUF": {
         "path_settings": "llm_causallm_model_path",
         "context_length": 32768,
         "capabilities": {
@@ -75,18 +75,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "is_embedding_model": False,
         },
         "files": {
-            "config.json": 728,
-            "generation_config.json": 239,
-            "merges.txt": 1671853,
-            "model-00001-of-00005.safetensors": 3996250744,
-            "model-00002-of-00005.safetensors": 3993160032,
-            "model-00003-of-00005.safetensors": 3959604768,
-            "model-00004-of-00005.safetensors": 3187841392,
-            "model-00005-of-00005.safetensors": 1244659840,
-            "model.safetensors.index.json": 32878,
-            "tokenizer.json": 11422654,
-            "tokenizer_config.json": 9732,
-            "vocab.json": 2776833,
+            "Qwen3-8B-Q4_K_M.gguf": 5026889920,
         },
     },
     "CohereForAI/c4ai-command-r-08-2024": {

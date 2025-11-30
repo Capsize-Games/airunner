@@ -28,8 +28,8 @@ class TestableGridDrawingMixin(GridDrawingMixin):
         self.active_grid_settings.pos_x = 50
         self.active_grid_settings.pos_y = 50
         self.application_settings = MagicMock()
-        self.application_settings.working_width = 512
-        self.application_settings.working_height = 512
+        self.application_settings.working_width = 1024
+        self.application_settings.working_height = 1024
         self.settings = MagicMock()
         self._grid_compensation_offset = QPointF(0, 0)
         self.canvas_offset = QPointF(0, 0)

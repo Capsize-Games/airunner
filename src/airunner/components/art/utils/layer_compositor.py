@@ -222,8 +222,8 @@ class LayerCompositor:
                 if grid_settings and app_settings:
                     region_x = grid_settings.pos_x or 0
                     region_y = grid_settings.pos_y or 0
-                    region_width = target_size[0] if target_size else (app_settings.working_width or 512)
-                    region_height = target_size[1] if target_size else (app_settings.working_height or 512)
+                    region_width = target_size[0] if target_size else (app_settings.working_width or 1024)
+                    region_height = target_size[1] if target_size else (app_settings.working_height or 1024)
 
                     result = self.compose_layers_in_region(
                         region_x=region_x,
@@ -262,7 +262,7 @@ class LayerCompositor:
 
             # Fallback to default size if no layer images found
             if composite_size is None:
-                composite_size = (512, 512)  # Default size
+                composite_size = (1024, 1024)  # Default size
                 self.logger.warning(
                     f"No layer images found, using default size: {composite_size}"
                 )

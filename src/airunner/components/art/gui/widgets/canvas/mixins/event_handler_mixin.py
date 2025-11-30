@@ -47,9 +47,7 @@ class EventHandlerMixin:
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events.
 
-        Handles middle mouse button for panning. Text tool logic is
-        handled separately in TextHandlingMixin.
-
+        Handles middle mouse button for panning.
         Args:
             event: Qt mouse event.
         """
@@ -59,8 +57,6 @@ class EventHandlerMixin:
             event.accept()
             return
 
-        # Delegate to text handling if text tool is active
-        # (TextHandlingMixin should override this or handle via super() chain)
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -260,14 +256,6 @@ class EventHandlerMixin:
 
             # FORCE the offset back to loaded value after layer initialization
             self.canvas_offset = loaded_offset
-
-            # Restore text items on load
-            try:
-                self._restore_text_items_from_db()
-            except Exception:
-                self.logger.exception(
-                    "Failed to restore text items on showEvent"
-                )
 
             # Final offset restoration
             self.canvas_offset = loaded_offset

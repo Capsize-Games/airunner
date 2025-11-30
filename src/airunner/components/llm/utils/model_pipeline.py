@@ -83,7 +83,8 @@ class ModelPipeline(
             "recommended_bits": 4,
         },
         "qwen3-8b": {
-            "repo_id": "Qwen/Qwen3-8B",
+            "repo_id": "Qwen/Qwen3-8B-GGUF",
+            "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
             "model_type": "llm",
             "supports_function_calling": True,
             "supports_thinking": True,

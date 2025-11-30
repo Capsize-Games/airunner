@@ -28,7 +28,7 @@ class SettingsManager:
 
     def restore_window_state(self, main_window):
         settings = main_window.window_settings
-        main_window.setMinimumSize(512, 512)
+        main_window.setMinimumSize(1024, 1024)
         width = int(settings["width"])
         height = int(settings["height"])
         main_window.resize(width, height)

@@ -8,13 +8,15 @@
 ║    ██║  ██║██║    ██║  ██║╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║     ║
 ║    ╚═╝  ╚═╝╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝     ║
 ║                                                                             ║
-║                      Local AI Models Made Easy                              ║
+║                          Local AI Models Made Easy                          ║
 ║                                                                             ║
 ╚═════════════════════════════════════════════════════════════════════════════╝
 Send Crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
+```
+
+## Your new favorite local AGI platform
 
 AI Runner is an all-in-one, offline-first desktop application, headless server, and Python library for local LLMs, TTS, STT, and image generation.
-```
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/ukcgjEpc5f) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 
@@ -31,7 +33,7 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 | **🎨 Visual Workflows** | Drag-and-drop LangGraph workflow builder with runtime execution |
 | **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and FLUX models with drawing tools, LoRA, inpainting, and filters |
 | **🔒 Privacy First** | Runs locally with no external APIs by default, configurable guardrails |
-| **⚡ Fast Generation** | ~2s inference on RTX 2080s with GPU acceleration |
+| **⚡ Fast Generation** | Uses GGUF and quantization for faster inference and lower VRAM usage |
 
 ### 🌍 Language Support
 
@@ -40,8 +42,6 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 | English | ✅ | ✅ | ✅ | ✅ |
 | Japanese | ✅ | ✅ | ❌ | ✅ |
 | Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ | ❌ |
-
-[🫰 Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
 
 ---
 
@@ -52,8 +52,8 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 | **OS** | Ubuntu 22.04, Windows 10 | Ubuntu 22.04 (Wayland) |
 | **CPU** | Ryzen 2700K / i7-8700K | Ryzen 5800X / i7-11700K |
 | **RAM** | 16 GB | 32 GB |
-| **GPU** | NVIDIA RTX 3060 | NVIDIA RTX 4090 |
-| **Storage** | 22 GB (with models) | 100 GB+ |
+| **GPU** | NVIDIA RTX 3060 | NVIDIA RTX 5080 |
+| **Storage** | 22 GB - 100 GB+ (actual usage varies, SSD recommended) | 100 GB+ |
 
 ---
 
