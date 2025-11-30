@@ -71,8 +71,6 @@ def intelligent_crawl(
         max_depth: Maximum depth to crawl (1-3)
         api: API instance (injected automatically)
 
-    Returns:
-        Aggregated content from all crawled pages, formatted as markdown
     """
     logger.info(
         f"intelligent_crawl: url={start_url}, goal='{research_goal}', "

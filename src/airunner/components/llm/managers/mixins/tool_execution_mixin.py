@@ -43,7 +43,9 @@ class ToolExecutionMixin:
         Returns:
             Updated workflow state with tool results
         """
+        from langchain_core.messages import AIMessage, ToolMessage
         from langgraph.prebuilt import ToolNode
+        import uuid
 
         # Get the last AIMessage which contains tool_calls
         messages = state["messages"]
@@ -56,6 +58,54 @@ class ToolExecutionMixin:
         tool_calls = last_message.tool_calls or []
         if not tool_calls:
             return state
+
+        # CRITICAL: When _force_tool is set, ONLY execute that specific tool
+        # If model called wrong tool, inject error and force correct tool
+        force_tool = getattr(self, "_force_tool", None)
+        if force_tool:
+            first_tool = tool_calls[0].get("name") if tool_calls else None
+            
+            if first_tool != force_tool:
+                # Model called the WRONG tool - inject error message
+                self.logger.error(
+                    f"Force tool violation: model called '{first_tool}' "
+                    f"but must call '{force_tool}' first"
+                )
+                
+                # Create a fake tool result with error message
+                error_msg = (
+                    f"ERROR: You must call '{force_tool}' first.\n\n"
+                    f"You tried to call '{first_tool}', but the workflow requires "
+                    f"calling '{force_tool}' before any other tool.\n\n"
+                    f"Call {force_tool}('coding', 'your task description') NOW."
+                )
+                
+                # Create ToolMessage with error
+                tool_call_id = tool_calls[0].get("id", str(uuid.uuid4()))
+                error_result = ToolMessage(
+                    content=error_msg,
+                    tool_call_id=tool_call_id,
+                    name=first_tool,
+                )
+                
+                # Return state with error message instead of executing wrong tool
+                return {"messages": [error_result]}
+            
+            # Model called correct forced tool - filter out any parallel calls
+            if len(tool_calls) > 1:
+                discarded = [tc.get("name") for tc in tool_calls[1:]]
+                self.logger.warning(
+                    f"Force tool active: executing only '{force_tool}', "
+                    f"discarding parallel calls: {discarded}"
+                )
+                tool_calls = [tool_calls[0]]
+                messages = list(state["messages"])
+                new_ai_message = AIMessage(
+                    content=last_message.content,
+                    tool_calls=tool_calls,
+                )
+                messages[-1] = new_ai_message
+                state = {**state, "messages": messages}
 
         # Emit "starting" status for each tool
         self._emit_starting_status(tool_calls)
@@ -70,7 +120,48 @@ class ToolExecutionMixin:
         # Extract tool results and emit "completed" status
         self._emit_completed_status(result_state, tool_calls)
 
+        # Handle force_tool after successful execution
+        # For workflow tools, set next required tool. Otherwise clear.
+        if hasattr(self, "_force_tool") and self._force_tool:
+            executed_tool = tool_calls[0].get("name") if tool_calls else None
+            if executed_tool == self._force_tool:
+                # Determine next required tool based on workflow sequence
+                next_tool = self._get_next_workflow_tool(executed_tool)
+                if next_tool:
+                    self.logger.info(
+                        f"Workflow sequence: '{executed_tool}' done, "
+                        f"now enforcing '{next_tool}'"
+                    )
+                    self._force_tool = next_tool
+                else:
+                    self.logger.info(
+                        f"Clearing force_tool '{self._force_tool}' after successful execution"
+                    )
+                    self._force_tool = None
+                # Rebind tools with new constraint (or without if cleared)
+                if hasattr(self, "_bind_tools_to_model"):
+                    self._bind_tools_to_model()
+
         return result_state
+
+    def _get_next_workflow_tool(self, current_tool: str) -> str | None:
+        """Get the next required tool in the coding workflow sequence.
+        
+        Previously enforced strict tool ordering, but this caused issues when
+        workflows were already active or the model correctly chose to skip steps.
+        
+        Now returns None to allow the model to choose tools freely based on
+        the workflow instructions in the system prompt.
+        
+        Args:
+            current_tool: The tool that just executed
+            
+        Returns:
+            None - workflow tool ordering is no longer enforced
+        """
+        # No longer enforce tool ordering - let the model follow instructions
+        # The workflow state and instructions guide it appropriately
+        return None
 
     def _sanitize_tool_functions(self) -> None:
         """Ensure each tool function has a docstring.

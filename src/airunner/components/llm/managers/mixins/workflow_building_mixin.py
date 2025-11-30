@@ -3,7 +3,7 @@
 Handles LangGraph workflow construction and compilation.
 """
 
-from typing import TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING
 
 from langgraph.graph import START, END, StateGraph
 
@@ -198,6 +198,26 @@ class WorkflowBuildingMixin:
 
         return workflow
 
+    def _route_after_force_response(self, state: Dict[str, Any]) -> str:
+        """Route after force_response node.
+        
+        For workflow continuation (duplicate workflow tool detected),
+        route back to the model so it can call the next tool.
+        Otherwise, end the graph.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            "model" for workflow continuation, "end" otherwise
+        """
+        if state.get("workflow_continuation"):
+            self.logger.info(
+                "Routing from force_response back to model for workflow continuation"
+            )
+            return "model"
+        return "end"
+
     def _add_tool_workflow_edges(self, workflow: StateGraph):
         """Add edges for tool-enabled workflow.
 
@@ -226,4 +246,14 @@ class WorkflowBuildingMixin:
                 "end": END,
             },
         )
-        workflow.add_edge("force_response", END)
+        # After force_response, conditionally route:
+        # - "model" for workflow continuation (duplicate workflow tool detected)
+        # - "end" for normal forced responses
+        workflow.add_conditional_edges(
+            "force_response",
+            self._route_after_force_response,
+            {
+                "model": "model",
+                "end": END,
+            },
+        )

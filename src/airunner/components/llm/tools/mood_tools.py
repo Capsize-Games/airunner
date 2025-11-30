@@ -37,8 +37,6 @@ def update_mood(
         emoji: A single emoji representing the mood
         api: API instance (injected automatically)
 
-    Returns:
-        Confirmation message
 
     Examples:
         update_mood("happy", "😊")

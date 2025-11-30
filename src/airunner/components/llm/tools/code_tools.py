@@ -36,8 +36,6 @@ def execute_python(code: str, timeout: int = 5) -> str:
         code: The Python code to execute
         timeout: Maximum execution time in seconds. Defaults to 5
 
-    Returns:
-        Execution result with stdout, stderr, and exit code
     """
     logger.info(f"Executing Python code (timeout: {timeout}s)")
 
@@ -97,8 +95,6 @@ def format_code(code: str, line_length: int = 79) -> str:
         code: The Python code to format
         line_length: Maximum line length. Defaults to 79
 
-    Returns:
-        Formatted code or error message
     """
     logger.info("Formatting Python code")
 
@@ -138,8 +134,6 @@ def lint_code(code: str) -> str:
     Args:
         code: The Python code to lint
 
-    Returns:
-        Linting report with issues found
     """
     logger.info("Linting Python code")
 
@@ -192,8 +186,6 @@ def create_code_file(filepath: str, content: str) -> str:
         filepath: Path where file should be created
         content: Content to write to the file
 
-    Returns:
-        Success message or error
     """
     logger.info(f"Creating code file: {filepath}")
 
@@ -232,8 +224,6 @@ def read_code_file(filepath: str) -> str:
     Args:
         filepath: Path to the file to read
 
-    Returns:
-        File contents or error message
     """
     logger.info(f"Reading code file: {filepath}")
 
@@ -271,8 +261,6 @@ def analyze_code_complexity(code: str) -> str:
     Args:
         code: The Python code to analyze
 
-    Returns:
-        Complexity analysis report
     """
     logger.info("Analyzing code complexity")
 

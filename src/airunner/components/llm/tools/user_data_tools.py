@@ -45,8 +45,6 @@ def store_user_data(key: str, value: str) -> str:
         key: The data field name (e.g., "name", "email", "preferences")
         value: The data value to store
 
-    Returns:
-        Confirmation message indicating successful storage or error message
 
     Examples:
         >>> store_user_data("name", "Alice")
@@ -90,8 +88,6 @@ def get_user_data(key: str) -> str:
     Args:
         key: The data field name to retrieve
 
-    Returns:
-        The stored value or an error message if not found
 
     Examples:
         >>> get_user_data("name")

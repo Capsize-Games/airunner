@@ -387,12 +387,68 @@ VERBOSE_REACT_TOOL_AGENT = (
 QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
     "QTWEBENGINE_REMOTE_DEBUGGING", ""
 )  # set to port "9223" to enable remote debugging
+
+# Slash commands for the chat prompt
+# Maps command name to configuration dict with:
+#   - tool: The tool name to force (or None for special behavior)
+#   - description: Human-readable description shown in autocomplete
+#   - action: Optional LLMActionType override (defaults to APPLICATION_COMMAND)
+#   - prompt_prefix: Optional prefix to prepend to user's message
 SLASH_COMMANDS = {
-    "a": LLMActionType.GENERATE_IMAGE,
-    "c": LLMActionType.CODE,
-    "f": LLMActionType.FILE_INTERACTION,
-    "s": LLMActionType.SEARCH,
-    "w": LLMActionType.WORKFLOW,
+    "deepsearch": {
+        "tool": "search_web",  # Force search tool, model chains additional tools
+        "description": "Multi-source research with notes & paper",
+        "action": "DEEP_RESEARCH",  # Uses research system prompt with agentic tool chaining
+        "prompt_prefix": "Please conduct comprehensive research on: ",
+    },
+    "deepresearch": {
+        "tool": "search_web",  # Force search tool, model chains additional tools
+        "description": "Alias for /deepsearch",
+        "action": "DEEP_RESEARCH",  # Uses research system prompt with agentic tool chaining
+        "prompt_prefix": "Please conduct comprehensive research on: ",
+    },
+    "search": {
+        "tool": "search_web",
+        "description": "Search the internet for information",
+    },
+    "news": {
+        "tool": "search_news",
+        "description": "Search for recent news articles",
+    },
+    "image": {
+        "tool": "generate_image",
+        "description": "Generate an image from your description",
+    },
+    "code": {
+        "tool": None,  # No forced tool - let model follow workflow instructions
+        "description": "Code assistance with structured TDD workflow",
+        "action": "CODE",
+        "prompt_prefix": "Please help me with this coding task: ",
+    },
+    "rag": {
+        "tool": "rag_search",
+        "description": "Search through your uploaded documents",
+    },
+    "scrape": {
+        "tool": "scrape_website",
+        "description": "Extract content from a website URL",
+    },
+    "remember": {
+        "tool": "record_knowledge",
+        "description": "Store information in long-term memory",
+    },
+    "recall": {
+        "tool": "recall_knowledge",
+        "description": "Recall information from long-term memory",
+    },
+    "clear": {
+        "tool": "clear_conversation",
+        "description": "Clear the current conversation history",
+    },
+    "calendar": {
+        "tool": "get_calendar_events",
+        "description": "View your calendar events",
+    },
 }
 
 AIRUNNER_SCRAPER_BLACKLIST = [

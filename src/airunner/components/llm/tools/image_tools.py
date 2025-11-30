@@ -23,8 +23,6 @@ def _get_current_generator_capabilities(api: Any):
     Args:
         api: The API object with settings access
         
-    Returns:
-        Tuple of (ImageGeneratorCapabilities, generator_name)
     """
     from airunner.components.art.config.image_generator_capabilities import (
         get_generator_capabilities,
@@ -54,8 +52,6 @@ def enhance_prompt_with_specialized_model(
         prompt: Main prompt to enhance
         second_prompt: Secondary prompt to enhance
 
-    Returns:
-        Tuple of (enhanced_prompt, enhanced_second_prompt)
     """
     try:
         from airunner.components.llm.managers.llm_model_manager import (

@@ -38,8 +38,6 @@ def synthesize_sources(sources: List[str], topic: str = "") -> str:
         sources: List of source texts to synthesize
         topic: Optional topic to focus synthesis on
 
-    Returns:
-        Synthesized summary with key points
     """
     logger.info(
         f"Synthesizing {len(sources)} sources"
@@ -107,8 +105,6 @@ def cite_sources(
         url: URL if online source
         style: Citation style (APA, MLA, Chicago)
 
-    Returns:
-        Formatted citation
     """
     logger.info(f"Formatting citation in {style} style")
 
@@ -151,8 +147,6 @@ def organize_research(findings: str, structure_type: str = "outline") -> str:
         findings: Raw research findings text
         structure_type: Type of structure (outline, mind_map, categories)
 
-    Returns:
-        Organized research structure
     """
     logger.info(f"Organizing research as {structure_type}")
 
@@ -199,8 +193,6 @@ def extract_key_points(text: str, max_points: int = 5) -> str:
         text: The text to extract key points from
         max_points: Maximum number of key points to extract
 
-    Returns:
-        Bulleted list of key points
     """
     logger.info(f"Extracting up to {max_points} key points")
 
@@ -246,8 +238,6 @@ def compare_sources(source1: str, source2: str, source3: str = "") -> str:
         source2: Second source text
         source3: Optional third source text
 
-    Returns:
-        Comparison analysis
     """
     logger.info("Comparing sources")
 

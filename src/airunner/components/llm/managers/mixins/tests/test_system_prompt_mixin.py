@@ -85,9 +85,10 @@ class TestSystemPrompt:
 
         prompt = mixin.system_prompt
 
-        assert "update_mood tool" in prompt
-        assert "Every 3 conversation turns" in prompt
-        assert "one-word emotion" in prompt
+        # New mood system uses automatic updates, not manual tool calls
+        assert "emotional state updates automatically every 3" in prompt
+        assert "conversation turns" in prompt
+        assert "mood subtly influence" in prompt
 
     @patch(
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
@@ -100,7 +101,7 @@ class TestSystemPrompt:
 
         prompt = mixin.system_prompt
 
-        assert "update_mood tool" not in prompt
+        assert "emotional state updates automatically" not in prompt
 
     @patch(
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
@@ -113,7 +114,7 @@ class TestSystemPrompt:
 
         prompt = mixin.system_prompt
 
-        assert "update_mood tool" not in prompt
+        assert "emotional state updates automatically" not in prompt
 
     @patch(
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
@@ -180,9 +181,11 @@ class TestGetSystemPromptForAction:
         )
 
         assert "Mode: DOCUMENT SEARCH" in prompt
-        assert "searching through uploaded documents" in prompt
         assert "rag_search" in prompt
         assert "search_web" in prompt
+        # Verify critical instruction is present
+        assert "CRITICAL INSTRUCTION" in prompt
+        assert "MUST use the rag_search tool" in prompt
 
     @patch(
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
@@ -206,7 +209,11 @@ class TestGetSystemPromptForAction:
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
     )
     def test_all_actions_include_base_prompt(self, mock_datetime, mixin):
-        """Should include base system prompt for all action types."""
+        """Should include base system prompt (bot identity) for all action types.
+        
+        Note: Datetime is now context-aware and only included for actions that
+        benefit from temporal awareness (CONVERSATIONAL_ACTIONS and DATETIME_ACTIONS).
+        """
         mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0)
         actions = [
             LLMActionType.CHAT,
@@ -218,20 +225,34 @@ class TestGetSystemPromptForAction:
         for action in actions:
             prompt = mixin.get_system_prompt_for_action(action)
 
-            # Base prompt should be present
-            assert "You are TestBot" in prompt
-            assert "2024-01-15 10:30:00" in prompt
+            # Bot identity should always be present
+            assert "You are TestBot" in prompt, f"Bot identity missing for {action}"
+        
+        # Datetime is context-aware: only included for conversational/datetime actions
+        chat_prompt = mixin.get_system_prompt_for_action(LLMActionType.CHAT)
+        assert "2024-01-15 10:30:00" in chat_prompt, "Datetime should be in CHAT"
+        
+        auto_prompt = mixin.get_system_prompt_for_action(LLMActionType.APPLICATION_COMMAND)
+        assert "2024-01-15 10:30:00" in auto_prompt, "Datetime should be in APPLICATION_COMMAND"
+        
+        # Image generation doesn't need datetime (it's not contextually relevant)
+        image_prompt = mixin.get_system_prompt_for_action(LLMActionType.GENERATE_IMAGE)
+        # Either datetime is absent or present - the key is identity is present
+        assert "You are TestBot" in image_prompt
 
     @patch(
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
     )
     def test_action_specific_text_appended_to_base(self, mock_datetime, mixin):
-        """Should append action-specific text to base prompt."""
+        """Should include action-specific text beyond the base identity prompt."""
         mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0)
 
         chat_prompt = mixin.get_system_prompt_for_action(LLMActionType.CHAT)
-        base_prompt = mixin.system_prompt
-
-        # Action-specific text should come after base
-        assert chat_prompt.startswith(base_prompt)
-        assert len(chat_prompt) > len(base_prompt)
+        
+        # Chat prompt should contain bot identity and action-specific content
+        assert "You are TestBot" in chat_prompt
+        assert "Mode: CHAT" in chat_prompt
+        assert "natural conversation" in chat_prompt
+        
+        # Action prompt should be longer than minimal identity-only prompt
+        assert len(chat_prompt) > 50  # Reasonably sized prompt

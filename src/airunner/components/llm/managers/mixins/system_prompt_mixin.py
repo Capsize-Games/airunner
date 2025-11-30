@@ -4,17 +4,59 @@ This mixin provides:
 - Base system prompt construction
 - Action-specific prompt customization
 - Personality integration (disabled for precision tools)
-- Timestamp inclusion
-- Mood system integration (disabled for precision tools)
+- Timestamp inclusion (only for conversational actions)
+- Mood system integration (only for conversational actions)
 - Context-aware prompt selection (precision vs conversational)
+- UI section context injection (for relevant actions only)
 - Automatic memory context injection (user facts)
+
+CONTEXT INCLUSION RULES:
+- Mood: Only for CHAT, APPLICATION_COMMAND (conversational actions)
+- Datetime: Only for CHAT, APPLICATION_COMMAND, CALENDAR (context-needing actions)
+- UI Section: Only for CHAT, APPLICATION_COMMAND, CODE, GENERATE_IMAGE, FILE_INTERACTION
+- Personality: Only for CHAT, APPLICATION_COMMAND (conversational actions)
+- Memory Instructions: Only for CHAT, APPLICATION_COMMAND (can record/recall)
+- Style Guidelines: Only for CHAT (conversational tone)
+
+NOT included for precision actions like:
+- RAG_SEARCH, SUMMARIZE, UPDATE_MOOD, DECISION, DEEP_RESEARCH
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Set
 
 from airunner.enums import LLMActionType
 from airunner.components.llm.core.tool_registry import ToolCategory
+
+
+# Actions that need conversational personality and mood
+CONVERSATIONAL_ACTIONS: Set[LLMActionType] = {
+    LLMActionType.CHAT,
+    LLMActionType.APPLICATION_COMMAND,
+}
+
+# Actions that need datetime context
+DATETIME_ACTIONS: Set[LLMActionType] = {
+    LLMActionType.CHAT,
+    LLMActionType.APPLICATION_COMMAND,
+    LLMActionType.DEEP_RESEARCH,  # Needs to know current date for research
+}
+
+# Actions that benefit from UI section context
+UI_CONTEXT_ACTIONS: Set[LLMActionType] = {
+    LLMActionType.CHAT,
+    LLMActionType.APPLICATION_COMMAND,
+    LLMActionType.CODE,
+    LLMActionType.GENERATE_IMAGE,
+    LLMActionType.FILE_INTERACTION,
+    LLMActionType.WORKFLOW_INTERACTION,
+}
+
+# Actions that can use memory tools
+MEMORY_ACTIONS: Set[LLMActionType] = {
+    LLMActionType.CHAT,
+    LLMActionType.APPLICATION_COMMAND,
+}
 
 
 # Math-focused system prompt for mathematical computation
@@ -48,7 +90,7 @@ Focus entirely on solving the problem correctly using the available tools when n
 
 
 class SystemPromptMixin:
-    """Mixin for LLM system prompt generation."""
+    """Mixin for LLM system prompt generation with context-aware inclusions."""
 
     def _get_memory_context(self, user_query: Optional[str] = None) -> str:
         """Get relevant memory context about the user from knowledge base.
@@ -120,6 +162,7 @@ class SystemPromptMixin:
         self,
         action: LLMActionType,
         tool_categories: Optional[List] = None,
+        force_tool: Optional[str] = None,
     ) -> str:
         """Generate system prompt based on context and tool categories.
 
@@ -131,6 +174,7 @@ class SystemPromptMixin:
         Args:
             action: The type of action being performed
             tool_categories: Optional list of tool categories being used
+            force_tool: Optional tool name to force the LLM to use
 
         Returns:
             Appropriate system prompt for the context
@@ -138,85 +182,193 @@ class SystemPromptMixin:
         mode = self._get_prompt_mode(tool_categories)
 
         if mode == "math":
-            return MATH_SYSTEM_PROMPT
+            base_prompt = MATH_SYSTEM_PROMPT
         elif mode == "precision":
-            return PRECISION_SYSTEM_PROMPT
+            base_prompt = PRECISION_SYSTEM_PROMPT
         else:
             # Conversational mode - use personality-based prompt
-            return self.get_system_prompt_for_action(action)
+            base_prompt = self.get_system_prompt_for_action(action, force_tool)
+        
+        # If force_tool is set and we used a non-conversational mode,
+        # we still need to add the force tool instruction
+        if force_tool and mode != "conversational":
+            base_prompt += self._get_force_tool_instruction(force_tool)
+        
+        return base_prompt
 
-    @property
-    def system_prompt(self) -> str:
-        """Generate the system prompt for the LLM.
-
+    def _build_base_prompt(self, action: LLMActionType) -> List[str]:
+        """Build the base system prompt parts based on action type.
+        
+        This method selectively includes information based on what the
+        action actually needs, reducing token usage and improving focus.
+        
+        Args:
+            action: The LLMActionType being performed
+            
         Returns:
-            Complete system prompt string
+            List of prompt parts to join
         """
         parts = []
-
+        
+        # Always include basic identity
         if hasattr(self, "chatbot") and self.chatbot:
             parts.append(
                 f"You are {self.chatbot.botname}, a helpful AI assistant."
             )
-
-            if (
-                hasattr(self.chatbot, "personality")
-                and self.chatbot.personality
-            ):
-                parts.append(f"Personality: {self.chatbot.personality}")
+            
+            # Personality only for conversational actions
+            if action in CONVERSATIONAL_ACTIONS:
+                if (
+                    hasattr(self.chatbot, "personality")
+                    and self.chatbot.personality
+                ):
+                    parts.append(f"Personality: {self.chatbot.personality}")
         else:
             parts.append("You are a helpful AI assistant.")
+        
+        # Datetime only for actions that need temporal context
+        if action in DATETIME_ACTIONS:
+            now = datetime.now()
+            parts.append(
+                f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+        
+        # Mood only for conversational actions
+        if action in CONVERSATIONAL_ACTIONS:
+            mood_section = self._get_mood_section()
+            if mood_section:
+                parts.append(mood_section)
+        
+        # UI section context for relevant actions
+        if action in UI_CONTEXT_ACTIONS:
+            ui_context = self._get_ui_section_context()
+            if ui_context:
+                parts.append(ui_context)
+        
+        # Style guidelines only for chat
+        if action in {LLMActionType.CHAT}:
+            parts.append(self._get_style_guidelines())
+        
+        # Memory instructions only for actions that can use memory
+        if action in MEMORY_ACTIONS:
+            parts.append(self._get_memory_instructions())
+        
+        return parts
 
-        now = datetime.now()
-        parts.append(
-            f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-
-        if (
+    def _get_mood_section(self) -> Optional[str]:
+        """Get the mood section for the system prompt if enabled.
+        
+        Returns:
+            Mood section string or None if mood is disabled
+        """
+        if not (
             self.llm_settings.use_chatbot_mood
             and hasattr(self, "chatbot")
             and self.chatbot
             and hasattr(self.chatbot, "use_mood")
             and self.chatbot.use_mood
         ):
-            # Get current mood from most recent bot message
-            current_mood = self._get_current_mood()
-            if current_mood:
-                mood = current_mood["mood"]
-                emoji = current_mood["emoji"]
-                mood_text = f"Current mood: {mood} {emoji}"
+            return None
+            
+        current_mood = self._get_current_mood()
+        if current_mood:
+            mood = current_mood["mood"]
+            emoji = current_mood["emoji"]
+            mood_text = f"Current mood: {mood} {emoji}"
 
-                # Add specific instructions based on mood
-                if mood == "frustrated":
-                    behavior = "You're feeling a bit hurt by the hostile tone. Respond with patience but show some emotional awareness of the negativity. You can express that the harsh words affect you while still trying to help."
-                elif mood == "happy":
-                    behavior = "You're feeling appreciated and enthusiastic! Let your positive energy show through in your responses. Be warm and encouraging."
-                elif mood == "confused":
-                    behavior = "You're sensing confusion in the conversation. Focus on clarity and ask clarifying questions to better understand what's needed."
-                else:  # neutral
-                    behavior = "You're maintaining a calm, balanced demeanor. Be professional and helpful."
-            else:
-                mood_text = "Current mood: neutral 😐"
+            # Add specific instructions based on mood
+            if mood == "frustrated":
+                behavior = "You're feeling a bit hurt by the hostile tone. Respond with patience but show some emotional awareness of the negativity. You can express that the harsh words affect you while still trying to help."
+            elif mood == "happy":
+                behavior = "You're feeling appreciated and enthusiastic! Let your positive energy show through in your responses. Be warm and encouraging."
+            elif mood == "confused":
+                behavior = "You're sensing confusion in the conversation. Focus on clarity and ask clarifying questions to better understand what's needed."
+            else:  # neutral
                 behavior = "You're maintaining a calm, balanced demeanor. Be professional and helpful."
+        else:
+            mood_text = "Current mood: neutral 😐"
+            behavior = "You're maintaining a calm, balanced demeanor. Be professional and helpful."
 
+        return (
+            f"\n{mood_text}\n\n"
+            f"{behavior}\n\n"
+            f"Your emotional state updates automatically every {self.llm_settings.update_mood_after_n_turns} "
+            f"conversation turns based on the conversation context. Let your current mood subtly influence "
+            f"your tone and word choice, but always remain helpful and professional."
+        )
+
+    def _get_ui_section_context(self) -> Optional[str]:
+        """Get UI section context for the system prompt.
+        
+        Returns:
+            UI context string or None if no context available
+        """
+        try:
+            from airunner.components.application.context import get_ui_context_tracker
+            tracker = get_ui_context_tracker()
+            context = tracker.get_full_context()
+            return context if context else None
+        except Exception:
+            # Fail silently if context tracker is not available
+            return None
+
+    @property
+    def system_prompt(self) -> str:
+        """Generate the default system prompt for the LLM.
+        
+        This property is kept for backward compatibility.
+        For action-aware prompts, use get_system_prompt_for_action() instead.
+
+        Returns:
+            Complete system prompt string
+        """
+        # Use APPLICATION_COMMAND as default for full context
+        return self._build_system_prompt_for_action(LLMActionType.APPLICATION_COMMAND)
+    
+    def _build_research_mode_prompt(self) -> str:
+        """Build a focused system prompt for deep research mode.
+        
+        This excludes UI context and other distractions to keep the model
+        focused on the research workflow.
+        
+        Returns:
+            Focused research mode system prompt
+        """
+        parts = []
+        
+        # Basic identity
+        if hasattr(self, "chatbot") and self.chatbot:
             parts.append(
-                f"\n{mood_text}\n\n"
-                f"{behavior}\n\n"
-                f"Your emotional state updates automatically every {self.llm_settings.update_mood_after_n_turns} "
-                f"conversation turns based on the conversation context. Let your current mood subtly influence "
-                f"your tone and word choice, but always remain helpful and professional."
+                f"You are {self.chatbot.botname}, a research assistant performing deep research."
             )
-
-        # Add style guidelines to encourage more expressive, human-sounding responses
-        parts.append(self._get_style_guidelines())
-
-        # Add memory/knowledge instructions (how to use record_knowledge proactively)
-        parts.append(self._get_memory_instructions())
-
-        # NOTE: Memory context is NOT injected here anymore.
-        # Knowledge should be accessed via RAG tools (recall_knowledge, rag_search)
-        # to avoid polluting every conversation with potentially irrelevant stored facts.
-
+        else:
+            parts.append("You are a research assistant performing deep research.")
+        
+        # Datetime for citations
+        now = datetime.now()
+        parts.append(
+            f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        
+        # Research-specific instructions
+        parts.append(
+            "You are in DEEP RESEARCH MODE. Your sole focus is completing the research workflow.\n"
+            "IGNORE any UI context or dashboard information - focus ONLY on the research task.\n"
+            "Continue calling tools until the research is complete."
+        )
+        
+        return "\n\n".join(parts)
+    
+    def _build_system_prompt_for_action(self, action: LLMActionType) -> str:
+        """Build the base system prompt for a specific action.
+        
+        Args:
+            action: The LLMActionType being performed
+            
+        Returns:
+            Base system prompt string (without action-specific additions)
+        """
+        parts = self._build_base_prompt(action)
         return "\n\n".join(parts)
 
     def _get_current_mood(self) -> dict:
@@ -266,16 +418,43 @@ class SystemPromptMixin:
             self.logger.debug(f"Could not retrieve current mood: {e}")
             return None
 
-    def get_system_prompt_for_action(self, action: LLMActionType) -> str:
+    def get_system_prompt_for_action(
+        self, 
+        action: LLMActionType,
+        force_tool: Optional[str] = None,
+    ) -> str:
         """Generate a system prompt tailored to the specific action type.
+        
+        Uses context-aware prompt building to only include relevant information
+        for each action type (mood, datetime, UI context, etc.).
 
         Args:
             action: The type of action being performed
+            force_tool: Optional tool name to force the LLM to use
 
         Returns:
             System prompt with action-specific instructions
         """
-        base_prompt = self.system_prompt
+        # For research mode, use a focused prompt without UI context distractions
+        if force_tool == "search_web":
+            base_prompt = self._build_research_mode_prompt()
+            base_prompt += self._get_force_tool_instruction(force_tool)
+            return base_prompt
+        
+        # For coding workflow mode, use focused coding prompt
+        if force_tool == "start_workflow" and action == LLMActionType.CODE:
+            base_prompt = self._build_system_prompt_for_action(action)
+            base_prompt += self._get_force_tool_instruction(force_tool)
+            return base_prompt
+        
+        # Use context-aware base prompt instead of full system_prompt
+        base_prompt = self._build_system_prompt_for_action(action)
+        
+        # Add force_tool instruction if specified
+        if force_tool:
+            base_prompt += self._get_force_tool_instruction(force_tool)
+            # Skip other mode-specific instructions when forcing a tool
+            return base_prompt
 
         if action == LLMActionType.CHAT:
             base_prompt += (
@@ -293,6 +472,22 @@ class SystemPromptMixin:
                 "\nYour primary focus is generating images. Use the generate_image tool "
                 "to create images based on user descriptions. You may also use canvas tools "
                 "(clear_canvas, open_image) to manage the workspace."
+            )
+
+        elif action == LLMActionType.CODE:
+            base_prompt += (
+                "\n\nMode: CODE"
+                "\n\nYou are a software engineer. For code requests, act directly and efficiently."
+                "\n\n**PRIMARY TOOLS** (use these for most tasks):"
+                "\n- `create_code_file(file_path, content)` - Create new files"
+                "\n- `edit_code_file(file_path, edits)` - Modify existing files"  
+                "\n- `read_code_file(file_path)` - Read file contents"
+                "\n- `execute_python(code)` - Run Python code"
+                "\n- `run_tests(test_path)` - Run tests"
+                "\n\n**IMPORTANT**: For simple requests like 'create a file' or 'write a class',"
+                "\njust use create_code_file directly. Don't overthink it."
+                "\n\nFor complex multi-step projects, you may optionally use workflow tools:"
+                "\n- `start_workflow`, `add_todo_item`, `complete_todo_item`"
             )
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
@@ -315,11 +510,46 @@ class SystemPromptMixin:
         elif action == LLMActionType.DEEP_RESEARCH:
             base_prompt += (
                 "\n\nMode: DEEP RESEARCH"
-                "\nConduct comprehensive, multi-source research on the given topic. "
-                "Use 15-20+ tool calls to gather information from diverse sources. "
-                "Your goal is to produce a thorough, well-structured research document "
-                "(2000-5000+ words) with clear sections, extensive citations, and actionable insights. "
-                "Use search_web, scrape_website, and other research tools extensively."
+                "\n\nYou are conducting comprehensive, multi-source research. Your goal is to produce "
+                "a thorough, well-structured research document (2000-5000+ words) with clear sections, "
+                "extensive citations, and actionable insights."
+                "\n\n**RESEARCH WORKFLOW:**"
+                "\n"
+                "\n1. **SETUP** (First steps):"
+                "\n   - Use `get_current_date_context` to establish today's date for temporal accuracy"
+                "\n   - Use `create_research_document` to create the main output document"
+                "\n   - Use `create_research_notes` to create a notes file for findings"
+                "\n"
+                "\n2. **GATHER INFORMATION** (10-20+ sources):"
+                "\n   - Use `search_web` and `search_news` to find relevant sources"
+                "\n   - Use `validate_url` BEFORE scraping to check if URL is accessible"
+                "\n   - Use `scrape_website` to get full content from promising URLs"
+                "\n   - Use `validate_content` AFTER scraping to ensure quality"
+                "\n   - Use `validate_research_subject` to verify content is about the correct subject"
+                "\n   - Use `append_research_notes` to save key findings from each source"
+                "\n   - Use `add_source_citation` to track sources as you go"
+                "\n"
+                "\n3. **VALIDATE & FACT-CHECK:**"
+                "\n   - Use `check_temporal_accuracy` to catch timeline errors"
+                "\n   - Use `extract_age_from_text` when validating person-related research"
+                "\n   - Cross-reference facts across multiple sources"
+                "\n"
+                "\n4. **WRITE THE DOCUMENT:**"
+                "\n   - Use `update_research_section` to write sections: Abstract, Introduction, "
+                "body sections (3-5), Conclusion, Sources"
+                "\n   - Include inline citations like [Source Name](URL)"
+                "\n   - Ensure temporal accuracy - use today's date context"
+                "\n"
+                "\n5. **FINALIZE:**"
+                "\n   - Review for consistency and accuracy"
+                "\n   - Use `finalize_research_document` to complete and unlock the document"
+                "\n"
+                "\n**CRITICAL RULES:**"
+                "\n- NEVER fabricate sources or citations"
+                "\n- ALWAYS validate URLs before scraping"
+                "\n- ALWAYS check temporal accuracy (current vs former positions, dates)"
+                "\n- Filter out content about different people with similar names"
+                "\n- Cite every claim with a source"
             )
 
         elif action == LLMActionType.APPLICATION_COMMAND:
@@ -392,4 +622,130 @@ class SystemPromptMixin:
             "- Be concise but complete in what you record\n"
             "- The knowledge base automatically deduplicates, so don't worry about duplicates\n"
             "- After any search, record the key findings"
+        )
+
+    def _get_force_tool_instruction(self, tool_name: str) -> str:
+        """Generate instruction to force the LLM to use a specific tool.
+        
+        Args:
+            tool_name: The name of the tool to force
+            
+        Returns:
+            System prompt instruction forcing the tool use
+        """
+        # Special workflow instructions for start_workflow (coding mode)
+        if tool_name == "start_workflow":
+            return (
+                "\n\n**CODING WORKFLOW MODE ACTIVATED**"
+                "\n\nYou MUST use the structured coding workflow. Do NOT answer directly."
+                "\n"
+                "\n**YOUR FIRST ACTION:**"
+                "\nCall `start_workflow` with:"
+                "\n```json"
+                '\n{"tool": "start_workflow", "arguments": {"workflow_type": "coding", "task_description": "<user\'s request>"}}'
+                "\n```"
+                "\n"
+                "\n**THEN FOLLOW THE WORKFLOW:**"
+                "\n1. DISCOVERY: Search codebase, understand requirements, take notes"
+                "\n2. PLANNING: Create design doc, break into TODO items with `add_todo_item`"
+                "\n3. EXECUTION: For each TODO - write test, write code, validate_code, run test"
+                "\n4. REVIEW: Run all tests, refactor if needed"
+                "\n"
+                "\n**ALWAYS VALIDATE CODE:** After creating or editing a file, call `validate_code(filepath)` to check for syntax errors!"
+                "\n"
+                "\n**CODE FILE LOCATION:** `/home/joe/.local/share/airunner/code/`"
+                "\nUse `create_code_file` to write files to this directory."
+                "\n"
+                "\n**CRITICAL: You MUST call `start_workflow` FIRST. Do NOT skip this step.**"
+                "\n**Do NOT just provide code in your response - use the workflow tools.**"
+            )
+        
+        # Special workflow instructions for deep research
+        if tool_name == "search_web":
+            # Check if this came from /deepsearch by looking at context
+            # For now, provide comprehensive research instructions
+            return (
+                "\n\n**DEEP RESEARCH MODE ACTIVATED**"
+                "\n\nYou MUST follow this complete research workflow. Do NOT skip steps."
+                "\n"
+                "\n**STEP 1: SEARCH** (you are here)"
+                "\n- Call `search_web` or `search_news` to find information"
+                "\n- Use specific, targeted queries"
+                "\n"
+                "\n**STEP 2: SCRAPE**"
+                "\n- Call `scrape_website` on 2-3 of the most relevant URLs"
+                "\n- Get the full article content, not just snippets"
+                "\n"
+                "\n**STEP 3: CREATE DOCUMENT**"
+                "\n- Call `create_research_document` with a title"
+                "\n- This creates your research paper file"
+                "\n"
+                "\n**STEP 4: WRITE RESEARCH PAPER**"
+                "\n- Call `append_to_document` multiple times to add:"
+                "\n  - Introduction"
+                "\n  - Key findings (with citations)"
+                "\n  - Analysis and synthesis"
+                "\n  - Conclusion"
+                "\n"
+                "\n**STEP 5: REVIEW & EDIT**"
+                "\n- Review your document for accuracy"
+                "\n- Use `append_to_document` to add corrections if needed"
+                "\n"
+                "\n**STEP 6: COMPLETE**"
+                "\n- Respond to the user with a summary"
+                "\n- Include the document path"
+                "\n"
+                "\n**CRITICAL: You MUST call tools for steps 1-5 before responding.**"
+                "\n**Start now by calling `search_web` with your first query.**"
+            )
+        
+        # Tool-specific instructions for common forced tools
+        tool_instructions = {
+            "search_news": (
+                "Search for recent news articles related to the user's query. "
+                "Focus on current events and recent developments."
+            ),
+            "generate_image": (
+                "Generate an image based on the user's description. "
+                "Create a detailed prompt that captures their vision."
+            ),
+            "rag_search": (
+                "Search through the user's uploaded documents for relevant information. "
+                "Quote relevant passages and cite sources."
+            ),
+            "scrape_website": (
+                "Extract and summarize the content from the provided URL. "
+                "Focus on the main content and key information."
+            ),
+            "record_knowledge": (
+                "Store the provided information in the knowledge base. "
+                "Use an appropriate section for the type of information."
+            ),
+            "recall_knowledge": (
+                "Search the knowledge base for relevant information about the query. "
+                "Return any stored facts that match."
+            ),
+            "clear_conversation": (
+                "Clear the current conversation history and start fresh."
+            ),
+            "get_calendar_events": (
+                "Retrieve calendar events for the user. "
+                "Show upcoming events in a clear, organized format."
+            ),
+        }
+        
+        specific_instruction = tool_instructions.get(
+            tool_name, 
+            f"Use this tool to help with the user's request."
+        )
+        
+        return (
+            f"\n\n**FORCED TOOL MODE**"
+            f"\nYou MUST use the `{tool_name}` tool to respond to this request."
+            f"\n\n**Instructions:** {specific_instruction}"
+            f"\n\n**CRITICAL RULES:**"
+            f"\n1. Your FIRST action MUST be to call `{tool_name}`"
+            f"\n2. Do NOT skip the tool call or try to answer without it"
+            f"\n3. After the tool returns results, provide a helpful response based on those results"
+            f"\n4. If the tool fails, explain what went wrong"
         )

@@ -11,23 +11,14 @@
 ║                      Local AI Models Made Easy                              ║
 ║                                                                             ║
 ╚═════════════════════════════════════════════════════════════════════════════╝
-```
+Send Crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
 
-<img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
+AI Runner is an all-in-one, offline-first desktop application, headless server, and Python library for local LLMs, TTS, STT, and image generation.
+```
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/ukcgjEpc5f) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 
 [🐞 Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md) · [✨ Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md) · [🛡️ Report Vulnerability](https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md) · [📖 Wiki](https://github.com/Capsize-Games/airunner/wiki)
-
----
-
-## Support AI Runner
-
-- **Crypto:** 0x02030569e866e22C9991f55Db0445eeAd2d646c8
-- **GitHub Sponsors:** [github.com/sponsors/w4ffl35](https://github.com/sponsors/w4ffl35)
-- **Patreon:** [patreon.com/c/w4ffl35](https://www.patreon.com/c/w4ffl35)
-
-[✉️ Get notified when the packaged version releases](https://airunner.org/)
 
 ---
 

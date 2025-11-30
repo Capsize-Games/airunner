@@ -9,66 +9,20 @@ This mixin handles:
 - Main generation orchestration
 """
 
-import os
 import random
 import traceback
-import uuid
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional
 
 import torch
 from langchain_core.messages import AIMessage
-from langchain_core.messages import HumanMessage
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.enums import LLMActionType, SignalCode
-from airunner.components.llm.agents.deep_research.deep_research_agent import (
-    DeepResearchAgent,
-)
-
-if TYPE_CHECKING:
-    pass
-
-
-# NOTE: Import path_settings for research folder access
-try:
-    from airunner.components.settings.data.path_settings import PathSettings
-
-    PATH_SETTINGS_AVAILABLE = True
-except ImportError:
-    PATH_SETTINGS_AVAILABLE = False
 
 
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
-
-    def _emit_deep_research_tool_status(
-        self,
-        tool_id: str,
-        prompt: str,
-        status: str,
-        details: Optional[str] = None,
-    ) -> None:
-        """Emit standardized tool status updates for Deep Research phases."""
-
-        conversation_id = None
-        api = getattr(self, "api", None)
-        if api is not None and hasattr(api, "current_conversation_id"):
-            conversation_id = getattr(api, "current_conversation_id")
-
-        payload = {
-            "tool_id": tool_id,
-            "tool_name": "deep_research",
-            "query": prompt,
-            "status": status,
-            "details": details,
-            "conversation_id": conversation_id,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-        self.emit_signal(SignalCode.LLM_TOOL_STATUS_SIGNAL, payload)
 
     def _setup_generation_workflow(
         self,
@@ -88,6 +42,13 @@ class GenerationMixin:
         Returns:
             The action-specific system prompt
         """
+        # Extract force_tool from request if present (needed for both branches)
+        force_tool = (
+            llm_request.force_tool 
+            if llm_request and hasattr(llm_request, "force_tool") 
+            else None
+        )
+        
         if system_prompt:
             action_system_prompt = system_prompt
         else:
@@ -96,11 +57,19 @@ class GenerationMixin:
                 llm_request.tool_categories if llm_request else None
             )
             action_system_prompt = self.get_system_prompt_with_context(
-                action, tool_categories
+                action, tool_categories, force_tool
             )
 
         if self._workflow_manager:
             self._workflow_manager.update_system_prompt(action_system_prompt)
+
+            # Set force_tool for agentic research mode
+            if force_tool and hasattr(self._workflow_manager, "set_force_tool"):
+                self._workflow_manager.set_force_tool(force_tool)
+                self.logger.info(f"Set workflow force_tool to: {force_tool}")
+            elif hasattr(self._workflow_manager, "set_force_tool"):
+                # Clear force_tool if not set in request
+                self._workflow_manager.set_force_tool(None)
 
             # Set response format if provided in request
             response_format = (
@@ -258,160 +227,6 @@ class GenerationMixin:
 
         return ""
 
-    def _handle_deep_research(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        llm_request: Optional[Any] = None,
-    ) -> Dict[str, Any]:
-        """Handle Deep Research mode by routing to DeepResearchAgent.
-
-        Args:
-            prompt: The research topic/question
-            system_prompt: Optional custom system prompt
-            llm_request: Optional LLM request parameters
-
-        Returns:
-            Dictionary with 'response' key containing result message and document path
-        """
-        try:
-            tool_status_id = (
-                getattr(self, "_current_request_id", None)
-                or f"deep-research-{uuid.uuid4().hex}"
-            )
-            self._emit_deep_research_tool_status(
-                tool_status_id,
-                prompt,
-                "starting",
-                details="planning ▸ research ▸ writing",
-            )
-
-            # Get research folder path
-            if not PATH_SETTINGS_AVAILABLE:
-                self._emit_deep_research_tool_status(
-                    tool_status_id,
-                    prompt,
-                    "completed",
-                    details="error: path settings",
-                )
-                return {
-                    "response": "Error: Cannot access path settings for Deep Research mode.",
-                    "error": "PathSettings unavailable",
-                }
-
-            path_settings = PathSettings.objects.first()
-            if not path_settings or not path_settings.base_path:
-                self._emit_deep_research_tool_status(
-                    tool_status_id,
-                    prompt,
-                    "completed",
-                    details="error: path settings",
-                )
-                return {
-                    "response": "Error: Path settings not configured.",
-                    "error": "PathSettings not configured",
-                }
-
-            research_path = os.path.join(
-                path_settings.base_path, "text/other/research"
-            )
-
-            # Create DeepResearchAgent with current chat model
-            agent = DeepResearchAgent(
-                chat_model=self._chat_model,
-                research_path=research_path,
-                system_prompt=system_prompt,
-                api=self,  # Pass self as API for tool access
-            )
-            if hasattr(agent, "set_tool_status_context"):
-                agent.set_tool_status_context(tool_status_id, prompt)
-
-            # Compile the agent graph
-            compiled_graph = agent.compile()
-
-            # Run the deep research workflow
-            self.logger.info(f"Starting Deep Research: '{prompt}'")
-
-            # Create initial message for the agent
-            initial_state = {
-                "messages": [HumanMessage(content=prompt)],
-                "research_topic": prompt,
-                "current_phase": "plan",
-                "search_queries": [],
-                "collected_sources": [],
-                "notes_path": "",
-                "outline": "",
-                "document_path": "",
-                "rag_loaded": False,
-                "sources_scraped": 0,
-                "sections_written": [],
-            }
-
-            result = compiled_graph.invoke(
-                initial_state
-            )  # Extract final message and document path from result
-            messages = result.get("messages", [])
-            document_path = result.get("document_path", "")
-
-            if messages:
-                final_message = messages[-1]
-                response_text = getattr(
-                    final_message, "content", str(final_message)
-                )
-            else:
-                response_text = "Deep research completed."
-
-            # Add document path to response
-            if document_path:
-                response_text += (
-                    f"\n\n**Research document saved to:** `{document_path}`"
-                )
-
-            self.logger.info(
-                f"Deep Research complete. Document: {document_path}"
-            )
-
-            details = None
-            if document_path:
-                try:
-                    details = f"report saved: {Path(document_path).name}"
-                except OSError:
-                    details = "report saved"
-            else:
-                details = "report ready"
-
-            self._emit_deep_research_tool_status(
-                tool_status_id,
-                prompt,
-                "completed",
-                details=details,
-            )
-
-            if hasattr(agent, "set_tool_status_context"):
-                agent.set_tool_status_context(None, None)
-
-            return {
-                "response": response_text,
-                "document_path": document_path,
-            }
-        except Exception as e:
-            self.logger.error(f"Deep Research failed: {e}", exc_info=True)
-            error_detail = str(e)[:80] if e else "unknown error"
-            self._emit_deep_research_tool_status(
-                tool_status_id,
-                prompt,
-                "completed",
-                details=f"error: {error_detail}",
-            )
-            if "agent" in locals() and hasattr(
-                agent, "set_tool_status_context"
-            ):
-                agent.set_tool_status_context(None, None)
-            return {
-                "response": f"Deep Research encountered an error: {str(e)}",
-                "error": str(e),
-            }
-
     def _do_generate(
         self,
         prompt: str,
@@ -468,21 +283,22 @@ class GenerationMixin:
             self.unload()
             self.load()
 
-        # DEEP RESEARCH MODE: Route to specialized deep research agent
+        # DEEP RESEARCH MODE: Now uses standard tool-based workflow
+        # The LLM uses research tools (search_web, scrape_website, validate_url,
+        # create_research_document, etc.) autonomously based on the system prompt
         if action == LLMActionType.DEEP_RESEARCH:
             self.logger.info(
-                "Deep Research mode detected - routing to DeepResearchAgent"
+                "Deep Research mode - using tool-based research workflow"
             )
-
-            # CRITICAL: Do NOT pass system_prompt for deep research
-            # The DeepResearchAgent has its own clean, focused system prompt
-            # that excludes mood/personality/conversational instructions.
-            # Passing the workflow manager's conversational prompt causes
-            # contamination with mood instructions like "Current mood: neutral 😐"
-            return self._handle_deep_research(
-                prompt=prompt,
-                system_prompt=None,  # Let agent use its own default
-                llm_request=llm_request,
+            # Use the standard workflow but ensure RESEARCH tools are available
+            # The system prompt in system_prompt_mixin.py provides instructions
+            # for how to use the research tools effectively
+            
+            # Don't return early - fall through to standard generation
+            # but log that we're in research mode
+            self.logger.info(
+                "Research tools will be used: search_web, search_news, scrape_website, "
+                "validate_url, validate_content, create_research_document, etc."
             )
 
         llm_request = llm_request or LLMRequest()

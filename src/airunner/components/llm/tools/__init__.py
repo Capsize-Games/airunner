@@ -52,10 +52,13 @@ from airunner.components.llm.tools import (
     code_tools,
     research_tools,
     research_document_tools,  # CRITICAL: Document creation tools for Deep Research
+    research_validation_tools,  # URL, content, and temporal validation for research
     research_rag_tools,  # RAG-based research tools (search, summaries)
     qa_tools,
     # Phase 3: Code generation tools
     code_generation_tools,
+    # Document editor tools for interactive code/document editing
+    document_editor_tools,
 )
 
 # Long-running project management tools
@@ -99,7 +102,10 @@ __all__ = [
     "author_tools",
     "code_tools",
     "research_tools",
+    "research_validation_tools",
     "qa_tools",
+    # Document editor tools
+    "document_editor_tools",
     # Long-running project tools
     "project_tools",
 ]

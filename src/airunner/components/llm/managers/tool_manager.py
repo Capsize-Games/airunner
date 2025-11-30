@@ -386,11 +386,15 @@ class ToolManager(
             # Auto mode: all tools available
             return self.get_all_tools()
 
-    def get_tools_by_categories(self, categories: List) -> List[Callable]:
+    def get_tools_by_categories(
+        self, categories: List, include_deferred: bool = False
+    ) -> List[Callable]:
         """Get tools filtered by categories.
 
         Args:
             categories: List of ToolCategory enum values to include
+            include_deferred: If True, include tools with defer_loading=True.
+                Default is False to reduce context size.
 
         Returns:
             List of tool functions matching the specified categories
@@ -401,18 +405,26 @@ class ToolManager(
             return []
 
         filtered_tools = []
-        category_set = set(categories)
+        seen_names = set()
 
-        for tool_info in ToolRegistry.all().values():
-            if tool_info.category in category_set:
-                # Get the actual tool function
-                tool_func = self._get_tool_by_name(tool_info.name)
-                if tool_func:
-                    filtered_tools.append(tool_func)
+        # Use get_by_category for each category to ensure lazy loading
+        # is triggered for any missing categories
+        for category in categories:
+            for tool_info in ToolRegistry.get_by_category(category):
+                # Skip deferred tools unless explicitly requested
+                if tool_info.defer_loading and not include_deferred:
+                    continue
+                if tool_info.name not in seen_names:
+                    seen_names.add(tool_info.name)
+                    # Get the actual tool function
+                    tool_func = self._get_tool_by_name(tool_info.name)
+                    if tool_func:
+                        filtered_tools.append(tool_func)
 
         self.logger.info(
             f"Filtered to {len(filtered_tools)} tools from "
-            f"categories: {[c.value for c in categories]}"
+            f"categories: {[c.value for c in categories]} "
+            f"(include_deferred={include_deferred})"
         )
         return filtered_tools
 

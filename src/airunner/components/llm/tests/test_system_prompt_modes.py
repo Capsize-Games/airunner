@@ -5,6 +5,8 @@ Tests that the LLM manager correctly switches between math, precision,
 and conversational modes based on tool categories.
 """
 
+from typing import Optional
+
 import pytest
 
 from airunner.components.llm.core.tool_registry import ToolCategory
@@ -19,9 +21,14 @@ from airunner.enums import LLMActionType
 class MockSystemPromptClass(SystemPromptMixin):
     """Mock class to test SystemPromptMixin."""
 
-    def get_system_prompt_for_action(self, action: LLMActionType) -> str:
+    def get_system_prompt_for_action(
+        self, action: LLMActionType, force_tool: Optional[str] = None
+    ) -> str:
         """Mock implementation that returns a conversational prompt."""
-        return f"Conversational prompt for {action.name}"
+        base = f"Conversational prompt for {action.name}"
+        if force_tool:
+            base += f" [forced: {force_tool}]"
+        return base
 
 
 class TestSystemPromptModes:
@@ -192,8 +199,67 @@ class TestSystemPromptIntegration:
             tool_categories=[ToolCategory.ANALYSIS.value],
         )
 
-        assert "precise" in prompt.lower()
-        assert "technical" in prompt.lower()
+
+class TestForceToolInstruction:
+    """Test force_tool parameter for slash commands."""
+
+    def test_force_tool_adds_instruction_in_conversational_mode(self):
+        """Test that force_tool adds instruction when in conversational mode."""
+        manager = MockSystemPromptClass()
+
+        # Force search_web tool
+        prompt = manager.get_system_prompt_with_context(
+            action=LLMActionType.CHAT,
+            tool_categories=None,
+            force_tool="search_web",
+        )
+
+        assert "forced: search_web" in prompt
+
+    def test_force_tool_adds_instruction_in_math_mode(self):
+        """Test that force_tool adds instruction even in math mode."""
+        manager = MockSystemPromptClass()
+
+        # Force a tool while in math mode
+        prompt = manager.get_system_prompt_with_context(
+            action=LLMActionType.CHAT,
+            tool_categories=[ToolCategory.MATH.value],
+            force_tool="search_web",
+        )
+
+        # Should still be math prompt but with force_tool instruction appended
+        assert "mathematics" in prompt.lower()
+        # search_web uses "RESEARCH MODE ACTIVATED" instead of "FORCED TOOL MODE"
+        assert "RESEARCH MODE ACTIVATED" in prompt
+        assert "search_web" in prompt
+
+    def test_force_tool_with_precision_mode(self):
+        """Test that force_tool adds instruction in precision mode."""
+        manager = MockSystemPromptClass()
+
+        prompt = manager.get_system_prompt_with_context(
+            action=LLMActionType.CHAT,
+            tool_categories=[ToolCategory.ANALYSIS.value],
+            force_tool="generate_image",
+        )
+
+        # Should be precision prompt with force_tool instruction
+        assert "precise technical assistant" in prompt
+        assert "FORCED TOOL MODE" in prompt
+        assert "generate_image" in prompt
+
+    def test_no_force_tool_no_instruction(self):
+        """Test that no force_tool means no forced tool instruction."""
+        manager = MockSystemPromptClass()
+
+        prompt = manager.get_system_prompt_with_context(
+            action=LLMActionType.CHAT,
+            tool_categories=None,
+            force_tool=None,
+        )
+
+        assert "FORCED TOOL MODE" not in prompt
+        assert "MUST use" not in prompt
 
 
 if __name__ == "__main__":
