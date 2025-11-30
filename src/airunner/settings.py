@@ -27,6 +27,12 @@ if os.environ.get("DEV_ENV", "1") == "1":
 
 python_venv_dir = os.path.dirname(sys.executable)
 
+# Application version
+AIRUNNER_VERSION = "5.0.0"
+
+# Donation wallet address
+AIRUNNER_DONATION_WALLET = "0x02030569e866e22C9991f55Db0445eeAd2d646c8"
+
 DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 
 NLTK_DOWNLOAD_DIR = os.path.join(
@@ -39,7 +45,7 @@ AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
     None,
 )
 AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
-    "AIRUNNER_DEFAULT_STT_HF_PATH", "openai/whisper-tiny"
+    "AIRUNNER_DEFAULT_STT_HF_PATH", "Systran/faster-distil-whisper-large-v3"
 )
 AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT = os.environ.get(
     "AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT",
@@ -150,9 +156,25 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
         "Ensure replies promote fairness and positivity."
     ),
 )
-AIRUNNER_BASE_PATH = os.environ.get(
-    "AIRUNNER_BASE_PATH", os.path.expanduser("~/.local/share/airunner")
-)
+
+# Detect Flatpak environment and use sandboxed data directory
+def _get_default_base_path() -> str:
+    """
+    Get the default base path for AI Runner data.
+    
+    In Flatpak, uses the sandboxed XDG_DATA_HOME directory.
+    Otherwise, uses ~/.local/share/airunner.
+    """
+    if os.environ.get("AIRUNNER_FLATPAK") == "1":
+        # Flatpak sandboxed data directory: ~/.var/app/com.capsizegames.AIRunner/data
+        xdg_data_home = os.environ.get(
+            "XDG_DATA_HOME",
+            os.path.expanduser("~/.local/share")
+        )
+        return os.path.join(xdg_data_home, "airunner")
+    return os.path.expanduser("~/.local/share/airunner")
+
+AIRUNNER_BASE_PATH = os.environ.get("AIRUNNER_BASE_PATH", _get_default_base_path())
 AIRUNNER_USER_DATA_PATH = AIRUNNER_BASE_PATH
 MODELS_DIR = os.path.join(AIRUNNER_BASE_PATH, "models")
 AIRUNNER_BUG_REPORT_LINK = os.environ.get(

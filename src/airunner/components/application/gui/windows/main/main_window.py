@@ -645,6 +645,64 @@ class MainWindow(
                 f"Click to {'enable' if not nsfw_filter else 'disable'} NSFW filter"
             )
 
+    def _add_legal_menu_items(self):
+        """Add Terms of Service, Privacy Policy, and Age Agreement menu items to Help menu."""
+        from PySide6.QtGui import QAction
+        
+        # Add separator before legal items
+        self.ui.menuAbout.addSeparator()
+        
+        # Age Agreement action
+        self.actionAgeAgreement = QAction("Age Restriction Policy", self)
+        self.actionAgeAgreement.triggered.connect(self._show_age_agreement)
+        self.ui.menuAbout.addAction(self.actionAgeAgreement)
+        
+        # Terms of Service action
+        self.actionTermsOfService = QAction("Terms of Service", self)
+        self.actionTermsOfService.triggered.connect(self._show_terms_of_service)
+        self.ui.menuAbout.addAction(self.actionTermsOfService)
+        
+        # Privacy Policy action
+        self.actionPrivacyPolicy = QAction("Privacy Policy", self)
+        self.actionPrivacyPolicy.triggered.connect(self._show_privacy_policy)
+        self.ui.menuAbout.addAction(self.actionPrivacyPolicy)
+    
+    def _show_age_agreement(self):
+        """Show Age Agreement dialog."""
+        from airunner.components.application.gui.dialogs.legal_document_dialog import (
+            LegalDocumentDialog,
+        )
+        dialog = LegalDocumentDialog(
+            self,
+            title="Age Restriction Policy",
+            document_type="age"
+        )
+        dialog.exec()
+    
+    def _show_terms_of_service(self):
+        """Show Terms of Service dialog."""
+        from airunner.components.application.gui.dialogs.legal_document_dialog import (
+            LegalDocumentDialog,
+        )
+        dialog = LegalDocumentDialog(
+            self,
+            title="Terms of Service",
+            document_type="terms"
+        )
+        dialog.exec()
+    
+    def _show_privacy_policy(self):
+        """Show Privacy Policy dialog."""
+        from airunner.components.application.gui.dialogs.legal_document_dialog import (
+            LegalDocumentDialog,
+        )
+        dialog = LegalDocumentDialog(
+            self,
+            title="Privacy Policy",
+            document_type="privacy"
+        )
+        dialog.exec()
+
     @Slot()
     def on_actionAbout_triggered(self):
         AboutWindow()
@@ -949,6 +1007,13 @@ class MainWindow(
         self.logger.debug("Loading UI")
 
         self.ui.setupUi(self)
+
+        # Disable innactive features
+        self.ui.video_button.hide()
+        self.ui.calendar_button.hide()
+        
+        # Add legal document menu items to Help menu
+        self._add_legal_menu_items()
 
         self.icon_manager = IconManager(self.icons, self.ui)
 
@@ -1480,6 +1545,19 @@ class MainWindow(
         self.initialized = True
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
+        
+        # Show donation dialog after window is fully displayed (only on first show)
+        if not hasattr(self, "_donation_dialog_shown"):
+            self._donation_dialog_shown = True
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(500, self._show_donation_dialog)
+    
+    def _show_donation_dialog(self):
+        """Show the donation dialog if appropriate."""
+        from airunner.components.application.gui.dialogs.donation_dialog import (
+            DonationDialog,
+        )
+        DonationDialog.show_if_appropriate(self)
 
     def move_to_second_screen(self):
         screens = QGuiApplication.screens()

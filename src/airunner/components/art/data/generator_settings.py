@@ -52,12 +52,12 @@ class GeneratorSettings(BaseModel):
     clip_skip = Column(Integer, default=0)
     crops_coords_top_left = Column(JSON, default={"x": 0, "y": 0})
     negative_crops_coords_top_left = Column(JSON, default={"x": 0, "y": 0})
-    original_size = Column(JSON, default={"width": 512, "height": 512})
+    original_size = Column(JSON, default={"width": 1024, "height": 1024})
     target_size = Column(JSON, default={"width": 1024, "height": 1024})
     negative_original_size = Column(
-        JSON, default={"width": 512, "height": 512}
+        JSON, default={"width": 1024, "height": 1024}
     )
-    negative_target_size = Column(JSON, default={"width": 512, "height": 512})
+    negative_target_size = Column(JSON, default={"width": 1024, "height": 1024})
 
     lora_scale = Column(Integer, default=100)
     use_refiner = Column(Boolean, default=False)

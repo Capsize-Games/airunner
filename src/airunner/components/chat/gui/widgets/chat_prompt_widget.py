@@ -110,10 +110,6 @@ class ChatPromptWidget(BaseWidget):
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.ui.prompt.keyPressEvent = self.handle_key_press
         
-        # Add margins to prompt text area to prevent overlap with token labels
-        # Top margin for token_count label, bottom margin for last/total labels
-        self.ui.prompt.setViewportMargins(24, 24, 24, 24)
-        
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None

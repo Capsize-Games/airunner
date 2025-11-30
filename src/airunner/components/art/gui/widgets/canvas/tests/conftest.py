@@ -133,7 +133,7 @@ def mock_image():
     """Create a standard test PIL Image."""
     from PIL import Image
 
-    return Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+    return Image.new("RGBA", (1024, 1024), (255, 0, 0, 255))
 
 
 @pytest.fixture(scope="function")

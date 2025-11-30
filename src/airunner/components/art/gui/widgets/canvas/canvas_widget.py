@@ -58,7 +58,6 @@ class CanvasWidget(BaseWidget):
         ("grid", "grid_button"),
         ("corner-up-left", "undo_button"),
         ("corner-up-right", "redo_button"),
-        ("type", "text_button"),
         ("folder", "open_art_document"),
         ("save", "save_art_document"),
         ("link-2", "snap_to_grid_button"),
@@ -286,15 +285,6 @@ class CanvasWidget(BaseWidget):
     def on_brush_color_button_clicked(self) -> None:
         """Handle brush color button click to open color picker."""
         self.color_button_clicked()
-
-    @Slot(bool)
-    def on_text_button_toggled(self, val: bool) -> None:
-        """Handle text tool button toggle.
-
-        Args:
-            val: True if button is checked, False otherwise.
-        """
-        self.api.art.canvas.toggle_tool(CanvasToolName.TEXT, val)
 
     @Slot()
     def on_recenter_button_clicked(self) -> None:
@@ -538,7 +528,6 @@ class CanvasWidget(BaseWidget):
         self.ui.active_grid_area_button.blockSignals(True)
         self.ui.brush_button.blockSignals(True)
         self.ui.eraser_button.blockSignals(True)
-        self.ui.text_button.blockSignals(True)
         self.ui.grid_button.blockSignals(True)
         self.ui.move_button.blockSignals(True)
         self.ui.active_grid_area_button.setChecked(
@@ -551,12 +540,10 @@ class CanvasWidget(BaseWidget):
         self.ui.eraser_button.setChecked(
             tool is CanvasToolName.ERASER and active
         )
-        self.ui.text_button.setChecked(tool is CanvasToolName.TEXT and active)
         self.ui.grid_button.setChecked(self.grid_settings.show_grid)
         self.ui.active_grid_area_button.blockSignals(False)
         self.ui.brush_button.blockSignals(False)
         self.ui.eraser_button.blockSignals(False)
-        self.ui.text_button.blockSignals(False)
         self.ui.grid_button.blockSignals(False)
         self.ui.move_button.blockSignals(False)
 

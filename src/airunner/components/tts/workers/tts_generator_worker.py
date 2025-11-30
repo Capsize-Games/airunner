@@ -81,7 +81,7 @@ class TTSGeneratorWorker(Worker):
             }
         )
 
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, data: dict = None):
         if self.tts:
             self.play_queue = []
             self.play_queue_started = False

@@ -47,7 +47,8 @@ ACTION="${1:-build}"
 case "$ACTION" in
     build)
         echo -e "${GREEN}Building AI Runner Flatpak...${NC}"
-        flatpak-builder --force-clean build-dir com.capsizegames.AIRunner.yml
+        # --disable-download=false allows network access during build for pip installs
+        flatpak-builder --force-clean --disable-download=false build-dir com.capsizegames.AIRunner.yml
         echo -e "${GREEN}Build complete!${NC}"
         echo ""
         echo "To install locally for testing:"
@@ -56,7 +57,7 @@ case "$ACTION" in
     
     install)
         echo -e "${GREEN}Building and installing AI Runner Flatpak locally...${NC}"
-        flatpak-builder --user --install --force-clean build-dir com.capsizegames.AIRunner.yml
+        flatpak-builder --user --install --force-clean --disable-download=false build-dir com.capsizegames.AIRunner.yml
         echo -e "${GREEN}Installation complete!${NC}"
         echo ""
         echo "Run with: flatpak run com.capsizegames.AIRunner"
@@ -64,7 +65,7 @@ case "$ACTION" in
     
     bundle)
         echo -e "${GREEN}Building AI Runner Flatpak bundle for distribution...${NC}"
-        flatpak-builder --repo=repo --force-clean build-dir com.capsizegames.AIRunner.yml
+        flatpak-builder --repo=repo --force-clean --disable-download=false build-dir com.capsizegames.AIRunner.yml
         flatpak build-bundle repo airunner.flatpak com.capsizegames.AIRunner
         echo -e "${GREEN}Bundle created: airunner.flatpak${NC}"
         echo ""

@@ -1,0 +1,144 @@
+# AI Runner - Privacy Policy
+
+**Last Updated: November 30, 2025**
+
+**Effective Date: November 30, 2025**
+
+Capsize LLC ("Capsize," "we," "us," or "our"), a Colorado limited liability company, is committed to protecting your privacy. This Privacy Policy explains how the AI Runner software ("Software") handles information when you use it.
+
+## 1. Overview: Privacy by Design
+
+AI Runner is designed with privacy as a core principle. **The Software runs entirely on your local machine.** We do not operate servers that collect, store, or process your personal data. Your data stays on your device unless you explicitly choose to use third-party services.
+
+## 2. Information We Do NOT Collect
+
+Capsize LLC does **not** collect:
+
+* Personal identification information (name, email, address, phone number)
+* Usage data or analytics
+* Chat conversations or prompts you enter
+* Images, documents, or files you process
+* Voice recordings or biometric data
+* Location data
+* Device identifiers or fingerprints
+* Browsing history or search queries
+
+## 3. Data Processed Locally on Your Device
+
+The Software processes the following types of data **locally on your device only**:
+
+### 3.1 Chat and Text Data
+* Conversations with AI assistants are processed and stored locally
+* Prompts, responses, and conversation history remain on your device
+* RAG (Retrieval-Augmented Generation) document processing occurs locally
+
+### 3.2 Image Data
+* Images you generate or process are stored locally
+* Image prompts and settings are stored locally
+* No images are transmitted to external servers by default
+
+### 3.3 Voice and Audio Data
+* Voice recordings for speech-to-text are processed locally
+* Text-to-speech audio is generated locally
+* Voice samples for voice cloning (if used) remain on your device
+
+### 3.4 Biometric Data
+* Voice characteristics used for speech processing
+* This data is never transmitted externally and is processed solely for Software functionality
+
+### 3.5 Application Settings
+* User preferences and configurations
+* Window positions and UI customizations
+* Model selections and parameters
+
+## 4. Third-Party Services and Models
+
+### 4.1 AI Models
+When you download AI models, you connect directly to third-party repositories (such as Hugging Face). These services have their own privacy policies:
+
+* **Hugging Face:** https://huggingface.co/privacy
+* **Other model providers:** Please review their respective privacy policies
+
+We recommend reviewing the privacy policies of any model provider you use.
+
+### 4.2 Optional External Services
+If you choose to use optional features that connect to external services (such as OpenRouter API), your data will be subject to those services' privacy policies. The Software will clearly indicate when data may be transmitted externally.
+
+## 5. Data Storage and Security
+
+### 5.1 Local Storage
+All data is stored in your local application directory (typically `~/.local/share/airunner/` on Linux). This includes:
+
+* SQLite databases for settings and metadata
+* Generated images and media files
+* Downloaded AI models
+* Conversation logs and history
+
+### 5.2 Your Responsibility
+Since all data is stored locally, you are responsible for:
+
+* Securing your device and the Software's data directory
+* Creating backups of important data
+* Deleting data you no longer wish to retain
+
+### 5.3 Data Deletion
+You can delete all Software data by:
+
+* Using the application's built-in data management features
+* Manually deleting the application data directory
+* Uninstalling the Software
+
+## 6. Colorado Privacy Act (CPA) Compliance
+
+As a Colorado company, we are committed to compliance with the Colorado Privacy Act. Under the CPA, you have certain rights regarding your personal data:
+
+### 6.1 Your Rights
+* **Right to Access:** You can access all your data directly on your device
+* **Right to Correct:** You can modify your data through the Software's settings
+* **Right to Delete:** You can delete your data at any time
+* **Right to Data Portability:** Your data is stored in standard formats on your device
+* **Right to Opt-Out:** Since we don't collect data, there's nothing to opt out of
+
+### 6.2 Sensitive Data
+The Software may process data considered "sensitive" under the CPA, including:
+
+* Biometric data (voice characteristics)
+* Data revealing certain personal characteristics through AI profiling features
+
+By using these features, you consent to their local processing. You can disable these features at any time through the Software's settings.
+
+## 7. Children's Privacy
+
+AI Runner is not intended for use by individuals under 18 years of age. We do not knowingly collect or process information from children. If you believe a child has used this Software, please ensure all locally stored data is deleted.
+
+## 8. International Users
+
+If you are using the Software from outside the United States, please be aware that your data remains on your local device and is not transferred to us. However, if you use third-party services (like model providers), data may be transferred according to their policies.
+
+## 9. Changes to This Privacy Policy
+
+We may update this Privacy Policy from time to time. Changes will be indicated by updating the "Last Updated" date. Your continued use of the Software after any changes constitutes acceptance of the updated Privacy Policy.
+
+## 10. Open Source Transparency
+
+AI Runner is open-source software. You can review our source code at any time to verify our privacy practices:
+
+* **Repository:** https://github.com/Capsize-Games/airunner
+
+## 11. Contact Us
+
+If you have questions about this Privacy Policy or our privacy practices, please contact us:
+
+**Capsize LLC**
+Email: contact@capsizegames.com
+
+## 12. Summary
+
+| What | How It's Handled |
+|------|------------------|
+| Personal Data Collection | None - we don't collect any |
+| Data Storage | Local device only |
+| Data Sharing | None - your data stays on your device |
+| Analytics/Tracking | None |
+| Third-Party Services | Optional - user-initiated only |
+| Data Deletion | Full control - delete anytime |

@@ -27,7 +27,6 @@ from airunner.components.art.gui.widgets.canvas.mixins.view_mixins import (
     GridDrawingMixin,
     ViewportPositioningMixin,
     EventHandlerMixin,
-    TextHandlingMixin,
     LayerItemManagementMixin,
     ActiveGridAreaMixin,
     PanOffsetMixin,
@@ -53,7 +52,6 @@ class CustomGraphicsView(
     GridDrawingMixin,
     ViewportPositioningMixin,
     EventHandlerMixin,
-    TextHandlingMixin,
     MediatorMixin,
     SettingsMixin,
     QGraphicsView,
@@ -369,9 +367,6 @@ class CustomGraphicsView(
 
     def on_tool_changed_signal(self, message):
         self.toggle_drag_mode()
-        # Update text item interaction flags based on tool
-        is_text = self.current_tool is CanvasToolName.TEXT
-        self._set_text_items_interaction(is_text)
         # Ensure active grid area doesn't block item interaction while moving
         try:
             self._update_active_grid_mouse_acceptance()
@@ -392,14 +387,6 @@ class CustomGraphicsView(
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
-
-        # After images/positions update, restore any text items persisted to DB
-        try:
-            self._restore_text_items_from_db()
-        except Exception:
-            self.logger.exception(
-                "Failed to restore text items after updateImagePositions"
-            )
 
     def enterEvent(self, event: QEvent) -> None:
         """

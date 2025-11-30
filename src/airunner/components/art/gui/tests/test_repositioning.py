@@ -420,8 +420,6 @@ def test_showEvent_loads_offset_and_preserves_it():
     if not hasattr(view.scene, "_refresh_layer_display"):
         view.scene._refresh_layer_display = lambda: None
 
-    # Stub _restore_text_items_from_db to avoid errors
-    view._restore_text_items_from_db = lambda: None
 
     # Simulate saved offset in settings
     saved_x, saved_y = 123.0, 456.0

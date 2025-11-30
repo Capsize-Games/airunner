@@ -10,6 +10,7 @@ import os
 import subprocess
 import traceback
 import shutil
+from pathlib import Path
 
 from airunner.components.settings.data.airunner_settings import (
     AIRunnerSettings,
@@ -273,11 +274,111 @@ def _configure_test_mode():
         session.commit()
 
 
+def _check_first_run_agreement():
+    """Check if user has accepted all legal agreements, show dialogs if not.
+    
+    Shows Age Agreement, Privacy Policy, and Terms of Service dialogs
+    in sequence on first run. All must be accepted to proceed.
+    
+    Returns:
+        tuple: (QApplication, bool) - app instance and whether to proceed
+    """
+    from PySide6.QtWidgets import QApplication
+    from airunner.utils.settings.get_qsettings import get_qsettings
+    from airunner.components.application.gui.dialogs.first_run_agreement_dialog import (
+        check_all_agreements,
+    )
+    
+    # Create QApplication if not exists (needed for dialog)
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    
+    qsettings = get_qsettings()
+    
+    # Check and show all agreement dialogs if needed
+    if not check_all_agreements(qsettings):
+        # User declined one of the agreements - exit
+        return app, False
+    
+    return app, True
+
+
+def _show_early_splash(existing_app=None):
+    """Show splash screen as early as possible, before heavy initialization."""
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtGui import QGuiApplication
+    from airunner.components.splash_screen.splash_screen import SplashScreen
+    
+    # Use existing app or create new
+    if existing_app is not None:
+        app = existing_app
+    else:
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication([])
+    
+    # Get the target screen
+    screens = QGuiApplication.screens()
+    target_screen = QGuiApplication.primaryScreen()
+    
+    # Try to use saved screen preference
+    try:
+        from airunner.utils.settings.get_qsettings import get_qsettings
+        qsettings = get_qsettings()
+        qsettings.beginGroup("window_settings")
+        saved_screen_name = qsettings.value("screen_name", None, type=str)
+        qsettings.endGroup()
+        
+        if saved_screen_name:
+            for s in screens:
+                if s.name() == saved_screen_name:
+                    target_screen = s
+                    break
+    except Exception:
+        pass
+    
+    # Final fallback
+    if not target_screen and screens:
+        target_screen = screens[0]
+    
+    # Create and show splash
+    base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
+    image_path = base_dir / "gui" / "images" / "splashscreen.png"
+    splash = SplashScreen(target_screen, image_path)
+    splash.show_message("Starting AI Runner...")
+    splash.show()
+    app.processEvents()
+    
+    return app, splash
+
+
+def _update_splash(splash, message):
+    """Update splash screen message and process events."""
+    from PySide6.QtWidgets import QApplication
+    if splash:
+        splash.show_message(message)
+        app = QApplication.instance()
+        if app:
+            app.processEvents()
+
+
 def main():
+    # Check first-run agreement BEFORE splash screen
+    app, proceed = _check_first_run_agreement()
+    if not proceed:
+        # User declined terms - exit
+        sys.exit(0)
+    
+    # Show splash screen IMMEDIATELY before any heavy operations
+    app, splash = _show_early_splash(existing_app=app)
+    
     # Build UI files first
+    _update_splash(splash, "Building UI files...")
     build_ui_if_needed()
 
     # --- Ensure database and tables are created before any DB access ---
+    _update_splash(splash, "Setting up database...")
     setup_database()
 
     # --- Configure test mode if running tests ---
@@ -285,6 +386,7 @@ def main():
         _configure_test_mode()
 
     # Register component settings after UI build but before main app starts
+    _update_splash(splash, "Registering component settings...")
     try:
         register_component_settings()
     except Exception as e:
@@ -292,6 +394,7 @@ def main():
         traceback.print_exc()
 
     # --- SSL certificate auto-generation ---
+    _update_splash(splash, "Generating SSL certificates...")
     path_settings = PathSettings.objects.first()
     if not path_settings:
         base_path = AIRUNNER_BASE_PATH
@@ -301,7 +404,15 @@ def main():
     os.environ["AIRUNNER_SSL_CERT"] = cert_file
     os.environ["AIRUNNER_SSL_KEY"] = key_file
 
-    # Only run the main app, no watcher logic
+    # Store splash in environment for main.py to use
+    _update_splash(splash, "Loading AI Runner...")
+    
+    # Pass splash to the main app via environment variable workaround
+    # The App class will take over the splash
+    import airunner.main as main_module
+    main_module._launcher_splash = splash
+    main_module._launcher_app = app
+    
+    # Run the main app (it will use our existing splash and app)
     from airunner.main import main as real_main
-
     sys.exit(real_main())

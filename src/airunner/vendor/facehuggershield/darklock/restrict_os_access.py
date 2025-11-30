@@ -536,6 +536,12 @@ class RestrictOSAccess(metaclass=Singleton):
             try:
                 # Pass dir_fd explicitly as it's a keyword-only argument
                 return self.original_mkdir(path, mode, dir_fd=dir_fd)
+            except FileExistsError as e:
+                # FileExistsError is expected when Path.mkdir(exist_ok=True) is used
+                logger.debug(
+                    f"Original os.mkdir for '{path}': Directory already exists (expected with exist_ok=True)"
+                )
+                raise  # Re-raise for Path.mkdir to handle
             except Exception as e:
                 logger.error(
                     f"Original os.mkdir failed for '{path}': {type(e).__name__} - {e}"

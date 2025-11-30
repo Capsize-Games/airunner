@@ -45,8 +45,8 @@ class TestCanvasAlignmentIssues:
         CURRENT BUG: Images don't align to center like active grid area does.
         EXPECTED: Image display position should match active grid display position.
         """
-        working_width = 512
-        working_height = 512
+        working_width = 1024
+        working_height = 1024
         viewport_width = 800
         viewport_height = 600
 

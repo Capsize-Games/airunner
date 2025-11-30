@@ -19,9 +19,6 @@ from airunner.components.art.gui.widgets.canvas.mixins.viewport_positioning_mixi
 from airunner.components.art.gui.widgets.canvas.mixins.event_handler_mixin import (
     EventHandlerMixin,
 )
-from airunner.components.art.gui.widgets.canvas.mixins.text_handling_mixin import (
-    TextHandlingMixin,
-)
 from airunner.components.art.gui.widgets.canvas.mixins.layer_item_management_mixin import (
     LayerItemManagementMixin,
 )
@@ -53,7 +50,6 @@ __all__ = [
     "GridDrawingMixin",
     "ViewportPositioningMixin",
     "EventHandlerMixin",
-    "TextHandlingMixin",
     "LayerItemManagementMixin",
     "ActiveGridAreaMixin",
     "PanOffsetMixin",

@@ -85,7 +85,7 @@ class TrainingConfig:
     channels_last: bool = False  # convert UNet to channels_last
 
     # Data
-    resolution: int = 512
+    resolution: int = 1024
     center_crop: bool = False
     random_flip: bool = False
     image_column: str = "image"

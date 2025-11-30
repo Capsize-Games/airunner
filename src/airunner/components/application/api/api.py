@@ -43,7 +43,7 @@ class API(App):
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, launcher_splash=None, launcher_app=None, **kwargs):
         import sys
 
         sys.stderr.write(
@@ -51,6 +51,11 @@ class API(App):
         )
         if hasattr(self, "_initialized") and self._initialized:
             return
+        
+        # Store launcher's splash and app for handoff to App class
+        self._launcher_splash = launcher_splash
+        self._launcher_app = launcher_app
+        
         self.paths = {
             "google-bert/bert-base-multilingual-uncased": os.path.expanduser(
                 os.path.join(
@@ -167,7 +172,13 @@ class API(App):
             SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
             SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
         }
-        super().__init__(*args, **kwargs)
+        # Pass launcher splash/app to parent App class
+        super().__init__(
+            *args,
+            launcher_splash=self._launcher_splash,
+            launcher_app=self._launcher_app,
+            **kwargs
+        )
         if self._initialize_app:
             setup_database()
 

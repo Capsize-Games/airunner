@@ -1,15 +1,11 @@
 WHISPER_FILES = {
-    "openai/whisper-tiny": [
-        "added_tokens.json",
+    # faster-whisper CTranslate2 distil-large-v3 model
+    # High quality, English-only, ~1.5GB disk, ~1.5-2GB VRAM with int8
+    "Systran/faster-distil-whisper-large-v3": [
         "config.json",
-        "generation_config.json",
-        "merges.txt",
-        "model.safetensors",
-        "normalizer.json",
+        "model.bin",
         "preprocessor_config.json",
-        "special_tokens_map.json",
         "tokenizer.json",
-        "tokenizer_config.json",
-        "vocab.json",
+        "vocabulary.json",
     ]
 }
