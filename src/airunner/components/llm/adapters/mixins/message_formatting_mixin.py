@@ -124,6 +124,8 @@ class MessageFormattingMixin:
         Returns:
             Formatted prompt string
         """
+        from langchain_core.messages import ToolMessage
+        
         chat_messages = []
         for msg in messages:
             if isinstance(msg, SystemMessage):
@@ -133,9 +135,18 @@ class MessageFormattingMixin:
             elif isinstance(msg, HumanMessage):
                 chat_messages.append({"role": "user", "content": msg.content})
             elif isinstance(msg, AIMessage):
-                chat_messages.append(
-                    {"role": "assistant", "content": msg.content}
-                )
+                # Include tool_calls if present (for models that support function calling)
+                msg_dict = {"role": "assistant", "content": msg.content or ""}
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    msg_dict["tool_calls"] = msg.tool_calls
+                chat_messages.append(msg_dict)
+            elif isinstance(msg, ToolMessage):
+                # Tool results - critical for the model to see search/tool outputs
+                chat_messages.append({
+                    "role": "tool",
+                    "content": msg.content,
+                    "tool_call_id": getattr(msg, "tool_call_id", ""),
+                })
 
         # Debug logging to trace what we send into the chat template
         try:
@@ -204,6 +215,8 @@ class MessageFormattingMixin:
         Returns:
             Simple formatted prompt string
         """
+        from langchain_core.messages import ToolMessage
+        
         prompt_parts = []
         for msg in messages:
             if isinstance(msg, SystemMessage):
@@ -212,6 +225,8 @@ class MessageFormattingMixin:
                 prompt_parts.append(f"User: {msg.content}")
             elif isinstance(msg, AIMessage):
                 prompt_parts.append(f"Assistant: {msg.content}")
+            elif isinstance(msg, ToolMessage):
+                prompt_parts.append(f"Tool Result: {msg.content}")
 
         prompt_parts.append("Assistant:")
         return "\n\n".join(prompt_parts)

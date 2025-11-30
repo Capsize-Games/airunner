@@ -32,8 +32,6 @@ def improve_writing(text: str, style: str = "general") -> str:
         text: The text to improve
         style: Target writing style (formal, casual, academic, creative, general)
 
-    Returns:
-        Suggestions for improving the text
     """
     logger.info(f"Analyzing text for style: {style}")
 
@@ -63,8 +61,6 @@ def check_grammar(text: str) -> str:
     Args:
         text: The text to check
 
-    Returns:
-        Grammar and spelling error report
     """
     logger.info(f"Checking grammar for {len(text)} characters")
 
@@ -94,8 +90,6 @@ def find_synonyms(word: str, context: str = "") -> str:
         word: The word or phrase to find synonyms for
         context: Optional context to help select appropriate synonyms
 
-    Returns:
-        List of synonyms and alternative phrasings
     """
     logger.info(f"Finding synonyms for: {word}")
 
@@ -125,8 +119,6 @@ def analyze_writing_style(text: str) -> str:
     Args:
         text: The text to analyze
 
-    Returns:
-        Detailed style analysis report
     """
     logger.info(f"Analyzing writing style for {len(text)} characters")
 

@@ -78,16 +78,18 @@ class ChatModelFactory:
     @staticmethod
     def create_gguf_model(
         model_path: str,
-        n_ctx: int = 4096,
+        n_ctx: int = 32768,  # Qwen3 native context (use YaRN for extended)
         n_gpu_layers: int = -1,
         n_batch: int = 512,
-        max_tokens: int = 4096,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        top_k: int = 20,
+        max_tokens: int = 32768,  # Qwen3 recommended output length
+        temperature: float = 0.6,  # Qwen3 thinking mode recommended
+        top_p: float = 0.95,  # Qwen3 thinking mode recommended
+        top_k: int = 20,  # Qwen3 recommended
         repeat_penalty: float = 1.15,
         flash_attn: bool = True,
         enable_thinking: bool = True,
+        use_yarn: bool = False,  # Disabled by default - requires more VRAM
+        yarn_orig_ctx: int = 32768,  # Qwen3 native context
     ) -> ChatGGUF:
         """
         Create a ChatModel for GGUF models via llama-cpp-python.
@@ -96,19 +98,22 @@ class ChatModelFactory:
         - Q4_K_M: ~4.1GB for 7B model (vs ~5.5GB for BnB 4-bit)
         - Faster inference via optimized llama.cpp backend
         - Native GPU acceleration via cuBLAS
+        - YaRN support for extended context (opt-in, requires VRAM)
 
         Args:
             model_path: Path to GGUF model file or directory containing GGUF
-            n_ctx: Context window size (default: 4096)
+            n_ctx: Context window size (default: 32768 native Qwen3)
             n_gpu_layers: Layers to offload to GPU (-1 for all)
             n_batch: Batch size for prompt processing
-            max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter
+            max_tokens: Maximum tokens to generate (32768 for Qwen3)
+            temperature: Sampling temperature (0.6 for Qwen3 thinking mode)
+            top_p: Nucleus sampling parameter (0.95 for Qwen3 thinking mode)
+            top_k: Top-k sampling parameter (20 for Qwen3)
             repeat_penalty: Penalty for repeating tokens
             flash_attn: Use flash attention to reduce VRAM usage
             enable_thinking: Enable thinking mode (Qwen3-style)
+            use_yarn: Enable YaRN for extended context (requires more VRAM)
+            yarn_orig_ctx: Original context length for YaRN scaling
 
         Returns:
             ChatGGUF instance
@@ -131,6 +136,8 @@ class ChatModelFactory:
             repeat_penalty=repeat_penalty,
             flash_attn=flash_attn,
             enable_thinking=enable_thinking,
+            use_yarn=use_yarn,
+            yarn_orig_ctx=yarn_orig_ctx,
         )
 
     @staticmethod

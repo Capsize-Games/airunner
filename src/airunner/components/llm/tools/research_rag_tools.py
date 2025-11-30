@@ -45,8 +45,6 @@ def search_document_chunks(
         document_path: Path to document
         max_results: Max chunks to return
 
-    Returns:
-        Formatted string with relevant document chunks
     """
     try:
         if not os.path.exists(document_path):
@@ -112,8 +110,6 @@ def _split_into_chunks(content: str, chunk_size: int = 1000) -> List[str]:
         content: Document content
         chunk_size: Target chunk size in characters
 
-    Returns:
-        List of content chunks
     """
     chunks = []
 
@@ -197,8 +193,6 @@ def update_research_summary(
         summary_content: New summary to write
         api: API instance
 
-    Returns:
-        Success message with path
     """
     try:
         # Derive summary path from notes path
@@ -237,8 +231,6 @@ def get_research_summary(
     Args:
         notes_path: Path to notes file (used to derive summary path)
 
-    Returns:
-        Summary content or empty string if not found
     """
     try:
         # Derive summary path from notes path

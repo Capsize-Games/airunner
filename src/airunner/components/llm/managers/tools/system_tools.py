@@ -134,11 +134,6 @@ class SystemTools(BaseTool):
 
             Returns:
                 Confirmation or error message
-
-            Examples:
-                emit_signal("TOGGLE_TTS_SIGNAL")
-                emit_signal("SD_GENERATE_IMAGE_SIGNAL", '{"prompt": "sunset beach"}')
-                emit_signal("CANVAS_CLEAR")
             """
             try:
                 # Parse data JSON

@@ -60,8 +60,6 @@ def record_knowledge(
         section: Which section to add it to
         api: API instance (injected)
 
-    Returns:
-        Confirmation message
     """
     try:
         from airunner.components.knowledge.knowledge_base import get_knowledge_base
@@ -121,8 +119,6 @@ def recall_knowledge(
         max_results: Max results to return
         api: API instance (injected)
 
-    Returns:
-        Matching facts or "no results" message
     """
     try:
         from airunner.components.knowledge.knowledge_base import get_knowledge_base
@@ -194,8 +190,6 @@ def read_knowledge_file(
         date: Specific date (YYYY-MM-DD) or None for today
         read_all: If True, combine all recent knowledge files
 
-    Returns:
-        Knowledge file content
     """
     try:
         from airunner.components.knowledge.knowledge_base import get_knowledge_base
@@ -262,8 +256,6 @@ def update_knowledge(
         is_regex: Use regex matching
         api: API instance
 
-    Returns:
-        Result message
     """
     try:
         from airunner.components.knowledge.knowledge_base import get_knowledge_base
@@ -321,8 +313,6 @@ def delete_knowledge(
         is_regex: Use regex matching
         api: API instance
 
-    Returns:
-        Result message
     """
     try:
         from airunner.components.knowledge.knowledge_base import get_knowledge_base
@@ -360,8 +350,6 @@ def delete_knowledge(
 def list_knowledge_files() -> str:
     """List all knowledge files.
 
-    Returns:
-        List of knowledge file dates
     """
     try:
         from airunner.components.knowledge.knowledge_base import get_knowledge_base

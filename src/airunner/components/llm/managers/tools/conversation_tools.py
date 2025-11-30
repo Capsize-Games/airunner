@@ -96,7 +96,7 @@ class ConversationTools(BaseTool):
             Returns:
                 Conversation details including messages, participants, and metadata
 
-            Example:
+            Usage:
                 get_conversation(42)  # Get full conversation #42
                 get_conversation(42, include_messages=False)  # Just metadata
             """
@@ -297,7 +297,7 @@ class ConversationTools(BaseTool):
             Returns:
                 Confirmation message with conversation details
 
-            Example:
+            Usage:
                 switch_conversation(42)  # Switch to conversation #42
             """
             try:
@@ -356,7 +356,7 @@ class ConversationTools(BaseTool):
             Returns:
                 Confirmation with new conversation ID
 
-            Example:
+            Usage:
                 create_new_conversation("New topic: Machine Learning")
             """
             try:
@@ -410,7 +410,7 @@ class ConversationTools(BaseTool):
             Returns:
                 List of matching conversations
 
-            Example:
+            Usage:
                 search_conversations("Python decorators")
                 search_conversations("health advice", search_messages=False)
             """
@@ -499,7 +499,7 @@ class ConversationTools(BaseTool):
             Returns:
                 Confirmation or warning message
 
-            Example:
+            Usage:
                 delete_conversation(42, confirm=True)
             """
             try:

@@ -30,17 +30,25 @@ if TYPE_CHECKING:
 class NodeFunctionsMixin:
     """Implements LangGraph node functions for the workflow."""
 
+    # Class-level set to track workflow tools that need special handling
+    WORKFLOW_TOOLS = {"start_workflow", "transition_phase", "add_todo_item", 
+                     "start_todo_item", "complete_todo_item", "get_workflow_status"}
+
     def _force_response_node(self, state: "WorkflowState") -> Dict[str, Any]:
         """Node that generates forced response when redundancy detected.
 
         This is a proper LangGraph node (not just a router) so state updates
         are properly persisted to the checkpoint/database.
 
+        For workflow tool duplicates, we add a HumanMessage with instructions
+        and set a flag to route back to the model. For other tools, we generate
+        a final response.
+
         Args:
             state: Workflow state with messages
 
         Returns:
-            Dict with new forced response message to be added to state
+            Dict with new message(s) and optional routing flag
         """
         # Find the AIMessage with tool_calls (should be second-to-last, before ToolMessage)
         ai_message_with_tools = None
@@ -66,21 +74,40 @@ class NodeFunctionsMixin:
         # Extract generation_kwargs from state for streaming configuration
         generation_kwargs = state.get("generation_kwargs", {})
 
-        self.logger.info(
-            f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
-        )
+        # WORKFLOW TOOLS: When a duplicate workflow tool is detected, 
+        # add instructions as a HumanMessage and route back to model
+        # so it can actually call the next tool.
+        if tool_name in self.WORKFLOW_TOOLS:
+            self.logger.info(
+                f"Force response node: Duplicate workflow tool '{tool_name}' - "
+                f"adding continuation instructions and routing back to model"
+            )
+            continuation_msg = self._create_workflow_continuation_message(
+                all_tool_content, tool_name, user_question
+            )
+            self.logger.info(
+                f"✓ Force response node: Added continuation message, routing to model"
+            )
+            # Set flag for conditional routing back to model
+            return {
+                "messages": [continuation_msg],
+                "workflow_continuation": True,
+            }
+        else:
+            self.logger.info(
+                f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
+            )
+            # Generate response based on tool results - this returns the full AIMessage
+            forced_message = self._generate_forced_response_message(
+                all_tool_content, tool_name, user_question, generation_kwargs
+            )
 
-        # Generate response based on tool results - this returns the full AIMessage
-        forced_message = self._generate_forced_response_message(
-            all_tool_content, tool_name, user_question, generation_kwargs
-        )
+            self.logger.info(
+                f"✓ Force response node: Generated {len(forced_message.content) if forced_message.content else 0} char response"
+            )
 
-        self.logger.info(
-            f"✓ Force response node: Generated {len(forced_message.content) if forced_message.content else 0} char response"
-        )
-
-        # Return dict with new message for LangGraph to merge via add_messages reducer
-        return {"messages": [forced_message]}
+            # Return dict with new message for LangGraph to merge via add_messages reducer
+            return {"messages": [forced_message], "workflow_continuation": False}
 
     def _has_tool_calls(self, message: BaseMessage) -> bool:
         """Check if message has tool calls.
@@ -169,6 +196,153 @@ class NodeFunctionsMixin:
         
         # Fallback
         fallback = "I found some information but encountered an issue generating a complete response."
+        if self._token_callback:
+            self._token_callback(fallback)
+        return AIMessage(content=fallback, tool_calls=[])
+
+    def _create_workflow_continuation_message(
+        self,
+        tool_content: str,
+        tool_name: str,
+        user_question: str,
+    ) -> HumanMessage:
+        """Create a HumanMessage with workflow continuation instructions.
+        
+        When the model calls the same workflow tool twice (e.g., start_workflow),
+        this creates a HumanMessage with explicit instructions to call the NEXT
+        tool in the sequence. The model will then be re-invoked with tools bound.
+        
+        Args:
+            tool_content: The tool result content (contains workflow instructions)
+            tool_name: Name of the workflow tool
+            user_question: Original user question
+            
+        Returns:
+            HumanMessage with workflow continuation instructions
+        """
+        self.logger.info(
+            f"Creating workflow continuation message for duplicate '{tool_name}' call"
+        )
+        
+        # Parse the tool result to extract the next action
+        next_action = ""
+        if "YOUR NEXT TOOL CALL:" in tool_content:
+            lines = tool_content.split("\n")
+            for line in lines:
+                if "YOUR NEXT TOOL CALL:" in line:
+                    next_action = line.split("YOUR NEXT TOOL CALL:")[-1].strip()
+                    break
+        elif "IMMEDIATE NEXT ACTION" in tool_content:
+            lines = tool_content.split("\n")
+            for i, line in enumerate(lines):
+                if "Call this tool NOW:" in line and i + 1 < len(lines):
+                    next_action = lines[i + 1].strip()
+                    break
+        
+        # Build a strong prompt that forces the model to call the NEXT tool
+        prompt_text = f"""[SYSTEM CORRECTION] You called {tool_name} twice. The workflow is ALREADY ACTIVE.
+
+DO NOT output any text response. DO NOT explain what you will do.
+You MUST call a workflow tool NOW.
+
+{f"REQUIRED: Call {next_action}" if next_action else "Call transition_phase('planning', 'Simple task, moving to planning')"}
+
+Your task: {user_question}
+
+CALL THE TOOL NOW. NO TEXT RESPONSE."""
+
+        return HumanMessage(content=prompt_text)
+
+    def _generate_workflow_continuation_response(
+        self,
+        tool_content: str,
+        tool_name: str,
+        user_question: str,
+        generation_kwargs: Optional[Dict] = None,
+    ) -> AIMessage:
+        """Generate a response that continues the workflow after duplicate detection.
+        
+        When the model calls the same workflow tool twice (e.g., start_workflow),
+        this generates a response that explicitly tells the model to follow
+        the workflow instructions from the tool result.
+        
+        Args:
+            tool_content: The tool result content (contains workflow instructions)
+            tool_name: Name of the workflow tool
+            user_question: Original user question
+            generation_kwargs: Optional generation parameters
+            
+        Returns:
+            AIMessage with workflow continuation instructions
+        """
+        self.logger.info(
+            f"Generating workflow continuation for duplicate '{tool_name}' call"
+        )
+        
+        # Parse the tool result to extract the next action
+        # The workflow tools output instructions like "YOUR NEXT TOOL CALL: transition_phase('planning', 'reason')"
+        next_action = ""
+        if "YOUR NEXT TOOL CALL:" in tool_content:
+            lines = tool_content.split("\n")
+            for line in lines:
+                if "YOUR NEXT TOOL CALL:" in line:
+                    next_action = line.split("YOUR NEXT TOOL CALL:")[-1].strip()
+                    break
+        elif "IMMEDIATE NEXT ACTION" in tool_content:
+            # Extract the tool call from the instructions
+            lines = tool_content.split("\n")
+            for i, line in enumerate(lines):
+                if "Call this tool NOW:" in line and i + 1 < len(lines):
+                    next_action = lines[i + 1].strip()
+                    break
+        
+        # Build a strong prompt that forces the model to continue the workflow
+        prompt_text = f"""You already started the workflow. The workflow has given you specific instructions.
+
+WORKFLOW STATUS:
+{tool_content[:1500]}
+
+CRITICAL: You called {tool_name} twice. The workflow is already active!
+
+{"The next step is: " + next_action if next_action else "Follow the instructions in the workflow status above."}
+
+DO NOT call {tool_name} again. Instead, call the NEXT tool in the sequence.
+
+For a coding workflow, the typical sequence is:
+1. start_workflow (DONE - you already did this)
+2. transition_phase('planning', 'reason') 
+3. add_todo_item('title', 'description')
+4. transition_phase('execution', 'reason')
+5. start_todo_item('todo_id')
+6. create_code_file(path, content) or other code tools
+7. complete_todo_item('todo_id')
+8. transition_phase('complete', 'All done')
+
+User's original request: {user_question}
+
+Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
+
+        try:
+            # Stream response with the continuation prompt
+            simple_prompt = [HumanMessage(content=prompt_text)]
+            response_message = self._stream_model_response(
+                simple_prompt, generation_kwargs
+            )
+            
+            if response_message:
+                return AIMessage(
+                    content=response_message.content or "",
+                    additional_kwargs=getattr(response_message, "additional_kwargs", {}),
+                    tool_calls=getattr(response_message, "tool_calls", []),
+                )
+        except Exception as e:
+            self.logger.error(f"Failed to generate workflow continuation: {e}")
+        
+        # Fallback - tell user the workflow is stuck
+        fallback = (
+            f"The workflow has been started but I'm having trouble continuing. "
+            f"The next step should be to call transition_phase to move to the planning phase."
+        )
         if self._token_callback:
             self._token_callback(fallback)
         return AIMessage(content=fallback, tool_calls=[])
@@ -362,8 +536,12 @@ Based on the search results above, provide a clear, conversational answer to the
         try:
             if hasattr(chat_model, "tools"):
                 chat_model.tools = None
-            if hasattr(chat_model, "tool_calling_mode"):
-                chat_model.tool_calling_mode = "react"
+            # Only try to set tool_calling_mode if it's not a read-only property
+            try:
+                if hasattr(chat_model, "tool_calling_mode"):
+                    chat_model.tool_calling_mode = "react"
+            except AttributeError:
+                pass  # Property is read-only (e.g., ChatGGUF)
             if hasattr(chat_model, "use_json_mode"):
                 chat_model.use_json_mode = False
 
@@ -377,8 +555,12 @@ Based on the search results above, provide a clear, conversational answer to the
         finally:
             if hasattr(chat_model, "tools"):
                 chat_model.tools = tools_backup
-            if hasattr(chat_model, "tool_calling_mode"):
-                chat_model.tool_calling_mode = mode_backup
+            # Only try to restore tool_calling_mode if it's not a read-only property
+            try:
+                if hasattr(chat_model, "tool_calling_mode"):
+                    chat_model.tool_calling_mode = mode_backup
+            except AttributeError:
+                pass  # Property is read-only (e.g., ChatGGUF)
             if hasattr(chat_model, "use_json_mode"):
                 chat_model.use_json_mode = json_mode_backup
 
@@ -432,6 +614,24 @@ Based on the search results above, provide a clear, conversational answer to the
             self._log_tool_call_info(last_message, state["messages"])
             return "tools"
 
+        # Check if the model is responding after a tool error without fixing it
+        # This catches cases where the model hallucinates success instead of following error guidance
+        tool_messages = self._get_tool_messages(state["messages"])
+        if tool_messages:
+            last_tool_msg = tool_messages[-1]
+            tool_content = str(getattr(last_tool_msg, 'content', ''))
+            
+            # Check if last tool result was an ERROR that requires action
+            if tool_content.startswith('ERROR:') and 'Cannot use' in tool_content:
+                # Model responded with text instead of calling a corrective tool
+                # Log the issue - this is a model behavior problem
+                response_content = getattr(last_message, 'content', '')
+                self.logger.warning(
+                    f"[ROUTE DEBUG] Model ignored tool ERROR and responded with text: {response_content[:200]}"
+                )
+                # We can't easily force the model to retry, so we log and let it through
+                # The error instructions in post-tool should help, but some models may still ignore them
+
         return "end"
 
     def _route_after_tools(self, state: "WorkflowState") -> str:
@@ -439,6 +639,7 @@ Based on the search results above, provide a clear, conversational answer to the
 
         Some tools (like update_mood) are status-only and don't need a response.
         Other tools (like scrape_website) return data that needs interpretation.
+        Task-completing tools (like create_code_file) should go to force_response.
 
         CRITICAL: Check for potential duplicate tool calls BEFORE routing back to model.
         If we detect the model will likely call the same tool again, route to force_response.
@@ -469,6 +670,15 @@ Based on the search results above, provide a clear, conversational answer to the
             "create_new_conversation",
             "update_conversation_title",
         }
+        
+        # Task-completing tools - route to force_response, not model
+        # This prevents the model from making more tool calls after the task is done
+        TASK_COMPLETING_TOOLS = {
+            "create_code_file",       # Code was written - present it to user
+            "write_file",             # File was written - present result
+            "execute_python",         # Code was executed - present output
+            "complete_todo_item",     # Workflow item completed
+        }
 
         # Check the most recent tool message to see what tool was called
         last_tool_msg = tool_messages[-1]
@@ -491,42 +701,49 @@ Based on the search results above, provide a clear, conversational answer to the
         for tool_call in last_ai_msg.tool_calls:
             tool_name = tool_call.get("name", "")
             self.logger.info(f"[ROUTE DEBUG] Checking tool: {tool_name}")
-            if tool_name not in NO_RESPONSE_TOOLS:
-                # CRITICAL: For search tools, we want to force response after execution
-                # to ensure the model synthesizes the results rather than potentially 
-                # ignoring them or calling more tools unnecessarily.
-                # 
-                # The force_response node has explicit prompts telling the model to 
-                # use the search results, which produces much better responses than
-                # letting the model go back through _call_model.
-
-                # Tools that should force response after execution
-                FORCE_RESPONSE_AFTER_EXECUTION = {
-                    "rag_search",
-                    "search_web",
-                    "search_news", 
-                    "scrape_website",
-                    "search_knowledge_base_documents",
-                }
-
-                if tool_name in FORCE_RESPONSE_AFTER_EXECUTION:
-                    # Always force response for these tools - don't let model decide
-                    self.logger.info(
-                        f"[ROUTE DEBUG] Tool '{tool_name}' is in FORCE_RESPONSE list - routing to force_response"
-                    )
-                    self.logger.info(
-                        f"[ROUTE DEBUG] Tool result length: {len(last_tool_msg.content) if hasattr(last_tool_msg, 'content') and last_tool_msg.content else 0} chars"
-                    )
-                    return "force_response"
-
-                # Other tools: let model process results normally
+            
+            if tool_name in NO_RESPONSE_TOOLS:
+                continue
+            
+            # Check if tool result indicates success for task-completing tools
+            last_tool_content = str(getattr(last_tool_msg, 'content', ''))
+            tool_succeeded = any(
+                indicator in last_tool_content.lower() 
+                for indicator in ['created', 'successfully', 'written', '✓', 'complete', 'done']
+            )
+            
+            if tool_name in TASK_COMPLETING_TOOLS and tool_succeeded:
+                # Task completed successfully - force response, don't allow more tool calls
                 self.logger.info(
-                    f"[ROUTE DEBUG] Tool '{tool_name}' needs model response - routing back to model"
+                    f"[ROUTE DEBUG] Task-completing tool '{tool_name}' succeeded - "
+                    "forcing response to prevent unnecessary tool calls"
                 )
-                self.logger.info(
-                    f"[ROUTE DEBUG] Tool result: {last_tool_msg.content if hasattr(last_tool_msg, 'content') else 'No content'}"
+                return "force_response"
+            
+            # For other tools, enable agentic multi-tool workflows
+            # The model can decide to call more tools (e.g., search -> scrape -> create_document)
+            # or respond with the results. Infinite loops are prevented by:
+            # 1. _is_duplicate_tool_call() check in _route_after_model
+            # 2. Max iterations guard based on tool call count
+            
+            # Check if we've hit max iterations (prevent runaway loops)
+            max_tool_iterations = 10  # Safety limit
+            tool_call_count = len([
+                m for m in state["messages"] 
+                if hasattr(m, 'tool_calls') and m.tool_calls
+            ])
+            
+            if tool_call_count >= max_tool_iterations:
+                self.logger.warning(
+                    f"[ROUTE DEBUG] Max tool iterations ({max_tool_iterations}) reached - forcing response"
                 )
-                return "model"
+                return "force_response"
+
+            # Route back to model to allow continuous tool calling
+            self.logger.info(
+                f"[ROUTE DEBUG] Tool '{tool_name}' completed - routing back to model for next action"
+            )
+            return "model"
 
         # All tools were status-only
         self.logger.info(
@@ -793,7 +1010,7 @@ Based on the search results above, provide a clear, conversational answer to the
         return {"messages": [response_message]}
 
     def _trim_messages(self, messages: List[BaseMessage]) -> List[BaseMessage]:
-        """Trim message history to max tokens.
+        """Trim message history to fit context window.
 
         Args:
             messages: List of messages to trim
@@ -803,7 +1020,7 @@ Based on the search results above, provide a clear, conversational answer to the
         """
         return trim_messages(
             messages,
-            max_tokens=self._max_tokens,
+            max_tokens=self._max_history_tokens,
             strategy="last",
             token_counter=self._token_counter,
             # Preserve system/phase instructions so later nodes don't lose guardrails
@@ -976,6 +1193,22 @@ Based on the search results above, provide a clear, conversational answer to the
             tool_calling_mode,
         )
 
+        # CRITICAL: When force_tool is set, add strong instruction for sequential execution
+        force_tool = getattr(self, "_force_tool", None)
+        if force_tool:
+            sequential_instruction = (
+                f"\n\n=== IMPORTANT: SEQUENTIAL TOOL EXECUTION REQUIRED ===\n"
+                f"You MUST call the '{force_tool}' tool FIRST and ONLY this tool.\n"
+                f"DO NOT call multiple tools at once.\n"
+                f"Call ONE tool, wait for the result, then call the next tool.\n"
+                f"This is a WORKFLOW - each step depends on the previous step's result.\n"
+                f"=== END INSTRUCTION ===\n"
+            )
+            system_prompt += sequential_instruction
+            self.logger.info(
+                f"[TOOL INSTRUCTIONS] Added sequential execution instruction for force_tool='{force_tool}'"
+            )
+
         return system_prompt
 
     def _add_post_tool_instructions(
@@ -997,18 +1230,180 @@ Based on the search results above, provide a clear, conversational answer to the
         if not has_tool_results:
             return system_prompt
 
+        # Check for ERROR responses from tools - these MUST be handled first
+        tool_messages = [m for m in trimmed_messages if m.__class__.__name__ == "ToolMessage"]
+        error_results = []
+        for tm in tool_messages:
+            content = str(getattr(tm, 'content', ''))
+            # Check if tool returned an error
+            if content.startswith('ERROR:') or content.startswith('Error:'):
+                error_results.append(content)
+        
+        if error_results:
+            # Critical: Tool returned an error - the model MUST NOT claim success
+            error_instruction = (
+                "\n\n=== CRITICAL: TOOL RETURNED AN ERROR - YOU MUST CALL A TOOL ===\n"
+                "The previous tool call FAILED. Read the error message carefully.\n\n"
+                "**ERROR MESSAGE:**\n"
+                f"{error_results[-1][:800]}\n\n"
+                "**YOU MUST DO ONE OF THESE:**\n"
+                "1. Call the tool suggested in the error message (e.g., transition_phase, add_todo_item, start_todo_item)\n"
+                "2. Follow the workflow steps exactly as described in the error\n\n"
+                "**DO NOT:**\n"
+                "- Claim the file was created (IT WAS NOT)\n"
+                "- Skip workflow steps\n"
+                "- Respond with text saying you completed the task\n"
+                "- Give the user any output without first fixing the workflow state\n\n"
+                "**NEXT ACTION:** Call one of these workflow tools:\n"
+                "- transition_phase('planning', 'reason') - to move to next phase\n"
+                "- add_todo_item('title', 'description') - to create a task\n"
+                "- start_todo_item('todo_1') - to begin working on a task\n\n"
+                "Call a tool NOW. Do not respond with text."
+            )
+            system_prompt += error_instruction
+            self.logger.info(
+                f"[POST-TOOL] Tool returned ERROR - injecting error handling instructions"
+            )
+            return system_prompt
+
         tool_calling_mode = getattr(
             self._chat_model, "tool_calling_mode", "react"
         )
 
         # Check if response format is explicitly set
         response_format = getattr(self, "_response_format", None)
+        
+        # Check if we're in research/agentic mode (force_tool was set)
+        force_tool = getattr(self, "_force_tool", None)
+        is_research_mode = force_tool == "search_web"
+        
+        # Count how many tool calls have been made to determine research phase
+        tool_call_count = len([
+            m for m in trimmed_messages 
+            if hasattr(m, 'tool_calls') and m.tool_calls
+        ])
+        
+        # Count scrape ATTEMPTS vs SUCCESSES
+        scrape_attempts = sum(
+            1 for m in trimmed_messages 
+            if hasattr(m, 'tool_calls') and m.tool_calls
+            for tc in m.tool_calls if tc.get('name') == 'scrape_website'
+        )
+        
+        # Check for SUCCESSFUL scrapes by examining ToolMessage name and content
+        successful_scrapes = 0
+        failed_scrapes = 0
+        tool_messages = [m for m in trimmed_messages if m.__class__.__name__ == "ToolMessage"]
+        for tm in tool_messages:
+            # Check if this is a scrape result by looking at the name attribute
+            tool_name = getattr(tm, 'name', None)
+            if tool_name == 'scrape_website':
+                content = str(getattr(tm, 'content', ''))
+                # Consider it successful if content is substantial and no error indicators
+                is_error = (
+                    'error' in content.lower()[:100] or 
+                    'failed' in content.lower()[:100] or
+                    'could not' in content.lower()[:100] or
+                    len(content) < 200
+                )
+                if is_error:
+                    failed_scrapes += 1
+                else:
+                    successful_scrapes += 1
+        
+        # Extract URLs from search results for reference
+        search_urls = []
+        for tm in tool_messages:
+            content = str(getattr(tm, 'content', ''))
+            if 'http' in content and 'search' in content.lower():
+                # Extract URLs from search results
+                import re
+                urls = re.findall(r'https?://[^\s\]"<>]+', content)
+                search_urls.extend(urls[:5])  # Keep top 5
+        
+        has_document = any(
+            'create_research_document' in str(getattr(m, 'tool_calls', []))
+            for m in trimmed_messages
+        )
+        
         self.logger.info(
-            f"[POST-TOOL] response_format={response_format}, tool_calling_mode={tool_calling_mode}"
+            f"[POST-TOOL] response_format={response_format}, tool_calling_mode={tool_calling_mode}, "
+            f"force_tool={force_tool}, is_research_mode={is_research_mode}, "
+            f"tool_calls={tool_call_count}, scrape_attempts={scrape_attempts}, "
+            f"successful_scrapes={successful_scrapes}, failed_scrapes={failed_scrapes}, "
+            f"has_doc={has_document}, search_urls={len(search_urls)}"
         )
 
-        # Build instruction based on response format
-        if response_format == "json":
+        # Build instruction based on mode
+        if is_research_mode:
+            # Research mode: provide explicit workflow instructions based on phase
+            
+            # Build URL suggestions if we have them
+            url_hint = ""
+            if search_urls:
+                url_hint = "\n\n**URLS FROM YOUR SEARCH RESULTS (use these!):**\n"
+                for url in search_urls[:3]:
+                    url_hint += f"- {url}\n"
+            
+            if scrape_attempts == 0 and tool_call_count <= 2:
+                # Phase 1: Just searched, need to scrape
+                instruction = (
+                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 1: SCRAPE SOURCES ===\n"
+                    "You've completed initial searches. Now you MUST scrape the most relevant URLs.\n\n"
+                    "**YOUR NEXT ACTION:**\n"
+                    "Call `scrape_website` on 2-3 URLs from your search results above.\n"
+                    "IMPORTANT: Only use URLs that appeared in your search results!"
+                    f"{url_hint}\n"
+                    "**DO NOT** write a response yet. You need more detailed content first."
+                )
+            elif scrape_attempts > 0 and successful_scrapes == 0 and failed_scrapes > 0:
+                # Phase 1b: Scrapes failed, try different URLs
+                instruction = (
+                    "\n\n=== DEEP RESEARCH WORKFLOW - SCRAPE ERROR RECOVERY ===\n"
+                    "Your previous scrape attempt failed. This is normal - some sites block scraping.\n\n"
+                    "**YOUR NEXT ACTION:**\n"
+                    "Try scraping DIFFERENT URLs from your search results.\n"
+                    "Choose URLs from different domains than the ones that failed."
+                    f"{url_hint}\n"
+                    "**DO NOT** give up. Try 2-3 more URLs before proceeding."
+                )
+            elif successful_scrapes > 0 and not has_document:
+                # Phase 2: Have successful scrapes, need to create document
+                instruction = (
+                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 2: CREATE RESEARCH DOCUMENT ===\n"
+                    f"You've successfully scraped {successful_scrapes} source(s). Now create your document.\n\n"
+                    "**YOUR NEXT ACTION:**\n"
+                    "1. Call `create_research_document` with a title for your research paper\n"
+                    "2. Then call `append_to_document` to add your synthesized findings\n\n"
+                    "**DO NOT** respond to the user yet. Create the document first."
+                )
+            elif has_document and tool_call_count < 8:
+                # Phase 3: Document exists, continue writing/editing
+                instruction = (
+                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 3: WRITE & REVIEW ===\n"
+                    "Your research document exists. Continue building it.\n\n"
+                    "**YOUR NEXT ACTIONS:**\n"
+                    "1. Use `append_to_document` to add more sections (introduction, analysis, conclusion)\n"
+                    "2. Review what you've written for accuracy\n"
+                    "3. If you find issues, use `append_to_document` to add corrections\n\n"
+                    "**WHEN COMPLETE:** Once your research paper has:\n"
+                    "- Introduction\n"
+                    "- Main findings with citations\n"
+                    "- Conclusion\n\n"
+                    "Then provide a summary response to the user with the document path."
+                )
+            else:
+                # Phase 4: Research complete or max iterations, summarize
+                instruction = (
+                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 4: COMPLETE ===\n"
+                    "Your research is complete. Provide a summary to the user.\n\n"
+                    "**YOUR RESPONSE SHOULD INCLUDE:**\n"
+                    "1. Key findings from your research\n"
+                    "2. The path to the research document you created (if any)\n"
+                    "3. A brief summary of your sources\n\n"
+                    "**DO NOT** call more tools. Respond with your findings."
+                )
+        elif response_format == "json":
             # Force JSON response even after tools
             instruction = (
                 "\n\n=== CRITICAL RESPONSE FORMAT REQUIREMENT ===\n"
@@ -1027,15 +1422,62 @@ Based on the search results above, provide a clear, conversational answer to the
                 f"Respond in {response_format} format."
             )
         else:
-            # Default behavior - conversational (for both react and json mode)
-            instruction = (
-                "\n\n=== CRITICAL: USE TOOL RESULTS ===\n"
-                "Tool results are available in the conversation above.\n"
-                "IMPORTANT: You MUST use these tool results to answer the user's question.\n"
-                "Do NOT ignore the tool results. Do NOT give a generic greeting.\n"
-                "Synthesize the information from the tool results into a helpful, conversational response.\n"
-                "If the tool returned search results, summarize the key information for the user."
-            )
+            # Check if the last tool was a "task-completing" tool
+            # These tools produce output that should be presented to the user,
+            # NOT followed by more tool calls
+            TASK_COMPLETING_TOOLS = {
+                "create_code_file",  # Code was written - present it to user
+                "write_file",        # File was written - present result
+                "execute_python",    # Code was executed - present output
+                "complete_todo_item",  # Workflow item completed
+            }
+            
+            # Get last AI message to check what tool was called
+            ai_messages = [m for m in trimmed_messages if hasattr(m, 'tool_calls') and m.tool_calls]
+            last_tool_name = None
+            if ai_messages:
+                last_ai = ai_messages[-1]
+                if last_ai.tool_calls:
+                    last_tool_name = last_ai.tool_calls[-1].get("name")
+            
+            # Check if the tool result indicates success
+            tool_succeeded = False
+            if tool_messages:
+                last_tool_content = str(getattr(tool_messages[-1], 'content', ''))
+                # Success indicators
+                if any(indicator in last_tool_content.lower() for indicator in 
+                       ['created', 'successfully', 'written', '✓', 'complete', 'done']):
+                    tool_succeeded = True
+            
+            if last_tool_name in TASK_COMPLETING_TOOLS and tool_succeeded:
+                # Task-completing tool succeeded - tell model to respond, not call more tools
+                instruction = (
+                    "\n\n=== TASK COMPLETED - RESPOND TO USER ===\n"
+                    "The requested task has been completed successfully!\n\n"
+                    "**YOUR NEXT ACTION:** Respond to the user with a summary.\n"
+                    "- Tell them what was accomplished\n"
+                    "- Include the file path or result from the tool output\n"
+                    "- Keep it brief and friendly\n\n"
+                    "**DO NOT:**\n"
+                    "- Call more tools (the task is DONE)\n"
+                    "- Start a new task without being asked\n"
+                    "- Give a generic greeting\n\n"
+                    "Example response: 'Done! I created hello_world.py with your function.'"
+                )
+                self.logger.info(
+                    f"[POST-TOOL] Task-completing tool '{last_tool_name}' succeeded - "
+                    "instructing model to respond (not call more tools)"
+                )
+            else:
+                # Default behavior - conversational (for both react and json mode)
+                instruction = (
+                    "\n\n=== CRITICAL: USE TOOL RESULTS ===\n"
+                    "Tool results are available in the conversation above.\n"
+                    "IMPORTANT: You MUST use these tool results to answer the user's question.\n"
+                    "Do NOT ignore the tool results. Do NOT give a generic greeting.\n"
+                    "Synthesize the information from the tool results into a helpful, conversational response.\n"
+                    "If the tool returned search results, summarize the key information for the user."
+                )
 
         system_prompt += instruction
         self.logger.info(

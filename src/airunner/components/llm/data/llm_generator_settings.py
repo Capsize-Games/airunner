@@ -25,9 +25,9 @@ class LLMGeneratorSettings(BaseModel):
     use_api = Column(Boolean, default=False)
     api_key = Column(String, nullable=True)
     api_model = Column(String, nullable=True)
-    top_p = Column(Integer, default=900)
+    top_p = Column(Integer, default=950)  # Qwen3 thinking mode: 0.95
     min_length = Column(Integer, default=1)
-    max_new_tokens = Column(Integer, default=1000)
+    max_new_tokens = Column(Integer, default=32768)  # Qwen3 recommended output length
     repetition_penalty = Column(Integer, default=100)
     do_sample = Column(
         Boolean, default=True

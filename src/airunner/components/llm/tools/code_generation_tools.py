@@ -35,6 +35,27 @@ _quality_manager: Optional[CodeQualityManager] = None
 _test_runner: Optional[TestRunner] = None
 
 
+def _get_default_code_directory() -> str:
+    """Get the default code directory from PathSettings database or fallback."""
+    try:
+        from airunner.components.settings.data.path_settings import PathSettings
+        path_settings = PathSettings.objects.first()
+        if path_settings and path_settings.base_path:
+            return str(Path(path_settings.base_path) / "code")
+    except Exception:
+        pass
+    
+    # Fallback to settings constant
+    try:
+        from airunner.settings import AIRUNNER_BASE_PATH
+        return str(Path(AIRUNNER_BASE_PATH) / "code")
+    except ImportError:
+        pass
+    
+    # Ultimate fallback
+    return str(Path.home() / ".local" / "share" / "airunner" / "code")
+
+
 def _get_workspace_manager(
     workspace_path: Optional[str] = None,
 ) -> WorkspaceManager:
@@ -43,8 +64,8 @@ def _get_workspace_manager(
     if _workspace_manager is None or (
         workspace_path and _workspace_manager.base_path != workspace_path
     ):
-        # Default to ~/airunner_workspace if not specified
-        path = workspace_path or str(Path.home() / "airunner_workspace")
+        # Default to ~/.local/share/airunner/code/ if not specified
+        path = workspace_path or _get_default_code_directory()
         _workspace_manager = WorkspaceManager(path)
         logger.info(f"Initialized workspace manager at: {path}")
     return _workspace_manager
@@ -87,9 +108,41 @@ def _get_test_runner(workspace_path: Optional[str] = None) -> TestRunner:
     """Get or create test runner singleton."""
     global _test_runner
     workspace = _get_workspace_manager(workspace_path)
-    if _test_runner is None or _test_runner.workspace != workspace:
-        _test_runner = TestRunner(workspace)
+    workspace_root = str(workspace.base_path) if hasattr(workspace, 'base_path') else workspace_path or _get_default_code_directory()
+    if _test_runner is None or _test_runner.workspace_root != Path(workspace_root):
+        _test_runner = TestRunner(workspace_root=workspace_root, test_dir=".")
     return _test_runner
+
+
+def _normalize_content(content: str) -> str:
+    """Normalize code content to fix common LLM output issues.
+    
+    Fixes:
+    - Double-escaped newlines (\\n -> \n)
+    - Double-escaped tabs (\\t -> \t)
+    - Windows line endings (\r\n -> \n)
+    
+    Args:
+        content: Raw content from LLM
+        
+    """
+    if not content:
+        return content
+    
+    # Fix double-escaped sequences (happens with JSON serialization)
+    # Only fix if there are escaped newlines but no actual newlines
+    if "\\n" in content and "\n" not in content.replace("\\n", ""):
+        content = content.replace("\\n", "\n")
+        content = content.replace("\\t", "\t")
+        content = content.replace("\\r", "\r")
+        content = content.replace('\\"', '"')
+        content = content.replace("\\'", "'")
+    
+    # Normalize Windows line endings
+    content = content.replace("\r\n", "\n")
+    content = content.replace("\r", "\n")
+    
+    return content
 
 
 @tool(
@@ -97,9 +150,15 @@ def _get_test_runner(workspace_path: Optional[str] = None) -> TestRunner:
     category=ToolCategory.CODE,
     description=(
         "Create a new code file with the specified content. "
+        "REQUIRES an active coding workflow - call start_workflow first! "
         "Automatically creates parent directories if needed. "
         "Use for generating new Python modules, scripts, or configuration files."
     ),
+    allowed_callers=["code_execution"],  # Can be called from code sandbox
+    input_examples=[
+        {"file_path": "src/hello.py", "content": "def hello():\n    print('Hello World')"},
+        {"file_path": "tests/test_hello.py", "content": "import pytest\nfrom src.hello import hello"},
+    ],
 )
 def create_code_file(
     file_path: str,
@@ -116,9 +175,16 @@ def create_code_file(
         workspace_path: Optional workspace root path
         create_backup: Whether to create backup if file exists
 
-    Returns:
-        Success message or error description
     """
+    # Check if workflow is in EXECUTION phase with active TODO
+    from airunner.components.llm.agents.workflow_tools import require_execution_phase
+    workflow_error = require_execution_phase("create_code_file")
+    if workflow_error:
+        return workflow_error
+    
+    # Normalize content to fix LLM output issues (e.g., escaped newlines)
+    content = _normalize_content(content)
+    
     try:
         handler = _get_code_handler(workspace_path)
         result = handler.execute(
@@ -143,9 +209,14 @@ def create_code_file(
     category=ToolCategory.CODE,
     description=(
         "Replace the entire content of an existing code file. "
+        "REQUIRES an active coding workflow - call start_workflow first! "
         "Creates a backup before editing. "
         "Use for major refactoring or complete file rewrites."
     ),
+    allowed_callers=["code_execution"],  # Can be called from code sandbox
+    input_examples=[
+        {"file_path": "src/hello.py", "content": "def hello(name: str):\n    print(f'Hello {name}')"},
+    ],
 )
 def edit_code_file(
     file_path: str,
@@ -162,9 +233,16 @@ def edit_code_file(
         workspace_path: Optional workspace root path
         create_backup: Whether to create backup before editing
 
-    Returns:
-        Success message or error description
     """
+    # Check if workflow is in EXECUTION phase with active TODO
+    from airunner.components.llm.agents.workflow_tools import require_execution_phase
+    workflow_error = require_execution_phase("edit_code_file")
+    if workflow_error:
+        return workflow_error
+    
+    # Normalize content to fix LLM output issues (e.g., escaped newlines)
+    content = _normalize_content(content)
+        
     try:
         handler = _get_code_handler(workspace_path)
         result = handler.execute(
@@ -188,10 +266,15 @@ def edit_code_file(
     name="read_code_file",
     category=ToolCategory.CODE,
     description=(
-        "Read the content of a code file. "
-        "Use to examine existing code before making changes or to understand "
-        "the current implementation."
+        "Read the contents of a code file from the workspace. "
+        "Returns the full file content with optional line numbers. "
+        "Use this to understand existing code before making changes."
     ),
+    allowed_callers=["code_execution"],  # Can be called from code sandbox
+    input_examples=[
+        {"file_path": "src/hello.py"},
+        {"file_path": "src/hello.py", "include_line_numbers": True},
+    ],
 )
 def read_code_file(
     file_path: str,
@@ -204,8 +287,6 @@ def read_code_file(
         file_path: Relative path to the file
         workspace_path: Optional workspace root path
 
-    Returns:
-        File content or error message
     """
     try:
         handler = _get_code_handler(workspace_path)
@@ -232,6 +313,7 @@ def read_code_file(
         "Uses flake8 for style checking and mypy for type checking. "
         "Returns detailed validation results with line numbers and issue descriptions."
     ),
+    defer_loading=True,  # Optional, discoverable via search_tools
 )
 def validate_code(
     file_path: str,
@@ -244,8 +326,6 @@ def validate_code(
         file_path: Relative path to the file
         workspace_path: Optional workspace root path
 
-    Returns:
-        Validation results summary
     """
     try:
         validator = _get_validator(workspace_path)
@@ -286,6 +366,7 @@ def validate_code(
         "Also runs isort to organize imports. "
         "Creates a backup before formatting."
     ),
+    defer_loading=True,  # Optional, discoverable via search_tools
 )
 def format_code_file(
     file_path: str,
@@ -300,8 +381,6 @@ def format_code_file(
         workspace_path: Optional workspace root path
         create_backup: Whether to create backup before formatting
 
-    Returns:
-        Formatting result message
     """
     try:
         handler = _get_code_handler(workspace_path)
@@ -321,10 +400,15 @@ def format_code_file(
     name="run_tests",
     category=ToolCategory.CODE,
     description=(
-        "Discover and run pytest tests for a code file. "
-        "Automatically finds corresponding test files and executes them. "
-        "Returns test results with pass/fail counts and failure details."
+        "Run pytest tests on a specific test file or discover tests for a source file. "
+        "For TDD: pass your test file directly (e.g., 'test_hello.py'). "
+        "Returns pass/fail counts and detailed output."
     ),
+    allowed_callers=["code_execution"],  # Can be called from code sandbox
+    input_examples=[
+        {"file_path": "tests/test_hello.py"},
+        {"file_path": "src/hello.py"},  # Will find associated tests
+    ],
 )
 def run_tests(
     file_path: str,
@@ -334,15 +418,19 @@ def run_tests(
     Run tests for a code file.
 
     Args:
-        file_path: Relative path to the code file
+        file_path: Relative path to test file (test_*.py) or source file
         workspace_path: Optional workspace root path
 
-    Returns:
-        Test results summary
     """
     try:
         test_runner = _get_test_runner(workspace_path)
-        result = test_runner.run_tests_for_file(file_path)
+        
+        # If it's a test file, run it directly
+        if file_path.startswith("test_") or "/test_" in file_path or file_path.endswith("_test.py"):
+            result = test_runner.run_tests(test_files=[file_path], verbose=True)
+        else:
+            # Otherwise, discover and run related tests
+            result = test_runner.run_tests_for_file(file_path)
 
         summary = [
             f"Tests for {file_path}:",
@@ -353,13 +441,21 @@ def run_tests(
 
         if result.skipped > 0:
             summary.append(f"  Skipped: {result.skipped}")
+        
+        if result.errors > 0:
+            summary.append(f"  Errors: {result.errors}")
 
-        if result.failures:
-            summary.append("\nFailures:")
-            for failure in result.failures[:3]:
-                summary.append(f"  - {failure}")
-            if len(result.failures) > 3:
-                summary.append(f"  ... and {len(result.failures) - 3} more")
+        summary.append(f"  Duration: {result.duration:.2f}s")
+        
+        # Include relevant output for failures/errors
+        if not result.success and result.output:
+            summary.append("\n--- Test Output ---")
+            # Get last 50 lines of output to show failures
+            output_lines = result.output.strip().split('\n')
+            if len(output_lines) > 50:
+                summary.append("(truncated to last 50 lines)")
+                output_lines = output_lines[-50:]
+            summary.append('\n'.join(output_lines))
 
         return "\n".join(summary)
 
@@ -376,6 +472,7 @@ def run_tests(
         "Supports glob patterns for filtering (e.g., '*.py' for Python files). "
         "Use to explore the workspace structure."
     ),
+    defer_loading=True,  # Discoverable via search_tools
 )
 def list_workspace_files(
     pattern: str = "**/*",
@@ -388,8 +485,6 @@ def list_workspace_files(
         pattern: Glob pattern for filtering (default: all files)
         workspace_path: Optional workspace root path
 
-    Returns:
-        List of matching files
     """
     try:
         handler = _get_code_handler(workspace_path)
@@ -421,6 +516,7 @@ def list_workspace_files(
         "Creates a backup before deletion. "
         "Use with caution - this operation cannot be easily undone."
     ),
+    defer_loading=True,  # Rare operation, discoverable via search_tools
 )
 def delete_code_file(
     file_path: str,
@@ -435,8 +531,6 @@ def delete_code_file(
         workspace_path: Optional workspace root path
         create_backup: Whether to create backup before deletion
 
-    Returns:
-        Success message or error description
     """
     try:
         handler = _get_code_handler(workspace_path)
