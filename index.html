@@ -108,7 +108,7 @@
         }
 
         /* Hero Section */
-        .hero {
+                .hero {
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -117,6 +117,7 @@
             background: radial-gradient(ellipse at top, #1a2332 0%, var(--bg-dark) 70%);
             position: relative;
             overflow: hidden;
+            /* removed direct background image so we can layer it via ::after */
         }
 
         .hero::before {
@@ -128,16 +129,36 @@
             bottom: 0;
             background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234299e1' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
             opacity: 0.5;
+            z-index: 1; /* keep the decorative overlay above the background image */
+        }
+
+        /* background image below content and overlay, with 50% transparency */
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("./art.png") no-repeat center 20px/cover fixed;
+            background-size: cover;
+            background-position: center 20px;
+            opacity: 0.5; /* <-- set the image opacity here */
+            pointer-events: none;
+            z-index: 0;
         }
 
         .hero-content {
             max-width: 1200px;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 4rem;
             align-items: center;
             position: relative;
-            z-index: 1;
+            z-index: 2; /* raised so content sits above the background image and overlay */
+            background: rgb(0, 0, 0, 0.80);
+            padding: 2rem;
+            border-radius: 16px;
         }
 
         .hero-text h1 {
@@ -770,9 +791,9 @@
                     </a>
                 </div>
             </div>
-            <div class="hero-image">
+            <!-- <div class="hero-image">
                 <img src="./art.png" alt="AI Runner Screenshot" style="width: 100%; height: auto; border-radius: 14px;">
-            </div>
+            </div> -->
         </div>
     </section>
 
