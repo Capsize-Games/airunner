@@ -268,6 +268,8 @@ class SDWorker(Worker):
         new_version = StableDiffusionVersion(version)
         if new_version is not self.version:
             self.version = new_version
+            # Reset model manager when version changes so the correct one is selected
+            self._model_manager = None
         return data
 
     def load_model_manager(self, data: Dict = None):
@@ -278,6 +280,7 @@ class SDWorker(Worker):
         do_reload = data.get("do_reload", False)
         # Ensure the model manager is instantiated before we try to set the image_request
         mm = self.model_manager
+        self.logger.debug(f"[LOAD DEBUG] load_model_manager: mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}, model_is_loaded={mm.model_is_loaded if mm else 'N/A'}")
         image_request = data.get("image_request")
         # Attach the image_request to the model manager BEFORE loading so model_path property
         # resolves to the ImageRequest.model_path instead of falling back to stale generator_settings.model
@@ -294,16 +297,18 @@ class SDWorker(Worker):
             # Debug: log which path will be used
             try:
                 self.logger.debug(
-                    "Pre-load state: image_request.model_path=%s generator_settings.model=%s resolved_manager_model_path=%s",
-                    getattr(image_request, "model_path", None),
-                    getattr(self.generator_settings, "model", None),
-                    getattr(mm, "model_path", None),
+                    "[LOAD DEBUG] After load: mm._pipe=%s, mm=%s",
+                    getattr(mm, "_pipe", "N/A"),
+                    id(mm),
                 )
             except Exception:
                 pass
-        if data:
+        # Only call the callback if the model is actually loaded
+        # If a download was triggered, the callback will be called after download completes
+        if data and mm and mm.model_is_loaded:
             callback = data.get("callback", None)
             if callback is not None:
+                self.logger.debug(f"[LOAD DEBUG] Calling callback with mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}")
                 callback(data)
 
     def unload(self, data: Dict):
@@ -440,16 +445,18 @@ class SDWorker(Worker):
         self.load_model_manager(message)
 
     def _finalize_do_generate_signal(self, message: Dict):
-        if self.model_manager:
+        mm = self.model_manager
+        self.logger.debug(f"[FINALIZE DEBUG] _finalize: mm={id(mm) if mm else None}, mm._pipe={getattr(mm, '_pipe', 'N/A') if mm else 'N/A'}")
+        if mm:
             # Don't try to generate if model isn't loaded yet (e.g., download in progress)
-            if not self.model_manager.model_is_loaded:
+            if not mm.model_is_loaded:
                 self.logger.info(
                     "Model not loaded yet, skipping generation (download may be in progress)"
                 )
                 return
 
             try:
-                self.model_manager.handle_generate_signal(message)
+                mm.handle_generate_signal(message)
             except (PipeNotLoadedException, TypeError) as e:
                 error_message = getattr(e, "message", str(e))
                 self.handle_error(error_message)

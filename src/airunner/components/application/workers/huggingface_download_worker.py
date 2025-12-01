@@ -26,6 +26,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         super().__init__(*args, **kwargs)
         self.downloader = HuggingFaceDownloader()
         self._current_model_type = None  # Set by _download_model for completion signals
+        self._current_pipeline_action = None  # Set by _download_model for completion signals
 
     @property
     def _complete_signal(self) -> SignalCode:
@@ -61,8 +62,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             zip_url: For ZIP downloads, the direct URL to download
 
         """
-        # Store model_type immediately for use in completion signals
+        # Store model_type and pipeline_action immediately for use in completion signals
         self._current_model_type = model_type
+        self._current_pipeline_action = pipeline_action
         
         self.logger.info(
             f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
@@ -341,7 +343,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             )
             self.emit_signal(
                 self._complete_signal,
-                {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type},
+                {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type, "pipeline_action": self._current_pipeline_action},
             )
             return
 
@@ -400,7 +402,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._cleanup_temp_files()
         self.emit_signal(
             self._complete_signal,
-            {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type},
+            {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type, "pipeline_action": self._current_pipeline_action},
         )
 
     def _download_and_extract_zip(self, zip_url: str, output_dir: str):
