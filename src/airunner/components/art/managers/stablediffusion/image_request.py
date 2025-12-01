@@ -37,8 +37,8 @@ class ImageRequest:
     negative_target_size: Dict = None
     negative_crops_coords_top_left: Dict = None
     lora_scale: float = 1.0
-    width: int = 512
-    height: int = 512
+    width: int = 1024
+    height: int = 1024
     callback: Optional[callable] = None
     node_id: Optional[str] = None
     image: Optional[Image.Image] = None

@@ -54,16 +54,6 @@ class TestModelFileChecker:
         assert "config.json" in files
         assert "checkpoint.pth" in files
 
-    def test_get_required_files_tts_speecht5(self):
-        """Test getting required files for SpeechT5 TTS models."""
-        files = ModelFileChecker.get_required_files(
-            model_type="tts_speecht5",
-            model_id="microsoft/speecht5_tts",
-        )
-        assert files is not None
-        assert isinstance(files, list)
-        assert "config.json" in files
-
     def test_get_required_files_unknown_model(self):
         """Test getting required files for unknown model returns None."""
         files = ModelFileChecker.get_required_files(
@@ -200,11 +190,7 @@ class TestUnifiedModelFiles:
             UNIFIED_MODEL_FILES,
         )
 
-        assert "art" in UNIFIED_MODEL_FILES
-        assert "llm" in UNIFIED_MODEL_FILES
-        assert "stt" in UNIFIED_MODEL_FILES
-        assert "tts_openvoice" in UNIFIED_MODEL_FILES
-        assert "tts_speecht5" in UNIFIED_MODEL_FILES
+        assert \"art\" in UNIFIED_MODEL_FILES\n        assert \"llm\" in UNIFIED_MODEL_FILES\n        assert \"stt\" in UNIFIED_MODEL_FILES\n        assert \"tts_openvoice\" in UNIFIED_MODEL_FILES
 
     def test_get_required_files_for_model_art(self):
         """Test get_required_files_for_model for art models."""

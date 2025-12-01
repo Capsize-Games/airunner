@@ -207,8 +207,14 @@ from airunner.components.application.api.api import API
 ################################################################
 from airunner.setup_database import setup_database
 
+# These may be set by launcher.py for early splash screen
+_launcher_splash = None
+_launcher_app = None
+
 
 def main():
+    global _launcher_splash, _launcher_app
+    
     parser = argparse.ArgumentParser(description="AI Runner")
     parser.add_argument(
         "--clear-window-settings",
@@ -261,8 +267,8 @@ def main():
     # This ensures root logger is configured before service loggers are created
     sys.stderr.write("DEBUG: main.py starting\n")
 
-    # Start the main application
-    api = API()
+    # Start the main application, passing launcher's splash if available
+    api = API(launcher_splash=_launcher_splash, launcher_app=_launcher_app)
     api.run()
 
 

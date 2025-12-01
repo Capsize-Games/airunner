@@ -109,16 +109,6 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="QCheckBox" name="speecht5_checkbox">
-     <property name="text">
-      <string>SpeechT5: Text-to-Speech</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
    <item row="7" column="0">
     <widget class="QCheckBox" name="whisper_checkbox">
      <property name="text">
@@ -166,22 +156,6 @@
     <hint type="destinationlabel">
      <x>-4</x>
      <y>338</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>speecht5_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>install_success_page</receiver>
-   <slot>speecht5_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>71</x>
-     <y>452</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>414</y>
     </hint>
    </hints>
   </connection>
@@ -254,7 +228,6 @@
   <slot>yes_toggled(bool)</slot>
   <slot>no_toggled(bool)</slot>
   <slot>ministral_toggled(bool)</slot>
-  <slot>speecht5_toggled(bool)</slot>
   <slot>whisper_toggled(bool)</slot>
   <slot>stable_diffusion_toggled(bool)</slot>
   <slot>embedding_model_toggled(bool)</slot>

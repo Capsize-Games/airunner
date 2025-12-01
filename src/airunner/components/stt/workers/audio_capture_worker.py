@@ -40,11 +40,11 @@ class AudioCaptureWorker(Worker):
         self.logger.debug("Heard signal")
         self.add_to_queue(item)
 
-    def on_stt_start_capture_signal(self):
+    def on_stt_start_capture_signal(self, data: dict = None):
         if not self.listening:
             self._start_listening()
 
-    def on_stt_stop_capture_signal(self):
+    def on_stt_stop_capture_signal(self, data: dict = None):
         if self.listening:
             self._stop_listening()
 

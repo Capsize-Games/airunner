@@ -158,14 +158,14 @@ class ImageRequestNode(BaseArtNode):
         },
         {
             "name": "image_width",
-            "value": 512,
+            "value": 1024,
             "widget_type": NodePropWidgetEnum.INT,
             "range": (64, 2048),
             "tab": "generation",
         },
         {
             "name": "image_height",
-            "value": 512,
+            "value": 1024,
             "widget_type": NodePropWidgetEnum.INT,
             "range": (64, 2048),
             "tab": "generation",
@@ -206,7 +206,7 @@ class ImageRequestNode(BaseArtNode):
         },
         {
             "name": "original_size",
-            "value": (512, 512),
+            "value": (1024, 1024),
             "widget_type": NodePropWidgetEnum.VECTOR2,
             "tab": "advanced",
         },
@@ -224,7 +224,7 @@ class ImageRequestNode(BaseArtNode):
         },
         {
             "name": "negative_original_size",
-            "value": (512, 512),
+            "value": (1024, 1024),
             "widget_type": NodePropWidgetEnum.VECTOR2,
             "tab": "advanced",
         },

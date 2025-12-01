@@ -47,7 +47,7 @@
   <url type="help">https://github.com/Capsize-Games/airunner/wiki</url>
   <url type="donation">https://github.com/sponsors/Capsize-Games</url>
   
-  <content_rating type="oasp-1.1" />
+  <content_rating type="oars-1.1" />
   
   <releases>
     <release version="3.1.0" date="2025-11-29">

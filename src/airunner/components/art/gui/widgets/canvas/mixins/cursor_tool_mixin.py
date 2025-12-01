@@ -89,8 +89,6 @@ class CursorToolMixin:
         """
         self.toggle_drag_mode()
         # Update text item interaction flags based on tool
-        is_text = self.current_tool is CanvasToolName.TEXT
-        self._set_text_items_interaction(is_text)
         # Ensure active grid area doesn't block item interaction while moving
         try:
             self._update_active_grid_mouse_acceptance()

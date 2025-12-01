@@ -35,7 +35,6 @@ from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
 from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
-from airunner.components.tts.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader
@@ -484,57 +483,8 @@ class InstallWorker(
                     print(f"Error downloading {filename}: {e}")
 
     def download_tts(self):
-        if not self.models_enabled["speecht5"]:
-            self.set_page()
-            return
-
-        # Add a check to prevent multiple simultaneous TTS downloads
-        if (
-            hasattr(self, "_tts_download_in_progress")
-            and self._tts_download_in_progress
-        ):
-            return
-
-        self._tts_download_in_progress = True
-
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading TTS models..."}
-        )
-
-        # Calculate total files first
-        total_files = 0
-        for k, v in SPEECH_T5_FILES.items():
-            total_files += len(v)
-
-        self.total_models_in_current_step += total_files
-
-        # Add a small delay between downloads to prevent race conditions
-
-        for k, v in SPEECH_T5_FILES.items():
-            for filename in v:
-                requested_file_path = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "text",
-                        "models",
-                        "tts",
-                        k,
-                    )
-                )
-                try:
-                    # Add a small delay to prevent overwhelming the download system
-                    time.sleep(0.1)
-                    self.hf_downloader.download_model(
-                        requested_path=k,
-                        requested_file_name=filename,
-                        requested_file_path=requested_file_path,
-                        requested_callback=self._safe_progress_emit,
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
-
-        # Reset the flag when downloads are queued
-        self._tts_download_in_progress = False
+        # OpenVoice is the primary TTS - no manual download needed for basic TTS
+        self.set_page()
 
     def download_openvoice(self):
         if not self.models_enabled["openvoice_model"]:
@@ -1290,9 +1240,6 @@ class InstallPage(BaseWizard):
                 ]["files"]
             )
 
-        if self.models_enabled["speecht5"]:
-            self.total_steps += len(SPEECH_T5_FILES["microsoft/speecht5_tts"])
-
         if self.models_enabled["whisper"]:
             self.total_steps += len(WHISPER_FILES["openai/whisper-tiny"])
 
@@ -1468,9 +1415,6 @@ class InstallPage(BaseWizard):
                     self.total_files += len(files)
         if self.models_enabled["whisper"]:
             for k, v in WHISPER_FILES.items():
-                self.total_files += len(v)
-        if self.models_enabled["speecht5"]:
-            for k, v in SPEECH_T5_FILES.items():
                 self.total_files += len(v)
         if self.models_enabled["openvoice_model"]:
             for k, v in OPENVOICE_FILES.items():

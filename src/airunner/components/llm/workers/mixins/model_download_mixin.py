@@ -232,6 +232,7 @@ class ModelDownloadMixin:
                 LLMResponse(
                     message=message,
                     is_end_of_message=False,
+                    is_system_message=True,
                 )
             )
         except Exception:
@@ -241,6 +242,7 @@ class ModelDownloadMixin:
                     "response": LLMResponse(
                         message=message,
                         is_end_of_message=False,
+                        is_system_message=True,
                     )
                 },
             )

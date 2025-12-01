@@ -25,8 +25,8 @@ class TestableViewportPositioningMixin(ViewportPositioningMixin):
         self.active_grid_settings.pos_y = 100
         self.active_grid_settings.pos = (100, 100)
         self.application_settings = MagicMock()
-        self.application_settings.working_width = 512
-        self.application_settings.working_height = 512
+        self.application_settings.working_width = 1024
+        self.application_settings.working_height = 1024
         self._scene = None
         self._is_restoring_state = False
         self._initialized = True
@@ -50,9 +50,6 @@ class TestableViewportPositioningMixin(ViewportPositioningMixin):
 
     def update_active_grid_settings(self, **kwargs):
         """Mock update_active_grid_settings method."""
-
-    def _restore_text_items_from_db(self):
-        """Mock _restore_text_items_from_db method."""
 
 
 @pytest.fixture

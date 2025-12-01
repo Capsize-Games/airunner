@@ -94,7 +94,7 @@ class SDImageGenerationMixin:
 
         Handles interruption and errors gracefully.
         """
-        self.logger.debug("Generating image")
+        self.logger.debug(f"[GEN DEBUG] _generate called: self._pipe={self._pipe}, self={id(self)}")
         if self._pipe is None:
             raise PipeNotLoadedException()
 

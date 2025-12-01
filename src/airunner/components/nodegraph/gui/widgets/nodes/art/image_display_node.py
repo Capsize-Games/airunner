@@ -25,7 +25,7 @@ class ImageDisplayWidget(NodeBaseWidget):
         # Create the QLabel widget that will actually display the image
         self.image_label = QLabel("No Image")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setMinimumSize(512, 512)
+        self.image_label.setMinimumSize(1024, 1024)
         # This is the key part - set the QLabel as the custom widget
         self.set_custom_widget(self.image_label)
         # Store the last value for get_value() to return

@@ -109,7 +109,3 @@ class PathSettings(BaseModel):
 
     def tts_processor_path(self) -> str:
         return os.path.join(self.tts_model_path, "processor")
-        return _resolve_path(self.tts_model_path)
-
-    def tts_processor_path(self) -> str:
-        return os.path.join(self.resolved_tts_model_path, "processor")

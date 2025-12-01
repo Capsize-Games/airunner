@@ -26,14 +26,14 @@ class AudioProcessorWorker(Worker):
         if self._stt is None:
             self._stt = WhisperModelManager()
 
-    def on_stt_load_signal(self):
+    def on_stt_load_signal(self, data: dict = None):
         if self._stt is None:
             self._initialize_stt_handler()
 
         if self._stt:
             self._stt_load()
 
-    def on_stt_unload_signal(self):
+    def on_stt_unload_signal(self, data: dict = None):
         if self._stt:
             self._stt_unload()
 
@@ -55,9 +55,18 @@ class AudioProcessorWorker(Worker):
             self._stt.unload()
 
     def on_stt_process_audio_signal(self, message):
+        self.logger.debug(f"on_stt_process_audio_signal called, message keys: {message.keys() if message else 'None'}")
         self.add_to_queue(message)
 
     def handle_message(self, audio_data):
+        self.logger.debug(f"handle_message called, _stt={self._stt}, audio_data keys: {audio_data.keys() if audio_data else 'None'}")
+        if self._stt is None:
+            self.logger.warning("STT handler not initialized, skipping audio")
+            return
+        if not self._stt.stt_is_loaded:
+            self.logger.warning(f"STT model not loaded (status={self._stt._model_status}), skipping audio")
+            return
+        self.logger.debug("Processing audio through STT model")
         self._stt.process_audio(audio_data)
 
     def update_properties(self):

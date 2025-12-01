@@ -25,6 +25,7 @@ class AgentWorker(Worker):
                     is_first_message=True,
                     is_end_of_message=True,
                     name=message["botname"],
+                    is_system_message=True,
                 )
             )
 

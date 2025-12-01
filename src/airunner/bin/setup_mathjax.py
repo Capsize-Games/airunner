@@ -14,14 +14,19 @@ from airunner.settings import MATHJAX_VERSION
 
 # Correct MathJax release asset (contains es5/tex-mml-chtml.js)
 MATHJAX_URL = f"https://github.com/mathjax/MathJax/archive/refs/tags/{MATHJAX_VERSION}.zip"
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.abspath(
-    os.path.join(SCRIPT_DIR, "..", "static", "mathjax")
-)
+
+# Use MATHJAX_INSTALL_DIR if set (for flatpak), otherwise use package directory
+if os.environ.get("MATHJAX_INSTALL_DIR"):
+    STATIC_DIR = os.environ["MATHJAX_INSTALL_DIR"]
+else:
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    STATIC_DIR = os.path.abspath(
+        os.path.join(SCRIPT_DIR, "..", "static", "mathjax")
+    )
 ZIP_PATH = os.path.join(STATIC_DIR, "mathjax.zip")
 
 # The main entry file for MathJax 3.x CHTML output (after extraction)
-MATHJAX_ENTRY = os.path.join(STATIC_DIR, "es5", "tex-mml-chtml.js")
+MATHJAX_ENTRY = os.path.join(STATIC_DIR, f"MathJax-{MATHJAX_VERSION}", "es5", "tex-mml-chtml.js")
 
 
 def ensure_mathjax():

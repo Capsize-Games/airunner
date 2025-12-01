@@ -50,6 +50,8 @@ extras_require = {
         "sounddevice==0.5.1",
         "pyttsx3==2.91",
         "cryptography==44.0.3",
+        # Speech-to-text: faster-whisper (CTranslate2-based, ~4x faster than transformers)
+        "faster-whisper>=1.0.0",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # GGUF model support via llama.cpp (smaller, faster than BitsAndBytes)
         # Note: For GPU support, install with: CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
@@ -96,6 +98,7 @@ extras_require = {
         "inflect==7.5.0",
         "pycountry==24.6.1",
         "librosa==0.11.0",
+        "torchcodec>=0.8.0",  # Required by torchaudio for audio loading
     ],
     "rabbitmq": ["pika"],
     "openvoice": [
@@ -221,16 +224,26 @@ setup(
     extras_require=extras_require,
     package_data={
         "airunner": [
-            "alembic/*",
-            "cursors/*",
-            "filters/*",
-            "icons/*",
-            "images/*",
-            "styles/*",
-            "widgets/**/*.ui",
-            "windows/**/*.ui",
-            "*.qrc",
+            # Alembic migrations
+            "alembic/*.py",
+            "alembic/*.mako",
+            "alembic/versions/*.py",
             "*.ini",
+            # GUI resources
+            "gui/cursors/*",
+            "gui/images/*",
+            "gui/resources/**/*",
+            "gui/styles/**/*",
+            # Component resources
+            "components/icons/*",
+            "components/art/filters/*",
+            # UI templates (all .ui files in templates directories)
+            "components/**/templates/*.ui",
+            # Static files (HTML, CSS, JS templates for web views)
+            "components/**/static/**/*",
+            "static/**/*",
+            # Vendor resources
+            "vendor/nodegraphqt/widgets/icons/*",
         ],
     },
     include_package_data=True,

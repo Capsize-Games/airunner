@@ -200,4 +200,34 @@ class PropertyMixin:
                 "Please configure a proper chat LLM model in LLM settings."
             )
 
+        # Validate that TTS model paths are not used as main LLM
+        if "/tts/" in model_path or "/openvoice" in model_path:
+            self.logger.error(
+                f"Invalid model path detected: '{model_path}' appears to be a TTS model. "
+                "Attempting to recover from model_id..."
+            )
+            
+            # Try to recover using saved model_id
+            saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
+            if saved_model_id and saved_model_id != "custom":
+                model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+                if model_info:
+                    model_name = model_info.get("name", saved_model_id)
+                    recovered_path = os.path.join(
+                        self.path_settings.base_path,
+                        "text/models/llm/causallm",
+                        model_name,
+                    )
+                    self.logger.info(f"Recovered model path from model_id '{saved_model_id}': {recovered_path}")
+                    # Save the corrected path
+                    self.llm_generator_settings.model_path = recovered_path
+                    return recovered_path
+            
+            # No recovery possible - clear and raise
+            self.llm_generator_settings.model_path = ""
+            raise ValueError(
+                "LLM model path was corrupted (contained TTS path). "
+                "Please select an LLM model from the dropdown."
+            )
+
         return model_path
