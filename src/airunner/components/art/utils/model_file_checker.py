@@ -2,7 +2,7 @@
 
 This module provides functionality to verify that all required files for a
 model are present on disk, and to initiate downloads for missing files.
-Supports all model types: Art (SD, SDXL, FLUX), LLM, STT (Whisper), TTS (OpenVoice, SpeechT5).
+Supports all model types: Art (SD, SDXL, FLUX), LLM, STT (Whisper), TTS (OpenVoice).
 """
 
 import os
@@ -25,7 +25,6 @@ class ModelFileChecker:
     - llm: Language models (Llama, Qwen, etc.)
     - stt: Speech-to-text models (Whisper)
     - tts_openvoice: OpenVoice TTS models
-    - tts_speecht5: SpeechT5 TTS models
     """
 
     @staticmethod
@@ -38,7 +37,7 @@ class ModelFileChecker:
         """Get list of required files for a model.
 
         Args:
-            model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
+            model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id or version name)
             version: Model version (for art models like "SDXL 1.0" and "Flux.1 S")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
@@ -65,7 +64,7 @@ class ModelFileChecker:
 
         Args:
             model_path: Path to the model directory or GGUF file
-            model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
+            model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id for non-art models)
             version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
@@ -248,7 +247,7 @@ class ModelFileChecker:
 
         Args:
             model_path: Path to the model
-            model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
+            model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id for non-art models)
             version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")

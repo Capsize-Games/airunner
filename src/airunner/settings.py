@@ -379,7 +379,6 @@ DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 LANGUAGES = {
     "whisper": ["en", "es", "fr", "de", "it", "nl", "pl", "pt", "ru", "zh"],
     "openvoice": ["en", "es", "fr", "ja", "zh", "zh_mix_en", "ko"],
-    "speecht5": ["en"],
 }
 
 # Server settings for local static content serving

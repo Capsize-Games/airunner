@@ -16,9 +16,6 @@ from airunner.components.downloader.gui.windows.setup_wizard.model_setup.llm.mis
 from airunner.components.downloader.gui.windows.setup_wizard.model_setup.stt.whisper_license import (
     WhisperLicense,
 )
-from airunner.components.downloader.gui.windows.setup_wizard.model_setup.tts.speecht5_license import (
-    SpeechT5License,
-)
 from airunner.components.downloader.gui.windows.setup_wizard.welcome_page import (
     WelcomePage,
 )
@@ -68,7 +65,6 @@ class SetupWizardWindow(
             "stable_diffusion_license": StableDiffusionLicense(self),
             "mistral_license": MistralLicense(self),
             "whisper_license": WhisperLicense(self),
-            "speech_t5_license": SpeechT5License(self),
         }
 
         for index, key in enumerate(self.pages.keys()):

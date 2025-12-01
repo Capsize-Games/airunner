@@ -497,29 +497,11 @@ class LLMGenerateWorker(
                     "Request completed successfully, clearing pending request"
                 )
                 self._pending_llm_request = None
-
-                # Get action from request
-                action = request_data.get("action", LLMActionType.CHAT)
-                if isinstance(action, str):
-                    try:
-                        action = LLMActionType(action)
-                    except ValueError:
-                        action = LLMActionType.CHAT
-
-                # Emit completion signal with the result
-                llm_response = LLMResponse(
-                    message=response_text,
-                    is_end_of_message=True,
-                    action=action,
-                    request_id=message.get("request_id"),
-                )
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    {"response": llm_response},
-                )
-                self.logger.info(
-                    f"Emitted completion signal with action {action} for request {message.get('request_id')}"
-                )
+                
+                # NOTE: We do NOT emit LLM_TEXT_STREAMED_SIGNAL here.
+                # The generation_mixin already handles streaming tokens and sending
+                # the end-of-message signal. Emitting here would cause duplicate
+                # TTS generation (the full message would be spoken twice).
             else:
                 self.logger.info(
                     f"Request failed with error, keeping pending request for retry after download"

@@ -28,7 +28,7 @@ class StatusManagementMixin:
         Args:
             message: Error message to display to user.
         """
-        response = LLMResponse(message=message, is_end_of_message=True)
+        response = LLMResponse(message=message, is_end_of_message=True, is_system_message=True)
 
         try:
             self.api.llm.send_llm_text_streamed_signal(response)
@@ -50,7 +50,7 @@ class StatusManagementMixin:
             else "✅ Model loaded and ready for chat\n"
         )
 
-        response = LLMResponse(message=message, is_end_of_message=False)
+        response = LLMResponse(message=message, is_end_of_message=False, is_system_message=True)
 
         try:
             self.api.llm.send_llm_text_streamed_signal(response)
@@ -79,6 +79,7 @@ class StatusManagementMixin:
             message=message,
             is_end_of_message=False,
             action=LLMActionType.CHAT,
+            is_system_message=True,
         )
 
         self.emit_signal(

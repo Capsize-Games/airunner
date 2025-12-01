@@ -82,12 +82,6 @@ class Ui_install_success_page(object):
 
         self.gridLayout.addWidget(self.checkBox, 4, 0, 1, 1)
 
-        self.speecht5_checkbox = QCheckBox(install_success_page)
-        self.speecht5_checkbox.setObjectName(u"speecht5_checkbox")
-        self.speecht5_checkbox.setChecked(True)
-
-        self.gridLayout.addWidget(self.speecht5_checkbox, 5, 0, 1, 1)
-
         self.whisper_checkbox = QCheckBox(install_success_page)
         self.whisper_checkbox.setObjectName(u"whisper_checkbox")
         self.whisper_checkbox.setChecked(True)
@@ -109,7 +103,6 @@ class Ui_install_success_page(object):
 
         self.retranslateUi(install_success_page)
         self.ministral_checkbox.toggled.connect(install_success_page.ministral_toggled)
-        self.speecht5_checkbox.toggled.connect(install_success_page.speecht5_toggled)
         self.whisper_checkbox.toggled.connect(install_success_page.whisper_toggled)
         self.groupBox.toggled.connect(install_success_page.stable_diffusion_toggled)
         self.checkBox.toggled.connect(install_success_page.embedding_model_toggled)
@@ -124,7 +117,6 @@ class Ui_install_success_page(object):
         self.total_size_label.setText(QCoreApplication.translate("install_success_page", u"0MB", None))
         self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Stable Diffusion Controlnet", None))
         self.checkBox.setText(QCoreApplication.translate("install_success_page", u"e5 Large: Embedding model (RAG search)", None))
-        self.speecht5_checkbox.setText(QCoreApplication.translate("install_success_page", u"SpeechT5: Text-to-Speech", None))
         self.whisper_checkbox.setText(QCoreApplication.translate("install_success_page", u"Whisper: Speech-to-Text (voice conversations)", None))
         self.ministral_checkbox.setText(QCoreApplication.translate("install_success_page", u"Ministral 8B Instruct 4bit: Large Language Model (LLM)", None))
         self.openvoice_model.setText(QCoreApplication.translate("install_success_page", u"OpenVoice: Text-to-Speech", None))

@@ -10,4 +10,4 @@ class VoiceSettings(BaseModel):
     model_type = Column(String, nullable=False)  # TTSModel string
     settings_id = Column(
         Integer, nullable=False
-    )  # Links to EspeakSettings or SpeechT5Settings or OpenVoiceSettings
+    )  # Links to EspeakSettings or OpenVoiceSettings

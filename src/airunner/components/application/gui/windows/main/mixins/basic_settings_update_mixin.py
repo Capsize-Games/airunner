@@ -4,9 +4,6 @@ from typing import Any, Dict, Type, Optional
 from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
 )
-from airunner.components.tts.data.models.speech_t5_settings import (
-    SpeechT5Settings,
-)
 from airunner.components.tts.data.models.espeak_settings import EspeakSettings
 from airunner.components.art.data.grid_settings import GridSettings
 from airunner.components.art.data.active_grid_settings import (
@@ -48,14 +45,6 @@ class BasicSettingsUpdateMixin:
             **settings_dict: Settings to update as keyword arguments.
         """
         self.update_settings(EspeakSettings, settings_dict)
-
-    def update_speech_t5_settings(self, **settings_dict):
-        """Update SpeechT5 TTS settings.
-
-        Args:
-            **settings_dict: Settings to update as keyword arguments.
-        """
-        self.update_settings(SpeechT5Settings, settings_dict)
 
     def update_grid_settings(self, **settings_dict):
         """Update grid settings.

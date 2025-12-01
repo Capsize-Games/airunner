@@ -59,7 +59,7 @@ def store_user_data(key: str, value: str) -> str:
         - The key must be a valid field name in the User model
     """
     try:
-        user = User.get_or_create()
+        user = User.objects.get_or_create()
         setattr(user, key, value)
         user.save()
         return f"Stored {key}: {value}"
@@ -102,7 +102,7 @@ def get_user_data(key: str) -> str:
         - Automatically retrieves from current user
     """
     try:
-        user = User.get_or_create()
+        user = User.objects.get_or_create()
         value = getattr(user, key, None)
         if value is None:
             return f"No data found for key: {key}"

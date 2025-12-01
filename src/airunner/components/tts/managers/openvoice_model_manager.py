@@ -115,6 +115,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self._target_se = None
         self._audio_name = None
+        self._skip_download_check = False  # Flag to skip download check after batch download
         speaker_recording_path = ""
         if self.openvoice_settings.reference_speaker_path is not None:
             speaker_recording_path = os.path.expanduser(
@@ -225,7 +226,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Generate speech using OpenVoice and apply tone color conversion.
         """
-        message = tts_request.message
+        message = self._prepare_text(tts_request.message)
         lang = self.language_settings.bot_language
         if lang is None:
             language = AvailableLanguage.EN
@@ -246,11 +247,21 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         if speaker_id not in speaker_ids:
             speaker_id = "EN-Newest"
 
+        # Get expression parameters from settings (stored as 0-100, convert to 0.0-1.0)
+        # Higher values = more expressive speech
+        settings = self.openvoice_settings
+        sdp_ratio = (settings.sdp_ratio if settings.sdp_ratio is not None else 50) / 100.0
+        noise_scale = (settings.noise_scale if settings.noise_scale is not None else 80) / 100.0
+        noise_scale_w = (settings.noise_scale_w if settings.noise_scale_w is not None else 90) / 100.0
+
         self.model.tts_to_file(
             message,
             speaker_ids[speaker_id],
             self.src_path,
             speed=self._speed,
+            sdp_ratio=sdp_ratio,
+            noise_scale=noise_scale,
+            noise_scale_w=noise_scale_w,
         )
 
         output_path = os.path.join(
@@ -268,14 +279,24 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         if response is not None:
             self.api.tts.add_to_stream(response)
 
-    def load(self, _target_model=None, retry: bool = False):
+    def load(self, _target_model=None):
         """
         Load and initialize the OpenVoice model.
         """
+        # Prevent re-entrancy - if already loading or loaded, skip
+        current_status = self._model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
+        if current_status in [ModelStatus.LOADING, ModelStatus.LOADED]:
+            self.logger.debug(f"OpenVoice already in state {current_status}, skipping load")
+            return True
+        
         self.logger.debug("Initializing OpenVoice")
 
-        # Check for missing files and trigger download if needed
-        if not retry:
+        # Skip download check if we just finished a batch download
+        if self._skip_download_check:
+            self._skip_download_check = False
+            self.logger.info("Skipping download check after batch download")
+        else:
+            # Check for missing files and trigger download if needed
             should_download, download_info = self._check_and_trigger_download()
             if should_download:
                 self.logger.info(
@@ -283,11 +304,16 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 )
                 return False
 
-        self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
+        
+        # Only unload if we have a model to unload (not on first load)
+        if self.model is not None:
+            self.model = None
+            
         self._initialize()
         self.model = TTS(language=self.language)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+        return True
 
     def unload(self):
         """
@@ -348,36 +374,99 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             raise OpenVoiceError("Target speaker extraction returned None.")
 
     def _check_and_trigger_download(self):
-        """Check for missing model files and trigger download if needed.
+        """Check for missing OpenVoice model files and trigger download if needed.
+
+        OpenVoice requires multiple components:
+        - Converter checkpoints (checkpoints_v2) - from ZIP file
+        - Core BERT models (English) - from HuggingFace
+        - MeloTTS voice models (per language) - from HuggingFace
+        - Language-specific BERT models - from HuggingFace
 
         Returns:
             Tuple of (should_download, download_info)
         """
-        # Check for the primary MeloTTS model (English by default)
-        # In a full implementation, this should check based on self.language
-        model_id = "myshell-ai/MeloTTS-English"
-        model_path = os.path.join(self.path_settings.tts_model_path, model_id)
+        from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
+            OPENVOICE_FILES,
+        )
+        from airunner.components.tts.data.bootstrap.openvoice_languages import (
+            OPENVOICE_CORE_MODELS,
+            OPENVOICE_LANGUAGE_MODELS,
+        )
 
-        should_download, download_info = (
-            ModelFileChecker.should_trigger_download(
+        # Check for the converter checkpoint files (from ZIP download)
+        converter_config = os.path.join(
+            self._checkpoint_converter_path, "config.json"
+        )
+        converter_checkpoint = os.path.join(
+            self._checkpoint_converter_path, "checkpoint.pth"
+        )
+        needs_converter = not os.path.exists(converter_config) or not os.path.exists(converter_checkpoint)
+
+        # Check which core models are missing
+        missing_core_models = []
+        for model_id in OPENVOICE_CORE_MODELS:
+            model_path = os.path.join(
+                self.path_settings.base_path,
+                "text/models/tts",
+                model_id,
+            )
+            should_download, _ = ModelFileChecker.should_trigger_download(
                 model_path=model_path,
                 model_type="tts_openvoice",
                 model_id=model_id,
             )
-        )
+            if should_download:
+                missing_core_models.append(model_id)
 
-        if should_download:
+        # Check which language models are missing
+        missing_languages = []
+        for lang_key, lang_info in OPENVOICE_LANGUAGE_MODELS.items():
+            for model_id in lang_info["models"]:
+                model_path = os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    model_id,
+                )
+                should_download, _ = ModelFileChecker.should_trigger_download(
+                    model_path=model_path,
+                    model_type="tts_openvoice",
+                    model_id=model_id,
+                )
+                if should_download:
+                    if lang_key not in missing_languages:
+                        missing_languages.append(lang_key)
+                    break  # Found one missing model for this language
+
+        # Determine if this is a first-time setup (core models or converter missing)
+        # vs just missing optional language models
+        is_first_time_setup = needs_converter or len(missing_core_models) > 0
+        
+        # Only trigger download for first-time setup (missing core components)
+        # Don't show language dialog for optional language models on subsequent loads
+        if is_first_time_setup:
             self.logger.info(
-                f"OpenVoice model files missing: {download_info.get('missing_files', [])}"
+                f"OpenVoice first-time setup: converter={needs_converter}, "
+                f"{len(missing_core_models)} core models missing"
             )
+            
+            def on_download_complete():
+                """Callback after batch download completes - skip re-checking."""
+                self._skip_download_check = True
+                self.load()
+            
             self.emit_signal(
-                SignalCode.START_HUGGINGFACE_DOWNLOAD,
+                SignalCode.START_OPENVOICE_BATCH_DOWNLOAD,
                 {
-                    "repo_id": download_info["repo_id"],
-                    "model_path": model_path,
-                    "model_type": "tts_openvoice",
-                    "callback": lambda: self.load(retry=True),
+                    "needs_converter": needs_converter,
+                    "missing_core_models": missing_core_models,
+                    "missing_languages": missing_languages,
+                    "callback": on_download_complete,
                 },
             )
+            return True, {
+                "needs_converter": needs_converter,
+                "missing_core_models": missing_core_models,
+                "missing_languages": missing_languages,
+            }
 
-        return should_download, download_info
+        return False, {}

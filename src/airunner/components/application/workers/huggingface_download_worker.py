@@ -25,6 +25,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.downloader = HuggingFaceDownloader()
+        self._current_model_type = None  # Set by _download_model for completion signals
 
     @property
     def _complete_signal(self) -> SignalCode:
@@ -38,31 +39,41 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
     def _download_model(
         self,
-        repo_id: str,
-        model_type: str,
-        output_dir: str,
+        repo_id: str = None,
+        model_type: str = None,
+        output_dir: str = None,
         version: str = None,
         pipeline_action: str = "txt2img",
         missing_files: list = None,
         gguf_filename: str = None,
+        zip_url: str = None,
     ):
-        """Download model files from HuggingFace.
+        """Download model files from HuggingFace or direct URL.
 
         Args:
             repo_id: HuggingFace repository ID (e.g., "black-forest-labs/FLUX.1-dev")
-            model_type: Type of model (llm, flux, gguf, etc.)
+            model_type: Type of model (llm, flux, gguf, openvoice_zip, etc.)
             output_dir: Directory to save the model
             version: Version name for bootstrap data lookup (e.g., "SDXL 1.0", "Flux.1 S")
             pipeline_action: Pipeline action (txt2img, inpaint, etc.)
             missing_files: Specific list of files to download (if provided, only these files will be downloaded)
             gguf_filename: For GGUF downloads, the specific .gguf file to download
+            zip_url: For ZIP downloads, the direct URL to download
 
         """
+        # Store model_type immediately for use in completion signals
+        self._current_model_type = model_type
+        
         self.logger.info(
             f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
             f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}, "
-            f"missing_files={missing_files}, gguf_filename={gguf_filename}"
+            f"missing_files={missing_files}, gguf_filename={gguf_filename}, zip_url={zip_url}"
         )
+
+        # Handle ZIP file downloads (OpenVoice checkpoints)
+        if model_type == "openvoice_zip" and zip_url:
+            self._download_and_extract_zip(zip_url, output_dir)
+            return
 
         # Handle GGUF downloads specially - just download the single file
         if model_type == "gguf" and gguf_filename:
@@ -77,7 +88,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # For art/stt/tts models, don't create a subdirectory - use output_dir directly
         # since it already points to the correct location
-        is_stt_tts = model_type in ("stt", "tts_speecht5", "tts_openvoice")
+        is_stt_tts = model_type in ("stt", "tts_openvoice")
         if model_type == "art" or is_stt_tts:
             model_path = Path(output_dir)
             self.logger.info(
@@ -115,7 +126,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # If specific missing_files list is provided, use ONLY those files
         # Otherwise, use the comprehensive bootstrap data
         is_art_model = model_type == "art"
-        is_stt_tts_model = model_type in ("stt", "tts_speecht5", "tts_openvoice")
+        is_stt_tts_model = model_type in ("stt", "tts_openvoice")
 
         # For art/stt/tts models, use bootstrap data directly (no API call)
         # For LLM models, we still need API to discover model shards
@@ -330,7 +341,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             )
             self.emit_signal(
                 self._complete_signal,
-                {"model_path": str(model_path), "repo_id": repo_id},
+                {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type},
             )
             return
 
@@ -389,8 +400,119 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._cleanup_temp_files()
         self.emit_signal(
             self._complete_signal,
-            {"model_path": str(model_path), "repo_id": repo_id},
+            {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type},
         )
+
+    def _download_and_extract_zip(self, zip_url: str, output_dir: str):
+        """Download and extract a ZIP file with progress tracking.
+
+        Args:
+            zip_url: Direct URL to the ZIP file
+            output_dir: Directory to extract to
+        """
+        import zipfile
+        import tempfile
+
+        filename = os.path.basename(zip_url)
+        model_path = Path(output_dir)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Initialize download state
+        self.is_cancelled = False
+        self._completed_files.clear()
+        self._failed_files.clear()
+        self._file_progress.clear()
+        self._file_sizes.clear()
+        self._file_threads.clear()
+        self._total_downloaded = 0
+        self._total_size = 0
+
+        temp_dir = model_path / ".downloading"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        self._model_path = model_path
+        self._temp_dir = temp_dir
+
+        self.emit_signal(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            {"message": f"Starting ZIP download: {filename}"},
+        )
+
+        # Get file size
+        try:
+            head_response = requests.head(zip_url, allow_redirects=True, timeout=30)
+            head_response.raise_for_status()
+            file_size = int(head_response.headers.get("Content-Length", 0))
+        except requests.RequestException as e:
+            self.logger.error(f"Failed to get ZIP file size: {e}")
+            file_size = 0
+
+        self._total_size = file_size
+        self._file_sizes[filename] = file_size
+
+        size_mb = file_size / (1024 * 1024)
+        self.emit_signal(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            {"message": f"Downloading: {filename} ({size_mb:.1f} MB)"},
+        )
+
+        # Download the file
+        temp_path = temp_dir / filename
+        try:
+            with requests.get(zip_url, stream=True, timeout=300) as response:
+                response.raise_for_status()
+
+                downloaded = 0
+                with open(temp_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if self.is_cancelled:
+                            self.emit_signal(
+                                self._failed_signal,
+                                {"error": "Download cancelled"},
+                            )
+                            return
+
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+
+                            # Update progress every ~1MB
+                            if downloaded % (1024 * 1024) < 8192:
+                                self._update_file_progress(
+                                    filename, downloaded, file_size
+                                )
+
+                self._update_file_progress(filename, downloaded, file_size)
+
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {"message": f"Extracting {filename}..."},
+            )
+
+            # Extract the ZIP
+            with zipfile.ZipFile(temp_path, "r") as zip_ref:
+                zip_ref.extractall(model_path)
+
+            # Clean up
+            temp_path.unlink()
+            self._cleanup_temp_files()
+
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {"message": f"Successfully extracted {filename}"},
+            )
+
+            self.emit_signal(
+                self._complete_signal,
+                {"model_path": str(model_path), "model_type": "openvoice_zip"},
+            )
+
+        except Exception as e:
+            self.logger.error(f"Failed to download/extract ZIP: {e}")
+            self.emit_signal(
+                self._failed_signal,
+                {"error": str(e)},
+            )
 
     def _download_gguf_model(
         self,
@@ -485,7 +607,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._cleanup_temp_files()
         self.emit_signal(
             self._complete_signal,
-            {"model_path": str(model_path), "repo_id": repo_id},
+            {"model_path": str(model_path), "repo_id": repo_id, "model_type": "gguf"},
         )
 
     def _download_file(

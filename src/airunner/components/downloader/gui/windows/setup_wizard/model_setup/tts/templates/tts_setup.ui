@@ -21,16 +21,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Download the models required for text to speech using the SpeechT5 model</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
+      <item row=\"1\" column=\"0\">\n    <widget class=\"QLabel\" name=\"label_2\">\n     <property name=\"text\">\n      <string>OpenVoice models are downloaded automatically when first used</string>\n     </property>\n     <property name=\"wordWrap\">\n      <bool>true</bool>\n     </property>\n    </widget>\n   </item>
    <item row="4" column="0">
     <widget class="QPushButton" name="cancel">
      <property name="text">
@@ -59,9 +50,7 @@
        <bold>true</bold>
       </font>
      </property>
-     <property name="text">
-      <string>SpeechT5</string>
-     </property>
+          <property name=\"text\">\n      <string>OpenVoice</string>\n     </property>
     </widget>
    </item>
    <item row="3" column="0">

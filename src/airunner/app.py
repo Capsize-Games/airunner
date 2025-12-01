@@ -799,6 +799,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
         translations_dir = os.path.join(
             os.path.dirname(__file__), "translations"
         )
+        # Remove the previously installed translator if any
+        old_translator = getattr(self.app, 'translator', None)
+        if old_translator is not None:
+            self.app.removeTranslator(old_translator)
+            self.app.translator = None
+
         translator = QTranslator()
         language_map = {
             QLocale.English: "english",
@@ -806,7 +812,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
         }
         base_name = language_map.get(locale.language(), "english")
         qm_path = os.path.join(translations_dir, f"{base_name}.qm")
-        self.app.removeTranslator(translator)
         if os.path.exists(qm_path) and translator.load(qm_path):
             self.app.installTranslator(translator)
             self.app.translator = translator
@@ -1215,8 +1220,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 )
 
     def retranslate_ui_signal(self) -> None:
-        """Retranslate UI elements (placeholder for subclasses)."""
-        pass
+        """Emit signal to retranslate all UI elements."""
+        self.emit_signal(SignalCode.RETRANSLATE_UI_SIGNAL)
 
 
 # Dummy classes for test patching

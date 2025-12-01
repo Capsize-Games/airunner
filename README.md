@@ -28,7 +28,7 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 
 | Feature | Description |
 |---------|-------------|
-| **🗣️ Voice Chat** | Real-time conversations with LLMs using espeak, SpeechT5, or OpenVoice TTS |
+| **🗣️ Voice Chat** | Real-time conversations with LLMs using espeak or OpenVoice |
 | **🤖 Custom AI Agents** | Configurable personalities, moods, and RAG-enhanced knowledge |
 | **🎨 Visual Workflows** | Drag-and-drop LangGraph workflow builder with runtime execution |
 | **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and FLUX models with drawing tools, LoRA, inpainting, and filters |
@@ -121,7 +121,7 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | **Image** | Stable Diffusion 1.5 | ~2 GB |
 | **Image** | SDXL 1.0 | ~6 GB |
 | **Image** | FLUX.1 Dev/Schnell (GGUF) | 8-12 GB |
-| **TTS** | OpenVoice / SpeechT5 | 654 MB - 4 GB |
+| **TTS** | OpenVoice | 654 MB |
 | **STT** | Whisper Tiny | 155 MB |
 
 **LLM Providers:** Local (HuggingFace), Ollama, OpenRouter, OpenAI

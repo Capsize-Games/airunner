@@ -21,6 +21,7 @@ class LLMResponse:
         sequence_number: Sequential number to track message order.
         request_id: Optional request ID for correlation with HTTP API requests.
         tools: Optional list of tool names that were executed during generation.
+        is_system_message: Flag indicating if this is a system/status message (not spoken by TTS).
     """
 
     message: str = ""
@@ -32,3 +33,4 @@ class LLMResponse:
     sequence_number: int = 0
     request_id: Optional[str] = None
     tools: Optional[list] = None
+    is_system_message: bool = False
