@@ -586,13 +586,25 @@
         .newsletter-form {
             display: flex;
             gap: 1rem;
-            max-width: 500px;
+            max-width: 700px;
             margin: 0 auto;
+            flex-wrap: wrap; /* allow smaller screens to wrap fields */
+            align-items: center;
         }
 
         .newsletter-form input {
             flex: 1;
             padding: 1rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .newsletter-form select {
+            flex: 1 1 220px; /* allow selects to wrap and be usable on narrow viewports */
+            padding: 1rem 1rem;
             border: 1px solid var(--border-color);
             border-radius: 10px;
             background: var(--bg-dark);
@@ -614,6 +626,15 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+        }
+
+        /* style for small optional helper text */
+        .newsletter-optional {
+            width: 100%;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            text-align: center;
         }
 
         .newsletter-form button:hover {
@@ -660,6 +681,15 @@
 
         .footer-links a:hover {
             color: var(--primary);
+        }
+
+        /* Footer disclaimer */
+        .footer-disclaimer {
+            width: 100%;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-align: center;
         }
 
         /* Responsive */
@@ -770,7 +800,7 @@
                 </p>
                 <div class="hero-badges">
                     <span class="badge">
-                        <span class="badge-icon">🔒</span> 100% Private
+                        <span class="badge-icon">🔒</span> 100% Private*
                     </span>
                     <span class="badge">
                         <span class="badge-icon">⚡</span> GPU Accelerated
@@ -1027,11 +1057,11 @@
                 <div class="req-card">
                     <h3>💻 Minimum</h3>
                     <ul class="req-list">
-                        <li><span>OS</span><span class="value">Linux / Windows 10+</span></li>
-                        <li><span>CPU</span><span class="value">4 cores</span></li>
-                        <li><span>RAM</span><span class="value">16 GB</span></li>
-                        <li><span>GPU</span><span class="value">NVIDIA GTX 1060 (6GB)</span></li>
-                        <li><span>Storage</span><span class="value">20 GB</span></li>
+                        <li><span>OS</span><span class="value">Linux (Ubuntu 22.04+)</span></li>
+                        <li><span>CPU</span><span class="value">8+ cores</span></li>
+                        <li><span>RAM</span><span class="value">32 GB+</span></li>
+                        <li><span>GPU</span><span class="value">NVIDIA RTX 5080+ (16GB+)</span></li>
+                        <li><span>Storage</span><span class="value">100 GB SSD</span></li>
                     </ul>
                 </div>
                 <div class="req-card">
@@ -1039,25 +1069,20 @@
                     <ul class="req-list">
                         <li><span>OS</span><span class="value">Linux (Ubuntu 22.04+)</span></li>
                         <li><span>CPU</span><span class="value">8+ cores</span></li>
-                        <li><span>RAM</span><span class="value">32 GB+</span></li>
-                        <li><span>GPU</span><span class="value">NVIDIA RTX 3080+ (12GB+)</span></li>
-                        <li><span>Storage</span><span class="value">100 GB SSD</span></li>
+                        <li><span>RAM</span><span class="value">64 GB+</span></li>
+                        <li><span>GPU</span><span class="value">NVIDIA RTX 5090+ (16GB+)</span></li>
+                        <li><span>Storage</span><span class="value">200 GB SSD</span></li>
                     </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Newsletter Section -->
     <section class="newsletter" id="notify">
         <div class="section-container">
             <div class="newsletter-card">
-                <h2>Stay Updated</h2>
-                <p>Get notified about new releases, features, and AI Runner news. We respect your privacy and won't spam you.</p>
-                <form class="newsletter-form" action="https://formspree.io/f/meogdanb" method="POST">
-                    <input type="email" name="email" placeholder="your@email.com" required>
-                    <button type="submit">Subscribe</button>
-                </form>
+                *An internet connection is required to download models and to use internet-dependent
+                features (e.g., web search). We retain no user data.
             </div>
         </div>
     </section>
@@ -1119,6 +1144,23 @@
                     });
                 }
             });
+        });
+
+        // Toggle "Other" interest field visibility
+        document.addEventListener('DOMContentLoaded', function () {
+            const interestSelect = document.getElementById('interest');
+            if (interestSelect) {
+                interestSelect.addEventListener('change', function (e) {
+                    const otherInput = document.getElementById('other-interest');
+                    if (!otherInput) return;
+                    if (this.value === 'other') {
+                        otherInput.style.display = 'block';
+                    } else {
+                        otherInput.style.display = 'none';
+                        otherInput.value = '';
+                    }
+                });
+            }
         });
     </script>
 </body>
