@@ -43,7 +43,7 @@ class Ui_input_image(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 565, 512))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 565, 1024))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
@@ -52,7 +52,7 @@ class Ui_input_image(object):
         self.image_container.setObjectName(u"image_container")
         sizePolicy.setHeightForWidth(self.image_container.sizePolicy().hasHeightForWidth())
         self.image_container.setSizePolicy(sizePolicy)
-        self.image_container.setMinimumSize(QSize(512, 512))
+        self.image_container.setMinimumSize(QSize(1024, 1024))
 
         self.gridLayout_2.addWidget(self.image_container, 0, 0, 1, 1)
 

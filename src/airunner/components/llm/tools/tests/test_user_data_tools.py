@@ -20,14 +20,14 @@ class TestStoreUserData:
         """Test successfully storing user data."""
         # Arrange
         mock_user = Mock()
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("name", "Alice")
 
         # Assert
         assert result == "Stored name: Alice"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
         assert hasattr(mock_user, "name")
         mock_user.save.assert_called_once()
 
@@ -36,14 +36,14 @@ class TestStoreUserData:
         """Test storing user email."""
         # Arrange
         mock_user = Mock()
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("email", "alice@example.com")
 
         # Assert
         assert result == "Stored email: alice@example.com"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
         mock_user.save.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
@@ -51,14 +51,14 @@ class TestStoreUserData:
         """Test storing user preferences."""
         # Arrange
         mock_user = Mock()
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("preferences", "dark_mode")
 
         # Assert
         assert result == "Stored preferences: dark_mode"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
         mock_user.save.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
@@ -67,7 +67,7 @@ class TestStoreUserData:
         # Arrange
         mock_user = Mock()
         mock_user.name = "Bob"
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("name", "Alice")
@@ -80,7 +80,7 @@ class TestStoreUserData:
     def test_store_user_data_error_handling(self, mock_user_class):
         """Test error handling when storage fails."""
         # Arrange
-        mock_user_class.get_or_create.side_effect = Exception("Database error")
+        mock_user_class.objects.get_or_create.side_effect = Exception("Database error")
 
         # Act
         result = store_user_data("name", "Alice")
@@ -94,7 +94,7 @@ class TestStoreUserData:
         # Arrange
         mock_user = Mock()
         mock_user.save.side_effect = Exception("Save failed")
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("name", "Alice")
@@ -107,7 +107,7 @@ class TestStoreUserData:
         """Test storing empty string value."""
         # Arrange
         mock_user = Mock()
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("name", "")
@@ -121,7 +121,7 @@ class TestStoreUserData:
         """Test storing value with special characters."""
         # Arrange
         mock_user = Mock()
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = store_user_data("bio", "Hello! I'm a developer 🚀")
@@ -140,14 +140,14 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.name = "Alice"
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("name")
 
         # Assert
         assert result == "Alice"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_get_user_data_email(self, mock_user_class):
@@ -155,28 +155,28 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.email = "alice@example.com"
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("email")
 
         # Assert
         assert result == "alice@example.com"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_get_user_data_not_found(self, mock_user_class):
         """Test retrieving non-existent key."""
         # Arrange
         mock_user = Mock(spec=[])  # Empty spec means no attributes
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("nonexistent")
 
         # Assert
         assert "No data found for key: nonexistent" in result
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_get_user_data_none_value(self, mock_user_class):
@@ -184,7 +184,7 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.name = None
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("name")
@@ -198,14 +198,14 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.age = 30
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("age")
 
         # Assert
         assert result == "30"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_get_user_data_boolean_value(self, mock_user_class):
@@ -213,20 +213,20 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.is_active = True
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("is_active")
 
         # Assert
         assert result == "True"
-        mock_user_class.get_or_create.assert_called_once()
+        mock_user_class.objects.get_or_create.assert_called_once()
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_get_user_data_error_handling(self, mock_user_class):
         """Test error handling when retrieval fails."""
         # Arrange
-        mock_user_class.get_or_create.side_effect = Exception("Database error")
+        mock_user_class.objects.get_or_create.side_effect = Exception("Database error")
 
         # Act
         result = get_user_data("name")
@@ -243,7 +243,7 @@ class TestGetUserData:
         type(mock_user).name = property(
             lambda self: (_ for _ in ()).throw(Exception("Property error"))
         )
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("name")
@@ -257,7 +257,7 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.name = ""
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("name")
@@ -272,7 +272,7 @@ class TestGetUserData:
         # Arrange
         mock_user = Mock()
         mock_user.count = 0
-        mock_user_class.get_or_create.return_value = mock_user
+        mock_user_class.objects.get_or_create.return_value = mock_user
 
         # Act
         result = get_user_data("count")

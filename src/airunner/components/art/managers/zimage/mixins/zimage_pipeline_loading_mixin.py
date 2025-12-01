@@ -73,6 +73,9 @@ class ZImagePipelineLoadingMixin:
         else:
             self._load_from_pretrained(self.model_path, pipeline_class, data)
         
+        # Debug: verify _pipe was set
+        self.logger.info(f"[ZIMAGE DEBUG] After _set_pipe: self._pipe={self._pipe}, self={id(self)}")
+        
         _clear_gpu_memory()
 
     def _has_complete_pretrained_structure(self, model_dir: Path) -> bool:

@@ -46,6 +46,7 @@ class LLMGeneratorSettings(BaseModel):
     length_penalty = Column(Integer, default=900)
     model_service = Column(String, default=ModelService.LOCAL.value)
     model_path = Column(String, default=AIRUNNER_DEFAULT_LLM_HF_PATH)
+    model_id = Column(String, nullable=True)  # Provider config model ID (e.g., "qwen3-8b")
     auto_extract_knowledge = Column(Boolean, default=True)
 
     # Mode-based routing settings

@@ -34,7 +34,7 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 class HuggingFaceDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
     """Dialog for showing HuggingFace model download progress with real-time updates."""
 
-    def __init__(self, parent, model_name: str, model_path: str):
+    def __init__(self, parent, model_name: str, model_path: str, batch_mode: bool = False):
         """
         Initialize the download dialog.
 
@@ -42,14 +42,15 @@ class HuggingFaceDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
             parent: Parent widget
             model_name: Display name of model being downloaded
             model_path: Path where model will be saved
+            batch_mode: If True, dialog will NOT auto-register for download signals
+                        and will NOT auto-close on download_complete. The caller
+                        must manage signals and closing explicitly.
         """
-        self.signal_handlers = {
-            SignalCode.UPDATE_DOWNLOAD_PROGRESS: self.on_progress_updated,
-            SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS: self.on_file_progress_updated,
-            SignalCode.UPDATE_DOWNLOAD_LOG: self.on_log_updated,
-            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE: self.on_download_complete,
-            SignalCode.HUGGINGFACE_DOWNLOAD_FAILED: self.on_download_failed,
-        }
+        # NOTE: We do NOT register for HUGGINGFACE_DOWNLOAD_COMPLETE here!
+        # This caused issues where multiple dialogs would all close when
+        # ANY download completed. The caller must explicitly connect signals.
+        self.signal_handlers = {}
+        self._batch_mode = batch_mode
         super().__init__(parent=parent)
 
         self.model_name = model_name
@@ -144,16 +145,25 @@ class HuggingFaceDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
             scrollbar.setValue(scrollbar.maximum())
 
     def on_download_complete(self, data: dict) -> None:
-        """Handle successful download completion."""
+        """Handle successful download completion.
+        
+        In batch mode, this just updates the UI but doesn't auto-close.
+        """
         self.ui.log_display.append("\n✓ Download complete!")
         self.ui.progress_bar.setValue(1000)
-        self.ui.log_display.append(
-            "Closing dialog and proceeding with model setup..."
-        )
-        self.ui.cancel_button.setEnabled(False)
-
-        # Close dialog after brief delay
-        QTimer.singleShot(1000, self.accept)
+        
+        if self._batch_mode:
+            # In batch mode, don't auto-close - caller will close when all done
+            self.ui.log_display.append("All downloads finished!")
+            self.ui.cancel_button.setText("Close")
+            self.ui.cancel_button.setEnabled(True)
+        else:
+            self.ui.log_display.append(
+                "Closing dialog and proceeding with model setup..."
+            )
+            self.ui.cancel_button.setEnabled(False)
+            # Close dialog after brief delay
+            QTimer.singleShot(1000, self.accept)
 
     def on_download_failed(self, data: dict) -> None:
         """Handle download failure."""

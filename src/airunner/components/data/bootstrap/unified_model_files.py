@@ -4,7 +4,7 @@ This module consolidates file requirements from:
 - Art models (SD, SDXL, FLUX, ControlNet)
 - LLM models (Llama, Qwen, etc.)
 - STT models (Whisper)
-- TTS models (OpenVoice, SpeechT5)
+- TTS models (OpenVoice)
 """
 
 from airunner.settings import AIRUNNER_ART_ENABLED
@@ -20,7 +20,6 @@ from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
 from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
-from airunner.components.tts.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 
 
 # Unified model file bootstrap data
@@ -29,7 +28,6 @@ UNIFIED_MODEL_FILES = {
     "llm": LLM_FILE_BOOTSTRAP_DATA,
     "stt": WHISPER_FILES,
     "tts_openvoice": OPENVOICE_FILES,
-    "tts_speecht5": SPEECH_T5_FILES,
 }
 
 
@@ -42,7 +40,7 @@ def get_required_files_for_model(
     """Get required files for a model.
 
     Args:
-        model_type: Type of model (art, llm, stt, tts_openvoice, tts_speecht5)
+        model_type: Type of model (art, llm, stt, tts_openvoice)
         model_id: Model identifier (repo_id or version name)
         version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
         pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
@@ -91,9 +89,5 @@ def get_required_files_for_model(
         if not model_data:
             return None
         return model_data.get("files")
-
-    # TTS SpeechT5 models use repo_id lookup
-    elif model_type == "tts_speecht5":
-        return data.get(model_id)
 
     return None

@@ -103,7 +103,6 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
         self.update_active_grid_area_position = Mock()
         self.updateImagePositions = Mock()
         self._apply_viewport_compensation = Mock()
-        self._restore_text_items_from_db = Mock()
         self._remove_text_item = Mock()
 
         # Mock super() methods that EventHandlerMixin calls
@@ -392,7 +391,6 @@ class TestEventHandlerMixin:
         mixin.set_canvas_color.assert_called_once_with(mixin.scene)
         mixin.show_active_grid_area.assert_called_once()
         mixin.scene._refresh_layer_display.assert_called_once()
-        mixin._restore_text_items_from_db.assert_called_once()
         mixin.align_canvas_items_to_viewport.assert_called_once()
 
     def test_showEvent_subsequent_show_no_resize(self, qapp):

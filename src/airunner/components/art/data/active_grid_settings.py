@@ -15,8 +15,8 @@ class ActiveGridSettings(BaseModel):
     fill_color = Column(String, default="#FF0000")
     pos_x = Column(Integer, default=0)
     pos_y = Column(Integer, default=0)
-    width = Column(Integer, default=512)
-    height = Column(Integer, default=512)
+    width = Column(Integer, default=1024)
+    height = Column(Integer, default=1024)
 
     @property
     def pos(self) -> tuple[int, int]:

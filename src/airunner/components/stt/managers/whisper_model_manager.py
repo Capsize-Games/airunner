@@ -3,10 +3,7 @@ import queue
 
 import numpy as np
 import torch
-from transformers.models.whisper.modeling_whisper import (
-    WhisperForConditionalGeneration,
-)
-from transformers.models.whisper.processing_whisper import WhisperProcessor
+from faster_whisper import WhisperModel
 from PySide6.QtCore import QThread, QMutex, QObject, Signal
 
 from airunner.components.application.managers.base_model_manager import (
@@ -14,10 +11,8 @@ from airunner.components.application.managers.base_model_manager import (
 )
 from airunner.components.art.utils.model_file_checker import ModelFileChecker
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.components.application.exceptions import NaNException
 from airunner.settings import (
     AIRUNNER_DEFAULT_STT_HF_PATH,
-    AIRUNNER_LOCAL_FILES_ONLY,
 )
 
 
@@ -55,7 +50,9 @@ class AudioProcessingWorker(QObject):
                         self.manager.logger.error(e)
 
                     if transcription:
-                        self.transcription_ready.emit(transcription)
+                        self.manager.logger.debug(f"Sending transcription: {transcription}")
+                        # Call directly instead of using Qt signal (avoids cross-thread signal issues)
+                        self.manager._send_transcription(transcription)
 
                 # Mark this task as done
                 self.queue.task_done()
@@ -75,7 +72,8 @@ class AudioProcessingWorker(QObject):
 
 class WhisperModelManager(BaseModelManager):
     """
-    Handler for the Whisper model from OpenAI.
+    Handler for the Whisper model using faster-whisper (CTranslate2).
+    Provides ~4x faster transcription compared to transformers-based Whisper.
     """
 
     def __init__(self, *args, **kwargs):
@@ -83,15 +81,11 @@ class WhisperModelManager(BaseModelManager):
         self.model_class = "stt"
         self._model_status = {
             ModelType.STT: ModelStatus.UNLOADED,
-            ModelType.STT_PROCESSOR: ModelStatus.UNLOADED,
-            ModelType.STT_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
         }
         super().__init__(*args, **kwargs)
 
         self._lock = QMutex()
         self._model = None
-        self._processor = None
-        self._feature_extractor = None
         self._sampling_rate = 16000
         self.audio_stream = None
 
@@ -108,8 +102,14 @@ class WhisperModelManager(BaseModelManager):
         # Register cleanup for application exit
         self.register(SignalCode.QUIT_APPLICATION, self.cleanup_worker)
 
-        # Determine device map strategy based on available hardware
-        self._device_map = "auto" if torch.cuda.is_available() else None
+        # Determine compute type based on available hardware
+        # Use int8 quantization for lower VRAM (~1.5-2GB vs ~3-4GB for float16)
+        if torch.cuda.is_available():
+            self._device = "cuda"
+            self._compute_type = "int8"
+        else:
+            self._device = "cpu"
+            self._compute_type = "int8"
 
     @property
     def model_path(self) -> str:
@@ -119,10 +119,6 @@ class WhisperModelManager(BaseModelManager):
             )
         )
         return os.path.abspath(file_path)
-
-    @property
-    def dtype(self):
-        return torch.float16 if torch.cuda.is_available() else torch.float32
 
     @property
     def stt_is_loading(self) -> bool:
@@ -161,7 +157,7 @@ class WhisperModelManager(BaseModelManager):
     def load(self, retry: bool = False):
         if self.stt_is_loading or self.stt_is_loaded:
             return
-        self.logger.debug("Loading Whisper (text-to-speech)")
+        self.logger.debug("Loading Whisper (speech-to-text) via faster-whisper")
 
         # Check for missing files and trigger download if needed
         if not retry:
@@ -178,12 +174,7 @@ class WhisperModelManager(BaseModelManager):
         # unsure why this is failing to load occasionally - this is a hack
         if self._model is None and retry is False:
             return self.load(retry=True)
-        self._load_processor()
-        if (
-            self._model is not None
-            and self._processor is not None
-            and self._feature_extractor is not None
-        ):
+        if self._model is not None:
             self.change_model_status(ModelType.STT, ModelStatus.LOADED)
             return True
         else:
@@ -193,62 +184,36 @@ class WhisperModelManager(BaseModelManager):
     def unload(self):
         if self.stt_is_loading or self.stt_is_unloaded:
             return
-        self.logger.debug("Unloading Whisper (text-to-speech)")
+        self.logger.debug("Unloading Whisper (speech-to-text)")
         self.change_model_status(ModelType.STT, ModelStatus.LOADING)
         self._unload_model()
-        self._unload_processor()
-        self._unload_feature_extractor()
         self.change_model_status(ModelType.STT, ModelStatus.UNLOADED)
 
     def _load_model(self):
         self.logger.debug(
-            f"Loading model from {self.model_path} with device_map={self._device_map}"
+            f"Loading faster-whisper model from {self.model_path} "
+            f"with device={self._device}, compute_type={self._compute_type}"
         )
         try:
             # Clean up any GPU memory before loading to avoid conflicts
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-            # Handle different loading scenarios based on available hardware
-            if torch.cuda.is_available():
-                # For CUDA, use device_map="auto" with low_cpu_mem_usage=True
-                self._model = WhisperForConditionalGeneration.from_pretrained(
-                    self.model_path,
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                    torch_dtype=self.dtype,
-                    use_safetensors=True,
-                    force_download=False,
-                    device_map=self._device_map,
-                    low_cpu_mem_usage=True,  # Fix for meta tensor issues
-                )
-            else:
-                # For CPU, load without device_map and with CPU optimization
-                self._model = WhisperForConditionalGeneration.from_pretrained(
-                    self.model_path,
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                    torch_dtype=self.dtype,
-                    use_safetensors=True,
-                    force_download=False,
-                    low_cpu_mem_usage=True,  # Fix for meta tensor issues
-                )
-                # Explicitly move to CPU in case it's needed
-                self._model = self._model.cpu()
+            # Load the CTranslate2 model directly from local path
+            # faster-whisper detects this is a directory and loads locally
+            self._model = WhisperModel(
+                self.model_path,
+                device=self._device,
+                compute_type=self._compute_type,
+                local_files_only=True,
+            )
+            self.logger.info(
+                f"faster-whisper model loaded on {self._device}"
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")
             self.change_model_status(ModelType.STT, ModelStatus.FAILED)
-            return None
-
-    def _load_processor(self):
-        model_path = self.model_path
-        self.logger.debug(f"Loading processor from {model_path}")
-        try:
-            self._processor = WhisperProcessor.from_pretrained(
-                model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load processor: {e}")
             return None
 
     def _unload_model(self):
@@ -257,69 +222,33 @@ class WhisperModelManager(BaseModelManager):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    def _unload_processor(self):
-        del self._processor
-        self._processor = None
-
-    def _unload_feature_extractor(self):
-        del self._feature_extractor
-        self._feature_extractor = None
-
     def _process_inputs(self, inputs: np.ndarray) -> str:
-        """Process audio input array and return transcription"""
-        # Using QMutex locker pattern
-        if not self._feature_extractor or not self._model:
+        """Process audio input array and return transcription using faster-whisper"""
+        if not self._model:
             return ""
 
         try:
-            # Pre-process the audio on CPU first
-            self.logger.debug("Processing audio input")
+            self.logger.debug("Processing audio input with faster-whisper")
 
-            # Convert numpy array to proper format
-            input_features = self._feature_extractor(
-                inputs, sampling_rate=self._sampling_rate, return_tensors="pt"
-            ).input_features
-
-            if torch.isnan(input_features).any():
-                raise NaNException("NaN values found in input features")
-
-            # Find model's device for placing tensors
-            model_device = next(self._model.parameters()).device
-
-            # Place features on the same device as model with correct dtype
-            input_features = input_features.to(
-                device=model_device, dtype=self.dtype
+            # faster-whisper expects float32 audio normalized to [-1, 1]
+            # The AudioProcessingWorker already handles this conversion
+            segments, info = self._model.transcribe(
+                inputs,
+                beam_size=1,
+                temperature=self.whisper_settings.temperature,
+                vad_filter=True,  # Voice activity detection for better accuracy
             )
 
-            self.logger.debug(
-                f"Input features prepared on device: {input_features.device}"
-            )
+            # Collect all segment texts
+            transcription = " ".join(segment.text for segment in segments)
+            transcription = transcription.strip()
 
-            # Call the model directly with the features
-            with torch.no_grad():
-                # Pass only the necessary arguments
-                result = self._model.generate(
-                    input_features=input_features,
-                    do_sample=True,
-                    temperature=self.whisper_settings.temperature,
-                    num_beams=1,
-                )
-
-            # Process the results
-            transcription = self.process_transcription(result)
-
-            if not transcription or "nan" in transcription:
+            if not transcription:
                 return ""
 
+            self.logger.debug(f"Transcribed: {transcription[:50]}...")
             return transcription
 
-        except RuntimeError as e:
-            self.logger.error(f"RuntimeError in audio processing: {e}")
-            if "device" in str(e).lower():
-                self.logger.error(
-                    f"Device mismatch detected. Model on: {model_device}"
-                )
-            return ""
         except Exception as e:
             self.logger.error(f"Error in audio processing: {e}")
             return ""
@@ -328,6 +257,7 @@ class WhisperModelManager(BaseModelManager):
         """
         Emit the transcription so that other handlers can use it
         """
+        self.logger.debug(f"_send_transcription called with: {transcription}")
         self.api.stt.audio_processor_response(transcription)
 
     def _check_and_trigger_download(self):
@@ -362,18 +292,3 @@ class WhisperModelManager(BaseModelManager):
             )
 
         return should_download, download_info
-
-    def process_transcription(self, generated_ids) -> str:
-        # Move to CPU only for decoding
-        generated_ids_cpu = generated_ids.cpu()
-        transcription = self._processor.batch_decode(
-            generated_ids_cpu, skip_special_tokens=True
-        )[0]
-
-        # Remove leading and trailing whitespace
-        transcription = transcription.strip()
-
-        # Remove any extra whitespace
-        transcription = " ".join(transcription.split())
-
-        return transcription

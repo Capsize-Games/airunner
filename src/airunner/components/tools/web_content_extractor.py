@@ -59,15 +59,21 @@ _patch_signals_for_subprocess()
 
 # Dynamically resolve cache directory based on PathSettings
 try:
-    base_path = PathSettings.objects.first().base_path
+    path_settings = PathSettings.objects.first()
+    if path_settings and path_settings.base_path:
+        base_path = path_settings.base_path
+    else:
+        # Use XDG data directory as fallback
+        base_path = Path.home() / ".local" / "share" / "airunner"
     CACHE_DIR = Path(base_path) / "cache" / ".webcache"
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     BLOCKLIST_FILE = Path(base_path) / ".scraper_blocklist"
 except Exception:
-    # Fallback to local .webcache if PathSettings is unavailable (e.g., during tests)
-    CACHE_DIR = Path(__file__).parent / ".webcache"
-    CACHE_DIR.mkdir(exist_ok=True)
-    BLOCKLIST_FILE = Path(__file__).parent / ".scraper_blocklist"
+    # Fallback to user's home directory if all else fails
+    base_path = Path.home() / ".local" / "share" / "airunner"
+    CACHE_DIR = base_path / "cache" / ".webcache"
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    BLOCKLIST_FILE = base_path / ".scraper_blocklist"
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 

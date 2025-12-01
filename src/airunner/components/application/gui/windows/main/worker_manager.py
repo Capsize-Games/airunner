@@ -76,6 +76,8 @@ class WorkerManager(Worker):
             SignalCode.FARA_LOAD_SIGNAL: self.on_fara_load_signal,
             SignalCode.FARA_UNLOAD_SIGNAL: self.on_fara_unload_signal,
             SignalCode.FARA_MODEL_DOWNLOAD_REQUIRED: self.on_fara_model_download_required_signal,
+            SignalCode.START_HUGGINGFACE_DOWNLOAD: self.on_start_huggingface_download_signal,
+            SignalCode.START_OPENVOICE_BATCH_DOWNLOAD: self.on_start_openvoice_batch_download_signal,
         }
         super().__init__()
         self._mask_generator_worker = None
@@ -515,6 +517,26 @@ class WorkerManager(Worker):
         Args:
             data: Download completion info with model_path
         """
+        # Skip if we're in a batch download (OpenVoice handles its own completion)
+        if hasattr(self, "_openvoice_remaining_downloads") and self._openvoice_remaining_downloads is not None:
+            if self.logger:
+                self.logger.debug(
+                    f"Skipping generic download complete handler during batch download"
+                )
+            return
+        
+        # Handle safety checker downloads - notify via queue to ensure thread safety
+        pipeline_action = data.get("pipeline_action", "")
+        if pipeline_action == "safety_checker":
+            if self.logger:
+                self.logger.info(
+                    "Safety checker download complete, notifying worker to retry load"
+                )
+            # Use queue to ensure thread-safe notification
+            if self._safety_checker_worker is not None:
+                self._safety_checker_worker.add_to_queue({"action": "load", "data": {}})
+            return
+        
         if self.logger:
             self.logger.info(
                 f"WorkerManager: Download complete for {data.get('model_path')}"
@@ -523,8 +545,11 @@ class WorkerManager(Worker):
                 f"Pending generation request: {self._pending_generation_request is not None}"
             )
 
-        # Delegate to LLM worker for LLM model downloads
-        if self._llm_generate_worker is not None:
+        # Delegate to LLM worker only for LLM model downloads
+        # Skip TTS, STT, and other non-LLM model types
+        model_type = data.get("model_type", "")
+        non_llm_types = {"tts_openvoice", "stt", "openvoice_zip", "art"}
+        if self._llm_generate_worker is not None and model_type not in non_llm_types:
             self.llm_generate_worker.on_huggingface_download_complete_signal(
                 data
             )
@@ -596,21 +621,40 @@ class WorkerManager(Worker):
             self.logger.info(
                 "Safety checker loaded, proceeding with pending image generation"
             )
-            pending_data = self._pending_generation_request
-            self._pending_generation_request = None
-            self._proceed_with_generation(pending_data)
+            # Note: Don't clear _pending_generation_request here - it will be cleared
+            # by on_huggingface_download_complete after the SD model download completes,
+            # or it will be set to None if no download is needed (generation proceeds immediately)
+            self._proceed_with_generation(self._pending_generation_request)
 
         elif (
             model_type == ModelType.SAFETY_CHECKER
             and status == ModelStatus.FAILED
             and self._pending_generation_request is not None
         ):
-            self.logger.warning(
-                "Safety checker failed to load; continuing image generation without it"
+            # Check if this was a download-triggered failure (we should wait for download)
+            # or a real failure (show error)
+            # The safety checker worker emits FAILED only after download fails or load fails
+            # If NSFW filter is enabled, we should NOT proceed - show error instead
+            from airunner.components.settings.data.application_settings import (
+                ApplicationSettings,
             )
-            pending_data = self._pending_generation_request
-            self._pending_generation_request = None
-            self._proceed_with_generation(pending_data)
+            app_settings = ApplicationSettings.objects.first()
+            
+            if app_settings.nsfw_filter:
+                self.logger.error(
+                    "Safety checker failed to load and NSFW filter is enabled. Cannot proceed with generation."
+                )
+                # Clear pending request since we're not proceeding
+                self._pending_generation_request = None
+                # Show error popup to user
+                self.api.application_error(
+                    message="Safety checker failed to load. Please disable the NSFW filter in settings or wait for the safety checker to download."
+                )
+            else:
+                self.logger.warning(
+                    "Safety checker failed to load; continuing image generation (NSFW filter disabled)"
+                )
+                self._proceed_with_generation(self._pending_generation_request)
 
         if self._sd_worker is not None:
             self.sd_worker.on_model_status_changed_signal(data)
@@ -634,9 +678,9 @@ class WorkerManager(Worker):
             self.sd_worker.on_unload_controlnet_signal(data)
 
     def on_safety_checker_load_signal(self, data):
-        # Initialize the safety checker worker and trigger loading
-        if self.safety_checker_worker is not None:
-            self.safety_checker_worker.handle_load(data)
+        # Ensure the worker is created and send load request through its queue
+        # Using add_to_queue ensures thread-safe message passing
+        self.safety_checker_worker.add_to_queue({"action": "load", "data": data})
 
     def on_safety_checker_unload_signal(self, data):
         # Trigger unloading if worker exists
@@ -687,8 +731,12 @@ class WorkerManager(Worker):
         Args:
             data: Image generation request data
         """
+        self.logger.info(f"_proceed_with_generation called with data keys: {data.keys() if data else 'None'}")
         if self.sd_worker is not None:
+            self.logger.info("Calling sd_worker.on_do_generate_signal")
             self.sd_worker.on_do_generate_signal(data)
+        else:
+            self.logger.error("sd_worker is None, cannot proceed with generation")
 
     def on_input_image_settings_changed_signal(self, data):
         if self._sd_worker is not None:
@@ -747,7 +795,7 @@ class WorkerManager(Worker):
                     self.logger.warning(f"Error unloading SD: {e}")
 
         # Unload TTS if loaded
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             try:
                 self.tts_generator_worker.unload()
                 if self.logger:
@@ -973,16 +1021,25 @@ class WorkerManager(Worker):
             )
 
     def update_properties(self, data):
-        if self._audio_processor_worker is not None:
+        if self._stt_audio_processor_worker is not None:
             self.stt_audio_processor_worker.update_properties(data)
 
     def on_stt_unload_signal(self, data):
-        if self._audio_processor_worker is not None:
+        if self._stt_audio_processor_worker is not None:
             self.stt_audio_processor_worker.on_stt_unload_signal(data)
 
     def on_stt_process_audio_signal(self, data):
-        if self._audio_processor_worker is not None:
-            self.stt_audio_processor_worker.on_stt_process_audio_signal(data)
+        # Use the property to ensure the worker is created
+        if self.logger:
+            self.logger.debug("on_stt_process_audio_signal called")
+        worker = self.stt_audio_processor_worker
+        if worker is not None:
+            if self.logger:
+                self.logger.debug("Forwarding audio to stt_audio_processor_worker")
+            worker.on_stt_process_audio_signal(data)
+        else:
+            if self.logger:
+                self.logger.warning("stt_audio_processor_worker is None")
 
     def on_interrupt_process_signal(self, data):
         # Interrupt LLM generation
@@ -990,33 +1047,44 @@ class WorkerManager(Worker):
             self.llm_generate_worker.llm_on_interrupt_process_signal(data)
 
         # Interrupt TTS generation
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_interrupt_process_signal(data)
 
         if self._tts_vocalizer_worker is not None:
             self.tts_vocalizer_worker.on_interrupt_process_signal(data)
 
     def on_unblock_tts_generator_signal(self, data):
-        if self._tts_generator_worker is not None:
+        callback_handled = False
+        
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_unblock_tts_generator_signal(data)
+            callback_handled = True
 
         if self._tts_vocalizer_worker is not None:
             self.tts_vocalizer_worker.on_unblock_tts_generator_signal(data)
+            callback_handled = True
+
+        # If no TTS workers handled this, still invoke the callback
+        # This ensures STT audio capture works even when TTS is disabled
+        if not callback_handled and data is not None:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback()
 
     def on_disable_tts_signal(self, data):
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_disable_tts_signal(data)
 
     def on_llm_text_streamed_signal(self, data):
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_llm_text_streamed_signal(data)
 
     def _reload_tts_model_manager(self, data):
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker._reload_tts_model_manager(data)
 
     def on_application_settings_changed_signal(self, data):
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_application_settings_changed_signal(
                 data
             )
@@ -1027,7 +1095,7 @@ class WorkerManager(Worker):
             )
 
     def on_add_to_queue_signal(self, data):
-        if self._tts_generator_worker is not None:
+        if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_add_to_queue_signal(data)
 
     def on_playback_device_changed_signal(self, data):
@@ -1037,3 +1105,552 @@ class WorkerManager(Worker):
     def on_image_exported_signal(self, data):
         # self.api.art.unload()
         pass
+
+    def on_start_huggingface_download_signal(self, data: dict):
+        """Handle START_HUGGINGFACE_DOWNLOAD signal for STT/TTS model downloads.
+
+        This signal is emitted when model managers detect missing model files
+        and need to trigger a download. Uses the same download infrastructure
+        as LLM and Art models.
+
+        Args:
+            data: Signal data dictionary containing:
+                - repo_id: HuggingFace repository ID
+                - model_path: Local path to save the model
+                - model_type: Type of model (stt, tts_openvoice)
+                - callback: Optional callback to invoke after download completes
+        """
+        from PySide6.QtWidgets import QApplication
+        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+            HuggingFaceDownloadDialog,
+        )
+
+        repo_id = data.get("repo_id", "")
+        model_path = data.get("model_path", "")
+        model_type = data.get("model_type", "")
+        callback = data.get("callback")
+
+        if not repo_id:
+            if self.logger:
+                self.logger.error("No repo_id provided in download request")
+            return
+
+        if self.logger:
+            self.logger.info(
+                f"Starting HuggingFace download for {model_type}: {repo_id}"
+            )
+
+        # Get main window for dialog parent
+        main_window = self._get_main_window()
+
+        if main_window:
+            try:
+                # Close any existing download dialog
+                if hasattr(self, "_download_dialog") and self._download_dialog:
+                    self._download_dialog.close()
+                    self._download_dialog = None
+
+                # Create download dialog
+                model_name = repo_id.split("/")[-1] if "/" in repo_id else repo_id
+                self._download_dialog = HuggingFaceDownloadDialog(
+                    parent=main_window,
+                    model_name=f"{model_name} ({model_type.upper()})",
+                    model_path=model_path,
+                )
+
+                # Store the callback for after download completes
+                self._pending_download_callback = callback
+
+                # Connect dialog to download worker signals
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_LOG,
+                    self._download_dialog.on_log_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_file_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._on_stt_tts_download_complete,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                    self._download_dialog.on_download_failed,
+                )
+
+                # Show the dialog
+                self._download_dialog.show()
+                self._download_dialog.raise_()
+                self._download_dialog.activateWindow()
+
+                if self.logger:
+                    self.logger.info(
+                        "Download dialog shown for STT/TTS model"
+                    )
+
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(
+                        f"Error showing download dialog: {e}", exc_info=True
+                    )
+        else:
+            if self.logger:
+                self.logger.error(
+                    "Unable to locate the main window; download dialog could not be displayed"
+                )
+
+        # Queue download request
+        download_data = {
+            "repo_id": repo_id,
+            "model_type": model_type,
+            "output_dir": model_path,
+        }
+
+        if self.logger:
+            self.logger.info(f"Queueing download request: {download_data}")
+
+        self.huggingface_download_worker.add_to_queue(download_data)
+
+    def _on_stt_tts_download_complete(self, data: dict):
+        """Handle completion of STT/TTS model download.
+
+        Invokes the stored callback if one was provided.
+        """
+        if hasattr(self, "_download_dialog") and self._download_dialog:
+            self._download_dialog.on_download_complete(data)
+
+        # Invoke callback if provided
+        if hasattr(self, "_pending_download_callback") and self._pending_download_callback:
+            callback = self._pending_download_callback
+            self._pending_download_callback = None
+            try:
+                callback()
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(
+                        f"Error invoking download callback: {e}", exc_info=True
+                    )
+
+    def on_start_openvoice_zip_download_signal(self, data: dict):
+        """Handle START_OPENVOICE_ZIP_DOWNLOAD signal for OpenVoice converter checkpoints.
+
+        Uses the same download dialog as HuggingFace downloads.
+
+        Args:
+            data: Signal data dictionary containing:
+                - callback: Optional callback to invoke after download completes
+        """
+        import os
+        from PySide6.QtWidgets import QApplication
+        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+            HuggingFaceDownloadDialog,
+        )
+
+        callback = data.get("callback")
+        
+        # Target directory for extraction
+        openvoice_dir = os.path.join(
+            self.path_settings.tts_model_path,
+            "openvoice",
+        )
+        
+        if self.logger:
+            self.logger.info(
+                f"Starting OpenVoice ZIP download to {openvoice_dir}"
+            )
+
+        # Get main window for dialog parent
+        main_window = self._get_main_window()
+
+        if main_window:
+            try:
+                # Close any existing download dialog
+                if hasattr(self, "_download_dialog") and self._download_dialog:
+                    self._download_dialog.close()
+                    self._download_dialog = None
+
+                # Create download dialog
+                self._download_dialog = HuggingFaceDownloadDialog(
+                    parent=main_window,
+                    model_name="OpenVoice Converter Checkpoints",
+                    model_path=openvoice_dir,
+                )
+
+                # Store the callback for after download completes
+                self._pending_download_callback = callback
+
+                # Connect dialog to download worker signals
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_LOG,
+                    self._download_dialog.on_log_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_file_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._on_stt_tts_download_complete,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                    self._download_dialog.on_download_failed,
+                )
+
+                # Show the dialog
+                self._download_dialog.show()
+                self._download_dialog.raise_()
+                self._download_dialog.activateWindow()
+
+                if self.logger:
+                    self.logger.info(
+                        "Download dialog shown for OpenVoice checkpoints"
+                    )
+
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(
+                        f"Error showing download dialog: {e}", exc_info=True
+                    )
+        else:
+            if self.logger:
+                self.logger.error(
+                    "Unable to locate the main window; download dialog could not be displayed"
+                )
+
+        # Queue download request - use the openvoice_zip model type
+        download_data = {
+            "model_type": "openvoice_zip",
+            "output_dir": openvoice_dir,
+            "zip_url": "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
+        }
+
+        if self.logger:
+            self.logger.info(f"Queueing OpenVoice ZIP download request: {download_data}")
+
+        self.huggingface_download_worker.add_to_queue(download_data)
+
+    def on_start_openvoice_batch_download_signal(self, data: dict):
+        """Handle START_OPENVOICE_BATCH_DOWNLOAD signal.
+
+        Shows a language selection dialog FIRST, then downloads all selected models
+        (including converter ZIP and HuggingFace models) in a single batch.
+
+        Args:
+            data: Signal data containing:
+                - needs_converter: Whether the converter ZIP needs download
+                - missing_core_models: List of core model IDs that need download
+                - missing_languages: List of language keys that need download
+                - callback: Callback to invoke after all downloads complete
+        """
+        import os
+        from PySide6.QtWidgets import QMessageBox, QDialog
+        from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
+            OpenVoiceLanguageDialog,
+        )
+        from airunner.components.tts.data.bootstrap.openvoice_languages import (
+            OPENVOICE_CORE_MODELS,
+            OPENVOICE_LANGUAGE_MODELS,
+            get_models_for_languages,
+        )
+        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+            HuggingFaceDownloadDialog,
+        )
+
+        needs_converter = data.get("needs_converter", False)
+        missing_core_models = data.get("missing_core_models", [])
+        missing_languages = data.get("missing_languages", [])
+        callback = data.get("callback")
+
+        if self.logger:
+            self.logger.info(
+                f"OpenVoice batch download requested: converter={needs_converter}, "
+                f"{len(missing_core_models)} core models, {len(missing_languages)} languages"
+            )
+
+        # Clean up any previous batch download state and ALL other download handlers
+        # that might interfere with the batch download
+        try:
+            self.huggingface_download_worker.unregister(
+                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._on_openvoice_batch_download_complete,
+            )
+        except Exception:
+            pass
+        # Unregister the STT/TTS download complete handler if it exists
+        try:
+            self.huggingface_download_worker.unregister(
+                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._on_stt_tts_download_complete,
+            )
+        except Exception:
+            pass
+        # Unregister any direct dialog handlers from other download flows
+        if hasattr(self, "_download_dialog") and self._download_dialog:
+            try:
+                self.huggingface_download_worker.unregister(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._download_dialog.on_download_complete,
+                )
+            except Exception:
+                pass
+        self._openvoice_remaining_downloads = None
+        self._openvoice_download_callback = None
+        self._pending_download_callback = None  # Clear any pending STT/TTS callback
+
+        main_window = self._get_main_window()
+        if not main_window:
+            if self.logger:
+                self.logger.error("Cannot show language dialog - no main window")
+            return
+
+        # Show language selection dialog FIRST
+        # This lets the user choose languages before any downloads start
+        dialog = OpenVoiceLanguageDialog(
+            parent=main_window,
+            missing_languages=missing_languages,
+        )
+        result = dialog.exec()
+        
+        if result != QDialog.Accepted:
+            if self.logger:
+                self.logger.info("User cancelled OpenVoice language selection")
+            return
+        
+        selected_languages = dialog.get_selected_languages()
+
+        # Build list of all models to download
+        models_to_download = list(missing_core_models)  # Always download core models
+        
+        # Add language-specific models for selected languages
+        for lang_key in selected_languages:
+            if lang_key in OPENVOICE_LANGUAGE_MODELS:
+                lang_info = OPENVOICE_LANGUAGE_MODELS[lang_key]
+                for model_id in lang_info["models"]:
+                    if model_id not in models_to_download:
+                        models_to_download.append(model_id)
+
+        # Count total downloads (including converter if needed)
+        total_downloads = len(models_to_download)
+        if needs_converter:
+            total_downloads += 1
+
+        if total_downloads == 0:
+            if self.logger:
+                self.logger.info("No OpenVoice models to download")
+            # Still invoke callback since download check passed
+            if callback:
+                callback()
+            return
+
+        if self.logger:
+            self.logger.info(
+                f"Downloading {total_downloads} OpenVoice items: "
+                f"converter={needs_converter}, models={models_to_download}"
+            )
+
+        # Create download dialog
+        try:
+            # Clean up any existing dialog and its signal handlers
+            if hasattr(self, "_download_dialog") and self._download_dialog:
+                # Unregister all signals connected to the old dialog
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.UPDATE_DOWNLOAD_LOG,
+                        self._download_dialog.on_log_updated,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                        self._download_dialog.on_progress_updated,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                        self._download_dialog.on_file_progress_updated,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                        self._download_dialog.on_download_complete,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                        self._download_dialog.on_download_failed,
+                    )
+                except Exception:
+                    pass
+                self._download_dialog.close()
+                self._download_dialog = None
+
+            self._download_dialog = HuggingFaceDownloadDialog(
+                parent=main_window,
+                model_name=f"OpenVoice TTS ({total_downloads} items)",
+                model_path=os.path.join(
+                    self.path_settings.base_path, "text/models/tts"
+                ),
+                batch_mode=True,  # Batch mode: don't auto-close on each download
+            )
+
+            # Track remaining downloads and callback
+            self._openvoice_remaining_downloads = total_downloads
+            self._openvoice_download_callback = callback
+
+            # Connect signals
+            self.huggingface_download_worker.register(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                self._download_dialog.on_log_updated,
+            )
+            self.huggingface_download_worker.register(
+                SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                self._download_dialog.on_progress_updated,
+            )
+            self.huggingface_download_worker.register(
+                SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                self._download_dialog.on_file_progress_updated,
+            )
+            self.huggingface_download_worker.register(
+                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._on_openvoice_batch_download_complete,
+            )
+            self.huggingface_download_worker.register(
+                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                self._download_dialog.on_download_failed,
+            )
+
+            # Show dialog
+            self._download_dialog.show()
+            self._download_dialog.raise_()
+            self._download_dialog.activateWindow()
+
+            # Queue converter ZIP download first if needed
+            if needs_converter:
+                openvoice_dir = os.path.join(
+                    self.path_settings.base_path, "text/models/tts/openvoice"
+                )
+                os.makedirs(openvoice_dir, exist_ok=True)
+                
+                download_data = {
+                    "model_type": "openvoice_zip",
+                    "output_dir": openvoice_dir,
+                    "zip_url": "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
+                }
+                if self.logger:
+                    self.logger.info(f"Queueing OpenVoice converter ZIP download")
+                self.huggingface_download_worker.add_to_queue(download_data)
+
+            # Queue all HuggingFace model downloads
+            for model_id in models_to_download:
+                model_path = os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    model_id,
+                )
+                download_data = {
+                    "repo_id": model_id,
+                    "model_type": "tts_openvoice",
+                    "output_dir": model_path,
+                }
+                self.huggingface_download_worker.add_to_queue(download_data)
+
+        except Exception as e:
+            if self.logger:
+                self.logger.error(
+                    f"Error setting up OpenVoice batch download: {e}", exc_info=True
+                )
+
+    def _on_openvoice_batch_download_complete(self, data: dict):
+        """Handle completion of a single model in the OpenVoice batch download."""
+        if not hasattr(self, "_openvoice_remaining_downloads") or self._openvoice_remaining_downloads is None:
+            # Not in a batch download, ignore
+            return
+            
+        self._openvoice_remaining_downloads -= 1
+        
+        if self.logger:
+            self.logger.info(
+                f"OpenVoice model download complete, {self._openvoice_remaining_downloads} remaining"
+            )
+        
+        if self._openvoice_remaining_downloads <= 0:
+            # All downloads complete - unregister all handlers
+            try:
+                self.huggingface_download_worker.unregister(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                    self._on_openvoice_batch_download_complete,
+                )
+            except Exception:
+                pass
+            
+            # Unregister dialog signal handlers
+            if hasattr(self, "_download_dialog") and self._download_dialog:
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.UPDATE_DOWNLOAD_LOG,
+                        self._download_dialog.on_log_updated,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                        self._download_dialog.on_progress_updated,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                        self._download_dialog.on_file_progress_updated,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self.huggingface_download_worker.unregister(
+                        SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                        self._download_dialog.on_download_failed,
+                    )
+                except Exception:
+                    pass
+                
+                # Notify dialog that all downloads are complete, then close it
+                self._download_dialog.on_download_complete(data)
+                # Use QTimer to close after a brief delay so user sees the completion message
+                from PySide6.QtCore import QTimer
+                dialog = self._download_dialog
+                QTimer.singleShot(1500, dialog.accept)
+                self._download_dialog = None
+            
+            # Clear tracking state
+            self._openvoice_remaining_downloads = None
+            
+            # Invoke callback
+            if hasattr(self, "_openvoice_download_callback") and self._openvoice_download_callback:
+                callback = self._openvoice_download_callback
+                self._openvoice_download_callback = None
+                try:
+                    callback()
+                except Exception as e:
+                    if self.logger:
+                        self.logger.error(
+                            f"Error invoking OpenVoice download callback: {e}",
+                            exc_info=True
+                        )

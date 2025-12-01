@@ -179,16 +179,6 @@ class TestOnToolChangedSignal:
             mock_view.on_tool_changed_signal({})
             mock_toggle.assert_called_once()
 
-    def test_on_tool_changed_updates_text_interaction_text_tool(
-        self, mock_view
-    ):
-        """Test text interaction enabled for TEXT tool."""
-        mock_view.application_settings.current_tool = CanvasToolName.TEXT
-
-        mock_view.on_tool_changed_signal({})
-
-        mock_view._set_text_items_interaction.assert_called_once_with(True)
-
     def test_on_tool_changed_updates_text_interaction_other_tool(
         self, mock_view
     ):

@@ -64,18 +64,6 @@ class ModelRegistry:
         """Register Mistral AI models."""
         models = [
             ModelMetadata(
-                name="Magistral 23B",
-                provider=ModelProvider.MISTRAL,
-                model_type=ModelType.LLM,
-                size_gb=23.0,
-                min_vram_gb=12.0,
-                min_ram_gb=16.0,
-                recommended_vram_gb=16.0,
-                recommended_ram_gb=32.0,
-                supports_quantization=True,
-                huggingface_id="mistralai/Magistral-23B-v0.1",
-            ),
-            ModelMetadata(
                 name="Ministral 8B",
                 provider=ModelProvider.MISTRAL,
                 model_type=ModelType.LLM,
@@ -85,7 +73,7 @@ class ModelRegistry:
                 recommended_vram_gb=8.0,
                 recommended_ram_gb=16.0,
                 supports_quantization=True,
-                huggingface_id="mistralai/Ministral-8B-v0.1",
+                huggingface_id="mistralai/Ministral-8B-Instruct-2410",
             ),
         ]
 
@@ -96,28 +84,16 @@ class ModelRegistry:
         """Register Llama models."""
         models = [
             ModelMetadata(
-                name="Llama 3.3 70B",
+                name="Llama 3.1 8B",
                 provider=ModelProvider.LLAMA,
                 model_type=ModelType.LLM,
-                size_gb=70.0,
-                min_vram_gb=24.0,
-                min_ram_gb=32.0,
-                recommended_vram_gb=40.0,
-                recommended_ram_gb=64.0,
-                supports_quantization=True,
-                huggingface_id="meta-llama/Llama-3.3-70B-Instruct",
-            ),
-            ModelMetadata(
-                name="Llama 3.2 3B",
-                provider=ModelProvider.LLAMA,
-                model_type=ModelType.LLM,
-                size_gb=3.0,
-                min_vram_gb=4.0,
+                size_gb=8.0,
+                min_vram_gb=6.0,
                 min_ram_gb=8.0,
-                recommended_vram_gb=6.0,
+                recommended_vram_gb=8.0,
                 recommended_ram_gb=16.0,
                 supports_quantization=True,
-                huggingface_id="meta-llama/Llama-3.2-3B-Instruct",
+                huggingface_id="meta-llama/Llama-3.1-8B-Instruct",
             ),
         ]
 

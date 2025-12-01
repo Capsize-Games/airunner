@@ -58,18 +58,6 @@ class ModelPipeline(
             },
             "recommended_bits": 4,
         },
-        "llama-3.2-3b": {
-            "repo_id": "meta-llama/Llama-3.2-3B-Instruct",
-            "model_type": "llm",
-            "supports_function_calling": False,
-            "context_length": 128000,
-            "vram_requirements_gb": {
-                "full": 12,
-                "4bit": 3,
-                "2bit": 2,
-            },
-            "recommended_bits": 4,
-        },
         "qwen2.5-7b": {
             "repo_id": "Qwen/Qwen2.5-7B-Instruct",
             "model_type": "llm",
@@ -83,7 +71,8 @@ class ModelPipeline(
             "recommended_bits": 4,
         },
         "qwen3-8b": {
-            "repo_id": "Qwen/Qwen3-8B",
+            "repo_id": "Qwen/Qwen3-8B-GGUF",
+            "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
             "model_type": "llm",
             "supports_function_calling": True,
             "supports_thinking": True,

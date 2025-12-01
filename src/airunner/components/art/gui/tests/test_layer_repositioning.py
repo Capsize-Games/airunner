@@ -292,9 +292,6 @@ def test_scene_update_image_position_applies_offsets():
     view.setProperty("canvas_type", "image")
     _ = view.scene
 
-    # Mock _restore_text_items_from_db to prevent errors
-    view._restore_text_items_from_db = lambda: None
-
     # Create layer item
     qimage = QImage(256, 256, QImage.Format.Format_ARGB32)
     qimage.fill(0xFF000000)

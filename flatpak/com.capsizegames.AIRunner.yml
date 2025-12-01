@@ -8,9 +8,8 @@ command: airunner
 finish-args:
   # X11 + Wayland display access
   - --share=ipc
-  - --socket=x11
-  - --socket=wayland
   - --socket=fallback-x11
+  - --socket=wayland
   
   # GPU access (OpenGL, Vulkan, CUDA)
   - --device=dri
@@ -22,10 +21,10 @@ finish-args:
   # Network access (for model downloads, API calls)
   - --share=network
   
-  # File system access
-  - --filesystem=home  # Access to user's home for models/data
+  # File system access (app data uses sandboxed ~/.var/app/com.capsizegames.AIRunner/data automatically)
   - --filesystem=xdg-documents  # For saving generated content
   - --filesystem=xdg-pictures  # For image generation output
+  - --filesystem=xdg-download:ro  # Read-only access to downloads (for importing models)
   
   # D-Bus access for system integration
   - --talk-name=org.freedesktop.Notifications
@@ -37,6 +36,18 @@ finish-args:
   - --env=AIRUNNER_FLATPAK=1
 
 modules:
+  # Kerberos library (required by QtWebEngine)
+  - name: krb5
+    subdir: src
+    buildsystem: autotools
+    sources:
+      - type: archive
+        url: https://kerberos.org/dist/krb5/1.21/krb5-1.21.3.tar.gz
+        sha256: b7a4cd5ead67fb08b980b21abd150ff7217e85ea320c9ed0c6dadd304840ad35
+    config-opts:
+      - --disable-static
+      - --disable-rpath
+
   # Python 3.13 build
   - name: python313
     buildsystem: autotools
@@ -51,10 +62,10 @@ modules:
       - --with-system-ffi
       - --with-ensurepip=install
     post-install:
-      - ln -s python3.13 /app/bin/python3
-      - ln -s python3.13 /app/bin/python
-      - ln -s pip3.13 /app/bin/pip3
-      - ln -s pip3.13 /app/bin/pip
+      - ln -sf python3.13 /app/bin/python3
+      - ln -sf python3.13 /app/bin/python
+      - ln -sf pip3.13 /app/bin/pip3
+      - ln -sf pip3.13 /app/bin/pip
 
   # PortAudio for audio I/O (required for pyaudio)
   - name: portaudio
@@ -69,6 +80,9 @@ modules:
   # AI Runner application
   - name: airunner
     buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
     sources:
       - type: dir
         path: ..
@@ -83,8 +97,9 @@ modules:
       # Note: Flatpak users need NVIDIA drivers on host + flatpak NVIDIA runtime
       - /app/venv/bin/pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
       
-      # Install AI Runner (without Japanese TTS to avoid MeCab dependency)
-      - /app/venv/bin/pip install ".[all]"
+      # Install AI Runner with specific extras (excluding Japanese/Korean TTS that require MeCab)
+      # Excludes: openvoice_jp, openvoice_kr which need mecab-python3 and python-mecab-ko
+      - /app/venv/bin/pip install ".[nvidia,huggingface,gui,linux,art,llm,llm_weather,tts,openvoice,melotts,openvoice_cn,openvoice_tw,gruut_support,search,computer_use]"
       
       # Create wrapper script
       - |
@@ -93,7 +108,7 @@ modules:
         export PATH="/app/venv/bin:$PATH"
         export PYTHONPATH="/app/venv/lib/python3.13/site-packages:$PYTHONPATH"
         export LD_LIBRARY_PATH="/app/lib:$LD_LIBRARY_PATH"
-        exec /app/venv/bin/python -m airunner "$@"
+        exec /app/venv/bin/python -c "from airunner.launcher import main; main()" "$@"
         EOF
       - chmod +x /app/bin/airunner
       
@@ -103,7 +118,7 @@ modules:
         #!/bin/bash
         export PATH="/app/venv/bin:$PATH"
         export PYTHONPATH="/app/venv/lib/python3.13/site-packages:$PYTHONPATH"
-        exec /app/venv/bin/python -m airunner.bin.airunner_setup "$@"
+        exec /app/venv/bin/python -c "from airunner.installer import main; main()" "$@"
         EOF
       - chmod +x /app/bin/airunner-setup
 

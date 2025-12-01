@@ -38,44 +38,6 @@ class LLMProviderConfig:
             "gguf_repo_id": "bartowski/Ministral-8B-Instruct-2410-GGUF",
             "gguf_filename": "Ministral-8B-Instruct-2410-Q4_K_M.gguf",
         },
-        "magistral-small-24b": {
-            "name": "Magistral-Small-2509",
-            "repo_id": "mistralai/Magistral-Small-2509",
-            "model_type": "mistral",
-            "function_calling": True,
-            "tool_calling_mode": "native",  # Uses tekken.json tokenizer
-            "supports_thinking": False,
-            "rag_capable": True,
-            "vision_capable": True,  # Has multimodal/vision support
-            "code_capable": True,
-            "context_length": 128000,
-            "vram_2bit_gb": 7,
-            "vram_4bit_gb": 14,
-            "vram_8bit_gb": 28,
-            "description": "Mistral 24B reasoning model with multimodal support, vision, and native tool calling",
-            # GGUF variant
-            "gguf_repo_id": "bartowski/Magistral-Small-2509-GGUF",
-            "gguf_filename": "Magistral-Small-2509-Q4_K_M.gguf",
-        },
-        "llama-3.2-3b": {
-            "name": "Llama-3.2-3B-Instruct",
-            "repo_id": "meta-llama/Llama-3.2-3B-Instruct",
-            "model_type": "llm",
-            "function_calling": False,
-            "tool_calling_mode": "react",  # Fallback pattern only
-            "supports_thinking": False,
-            "rag_capable": True,
-            "vision_capable": False,
-            "code_capable": False,
-            "context_length": 128000,
-            "vram_2bit_gb": 2,
-            "vram_4bit_gb": 3,
-            "vram_8bit_gb": 6,
-            "description": "Meta Llama 3.2 3B (ReAct pattern only - for simple chat)",
-            # GGUF variant
-            "gguf_repo_id": "bartowski/Llama-3.2-3B-Instruct-GGUF",
-            "gguf_filename": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
-        },
         "llama-3.1-8b": {
             "name": "Llama-3.1-8B-Instruct",
             "repo_id": "meta-llama/Llama-3.1-8B-Instruct",

@@ -60,7 +60,6 @@ class SettingsModelFactory:
             "PathSettings": "airunner.components.settings.data.path_settings",
             "MemorySettings": "airunner.components.art.data.memory_settings",
             "VoiceSettings": "airunner.components.settings.data.voice_settings",
-            "SpeechT5Settings": "airunner.components.tts.data.models.speech_t5_settings",
             "EspeakSettings": "airunner.components.tts.data.models.espeak_settings",
             "OpenVoiceSettings": "airunner.components.tts.data.models.openvoice_settings",
             "Chatbot": "airunner.components.llm.data.chatbot",
