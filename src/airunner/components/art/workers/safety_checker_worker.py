@@ -33,9 +33,9 @@ class SafetyCheckerWorker(Worker):
             torch.float16 if torch.cuda.is_available() else torch.float32
         )
         self._is_loading = False  # Prevent concurrent load attempts
+        self._download_pending = False  # Track if download is in progress
 
-        # Register signal handlers
-        self.register(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, self.handle_load)
+        # Register signal handlers for unload and filter (load is handled via queue)
         self.register(
             SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.handle_unload
         )
@@ -43,6 +43,25 @@ class SafetyCheckerWorker(Worker):
             SignalCode.SAFETY_CHECKER_FILTER_REQUEST,
             self.handle_filter_request,
         )
+
+    def handle_message(self, message: Any):
+        """Process messages from the worker queue.
+        
+        Args:
+            message: Message dict with 'action' and optional 'data' keys
+        """
+        if not isinstance(message, dict):
+            return
+            
+        action = message.get("action")
+        data = message.get("data")
+        
+        if action == "load":
+            self.handle_load(data)
+        elif action == "unload":
+            self.handle_unload(data)
+        elif action == "filter":
+            self.handle_filter_request(data)
 
     @classmethod
     def get_instance(cls) -> Optional["SafetyCheckerWorker"]:
@@ -83,6 +102,14 @@ class SafetyCheckerWorker(Worker):
                 "Safety checker is already loading, skipping duplicate request"
             )
             return
+        
+        # If this is a retry after download, reset the download pending flag
+        # (WorkerManager calls this after download completes)
+        if self._download_pending:
+            self.logger.info(
+                "Retrying load after download completion"
+            )
+            self._download_pending = False
 
         self._is_loading = True
         self.logger.info("Loading safety checker models")
@@ -105,33 +132,35 @@ class SafetyCheckerWorker(Worker):
 
             self.logger.info(f"Safety checker path: {safety_checker_path}")
 
-            # Check if files exist
-            if not os.path.exists(safety_checker_path):
-                self.logger.error(
-                    f"Safety checker path does not exist: {safety_checker_path}"
-                )
-                self._emit_status(ModelStatus.FAILED)
-                return
-
-            # Check for required files
+            # Required files for safety checker
             required_files = [
                 "config.json",
                 "pytorch_model.bin",
                 "preprocessor_config.json",
             ]
-            missing_files = [
-                f
-                for f in required_files
-                if not os.path.exists(os.path.join(safety_checker_path, f))
-            ]
+            # Check if path exists, if not all files are missing
+            if not os.path.exists(safety_checker_path):
+                self.logger.info(
+                    f"Safety checker path does not exist: {safety_checker_path}, will download"
+                )
+                missing_files = required_files
+            else:
+                missing_files = [
+                    f
+                    for f in required_files
+                    if not os.path.exists(os.path.join(safety_checker_path, f))
+                ]
 
             if missing_files:
-                self.logger.error(
+                self.logger.info(
                     f"Missing safety checker files: {missing_files}"
                 )
                 self.logger.info(
                     "Triggering download via ART_MODEL_DOWNLOAD_REQUIRED signal"
                 )
+                
+                # Mark download as pending to prevent duplicate triggers
+                self._download_pending = True
 
                 self.emit_signal(
                     SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
@@ -145,17 +174,8 @@ class SafetyCheckerWorker(Worker):
                     },
                 )
 
-                # Register for download completion
-                self.register(
-                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                    self._on_download_complete,
-                )
-                self.register(
-                    SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
-                    self._on_download_failed,
-                )
-
-                # Reset loading flag so download completion can retry
+                # WorkerManager handles download completion and will notify us via queue
+                # Reset loading flag so download completion can retry, but keep download_pending
                 self._is_loading = False
                 return
 
@@ -341,59 +361,3 @@ class SafetyCheckerWorker(Worker):
                 "request_id": request_id,
             },
         )
-
-    def _on_download_complete(self, data: Dict):
-        """Handle download completion and retry load.
-
-        Args:
-            data: Download completion data
-        """
-        from airunner.components.settings.data.path_settings import (
-            PathSettings,
-        )
-
-        path_settings = PathSettings.objects.first()
-
-        expected_path = os.path.expanduser(
-            os.path.join(
-                path_settings.base_path,
-                "art/models/Safety Checker",
-            )
-        )
-        downloaded_path = data.get("model_path", "")
-
-        if downloaded_path and os.path.abspath(
-            downloaded_path
-        ) == os.path.abspath(expected_path):
-            self.logger.info("Safety checker download complete, retrying load")
-            self._unregister_download_handlers()
-            self.handle_load()
-
-    def _on_download_failed(self, data: Dict):
-        """Handle download failure.
-
-        Args:
-            data: Download failure data
-        """
-        error = data.get("error", "Unknown error")
-        self.logger.error(f"Safety checker download failed: {error}")
-        self._unregister_download_handlers()
-        self._emit_status(ModelStatus.FAILED)
-
-    def _unregister_download_handlers(self):
-        """Unregister download completion/failure handlers."""
-        try:
-            self.mediator.unregister(
-                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                self._on_download_complete,
-            )
-        except Exception:
-            pass
-
-        try:
-            self.mediator.unregister(
-                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
-                self._on_download_failed,
-            )
-        except Exception:
-            pass

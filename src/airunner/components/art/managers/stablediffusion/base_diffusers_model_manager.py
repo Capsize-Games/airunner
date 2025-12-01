@@ -521,12 +521,8 @@ class BaseDiffusersModelManager(
         except RuntimeError as e:
             error_msg = str(e)
             if "download triggered" in error_msg:
-                # Download was triggered, register handler and wait
+                # Download was triggered, WorkerManager will handle retry via HUGGINGFACE_DOWNLOAD_COMPLETE
                 self.logger.info(f"Download triggered: {error_msg}")
-                self.register(
-                    SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                    self._on_model_download_complete,
-                )
                 self.change_model_status(self.model_type, ModelStatus.UNLOADED)
             else:
                 self.logger.error(f"Failed to load pipe: {e}")
@@ -624,6 +620,7 @@ class BaseDiffusersModelManager(
 
         # Emit signal to trigger download dialog
         # Include image_request so generation can be retried after download
+        # WorkerManager will handle the download and retry generation via DO_GENERATE_SIGNAL
         self.emit_signal(
             SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
             {
@@ -636,33 +633,4 @@ class BaseDiffusersModelManager(
             },
         )
 
-        # Register handler for download completion to retry load
-        self.register(
-            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-            self._on_model_download_complete,
-        )
-
         return True, download_info
-
-    def _on_model_download_complete(self, data: Dict):
-        """Handle model download completion and retry loading.
-
-        Args:
-            data: Download completion data with model_path
-        """
-        downloaded_path = data.get("model_path", "")
-
-        # Check if this download was for our model
-        if downloaded_path and downloaded_path in self.model_path:
-            self.logger.info(
-                f"Model download complete for {downloaded_path}, retrying load"
-            )
-
-            # Unregister handler
-            self.unregister(
-                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                self._on_model_download_complete,
-            )
-
-            # Retry loading
-            self.load()

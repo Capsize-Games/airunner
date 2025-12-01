@@ -525,6 +525,18 @@ class WorkerManager(Worker):
                 )
             return
         
+        # Handle safety checker downloads - notify via queue to ensure thread safety
+        pipeline_action = data.get("pipeline_action", "")
+        if pipeline_action == "safety_checker":
+            if self.logger:
+                self.logger.info(
+                    "Safety checker download complete, notifying worker to retry load"
+                )
+            # Use queue to ensure thread-safe notification
+            if self._safety_checker_worker is not None:
+                self._safety_checker_worker.add_to_queue({"action": "load", "data": {}})
+            return
+        
         if self.logger:
             self.logger.info(
                 f"WorkerManager: Download complete for {data.get('model_path')}"
@@ -609,21 +621,40 @@ class WorkerManager(Worker):
             self.logger.info(
                 "Safety checker loaded, proceeding with pending image generation"
             )
-            pending_data = self._pending_generation_request
-            self._pending_generation_request = None
-            self._proceed_with_generation(pending_data)
+            # Note: Don't clear _pending_generation_request here - it will be cleared
+            # by on_huggingface_download_complete after the SD model download completes,
+            # or it will be set to None if no download is needed (generation proceeds immediately)
+            self._proceed_with_generation(self._pending_generation_request)
 
         elif (
             model_type == ModelType.SAFETY_CHECKER
             and status == ModelStatus.FAILED
             and self._pending_generation_request is not None
         ):
-            self.logger.warning(
-                "Safety checker failed to load; continuing image generation without it"
+            # Check if this was a download-triggered failure (we should wait for download)
+            # or a real failure (show error)
+            # The safety checker worker emits FAILED only after download fails or load fails
+            # If NSFW filter is enabled, we should NOT proceed - show error instead
+            from airunner.components.settings.data.application_settings import (
+                ApplicationSettings,
             )
-            pending_data = self._pending_generation_request
-            self._pending_generation_request = None
-            self._proceed_with_generation(pending_data)
+            app_settings = ApplicationSettings.objects.first()
+            
+            if app_settings.nsfw_filter:
+                self.logger.error(
+                    "Safety checker failed to load and NSFW filter is enabled. Cannot proceed with generation."
+                )
+                # Clear pending request since we're not proceeding
+                self._pending_generation_request = None
+                # Show error popup to user
+                self.api.application_error(
+                    message="Safety checker failed to load. Please disable the NSFW filter in settings or wait for the safety checker to download."
+                )
+            else:
+                self.logger.warning(
+                    "Safety checker failed to load; continuing image generation (NSFW filter disabled)"
+                )
+                self._proceed_with_generation(self._pending_generation_request)
 
         if self._sd_worker is not None:
             self.sd_worker.on_model_status_changed_signal(data)
@@ -647,9 +678,9 @@ class WorkerManager(Worker):
             self.sd_worker.on_unload_controlnet_signal(data)
 
     def on_safety_checker_load_signal(self, data):
-        # Initialize the safety checker worker and trigger loading
-        if self.safety_checker_worker is not None:
-            self.safety_checker_worker.handle_load(data)
+        # Ensure the worker is created and send load request through its queue
+        # Using add_to_queue ensures thread-safe message passing
+        self.safety_checker_worker.add_to_queue({"action": "load", "data": data})
 
     def on_safety_checker_unload_signal(self, data):
         # Trigger unloading if worker exists
@@ -700,8 +731,12 @@ class WorkerManager(Worker):
         Args:
             data: Image generation request data
         """
+        self.logger.info(f"_proceed_with_generation called with data keys: {data.keys() if data else 'None'}")
         if self.sd_worker is not None:
+            self.logger.info("Calling sd_worker.on_do_generate_signal")
             self.sd_worker.on_do_generate_signal(data)
+        else:
+            self.logger.error("sd_worker is None, cannot proceed with generation")
 
     def on_input_image_settings_changed_signal(self, data):
         if self._sd_worker is not None:

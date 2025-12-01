@@ -43,6 +43,19 @@ FLOW_MATCH_VERSIONS = (
     StableDiffusionVersion.Z_IMAGE_BASE.value,
 )
 
+# Mapping from version to generator_name
+VERSION_TO_GENERATOR: dict[str, str] = {
+    StableDiffusionVersion.FLUX_DEV.value: ImageGenerator.FLUX.value,
+    StableDiffusionVersion.FLUX_SCHNELL.value: ImageGenerator.FLUX.value,
+    StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
+    StableDiffusionVersion.Z_IMAGE_BASE.value: ImageGenerator.ZIMAGE.value,
+    StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
+    StableDiffusionVersion.SDXL_TURBO.value: ImageGenerator.STABLEDIFFUSION.value,
+    StableDiffusionVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
+    StableDiffusionVersion.SDXL_HYPER.value: ImageGenerator.STABLEDIFFUSION.value,
+    StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
+}
+
 # Scheduler constraints: only FlowMatchEuler for FLUX/Z-Image
 FLOW_MATCH_SCHEDULER_NAME = Scheduler.FLOW_MATCH_EULER.value
 
@@ -411,8 +424,10 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         prev_version = self.generator_settings.version
         prev_pipeline = self.generator_settings.pipeline_action
         prev_model = self.generator_settings.model
-        # First update version in settings (does not touch model/pipeline yet)
-        self.update_generator_settings(version=val)
+        # Determine the generator_name for this version
+        generator_name = VERSION_TO_GENERATOR.get(val, ImageGenerator.FLUX.value)
+        # First update version and generator_name in settings
+        self.update_generator_settings(version=val, generator_name=generator_name)
         self.api.widget_element_changed("sd_version", "version", val)
         self._load_pipelines_combobox()
         generator_settings = self.generator_settings

@@ -30,7 +30,33 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
+# Mapping from CivitAI baseModel names to airunner version folder names.
+# CivitAI may use different naming conventions than airunner expects.
+CIVITAI_BASE_MODEL_MAP: Dict[str, str] = {
+    "ZImageTurbo": "Z-Image Turbo",
+    "ZImageBase": "Z-Image Base",
+    "Flux.1 D": "Flux.1 D",
+    "Flux.1 S": "Flux.1 S",
+    "SDXL 1.0": "SDXL 1.0",
+    "SDXL Turbo": "SDXL Turbo",
+    "SDXL Lightning": "SDXL Lightning",
+    "SDXL Hyper": "SDXL Hyper",
+}
+
+
 class DownloadModelDialog(QDialog):
+    @staticmethod
+    def _normalize_base_model(base_model: str) -> str:
+        """Normalize CivitAI base model name to airunner version folder name.
+        
+        Args:
+            base_model: The baseModel string from CivitAI API.
+            
+        Returns:
+            The normalized version folder name for airunner.
+        """
+        return CIVITAI_BASE_MODEL_MAP.get(base_model, base_model)
+
     @staticmethod
     def _get_model_subfolder(model_type: str, file_info: dict) -> str:
         """Map model type and file info to correct subfolder."""
@@ -488,7 +514,9 @@ class DownloadModelDialog(QDialog):
             return
 
         # Get baseModel (e.g., "SDXL 1.0") and type (e.g., "LORA")
-        base_model = version.get("baseModel", "checkpoint")
+        # Normalize CivitAI base model names to airunner version folder names
+        raw_base_model = version.get("baseModel", "checkpoint")
+        base_model = self._normalize_base_model(raw_base_model)
         model_type = version.get(
             "type", self.model_info.get("type", "checkpoint")
         )
