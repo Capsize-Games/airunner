@@ -21,9 +21,6 @@ from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner.components.tts.data.models.speech_t5_settings import (
-    SpeechT5Settings,
-)
 from airunner.components.tts.data.models.espeak_settings import EspeakSettings
 from airunner.components.stt.data.stt_settings import STTSettings
 from airunner.components.art.data.schedulers import Schedulers
@@ -77,7 +74,6 @@ classes = [
     MetadataSettings,
     GeneratorSettings,
     LLMGeneratorSettings,
-    SpeechT5Settings,
     EspeakSettings,
     STTSettings,
     Schedulers,

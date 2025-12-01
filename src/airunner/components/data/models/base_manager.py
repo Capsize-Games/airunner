@@ -78,6 +78,40 @@ class BaseManager:
             session.expunge_all()
             return result.to_dataclass() if result else None
 
+    def get_or_create(self, defaults: Optional[dict] = None, **kwargs) -> _T:
+        """Get an existing record or create a new one.
+
+        Args:
+            defaults: Default values to use when creating a new record.
+            **kwargs: Filter criteria to find existing record.
+
+        Returns:
+            The existing or newly created record as a dataclass.
+        """
+        with session_scope() as session:
+            try:
+                # Try to find existing record
+                if kwargs:
+                    result = session.query(self.cls).filter_by(**kwargs).first()
+                else:
+                    result = session.query(self.cls).first()
+
+                if result:
+                    session.expunge(result)
+                    return result
+
+                # Create new record
+                create_kwargs = {**(defaults or {}), **kwargs}
+                result = self.cls(**create_kwargs)
+                session.add(result)
+                session.commit()
+                session.refresh(result)
+                session.expunge(result)
+                return result
+            except Exception as e:
+                self.logger.error(f"Error in get_or_create({kwargs}): {e}")
+                raise
+
     def all(self) -> List[_T]:
         with session_scope() as session:
             try:

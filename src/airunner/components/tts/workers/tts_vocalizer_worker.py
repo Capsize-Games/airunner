@@ -39,26 +39,18 @@ class TTSVocalizerWorker(Worker):
     def is_espeak(self) -> bool:
         return self.chatbot_voice_model_type == TTSModel.ESPEAK.value
 
-    def on_interrupt_process_signal(self):
+    def on_interrupt_process_signal(self, data: dict = None):
         self.stop_stream()
         self.accept_message = False
         self.queue = Queue()
 
-    def on_unblock_tts_generator_signal(self):
+    def on_unblock_tts_generator_signal(self, data: dict = None):
         if self.application_settings.tts_enabled:
             self.logger.debug("Starting TTS stream...")
             self.accept_message = True
             self.start_stream()
 
     def on_application_settings_changed_signal(self, data):
-        # if (
-        #     data
-        #     and data.get("setting_name", "") == "speech_t5_settings"
-        #     and data.get("column_name", "") == "pitch"
-        # ):
-        #     pitch = data.get("value", 0)
-        #     self.stop_stream()
-        #     self.start_stream(pitch)
         pass
 
     def on_playback_device_changed_signal(self):
@@ -79,10 +71,10 @@ class TTSVocalizerWorker(Worker):
         self.logger.info("Starting TTS vocalizer stream...")
 
         # Determine the model's native sample rate
-        if self.chatbot_voice_model_type == TTSModel.SPEECHT5:
-            self._model_samplerate = 16000
-        elif self.chatbot_voice_model_type == TTSModel.OPENVOICE:
+        if self.chatbot_voice_model_type == TTSModel.OPENVOICE:
             self._model_samplerate = 24000
+        elif self.chatbot_voice_model_type == TTSModel.ESPEAK:
+            self._model_samplerate = 16000
         else:
             self._model_samplerate = 16000  # Default fallback
             self.logger.warning(

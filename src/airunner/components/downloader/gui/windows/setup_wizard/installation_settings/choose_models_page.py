@@ -29,7 +29,6 @@ class ChooseModelsPage(BaseWizard):
         super().__init__(*args, **kwargs)
         self.models_enabled = {
             "stable_diffusion": True,
-            "speecht5": True,
             "whisper": True,
             "mistral": True,
             "embedding_model": True,
@@ -337,9 +336,7 @@ class ChooseModelsPage(BaseWizard):
         except Exception:
             pass
 
-        # Do not reparent the top-level generated checkboxes; leave them in the main grid layout.
-        # The UI template places ministral, e5 (embedding), speecht5, openvoice, and whisper at top-level
-        # and they should remain there so their grid positions are preserved.
+                # Do not reparent the top-level generated checkboxes; leave them in the main grid layout.\n        # The UI template places ministral, e5 (embedding), openvoice, and whisper at top-level\n        # and they should remain there so their grid positions are preserved.
 
         self.update_total_size_label()
 
@@ -347,7 +344,6 @@ class ChooseModelsPage(BaseWizard):
         # Sizes are tracked in bytes
         mistral_size = 5.8 * 1024 * 1024
         whisper_size = 144.5 * 1024
-        speecht5_size = 654.4 * 1024
         embedding_model_size = 1.3 * 1024 * 1024
         # FLUX models are ~23GB total (transformer ~10GB, text encoders ~10GB, vae ~3GB)
         flux_core_size = 23 * 1024 * 1024
@@ -384,8 +380,6 @@ class ChooseModelsPage(BaseWizard):
             total_bytes += mistral_size
         if self.models_enabled.get("whisper", False):
             total_bytes += whisper_size
-        if self.models_enabled.get("speecht5", False):
-            total_bytes += speecht5_size
         if self.models_enabled.get("embedding_model", False):
             total_bytes += embedding_model_size
         if self.models_enabled.get("openvoice_model", False):
@@ -424,11 +418,6 @@ class ChooseModelsPage(BaseWizard):
     @Slot(bool)
     def embedding_model_toggled(self, val: bool):
         self.models_enabled["embedding_model"] = val
-        self.update_total_size_label()
-
-    @Slot(bool)
-    def speecht5_toggled(self, val: bool):
-        self.models_enabled["speecht5"] = val
         self.update_total_size_label()
 
     @Slot(bool)

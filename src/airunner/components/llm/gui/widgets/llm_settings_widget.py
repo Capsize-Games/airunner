@@ -494,8 +494,8 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         # Set default model path if empty
         model_path = self.llm_generator_settings.model_path
         if not model_path:
-            # Set a sensible default: Llama 3.2 3B Instruct
-            default_model_id = "llama-3.2-3b-instruct"
+            # Set a sensible default: Qwen3 8B (best overall for agent tasks)
+            default_model_id = "qwen3-8b"
             model_info = LLMProviderConfig.get_model_info(
                 provider, default_model_id
             )

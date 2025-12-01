@@ -98,6 +98,7 @@ extras_require = {
         "inflect==7.5.0",
         "pycountry==24.6.1",
         "librosa==0.11.0",
+        "torchcodec>=0.8.0",  # Required by torchaudio for audio loading
     ],
     "rabbitmq": ["pika"],
     "openvoice": [

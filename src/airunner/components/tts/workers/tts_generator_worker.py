@@ -9,9 +9,6 @@ from airunner.components.tts.managers.exceptions import OpenVoiceError
 from airunner.components.tts.managers.openvoice_model_manager import (
     OpenVoiceModelManager,
 )
-from airunner.components.tts.managers.speecht5_model_manager import (
-    SpeechT5ModelManager,
-)
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -37,6 +34,10 @@ class TTSGeneratorWorker(Worker):
 
     tokens = []
     queue_type = QueueType.GET_NEXT_ITEM
+    
+    # Sentence buffering configuration for better prosody
+    SENTENCE_BUFFER_SIZE = 2  # Number of sentences to buffer before generating
+    MIN_WORDS_FOR_GENERATION = 8  # Minimum words before generating (even with fewer sentences)
 
     def __init__(self, *args, **kwargs):
         self.tts = None
@@ -44,6 +45,7 @@ class TTSGeneratorWorker(Worker):
         self.play_queue_started = False
         self.do_interrupt = False
         self._current_model: Optional[str] = None
+        self._sentence_buffer = []  # Buffer to hold complete sentences
         super().__init__()
 
     @property
@@ -63,15 +65,20 @@ class TTSGeneratorWorker(Worker):
         if response.action is LLMActionType.GENERATE_IMAGE:
             return
 
-        # Initialize TTS if needed but avoid reloading if it's already in the process
-        if not self.tts or (
-            self.tts
-            and not self.tts.model_status
-            not in [ModelStatus.LOADED, ModelStatus.LOADING]
-        ):
+        # Skip system/status messages (e.g., "model loaded and ready")
+        if getattr(response, 'is_system_message', False):
+            return
+
+        # Initialize TTS if needed but avoid reloading if it's already loaded/loading
+        if not self.tts:
             self._load_tts()
-        elif self.do_interrupt and response and response.is_first_message:
-            self.on_unblock_tts_generator_signal()
+        elif self.tts and self.tts.model_status not in [ModelStatus.LOADED, ModelStatus.LOADING]:
+            self._load_tts()
+        
+        # Unblock TTS if it was interrupted - any new message should resume TTS
+        if self.do_interrupt:
+            self.logger.debug("Unblocking TTS due to new message")
+            self.on_unblock_tts_generator_signal(None)
 
         self.add_to_queue(
             {
@@ -86,6 +93,7 @@ class TTSGeneratorWorker(Worker):
             self.play_queue = []
             self.play_queue_started = False
             self.tokens = []
+            self._sentence_buffer = []  # Clear buffered sentences on interrupt
             self.queue = queue.Queue()
             self.do_interrupt = True
             self.paused = True
@@ -102,11 +110,11 @@ class TTSGeneratorWorker(Worker):
             if callback is not None:
                 callback()
 
-    def on_enable_tts_signal(self):
-        print("ON ENABLE TTS SIGNAL")
+    def on_enable_tts_signal(self, data: dict = None):
+        self.logger.debug("ON ENABLE TTS SIGNAL")
         self._load_tts()
 
-    def on_disable_tts_signal(self):
+    def on_disable_tts_signal(self, data: dict = None):
         self._unload_tts()
 
     def start_worker_thread(self):
@@ -124,12 +132,11 @@ class TTSGeneratorWorker(Worker):
             self._load_tts()
 
     def on_application_settings_changed_signal(self, data):
-        if (
-            data
-            and data.get("setting_name", "") == "speech_t5_settings"
-            and data.get("column_name", "") == "voice"
-        ):
-            self.tts.reload_speaker_embeddings()
+        # Handle settings changes that require TTS model updates
+        setting_name = data.get("setting_name", "") if data else ""
+        if setting_name == "openvoice_settings":
+            if self.tts:
+                self.tts.reload_speaker_embeddings()
 
     def _initialize_tts_model_manager(self):
         self.logger.info("Initializing TTS handler...")
@@ -147,9 +154,7 @@ class TTSGeneratorWorker(Worker):
             )
             return
         self._current_model = model
-        if model_type is TTSModel.SPEECHT5:
-            tts_model_manager_class_ = SpeechT5ModelManager
-        elif model_type is TTSModel.OPENVOICE:
+        if model_type is TTSModel.OPENVOICE:
             tts_model_manager_class_ = OpenVoiceModelManager
         else:
             tts_model_manager_class_ = EspeakModelManager
@@ -201,14 +206,21 @@ class TTSGeneratorWorker(Worker):
             return len(s.split())
 
         if is_end_of_message:
-            # If this is the end of a message, generate the full text and clear tokens
-            self._generate(text)
-            self.play_queue_started = True
+            # End of message - flush any buffered sentences plus remaining text
+            if self._sentence_buffer or text.strip():
+                # Combine buffered sentences with any remaining text
+                all_text = " ".join(self._sentence_buffer)
+                if text.strip():
+                    all_text = (all_text + " " + text.strip()).strip()
+                if all_text:
+                    self._generate(all_text)
+                    self.play_queue_started = True
+            self._sentence_buffer = []
             self.tokens = []
         else:
-            # Split text at punctuation for incremental TTS
-            punctuation = [".", "?", "!", ";", ":", "\n", ","]
-            for p in punctuation:
+            # Split text only at major sentence boundaries for better prosody
+            sentence_endings = [".", "?", "!", "\n"]
+            for p in sentence_endings:
                 if self.do_interrupt:
                     return
                 text = text.strip()
@@ -218,28 +230,43 @@ class TTSGeneratorWorker(Worker):
                     )  # Split at the first occurrence of punctuation
                     if len(split_text) > 1:
                         before, after = split_text[0], split_text[1]
-                        if p == ",":
-                            if word_count(before) < 3 or word_count(after) < 3:
-                                continue  # Skip splitting if there are not enough words around the comma
-                        sentence = (
-                            before + p
-                        )  # Include the punctuation in the sentence
-                        self._generate(sentence)
-                        self.play_queue_started = True
-
-                        # Set tokens to the remaining text
-                        remaining_text = after.strip()
-                        if not self.do_interrupt:
-                            self.tokens = (
-                                [remaining_text] if remaining_text else []
+                        # Only consider if we have meaningful content (at least 2 words)
+                        if word_count(before) >= 2:
+                            sentence = (
+                                before + p
+                            )  # Include the punctuation in the sentence
+                            
+                            # Add to sentence buffer instead of generating immediately
+                            self._sentence_buffer.append(sentence)
+                            
+                            # Calculate total buffered words
+                            total_words = sum(word_count(s) for s in self._sentence_buffer)
+                            
+                            # Generate if we have enough sentences OR enough words
+                            should_generate = (
+                                len(self._sentence_buffer) >= self.SENTENCE_BUFFER_SIZE or
+                                total_words >= self.MIN_WORDS_FOR_GENERATION
                             )
+                            
+                            if should_generate:
+                                # Combine all buffered sentences and generate
+                                combined_text = " ".join(self._sentence_buffer)
+                                self._generate(combined_text)
+                                self.play_queue_started = True
+                                self._sentence_buffer = []
+
+                            # Set tokens to the remaining text
+                            remaining_text = after.strip()
+                            if not self.do_interrupt:
+                                self.tokens = (
+                                    [remaining_text] if remaining_text else []
+                                )
                             break
 
         if self.do_interrupt:
             self.on_interrupt_process_signal()
 
     def _load_tts(self):
-        print("LOAD TTS TRIGGERED")
         if not self.tts_enabled:
             self.logger.info("TTS is disabled. Skipping load.")
             return
@@ -294,15 +321,11 @@ class TTSGeneratorWorker(Worker):
         if self.tts:
             tts_req: Optional[Type[TTSRequest]] = None
 
-            if model_type is TTSModel.SPEECHT5:
-                tts_req = TTSRequest(
-                    message=message, gender=self.chatbot.gender
-                )
-            elif model_type is TTSModel.OPENVOICE:
+            if model_type is TTSModel.OPENVOICE:
                 tts_req = OpenVoiceTTSRequest(
                     message=message, gender=self.chatbot.gender
                 )
-            else:
+            elif model_type is TTSModel.ESPEAK:
                 tts_req = EspeakTTSRequest(
                     message=message,
                     gender=self.chatbot.gender,

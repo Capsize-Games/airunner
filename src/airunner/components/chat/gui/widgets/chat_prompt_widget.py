@@ -1171,10 +1171,51 @@ class ChatPromptWidget(BaseWidget):
     
     def _restore_model_selection(self, provider: str) -> None:
         """Restore model selection based on saved settings."""
+        # First try to match by saved model_id (most reliable)
+        saved_model_id = getattr(self.llm_generator_settings, "model_id", None) or ""
+        if saved_model_id:
+            for i in range(self.ui.model_dropdown.count()):
+                item_model_id = self.ui.model_dropdown.itemData(i)
+                if item_model_id == saved_model_id:
+                    self.ui.model_dropdown.setCurrentIndex(i)
+                    if provider == ModelService.LOCAL.value:
+                        self._update_model_tooltip(saved_model_id)
+                        
+                        # Verify model_path is correct - rebuild if corrupted
+                        current_path = getattr(self.llm_generator_settings, "model_path", "") or ""
+                        if not current_path or "/tts/" in current_path or "/openvoice" in current_path:
+                            # Path is missing or corrupted - rebuild from model_id
+                            model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+                            if model_info:
+                                model_name = model_info.get("name", saved_model_id)
+                                base_path = os.path.expanduser(
+                                    getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                                )
+                                correct_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
+                                self.logger.info(
+                                    f"Rebuilding corrupted model_path from model_id '{saved_model_id}': {correct_path}"
+                                )
+                                self.update_llm_generator_settings(
+                                    model_path=correct_path,
+                                    model_version=model_name,
+                                )
+                    return
+        
+        # Fallback: try to match by model path or version
         if provider == ModelService.LOCAL.value:
             # For HuggingFace, match by model path
             current_path = getattr(self.llm_generator_settings, "model_path", "") or ""
             if current_path:
+                # Check for corrupted path (TTS model paths should not be in LLM settings)
+                if "/tts/" in current_path or "/openvoice" in current_path:
+                    self.logger.warning(
+                        f"Detected corrupted LLM model_path (TTS path): {current_path}. "
+                        "Please select an LLM model from the dropdown."
+                    )
+                    # Clear the corrupted path - don't auto-select, let user choose
+                    self.update_llm_generator_settings(model_path="")
+                    return
+                    
                 for i in range(self.ui.model_dropdown.count()):
                     model_id = self.ui.model_dropdown.itemData(i)
                     if model_id == "custom":
@@ -1197,6 +1238,54 @@ class ChatPromptWidget(BaseWidget):
                         return
                 # If not found in list, it might be custom - set as text
                 self.ui.model_dropdown.setEditText(current_model)
+
+    def _select_and_save_default_model(self, provider: str) -> None:
+        """Select and save the first available model as default.
+        
+        Called when corrupted settings are detected to auto-recover.
+        
+        Args:
+            provider: Current provider (local, ollama, openrouter)
+        """
+        if provider == ModelService.LOCAL.value:
+            # Find the first non-custom model
+            for i in range(self.ui.model_dropdown.count()):
+                model_id = self.ui.model_dropdown.itemData(i)
+                if model_id and model_id != "custom":
+                    # Select in dropdown
+                    self.ui.model_dropdown.setCurrentIndex(i)
+                    self._update_model_tooltip(model_id)
+                    
+                    # Build the correct path and save to settings
+                    model_info = LLMProviderConfig.get_model_info("local", model_id)
+                    if model_info:
+                        model_name = model_info.get("name", model_id)
+                        base_path = os.path.expanduser(
+                            getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                        )
+                        model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
+                        
+                        # Save to database
+                        self.update_llm_generator_settings(
+                            model_path=model_path,
+                            model_version=model_name,
+                            model_id=model_id,
+                        )
+                        self.logger.info(f"Auto-selected default model: {model_id} ({model_path})")
+                    return
+        else:
+            # For remote providers, select first non-custom model
+            for i in range(self.ui.model_dropdown.count()):
+                model_id = self.ui.model_dropdown.itemData(i)
+                if model_id and model_id != "custom":
+                    self.ui.model_dropdown.setCurrentIndex(i)
+                    self.update_llm_generator_settings(
+                        model_version=model_id,
+                        model_path="",
+                        model_id=model_id,
+                    )
+                    self.logger.info(f"Auto-selected default model: {model_id}")
+                    return
 
     def _update_model_tooltip(self, model_id: str) -> None:
         """Update the model dropdown tooltip with model metadata."""
@@ -1334,6 +1423,7 @@ class ChatPromptWidget(BaseWidget):
             self.update_llm_generator_settings(
                 model_path=model_path,
                 model_version=model_name,
+                model_id=model_id,  # Save the provider config model ID
             )
             
             # Emit signal that model changed (will trigger reload/download)
@@ -1346,6 +1436,7 @@ class ChatPromptWidget(BaseWidget):
             self.update_llm_generator_settings(
                 model_version=model_id,
                 model_path="",  # Not used for remote providers
+                model_id=model_id,  # Save the model ID
             )
             
             # Emit signal

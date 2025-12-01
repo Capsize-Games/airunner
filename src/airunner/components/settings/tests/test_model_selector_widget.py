@@ -108,8 +108,8 @@ class TestModelSelectorWidget:
         widget = ModelSelectorWidget()
         widget.set_provider(ModelService.LOCAL.value)
 
-        # Select a known model (llama-3.2-3b should have info)
-        widget.set_model("llama-3.2-3b")
+        # Select a known model (qwen3-8b should have info)
+        widget.set_model("qwen3-8b")
 
         # Should display VRAM info
         vram_text = widget.vram_label.text()
@@ -139,7 +139,7 @@ class TestModelSelectorWidget:
 
         # Set a local model with info
         widget.set_provider(ModelService.LOCAL.value)
-        widget.set_model("llama-3.2-3b")
+        widget.set_model("qwen3-8b")
 
         # Change provider
         widget.set_provider(ModelService.OPENROUTER.value)

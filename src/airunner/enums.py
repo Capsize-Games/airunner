@@ -206,6 +206,9 @@ class SignalCode(Enum):
     HUGGINGFACE_DOWNLOAD_FAILED = "huggingface_download_failed"
     CANCEL_HUGGINGFACE_DOWNLOAD = "cancel_huggingface_download"
     START_HUGGINGFACE_DOWNLOAD = "start_huggingface_download"
+    START_OPENVOICE_ZIP_DOWNLOAD = "start_openvoice_zip_download"
+    OPENVOICE_ZIP_DOWNLOAD_COMPLETE = "openvoice_zip_download_complete"
+    START_OPENVOICE_BATCH_DOWNLOAD = "start_openvoice_batch_download"
     CIVITAI_DOWNLOAD_WORKER_READY = "civitai_download_worker_ready"
     CIVITAI_DOWNLOAD_COMPLETE = "civitai_download_complete"
     CIVITAI_DOWNLOAD_FAILED = "civitai_download_failed"
@@ -663,18 +666,7 @@ class HandlerState(Enum):
 
 class TTSModel(Enum):
     ESPEAK = "Espeak"
-    SPEECHT5 = "SpeechT5"
     OPENVOICE = "OpenVoice"
-
-
-class SpeechT5Voices(Enum):
-    US_MALE = "US Male"
-    US_MALE_2 = "US Male 2"
-    US_FEMALE = "US Female"
-    US_FEMALE_2 = "US Female 2"
-    CANADIAN_MALE = "Canadian Male"
-    SCOTTISH_MALE = "Scottish Male"
-    INDIAN_MALE = "Indian Male"
 
 
 class AvailableLanguage(enum.Enum):

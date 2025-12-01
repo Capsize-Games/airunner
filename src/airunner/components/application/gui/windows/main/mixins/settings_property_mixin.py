@@ -187,7 +187,7 @@ class SettingsPropertyMixin:
             if voice_settings is None:
                 from airunner.enums import TTSModel as TTSModelEnum
 
-                settings = self._get_settings_for_voice_settings(
+                settings = self._get_settings_for_voice_model(
                     TTSModelEnum.ESPEAK
                 )
                 voice_settings = VoiceSettings.objects.create(
@@ -209,29 +209,31 @@ class SettingsPropertyMixin:
             )
         return voice_settings
 
+    def _get_settings_for_voice_model(self, model_type) -> Any:
+        """Get the appropriate settings object for a TTS model type.
+        
+        Args:
+            model_type: TTSModel enum value
+            
+        Returns:
+            Settings object for the specified TTS model type
+        """
+        from airunner.enums import TTSModel as TTSModelEnum
+        
+        if model_type == TTSModelEnum.ESPEAK:
+            return self.espeak_settings
+        elif model_type == TTSModelEnum.OPENVOICE:
+            return self.openvoice_settings
+        else:
+            # Default to espeak
+            return self.espeak_settings
+
     @property
     def chatbot_voice_model_type(self) -> Any:
         """Get TTS model type for current chatbot voice."""
         from airunner.enums import TTSModel
 
         return TTSModel(self.chatbot_voice_settings.model_type)
-
-    @property
-    def speech_t5_settings(self) -> Any:
-        """Get SpeechT5 TTS model settings."""
-        SpeechT5Settings = get_settings_model("SpeechT5Settings")
-        cached = self.settings_mixin_shared_instance.get_cached_setting(
-            SpeechT5Settings
-        )
-        if cached is not None:
-            return cached
-        settings = SpeechT5Settings.objects.first()
-        if settings is None:
-            settings = SpeechT5Settings.objects.create()
-        self.settings_mixin_shared_instance.set_cached_setting(
-            SpeechT5Settings, settings
-        )
-        return settings
 
     @property
     def espeak_settings(self) -> Optional[Any]:
