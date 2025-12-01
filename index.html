@@ -3,251 +3,1103 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Product Launch - Airunner</title>
+    <title>AI Runner - Local AI for Chat, Image Generation & More</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Run powerful AI models locally - chatbots, image generation, text-to-speech, and more. No cloud, no subscriptions. Privacy-first AI on your hardware.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: linear-gradient(135deg, #101010 0%, #23272f 100%);
+        :root {
+            --primary: #4299e1;
+            --primary-dark: #2b6cb0;
+            --accent: #38b2ac;
+            --bg-dark: #0f1419;
+            --bg-card: #1a1f2e;
+            --text-light: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #2d3748;
+            --gradient: linear-gradient(135deg, #4299e1 0%, #38b2ac 100%);
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+            box-sizing: border-box;
         }
 
-        .container {
-            margin-top: 60px;
-            background: rgba(255, 255, 255, 0.97);
-            padding: 2.5rem 2.5rem 2.5rem 2.5rem;
-            border-radius: 18px;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.13);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 340px;
-            max-width: 520px;
-            border: none;
+        html {
+            scroll-behavior: smooth;
         }
 
-        .content {
-            width: 360px;
-        }
-
-        .logo {
-            width: 380px;
-            height: auto;
-            background: none;
-            border-radius: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .logo img {
-            width: 100%;
-            height: auto;
-            max-width: 100%;
-            border-radius: 8px;
-        }
-
-        h1 {
-            margin: 0 0 1.2rem 0;
-            padding: 10px 0;
-            font-size: 0.95rem;
-            color: #1a202c;
-            font-weight: 800;
-            letter-spacing: -1px;
-            text-align: center;
-            border-top: 1px solid #4299e1;
-            border-bottom: 1px solid #4299e1;
-        }
-
-        p {
-            color: #3b4252;
-            max-width: 440px;
-            margin-bottom: 1.5rem;
-            padding-left: 15px;
-            font-size: 0.9rem;
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
             line-height: 1.6;
-            width: 250px;
-            margin: 0 auto 20px 30px;
-            border-left: 4px solid #4299e1;
         }
 
-        ul {
-            color: #2d3748;
-            text-align: left;
-            max-width: 340px;
-            margin: 0 0 2rem 0;
-            padding-left: 1.2em;
-            font-size: 1.05rem;
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 20, 25, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-light);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-logo img {
+            height: 32px;
+            width: auto;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
             list-style: none;
         }
 
-        ul li {
-            margin-bottom: 0.5em;
-            position: relative;
-            padding-left: 1.2em;
-        }
-
-        ul li:before {
-            content: '\2714';
-            color: #4299e1;
-            position: absolute;
-            left: 0;
-            font-size: 1em;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-            max-width: 340px;
-            margin-bottom: 0.5rem;
-        }
-
-        input[type="text"],
-        input[type="email"] {
-            padding: 0.85rem;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 1.08rem;
-            outline: none;
-            transition: border 0.2s, box-shadow 0.2s;
-            background: #f7fafc;
-        }
-
-        input[type="text"]:focus,
-        input[type="email"]:focus {
-            border-color: #4299e1;
-            box-shadow: 0 0 0 2px #4299e133;
-        }
-
-        button {
-            padding: 0.85rem;
-            background: linear-gradient(90deg, #4299e1 0%, #38b2ac 100%);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.08rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 8px rgba(66, 153, 225, 0.10);
-        }
-
-        button:hover {
-            background: linear-gradient(90deg, #2b6cb0 0%, #319795 100%);
-            box-shadow: 0 4px 16px rgba(66, 153, 225, 0.13);
-        }
-
-        .success-message {
-            color: #38a169;
-            margin-top: 1rem;
-            text-align: center;
-            font-weight: 600;
-            font-size: 1.08rem;
-        }
-
-        .footer-links {
-            margin-top: 2rem;
-            color: #718096;
-            font-size: 1em;
-            text-align: center;
-        }
-
-        .footer-links a {
-            color: #4299e1;
+        .nav-links a {
+            color: var(--text-muted);
             text-decoration: none;
-            margin: 0 0.5em;
+            font-weight: 500;
             transition: color 0.2s;
         }
 
-        .footer-links a:hover {
-            color: #2b6cb0;
+        .nav-links a:hover {
+            color: var(--primary);
         }
 
-        @media (max-width: 600px) {
-            .container {
-                padding: 1.2rem 0.5rem;
-                min-width: unset;
-                max-width: 98vw;
+        .nav-cta {
+            background: var(--gradient);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(66, 153, 225, 0.3);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8rem 2rem 4rem;
+            background: radial-gradient(ellipse at top, #1a2332 0%, var(--bg-dark) 70%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234299e1' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-text h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-text .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            max-width: 500px;
+        }
+
+        .hero-badges {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-icon {
+            color: var(--primary);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(66, 153, 225, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-light);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .screenshot-placeholder {
+            background: var(--bg-card);
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            aspect-ratio: 16/10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 1rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .screenshot-placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 6rem 2rem;
+            background: var(--bg-dark);
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Screenshots Section */
+        .screenshots {
+            padding: 6rem 2rem;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, #1a2332 100%);
+        }
+
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .screenshot-card:hover {
+            transform: scale(1.02);
+        }
+
+        .screenshot-card .screenshot-placeholder {
+            border: none;
+            border-radius: 0;
+            aspect-ratio: 16/9;
+        }
+
+        .screenshot-card-content {
+            padding: 1.5rem;
+        }
+
+        .screenshot-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .screenshot-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Installation Section */
+        .installation {
+            padding: 6rem 2rem;
+            background: var(--bg-dark);
+        }
+
+        .install-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .install-tab {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .install-tab:hover,
+        .install-tab.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(66, 153, 225, 0.1);
+        }
+
+        .install-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .install-content h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .install-step {
+            margin-bottom: 2rem;
+        }
+
+        .install-step h4 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .install-step p {
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .code-block {
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block code {
+            color: #c9d1d9;
+        }
+
+        .code-block .comment {
+            color: #8b949e;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--border-color);
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .install-panel {
+            display: none;
+        }
+
+        .install-panel.active {
+            display: block;
+        }
+
+        .note-box {
+            background: rgba(66, 153, 225, 0.1);
+            border: 1px solid rgba(66, 153, 225, 0.3);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .note-box strong {
+            color: var(--primary);
+        }
+
+        /* Requirements Section */
+        .requirements {
+            padding: 6rem 2rem;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, #1a2332 100%);
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .req-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .req-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .req-list {
+            list-style: none;
+        }
+
+        .req-list li {
+            color: var(--text-muted);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .req-list li:last-child {
+            border-bottom: none;
+        }
+
+        .req-list .value {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        /* Newsletter Section */
+        .newsletter {
+            padding: 6rem 2rem;
+            background: var(--bg-dark);
+        }
+
+        .newsletter-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 4rem;
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .newsletter-card h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .newsletter-card p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .newsletter-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .newsletter-form input {
+            flex: 1;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .newsletter-form input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .newsletter-form button {
+            padding: 1rem 2rem;
+            background: var(--gradient);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .newsletter-form button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(66, 153, 225, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem;
+            background: #0a0d12;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .footer-left {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
             }
 
-            .logo {
-                width: 98vw;
-                max-width: 98vw;
+            .hero-text .subtitle {
+                margin: 0 auto 2rem;
             }
 
-            h1 {
-                font-size: 1.3rem;
+            .hero-badges {
+                justify-content: center;
             }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .screenshots-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .requirements-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .newsletter-form {
+                flex-direction: column;
+            }
+
+            .install-tabs {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .install-tab {
+                text-align: center;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate {
+            animation: fadeInUp 0.6s ease-out forwards;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="logo" aria-label="AI Runner Logo">
-            <img src="./logo.png" alt="AI Runner Logo">
-        </div>
-        <div class="content">
-            <h1>Offline AI interface for Hackers, Makers, and Builders</h1>
-            <p>
-                Run powerful AI models - chatbots, voice, and image generation - <b>locally</b> on your own
-                hardware.<br>
-                No cloud. No subscriptions. Just fast, private, open AI.
-            </p>
-            <ul>
-                <li>Voice-based chatbots & custom agents</li>
-                <li>Text-to-image & image manipulation</li>
-                <li>Retrieval-augmented generation (RAG)</li>
-                <li>Works on Linux & Windows</li>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <img src="./logo.png" alt="AI Runner">
+                AI Runner
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#screenshots">Screenshots</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#requirements">Requirements</a></li>
             </ul>
-            <p>The <strong>packaged version of AI Runner</strong> is launching soon. Sign up to get notified of its
-                release!</p>
+            <a href="https://github.com/Capsize-Games/airunner" class="nav-cta" target="_blank">
+                ⭐ Star on GitHub
+            </a>
         </div>
-        <form action="https://formspree.io/f/meogdanb" method="POST" id="notify-form" autocomplete="off">
-            <input type="text" id="name" name="name" placeholder="Your Name" required>
-            <input type="email" id="email" name="email" placeholder="Your Email Address" required>
+    </nav>
 
-            <input type="text" id="company" name="company" placeholder="Company Name (optional)">
-
-            <label for="purpose" style="font-size:0.95em;color:#3b4252;">Purpose of use (optional):</label>
-            <select id="purpose" name="purpose">
-                <option value="">-- Select --</option>
-                <option value="personal">Personal</option>
-                <option value="professional">Professional</option>
-            </select>
-
-            <label for="interest" style="font-size:0.95em;color:#3b4252;">Primary interest (optional):</label>
-            <select id="interest" name="interest"
-                onchange="document.getElementById('other-interest').style.display = this.value === 'other' ? 'block' : 'none';">
-                <option value="">-- Select --</option>
-                <option value="art">Art</option>
-                <option value="llm">LLM (Large Language Models)</option>
-                <option value="tts">Real-time Text-to-Speech</option>
-                <option value="nodegraph">Nodegraph Workflows</option>
-                <option value="all">All of the above</option>
-                <option value="other">Other (please specify)</option>
-            </select>
-            <input type="text" id="other-interest" name="other_interest" placeholder="Please specify..."
-                style="display:none;">
-
-            <button type="submit">Notify Me</button>
-        </form>
-        <div id="success" class="success-message" style="display:none;">
-            Thank you! You'll be the first to know.
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>Run Powerful AI Models Locally</h1>
+                <p class="subtitle">
+                    Chat with LLMs, generate images, convert text to speech, and more — all on your own hardware. 
+                    No cloud. No subscriptions. Complete privacy.
+                </p>
+                <div class="hero-badges">
+                    <span class="badge">
+                        <span class="badge-icon">🔒</span> 100% Private
+                    </span>
+                    <span class="badge">
+                        <span class="badge-icon">⚡</span> GPU Accelerated
+                    </span>
+                    <span class="badge">
+                        <span class="badge-icon">🐧</span> Linux & Windows
+                    </span>
+                    <span class="badge">
+                        <span class="badge-icon">🆓</span> Open Source
+                    </span>
+                </div>
+                <div class="hero-buttons">
+                    <a href="#installation" class="btn btn-primary">
+                        📦 Install Now
+                    </a>
+                    <a href="https://github.com/Capsize-Games/airunner" class="btn btn-secondary" target="_blank">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="./art.png" alt="AI Runner Screenshot" style="width: 100%; height: auto; border-radius: 14px;">
+            </div>
         </div>
-        <div class="footer-links">
-            <a href="https://github.com/Capsize-Games/airunner" target="_blank">GitHub</a>
-            |
-            <a href="https://discord.gg/PUVDDCJ7gz" target="_blank">Discord</a>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>Everything You Need for Local AI</h2>
+                <p>A complete suite of AI tools running entirely on your hardware, with no data ever leaving your machine.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>Chat with Local LLMs</h3>
+                    <p>Run Qwen, Mistral, Llama, and other models locally. Enjoy fast, private conversations with AI assistants.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Image Generation</h3>
+                    <p>Create stunning images with Stable Diffusion and FLUX. Text-to-image, inpainting, and outpainting supported.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔊</div>
+                    <h3>Text-to-Speech</h3>
+                    <p>Convert text to natural-sounding speech with multiple voice options. Real-time voice synthesis.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎤</div>
+                    <h3>Speech-to-Text</h3>
+                    <p>Transcribe audio to text with high accuracy. Perfect for dictation and accessibility.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3>RAG & Document Q&A</h3>
+                    <p>Ask questions about your documents. AI reads and understands your PDFs, ebooks, and web pages.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Agentic Tools</h3>
+                    <p>Web search, file operations, deep research mode, and more. Let AI help automate your workflows.</p>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section class="screenshots" id="screenshots">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>See AI Runner in Action</h2>
+                <p>A clean, intuitive interface designed for productivity and creativity.</p>
+            </div>
+            <div class="screenshots-grid">
+                <div class="screenshot-card">
+                    <img src="./chat_interface.png" alt="AI Runner Chat Interface" style="width: 100%; height: auto; border-radius: 14px;">
+                    <div class="screenshot-card-content">
+                        <h3>Chat Interface</h3>
+                        <p>Have conversations with local LLMs in a clean, familiar interface.</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <img src="./art_interface.png" alt="AI Runner Chat Interface" style="width: 100%; height: auto; border-radius: 14px;">
+                    <div class="screenshot-card-content">
+                        <h3>Image Generation</h3>
+                        <p>Generate stunning images with Stable Diffusion and FLUX models.</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <img src="./workflow_interface.png" alt="AI Runner Chat Interface" style="width: 100%; height: auto; border-radius: 14px;">
+                    <div class="screenshot-card-content">
+                        <h3>Nodegraph Workflows</h3>
+                        <p>Create complex AI workflows visually with our nodegraph editor.</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <img src="./preferences_interface.png" alt="AI Runner Chat Interface" style="width: 100%; height: auto; border-radius: 14px;">
+                    <div class="screenshot-card-content">
+                        <h3>Settings & Models</h3>
+                        <p>Configure models, adjust parameters, and customize your experience.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section class="installation" id="installation">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>Get Started in Minutes</h2>
+                <p>Choose your preferred installation method and start using AI Runner today.</p>
+            </div>
+            
+            <div class="install-tabs">
+                <button class="install-tab active" onclick="showInstallTab('flatpak')">📦 Flatpak (Linux)</button>
+                <button class="install-tab" onclick="showInstallTab('pip')">🐍 pip (Linux/Windows)</button>
+                <button class="install-tab" onclick="showInstallTab('source')">💻 From Source</button>
+            </div>
+
+            <div class="install-content">
+                <!-- Flatpak Installation -->
+                <div id="flatpak-panel" class="install-panel active">
+                    <h3>📦 Flatpak Installation (Linux)</h3>
+                    
+                    <div class="install-step">
+                        <h4>Step 1: Install Flatpak</h4>
+                        <p>If you don't have Flatpak installed, install it first:</p>
+                        <div class="code-block">
+                            <code><span class="comment"># Debian/Ubuntu</span><br>sudo apt install flatpak<br><br><span class="comment"># Fedora</span><br>sudo dnf install flatpak<br><br><span class="comment"># Arch</span><br>sudo pacman -S flatpak</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 2: Add Flathub Remote</h4>
+                        <div class="code-block">
+                            <code>flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 3: Build & Install AI Runner</h4>
+                        <p>While our Flathub submission is pending approval, you can build and install manually:</p>
+                        <div class="code-block">
+                            <code><span class="comment"># Clone the repository</span><br>git clone https://github.com/Capsize-Games/airunner.git<br>cd airunner/flatpak<br><br><span class="comment"># Install flatpak-builder if needed</span><br>sudo apt install flatpak-builder  <span class="comment"># Debian/Ubuntu</span><br><br><span class="comment"># Build the Flatpak</span><br>./build.sh<br><br><span class="comment"># Install locally</span><br>./build.sh install</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 4: Run AI Runner</h4>
+                        <div class="code-block">
+                            <code>flatpak run com.capsizegames.AIRunner</code>
+                        </div>
+                    </div>
+
+                    <div class="note-box">
+                        <strong>📝 Note:</strong> Once approved on Flathub, you'll be able to install directly with:<br>
+                        <code style="background: rgba(0,0,0,0.3); padding: 0.25rem 0.5rem; border-radius: 4px; margin-top: 0.5rem; display: inline-block;">flatpak install flathub com.capsizegames.AIRunner</code>
+                    </div>
+                </div>
+
+                <!-- pip Installation -->
+                <div id="pip-panel" class="install-panel">
+                    <h3>🐍 pip Installation (Linux/Windows)</h3>
+                    
+                    <div class="install-step">
+                        <h4>Prerequisites</h4>
+                        <p>Ensure you have Python 3.10+ and pip installed. CUDA toolkit recommended for GPU acceleration.</p>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 1: Create Virtual Environment (Recommended)</h4>
+                        <div class="code-block">
+                            <code>python -m venv airunner-env<br><br><span class="comment"># Linux/macOS</span><br>source airunner-env/bin/activate<br><br><span class="comment"># Windows</span><br>airunner-env\Scripts\activate</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 2: Install AI Runner</h4>
+                        <div class="code-block">
+                            <code>pip install airunner</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 3: Download Models</h4>
+                        <div class="code-block">
+                            <code>airunner-setup</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 4: Run AI Runner</h4>
+                        <div class="code-block">
+                            <code>airunner</code>
+                        </div>
+                    </div>
+
+                    <div class="note-box">
+                        <strong>💡 Tip:</strong> For GPU acceleration, ensure you have CUDA drivers installed and use the appropriate PyTorch version for your GPU.
+                    </div>
+                </div>
+
+                <!-- Source Installation -->
+                <div id="source-panel" class="install-panel">
+                    <h3>💻 From Source (Development)</h3>
+                    
+                    <div class="install-step">
+                        <h4>Step 1: Clone Repository</h4>
+                        <div class="code-block">
+                            <code>git clone https://github.com/Capsize-Games/airunner.git<br>cd airunner</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 2: Create Virtual Environment</h4>
+                        <div class="code-block">
+                            <code>python -m venv venv<br>source venv/bin/activate  <span class="comment"># Linux/macOS</span></code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 3: Install Dependencies</h4>
+                        <div class="code-block">
+                            <code>pip install -e ".[all]"</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 4: Download Models & Run</h4>
+                        <div class="code-block">
+                            <code>airunner-setup<br>airunner</code>
+                        </div>
+                    </div>
+
+                    <div class="note-box">
+                        <strong>🔧 Development:</strong> See our <a href="https://github.com/Capsize-Games/airunner/wiki" style="color: var(--primary);">Wiki</a> for development setup, contributing guidelines, and architecture documentation.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Requirements Section -->
+    <section class="requirements" id="requirements">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>System Requirements</h2>
+                <p>AI Runner works best with a dedicated GPU, but CPU-only mode is available.</p>
+            </div>
+            <div class="requirements-grid">
+                <div class="req-card">
+                    <h3>💻 Minimum</h3>
+                    <ul class="req-list">
+                        <li><span>OS</span><span class="value">Linux / Windows 10+</span></li>
+                        <li><span>CPU</span><span class="value">4 cores</span></li>
+                        <li><span>RAM</span><span class="value">16 GB</span></li>
+                        <li><span>GPU</span><span class="value">NVIDIA GTX 1060 (6GB)</span></li>
+                        <li><span>Storage</span><span class="value">20 GB</span></li>
+                    </ul>
+                </div>
+                <div class="req-card">
+                    <h3>🚀 Recommended</h3>
+                    <ul class="req-list">
+                        <li><span>OS</span><span class="value">Linux (Ubuntu 22.04+)</span></li>
+                        <li><span>CPU</span><span class="value">8+ cores</span></li>
+                        <li><span>RAM</span><span class="value">32 GB+</span></li>
+                        <li><span>GPU</span><span class="value">NVIDIA RTX 3080+ (12GB+)</span></li>
+                        <li><span>Storage</span><span class="value">100 GB SSD</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter" id="notify">
+        <div class="section-container">
+            <div class="newsletter-card">
+                <h2>Stay Updated</h2>
+                <p>Get notified about new releases, features, and AI Runner news. We respect your privacy and won't spam you.</p>
+                <form class="newsletter-form" action="https://formspree.io/f/meogdanb" method="POST">
+                    <input type="email" name="email" placeholder="your@email.com" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-left">
+                © 2025 Capsize Games. AI Runner is open source under GPL-3.0.
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/Capsize-Games/airunner" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    GitHub
+                </a>
+                <a href="https://discord.gg/PUVDDCJ7gz" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
+                    </svg>
+                    Discord
+                </a>
+                <a href="https://github.com/Capsize-Games/airunner/wiki" target="_blank">
+                    📖 Documentation
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function showInstallTab(tabName) {
+            // Hide all panels
+            document.querySelectorAll('.install-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // Deactivate all tabs
+            document.querySelectorAll('.install-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected panel
+            document.getElementById(tabName + '-panel').classList.add('active');
+            
+            // Activate selected tab
+            event.target.classList.add('active');
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
