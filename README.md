@@ -159,7 +159,14 @@ mkcert -install
 - Provide consumer notice and appeal mechanisms
 - Report algorithmic discrimination to the Colorado Attorney General
 
-**AI Runner's Design:** Local-first operation, configurable guardrails, and no external data transmission by default help support compliant use. If you choose to use search features via DuckDuckGo API, or use OpenRouter, your prompts will be transmitted to those services. If you use the model downloader from CivitAI or HuggingFace models, your computer will connect to their servers in order to download the required files.
+**AI Runner's Design:** AI Runner is designed with privacy as a core principle—it runs entirely locally with no external data transmission by default. However, certain optional features connect to external services:
+
+- **Model Downloads:** Connecting to HuggingFace or CivitAI to download models
+- **Web Search / Deep Research:** Search queries sent to DuckDuckGo; web pages scraped for research
+- **Weather Prompt:** Location coordinates sent to Open-Meteo API if enabled
+- **External LLM Providers:** Prompts sent to OpenRouter or OpenAI if configured
+
+**We recommend using a VPN** when using features that connect to external services. See our full [Privacy Policy](src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/privacy_policy.md) for details.
 
 ---
 
