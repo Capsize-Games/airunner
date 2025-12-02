@@ -17,6 +17,7 @@ class StatusWidget(BaseWidget):
         self._model_status = {
             model_type: ModelStatus.UNLOADED for model_type in ModelType
         }
+        self._llm_version = None  # Track LLM model version separately
         self.signal_handlers = {
             SignalCode.APPLICATION_STATUS_INFO_SIGNAL: self.on_status_info_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
@@ -24,6 +25,7 @@ class StatusWidget(BaseWidget):
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.SD_PIPELINE_LOADED_SIGNAL: self.set_sd_pipeline_label,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
+            SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
         }
         super().__init__(*args, **kwargs)
 
@@ -196,12 +198,16 @@ class StatusWidget(BaseWidget):
 
     def set_llm_status_text(self):
         model_version = self.llm_generator_settings.model_version
-        if self.version != model_version:
-            version = model_version
+        if self._llm_version != model_version:
+            self._llm_version = model_version
             try:
-                self.ui.llm_status.setText(version)
+                self.ui.llm_status.setText(model_version)
             except RuntimeError as e:
                 self.logger.warning(f"Error setting LLM status text: {e}")
+
+    def on_llm_model_changed(self, data: Optional[Dict] = None):
+        """Handle LLM model change signal to update status bar."""
+        self.set_llm_status_text()
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)

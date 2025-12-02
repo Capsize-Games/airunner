@@ -239,6 +239,8 @@ setup(
             "components/art/filters/*",
             # UI templates (all .ui files in templates directories)
             "components/**/templates/*.ui",
+            # Legal documents (user agreement, privacy policy)
+            "components/**/user_agreement/*.md",
             # Static files (HTML, CSS, JS templates for web views)
             "components/**/static/**/*",
             "static/**/*",

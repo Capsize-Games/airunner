@@ -16,6 +16,7 @@ from airunner.components.llm.core.tool_registry import tool, ToolCategory
     description="Quit the AI Runner application",
     return_direct=True,
     requires_api=True,
+    defer_loading=False,  # Essential tool - always available
 )
 def quit_application(api: Any = None) -> str:
     """Quit the application."""
@@ -29,6 +30,7 @@ def quit_application(api: Any = None) -> str:
     description="Enable or disable text-to-speech",
     return_direct=True,
     requires_api=True,
+    defer_loading=False,  # Essential tool - always available
 )
 def toggle_tts(
     enabled: Annotated[bool, "True to enable, False to disable"],

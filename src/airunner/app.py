@@ -1183,10 +1183,17 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def _ensure_mathjax(self):
         # Only run setup if MathJax is not present
         # Use user data directory instead of package directory (read-only in flatpak)
-        base_path = os.environ.get(
-            "AIRUNNER_DATA_DIR",
-            os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
-        )
+        if os.environ.get("AIRUNNER_FLATPAK") == "1":
+            xdg_data_home = os.environ.get(
+                "XDG_DATA_HOME",
+                os.path.expanduser("~/.local/share")
+            )
+            base_path = os.path.join(xdg_data_home, "airunner")
+        else:
+            base_path = os.environ.get(
+                "AIRUNNER_DATA_DIR",
+                os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+            )
         mathjax_dir = os.path.join(
             base_path,
             "static",
@@ -1194,14 +1201,15 @@ class App(MediatorMixin, SettingsMixin, QObject):
             f"MathJax-{MATHJAX_VERSION}",
             "es5",
         )
-        os.makedirs(mathjax_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.dirname(mathjax_dir)), exist_ok=True)  # Create .../static/mathjax
         entry = os.path.join(mathjax_dir, "tex-mml-chtml.js")
         if not os.path.exists(entry):
             print("MathJax not found, attempting to download and set up...")
             try:
                 # Set environment variable so setup script knows where to install
+                # Pass .../static/mathjax (parent of MathJax-{VERSION})
                 env = os.environ.copy()
-                env["MATHJAX_INSTALL_DIR"] = os.path.dirname(mathjax_dir)
+                env["MATHJAX_INSTALL_DIR"] = os.path.dirname(os.path.dirname(mathjax_dir))
                 subprocess.check_call(
                     [
                         sys.executable,
