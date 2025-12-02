@@ -799,6 +799,7 @@
                 <li><a href="#screenshots">Screenshots</a></li>
                 <li><a href="#installation">Installation</a></li>
                 <li><a href="#requirements">Requirements</a></li>
+                <li><a href="https://github.com/Capsize-Games/airunner/wiki" target="_blank">📖 Wiki</a></li>
             </ul>
             <a href="https://github.com/Capsize-Games/airunner" class="nav-cta" target="_blank">
                 ⭐ Star on GitHub
@@ -935,49 +936,51 @@
             </div>
             
             <div class="install-tabs">
-                <button class="install-tab active" onclick="showInstallTab('flatpak')">📦 Flatpak (Linux)</button>
+                <button class="install-tab active" onclick="showInstallTab('docker')">🐳 Docker (Recommended)</button>
                 <button class="install-tab" onclick="showInstallTab('pip')">🐍 pip (Linux/Windows)</button>
                 <button class="install-tab" onclick="showInstallTab('source')">💻 From Source</button>
             </div>
 
             <div class="install-content">
-                <!-- Flatpak Installation -->
-                <div id="flatpak-panel" class="install-panel active">
-                    <h3>📦 Flatpak Installation (Linux)</h3>
+                <!-- Docker Installation -->
+                <div id="docker-panel" class="install-panel active">
+                    <h3>🐳 Docker Installation (Recommended)</h3>
                     
                     <div class="install-step">
-                        <h4>Step 1: Install Flatpak</h4>
-                        <p>If you don't have Flatpak installed, install it first:</p>
+                        <h4>Prerequisites</h4>
+                        <p>Ensure you have Docker and NVIDIA Container Toolkit installed:</p>
                         <div class="code-block">
-                            <code><span class="comment"># Debian/Ubuntu</span><br>sudo apt install flatpak<br><br><span class="comment"># Fedora</span><br>sudo dnf install flatpak<br><br><span class="comment"># Arch</span><br>sudo pacman -S flatpak</code>
+                            <code><span class="comment"># Install Docker (if not already installed)</span><br>curl -fsSL https://get.docker.com | sh<br><br><span class="comment"># Install NVIDIA Container Toolkit</span><br>distribution=$(. /etc/os-release;echo $ID$VERSION_ID)<br>curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -<br>curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list<br>sudo apt update && sudo apt install -y nvidia-container-toolkit<br>sudo systemctl restart docker</code>
                         </div>
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 2: Add Flathub Remote</h4>
+                        <h4>Step 1: Clone Repository</h4>
                         <div class="code-block">
-                            <code>flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo</code>
+                            <code>git clone https://github.com/Capsize-Games/airunner.git<br>cd airunner</code>
                         </div>
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 3: Build & Install AI Runner</h4>
-                        <p>While our Flathub submission is pending approval, you can build and install manually:</p>
+                        <h4>Step 2: Run AI Runner (GUI Mode)</h4>
                         <div class="code-block">
-                            <code><span class="comment"># Clone the repository</span><br>git clone https://github.com/Capsize-Games/airunner.git<br>cd airunner/flatpak<br><br><span class="comment"># Install flatpak-builder if needed</span><br>sudo apt install flatpak-builder  <span class="comment"># Debian/Ubuntu</span><br><br><span class="comment"># Build the Flatpak</span><br>./build.sh<br><br><span class="comment"># Install locally</span><br>./build.sh install</code>
+                            <code><span class="comment"># Allow X11 access and run with GUI</span><br>xhost +local:docker && docker compose run --rm airunner</code>
                         </div>
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 4: Run AI Runner</h4>
+                        <h4>Alternative: Headless API Server</h4>
+                        <p>Run AI Runner as a headless API server on port 8080:</p>
                         <div class="code-block">
-                            <code>flatpak run com.capsizegames.AIRunner</code>
+                            <code>docker compose run --rm --service-ports airunner --headless</code>
                         </div>
                     </div>
 
                     <div class="note-box">
-                        <strong>📝 Note:</strong> Once approved on Flathub, you'll be able to install directly with:<br>
-                        <code style="background: rgba(0,0,0,0.3); padding: 0.25rem 0.5rem; border-radius: 4px; margin-top: 0.5rem; display: inline-block;">flatpak install flathub com.capsizegames.AIRunner</code>
+                        <strong>🔌 API Endpoints:</strong> The headless server exposes:<br>
+                        <code style="background: rgba(0,0,0,0.3); padding: 0.25rem 0.5rem; border-radius: 4px; margin-top: 0.5rem; display: inline-block;">GET /health</code> - Health check<br>
+                        <code style="background: rgba(0,0,0,0.3); padding: 0.25rem 0.5rem; border-radius: 4px; margin-top: 0.25rem; display: inline-block;">POST /llm</code> - LLM inference<br>
+                        <code style="background: rgba(0,0,0,0.3); padding: 0.25rem 0.5rem; border-radius: 4px; margin-top: 0.25rem; display: inline-block;">POST /art</code> - Image generation
                     </div>
                 </div>
 
