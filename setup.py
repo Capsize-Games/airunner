@@ -252,7 +252,6 @@ setup(
     entry_points={
         "console_scripts": [
             "airunner=airunner.launcher:main",
-            "airunner-setup=airunner.installer:main",
             "airunner-headless=airunner.bin.airunner_headless:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-compile-translations=airunner.bin.compile_translations:main",

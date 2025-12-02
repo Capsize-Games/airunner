@@ -229,15 +229,6 @@ exec python -m airunner.launcher "\$@"
 EOF
     chmod +x "$BIN_DIR/airunner"
     
-    # Setup launcher
-    cat > "$BIN_DIR/airunner-setup" << EOF
-#!/bin/bash
-# AI Runner Model Setup
-source "${VENV_DIR}/bin/activate"
-exec python -m airunner.installer "\$@"
-EOF
-    chmod +x "$BIN_DIR/airunner-setup"
-    
     # Headless launcher
     cat > "$BIN_DIR/airunner-headless" << EOF
 #!/bin/bash
@@ -277,17 +268,15 @@ print_success() {
     if [ "$ADD_TO_PATH" = true ]; then
         echo "1. Add ~/.local/bin to your PATH (see above)"
         echo ""
-        echo "2. Download AI models (required for first use):"
-        echo -e "   ${YELLOW}$BIN_DIR/airunner-setup${NC}"
-        echo ""
-        echo "3. Launch AI Runner:"
-        echo -e "   ${YELLOW}$BIN_DIR/airunner${NC}"
-    else
-        echo "1. Download AI models (required for first use):"
-        echo -e "   ${YELLOW}airunner-setup${NC}"
-        echo ""
         echo "2. Launch AI Runner:"
+        echo -e "   ${YELLOW}$BIN_DIR/airunner${NC}"
+        echo ""
+        echo "3. Download models from Tools → Download Models menu"
+    else
+        echo "1. Launch AI Runner:"
         echo -e "   ${YELLOW}airunner${NC}"
+        echo ""
+        echo "2. Download models from Tools → Download Models menu"
     fi
     
     echo ""
@@ -307,7 +296,7 @@ uninstall() {
     fi
     
     # Remove launcher scripts
-    for script in airunner airunner-setup airunner-headless; do
+    for script in airunner airunner-headless; do
         if [ -f "$BIN_DIR/$script" ]; then
             rm "$BIN_DIR/$script"
             log_success "Removed $BIN_DIR/$script"
