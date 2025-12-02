@@ -48,6 +48,18 @@ def search_web(
     """
     global _last_search_time
 
+    # Check if DuckDuckGo search is allowed
+    from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+        is_duckduckgo_allowed,
+    )
+    if not is_duckduckgo_allowed():
+        logger.info("Web search disabled by privacy settings")
+        return {
+            "results": [],
+            "summary": "Web search is disabled in privacy settings. "
+            "You can enable it in Preferences → Privacy & Security → External Services."
+        }
+
     try:
         # Rate limiting: wait if we searched too recently
         time_since_last = time.time() - _last_search_time
@@ -142,6 +154,18 @@ def search_news(
 
     """
     global _last_search_time
+
+    # Check if DuckDuckGo search is allowed
+    from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+        is_duckduckgo_allowed,
+    )
+    if not is_duckduckgo_allowed():
+        logger.info("News search disabled by privacy settings")
+        return {
+            "results": [],
+            "summary": "Web search is disabled in privacy settings. "
+            "You can enable it in Preferences → Privacy & Security → External Services."
+        }
 
     try:
         # Rate limiting: wait if we searched too recently

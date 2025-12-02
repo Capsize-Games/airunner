@@ -711,6 +711,19 @@ class DownloadModelDialog(QDialog):
 
 
 def show_download_model_dialog(parent, path_settings, application_settings):
+    # Check if CivitAI downloads are allowed
+    from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+        is_civitai_allowed,
+    )
+    if not is_civitai_allowed():
+        QMessageBox.warning(
+            parent,
+            "Downloads Disabled",
+            "CivitAI downloads are disabled in privacy settings.\n\n"
+            "You can enable them in Preferences → Privacy & Security → External Services."
+        )
+        return
+        
     url, ok = QInputDialog.getText(
         parent, "Download Model from CivitAI", "Paste CivitAI model URL:"
     )
