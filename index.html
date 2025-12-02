@@ -799,6 +799,7 @@
                 <li><a href="#screenshots">Screenshots</a></li>
                 <li><a href="#installation">Installation</a></li>
                 <li><a href="#requirements">Requirements</a></li>
+                <li><a href="#privacy">Privacy</a></li>
                 <li><a href="https://github.com/Capsize-Games/airunner/wiki" target="_blank">📖 Wiki</a></li>
             </ul>
             <a href="https://github.com/Capsize-Games/airunner" class="nav-cta" target="_blank">
@@ -1098,11 +1099,31 @@
         </div>
     </section>
 
-    <section class="newsletter" id="notify">
+    <section class="newsletter" id="privacy">
         <div class="section-container">
             <div class="newsletter-card">
-                *An internet connection is required to download models from HuggingFace.co and CivitAI.com and to use internet-dependent
-                features (e.g., web search which uses DuckDuckGo). We retain no user data but third-party sites may have their own policies.
+                <h2>🔒 Privacy First</h2>
+                <p style="text-align: left; margin-bottom: 1.5rem;">
+                    AI Runner is designed with privacy as a core principle. <strong>All data is processed and stored locally on your device.</strong> 
+                    We do not collect personal data, usage analytics, or any of your conversations, images, or files.
+                </p>
+                <div style="text-align: left; color: var(--text-muted); font-size: 0.95rem;">
+                    <p style="margin-bottom: 1rem;"><strong style="color: var(--text-light);">Optional External Connections:</strong></p>
+                    <ul style="list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                        <li style="padding: 0.4rem 0;">• <strong>Model Downloads:</strong> HuggingFace.co, CivitAI.com</li>
+                        <li style="padding: 0.4rem 0;">• <strong>Web Search:</strong> DuckDuckGo (when enabled)</li>
+                        <li style="padding: 0.4rem 0;">• <strong>Weather:</strong> Open-Meteo API (when enabled)</li>
+                        <li style="padding: 0.4rem 0;">• <strong>External LLMs:</strong> OpenRouter, OpenAI, Ollama (when configured)</li>
+                    </ul>
+                    <p style="margin-bottom: 1rem;">
+                        These connections only occur when you explicitly enable them. You can use AI Runner completely offline after downloading models once.
+                        <strong>We recommend using a VPN</strong> when using features that connect to external services.
+                    </p>
+                </div>
+                <a href="https://github.com/Capsize-Games/airunner/blob/master/src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/privacy_policy.md" 
+                   target="_blank" class="btn btn-secondary" style="margin-top: 1rem;">
+                    📄 Read Full Privacy Policy
+                </a>
             </div>
         </div>
     </section>
