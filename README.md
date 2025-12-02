@@ -163,6 +163,7 @@ mkcert -install
 
 - **Model Downloads:** Connecting to HuggingFace or CivitAI to download models
 - **Web Search / Deep Research:** Search queries sent to DuckDuckGo; web pages scraped for research
+- **Weather Prompt:** Location coordinates sent to Open-Meteo API if enabled
 - **External LLM Providers:** Prompts sent to OpenRouter or OpenAI if configured
 
 **We recommend using a VPN** when using features that connect to external services. See our full [Privacy Policy](src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/privacy_policy.md) for details.
