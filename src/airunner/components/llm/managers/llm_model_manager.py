@@ -618,9 +618,14 @@ class LLMModelManager(
         self.logger.info(
             f"[TOOL FILTER] Getting tools by categories: {list(allowed_categories)}",
         )
+        # When filtering by category, include ALL tools in those categories
+        # (including deferred ones). The defer_loading flag is only meant to
+        # reduce the global tool count when no category filter is applied.
+        # If the LLM classified that it needs certain categories, it should
+        # have access to all tools in those categories.
         filtered_tools = self._tool_manager.get_tools_by_categories(
             list(allowed_categories),
-            include_deferred=False,  # Deferred tools discoverable via search_tools
+            include_deferred=True,  # Include all tools in selected categories
         )
         # Debug: Log the filtered tools (names) for verification
         try:
@@ -706,6 +711,12 @@ Reply with ONLY category names (comma-separated) or "none":"""
                     if hasattr(chat_model, 'temperature'):
                         chat_model.temperature = 0.1
                     
+                    # Temporarily disable tools for classification
+                    # This prevents 100+ tool definitions from bloating the context
+                    original_tool_choice = getattr(chat_model, 'tool_choice', None)
+                    if hasattr(chat_model, 'tool_choice'):
+                        chat_model.tool_choice = "none"
+                    
                     try:
                         response = chat_model.invoke([HumanMessage(content=classification_prompt)])
                     finally:
@@ -714,6 +725,8 @@ Reply with ONLY category names (comma-separated) or "none":"""
                             chat_model.enable_thinking = original_thinking
                         if hasattr(chat_model, 'temperature'):
                             chat_model.temperature = original_temp
+                        if hasattr(chat_model, 'tool_choice'):
+                            chat_model.tool_choice = original_tool_choice
                     
                     response_text = response.content if hasattr(response, 'content') else str(response)
                     

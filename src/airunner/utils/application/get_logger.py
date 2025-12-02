@@ -45,14 +45,26 @@ class Logger:
                 )
 
                 settings = PathSettings.objects.first()
-                base_path = (
-                    settings.base_path
-                    if settings
-                    else "~/.local/share/airunner"
-                )
+                if settings:
+                    base_path = settings.base_path
+                elif os.environ.get("AIRUNNER_FLATPAK") == "1":
+                    xdg_data_home = os.environ.get(
+                        "XDG_DATA_HOME",
+                        os.path.expanduser("~/.local/share")
+                    )
+                    base_path = os.path.join(xdg_data_home, "airunner")
+                else:
+                    base_path = "~/.local/share/airunner"
             except (ImportError, Exception):
                 # Fallback if PathSettings not available yet (during initialization)
-                base_path = "~/.local/share/airunner"
+                if os.environ.get("AIRUNNER_FLATPAK") == "1":
+                    xdg_data_home = os.environ.get(
+                        "XDG_DATA_HOME",
+                        os.path.expanduser("~/.local/share")
+                    )
+                    base_path = os.path.join(xdg_data_home, "airunner")
+                else:
+                    base_path = "~/.local/share/airunner"
 
             try:
                 log_file = os.environ.get(

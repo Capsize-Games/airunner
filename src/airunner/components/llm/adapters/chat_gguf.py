@@ -456,7 +456,9 @@ For each function call, return a json object with function name and arguments wi
         Yields:
             ChatGenerationChunk objects with streamed content
         """
+        self.logger.info("[ChatGGUF._stream] Starting stream generation")
         converted_messages = self._convert_messages(messages)
+        self.logger.info(f"[ChatGGUF._stream] Converted {len(converted_messages)} messages")
         
         # NOTE: We do NOT pass tools - they are in the system prompt
         chat_kwargs = {
@@ -475,8 +477,16 @@ For each function call, return a json object with function name and arguments wi
 
         self._interrupted = False
         full_content = []
-
+        
+        self.logger.info(f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}")
+        self.logger.info(f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}")
+        self.logger.info(f"[ChatGGUF._stream] tool_choice: {self.tool_choice}")
+        
+        chunk_count = 0
         for chunk in self._llama.create_chat_completion(**chat_kwargs):
+            chunk_count += 1
+            if chunk_count == 1:
+                self.logger.info(f"[ChatGGUF._stream] First chunk received")
             if self._interrupted:
                 break
 
@@ -497,6 +507,7 @@ For each function call, return a json object with function name and arguments wi
                 yield chunk_msg
 
         # After streaming completes, parse <tool_call> tags from full content
+        self.logger.info(f"[ChatGGUF._stream] Stream loop finished. Total chunks: {chunk_count}, content length: {len(''.join(full_content))}")
         full_text = "".join(full_content)
         tool_calls = self._parse_tool_calls(full_text)
         

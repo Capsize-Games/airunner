@@ -64,8 +64,11 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,
+            os.path.join(airunner_path, "cache"),  # Web content cache
+            os.path.join(airunner_path, "cache/.webcache"),  # Web scraper cache
             os.path.join(airunner_path, "code"),  # Code generation workspace
             os.path.join(airunner_path, "data"),
+            os.path.join(airunner_path, "static"),  # Static assets (MathJax, etc.)
             os.path.join(airunner_path, "text"),
             os.path.join(airunner_path, "text/other"),
             os.path.join(airunner_path, "text/other/documents"),

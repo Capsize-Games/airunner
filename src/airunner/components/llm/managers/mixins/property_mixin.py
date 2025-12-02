@@ -49,13 +49,17 @@ class PropertyMixin:
 
     @property
     def tools(self) -> List:
-        """Get all available tools from tool manager.
+        """Get immediately-available tools from tool manager.
+        
+        Returns only tools with defer_loading=False to reduce context size.
+        Deferred tools (defer_loading=True) can be discovered via the
+        search_tools meta-tool, which is always included in immediate tools.
 
         Returns:
-            List of available tools
+            List of immediate tools (not deferred)
         """
         if self._tool_manager:
-            return self._tool_manager.get_all_tools()
+            return self._tool_manager.get_immediate_tools()
         return []
 
     @property

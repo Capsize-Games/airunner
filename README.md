@@ -1,22 +1,16 @@
+# AI Runner
+
 ```
-╔═════════════════════════════════════════════════════════════════════════════╗
-║                                                                             ║
-║     █████╗ ██╗    ██████╗ ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗      ║
-║    ██╔══██╗██║    ██╔══██╗██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗     ║
-║    ███████║██║    ██████╔╝██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝     ║
-║    ██╔══██║██║    ██╔══██╗██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗     ║
-║    ██║  ██║██║    ██║  ██║╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║     ║
-║    ╚═╝  ╚═╝╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝     ║
-║                                                                             ║
-║                          Local AI Models Made Easy                          ║
-║                                                                             ║
-╚═════════════════════════════════════════════════════════════════════════════╝
-Send Crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
+Support development. Send crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
 ```
 
-## Your new favorite local AGI platform
+## Your new favorite local AI platform
 
 AI Runner is an all-in-one, offline-first desktop application, headless server, and Python library for local LLMs, TTS, STT, and image generation.
+
+
+<img src="./images/art_interface.png" alt="AI Runner Logo" />
+
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/ukcgjEpc5f) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 
@@ -189,3 +183,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 - [Wiki](https://github.com/Capsize-Games/airunner/wiki)
 - [API Service Layer](src/airunner/components/application/api/README.md)
 - [ORM Models](src/airunner/components/data/models/README.md)
+
+---
+
+<a href="https://airunner.org">
+   <img src="https://airunner.org/logo.png" alt="AI Runner Logo" width="100"/>
+</a>
+

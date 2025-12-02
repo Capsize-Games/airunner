@@ -1583,6 +1583,7 @@ Based on the search results above, provide a clear, conversational answer to the
         # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
+            self.logger.info(f"[STREAM] Starting stream from chat_model type: {type(self._chat_model).__name__}")
             for chunk in self._chat_model.stream(
                 formatted_prompt, **generation_kwargs
             ):

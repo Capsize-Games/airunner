@@ -165,6 +165,28 @@ class ModelDownloadMixin:
 
             self.download_manager = create_worker(DownloadHuggingFaceModel)
 
+            # Connect dialog to download worker signals
+            self.download_manager.register(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                self._download_dialog.on_log_updated,
+            )
+            self.download_manager.register(
+                SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                self._download_dialog.on_progress_updated,
+            )
+            self.download_manager.register(
+                SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                self._download_dialog.on_file_progress_updated,
+            )
+            self.download_manager.register(
+                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._download_dialog.on_download_complete,
+            )
+            self.download_manager.register(
+                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                self._download_dialog.on_download_failed,
+            )
+
             if is_gguf and gguf_filename:
                 # GGUF download - just download the single .gguf file
                 self.download_manager.download(
