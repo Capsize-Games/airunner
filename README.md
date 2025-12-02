@@ -129,10 +129,11 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | Command | Description |
 |---------|-------------|
 | `airunner` | Launch GUI |
-| `airunner-setup` | Download models |
 | `airunner-build-ui` | Rebuild UI from `.ui` files |
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
+
+**Note:** To download models, use *Tools → Download Models* from the main application menu.
 
 ---
 

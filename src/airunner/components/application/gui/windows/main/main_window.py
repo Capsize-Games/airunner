@@ -666,6 +666,28 @@ class MainWindow(
         self.actionPrivacyPolicy = QAction("Privacy Policy", self)
         self.actionPrivacyPolicy.triggered.connect(self._show_privacy_policy)
         self.ui.menuAbout.addAction(self.actionPrivacyPolicy)
+
+    def _add_download_models_menu_item(self):
+        """Add Download Models action to Tools menu."""
+        from PySide6.QtGui import QAction
+        
+        # Add separator before download models
+        self.ui.menuTools.addSeparator()
+        
+        # Download Models action
+        self.actionDownloadModels = QAction("Download Models...", self)
+        self.actionDownloadModels.setToolTip(
+            "Download pre-configured models from HuggingFace"
+        )
+        self.actionDownloadModels.triggered.connect(self._show_download_models_dialog)
+        self.ui.menuTools.addAction(self.actionDownloadModels)
+
+    def _show_download_models_dialog(self):
+        """Show the Download Models dialog."""
+        from airunner.components.application.gui.dialogs.download_models_dialog import (
+            show_download_models_dialog,
+        )
+        show_download_models_dialog(self)
     
     def _show_age_agreement(self):
         """Show Age Agreement dialog."""
@@ -1014,6 +1036,9 @@ class MainWindow(
         
         # Add legal document menu items to Help menu
         self._add_legal_menu_items()
+        
+        # Add Download Models menu item to Tools menu
+        self._add_download_models_menu_item()
 
         self.icon_manager = IconManager(self.icons, self.ui)
 
