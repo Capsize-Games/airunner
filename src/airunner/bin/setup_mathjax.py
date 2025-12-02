@@ -17,6 +17,8 @@ MATHJAX_URL = f"https://github.com/mathjax/MathJax/archive/refs/tags/{MATHJAX_VE
 
 # Use MATHJAX_INSTALL_DIR if set (for flatpak), otherwise use package directory
 if os.environ.get("MATHJAX_INSTALL_DIR"):
+    # MATHJAX_INSTALL_DIR points to the parent of MathJax-{VERSION}
+    # e.g., .../static/mathjax (not including MathJax-{VERSION})
     STATIC_DIR = os.environ["MATHJAX_INSTALL_DIR"]
 else:
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +28,7 @@ else:
 ZIP_PATH = os.path.join(STATIC_DIR, "mathjax.zip")
 
 # The main entry file for MathJax 3.x CHTML output (after extraction)
+# The zip extracts to MathJax-{VERSION}/es5/tex-mml-chtml.js
 MATHJAX_ENTRY = os.path.join(STATIC_DIR, f"MathJax-{MATHJAX_VERSION}", "es5", "tex-mml-chtml.js")
 
 
@@ -40,13 +43,9 @@ def ensure_mathjax():
     with zipfile.ZipFile(ZIP_PATH, "r") as zip_ref:
         zip_ref.extractall(STATIC_DIR)
     os.remove(ZIP_PATH)
-    # Move es5/* files up to static/mathjax/
-    es5_dir = os.path.join(STATIC_DIR, "es5")
-    if os.path.isdir(es5_dir):
-        for f in os.listdir(es5_dir):
-            shutil.move(os.path.join(es5_dir, f), STATIC_DIR)
-        shutil.rmtree(es5_dir)
-    print("MathJax setup complete at:", STATIC_DIR)
+    # The zip extracts to MathJax-{VERSION}/ which contains es5/
+    # No need to move files - the structure is already correct
+    print("MathJax setup complete at:", os.path.join(STATIC_DIR, f"MathJax-{MATHJAX_VERSION}"))
 
 
 if __name__ == "__main__":

@@ -547,12 +547,15 @@ class WorkerManager(Worker):
 
         # Delegate to LLM worker only for LLM model downloads
         # Skip TTS, STT, and other non-LLM model types
+        # Use add_to_queue to ensure processing happens in worker thread,
+        # not main thread, to prevent UI lockups during model loading
         model_type = data.get("model_type", "")
         non_llm_types = {"tts_openvoice", "stt", "openvoice_zip", "art"}
         if self._llm_generate_worker is not None and model_type not in non_llm_types:
-            self.llm_generate_worker.on_huggingface_download_complete_signal(
-                data
-            )
+            self.llm_generate_worker.add_to_queue({
+                "_message_type": "download_complete",
+                "data": data
+            })
 
         # If we have a pending generation request (for image generation), retry it now
         if self._pending_generation_request:
@@ -906,6 +909,28 @@ class WorkerManager(Worker):
         # Create download worker
         self._huggingface_download_worker = create_worker(DownloadHuggingFaceModel)
         
+        # Connect dialog to download worker signals
+        self._huggingface_download_worker.register(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            self._download_dialog.on_log_updated,
+        )
+        self._huggingface_download_worker.register(
+            SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+            self._download_dialog.on_progress_updated,
+        )
+        self._huggingface_download_worker.register(
+            SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+            self._download_dialog.on_file_progress_updated,
+        )
+        self._huggingface_download_worker.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+            self._download_dialog.on_download_complete,
+        )
+        self._huggingface_download_worker.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+            self._download_dialog.on_download_failed,
+        )
+        
         if is_gguf and gguf_filename:
             self.logger.info(f"Starting GGUF download: {repo_id}/{gguf_filename}")
             self._huggingface_download_worker.download(
@@ -931,10 +956,13 @@ class WorkerManager(Worker):
         self._download_dialog.show()
 
     def on_huggingface_download_complete_signal(self, data):
+        # Use add_to_queue to ensure processing happens in worker thread,
+        # not main thread, to prevent UI lockups during model loading
         if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_huggingface_download_complete_signal(
-                data
-            )
+            self.llm_generate_worker.add_to_queue({
+                "_message_type": "download_complete",
+                "data": data
+            })
 
     def on_llm_reload_rag_index_signal(self, data):
         if self._llm_generate_worker is not None:

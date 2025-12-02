@@ -68,13 +68,10 @@ class LLMGenerateWorker(
             False  # Disabled to prevent Qt threading crash
         )
 
-        # Register download completion handler
-        from airunner.enums import SignalCode
-
-        self.register(
-            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-            self.on_huggingface_download_complete_signal,
-        )
+        # NOTE: Download completion is now handled via the queue mechanism
+        # (WorkerManager.on_huggingface_download_complete adds to queue with
+        # _message_type="download_complete") rather than direct signal registration.
+        # This ensures download handling runs in the worker thread, not the main thread.
 
         # Auto-unload timer is DISABLED - QTimer cannot work in worker threads
         # self._start_inactivity_timer()
@@ -448,6 +445,14 @@ class LLMGenerateWorker(
         Args:
             message: Message dictionary to process
         """
+        # Handle download complete messages from the queue
+        # This ensures download completion is processed in the worker thread,
+        # not the main thread, preventing UI lockups during model loading
+        if message.get("_message_type") == "download_complete":
+            self.logger.info("Processing download complete message from queue")
+            self.on_huggingface_download_complete_signal(message.get("data", {}))
+            return
+
         if self._interrupted:
             self.logger.info("Skipping message - worker interrupted")
             return

@@ -58,19 +58,30 @@ def _patch_signals_for_subprocess():
 _patch_signals_for_subprocess()
 
 # Dynamically resolve cache directory based on PathSettings
+def _get_base_path() -> Path:
+    """Get the base path for cache, respecting Flatpak environment."""
+    import os
+    if os.environ.get("AIRUNNER_FLATPAK") == "1":
+        xdg_data_home = os.environ.get(
+            "XDG_DATA_HOME",
+            os.path.expanduser("~/.local/share")
+        )
+        return Path(xdg_data_home) / "airunner"
+    return Path.home() / ".local" / "share" / "airunner"
+
 try:
     path_settings = PathSettings.objects.first()
     if path_settings and path_settings.base_path:
-        base_path = path_settings.base_path
+        base_path = Path(path_settings.base_path)
     else:
-        # Use XDG data directory as fallback
-        base_path = Path.home() / ".local" / "share" / "airunner"
-    CACHE_DIR = Path(base_path) / "cache" / ".webcache"
+        # Use Flatpak-aware path as fallback
+        base_path = _get_base_path()
+    CACHE_DIR = base_path / "cache" / ".webcache"
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    BLOCKLIST_FILE = Path(base_path) / ".scraper_blocklist"
+    BLOCKLIST_FILE = base_path / ".scraper_blocklist"
 except Exception:
-    # Fallback to user's home directory if all else fails
-    base_path = Path.home() / ".local" / "share" / "airunner"
+    # Fallback using Flatpak-aware path
+    base_path = _get_base_path()
     CACHE_DIR = base_path / "cache" / ".webcache"
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     BLOCKLIST_FILE = base_path / ".scraper_blocklist"

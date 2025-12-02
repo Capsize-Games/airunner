@@ -31,28 +31,37 @@ You agree not to use the Software for any purpose that is illegal, harmful, or o
 ### 3.2 Harmful and Exploitative Content
 * **Self-Harm:** Creating content that promotes, encourages, or provides instructions for self-harm, suicide, eating disorders, or other forms of self-injury
 * **Exploitation of Minors:** Creating or distributing any content that exploits, abuses, endangers, or sexualizes children in any way. This includes AI-generated child sexual abuse material (CSAM), which is illegal
+* **Sexual Exploitation:** Creating content that promotes or facilitates human trafficking, sexual slavery, prostitution, or any form of sexual exploitation of adults
 * **Non-Consensual Content:** Creating intimate, sexual, or degrading imagery of real persons without their explicit consent
 * **Harassment and Abuse:** Generating content intended to harass, threaten, stalk, intimidate, or harm any individual
+* **Violence and Terrorism:** Creating content that glorifies, incites, or provides instructions for acts of violence, terrorism, mass casualties, or violent extremism
+* **Animal Cruelty:** Creating content that depicts, promotes, or encourages animal abuse, cruelty, or illegal animal fighting
+* **Weapons and Dangerous Activities:** Creating instructions, schematics, or guidance for manufacturing weapons, explosives, chemical agents, biological agents, or other materials intended to cause harm
 
 ### 3.3 Deception and Manipulation
 * **Impersonation:** Creating content intended to deceive or impersonate any person without their explicit consent. All AI-generated content must be clearly identified as such when shared publicly
 * **Misinformation:** Deliberately creating and distributing false information intended to deceive others or cause harm
 * **Fraudulent Content:** Creating fake documents, credentials, or evidence for fraudulent purposes
 
-### 3.4 Discrimination and Hate
+### 3.4 Malicious Software and Hacking
+* **Malware:** Using the Software to generate, develop, or distribute malicious code, viruses, ransomware, spyware, or any software designed to damage, disrupt, or gain unauthorized access to computer systems
+* **Hacking Tools:** Creating tools, scripts, or instructions intended to exploit security vulnerabilities, bypass authentication systems, or conduct unauthorized access to networks or data
+* **Phishing:** Generating content designed to trick individuals into revealing sensitive information such as passwords, financial details, or personal data
+
+### 3.5 Discrimination and Hate
 * Generating content that promotes hatred, violence, or discrimination against individuals or groups based on race, ethnicity, religion, gender, sexual orientation, disability, national origin, or any other protected characteristic
 
-### 3.5 Privacy Violations
+### 3.6 Privacy Violations
 * Processing, storing, or transmitting personal or sensitive data of others without their lawful consent
 * Using the Software to conduct surveillance or violate the privacy rights of individuals
 
-### 3.6 Professional Misuse
+### 3.7 Professional Misuse
 * **Not Medical Advice:** The Software must NOT be used as a substitute for professional medical advice, diagnosis, or treatment. Never disregard professional medical advice or delay seeking it because of AI-generated content
 * **Not Legal Advice:** The Software must NOT be used as a substitute for licensed legal counsel. AI-generated content does not constitute legal advice and should not be relied upon for legal matters
 * **Not Financial Advice:** The Software must NOT be used to provide investment, tax, or financial planning advice. Consult qualified financial professionals for such matters
 * **Not Mental Health Treatment:** The Software must NOT be used as a substitute for professional mental health care. If you are experiencing a mental health crisis, contact a mental health professional or crisis hotline immediately
 
-### 3.7 High-Risk Applications
+### 3.8 High-Risk Applications
 * Using the Software in any safety-critical system or "high-risk" scenario where its failure could lead to death, personal injury, or severe environmental or property damage
 * Using the Software to make automated decisions that significantly affect individuals' rights, employment, creditworthiness, or access to essential services without human oversight
 
