@@ -85,6 +85,13 @@ class WeatherMixin:
         )
 
     def get_weather(self) -> Optional[VariablesWithTime]:
+        # Check if Open-Meteo API is allowed in privacy settings
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            is_openmeteo_allowed,
+        )
+        if not is_openmeteo_allowed():
+            return None
+            
         if (
             not self.user.latitude
             or not self.user.longitude

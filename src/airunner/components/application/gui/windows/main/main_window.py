@@ -1575,8 +1575,17 @@ class MainWindow(
         if not hasattr(self, "_donation_dialog_shown"):
             self._donation_dialog_shown = True
             from PySide6.QtCore import QTimer
+            # Show privacy consent first, then donation dialog
+            QTimer.singleShot(300, self._show_privacy_consent_dialog)
             QTimer.singleShot(500, self._show_donation_dialog)
     
+    def _show_privacy_consent_dialog(self):
+        """Show the privacy consent dialog on first launch."""
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            PrivacyConsentDialog,
+        )
+        PrivacyConsentDialog.show_if_needed(self)
+
     def _show_donation_dialog(self):
         """Show the donation dialog if appropriate."""
         from airunner.components.application.gui.dialogs.donation_dialog import (

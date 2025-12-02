@@ -62,6 +62,9 @@ from airunner.components.settings.gui.widgets.openrouter_settings.openrouter_set
 from airunner.components.settings.gui.widgets.theme_settings.theme_settings_widget import (
     ThemeSettingsWidget,
 )
+from airunner.components.settings.gui.widgets.privacy_settings.privacy_settings_widget import (
+    PrivacySettingsWidget,
+)
 from airunner.components.settings.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
 )
@@ -168,6 +171,8 @@ class SettingsWindow(BaseWindow):
             return ThemeSettingsWidget
         elif name == "language_settings":
             return LanguageSettingsWidget
+        elif name == "privacy_settings":
+            return PrivacySettingsWidget
         # elif name == "stt_preferences":
         #     return STTSettingsWidget
 
@@ -181,6 +186,17 @@ class SettingsWindow(BaseWindow):
         self.ui.directory.setIndentation(20)
 
         directory = [
+            {
+                "section": "Privacy & Security",
+                "files": [
+                    {
+                        "name": "privacy_settings",
+                        "display_name": "External Services",
+                        "checkable": False,
+                        "description": "Control which external services AI Runner can connect to.",
+                    },
+                ],
+            },
             {
                 "section": "Image Export Preferences",
                 "files": [
