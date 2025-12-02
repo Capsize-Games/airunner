@@ -271,9 +271,16 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         else:
             # For LLM models, get list of files from HuggingFace API
+            self.logger.info(f"Fetching file list from HuggingFace API for {repo_id}...")
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {"message": f"Fetching file list from HuggingFace..."},
+            )
             try:
                 all_files = self.downloader.get_model_files(repo_id)
+                self.logger.info(f"Got {len(all_files)} files from HuggingFace API")
             except Exception as e:
+                self.logger.error(f"Failed to get file list: {e}")
                 self.emit_signal(self._failed_signal, {"error": str(e)})
                 return
 

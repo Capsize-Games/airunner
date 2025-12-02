@@ -100,7 +100,7 @@ class ToolInfo:
     return_direct: bool = False
     requires_agent: bool = False
     requires_api: bool = False
-    defer_loading: bool = False
+    defer_loading: bool = True  # Default to deferred - use search_tools to discover
     keywords: List[str] = field(default_factory=list)
     allowed_callers: List[str] = field(default_factory=list)
     input_examples: List[Dict[str, Any]] = field(default_factory=list)
@@ -126,7 +126,7 @@ class ToolRegistry:
         return_direct: bool = False,
         requires_agent: bool = False,
         requires_api: bool = False,
-        defer_loading: bool = False,
+        defer_loading: bool = True,  # Default to deferred - use search_tools to discover
         keywords: Optional[List[str]] = None,
         allowed_callers: Optional[List[str]] = None,
         input_examples: Optional[List[Dict[str, Any]]] = None,
@@ -344,7 +344,7 @@ def tool(
     return_direct: bool = False,
     requires_agent: bool = False,
     requires_api: bool = False,
-    defer_loading: bool = False,
+    defer_loading: bool = True,  # Default to deferred - use search_tools to discover
     keywords: Optional[List[str]] = None,
     allowed_callers: Optional[List[str]] = None,
     input_examples: Optional[List[Dict[str, Any]]] = None,

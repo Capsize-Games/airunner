@@ -117,6 +117,7 @@ Enhanced (detailed, specific, no explanations):"""
     ),
     return_direct=True,
     requires_api=True,
+    defer_loading=False,  # Essential tool - always available
     keywords=["picture", "art", "draw", "create", "painting", "photo", "image", "generate"],
     input_examples=[
         {

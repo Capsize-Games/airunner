@@ -157,24 +157,10 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
     ),
 )
 
-# Detect Flatpak environment and use sandboxed data directory
-def _get_default_base_path() -> str:
-    """
-    Get the default base path for AI Runner data.
-    
-    In Flatpak, uses the sandboxed XDG_DATA_HOME directory.
-    Otherwise, uses ~/.local/share/airunner.
-    """
-    if os.environ.get("AIRUNNER_FLATPAK") == "1":
-        # Flatpak sandboxed data directory: ~/.var/app/com.capsizegames.AIRunner/data
-        xdg_data_home = os.environ.get(
-            "XDG_DATA_HOME",
-            os.path.expanduser("~/.local/share")
-        )
-        return os.path.join(xdg_data_home, "airunner")
-    return os.path.expanduser("~/.local/share/airunner")
-
-AIRUNNER_BASE_PATH = os.environ.get("AIRUNNER_BASE_PATH", _get_default_base_path())
+AIRUNNER_BASE_PATH = os.environ.get(
+    "AIRUNNER_BASE_PATH",
+    os.path.expanduser("~/.local/share/airunner")
+)
 AIRUNNER_USER_DATA_PATH = AIRUNNER_BASE_PATH
 MODELS_DIR = os.path.join(AIRUNNER_BASE_PATH, "models")
 AIRUNNER_BUG_REPORT_LINK = os.environ.get(

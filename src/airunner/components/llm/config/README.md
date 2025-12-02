@@ -296,7 +296,7 @@ enhanced = use_specialized_model(
 ### "Model not found"
 - Ensure model is in `MODEL_REGISTRY`
 - Check `CAPABILITY_TO_MODEL` mapping
-- Download model with `airunner-setup`
+- Download model from *Tools → Download Models* menu
 
 ### "Out of VRAM"
 - Models swap automatically

@@ -31,6 +31,7 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
     ),
     return_direct=False,
     requires_api=True,
+    defer_loading=False,  # Essential tool - always available
     keywords=["remember", "memory", "fact", "store", "save", "learn", "record", "note"],
     input_examples=[
         {"fact": "User's name is Joe Curlee", "section": "Identity"},
@@ -96,6 +97,7 @@ def record_knowledge(
     ),
     return_direct=False,
     requires_api=True,
+    defer_loading=False,  # Essential tool - always available
     keywords=["remember", "memory", "recall", "search", "find", "know", "what do I know"],
     input_examples=[
         {"query": "user's health conditions"},

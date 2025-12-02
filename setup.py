@@ -239,6 +239,8 @@ setup(
             "components/art/filters/*",
             # UI templates (all .ui files in templates directories)
             "components/**/templates/*.ui",
+            # Legal documents (user agreement, privacy policy)
+            "components/**/user_agreement/*.md",
             # Static files (HTML, CSS, JS templates for web views)
             "components/**/static/**/*",
             "static/**/*",
@@ -250,7 +252,6 @@ setup(
     entry_points={
         "console_scripts": [
             "airunner=airunner.launcher:main",
-            "airunner-setup=airunner.installer:main",
             "airunner-headless=airunner.bin.airunner_headless:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-compile-translations=airunner.bin.compile_translations:main",

@@ -29,6 +29,7 @@ _SEARCH_COOLDOWN = 2.0  # seconds between searches
     ),
     return_direct=False,
     requires_api=False,
+    defer_loading=False,  # Essential tool - always available
     keywords=["internet", "google", "duckduckgo", "online", "web", "find"],
     input_examples=[
         {"query": "latest news about artificial intelligence"},

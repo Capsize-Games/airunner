@@ -84,10 +84,3 @@ FEATURE_ROADMAP.md
 logs
 .github/scripts
 *.sqlite3
-
-# Flatpak build artifacts
-flatpak/build-dir/
-flatpak/repo/
-flatpak/.flatpak-builder/
-flatpak/*.flatpak
-.flatpak-builder
