@@ -681,6 +681,22 @@ class MainWindow(
         )
         self.actionDownloadModels.triggered.connect(self._show_download_models_dialog)
         self.ui.menuTools.addAction(self.actionDownloadModels)
+        
+        # Privacy Settings action
+        self.actionPrivacySettings = QAction("Privacy Settings...", self)
+        self.actionPrivacySettings.setToolTip(
+            "Manage external service connections and privacy options"
+        )
+        self.actionPrivacySettings.triggered.connect(self._show_privacy_settings)
+        self.ui.menuTools.addAction(self.actionPrivacySettings)
+    
+    def _show_privacy_settings(self):
+        """Show the Privacy Settings dialog."""
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            PrivacyConsentDialog,
+        )
+        dialog = PrivacyConsentDialog(self)
+        dialog.exec()
 
     def _show_download_models_dialog(self):
         """Show the Download Models dialog."""

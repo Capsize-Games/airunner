@@ -385,8 +385,6 @@ class SettingsWindow(BaseWindow):
                 checked = self.application_settings.latest_version_check
             elif name == "enable_workflows":
                 checked = self.enable_workflows
-            elif name == "allow_online_mode":
-                checked = self.application_settings.allow_online_mode
 
             file_item.setCheckState(
                 Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
@@ -434,9 +432,6 @@ class SettingsWindow(BaseWindow):
         elif name == "enable_workflows":
             checked = item.checkState() == Qt.CheckState.Checked
             self.enable_workflows = checked
-        elif name == "allow_online_mode":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings(allow_online_mode=checked)
         elif name == "reset_settings":
             self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
 
