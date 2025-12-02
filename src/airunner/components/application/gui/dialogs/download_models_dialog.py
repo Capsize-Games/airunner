@@ -291,6 +291,19 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         
     def _start_downloads(self) -> None:
         """Start downloading selected models."""
+        # Check if HuggingFace downloads are allowed
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            is_huggingface_allowed,
+        )
+        if not is_huggingface_allowed():
+            QMessageBox.warning(
+                self,
+                "Downloads Disabled",
+                "HuggingFace downloads are disabled in privacy settings.\n\n"
+                "You can enable them in Preferences → Privacy & Security → External Services."
+            )
+            return
+            
         # Build download queue from selected models
         self._download_queue = []
         

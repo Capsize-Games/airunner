@@ -34,7 +34,6 @@ class ApplicationSettings(BaseModel):
     override_system_theme = Column(Boolean, default=True)
     latest_version_check = Column(Boolean, default=True)
     app_version = Column(String, default="")
-    allow_online_mode = Column(Boolean, default=True)
     current_tool = Column(String, default=CanvasToolName.BRUSH.value)
     image_export_type = Column(String, default="png")
     auto_export_images = Column(Boolean, default=True)
