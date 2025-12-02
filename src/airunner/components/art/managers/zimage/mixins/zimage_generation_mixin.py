@@ -47,23 +47,12 @@ class ZImageGenerationMixin:
             data.pop(key, None)
 
     def _enforce_zimage_guidance(self, data: Dict) -> None:
-        """Configure guidance for Z-Image Turbo.
+        """Log guidance and steps for Z-Image (uses DB settings).
         
-        Z-Image Turbo uses guidance_scale=0.0 by default (similar to FLUX schnell).
-        For the base model, guidance_scale can be higher.
+        Z-Image Turbo works best with guidance_scale=0.0 and 8-9 steps,
+        but we respect whatever the user has configured.
         """
-        guidance_scale = data.get("guidance_scale", 0.0)
-        
-        # Z-Image Turbo models work best with guidance_scale=0.0
-        if "Turbo" in str(self.model_path) and guidance_scale > 0.0:
-            self.logger.warning(
-                "Z-Image Turbo works best with guidance_scale=0.0, "
-                f"but got {guidance_scale}. Consider setting to 0.0."
-            )
-        
-        # Default inference steps for Z-Image Turbo is 9 (8 DiT forwards)
-        if "num_inference_steps" not in data:
-            data["num_inference_steps"] = 9
+        pass
 
     def _log_zimage_generation_params(self, data: Dict) -> None:
         """Log core generation parameters for debugging."""

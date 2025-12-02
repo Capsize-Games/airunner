@@ -1,4 +1,5 @@
 import os
+import threading
 from typing import Dict, Optional
 
 import torch
@@ -45,6 +46,7 @@ class SDWorker(Worker):
         self._sdxl: Optional[SDXLModelManager] = None
         self._x4_upscaler: Optional[X4UpscaleManager] = None
         self._model_manager = None
+        self._model_manager_lock = threading.Lock()  # Protects lazy model manager creation
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
         self._current_model = None
         self._current_version = None
@@ -72,37 +74,41 @@ class SDWorker(Worker):
 
     @property
     def model_manager(self):
-        if self._model_manager is None:
-            version = StableDiffusionVersion(self.generator_settings.version)
+        # Use lock to prevent race condition when multiple threads access this property
+        # simultaneously (e.g., worker thread loading model while main thread handles signal)
+        with self._model_manager_lock:
+            if self._model_manager is None:
+                version = StableDiffusionVersion(self.generator_settings.version)
 
-            if version in (
-                StableDiffusionVersion.FLUX_DEV,
-                StableDiffusionVersion.FLUX_SCHNELL,
-            ):
-                self._model_manager = self.flux
-            elif version in (
-                StableDiffusionVersion.Z_IMAGE_TURBO,
-                StableDiffusionVersion.Z_IMAGE_BASE,
-            ):
-                self._model_manager = self.zimage
-            elif version in (
-                StableDiffusionVersion.SDXL1_0,
-                StableDiffusionVersion.SDXL_TURBO,
-                StableDiffusionVersion.SDXL_LIGHTNING,
-                StableDiffusionVersion.SDXL_HYPER,
-            ):
-                self._model_manager = self.sdxl
-            elif version == StableDiffusionVersion.X4_UPSCALER:
-                self._model_manager = self.x4_upscaler
-            else:
-                raise ValueError(
-                    f"Unsupported Stable Diffusion version: {version}"
-                )
-        return self._model_manager
+                if version in (
+                    StableDiffusionVersion.FLUX_DEV,
+                    StableDiffusionVersion.FLUX_SCHNELL,
+                ):
+                    self._model_manager = self.flux
+                elif version in (
+                    StableDiffusionVersion.Z_IMAGE_TURBO,
+                    StableDiffusionVersion.Z_IMAGE_BASE,
+                ):
+                    self._model_manager = self.zimage
+                elif version in (
+                    StableDiffusionVersion.SDXL1_0,
+                    StableDiffusionVersion.SDXL_TURBO,
+                    StableDiffusionVersion.SDXL_LIGHTNING,
+                    StableDiffusionVersion.SDXL_HYPER,
+                ):
+                    self._model_manager = self.sdxl
+                elif version == StableDiffusionVersion.X4_UPSCALER:
+                    self._model_manager = self.x4_upscaler
+                else:
+                    raise ValueError(
+                        f"Unsupported Stable Diffusion version: {version}"
+                    )
+            return self._model_manager
 
     @model_manager.setter
     def model_manager(self, value):
-        self._model_manager = value
+        with self._model_manager_lock:
+            self._model_manager = value
 
     @property
     def flux(self):
@@ -415,6 +421,7 @@ class SDWorker(Worker):
             self.model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
+        self.logger.debug(f"[HANDLE_MESSAGE] Received message: {message}")
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)
@@ -425,6 +432,9 @@ class SDWorker(Worker):
                 if "message" in message
                 else message.get("data", {})
             )
+            
+            self.logger.debug(f"[HANDLE_MESSAGE] action={action}, model_type={model_type}")
+            
             if action is not None and model_type is not None:
                 if action is ModelAction.LOAD:
                     if model_type is ModelType.SD:
