@@ -63,7 +63,7 @@ FLOW_MATCH_SCHEDULER_NAME = Scheduler.FLOW_MATCH_EULER.value
 VERSION_CONSTRAINTS = {
     StableDiffusionVersion.Z_IMAGE_TURBO.value: {
         "guidance_scale_max": 5.0,
-        "steps_max": 10,
+        "steps_max": 20,
     },
     StableDiffusionVersion.Z_IMAGE_BASE.value: {
         "guidance_scale_max": 5.0,
