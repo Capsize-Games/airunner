@@ -51,18 +51,53 @@ The Software processes the following types of data **locally on your device only
 * Window positions and UI customizations
 * Model selections and parameters
 
-## 4. Third-Party Services and Models
+## 4. Third-Party Services and External Connections
 
-### 4.1 AI Models
-When you download AI models, you connect directly to third-party repositories (such as Hugging Face). These services have their own privacy policies:
+### 4.1 AI Model Downloads
+When you download AI models using the built-in model downloader, your computer connects directly to third-party repositories:
 
+* **HuggingFace:** When downloading LLM, STT, TTS, and Stable Diffusion models
+* **CivitAI:** When downloading community models, LoRAs, or embeddings via the CivitAI downloader
+
+These services may log your IP address and download requests according to their own privacy policies:
 * **Hugging Face:** https://huggingface.co/privacy
-* **Other model providers:** Please review their respective privacy policies
+* **CivitAI:** https://civitai.com/content/privacy
 
-We recommend reviewing the privacy policies of any model provider you use.
+### 4.2 Search Features
+If you enable search functionality, the following connections may be made:
 
-### 4.2 Optional External Services
-If you choose to use optional features that connect to external services (such as OpenRouter API), your data will be subject to those services' privacy policies. The Software will clearly indicate when data may be transmitted externally.
+* **DuckDuckGo API:** When using web search features, your search queries are transmitted to DuckDuckGo's servers
+* **Deep Research:** When using the Deep Research feature, the LLM will search DuckDuckGo and scrape web pages for results to augment its responses, which involves connecting to DuckDuckGo's servers and the individual websites being researched
+
+### 4.3 External LLM Providers
+If you configure external LLM providers, your prompts and conversations will be transmitted to those services:
+
+* **OpenRouter:** If configured, your prompts are sent to OpenRouter's API servers
+* **OpenAI:** If configured, your prompts are sent to OpenAI's API servers
+* **Ollama:** If configured with a remote server, data is sent to that server
+
+### 4.4 Weather Information
+If you enable the weather prompt feature in the LLM settings, your location coordinates are transmitted to the Open-Meteo weather service:
+
+* **Open-Meteo API:** Your latitude and longitude (derived from your zipcode setting) are sent to `api.open-meteo.com` to retrieve current weather conditions
+* **Data Sent:** Only geographic coordinates—no personal identifiers
+* **Privacy Policy:** https://open-meteo.com/en/terms
+
+This feature is **disabled by default** and only activates when you:
+1. Enable "Use weather prompt" in LLM settings
+2. Provide your location (zipcode or coordinates) in user settings
+
+### 4.5 Privacy Recommendation
+**We recommend using a VPN** when using features that connect to external services (model downloads, web search, Deep Research, weather, or external LLM providers) if you want additional privacy protection.
+
+### 4.6 Local-First Design
+By default, AI Runner operates entirely locally without any external connections. External connections only occur when you:
+* Download models from HuggingFace or CivitAI
+* Use web search or Deep Research features
+* Enable the weather prompt feature
+* Configure external LLM providers (OpenRouter, OpenAI, remote Ollama)
+
+You can use AI Runner with full functionality by downloading models once and then operating completely offline.
 
 ## 5. Data Storage and Security
 
@@ -138,7 +173,9 @@ Email: contact@capsizegames.com
 |------|------------------|
 | Personal Data Collection | None - we don't collect any |
 | Data Storage | Local device only |
-| Data Sharing | None - your data stays on your device |
+| Data Sharing | None by default - your data stays on your device |
 | Analytics/Tracking | None |
-| Third-Party Services | Optional - user-initiated only |
+| Model Downloads | Connects to HuggingFace/CivitAI (user-initiated) |
+| Web Search/Deep Research | Connects to DuckDuckGo and websites (user-enabled) |
+| External LLM Providers | Connects to OpenRouter/OpenAI (user-configured) |
 | Data Deletion | Full control - delete anytime |
