@@ -159,7 +159,7 @@ mkcert -install
 - Provide consumer notice and appeal mechanisms
 - Report algorithmic discrimination to the Colorado Attorney General
 
-**AI Runner's Design:** Local-first operation, configurable guardrails, and no external data transmission by default help support compliant use. If you choose to use search features via DuckDuckGo API, or use OpenRouter, your prompts will be transmitted to those services. If you use the model downloader from CivitAI or HuggingFace models, your computer will connect to their servers in order to download the required files.
+**AI Runner's Design:** Local-first operation, configurable guardrails, and no external data transmission by default help support compliant use. If you choose to use search features via DuckDuckGo API, or use OpenRouter, your prompts will be transmitted to those services. If you use the model downloader from CivitAI or HuggingFace models, your computer will connect to their servers in order to download the required files. If you use Deep Research, the LLM will search DuckDuckGo and scrape web pages for results to augment its responses, which involves connecting to those indvidual services and websites. It is recommended that you use a VPN for more privacy when using these features.
 
 ---
 
