@@ -76,13 +76,25 @@ If you configure external LLM providers, your prompts and conversations will be 
 * **OpenAI:** If configured, your prompts are sent to OpenAI's API servers
 * **Ollama:** If configured with a remote server, data is sent to that server
 
-### 4.4 Privacy Recommendation
-**We recommend using a VPN** when using features that connect to external services (model downloads, web search, Deep Research, or external LLM providers) if you want additional privacy protection.
+### 4.4 Weather Information
+If you enable the weather prompt feature in the LLM settings, your location coordinates are transmitted to the Open-Meteo weather service:
 
-### 4.5 Local-First Design
+* **Open-Meteo API:** Your latitude and longitude (derived from your zipcode setting) are sent to `api.open-meteo.com` to retrieve current weather conditions
+* **Data Sent:** Only geographic coordinates—no personal identifiers
+* **Privacy Policy:** https://open-meteo.com/en/terms
+
+This feature is **disabled by default** and only activates when you:
+1. Enable "Use weather prompt" in LLM settings
+2. Provide your location (zipcode or coordinates) in user settings
+
+### 4.5 Privacy Recommendation
+**We recommend using a VPN** when using features that connect to external services (model downloads, web search, Deep Research, weather, or external LLM providers) if you want additional privacy protection.
+
+### 4.6 Local-First Design
 By default, AI Runner operates entirely locally without any external connections. External connections only occur when you:
 * Download models from HuggingFace or CivitAI
 * Use web search or Deep Research features
+* Enable the weather prompt feature
 * Configure external LLM providers (OpenRouter, OpenAI, remote Ollama)
 
 You can use AI Runner with full functionality by downloading models once and then operating completely offline.
