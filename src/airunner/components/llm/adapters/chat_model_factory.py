@@ -158,7 +158,21 @@ class ChatModelFactory:
 
         Returns:
             ChatOpenAI configured for OpenRouter
+            
+        Raises:
+            ValueError: If OpenRouter is disabled in privacy settings
+            ImportError: If langchain-openai is not installed
         """
+        # Check if OpenRouter is allowed in privacy settings
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            is_openrouter_allowed,
+        )
+        if not is_openrouter_allowed():
+            raise ValueError(
+                "OpenRouter is disabled in privacy settings. "
+                "Enable it in Preferences → Privacy & Security → External Services."
+            )
+            
         try:
             from langchain_openai import ChatOpenAI
 
@@ -224,7 +238,21 @@ class ChatModelFactory:
 
         Returns:
             ChatOpenAI instance
+            
+        Raises:
+            ValueError: If OpenAI is disabled in privacy settings
+            ImportError: If langchain-openai is not installed
         """
+        # Check if OpenAI is allowed in privacy settings
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            is_openai_allowed,
+        )
+        if not is_openai_allowed():
+            raise ValueError(
+                "OpenAI is disabled in privacy settings. "
+                "Enable it in Preferences → Privacy & Security → External Services."
+            )
+            
         try:
             from langchain_openai import ChatOpenAI
 

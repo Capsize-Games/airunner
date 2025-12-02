@@ -1148,10 +1148,27 @@ class WorkerManager(Worker):
                 - model_type: Type of model (stt, tts_openvoice)
                 - callback: Optional callback to invoke after download completes
         """
-        from PySide6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication, QMessageBox
         from airunner.components.llm.gui.windows.huggingface_download_dialog import (
             HuggingFaceDownloadDialog,
         )
+        
+        # Check if HuggingFace downloads are allowed
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            is_huggingface_allowed,
+        )
+        if not is_huggingface_allowed():
+            if self.logger:
+                self.logger.info("HuggingFace downloads disabled by privacy settings")
+            main_window = self._get_main_window()
+            if main_window:
+                QMessageBox.warning(
+                    main_window,
+                    "Downloads Disabled",
+                    "HuggingFace downloads are disabled in privacy settings.\n\n"
+                    "You can enable them in Preferences → Privacy & Security → External Services."
+                )
+            return
 
         repo_id = data.get("repo_id", "")
         model_path = data.get("model_path", "")
