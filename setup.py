@@ -187,7 +187,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="5.0.4",
+    version="5.0.5",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -270,6 +270,7 @@ setup(
             "airunner-remove-unused-imports=airunner.bin.remove_unused_imports:main",
             "airunner-migrate-knowledge=airunner.bin.airunner_migrate_knowledge:main",
             "airunner-cleanup-llm-models=airunner.bin.cleanup_llm_models:main",
+            "airunner-hf-download=airunner.bin.airunner_hf_download:main",
         ],
     },
 )

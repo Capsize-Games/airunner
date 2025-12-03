@@ -8,12 +8,14 @@ the HTTP API server for /llm, /art, /stt, /tts endpoints.
 Usage:
     airunner-headless
     airunner-headless --host 0.0.0.0 --port 8080
+    airunner-headless --ollama-mode  # Run as Ollama replacement on port 11434
     airunner-headless --help
 
 Environment Variables:
     AIRUNNER_HEADLESS: Set to 1 (automatically set by this script)
     AIRUNNER_HTTP_HOST: Override host (default: 0.0.0.0)
     AIRUNNER_HTTP_PORT: Override port (default: 8080)
+    AIRUNNER_OLLAMA_MODE: Run as Ollama replacement (default: 0)
     AIRUNNER_LLM_ON: Enable LLM service (default: 1)
     AIRUNNER_TTS_ON: Enable TTS service (default: 0)
     AIRUNNER_STT_ON: Enable STT service (default: 0)
@@ -29,6 +31,9 @@ Examples:
 
     # Start on localhost only
     airunner-headless --host 127.0.0.1 --port 8080
+
+    # Run as Ollama replacement (port 11434) for VS Code integration
+    airunner-headless --ollama-mode
 
     # Enable all services
     AIRUNNER_LLM_ON=1 AIRUNNER_SD_ON=1 airunner-headless
@@ -57,19 +62,37 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("AIRUNNER_HTTP_PORT", "8080")),
-        help="Port to listen on (default: 8080)",
+        default=None,  # Will be set based on --ollama-mode
+        help="Port to listen on (default: 8080, or 11434 in ollama-mode)",
+    )
+
+    parser.add_argument(
+        "--ollama-mode",
+        action="store_true",
+        default=os.environ.get("AIRUNNER_OLLAMA_MODE", "0") == "1",
+        help="Run as Ollama replacement on port 11434 for VS Code integration",
     )
 
     args = parser.parse_args()
 
+    # Determine port based on mode
+    if args.port is not None:
+        port = args.port
+    elif args.ollama_mode:
+        port = 11434  # Ollama's default port
+    else:
+        port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
+
     # Set environment variables from args BEFORE importing settings
     # AIRUNNER_HEADLESS_SERVER_HOST/PORT are used by settings.py at import time
     os.environ["AIRUNNER_HEADLESS_SERVER_HOST"] = args.host
-    os.environ["AIRUNNER_HEADLESS_SERVER_PORT"] = str(args.port)
+    os.environ["AIRUNNER_HEADLESS_SERVER_PORT"] = str(port)
     # Also set the old names for backwards compatibility
     os.environ["AIRUNNER_HTTP_HOST"] = args.host
-    os.environ["AIRUNNER_HTTP_PORT"] = str(args.port)
+    os.environ["AIRUNNER_HTTP_PORT"] = str(port)
+    
+    # Set Ollama mode flag for server.py to use
+    os.environ["AIRUNNER_OLLAMA_MODE"] = "1" if args.ollama_mode else "0"
 
     # Now import settings after environment is configured
     from airunner.settings import AIRUNNER_LOG_LEVEL
@@ -89,10 +112,17 @@ def main():
     os.environ.setdefault("AIRUNNER_KNOWLEDGE_ON", "0")
 
     logger.info("=" * 60)
-    logger.info("AI Runner Headless Server")
+    if args.ollama_mode:
+        logger.info("AI Runner Headless Server (Ollama Mode)")
+        logger.info("Running as Ollama replacement for VS Code integration")
+    else:
+        logger.info("AI Runner Headless Server")
     logger.info("=" * 60)
     logger.info(f"Host: {args.host}")
-    logger.info(f"Port: {args.port}")
+    logger.info(f"Port: {port}")
+    if args.ollama_mode:
+        logger.info("Ollama API: http://localhost:11434/api/")
+        logger.info("OpenAI API: http://localhost:11434/v1/")
     logger.info(f"Log Level: {AIRUNNER_LOG_LEVEL}")
     logger.info("=" * 60)
 
