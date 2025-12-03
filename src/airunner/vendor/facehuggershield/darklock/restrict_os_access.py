@@ -39,6 +39,11 @@ class RestrictOSAccess(metaclass=Singleton):
             self.original_mkdir = os.mkdir
             self.original_remove = os.remove  # Capture original os.remove
             self.original_rmdir = os.rmdir  # Capture original os.rmdir
+            self.original_unlink = os.unlink  # Capture original os.unlink (alias for remove)
+            self.original_rename = os.rename  # Capture original os.rename
+            self.original_replace = os.replace  # Capture original os.replace
+            self.original_link = getattr(os, 'link', None)  # os.link may not exist on all platforms
+            self.original_symlink = getattr(os, 'symlink', None)  # os.symlink may not exist on all platforms
             # self.original_import = _TRUE_BUILTIN_IMPORT # Use module-level for consistency
 
             self.whitelisted_directories = []
@@ -112,11 +117,17 @@ class RestrictOSAccess(metaclass=Singleton):
         os.mkdir = self.restricted_mkdir  # Patch os.mkdir
         os.remove = self.restricted_remove  # Patch os.remove
         os.rmdir = self.restricted_rmdir  # Patch os.rmdir
+        os.unlink = self.restricted_unlink  # Patch os.unlink (alias for remove)
+        os.rename = self.restricted_rename  # Patch os.rename
+        os.replace = self.restricted_replace  # Patch os.replace
+        # Patch os.link and os.symlink if they exist on this platform
+        if self.original_link is not None:
+            os.link = self.restricted_link
+        if self.original_symlink is not None:
+            os.symlink = self.restricted_symlink
 
         # builtins.__import__ = self.restricted_import # Patching import is DISABLED
         # logger.info("Import restriction patching is currently DISABLED.")
-
-        # TODO: Implement network restriction hooks based on self.allow_network.
 
         sys._airunner_os_restriction_activated = True
         logger.info("OS access restrictions activated.")
@@ -136,6 +147,14 @@ class RestrictOSAccess(metaclass=Singleton):
         os.mkdir = self.original_mkdir  # Restore os.mkdir
         os.remove = self.original_remove  # Restore os.remove
         os.rmdir = self.original_rmdir  # Restore os.rmdir
+        os.unlink = self.original_unlink  # Restore os.unlink
+        os.rename = self.original_rename  # Restore os.rename
+        os.replace = self.original_replace  # Restore os.replace
+        # Restore os.link and os.symlink if they exist
+        if self.original_link is not None:
+            os.link = self.original_link
+        if self.original_symlink is not None:
+            os.symlink = self.original_symlink
 
         # if builtins.__import__ == self.restricted_import: # Only restore if we patched it
         #    builtins.__import__ = _TRUE_BUILTIN_IMPORT # Restore true import
@@ -623,6 +642,167 @@ class RestrictOSAccess(metaclass=Singleton):
             )
             raise PermissionError(
                 f"File system rmdir operation on '{abs_target_path}' is not allowed."
+            )
+
+    def restricted_unlink(self, path, *, dir_fd=None):
+        """Restricted os.unlink - alias for os.remove with same security checks."""
+        logger.debug(
+            f"restricted_unlink called for path: '{path}', dir_fd: {dir_fd}"
+        )
+        # os.unlink is functionally identical to os.remove
+        return self.restricted_remove(path, dir_fd=dir_fd)
+
+    def restricted_rename(self, src, dst, *, src_dir_fd=None, dst_dir_fd=None):
+        """Restricted os.rename - both source and destination must be whitelisted."""
+        logger.debug(
+            f"restricted_rename called: src='{src}', dst='{dst}'"
+        )
+        if src_dir_fd is not None or dst_dir_fd is not None:
+            logger.warning(
+                f"restricted_rename with dir_fd: Whitelist check may not correctly resolve relative paths."
+            )
+
+        abs_src = os.path.abspath(os.path.normpath(src))
+        abs_dst = os.path.abspath(os.path.normpath(dst))
+        
+        # Both source and destination must be in whitelisted directories
+        src_allowed = self.is_path_whitelisted(abs_src)
+        dst_allowed = self.is_path_whitelisted(abs_dst)
+        
+        if src_allowed and dst_allowed:
+            logger.info(
+                f"Rename: Both '{abs_src}' and '{abs_dst}' are whitelisted. Calling original os.rename."
+            )
+            try:
+                return self.original_rename(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+            except Exception as e:
+                logger.error(
+                    f"Original os.rename failed: {type(e).__name__} - {e}"
+                )
+                raise
+        else:
+            if not src_allowed:
+                logger.error(f"Rename: Source path '{abs_src}' is NOT whitelisted.")
+            if not dst_allowed:
+                logger.error(f"Rename: Destination path '{abs_dst}' is NOT whitelisted.")
+            raise PermissionError(
+                f"File system rename operation from '{abs_src}' to '{abs_dst}' is not allowed."
+            )
+
+    def restricted_replace(self, src, dst, *, src_dir_fd=None, dst_dir_fd=None):
+        """Restricted os.replace - both source and destination must be whitelisted."""
+        logger.debug(
+            f"restricted_replace called: src='{src}', dst='{dst}'"
+        )
+        if src_dir_fd is not None or dst_dir_fd is not None:
+            logger.warning(
+                f"restricted_replace with dir_fd: Whitelist check may not correctly resolve relative paths."
+            )
+
+        abs_src = os.path.abspath(os.path.normpath(src))
+        abs_dst = os.path.abspath(os.path.normpath(dst))
+        
+        # Both source and destination must be in whitelisted directories
+        src_allowed = self.is_path_whitelisted(abs_src)
+        dst_allowed = self.is_path_whitelisted(abs_dst)
+        
+        if src_allowed and dst_allowed:
+            logger.info(
+                f"Replace: Both '{abs_src}' and '{abs_dst}' are whitelisted. Calling original os.replace."
+            )
+            try:
+                return self.original_replace(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+            except Exception as e:
+                logger.error(
+                    f"Original os.replace failed: {type(e).__name__} - {e}"
+                )
+                raise
+        else:
+            if not src_allowed:
+                logger.error(f"Replace: Source path '{abs_src}' is NOT whitelisted.")
+            if not dst_allowed:
+                logger.error(f"Replace: Destination path '{abs_dst}' is NOT whitelisted.")
+            raise PermissionError(
+                f"File system replace operation from '{abs_src}' to '{abs_dst}' is not allowed."
+            )
+
+    def restricted_link(self, src, dst, *, src_dir_fd=None, dst_dir_fd=None, follow_symlinks=True):
+        """Restricted os.link - both source and destination must be whitelisted.
+        
+        Hard links can be security risks as they can create additional references
+        to sensitive files. Both source and destination are strictly checked.
+        """
+        logger.debug(
+            f"restricted_link called: src='{src}', dst='{dst}'"
+        )
+        if src_dir_fd is not None or dst_dir_fd is not None:
+            logger.warning(
+                f"restricted_link with dir_fd: Whitelist check may not correctly resolve relative paths."
+            )
+
+        abs_src = os.path.abspath(os.path.normpath(src))
+        abs_dst = os.path.abspath(os.path.normpath(dst))
+        
+        # Both source and destination must be in whitelisted directories
+        src_allowed = self.is_path_whitelisted(abs_src)
+        dst_allowed = self.is_path_whitelisted(abs_dst)
+        
+        if src_allowed and dst_allowed:
+            logger.info(
+                f"Link: Both '{abs_src}' and '{abs_dst}' are whitelisted. Calling original os.link."
+            )
+            try:
+                return self.original_link(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd, follow_symlinks=follow_symlinks)
+            except Exception as e:
+                logger.error(
+                    f"Original os.link failed: {type(e).__name__} - {e}"
+                )
+                raise
+        else:
+            if not src_allowed:
+                logger.error(f"Link: Source path '{abs_src}' is NOT whitelisted.")
+            if not dst_allowed:
+                logger.error(f"Link: Destination path '{abs_dst}' is NOT whitelisted.")
+            raise PermissionError(
+                f"File system hard link operation from '{abs_src}' to '{abs_dst}' is not allowed."
+            )
+
+    def restricted_symlink(self, src, dst, target_is_directory=False, *, dir_fd=None):
+        """Restricted os.symlink - destination must be whitelisted.
+        
+        Symlinks can be security risks as they can point to arbitrary locations.
+        The destination (where the symlink is created) must be in a whitelisted directory.
+        Note: We don't restrict where the symlink points to (src) because symlinks
+        often need to point to system libraries or other locations.
+        """
+        logger.debug(
+            f"restricted_symlink called: src='{src}', dst='{dst}'"
+        )
+        if dir_fd is not None:
+            logger.warning(
+                f"restricted_symlink with dir_fd: Whitelist check may not correctly resolve relative paths."
+            )
+
+        abs_dst = os.path.abspath(os.path.normpath(dst))
+        
+        # Destination (where symlink is created) must be in a whitelisted directory
+        if self.is_path_whitelisted(abs_dst):
+            logger.info(
+                f"Symlink: Destination '{abs_dst}' is whitelisted. Calling original os.symlink."
+            )
+            try:
+                return self.original_symlink(src, dst, target_is_directory=target_is_directory, dir_fd=dir_fd)
+            except Exception as e:
+                logger.error(
+                    f"Original os.symlink failed: {type(e).__name__} - {e}"
+                )
+                raise
+        else:
+            logger.error(
+                f"Symlink: Destination path '{abs_dst}' is NOT whitelisted for symlink creation."
+            )
+            raise PermissionError(
+                f"File system symlink creation at '{abs_dst}' is not allowed."
             )
 
 
