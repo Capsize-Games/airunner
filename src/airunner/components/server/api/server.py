@@ -125,6 +125,50 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _validate_model_available(self) -> tuple[bool, str, str]:
+        """Check if the configured LLM model is available and downloaded.
+        
+        Returns:
+            Tuple of (is_valid, model_path, error_message)
+            - is_valid: True if model exists and is ready
+            - model_path: The model path being validated
+            - error_message: Human-readable error if not valid
+        """
+        api = get_api()
+        if not api:
+            return False, "", "API not initialized"
+        
+        # Get LLM settings from the API
+        llm_settings = getattr(api, 'llm_generator_settings', None)
+        if not llm_settings:
+            return False, "", "LLM settings not configured"
+        
+        model_path = getattr(llm_settings, 'model_path', '') or ''
+        model_name = getattr(llm_settings, 'model_name', '') or ''
+        
+        if not model_path:
+            return False, "", f"No model path configured. Please run 'airunner' (GUI) first to download and select a model."
+        
+        # Check if path exists
+        if not os.path.exists(model_path):
+            return False, model_path, (
+                f"Model not found at '{model_path}'. "
+                f"The model '{model_name}' needs to be downloaded. "
+                f"Please run 'airunner' (GUI) and download the model, or run 'airunner-setup' to download default models."
+            )
+        
+        # Check for minimum required files (config.json or a .gguf file)
+        has_config = os.path.exists(os.path.join(model_path, "config.json"))
+        has_gguf = any(f.endswith('.gguf') for f in os.listdir(model_path) if os.path.isfile(os.path.join(model_path, f)))
+        
+        if not has_config and not has_gguf:
+            return False, model_path, (
+                f"Model at '{model_path}' appears incomplete (missing config.json or .gguf file). "
+                f"Please re-download the model using the AIRunner GUI or 'airunner-setup'."
+            )
+        
+        return True, model_path, ""
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -370,10 +414,13 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         Response format matches Ollama's /api/tags specification.
         Returns actual model info from AIRunner settings when available.
         """
+        import re
+        
         # Try to get actual model info from settings
         model_name = "airunner:latest"
         model_family = "qwen"
         parameter_size = "8B"
+        quantization = "Q4_K_M"
         
         try:
             from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
@@ -381,11 +428,11 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             if settings and settings.model_version:
                 # Extract model name from path (e.g., "Qwen2.5-7B-Instruct-4bit")
                 import os
-                model_name = os.path.basename(settings.model_version)
-                model_name = f"{model_name}:latest"
+                model_basename = os.path.basename(settings.model_version)
+                model_name = f"{model_basename}:latest"
                 
-                # Try to detect model family and size from name
-                name_lower = model_name.lower()
+                # Try to detect model family from name
+                name_lower = model_basename.lower()
                 if "qwen" in name_lower:
                     model_family = "qwen"
                 elif "llama" in name_lower:
@@ -396,12 +443,28 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     model_family = "phi"
                 
                 # Extract parameter size
-                import re
                 size_match = re.search(r'(\d+\.?\d*)b', name_lower)
                 if size_match:
-                    parameter_size = f"{size_match.group(1)}B"
+                    parameter_size = f"{size_match.group(1).upper()}B"
+                
+                # Detect quantization level
+                if "4bit" in name_lower or "q4" in name_lower:
+                    quantization = "Q4_K_M"
+                elif "8bit" in name_lower or "q8" in name_lower:
+                    quantization = "Q8_0"
+                elif "fp16" in name_lower or "f16" in name_lower:
+                    quantization = "F16"
         except Exception as e:
             self.logger.debug(f"Could not get model settings: {e}")
+        
+        # Calculate approximate size based on parameter count and quantization
+        param_num = float(parameter_size.replace("B", ""))
+        if quantization.startswith("Q4"):
+            size_bytes = int(param_num * 0.5 * 1e9)  # ~0.5 bytes per param for Q4
+        elif quantization.startswith("Q8"):
+            size_bytes = int(param_num * 1.0 * 1e9)  # ~1 byte per param for Q8
+        else:
+            size_bytes = int(param_num * 2.0 * 1e9)  # ~2 bytes per param for F16
         
         models_data = {
             "models": [
@@ -409,7 +472,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     "name": model_name,
                     "model": model_name,
                     "modified_at": "2024-12-01T00:00:00.000000000Z",
-                    "size": 4500000000,
+                    "size": size_bytes,
                     "digest": f"sha256:{''.join(f'{ord(c):02x}' for c in model_name[:32]).ljust(64, '0')}",
                     "details": {
                         "parent_model": "",
@@ -417,7 +480,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                         "family": model_family,
                         "families": [model_family],
                         "parameter_size": parameter_size,
-                        "quantization_level": "Q4_K_M"
+                        "quantization_level": quantization
                     }
                 }
             ]
@@ -496,19 +559,42 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Determine model family from name
         family = "llama"
         families = ["llama"]
-        if "qwen" in model_name.lower():
+        name_lower = model_name.lower()
+        
+        if "qwen" in name_lower:
             family = "qwen"
             families = ["qwen"]
-        elif "mistral" in model_name.lower():
+        elif "mistral" in name_lower:
             family = "mistral"
             families = ["mistral"]
-        elif "phi" in model_name.lower():
+        elif "phi" in name_lower:
             family = "phi"
             families = ["phi"]
         
+        # Determine capabilities based on model type
+        capabilities = ["completion", "tools"]
+        
+        # Add vision capability for VL (vision-language) models
+        if "-vl" in name_lower or "vl-" in name_lower or "vision" in name_lower:
+            capabilities.append("vision")
+        
+        # Detect parameter size from model name
+        import re
+        parameter_size = "8B"
+        size_match = re.search(r'(\d+\.?\d*)b', name_lower)
+        if size_match:
+            parameter_size = f"{size_match.group(1).upper()}B"
+        
+        # Detect context length based on model
+        num_ctx = 4096
+        if "qwen3" in name_lower:
+            num_ctx = 40960  # Qwen3 supports 40K context
+            if "30b" in name_lower or "235b" in name_lower or "4b" in name_lower:
+                num_ctx = 262144  # MoE models support 256K
+        
         model_info = {
-            "modelfile": f"FROM {model_name}\nPARAMETER temperature 0.7\nPARAMETER num_ctx 4096",
-            "parameters": "temperature 0.7\nnum_ctx 4096",
+            "modelfile": f"FROM {model_name}\nPARAMETER temperature 0.7\nPARAMETER num_ctx {num_ctx}",
+            "parameters": f"temperature 0.7\nnum_ctx {num_ctx}",
             "template": "{{ if .System }}<|im_start|>system\n{{ .System }}<|im_end|>\n{{ end }}{{ if .Prompt }}<|im_start|>user\n{{ .Prompt }}<|im_end|>\n{{ end }}<|im_start|>assistant\n{{ .Response }}<|im_end|>",
             "license": "Apache 2.0",
             "modified_at": "2024-12-01T00:00:00.000000000Z",
@@ -517,17 +603,18 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "format": "gguf",
                 "family": family,
                 "families": families,
-                "parameter_size": "8B",
+                "parameter_size": parameter_size,
                 "quantization_level": "Q4_K_M"
             },
             "model_info": {
                 "general.architecture": family,
                 "general.file_type": 15,
-                "general.parameter_count": 8000000000,
+                "general.parameter_count": int(float(parameter_size.replace("B", "")) * 1e9) if parameter_size.replace(".", "").replace("B", "").isdigit() else 8000000000,
                 "general.quantization_version": 2,
-                "tokenizer.ggml.model": "gpt2"
+                "tokenizer.ggml.model": "gpt2",
+                "context_length": num_ctx
             },
-            "capabilities": ["completion", "tools"]
+            "capabilities": capabilities
         }
         self._send_json_response(model_info)
 
@@ -721,16 +808,17 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         options = data.get("options", {})
         tools = data.get("tools", [])
         
-        self.logger.info(f"[Ollama API] /api/chat request: model={model}, stream={stream}, tools={len(tools)} tool(s)")
+        self.logger.info(f"[Ollama API] /api/chat request: model={model}, stream={stream}, messages={len(messages)}, tools={len(tools)} tool(s)")
         
         if not messages:
             self._set_headers(400)
             self.wfile.write(json.dumps({"error": "messages is required"}).encode("utf-8"))
             return
         
-        # Extract system prompt and build conversation prompt
+        # Extract system prompt and find the last user message
+        # VS Code/Ollama clients send the full conversation history
         system_prompt = ""
-        conversation_parts = []
+        last_user_content = ""
         
         for msg in messages:
             role = msg.get("role", "user")
@@ -739,27 +827,40 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             if role == "system":
                 system_prompt = content
             elif role == "user":
-                conversation_parts.append(f"User: {content}")
-            elif role == "assistant":
-                conversation_parts.append(f"Assistant: {content}")
-            elif role == "tool":
-                # Tool response from previous tool call
-                tool_name = msg.get("tool_name", "tool")
-                conversation_parts.append(f"Tool ({tool_name}): {content}")
+                # Keep tracking the latest user message
+                last_user_content = content
         
-        # Build prompt (don't add trailing "Assistant:" - let the model continue naturally)
-        prompt = "\n".join(conversation_parts)
+        # Use just the last user message as the prompt
+        # The LLMModelManager/WorkflowManager handles conversation history internally
+        prompt = last_user_content
+        
+        self.logger.info(f"[Ollama API] Extracted prompt: {prompt[:100]}...")
+        if system_prompt:
+            self.logger.info(f"[Ollama API] System prompt: {system_prompt[:100]}...")
         
         llm_request = LLMRequest()
         llm_request.temperature = options.get("temperature", 0.7)
         llm_request.max_new_tokens = options.get("num_predict", 2048)
+        
+        # CRITICAL: Set system prompt from the request
+        # This allows VS Code and other clients to provide their own system prompt
         if system_prompt:
             llm_request.system_prompt = system_prompt
         
-        # Pass tools to the LLM if provided
+        # For Ollama API requests, don't use conversation memory
+        # The client manages its own history and sends it with each request
+        llm_request.use_memory = False
+        
+        # Handle tools - if tools provided, enable them; otherwise disable all tools
+        # This prevents AIRunner's default tools from interfering with simple chat
         if tools:
             llm_request.tools = tools
+            llm_request.tool_categories = None  # Enable all tools when tools are provided
             self.logger.info(f"[Ollama API] Passing {len(tools)} tools to LLM")
+        else:
+            # Explicitly disable tools for simple chat requests
+            llm_request.tool_categories = []  # Empty list = no tools
+            self.logger.info("[Ollama API] No tools provided, disabling all tools")
         
         request_id = str(uuid.uuid4())
         
@@ -1120,9 +1221,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             }).encode("utf-8"))
             return
         
-        # Extract system prompt and build conversation
+        # Extract system prompt and find the last user message
+        # The client sends the full conversation history
         system_prompt = ""
-        conversation_parts = []
+        last_user_content = ""
         
         for msg in messages:
             role = msg.get("role", "user")
@@ -1131,23 +1233,16 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             if role == "system":
                 system_prompt = content
             elif role == "user":
-                conversation_parts.append(f"User: {content}")
-            elif role == "assistant":
-                # Handle assistant messages with tool calls
-                tool_calls = msg.get("tool_calls", [])
-                if tool_calls:
-                    for tc in tool_calls:
-                        func_name = tc.get("function", {}).get("name", "")
-                        func_args = tc.get("function", {}).get("arguments", "{}")
-                        conversation_parts.append(f"Assistant: [Calling tool: {func_name}({func_args})]")
-                elif content:
-                    conversation_parts.append(f"Assistant: {content}")
-            elif role == "tool":
-                # Tool result message
-                tool_call_id = msg.get("tool_call_id", "")
-                conversation_parts.append(f"Tool Result ({tool_call_id}): {content}")
+                # Keep tracking the latest user message
+                last_user_content = content
         
-        prompt = "\n".join(conversation_parts)
+        # Use just the last user message as the prompt
+        # The LLMModelManager/WorkflowManager handles conversation history internally
+        prompt = last_user_content
+        
+        self.logger.info(f"[OpenAI API] Extracted prompt: {prompt[:100]}...")
+        if system_prompt:
+            self.logger.info(f"[OpenAI API] System prompt: {system_prompt[:100]}...")
         
         # Enhance system prompt with tool definitions if tools are provided
         if tools:
@@ -1164,9 +1259,18 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if system_prompt:
             llm_request.system_prompt = system_prompt
         
-        # Enable tool categories if tools are provided
+        # For API requests, don't use conversation memory
+        # The client manages its own history and sends it with each request
+        llm_request.use_memory = False
+        
+        # Handle tools - if tools provided, enable them; otherwise disable all tools
         if tools:
-            llm_request.tool_categories = None  # Enable all tools
+            llm_request.tool_categories = None  # Enable all tools when tools are provided
+            self.logger.info(f"[OpenAI API] Tools provided, enabling tool categories")
+        else:
+            # Explicitly disable tools for simple chat requests
+            llm_request.tool_categories = []  # Empty list = no tools
+            self.logger.info("[OpenAI API] No tools provided, disabling all tools")
         
         request_id = str(uuid.uuid4())
         

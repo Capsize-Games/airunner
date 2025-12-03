@@ -1,6 +1,8 @@
 """Model download management operations for LLM worker."""
 
 import os
+import sys
+import threading
 from typing import Dict, Optional
 
 from PySide6.QtWidgets import QApplication
@@ -10,18 +12,171 @@ from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.llm.managers.llm_response import LLMResponse
 
 
+class HeadlessDownloadProgress:
+    """Headless download progress tracker using tqdm."""
+    
+    def __init__(self, model_name: str, model_path: str):
+        """Initialize headless download progress.
+        
+        Args:
+            model_name: Name of the model being downloaded
+            model_path: Path where model will be saved
+        """
+        self.model_name = model_name
+        self.model_path = model_path
+        self._overall_bar = None
+        self._file_bars: Dict[str, object] = {}
+        self._lock = threading.Lock()
+        self._completed = threading.Event()
+        self._failed = False
+        self._error_message = ""
+        
+        # Import tqdm here to avoid issues if not installed
+        try:
+            from tqdm import tqdm
+            self._tqdm = tqdm
+        except ImportError:
+            self._tqdm = None
+            print(f"[Download] tqdm not installed, using simple progress output")
+    
+    def on_log_updated(self, data: Dict) -> None:
+        """Handle log messages from download worker."""
+        message = data.get("message", "")
+        if self._tqdm:
+            # Use tqdm.write to avoid breaking progress bars
+            self._tqdm.write(f"[Download] {message}")
+        else:
+            print(f"[Download] {message}")
+    
+    def on_progress_updated(self, data: Dict) -> None:
+        """Handle overall progress updates."""
+        progress = data.get("progress", 0)
+        
+        if self._tqdm and self._overall_bar is None:
+            self._overall_bar = self._tqdm(
+                total=100,
+                desc=f"Downloading {self.model_name}",
+                unit="%",
+                position=0,
+                leave=True,
+            )
+        
+        if self._overall_bar:
+            self._overall_bar.n = progress
+            self._overall_bar.refresh()
+        elif not self._tqdm:
+            print(f"\r[Download] Overall progress: {progress:.1f}%", end="", flush=True)
+    
+    def on_file_progress_updated(self, data: Dict) -> None:
+        """Handle per-file progress updates."""
+        filename = data.get("filename", "")
+        downloaded = data.get("downloaded", 0)
+        total = data.get("total", 0)
+        
+        if not filename:
+            return
+        
+        with self._lock:
+            if self._tqdm:
+                if filename not in self._file_bars and total > 0:
+                    # Create a new progress bar for this file
+                    position = len(self._file_bars) + 1
+                    short_name = os.path.basename(filename)[:30]
+                    self._file_bars[filename] = self._tqdm(
+                        total=total,
+                        desc=short_name,
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        position=position,
+                        leave=False,
+                    )
+                
+                if filename in self._file_bars:
+                    bar = self._file_bars[filename]
+                    bar.n = downloaded
+                    bar.refresh()
+                    
+                    # Close bar when complete
+                    if downloaded >= total and total > 0:
+                        bar.close()
+                        del self._file_bars[filename]
+    
+    def on_download_complete(self, data: Dict) -> None:
+        """Handle download completion."""
+        # Close all progress bars
+        with self._lock:
+            for bar in self._file_bars.values():
+                bar.close()
+            self._file_bars.clear()
+            
+            if self._overall_bar:
+                self._overall_bar.n = 100
+                self._overall_bar.refresh()
+                self._overall_bar.close()
+                self._overall_bar = None
+        
+        if self._tqdm:
+            self._tqdm.write(f"✅ Download complete: {self.model_name}")
+        else:
+            print(f"\n✅ Download complete: {self.model_name}")
+        
+        self._completed.set()
+    
+    def on_download_failed(self, data: Dict) -> None:
+        """Handle download failure."""
+        error = data.get("error", "Unknown error")
+        self._failed = True
+        self._error_message = error
+        
+        # Close all progress bars
+        with self._lock:
+            for bar in self._file_bars.values():
+                bar.close()
+            self._file_bars.clear()
+            
+            if self._overall_bar:
+                self._overall_bar.close()
+                self._overall_bar = None
+        
+        if self._tqdm:
+            self._tqdm.write(f"❌ Download failed: {error}")
+        else:
+            print(f"\n❌ Download failed: {error}")
+        
+        self._completed.set()
+    
+    def wait_for_completion(self, timeout: float = 3600) -> bool:
+        """Wait for download to complete.
+        
+        Args:
+            timeout: Maximum time to wait in seconds (default: 1 hour)
+            
+        Returns:
+            True if download succeeded, False if failed or timed out
+        """
+        completed = self._completed.wait(timeout=timeout)
+        return completed and not self._failed
+    
+    @property
+    def error_message(self) -> str:
+        """Get error message if download failed."""
+        return self._error_message
+
+
 class ModelDownloadMixin:
     """Handles LLM model download operations.
 
     This mixin provides functionality for:
     - Handling download required signals
-    - Showing download dialog
+    - Showing download dialog (GUI mode)
+    - Headless download with tqdm progress (headless mode)
     - Managing download worker
     - Handling download completion and auto-loading
     """
 
     def on_llm_model_download_required_signal(self, data: Dict) -> None:
-        """Handle model download required signal - show download dialog.
+        """Handle model download required signal - show download dialog or download headless.
 
         Args:
             data: Dictionary containing model_path, model_name, repo_id, model_type
@@ -57,10 +212,6 @@ class ModelDownloadMixin:
             self.logger.error("No repo_id provided in download request")
             return
 
-        main_window = self._get_main_window()
-        if not main_window:
-            return
-
         model_info = self._get_model_info(repo_id)
         if not model_info:
             return
@@ -71,13 +222,148 @@ class ModelDownloadMixin:
             model_info["is_gguf"] = True
             model_info["gguf_filename"] = gguf_filename
 
-        self._show_download_dialog(
-            main_window,
-            model_info,
-            model_path,
-            repo_id,
-            data.get("missing_files"),
+        # Check if we're running in GUI or headless mode
+        if self._is_headless_mode():
+            # Headless mode - download with tqdm progress
+            self._download_headless(
+                model_info,
+                model_path,
+                repo_id,
+                data.get("missing_files"),
+            )
+        else:
+            # GUI mode - show download dialog
+            main_window = self._get_main_window()
+            if main_window:
+                self._show_download_dialog(
+                    main_window,
+                    model_info,
+                    model_path,
+                    repo_id,
+                    data.get("missing_files"),
+                )
+
+    def _is_headless_mode(self) -> bool:
+        """Check if running in headless mode (no GUI).
+        
+        Returns:
+            True if running headless (QCoreApplication), False if GUI (QApplication)
+        """
+        app = QApplication.instance()
+        if app is None:
+            return True
+        # QCoreApplication doesn't have topLevelWidgets, only QApplication does
+        return not hasattr(app, 'topLevelWidgets')
+
+    def _download_headless(
+        self,
+        model_info: Dict,
+        model_path: str,
+        repo_id: str,
+        missing_files: Optional[list] = None,
+    ) -> bool:
+        """Download model in headless mode with tqdm progress bars.
+        
+        Args:
+            model_info: Model configuration dictionary
+            model_path: Path where model will be saved
+            repo_id: HuggingFace repository ID
+            missing_files: Optional list of specific files to download
+            
+        Returns:
+            True if download succeeded, False otherwise
+        """
+        from airunner.components.llm.managers.download_huggingface import (
+            DownloadHuggingFaceModel,
         )
+        from airunner.utils.application.create_worker import create_worker
+
+        self._download_dialog_showing = True
+        
+        is_gguf = model_info.get("is_gguf", False)
+        gguf_filename = model_info.get("gguf_filename")
+        model_name = model_info.get("name", repo_id)
+        
+        if is_gguf:
+            model_name = f"{model_name} (GGUF)"
+        
+        self.logger.info(f"Starting headless download: {model_name}")
+        print(f"\n📦 Downloading model: {model_name}")
+        print(f"   Repository: {repo_id}")
+        print(f"   Destination: {model_path}\n")
+        
+        # Create progress tracker
+        progress = HeadlessDownloadProgress(model_name, model_path)
+        
+        # Create download worker
+        download_manager = create_worker(DownloadHuggingFaceModel)
+        
+        # Connect progress tracker to download worker signals
+        download_manager.register(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            progress.on_log_updated,
+        )
+        download_manager.register(
+            SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+            progress.on_progress_updated,
+        )
+        download_manager.register(
+            SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+            progress.on_file_progress_updated,
+        )
+        download_manager.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+            progress.on_download_complete,
+        )
+        download_manager.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+            progress.on_download_failed,
+        )
+        
+        # Also register our own completion handler for auto-loading
+        download_manager.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+            self.on_huggingface_download_complete_signal,
+        )
+        
+        try:
+            if is_gguf and gguf_filename:
+                # GGUF download
+                download_manager.download(
+                    repo_id=repo_id,
+                    model_type="gguf",
+                    output_dir=model_path,
+                    setup_quantization=False,
+                    quantization_bits=0,
+                    missing_files=None,
+                    gguf_filename=gguf_filename,
+                )
+            else:
+                # Standard HuggingFace download
+                download_manager.download(
+                    repo_id=repo_id,
+                    model_type=model_info.get("model_type", "llm"),
+                    output_dir=os.path.dirname(model_path),
+                    setup_quantization=model_info.get("setup_quantization", True),
+                    quantization_bits=model_info.get("quantization_bits", 4),
+                    missing_files=missing_files,
+                )
+            
+            # Wait for download to complete (with 1 hour timeout)
+            success = progress.wait_for_completion(timeout=3600)
+            
+            if not success:
+                self.logger.error(f"Download failed: {progress.error_message}")
+                self._download_dialog_showing = False
+                return False
+            
+            self._download_dialog_showing = False
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error during headless download: {e}")
+            self._download_dialog_showing = False
+            return False
 
     def _get_main_window(self) -> Optional[object]:
         """Get the main application window.
@@ -86,6 +372,13 @@ class ModelDownloadMixin:
             Main window object or None if not found
         """
         app = QApplication.instance()
+        if app is None:
+            return None
+        
+        # QCoreApplication doesn't have topLevelWidgets
+        if not hasattr(app, 'topLevelWidgets'):
+            return None
+        
         for widget in app.topLevelWidgets():
             if widget.__class__.__name__ == "MainWindow":
                 return widget
