@@ -1,10 +1,34 @@
 """
-HTTP API endpoints for AI Runner: /llm, /art, /stt, /tts
+HTTP API endpoints for AI Runner with full Ollama and OpenAI compatibility.
+
+This server can run on port 11434 to fully emulate Ollama, allowing VS Code
+and other tools to use AIRunner as if it were Ollama.
+
+Native AIRunner endpoints:
 - /llm/generate: POST, accepts JSON with prompt + llm_request params, streams NDJSON responses
 - /llm/models: GET, lists available models
 - /health: GET, returns server health status
 - /art: POST, accepts ImageRequest dict, returns ImageResponse dict
 - /stt, /tts: POST, stubbed
+
+Ollama-compatible endpoints (port 11434 recommended):
+- /api/tags: GET, list available models
+- /api/version: GET, get version info
+- /api/generate: POST, text generation
+- /api/chat: POST, chat completion
+- /api/show: POST, show model info
+- /api/ps: GET, list running models
+- /api/embed: POST, generate embeddings (stubbed)
+
+OpenAI-compatible endpoints:
+- /v1/models: GET, list models
+- /v1/chat/completions: POST, chat completion with tool calling support
+
+Usage:
+    # Run as Ollama replacement on port 11434
+    airunner --headless --port 11434
+    
+    # VS Code will automatically detect it as Ollama
 """
 
 import os
@@ -65,6 +89,9 @@ def set_api(api_instance):
 
 
 class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
+    # Use HTTP/1.1 for better compatibility with VS Code and other clients
+    protocol_version = "HTTP/1.1"
+
     def __init__(self, *args, **kwargs):
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._timeout: int = (
@@ -78,12 +105,57 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
 
+    def _send_json_response(self, data: dict, status: int = 200):
+        """Send a complete JSON response with proper Content-Length header."""
+        body = json.dumps(data).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_text_response(self, text: str, status: int = 200):
+        """Send a complete text response with proper Content-Length header."""
+        body = text.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, HEAD, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
+
+    def do_HEAD(self):
+        """Handle HEAD requests - same as GET but no body."""
+        path = self.path.rstrip("/")
+        self.logger.info(f"[Ollama API] HEAD {self.path} from {self.client_address}")
+        
+        if path == "" or path == "/":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", "17")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+        elif path == "/api/version":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+        elif path == "/api/tags":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
 
     def _read_request_body(self) -> bytes:
         """Read raw request body bytes from the HTTP request.
@@ -199,6 +271,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Route to appropriate handler
         route_map = {
+            # Original AIRunner endpoints
             "/llm": self._handle_llm,
             "/llm/generate": self._handle_llm,
             "/llm/generate_batch": self._handle_llm_batch,
@@ -208,6 +281,18 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "/art": lambda d: self._handle_stub("ART not implemented"),
             "/stt": lambda d: self._handle_stub("STT not implemented"),
             "/tts": lambda d: self._handle_stub("TTS not implemented"),
+            # Ollama-compatible endpoints (run on port 11434 to emulate Ollama)
+            "/api/generate": self._handle_ollama_generate,
+            "/api/chat": self._handle_ollama_chat,
+            "/api/show": self._handle_ollama_show,
+            "/api/pull": self._handle_ollama_pull,
+            "/api/embed": self._handle_ollama_embed,
+            "/api/embeddings": self._handle_ollama_embed,  # Legacy endpoint
+            "/api/copy": self._handle_ollama_copy,
+            "/api/create": self._handle_ollama_create,
+            # OpenAI-compatible endpoints (for VS Code Copilot BYOK)
+            "/v1/chat/completions": self._handle_openai_chat_completions,
+            "/v1/models": self._handle_openai_models,
         }
 
         handler = route_map.get(path)
@@ -222,16 +307,34 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests for /health and other endpoints."""
         path = self.path.rstrip("/")
-
-        if path == "/health":
+        
+        # Log all GET requests for debugging
+        self.logger.info(f"[Ollama API] GET {self.path} from {self.client_address}")
+        
+        # Root endpoint - Ollama returns "Ollama is running"
+        if path == "" or path == "/":
+            self._handle_ollama_root()
+        elif path == "/health":
             self._handle_health()
         elif path == "/llm/models":
             self._handle_llm_models()
+        # Ollama-compatible endpoints
+        elif path == "/api/tags":
+            self._handle_ollama_tags()
+        elif path == "/api/version":
+            self._handle_ollama_version()
+        elif path == "/api/ps":
+            self._handle_ollama_ps()
+        # OpenAI-compatible endpoints (for VS Code Copilot BYOK)
+        elif path == "/v1/models":
+            self._handle_openai_models(None)
         else:
-            self._set_headers(404)
-            self.wfile.write(
-                json.dumps({"error": "Not found"}).encode("utf-8")
-            )
+            self.logger.warning(f"[Ollama API] Unknown GET endpoint: {path}")
+            self._send_json_response({"error": "Not found"}, status=404)
+
+    def _handle_ollama_root(self):
+        """Handle root endpoint - Ollama returns 'Ollama is running'."""
+        self._send_text_response("Ollama is running")
 
     def _handle_health(self):
         """Health check endpoint."""
@@ -256,6 +359,1093 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "models": [{"name": "default", "type": "local", "loaded": False}]
         }
         self.wfile.write(json.dumps(models_data).encode("utf-8"))
+
+    # =========================================================================
+    # Ollama-Compatible API Endpoints (for VS Code Continue.dev)
+    # =========================================================================
+
+    def _handle_ollama_tags(self):
+        """Handle Ollama /api/tags endpoint - list available models.
+        
+        Response format matches Ollama's /api/tags specification.
+        Returns actual model info from AIRunner settings when available.
+        """
+        # Try to get actual model info from settings
+        model_name = "airunner:latest"
+        model_family = "qwen"
+        parameter_size = "8B"
+        
+        try:
+            from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
+            settings = LLMGeneratorSettings.objects.first()
+            if settings and settings.model_version:
+                # Extract model name from path (e.g., "Qwen2.5-7B-Instruct-4bit")
+                import os
+                model_name = os.path.basename(settings.model_version)
+                model_name = f"{model_name}:latest"
+                
+                # Try to detect model family and size from name
+                name_lower = model_name.lower()
+                if "qwen" in name_lower:
+                    model_family = "qwen"
+                elif "llama" in name_lower:
+                    model_family = "llama"
+                elif "mistral" in name_lower:
+                    model_family = "mistral"
+                elif "phi" in name_lower:
+                    model_family = "phi"
+                
+                # Extract parameter size
+                import re
+                size_match = re.search(r'(\d+\.?\d*)b', name_lower)
+                if size_match:
+                    parameter_size = f"{size_match.group(1)}B"
+        except Exception as e:
+            self.logger.debug(f"Could not get model settings: {e}")
+        
+        models_data = {
+            "models": [
+                {
+                    "name": model_name,
+                    "model": model_name,
+                    "modified_at": "2024-12-01T00:00:00.000000000Z",
+                    "size": 4500000000,
+                    "digest": f"sha256:{''.join(f'{ord(c):02x}' for c in model_name[:32]).ljust(64, '0')}",
+                    "details": {
+                        "parent_model": "",
+                        "format": "gguf",
+                        "family": model_family,
+                        "families": [model_family],
+                        "parameter_size": parameter_size,
+                        "quantization_level": "Q4_K_M"
+                    }
+                }
+            ]
+        }
+        self._send_json_response(models_data)
+
+    def _handle_ollama_ps(self):
+        """Handle Ollama /api/ps endpoint - list running models.
+        
+        This shows which models are currently loaded in memory.
+        """
+        # Try to get actual model info
+        model_name = "airunner:latest"
+        try:
+            from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
+            settings = LLMGeneratorSettings.objects.first()
+            if settings and settings.model_version:
+                import os
+                model_name = os.path.basename(settings.model_version)
+                model_name = f"{model_name}:latest"
+        except Exception:
+            pass
+        
+        # Check if model is loaded
+        api = get_api()
+        is_loaded = api is not None and hasattr(api, 'llm') and api.llm is not None
+        
+        if is_loaded:
+            models_data = {
+                "models": [
+                    {
+                        "name": model_name,
+                        "model": model_name,
+                        "size": 4500000000,
+                        "digest": f"sha256:{''.join(f'{ord(c):02x}' for c in model_name[:32]).ljust(64, '0')}",
+                        "details": {
+                            "parent_model": "",
+                            "format": "gguf",
+                            "family": "qwen",
+                            "families": ["qwen"],
+                            "parameter_size": "8B",
+                            "quantization_level": "Q4_K_M"
+                        },
+                        "expires_at": "2099-12-31T23:59:59.000000000Z",
+                        "size_vram": 4500000000
+                    }
+                ]
+            }
+        else:
+            models_data = {"models": []}
+        
+        self._send_json_response(models_data)
+
+    def _handle_ollama_version(self):
+        """Handle Ollama /api/version endpoint.
+        
+        Returns a version string that mimics Ollama's format.
+        """
+        # Use a recent Ollama version to ensure compatibility
+        # VS Code may check for minimum version support
+        self._send_json_response({"version": "0.9.0"})
+
+    def _handle_ollama_show(self, data):
+        """Handle Ollama /api/show endpoint - show model information.
+        
+        Returns full model metadata including capabilities for VS Code compatibility.
+        """
+        model_name = data.get("name", "airunner:latest")
+        
+        # Get actual model info from settings if available
+        api = get_api()
+        llm_settings = None
+        if api and hasattr(api, 'llm_generator_settings'):
+            llm_settings = api.llm_generator_settings
+        
+        # Determine model family from name
+        family = "llama"
+        families = ["llama"]
+        if "qwen" in model_name.lower():
+            family = "qwen"
+            families = ["qwen"]
+        elif "mistral" in model_name.lower():
+            family = "mistral"
+            families = ["mistral"]
+        elif "phi" in model_name.lower():
+            family = "phi"
+            families = ["phi"]
+        
+        model_info = {
+            "modelfile": f"FROM {model_name}\nPARAMETER temperature 0.7\nPARAMETER num_ctx 4096",
+            "parameters": "temperature 0.7\nnum_ctx 4096",
+            "template": "{{ if .System }}<|im_start|>system\n{{ .System }}<|im_end|>\n{{ end }}{{ if .Prompt }}<|im_start|>user\n{{ .Prompt }}<|im_end|>\n{{ end }}<|im_start|>assistant\n{{ .Response }}<|im_end|>",
+            "license": "Apache 2.0",
+            "modified_at": "2024-12-01T00:00:00.000000000Z",
+            "details": {
+                "parent_model": "",
+                "format": "gguf",
+                "family": family,
+                "families": families,
+                "parameter_size": "8B",
+                "quantization_level": "Q4_K_M"
+            },
+            "model_info": {
+                "general.architecture": family,
+                "general.file_type": 15,
+                "general.parameter_count": 8000000000,
+                "general.quantization_version": 2,
+                "tokenizer.ggml.model": "gpt2"
+            },
+            "capabilities": ["completion", "tools"]
+        }
+        self._send_json_response(model_info)
+
+    def _handle_ollama_generate(self, data):
+        """Handle Ollama /api/generate endpoint - text generation.
+        
+        Request format:
+        {
+            "model": "airunner:latest",
+            "prompt": "Why is the sky blue?",
+            "stream": true,
+            "options": {"temperature": 0.7, "num_predict": 100}
+        }
+        """
+        prompt = data.get("prompt", "")
+        model = data.get("model", "airunner:latest")
+        stream = data.get("stream", True)
+        options = data.get("options", {})
+        system = data.get("system", "")
+        
+        if not prompt:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({"error": "prompt is required"}).encode("utf-8"))
+            return
+        
+        llm_request = LLMRequest()
+        llm_request.temperature = options.get("temperature", 0.7)
+        llm_request.max_new_tokens = options.get("num_predict", 2048)
+        if system:
+            llm_request.system_prompt = system
+        
+        request_id = str(uuid.uuid4())
+        
+        if stream:
+            self._handle_ollama_generate_stream(prompt, model, llm_request, request_id)
+        else:
+            self._handle_ollama_generate_non_stream(prompt, model, llm_request, request_id)
+
+    def _handle_ollama_generate_stream(self, prompt, model, llm_request, request_id):
+        """Handle streaming Ollama generate response."""
+        self._set_headers(200, content_type="application/x-ndjson")
+        
+        complete_event = threading.Event()
+        start_time = time.time()
+        
+        def stream_callback(data: dict):
+            response = data.get("response")
+            if response:
+                created_at = time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime())
+                
+                ollama_response = {
+                    "model": model,
+                    "created_at": created_at,
+                    "response": response.message,
+                    "done": response.is_end_of_message,
+                }
+                
+                if response.is_end_of_message:
+                    duration_ns = int((time.time() - start_time) * 1e9)
+                    ollama_response.update({
+                        "total_duration": duration_ns,
+                        "load_duration": 0,
+                        "prompt_eval_count": len(prompt) // 4,
+                        "prompt_eval_duration": duration_ns // 10,
+                        "eval_count": 100,
+                        "eval_duration": duration_ns,
+                    })
+                    complete_event.set()
+                
+                self.wfile.write(json.dumps(ollama_response).encode("utf-8") + b"\n")
+                self.wfile.flush()
+        
+        api = get_api()
+        if not api:
+            error_response = {"error": "API not initialized"}
+            self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+            return
+        
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=LLMActionType.CHAT,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=stream_callback,
+            )
+            
+            if not complete_event.wait(timeout=300):
+                error_response = {
+                    "model": model,
+                    "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
+                    "response": "",
+                    "done": True,
+                    "error": "Request timeout"
+                }
+                self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+                
+        except Exception as e:
+            self.logger.error(f"Ollama generate error: {e}", exc_info=True)
+            error_response = {
+                "model": model,
+                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
+                "response": "",
+                "done": True,
+                "error": str(e)
+            }
+            self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+
+    def _handle_ollama_generate_non_stream(self, prompt, model, llm_request, request_id):
+        """Handle non-streaming Ollama generate response."""
+        complete_event = threading.Event()
+        complete_message = []
+        start_time = time.time()
+        
+        def collect_callback(data: dict):
+            response = data.get("response")
+            if response:
+                complete_message.append(response.message)
+                if response.is_end_of_message:
+                    complete_event.set()
+        
+        api = get_api()
+        if not api:
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": "API not initialized"}).encode("utf-8"))
+            return
+        
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=LLMActionType.CHAT,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=collect_callback,
+            )
+            
+            if complete_event.wait(timeout=300):
+                duration_ns = int((time.time() - start_time) * 1e9)
+                full_response = "".join(complete_message)
+                
+                self._set_headers(200)
+                response_data = {
+                    "model": model,
+                    "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
+                    "response": full_response,
+                    "done": True,
+                    "total_duration": duration_ns,
+                    "load_duration": 0,
+                    "prompt_eval_count": len(prompt) // 4,
+                    "prompt_eval_duration": duration_ns // 10,
+                    "eval_count": len(full_response) // 4,
+                    "eval_duration": duration_ns,
+                }
+                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            else:
+                self._set_headers(504)
+                self.wfile.write(json.dumps({"error": "Request timeout"}).encode("utf-8"))
+                
+        except Exception as e:
+            self.logger.error(f"Ollama generate error: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def _handle_ollama_chat(self, data):
+        """Handle Ollama /api/chat endpoint - chat completion with tool support.
+        
+        Request format:
+        {
+            "model": "airunner:latest",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": "Hello!"}
+            ],
+            "stream": true,
+            "options": {"temperature": 0.7},
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "description": "Get weather for a location",
+                        "parameters": {...}
+                    }
+                }
+            ]
+        }
+        """
+        messages = data.get("messages", [])
+        model = data.get("model", "airunner:latest")
+        stream = data.get("stream", True)
+        options = data.get("options", {})
+        tools = data.get("tools", [])
+        
+        self.logger.info(f"[Ollama API] /api/chat request: model={model}, stream={stream}, tools={len(tools)} tool(s)")
+        
+        if not messages:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({"error": "messages is required"}).encode("utf-8"))
+            return
+        
+        # Extract system prompt and build conversation prompt
+        system_prompt = ""
+        conversation_parts = []
+        
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            if role == "system":
+                system_prompt = content
+            elif role == "user":
+                conversation_parts.append(f"User: {content}")
+            elif role == "assistant":
+                conversation_parts.append(f"Assistant: {content}")
+            elif role == "tool":
+                # Tool response from previous tool call
+                tool_name = msg.get("tool_name", "tool")
+                conversation_parts.append(f"Tool ({tool_name}): {content}")
+        
+        # Build prompt (don't add trailing "Assistant:" - let the model continue naturally)
+        prompt = "\n".join(conversation_parts)
+        
+        llm_request = LLMRequest()
+        llm_request.temperature = options.get("temperature", 0.7)
+        llm_request.max_new_tokens = options.get("num_predict", 2048)
+        if system_prompt:
+            llm_request.system_prompt = system_prompt
+        
+        # Pass tools to the LLM if provided
+        if tools:
+            llm_request.tools = tools
+            self.logger.info(f"[Ollama API] Passing {len(tools)} tools to LLM")
+        
+        request_id = str(uuid.uuid4())
+        
+        if stream:
+            self._handle_ollama_chat_stream(prompt, model, llm_request, request_id, tools)
+        else:
+            self._handle_ollama_chat_non_stream(prompt, model, llm_request, request_id, tools)
+
+    def _handle_ollama_chat_stream(self, prompt, model, llm_request, request_id, tools=None):
+        """Handle streaming Ollama chat response with tool support."""
+        self._set_headers(200, content_type="application/x-ndjson")
+        
+        complete_event = threading.Event()
+        start_time = time.time()
+        tool_calls_made = []
+        
+        def stream_callback(data: dict):
+            response = data.get("response")
+            if response:
+                created_at = time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime())
+                
+                ollama_response = {
+                    "model": model,
+                    "created_at": created_at,
+                    "message": {
+                        "role": "assistant",
+                        "content": response.message,
+                    },
+                    "done": response.is_end_of_message,
+                }
+                
+                # Check if response contains tool calls
+                if hasattr(response, 'tool_calls') and response.tool_calls:
+                    ollama_response["message"]["tool_calls"] = response.tool_calls
+                    ollama_response["message"]["content"] = ""
+                
+                if response.is_end_of_message:
+                    duration_ns = int((time.time() - start_time) * 1e9)
+                    ollama_response.update({
+                        "done_reason": "stop",
+                        "total_duration": duration_ns,
+                        "load_duration": 0,
+                        "prompt_eval_count": len(prompt) // 4,
+                        "prompt_eval_duration": duration_ns // 10,
+                        "eval_count": 100,
+                        "eval_duration": duration_ns,
+                    })
+                    complete_event.set()
+                
+                self.wfile.write(json.dumps(ollama_response).encode("utf-8") + b"\n")
+                self.wfile.flush()
+        
+        api = get_api()
+        if not api:
+            error_response = {"error": "API not initialized"}
+            self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+            return
+        
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=LLMActionType.CHAT,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=stream_callback,
+            )
+            
+            if not complete_event.wait(timeout=300):
+                error_response = {
+                    "model": model,
+                    "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
+                    "message": {"role": "assistant", "content": ""},
+                    "done": True,
+                    "error": "Request timeout"
+                }
+                self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+                
+        except Exception as e:
+            self.logger.error(f"Ollama chat error: {e}", exc_info=True)
+            error_response = {
+                "model": model,
+                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
+                "message": {"role": "assistant", "content": ""},
+                "done": True,
+                "error": str(e)
+            }
+            self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+
+    def _handle_ollama_chat_non_stream(self, prompt, model, llm_request, request_id, tools=None):
+        """Handle non-streaming Ollama chat response with tool support."""
+        complete_event = threading.Event()
+        complete_message = []
+        tool_calls_result = []
+        start_time = time.time()
+        
+        def collect_callback(data: dict):
+            response = data.get("response")
+            if response:
+                complete_message.append(response.message)
+                # Collect tool calls if present
+                if hasattr(response, 'tool_calls') and response.tool_calls:
+                    tool_calls_result.extend(response.tool_calls)
+                if response.is_end_of_message:
+                    complete_event.set()
+        
+        api = get_api()
+        if not api:
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": "API not initialized"}).encode("utf-8"))
+            return
+        
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=LLMActionType.CHAT,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=collect_callback,
+            )
+            
+            if complete_event.wait(timeout=300):
+                duration_ns = int((time.time() - start_time) * 1e9)
+                full_response = "".join(complete_message)
+                
+                message_data = {
+                    "role": "assistant",
+                    "content": full_response,
+                }
+                
+                # Add tool calls if present
+                if tool_calls_result:
+                    message_data["tool_calls"] = tool_calls_result
+                    message_data["content"] = ""
+                
+                self._set_headers(200)
+                response_data = {
+                    "model": model,
+                    "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
+                    "message": message_data,
+                    "done_reason": "stop",
+                    "done": True,
+                    "total_duration": duration_ns,
+                    "load_duration": 0,
+                    "prompt_eval_count": len(prompt) // 4,
+                    "prompt_eval_duration": duration_ns // 10,
+                    "eval_count": len(full_response) // 4,
+                    "eval_duration": duration_ns,
+                }
+                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            else:
+                self._set_headers(504)
+                self.wfile.write(json.dumps({"error": "Request timeout"}).encode("utf-8"))
+                
+        except Exception as e:
+            self.logger.error(f"Ollama chat error: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def _handle_ollama_ps(self):
+        """Handle Ollama /api/ps endpoint - list running models.
+        
+        VS Code uses this to check if a model is loaded.
+        """
+        self._set_headers(200)
+        # Return the currently loaded model as "running"
+        ps_data = {
+            "models": [
+                {
+                    "name": "airunner:latest",
+                    "model": "airunner:latest",
+                    "size": 5000000000,  # ~5GB placeholder
+                    "digest": "sha256:airunner",
+                    "details": {
+                        "parent_model": "",
+                        "format": "gguf",
+                        "family": "qwen",
+                        "families": ["qwen"],
+                        "parameter_size": "8B",
+                        "quantization_level": "Q4_K_M"
+                    },
+                    "expires_at": "2099-12-31T23:59:59Z",
+                    "size_vram": 5000000000
+                }
+            ]
+        }
+        self.wfile.write(json.dumps(ps_data).encode("utf-8"))
+
+    def _handle_ollama_pull(self, data):
+        """Handle Ollama /api/pull endpoint - pretend to pull a model.
+        
+        Since AIRunner manages its own models, we just return success.
+        VS Code may call this when trying to ensure a model exists.
+        """
+        model = data.get("model", "airunner:latest")
+        stream = data.get("stream", True)
+        
+        if stream:
+            self._set_headers(200, content_type="application/x-ndjson")
+            # Simulate pull progress
+            responses = [
+                {"status": "pulling manifest"},
+                {"status": f"pulling {model}"},
+                {"status": "verifying sha256 digest"},
+                {"status": "writing manifest"},
+                {"status": "success"}
+            ]
+            for resp in responses:
+                self.wfile.write(json.dumps(resp).encode("utf-8") + b"\n")
+                self.wfile.flush()
+        else:
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"status": "success"}).encode("utf-8"))
+
+    def _handle_ollama_embed(self, data):
+        """Handle Ollama /api/embed endpoint - generate embeddings.
+        
+        Placeholder - returns dummy embeddings.
+        TODO: Implement actual embedding generation if needed.
+        """
+        model = data.get("model", "airunner:latest")
+        input_text = data.get("input", data.get("prompt", ""))
+        
+        # Generate placeholder embeddings (384 dimensions like all-MiniLM)
+        import random
+        if isinstance(input_text, list):
+            embeddings = [[random.uniform(-1, 1) for _ in range(384)] for _ in input_text]
+        else:
+            embeddings = [[random.uniform(-1, 1) for _ in range(384)]]
+        
+        self._set_headers(200)
+        response_data = {
+            "model": model,
+            "embeddings": embeddings,
+            "total_duration": 1000000,
+            "load_duration": 100000,
+            "prompt_eval_count": len(str(input_text)) // 4
+        }
+        self.wfile.write(json.dumps(response_data).encode("utf-8"))
+
+    def _handle_ollama_copy(self, data):
+        """Handle Ollama /api/copy endpoint - copy a model.
+        
+        Since AIRunner manages models differently, we just return success.
+        """
+        self._set_headers(200)
+        # No response body needed for success
+
+    def _handle_ollama_create(self, data):
+        """Handle Ollama /api/create endpoint - create a model.
+        
+        Since AIRunner manages models differently, we simulate success.
+        """
+        model = data.get("model", "custom:latest")
+        stream = data.get("stream", True)
+        
+        if stream:
+            self._set_headers(200, content_type="application/x-ndjson")
+            responses = [
+                {"status": "reading model metadata"},
+                {"status": "creating system layer"},
+                {"status": "writing manifest"},
+                {"status": "success"}
+            ]
+            for resp in responses:
+                self.wfile.write(json.dumps(resp).encode("utf-8") + b"\n")
+                self.wfile.flush()
+        else:
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"status": "success"}).encode("utf-8"))
+
+    # =========================================================================
+    # End of Ollama-Compatible API Endpoints
+    # =========================================================================
+
+    # =========================================================================
+    # OpenAI-Compatible API Endpoints (for VS Code Copilot BYOK)
+    # =========================================================================
+
+    def _handle_openai_models(self, data):
+        """Handle OpenAI /v1/models endpoint - list available models."""
+        self._set_headers(200)
+        models_data = {
+            "object": "list",
+            "data": [
+                {
+                    "id": "airunner",
+                    "object": "model",
+                    "created": 1700000000,
+                    "owned_by": "airunner",
+                    "permission": [],
+                    "root": "airunner",
+                    "parent": None,
+                }
+            ]
+        }
+        self.wfile.write(json.dumps(models_data).encode("utf-8"))
+
+    def _handle_openai_chat_completions(self, data):
+        """Handle OpenAI /v1/chat/completions endpoint with tool calling support.
+        
+        Request format:
+        {
+            "model": "airunner",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": "Hello!"}
+            ],
+            "stream": true,
+            "temperature": 0.7,
+            "max_tokens": 2048,
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_weather",
+                        "description": "Get current weather",
+                        "parameters": {...}
+                    }
+                }
+            ],
+            "tool_choice": "auto"
+        }
+        
+        Response with tool calls:
+        {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": null,
+                    "tool_calls": [{
+                        "id": "call_xxx",
+                        "type": "function",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": "{\"city\": \"Tokyo\"}"
+                        }
+                    }]
+                },
+                "finish_reason": "tool_calls"
+            }]
+        }
+        """
+        messages = data.get("messages", [])
+        model = data.get("model", "airunner")
+        stream = data.get("stream", False)
+        temperature = data.get("temperature", 0.7)
+        max_tokens = data.get("max_tokens", 2048)
+        tools = data.get("tools", [])
+        tool_choice = data.get("tool_choice", "auto")
+        
+        if not messages:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({
+                "error": {
+                    "message": "messages is required",
+                    "type": "invalid_request_error"
+                }
+            }).encode("utf-8"))
+            return
+        
+        # Extract system prompt and build conversation
+        system_prompt = ""
+        conversation_parts = []
+        
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            if role == "system":
+                system_prompt = content
+            elif role == "user":
+                conversation_parts.append(f"User: {content}")
+            elif role == "assistant":
+                # Handle assistant messages with tool calls
+                tool_calls = msg.get("tool_calls", [])
+                if tool_calls:
+                    for tc in tool_calls:
+                        func_name = tc.get("function", {}).get("name", "")
+                        func_args = tc.get("function", {}).get("arguments", "{}")
+                        conversation_parts.append(f"Assistant: [Calling tool: {func_name}({func_args})]")
+                elif content:
+                    conversation_parts.append(f"Assistant: {content}")
+            elif role == "tool":
+                # Tool result message
+                tool_call_id = msg.get("tool_call_id", "")
+                conversation_parts.append(f"Tool Result ({tool_call_id}): {content}")
+        
+        prompt = "\n".join(conversation_parts)
+        
+        # Enhance system prompt with tool definitions if tools are provided
+        if tools:
+            tool_descriptions = self._format_tools_for_prompt(tools)
+            enhanced_system = system_prompt or ""
+            if enhanced_system:
+                enhanced_system += "\n\n"
+            enhanced_system += tool_descriptions
+            system_prompt = enhanced_system
+        
+        llm_request = LLMRequest()
+        llm_request.temperature = temperature
+        llm_request.max_new_tokens = max_tokens
+        if system_prompt:
+            llm_request.system_prompt = system_prompt
+        
+        # Enable tool categories if tools are provided
+        if tools:
+            llm_request.tool_categories = None  # Enable all tools
+        
+        request_id = str(uuid.uuid4())
+        
+        if stream:
+            self._handle_openai_chat_stream(prompt, model, llm_request, request_id, tools)
+        else:
+            self._handle_openai_chat_non_stream(prompt, model, llm_request, request_id, tools)
+
+    def _format_tools_for_prompt(self, tools):
+        """Format OpenAI tool definitions into a prompt-friendly format.
+        
+        This converts OpenAI-style tool definitions into instructions
+        that help the LLM understand available tools.
+        """
+        if not tools:
+            return ""
+        
+        lines = ["You have access to the following tools:"]
+        for tool in tools:
+            if tool.get("type") == "function":
+                func = tool.get("function", {})
+                name = func.get("name", "")
+                desc = func.get("description", "")
+                params = func.get("parameters", {})
+                
+                lines.append(f"\n**{name}**: {desc}")
+                if params.get("properties"):
+                    lines.append("  Parameters:")
+                    for param_name, param_info in params["properties"].items():
+                        param_type = param_info.get("type", "any")
+                        param_desc = param_info.get("description", "")
+                        required = param_name in params.get("required", [])
+                        req_str = " (required)" if required else " (optional)"
+                        lines.append(f"    - {param_name}: {param_type}{req_str} - {param_desc}")
+        
+        lines.append("\nTo use a tool, respond with a JSON object in this format:")
+        lines.append('{"tool_call": {"name": "tool_name", "arguments": {"arg1": "value1"}}}')
+        lines.append("\nOnly use a tool if it's necessary to answer the user's question.")
+        
+        return "\n".join(lines)
+
+    def _parse_tool_calls_from_response(self, response_text, tools):
+        """Parse tool calls from LLM response text.
+        
+        Looks for JSON tool call patterns in the response and extracts them.
+        Returns (content, tool_calls) tuple.
+        """
+        import re
+        
+        if not tools or not response_text:
+            return response_text, []
+        
+        # Try to find JSON tool call pattern
+        tool_call_pattern = r'\{[\s]*"tool_call"[\s]*:[\s]*\{[^}]+\}[\s]*\}'
+        matches = re.findall(tool_call_pattern, response_text, re.DOTALL)
+        
+        tool_calls = []
+        for i, match in enumerate(matches):
+            try:
+                parsed = json.loads(match)
+                if "tool_call" in parsed:
+                    tc = parsed["tool_call"]
+                    tool_calls.append({
+                        "id": f"call_{uuid.uuid4().hex[:8]}",
+                        "type": "function",
+                        "function": {
+                            "name": tc.get("name", ""),
+                            "arguments": json.dumps(tc.get("arguments", {}))
+                        }
+                    })
+            except json.JSONDecodeError:
+                continue
+        
+        if tool_calls:
+            # Remove tool call JSON from response content
+            content = re.sub(tool_call_pattern, "", response_text).strip()
+            return content if content else None, tool_calls
+        
+        return response_text, []
+
+    def _handle_openai_chat_stream(self, prompt, model, llm_request, request_id, tools=None):
+        """Handle streaming OpenAI chat response (SSE format).
+        
+        Note: Tool calls in streaming mode are complex. For now, we accumulate
+        the full response and check for tool calls at the end.
+        """
+        self._set_headers(200, content_type="text/event-stream")
+        
+        complete_event = threading.Event()
+        start_time = time.time()
+        accumulated_response = []
+        
+        def stream_callback(data: dict):
+            response = data.get("response")
+            if response:
+                chunk_id = f"chatcmpl-{request_id[:8]}"
+                created = int(time.time())
+                
+                # Accumulate response for tool call detection
+                accumulated_response.append(response.message)
+                
+                if response.is_end_of_message:
+                    # Check for tool calls in accumulated response
+                    full_text = "".join(accumulated_response)
+                    content, tool_calls = self._parse_tool_calls_from_response(full_text, tools)
+                    
+                    if tool_calls:
+                        # Send tool call chunk
+                        chunk = {
+                            "id": chunk_id,
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {
+                                    "tool_calls": tool_calls
+                                },
+                                "finish_reason": "tool_calls"
+                            }]
+                        }
+                        self.wfile.write(f"data: {json.dumps(chunk)}\n\n".encode("utf-8"))
+                    else:
+                        # Send final chunk with finish_reason
+                        chunk = {
+                            "id": chunk_id,
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {},
+                                "finish_reason": "stop"
+                            }]
+                        }
+                        self.wfile.write(f"data: {json.dumps(chunk)}\n\n".encode("utf-8"))
+                    
+                    self.wfile.write(b"data: [DONE]\n\n")
+                    self.wfile.flush()
+                    complete_event.set()
+                else:
+                    # Send content chunk
+                    chunk = {
+                        "id": chunk_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model,
+                        "choices": [{
+                            "index": 0,
+                            "delta": {"content": response.message},
+                            "finish_reason": None
+                        }]
+                    }
+                    self.wfile.write(f"data: {json.dumps(chunk)}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+        
+        api = get_api()
+        if not api:
+            error_chunk = {"error": {"message": "API not initialized"}}
+            self.wfile.write(f"data: {json.dumps(error_chunk)}\n\n".encode("utf-8"))
+            return
+        
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=LLMActionType.CHAT,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=stream_callback,
+            )
+            
+            if not complete_event.wait(timeout=300):
+                error_chunk = {"error": {"message": "Request timeout"}}
+                self.wfile.write(f"data: {json.dumps(error_chunk)}\n\n".encode("utf-8"))
+                
+        except Exception as e:
+            self.logger.error(f"OpenAI chat stream error: {e}", exc_info=True)
+            error_chunk = {"error": {"message": str(e)}}
+            self.wfile.write(f"data: {json.dumps(error_chunk)}\n\n".encode("utf-8"))
+
+    def _handle_openai_chat_non_stream(self, prompt, model, llm_request, request_id, tools=None):
+        """Handle non-streaming OpenAI chat response with tool calling support."""
+        complete_event = threading.Event()
+        complete_message = []
+        start_time = time.time()
+        
+        def collect_callback(data: dict):
+            response = data.get("response")
+            if response:
+                complete_message.append(response.message)
+                if response.is_end_of_message:
+                    complete_event.set()
+        
+        api = get_api()
+        if not api:
+            self._set_headers(500)
+            self.wfile.write(json.dumps({
+                "error": {"message": "API not initialized"}
+            }).encode("utf-8"))
+            return
+        
+        try:
+            api.llm.send_request(
+                prompt=prompt,
+                action=LLMActionType.CHAT,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=collect_callback,
+            )
+            
+            if complete_event.wait(timeout=300):
+                full_response = "".join(complete_message)
+                created = int(time.time())
+                
+                # Check for tool calls in response
+                content, tool_calls = self._parse_tool_calls_from_response(full_response, tools)
+                
+                self._set_headers(200)
+                
+                if tool_calls:
+                    # Response with tool calls
+                    response_data = {
+                        "id": f"chatcmpl-{request_id[:8]}",
+                        "object": "chat.completion",
+                        "created": created,
+                        "model": model,
+                        "choices": [{
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": content,
+                                "tool_calls": tool_calls
+                            },
+                            "finish_reason": "tool_calls"
+                        }],
+                        "usage": {
+                            "prompt_tokens": len(prompt) // 4,
+                            "completion_tokens": len(full_response) // 4,
+                            "total_tokens": (len(prompt) + len(full_response)) // 4
+                        }
+                    }
+                else:
+                    # Regular response without tool calls
+                    response_data = {
+                        "id": f"chatcmpl-{request_id[:8]}",
+                        "object": "chat.completion",
+                        "created": created,
+                        "model": model,
+                        "choices": [{
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": full_response
+                            },
+                            "finish_reason": "stop"
+                        }],
+                        "usage": {
+                            "prompt_tokens": len(prompt) // 4,
+                            "completion_tokens": len(full_response) // 4,
+                            "total_tokens": (len(prompt) + len(full_response)) // 4
+                        }
+                    }
+                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            else:
+                self._set_headers(504)
+                self.wfile.write(json.dumps({
+                    "error": {"message": "Request timeout"}
+                }).encode("utf-8"))
+                
+        except Exception as e:
+            self.logger.error(f"OpenAI chat error: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({
+                "error": {"message": str(e)}
+            }).encode("utf-8"))
+
+    # =========================================================================
+    # End of OpenAI-Compatible API Endpoints
+    # =========================================================================
 
     def _extract_llm_request_data(self, data: Dict) -> Dict:
         """Extract and normalize llm_request data from request.
