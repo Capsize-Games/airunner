@@ -1056,12 +1056,17 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
             window_class = MainWindow
 
-        if self.splash:
-            self.splash.finish(None)
-
         try:
+            # Update splash message during window creation
+            self.update_splash_message(self.splash, "Initializing main window...")
             window = window_class(app=self, **self.window_class_params)
             app.main_window = window
+            
+            # Close splash screen AFTER window is created and shown
+            # This ensures the splash stays visible during the entire loading process
+            if self.splash:
+                self.splash.finish(window)
+            
             window.raise_()
             # --- LNA/diagnostics: log Qt version, enable dev tools, set custom page if QWebEngineView present ---
             print(f"Qt Version: {qVersion()}")

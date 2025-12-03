@@ -60,7 +60,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     )
 
     activate(
-        activate_shadowlogger=False,
+        activate_shadowlogger=True,
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,
@@ -108,12 +108,14 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             os.path.join(os.path.expanduser("~"), "nltk_data/corpora"),
         ],
         nullscream_whitelist=[
-            "huggingface_hub",
             "transformers",
             "diffusers",
             "sentencepiece",
         ],
-        nullscream_blacklist=[],
+        nullscream_blacklist=[
+            "huggingface_hub",
+            "google.cloud.storage",
+        ],
     )
 #################################################################
 
