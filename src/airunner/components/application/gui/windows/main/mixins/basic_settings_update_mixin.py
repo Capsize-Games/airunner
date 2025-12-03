@@ -84,6 +84,28 @@ class BasicSettingsUpdateMixin:
         Args:
             **settings_dict: Settings to update as keyword arguments.
         """
+        # Validate model_path to prevent corruption from SD/art/TTS model paths
+        if "model_path" in settings_dict:
+            model_path = settings_dict["model_path"]
+            if model_path:
+                invalid_patterns = [
+                    "/art/models/",
+                    "/txt2img",
+                    "/inpaint",
+                    "/tts/",
+                    "/openvoice",
+                    "/embedding/",
+                ]
+                for pattern in invalid_patterns:
+                    if pattern in model_path:
+                        self.logger.error(
+                            f"Blocked invalid LLM model_path update: '{model_path}' "
+                            f"contains invalid pattern '{pattern}'"
+                        )
+                        # Remove the invalid model_path from the update
+                        del settings_dict["model_path"]
+                        break
+        
         self.update_settings(LLMGeneratorSettings, settings_dict)
 
     def update_whisper_settings(self, **settings_dict):

@@ -204,6 +204,37 @@ class PropertyMixin:
                 "Please configure a proper chat LLM model in LLM settings."
             )
 
+        # Validate that SD/art model paths are not used as main LLM
+        if "/art/models/" in model_path or "/txt2img" in model_path or "/inpaint" in model_path:
+            self.logger.error(
+                f"Invalid model path detected: '{model_path}' appears to be an SD/art model. "
+                "Attempting to recover from model_id..."
+            )
+            
+            # Try to recover using saved model_id
+            saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
+            if saved_model_id and saved_model_id != "custom":
+                from airunner.components.llm.data.llm_provider_config import LLMProviderConfig
+                model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+                if model_info:
+                    model_name = model_info.get("name", saved_model_id)
+                    recovered_path = os.path.join(
+                        self.path_settings.base_path,
+                        "text/models/llm/causallm",
+                        model_name,
+                    )
+                    self.logger.info(f"Recovered model path from model_id '{saved_model_id}': {recovered_path}")
+                    # Save the corrected path
+                    self.llm_generator_settings.model_path = recovered_path
+                    return recovered_path
+            
+            # No recovery possible - clear and raise
+            self.llm_generator_settings.model_path = ""
+            raise ValueError(
+                "LLM model path was corrupted (contained SD/art model path). "
+                "Please select an LLM model from the dropdown."
+            )
+
         # Validate that TTS model paths are not used as main LLM
         if "/tts/" in model_path or "/openvoice" in model_path:
             self.logger.error(

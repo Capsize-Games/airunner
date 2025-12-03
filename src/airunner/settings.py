@@ -459,5 +459,4 @@ SLASH_COMMANDS = {
 }
 
 AIRUNNER_SCRAPER_BLACKLIST = [
-    "wikipedia.org",
 ]
