@@ -15,13 +15,32 @@ def activate(
     activate_darklock: bool = True,
     activate_nullscream: bool = True,
     show_stdout: bool = True,
-    # darklock properites
+    # darklock properties
     darklock_os_whitelisted_operations: List = None,
     darklock_os_whitelisted_filenames: List = None,
-    darklock_os_whitelisted_modules: List = None,  # Changed from darklock_os_whitelisted_imports
+    darklock_os_whitelisted_modules: List = None,
     darklock_os_whitelisted_directories: List = None,
     darklock_os_allow_network: bool = False,
+    darklock_allowed_network_port: int = None,
 ):
+    """
+    Activate FacehuggerShield security protections.
+    
+    Args:
+        nullscream_blacklist: Modules to block (return noop versions).
+        nullscream_whitelist: Modules to allow even if in blacklist.
+        nullscream_function_blacklist: Specific functions to block.
+        activate_shadowlogger: Enable log interception.
+        activate_darklock: Enable OS/network restrictions.
+        activate_nullscream: Enable module blocking.
+        show_stdout: Show shadowed logs to stdout.
+        darklock_os_whitelisted_operations: OS operations to allow.
+        darklock_os_whitelisted_filenames: Files to allow access to.
+        darklock_os_whitelisted_modules: Modules allowed to perform OS operations.
+        darklock_os_whitelisted_directories: Directories to allow file operations in.
+        darklock_os_allow_network: If True, allow network on specific port only.
+        darklock_allowed_network_port: Port to allow if allow_network=True.
+    """
     nullscream_blacklist = nullscream_blacklist or [
         "huggingface_hub.commands",
         "huggingface_hub.commands._cli_utils",
@@ -65,7 +84,8 @@ def activate(
         show_stdout=show_stdout,
         darklock_os_whitelisted_operations=darklock_os_whitelisted_operations,
         darklock_os_whitelisted_filenames=darklock_os_whitelisted_filenames,
-        darklock_os_whitelisted_modules=darklock_os_whitelisted_modules,  # Changed from darklock_os_whitelisted_imports
+        darklock_os_whitelisted_modules=darklock_os_whitelisted_modules,
         darklock_os_whitelisted_directories=darklock_os_whitelisted_directories,
-        darklock_os_allow_network=darklock_os_allow_network,  # Pass allow_network
+        darklock_os_allow_network=darklock_os_allow_network,
+        darklock_allowed_network_port=darklock_allowed_network_port,
     )

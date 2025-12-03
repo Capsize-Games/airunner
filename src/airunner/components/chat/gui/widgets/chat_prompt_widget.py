@@ -1183,7 +1183,10 @@ class ChatPromptWidget(BaseWidget):
                         
                         # Verify model_path is correct - rebuild if corrupted
                         current_path = getattr(self.llm_generator_settings, "model_path", "") or ""
-                        if not current_path or "/tts/" in current_path or "/openvoice" in current_path:
+                        # Check for corrupted paths (TTS/SD/art model paths)
+                        invalid_patterns = ["/tts/", "/openvoice", "/art/models/", "/txt2img", "/inpaint"]
+                        is_corrupted = not current_path or any(pattern in current_path for pattern in invalid_patterns)
+                        if is_corrupted:
                             # Path is missing or corrupted - rebuild from model_id
                             model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                             if model_info:
@@ -1206,13 +1209,30 @@ class ChatPromptWidget(BaseWidget):
             # For HuggingFace, match by model path
             current_path = getattr(self.llm_generator_settings, "model_path", "") or ""
             if current_path:
-                # Check for corrupted path (TTS model paths should not be in LLM settings)
-                if "/tts/" in current_path or "/openvoice" in current_path:
+                # Check for corrupted path (TTS/SD/art model paths should not be in LLM settings)
+                invalid_patterns = ["/tts/", "/openvoice", "/art/models/", "/txt2img", "/inpaint"]
+                is_corrupted = any(pattern in current_path for pattern in invalid_patterns)
+                if is_corrupted:
                     self.logger.warning(
-                        f"Detected corrupted LLM model_path (TTS path): {current_path}. "
-                        "Please select an LLM model from the dropdown."
+                        f"Detected corrupted LLM model_path: {current_path}. "
+                        "Attempting to recover from model_id..."
                     )
-                    # Clear the corrupted path - don't auto-select, let user choose
+                    # Try to recover from model_id first
+                    if saved_model_id and saved_model_id != "custom":
+                        model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+                        if model_info:
+                            model_name = model_info.get("name", saved_model_id)
+                            base_path = os.path.expanduser(
+                                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                            )
+                            correct_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
+                            self.logger.info(f"Recovered corrupted model_path to: {correct_path}")
+                            self.update_llm_generator_settings(
+                                model_path=correct_path,
+                                model_version=model_name,
+                            )
+                            return
+                    # No recovery possible - clear the corrupted path
                     self.update_llm_generator_settings(model_path="")
                     return
                     
