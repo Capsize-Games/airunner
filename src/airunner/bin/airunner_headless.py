@@ -9,6 +9,11 @@ Usage:
     airunner-headless
     airunner-headless --host 0.0.0.0 --port 8080
     airunner-headless --ollama-mode  # Run as Ollama replacement on port 11434
+    airunner-headless --model /path/to/llm/model  # Load specific LLM model
+    airunner-headless --art-model /path/to/art/model  # Load specific art model
+    airunner-headless --tts-model /path/to/tts/model  # Load specific TTS model
+    airunner-headless --stt-model /path/to/stt/model  # Load specific STT model
+    airunner-headless --no-preload  # Don't preload models, load on first request
     airunner-headless --help
 
 Environment Variables:
@@ -21,6 +26,11 @@ Environment Variables:
     AIRUNNER_STT_ON: Enable STT service (default: 0)
     AIRUNNER_SD_ON: Enable Stable Diffusion (default: 0)
     AIRUNNER_CN_ON: Enable ControlNet (default: 0)
+    AIRUNNER_LLM_MODEL_PATH: Path to LLM model to preload
+    AIRUNNER_ART_MODEL_PATH: Path to art model to preload
+    AIRUNNER_TTS_MODEL_PATH: Path to TTS model to preload
+    AIRUNNER_STT_MODEL_PATH: Path to STT model to preload
+    AIRUNNER_NO_PRELOAD: Set to 1 to disable model preloading
 
 Examples:
     # Start with defaults (0.0.0.0:8080)
@@ -35,8 +45,18 @@ Examples:
     # Run as Ollama replacement (port 11434) for VS Code integration
     airunner-headless --ollama-mode
 
-    # Enable all services
-    AIRUNNER_LLM_ON=1 AIRUNNER_SD_ON=1 airunner-headless
+    # Load a specific LLM model at startup
+    airunner-headless --model /path/to/Qwen2.5-7B-Instruct-4bit
+
+    # Run without preloading models (load on first request)
+    airunner-headless --no-preload
+
+    # Enable Stable Diffusion and load a specific art model
+    airunner-headless --enable-art --art-model /path/to/stable-diffusion-v1-5
+
+    # Enable all services with specific models
+    airunner-headless --enable-llm --enable-art --enable-tts --enable-stt \\
+        --model /path/to/llm --art-model /path/to/art
 """
 
 import argparse
@@ -73,6 +93,71 @@ def main():
         help="Run as Ollama replacement on port 11434 for VS Code integration",
     )
 
+    # Model path arguments
+    parser.add_argument(
+        "--model", "-m",
+        type=str,
+        default=os.environ.get("AIRUNNER_LLM_MODEL_PATH"),
+        help="Path to LLM model to load at startup (or load on first request)",
+    )
+
+    parser.add_argument(
+        "--art-model",
+        type=str,
+        default=os.environ.get("AIRUNNER_ART_MODEL_PATH"),
+        help="Path to art/Stable Diffusion model to load",
+    )
+
+    parser.add_argument(
+        "--tts-model",
+        type=str,
+        default=os.environ.get("AIRUNNER_TTS_MODEL_PATH"),
+        help="Path to TTS model to load",
+    )
+
+    parser.add_argument(
+        "--stt-model",
+        type=str,
+        default=os.environ.get("AIRUNNER_STT_MODEL_PATH"),
+        help="Path to STT model to load",
+    )
+
+    # Service enable flags
+    parser.add_argument(
+        "--enable-llm",
+        action="store_true",
+        default=None,
+        help="Enable LLM service (default: enabled unless --no-preload)",
+    )
+
+    parser.add_argument(
+        "--enable-art",
+        action="store_true",
+        default=None,
+        help="Enable Stable Diffusion/art service",
+    )
+
+    parser.add_argument(
+        "--enable-tts",
+        action="store_true",
+        default=None,
+        help="Enable TTS service",
+    )
+
+    parser.add_argument(
+        "--enable-stt",
+        action="store_true",
+        default=None,
+        help="Enable STT service",
+    )
+
+    parser.add_argument(
+        "--no-preload",
+        action="store_true",
+        default=os.environ.get("AIRUNNER_NO_PRELOAD", "0") == "1",
+        help="Don't preload models at startup, load them on first request instead",
+    )
+
     args = parser.parse_args()
 
     # Determine port based on mode
@@ -94,6 +179,20 @@ def main():
     # Set Ollama mode flag for server.py to use
     os.environ["AIRUNNER_OLLAMA_MODE"] = "1" if args.ollama_mode else "0"
 
+    # Set model paths if provided
+    if args.model:
+        os.environ["AIRUNNER_LLM_MODEL_PATH"] = args.model
+    if args.art_model:
+        os.environ["AIRUNNER_ART_MODEL_PATH"] = args.art_model
+    if args.tts_model:
+        os.environ["AIRUNNER_TTS_MODEL_PATH"] = args.tts_model
+    if args.stt_model:
+        os.environ["AIRUNNER_STT_MODEL_PATH"] = args.stt_model
+
+    # Set no-preload flag
+    if args.no_preload:
+        os.environ["AIRUNNER_NO_PRELOAD"] = "1"
+
     # Now import settings after environment is configured
     from airunner.settings import AIRUNNER_LOG_LEVEL
     from airunner.utils.application import get_logger
@@ -101,15 +200,67 @@ def main():
     # Configure logging
     logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
-    # Default to LLM-only in headless mode (can be overridden by env vars)
-    os.environ.setdefault("AIRUNNER_LLM_ON", "1")
-    os.environ.setdefault("AIRUNNER_TTS_ON", "0")
-    os.environ.setdefault("AIRUNNER_STT_ON", "0")
-    os.environ.setdefault("AIRUNNER_SD_ON", "0")
+    # Determine which services to enable based on:
+    # 1. Explicit --enable-* flags
+    # 2. Model path provided (implies service should be enabled)
+    # 3. Environment variables
+    # 4. Defaults (LLM on, others off)
+    
+    # LLM service
+    if args.enable_llm is not None:
+        os.environ["AIRUNNER_LLM_ON"] = "1" if args.enable_llm else "0"
+    elif args.model:
+        # If a model path is provided, enable the service
+        os.environ["AIRUNNER_LLM_ON"] = "1"
+    else:
+        os.environ.setdefault("AIRUNNER_LLM_ON", "1")
+    
+    # Art/Stable Diffusion service
+    if args.enable_art is not None:
+        os.environ["AIRUNNER_SD_ON"] = "1" if args.enable_art else "0"
+    elif args.art_model:
+        os.environ["AIRUNNER_SD_ON"] = "1"
+    else:
+        os.environ.setdefault("AIRUNNER_SD_ON", "0")
+    
+    # TTS service
+    if args.enable_tts is not None:
+        os.environ["AIRUNNER_TTS_ON"] = "1" if args.enable_tts else "0"
+    elif args.tts_model:
+        os.environ["AIRUNNER_TTS_ON"] = "1"
+    else:
+        os.environ.setdefault("AIRUNNER_TTS_ON", "0")
+    
+    # STT service
+    if args.enable_stt is not None:
+        os.environ["AIRUNNER_STT_ON"] = "1" if args.enable_stt else "0"
+    elif args.stt_model:
+        os.environ["AIRUNNER_STT_ON"] = "1"
+    else:
+        os.environ.setdefault("AIRUNNER_STT_ON", "0")
+
+    # ControlNet defaults to off
     os.environ.setdefault("AIRUNNER_CN_ON", "0")
 
     # Disable knowledge system in headless mode (has GUI dependencies)
     os.environ.setdefault("AIRUNNER_KNOWLEDGE_ON", "0")
+
+    # Print ASCII banner
+    banner = """
+\033[96m
+     █████╗ ██╗    ██████╗ ██╗   ██╗███╗   ██╗███╗   ██╗███████╗██████╗ 
+    ██╔══██╗██║    ██╔══██╗██║   ██║████╗  ██║████╗  ██║██╔════╝██╔══██╗
+    ███████║██║    ██████╔╝██║   ██║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝
+    ██╔══██║██║    ██╔══██╗██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
+    ██║  ██║██║    ██║  ██║╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║
+    ╚═╝  ╚═╝╚═╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝
+\033[0m
+\033[93m    ╔══════════════════════════════════════════════════════════════╗
+    ║  💖 Support AI Runner development! Send crypto:               ║
+    ║  \033[97m0x02030569e866e22C9991f55Db0445eeAd2d646c8\033[93m                  ║
+    ╚══════════════════════════════════════════════════════════════╝\033[0m
+"""
+    print(banner)
 
     logger.info("=" * 60)
     if args.ollama_mode:
@@ -124,18 +275,26 @@ def main():
         logger.info("Ollama API: http://localhost:11434/api/")
         logger.info("OpenAI API: http://localhost:11434/v1/")
     logger.info(f"Log Level: {AIRUNNER_LOG_LEVEL}")
+    if args.no_preload:
+        logger.info("Model preloading: DISABLED (will load on first request)")
+    else:
+        logger.info("Model preloading: ENABLED")
     logger.info("=" * 60)
 
-    # Show enabled services
+    # Show enabled services and model paths
     services = []
     if os.environ.get("AIRUNNER_LLM_ON") == "1":
-        services.append("LLM")
+        model_info = f" ({args.model})" if args.model else ""
+        services.append(f"LLM{model_info}")
     if os.environ.get("AIRUNNER_SD_ON") == "1":
-        services.append("Stable Diffusion")
+        model_info = f" ({args.art_model})" if args.art_model else ""
+        services.append(f"Stable Diffusion{model_info}")
     if os.environ.get("AIRUNNER_TTS_ON") == "1":
-        services.append("TTS")
+        model_info = f" ({args.tts_model})" if args.tts_model else ""
+        services.append(f"TTS{model_info}")
     if os.environ.get("AIRUNNER_STT_ON") == "1":
-        services.append("STT")
+        model_info = f" ({args.stt_model})" if args.stt_model else ""
+        services.append(f"STT{model_info}")
 
     logger.info(
         f"Enabled services: {', '.join(services) if services else 'None'}"

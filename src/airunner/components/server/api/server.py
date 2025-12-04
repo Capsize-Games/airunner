@@ -169,6 +169,143 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         
         return True, model_path, ""
 
+    def _is_llm_model_loaded(self) -> bool:
+        """Check if an LLM model is currently loaded.
+        
+        Returns:
+            True if a model is loaded and ready for inference
+        """
+        api = get_api()
+        if not api:
+            return False
+        
+        # Check via worker manager if available
+        if hasattr(api, '_worker_manager') and api._worker_manager:
+            worker = getattr(api._worker_manager, 'llm_generate_worker', None)
+            if worker:
+                manager = getattr(worker, 'model_manager', None)
+                if manager:
+                    # Check if chat_model is loaded
+                    return getattr(manager, '_chat_model', None) is not None
+        return False
+
+    def _ensure_llm_model_loaded(self) -> tuple[bool, str]:
+        """Ensure LLM model is loaded, triggering load if necessary.
+        
+        If no model is loaded and a model path is configured, this will
+        trigger the model loading process and wait for it to complete.
+        
+        Returns:
+            Tuple of (success, error_message)
+        """
+        # First validate model is available
+        is_valid, model_path, error_msg = self._validate_model_available()
+        if not is_valid:
+            return False, error_msg
+        
+        # Check if already loaded
+        if self._is_llm_model_loaded():
+            return True, ""
+        
+        # Model not loaded - trigger loading
+        api = get_api()
+        if not api:
+            return False, "API not initialized"
+        
+        self.logger.info(f"Auto-loading LLM model: {model_path}")
+        
+        # Import SignalCode here to avoid circular imports
+        from airunner.enums import SignalCode
+        
+        # Emit load signal
+        api.emit_signal(
+            SignalCode.LLM_LOAD_SIGNAL,
+            {"model_path": model_path},
+        )
+        
+        # Wait for model to load (with timeout)
+        import time
+        max_wait = 120  # 2 minute timeout
+        start_time = time.time()
+        
+        while time.time() - start_time < max_wait:
+            if self._is_llm_model_loaded():
+                self.logger.info("LLM model loaded successfully")
+                return True, ""
+            time.sleep(0.5)
+        
+        return False, f"Model loading timed out after {max_wait} seconds. Try starting the server with a model pre-loaded."
+
+    def _is_art_model_loaded(self) -> bool:
+        """Check if a Stable Diffusion/art model is currently loaded.
+        
+        Returns:
+            True if a model is loaded and ready for inference
+        """
+        api = get_api()
+        if not api:
+            return False
+        
+        if hasattr(api, '_worker_manager') and api._worker_manager:
+            worker = getattr(api._worker_manager, 'sd_worker', None)
+            if worker:
+                manager = getattr(worker, 'model_manager', None)
+                if manager:
+                    return getattr(manager, 'model_is_loaded', False)
+        return False
+
+    def _ensure_art_model_loaded(self) -> tuple[bool, str]:
+        """Ensure art/Stable Diffusion model is loaded, triggering load if necessary.
+        
+        Returns:
+            Tuple of (success, error_message)
+        """
+        # Check if Stable Diffusion is enabled
+        if os.environ.get("AIRUNNER_SD_ON") != "1":
+            return False, "Stable Diffusion service is not enabled. Start with --enable-art flag."
+        
+        # Check if already loaded
+        if self._is_art_model_loaded():
+            return True, ""
+        
+        api = get_api()
+        if not api:
+            return False, "API not initialized"
+        
+        # Get art model path from environment or settings
+        art_model_path = os.environ.get("AIRUNNER_ART_MODEL_PATH")
+        
+        if not art_model_path:
+            # Try to get from settings
+            try:
+                from airunner.components.art.data.generator_settings import GeneratorSettings
+                settings = GeneratorSettings.objects.first()
+                if settings:
+                    art_model_path = settings.model
+            except Exception:
+                pass
+        
+        if not art_model_path:
+            return False, "No art model configured. Use --art-model flag or configure in AIRunner GUI."
+        
+        self.logger.info(f"Auto-loading art model: {art_model_path}")
+        
+        from airunner.enums import SignalCode
+        api.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"model_path": art_model_path})
+        
+        # Wait for model to load
+        import time
+        max_wait = 120
+        start_time = time.time()
+        
+        while time.time() - start_time < max_wait:
+            if self._is_art_model_loaded():
+                self.logger.info("Art model loaded successfully")
+                return True, ""
+            time.sleep(0.5)
+        
+        return False, f"Art model loading timed out after {max_wait} seconds."
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -273,8 +410,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         Args:
             error_msg: Error message to send
         """
-        self._set_headers(400)
-        self.wfile.write(json.dumps({"error": error_msg}).encode("utf-8"))
+        self._send_json_response({"error": error_msg}, status=400)
 
     def _parse_request_body(self) -> Optional[Dict]:
         """Parse request body from JSON or form-encoded data.
@@ -343,10 +479,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if handler:
             handler(data)
         else:
-            self._set_headers(404)
-            self.wfile.write(
-                json.dumps({"error": "Not found"}).encode("utf-8")
-            )
+            self._send_json_response({"error": "Not found"}, status=404)
 
     def do_GET(self):
         """Handle GET requests for /health and other endpoints."""
@@ -382,7 +515,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_health(self):
         """Health check endpoint."""
-        self._set_headers(200)
         health_data = {
             "status": "ready",
             "services": {
@@ -393,16 +525,15 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             },
             "version": "2.0.0",
         }
-        self.wfile.write(json.dumps(health_data).encode("utf-8"))
+        self._send_json_response(health_data)
 
     def _handle_llm_models(self):
         """List available LLM models."""
-        self._set_headers(200)
         # TODO: Get actual model list from API
         models_data = {
             "models": [{"name": "default", "type": "local", "loaded": False}]
         }
-        self.wfile.write(json.dumps(models_data).encode("utf-8"))
+        self._send_json_response(models_data)
 
     # =========================================================================
     # Ollama-Compatible API Endpoints (for VS Code Continue.dev)
@@ -628,7 +759,18 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "stream": true,
             "options": {"temperature": 0.7, "num_predict": 100}
         }
+        
+        Automatically loads the model if not already loaded.
         """
+        # Ensure model is loaded (auto-load if needed)
+        success, error_msg = self._ensure_llm_model_loaded()
+        if not success:
+            self._send_json_response({
+                "error": error_msg,
+                "hint": "Start with --model flag or configure model in AIRunner GUI"
+            }, status=503)
+            return
+        
         prompt = data.get("prompt", "")
         model = data.get("model", "airunner:latest")
         stream = data.get("stream", True)
@@ -636,8 +778,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         system = data.get("system", "")
         
         if not prompt:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({"error": "prompt is required"}).encode("utf-8"))
+            self._send_json_response({"error": "prompt is required"}, status=400)
             return
         
         llm_request = LLMRequest()
@@ -722,6 +863,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "error": str(e)
             }
             self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+        
+        # Close connection to signal end of stream
+        self.close_connection = True
 
     def _handle_ollama_generate_non_stream(self, prompt, model, llm_request, request_id):
         """Handle non-streaming Ollama generate response."""
@@ -738,8 +882,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         
         api = get_api()
         if not api:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": "API not initialized"}).encode("utf-8"))
+            self._send_json_response({"error": "API not initialized"}, status=500)
             return
         
         try:
@@ -755,7 +898,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 duration_ns = int((time.time() - start_time) * 1e9)
                 full_response = "".join(complete_message)
                 
-                self._set_headers(200)
                 response_data = {
                     "model": model,
                     "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
@@ -768,15 +910,13 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     "eval_count": len(full_response) // 4,
                     "eval_duration": duration_ns,
                 }
-                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+                self._send_json_response(response_data)
             else:
-                self._set_headers(504)
-                self.wfile.write(json.dumps({"error": "Request timeout"}).encode("utf-8"))
+                self._send_json_response({"error": "Request timeout"}, status=504)
                 
         except Exception as e:
             self.logger.error(f"Ollama generate error: {e}", exc_info=True)
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json_response({"error": str(e)}, status=500)
 
     def _handle_ollama_chat(self, data):
         """Handle Ollama /api/chat endpoint - chat completion with tool support.
@@ -801,7 +941,18 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 }
             ]
         }
+        
+        Automatically loads the model if not already loaded.
         """
+        # Ensure model is loaded (auto-load if needed)
+        success, error_msg = self._ensure_llm_model_loaded()
+        if not success:
+            self._send_json_response({
+                "error": error_msg,
+                "hint": "Start with --model flag or configure model in AIRunner GUI"
+            }, status=503)
+            return
+        
         messages = data.get("messages", [])
         model = data.get("model", "airunner:latest")
         stream = data.get("stream", True)
@@ -811,8 +962,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.logger.info(f"[Ollama API] /api/chat request: model={model}, stream={stream}, messages={len(messages)}, tools={len(tools)} tool(s)")
         
         if not messages:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({"error": "messages is required"}).encode("utf-8"))
+            self._send_json_response({"error": "messages is required"}, status=400)
             return
         
         # Extract system prompt and find the last user message
@@ -948,6 +1098,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "error": str(e)
             }
             self.wfile.write(json.dumps(error_response).encode("utf-8") + b"\n")
+        
+        # Close connection to signal end of stream
+        self.close_connection = True
 
     def _handle_ollama_chat_non_stream(self, prompt, model, llm_request, request_id, tools=None):
         """Handle non-streaming Ollama chat response with tool support."""
@@ -968,8 +1121,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         
         api = get_api()
         if not api:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": "API not initialized"}).encode("utf-8"))
+            self._send_json_response({"error": "API not initialized"}, status=500)
             return
         
         try:
@@ -995,7 +1147,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     message_data["tool_calls"] = tool_calls_result
                     message_data["content"] = ""
                 
-                self._set_headers(200)
                 response_data = {
                     "model": model,
                     "created_at": time.strftime("%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime()),
@@ -1009,22 +1160,19 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     "eval_count": len(full_response) // 4,
                     "eval_duration": duration_ns,
                 }
-                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+                self._send_json_response(response_data)
             else:
-                self._set_headers(504)
-                self.wfile.write(json.dumps({"error": "Request timeout"}).encode("utf-8"))
+                self._send_json_response({"error": "Request timeout"}, status=504)
                 
         except Exception as e:
             self.logger.error(f"Ollama chat error: {e}", exc_info=True)
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json_response({"error": str(e)}, status=500)
 
     def _handle_ollama_ps(self):
         """Handle Ollama /api/ps endpoint - list running models.
         
         VS Code uses this to check if a model is loaded.
         """
-        self._set_headers(200)
         # Return the currently loaded model as "running"
         ps_data = {
             "models": [
@@ -1046,7 +1194,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 }
             ]
         }
-        self.wfile.write(json.dumps(ps_data).encode("utf-8"))
+        self._send_json_response(ps_data)
 
     def _handle_ollama_pull(self, data):
         """Handle Ollama /api/pull endpoint - pretend to pull a model.
@@ -1071,8 +1219,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(resp).encode("utf-8") + b"\n")
                 self.wfile.flush()
         else:
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"status": "success"}).encode("utf-8"))
+            self._send_json_response({"status": "success"})
 
     def _handle_ollama_embed(self, data):
         """Handle Ollama /api/embed endpoint - generate embeddings.
@@ -1090,7 +1237,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         else:
             embeddings = [[random.uniform(-1, 1) for _ in range(384)]]
         
-        self._set_headers(200)
         response_data = {
             "model": model,
             "embeddings": embeddings,
@@ -1098,15 +1244,14 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "load_duration": 100000,
             "prompt_eval_count": len(str(input_text)) // 4
         }
-        self.wfile.write(json.dumps(response_data).encode("utf-8"))
+        self._send_json_response(response_data)
 
     def _handle_ollama_copy(self, data):
         """Handle Ollama /api/copy endpoint - copy a model.
         
         Since AIRunner manages models differently, we just return success.
         """
-        self._set_headers(200)
-        # No response body needed for success
+        self._send_json_response({"status": "success"})
 
     def _handle_ollama_create(self, data):
         """Handle Ollama /api/create endpoint - create a model.
@@ -1128,8 +1273,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(resp).encode("utf-8") + b"\n")
                 self.wfile.flush()
         else:
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"status": "success"}).encode("utf-8"))
+            self._send_json_response({"status": "success"})
 
     # =========================================================================
     # End of Ollama-Compatible API Endpoints
@@ -1141,7 +1285,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_openai_models(self, data):
         """Handle OpenAI /v1/models endpoint - list available models."""
-        self._set_headers(200)
         models_data = {
             "object": "list",
             "data": [
@@ -1156,7 +1299,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 }
             ]
         }
-        self.wfile.write(json.dumps(models_data).encode("utf-8"))
+        self._send_json_response(models_data)
 
     def _handle_openai_chat_completions(self, data):
         """Handle OpenAI /v1/chat/completions endpoint with tool calling support.
@@ -1202,7 +1345,21 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "finish_reason": "tool_calls"
             }]
         }
+        
+        Automatically loads the model if not already loaded.
         """
+        # Ensure model is loaded (auto-load if needed)
+        success, error_msg = self._ensure_llm_model_loaded()
+        if not success:
+            self._send_json_response({
+                "error": {
+                    "message": error_msg,
+                    "type": "service_unavailable",
+                    "hint": "Start with --model flag or configure model in AIRunner GUI"
+                }
+            }, status=503)
+            return
+        
         messages = data.get("messages", [])
         model = data.get("model", "airunner")
         stream = data.get("stream", False)
@@ -1212,13 +1369,12 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         tool_choice = data.get("tool_choice", "auto")
         
         if not messages:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({
+            self._send_json_response({
                 "error": {
                     "message": "messages is required",
                     "type": "invalid_request_error"
                 }
-            }).encode("utf-8"))
+            }, status=400)
             return
         
         # Extract system prompt and find the last user message
@@ -1450,6 +1606,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self.logger.error(f"OpenAI chat stream error: {e}", exc_info=True)
             error_chunk = {"error": {"message": str(e)}}
             self.wfile.write(f"data: {json.dumps(error_chunk)}\n\n".encode("utf-8"))
+        
+        # Close connection to signal end of stream
+        self.close_connection = True
 
     def _handle_openai_chat_non_stream(self, prompt, model, llm_request, request_id, tools=None):
         """Handle non-streaming OpenAI chat response with tool calling support."""
@@ -1466,10 +1625,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         
         api = get_api()
         if not api:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({
+            self._send_json_response({
                 "error": {"message": "API not initialized"}
-            }).encode("utf-8"))
+            }, status=500)
             return
         
         try:
@@ -1487,8 +1645,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 
                 # Check for tool calls in response
                 content, tool_calls = self._parse_tool_calls_from_response(full_response, tools)
-                
-                self._set_headers(200)
                 
                 if tool_calls:
                     # Response with tool calls
@@ -1533,19 +1689,17 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                             "total_tokens": (len(prompt) + len(full_response)) // 4
                         }
                     }
-                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+                self._send_json_response(response_data)
             else:
-                self._set_headers(504)
-                self.wfile.write(json.dumps({
+                self._send_json_response({
                     "error": {"message": "Request timeout"}
-                }).encode("utf-8"))
+                }, status=504)
                 
         except Exception as e:
             self.logger.error(f"OpenAI chat error: {e}", exc_info=True)
-            self._set_headers(500)
-            self.wfile.write(json.dumps({
+            self._send_json_response({
                 "error": {"message": str(e)}
-            }).encode("utf-8"))
+            }, status=500)
 
     # =========================================================================
     # End of OpenAI-Compatible API Endpoints
@@ -1609,15 +1763,26 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             return LLMActionType.CHAT
 
     def _handle_llm(self, data):
-        """Handle LLM generation request with streaming support."""
+        """Handle LLM generation request with streaming support.
+        
+        Automatically loads the model if not already loaded.
+        """
         print("HANDLE LLM CALLED")
         print("data", data)
+        
+        # Ensure model is loaded (auto-load if needed)
+        success, error_msg = self._ensure_llm_model_loaded()
+        if not success:
+            self._send_json_response({
+                "error": "Model not available",
+                "details": error_msg,
+                "hint": "Start with --model flag or configure model in AIRunner GUI"
+            }, status=503)
+            return
+        
         prompt = data.get("prompt")
         if not prompt:
-            self._set_headers(400)
-            self.wfile.write(
-                json.dumps({"error": "Missing 'prompt' field"}).encode("utf-8")
-            )
+            self._send_json_response({"error": "Missing 'prompt' field"}, status=400)
             return
 
         system_prompt = data.get("system_prompt")
@@ -1837,6 +2002,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self.logger.debug(
                 f"HTTP Server: complete_event set for request_id={request_id}"
             )
+        
+        # Close connection to signal end of stream
+        self.close_connection = True
 
     def _handle_llm_non_stream(
         self,
@@ -1849,8 +2017,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.logger.debug(
             f"_handle_llm_non_stream ENTERED with request_id={request_id}"
         )
-        self._set_headers(200)
-        self.logger.debug("_handle_llm_non_stream Headers set")
 
         # Collect all response chunks
         complete_message = []
@@ -1951,7 +2117,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "tools": [],
             }
 
-        self.wfile.write(json.dumps(response_data).encode("utf-8"))
+        self._send_json_response(response_data)
 
     def _handle_llm_batch(self, data):
         """Handle batch LLM generation request.
@@ -1968,11 +2134,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         """
         prompts = data.get("prompts")
         if not prompts or not isinstance(prompts, list):
-            self._set_headers(400)
-            self.wfile.write(
-                json.dumps(
-                    {"error": "Missing or invalid 'prompts' field"}
-                ).encode("utf-8")
+            self._send_json_response(
+                {"error": "Missing or invalid 'prompts' field"},
+                status=400
             )
             return
 
@@ -2046,8 +2210,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         llm_request: LLMRequest,
     ):
         """Handle synchronous batch LLM generation."""
-        self._set_headers(200)
-
         responses = []
         total = len(prompts)
 
@@ -2127,22 +2289,35 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "failed": sum(1 for r in responses if not r["success"]),
         }
 
-        self.wfile.write(json.dumps(response_data).encode("utf-8"))
+        self._send_json_response(response_data)
 
     def _handle_art(self, data):
-        self._set_headers(200)
+        """Handle art/Stable Diffusion generation request.
+        
+        Automatically loads the model if not already loaded.
+        """
+        # Ensure model is loaded (auto-load if needed)
+        success, error_msg = self._ensure_art_model_loaded()
+        if not success:
+            self._send_json_response({
+                "error": "Art model not available",
+                "details": error_msg,
+                "hint": "Start with --enable-art --art-model flag or configure in AIRunner GUI"
+            }, status=503)
+            return
+        
         # For now, just return a stub ImageResponse
+        # TODO: Implement actual art generation
         response = ImageResponse(
             images=None,
             data=None,
             active_rect=None,
             is_outpaint=False,
         )
-        self.wfile.write(json.dumps(response.to_dict()).encode("utf-8"))
+        self._send_json_response(response.to_dict())
 
     def _handle_stub(self, msg):
-        self._set_headers(200)
-        self.wfile.write(json.dumps({"result": msg}).encode("utf-8"))
+        self._send_json_response({"result": msg})
 
     def _handle_reset_memory(self):
         """Reset LLM conversation memory.
@@ -2211,14 +2386,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     f"Error creating new conversation: {db_err}", exc_info=True
                 )
 
-            self._set_headers(200)
-            self.wfile.write(
-                json.dumps({"status": "memory_cleared"}).encode("utf-8")
-            )
+            self._send_json_response({"status": "memory_cleared"})
         except Exception as e:
             self.logger.error(f"Error resetting memory: {e}", exc_info=True)
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json_response({"error": str(e)}, status=500)
 
     def _handle_reset_database(self):
         """Reset test database by clearing all test-related tables.
@@ -2233,13 +2404,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         try:
             # SAFETY: Only allow in test environment
             if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
-                self._set_headers(403)
-                self.wfile.write(
-                    json.dumps(
-                        {
-                            "error": "reset_database only allowed in test environment"
-                        }
-                    ).encode("utf-8")
+                self._send_json_response(
+                    {"error": "reset_database only allowed in test environment"},
+                    status=403
                 )
                 return
             deleted_counts = {}
@@ -2251,16 +2418,12 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
             self.logger.info(f"Test database cleared: {deleted_counts}")
 
-            self._set_headers(200)
-            self.wfile.write(
-                json.dumps(
-                    {"status": "database_cleared", "deleted": deleted_counts}
-                ).encode("utf-8")
+            self._send_json_response(
+                {"status": "database_cleared", "deleted": deleted_counts}
             )
         except Exception as e:
             self.logger.error(f"Error resetting database: {e}", exc_info=True)
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json_response({"error": str(e)}, status=500)
 
     def _handle_shutdown(self):
         """Gracefully shutdown the headless server.
@@ -2270,10 +2433,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         connection errors.
         """
         try:
-            self._set_headers(200)
-            self.wfile.write(
-                json.dumps({"status": "shutting_down"}).encode("utf-8")
-            )
+            self._send_json_response({"status": "shutting_down"})
 
             # Schedule shutdown in a background thread to allow response to complete
             def delayed_shutdown():
@@ -2293,8 +2453,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             self.logger.error(f"Error during shutdown: {e}", exc_info=True)
-            self._set_headers(500)
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json_response({"error": str(e)}, status=500)
 
 
 # Usage: pass AIRunnerAPIRequestHandler to your HTTP server for /llm, /art, /stt, /tts endpoints.
