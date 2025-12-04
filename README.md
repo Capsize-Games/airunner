@@ -129,11 +129,170 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | Command | Description |
 |---------|-------------|
 | `airunner` | Launch GUI |
+| `airunner-headless` | Start headless API server |
+| `airunner-hf-download` | Download/manage models from HuggingFace |
 | `airunner-build-ui` | Rebuild UI from `.ui` files |
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main application menu.
+**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` from the command line.
+
+---
+
+## 🖥️ Headless Server
+
+AI Runner can run as a headless HTTP API server, enabling remote access to LLM, image generation, TTS, and STT capabilities. This is useful for:
+
+- Running AI services on a remote server
+- Integration with other applications via REST API
+- VS Code integration as an Ollama/OpenAI replacement
+- Automated pipelines and scripting
+
+### Quick Start
+
+```bash
+# Start with defaults (port 8080, LLM only)
+airunner-headless
+
+# Start with a specific LLM model
+airunner-headless --model /path/to/Qwen2.5-7B-Instruct-4bit
+
+# Run as Ollama replacement for VS Code (port 11434)
+airunner-headless --ollama-mode
+
+# Don't preload models - load on first request
+airunner-headless --no-preload
+```
+
+### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `--host HOST` | Host address to bind to (default: `0.0.0.0`) |
+| `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
+| `--ollama-mode` | Run as Ollama replacement on port 11434 |
+| `--model, -m PATH` | Path to LLM model to load |
+| `--art-model PATH` | Path to Stable Diffusion model to load |
+| `--tts-model PATH` | Path to TTS model to load |
+| `--stt-model PATH` | Path to STT model to load |
+| `--enable-llm` | Enable LLM service |
+| `--enable-art` | Enable Stable Diffusion/art service |
+| `--enable-tts` | Enable TTS service |
+| `--enable-stt` | Enable STT service |
+| `--no-preload` | Don't preload models at startup |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AIRUNNER_LLM_MODEL_PATH` | Path to LLM model |
+| `AIRUNNER_ART_MODEL_PATH` | Path to art model |
+| `AIRUNNER_TTS_MODEL_PATH` | Path to TTS model |
+| `AIRUNNER_STT_MODEL_PATH` | Path to STT model |
+| `AIRUNNER_NO_PRELOAD` | Set to `1` to disable model preloading |
+| `AIRUNNER_LLM_ON` | Enable LLM service (`1` or `0`) |
+| `AIRUNNER_SD_ON` | Enable Stable Diffusion (`1` or `0`) |
+| `AIRUNNER_TTS_ON` | Enable TTS service (`1` or `0`) |
+| `AIRUNNER_STT_ON` | Enable STT service (`1` or `0`) |
+
+### API Endpoints
+
+#### Native AIRunner Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check and service status |
+| POST | `/llm` | LLM text generation (streaming) |
+| POST | `/llm/generate` | LLM text generation |
+| POST | `/art` | Image generation |
+| POST | `/tts` | Text-to-speech |
+| POST | `/stt` | Speech-to-text |
+
+#### Ollama-Compatible Endpoints (port 11434)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tags` | List available models |
+| GET | `/api/version` | Get version info |
+| GET | `/api/ps` | List running models |
+| POST | `/api/generate` | Text generation |
+| POST | `/api/chat` | Chat completion |
+| POST | `/api/show` | Show model info |
+
+#### OpenAI-Compatible Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/v1/models` | List models |
+| POST | `/v1/chat/completions` | Chat completion with tool support |
+
+### Example: LLM Request
+
+```bash
+curl -X POST http://localhost:8080/llm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What is the capital of France?",
+    "stream": true,
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'
+```
+
+### Example: Ollama Mode with VS Code
+
+1. Start the headless server in Ollama mode:
+   ```bash
+   airunner-headless --ollama-mode --model /path/to/your/model
+   ```
+
+2. Configure VS Code Continue extension to use `http://localhost:11434`
+
+3. The server will respond to Ollama API calls, allowing seamless integration.
+
+### Auto-Loading Models
+
+When `--no-preload` is used, models are automatically loaded on the first request to the corresponding endpoint. This is useful for:
+
+- Reducing startup time
+- Running multiple services without loading all models upfront
+- Memory-constrained environments
+
+---
+
+## 📦 Model Management
+
+### Download Models
+
+```bash
+# List available models
+airunner-hf-download
+
+# List only LLM models
+airunner-hf-download list --type llm
+
+# Download a model (GGUF by default)
+airunner-hf-download qwen3-8b
+
+# Download full safetensors version
+airunner-hf-download --full qwen3-8b
+
+# Download any HuggingFace model
+airunner-hf-download Qwen/Qwen3-8B
+
+# List downloaded models
+airunner-hf-download --downloaded
+```
+
+### Delete Models
+
+```bash
+# Delete a model (with confirmation)
+airunner-hf-download --delete Qwen3-8B
+
+# Delete without confirmation (for scripts)
+airunner-hf-download --delete Qwen3-8B --force
+```
 
 ---
 
