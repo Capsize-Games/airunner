@@ -556,11 +556,12 @@ def print_downloaded_models(downloaded: Dict[str, List[Dict]], model_type: Optio
         print(f"{bold}Total: {total_models} model(s), {total_size:.1f}GB{reset}\n")
 
 
-def delete_model(model_name: str) -> bool:
+def delete_model(model_name: str, force: bool = False) -> bool:
     """Delete a downloaded model.
     
     Args:
         model_name: Name of the model to delete
+        force: If True, skip confirmation prompt
         
     Returns:
         True if deletion succeeded, False otherwise
@@ -590,17 +591,20 @@ def delete_model(model_name: str) -> bool:
     model_path = found_model["path"]
     size_gb = found_model["size_gb"]
     
-    # Confirm deletion
+    # Show model details
     print(f"\n⚠️  About to delete: {found_model['name']}")
     print(f"   Type: {found_type}")
     print(f"   Size: {size_gb:.1f}GB")
     print(f"   Path: {model_path}")
     
-    response = input(f"\nAre you sure you want to delete this model? [y/N]: ").strip().lower()
-    
-    if response != 'y':
-        print("Deletion cancelled.")
-        return False
+    # Confirm deletion (unless force flag is set)
+    if not force:
+        response = input(f"\nAre you sure you want to delete this model? [y/N]: ").strip().lower()
+        if response != 'y':
+            print("Deletion cancelled.")
+            return False
+    else:
+        print("\n(Force mode: skipping confirmation)")
     
     try:
         shutil.rmtree(model_path)
@@ -666,11 +670,17 @@ def main():
         help="Delete a downloaded model by name",
     )
     
+    parser.add_argument(
+        "--force", "-y",
+        action="store_true",
+        help="Skip confirmation prompt when deleting (use with --delete)",
+    )
+    
     args = parser.parse_args()
     
     # Handle --delete
     if args.delete:
-        success = delete_model(args.delete)
+        success = delete_model(args.delete, force=args.force)
         return 0 if success else 1
     
     # Handle --downloaded
