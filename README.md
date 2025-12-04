@@ -131,11 +131,12 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | `airunner` | Launch GUI |
 | `airunner-headless` | Start headless API server |
 | `airunner-hf-download` | Download/manage models from HuggingFace |
+| `airunner-civitai-download` | Download models from CivitAI |
 | `airunner-build-ui` | Rebuild UI from `.ui` files |
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` from the command line.
+**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` / `airunner-civitai-download` from the command line.
 
 ---
 
@@ -331,6 +332,26 @@ airunner-hf-download --delete Qwen3-8B
 
 # Delete without confirmation (for scripts)
 airunner-hf-download --delete Qwen3-8B --force
+```
+
+### Download from CivitAI
+
+```bash
+# Download a model from CivitAI URL
+airunner-civitai-download https://civitai.com/models/995002/70s-sci-fi-movie
+
+# Download a specific version
+airunner-civitai-download https://civitai.com/models/995002?modelVersionId=1880417
+
+# Download to a custom directory
+airunner-civitai-download <url> --output-dir /path/to/models
+
+# Use API key for authentication (for gated models)
+airunner-civitai-download <url> --api-key your_api_key
+
+# Or set CIVITAI_API_KEY environment variable
+export CIVITAI_API_KEY=your_api_key
+airunner-civitai-download <url>
 ```
 
 ---
