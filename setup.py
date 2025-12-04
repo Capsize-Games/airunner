@@ -271,6 +271,7 @@ setup(
             "airunner-migrate-knowledge=airunner.bin.airunner_migrate_knowledge:main",
             "airunner-cleanup-llm-models=airunner.bin.cleanup_llm_models:main",
             "airunner-hf-download=airunner.bin.airunner_hf_download:main",
+            "airunner-civitai-download=airunner.bin.airunner_civitai_download:main",
         ],
     },
 )
