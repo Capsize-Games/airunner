@@ -449,7 +449,17 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """Pre-load LLM model from settings if configured.
 
         This speeds up first request by loading model at startup.
+        Respects AIRUNNER_NO_PRELOAD environment variable to skip preloading.
+        Uses AIRUNNER_LLM_MODEL_PATH if provided to override settings.
         """
+        # Check if preloading is disabled
+        if os.environ.get("AIRUNNER_NO_PRELOAD") == "1":
+            self.logger.info(
+                "Model preloading disabled (--no-preload flag or AIRUNNER_NO_PRELOAD=1)"
+            )
+            self.logger.info("Models will be loaded on first request")
+            return
+
         try:
             # Log which database we're using and dev/prod mode for debugging
             try:
@@ -461,15 +471,42 @@ class App(MediatorMixin, SettingsMixin, QObject):
             except Exception:
                 # Best-effort; not critical if we can't fetch settings
                 pass
+
+            # Check for CLI-provided model path first
+            cli_model_path = os.environ.get("AIRUNNER_LLM_MODEL_PATH")
+            
             with session_scope() as session:
                 llm_settings = session.query(LLMGeneratorSettings).first()
-                # If there's no LLM settings row configured, attempt to create one
-                # using the environment default model path (useful for production
-                # installs where the DB has not been configured via UI).
-                if not llm_settings:
+                
+                # Determine model path priority:
+                # 1. CLI-provided path (AIRUNNER_LLM_MODEL_PATH)
+                # 2. Existing settings from database
+                # 3. Default path from environment
+                # 4. AIModels table fallback
+                model_path_to_use = None
+                
+                if cli_model_path:
+                    # CLI path takes highest priority
+                    model_path_to_use = cli_model_path
+                    self.logger.info(f"Using CLI-provided model path: {cli_model_path}")
+                    
+                    # Update or create settings with CLI path
+                    if llm_settings:
+                        llm_settings.model_path = cli_model_path
+                        session.commit()
+                    else:
+                        new_settings = LLMGeneratorSettings()
+                        new_settings.model_path = cli_model_path
+                        new_settings.model_service = ModelService.LOCAL.value
+                        session.add(new_settings)
+                        session.commit()
+                        llm_settings = new_settings
+                elif llm_settings and llm_settings.model_path:
+                    model_path_to_use = llm_settings.model_path
+                else:
+                    # Try to find a default model path
                     default_model_path = (
-                        os.environ.get("AIRUNNER_LLM_MODEL_PATH")
-                        or os.environ.get("AIRUNNER_DEFAULT_LLM_HF_PATH")
+                        os.environ.get("AIRUNNER_DEFAULT_LLM_HF_PATH")
                         or AIRUNNER_DEFAULT_LLM_HF_PATH
                     )
                     # If no default path from env, try to find an installed AI model
@@ -500,18 +537,18 @@ class App(MediatorMixin, SettingsMixin, QObject):
                         new_settings.model_service = ModelService.LOCAL.value
                         session.add(new_settings)
                         session.commit()
-                        llm_settings = new_settings
+                        model_path_to_use = default_model_path
 
-                if llm_settings and llm_settings.model_path:
+                if model_path_to_use:
                     self.logger.info(
-                        f"Pre-loading LLM model: {llm_settings.model_path}"
+                        f"Pre-loading LLM model: {model_path_to_use}"
                     )
                     self.logger.info("This may take 30-60 seconds...")
 
                     # Emit model load signal - WorkerManager will handle it
                     self.emit_signal(
                         SignalCode.LLM_LOAD_SIGNAL,
-                        {"model_path": llm_settings.model_path},
+                        {"model_path": model_path_to_use},
                     )
 
                     # Wait a bit for loading to start
