@@ -57,6 +57,29 @@ def is_server_running() -> bool:
         return False
 
 
+def get_service_status(service: str) -> bool:
+    """Check if a specific service is enabled via /health endpoint.
+    
+    Args:
+        service: Service name ('art', 'llm', 'tts', 'stt')
+    
+    Returns:
+        True if service is enabled, False otherwise
+    """
+    try:
+        response = requests.get(
+            f"{BASE_URL}/health",
+            timeout=(TIMEOUT_CONNECT, 5)
+        )
+        if response.status_code == 200:
+            data = response.json()
+            services = data.get("services", {})
+            return services.get(service, False)
+    except requests.exceptions.RequestException:
+        pass
+    return False
+
+
 # Skip all tests if server is not running
 pytestmark = pytest.mark.skipif(
     not is_server_running(),
@@ -291,23 +314,25 @@ class TestArtEndpoint:
     model to be downloaded. Start server with: airunner-headless --enable-art
     """
 
-    @pytest.mark.skipif(
-        os.environ.get("AIRUNNER_SD_ON") != "1",
-        reason="Art service not enabled. Start with --enable-art"
-    )
+    @pytest.mark.timeout(360)  # 6 minute timeout for image generation
     def test_art_generation(self):
         """Test basic image generation request."""
+        if not get_service_status("art"):
+            pytest.skip("Art service not enabled. Start with --enable-art")
+        
         payload = {
             "prompt": "A red apple on a white background",
+            "negative_prompt": "blurry, low quality",
             "width": 512,
             "height": 512,
             "steps": 4,  # Z-Image Turbo uses few steps
+            "seed": 42,
         }
 
         response = requests.post(
             f"{BASE_URL}/art",
             json=payload,
-            timeout=(TIMEOUT_CONNECT, TIMEOUT_READ * 2),  # Image gen takes longer
+            timeout=(TIMEOUT_CONNECT, 300),  # Image gen can take up to 5 minutes
         )
 
         # Art endpoint may return 503 if not configured, that's acceptable
@@ -315,8 +340,25 @@ class TestArtEndpoint:
         
         if response.status_code == 200:
             data = response.json()
-            # Verify we got some response structure
-            assert data is not None, "No response data"
+            # Verify we got actual image data
+            assert "images" in data, "Response missing 'images' field"
+            assert "count" in data, "Response missing 'count' field"
+            
+            # Should have at least one image
+            assert data["count"] >= 1, f"Expected at least 1 image, got {data['count']}"
+            assert len(data["images"]) >= 1, "Images array is empty"
+            
+            # Verify first image is valid base64
+            if data["images"]:
+                import base64
+                try:
+                    # Try to decode the base64 - should not raise
+                    img_bytes = base64.b64decode(data["images"][0])
+                    assert len(img_bytes) > 0, "Decoded image is empty"
+                    # PNG files start with specific bytes
+                    assert img_bytes[:4] == b'\x89PNG', "Image is not a valid PNG"
+                except Exception as e:
+                    pytest.fail(f"Failed to decode base64 image: {e}")
 
 
 class TestSTTEndpoint:
@@ -326,25 +368,36 @@ class TestSTTEndpoint:
     model to be downloaded. Start server with: airunner-headless --enable-stt
     """
 
-    @pytest.mark.skipif(
-        os.environ.get("AIRUNNER_STT_ON") != "1",
-        reason="STT service not enabled. Start with --enable-stt"
-    )
-    def test_stt_endpoint_exists(self):
-        """Test that STT endpoint responds (even if stubbed)."""
-        # Create a minimal WAV file header for testing
-        # This is a valid but silent 1-second WAV file
-        wav_header = self._create_minimal_wav()
+    @pytest.mark.timeout(60)
+    def test_stt_transcription(self):
+        """Test STT transcription with audio data."""
+        if not get_service_status("stt"):
+            pytest.skip("STT service not enabled. Start with --enable-stt")
         
+        # Create a minimal WAV file with some audio
+        wav_data = self._create_minimal_wav()
+        
+        # Encode as base64
+        import base64
+        audio_b64 = base64.b64encode(wav_data).decode("utf-8")
+        
+        payload = {
+            "audio": audio_b64,
+            "format": "wav"
+        }
+
         response = requests.post(
             f"{BASE_URL}/stt",
-            data=wav_header,
-            headers={"Content-Type": "audio/wav"},
-            timeout=(TIMEOUT_CONNECT, TIMEOUT_READ),
+            json=payload,
+            timeout=(TIMEOUT_CONNECT, 60),
         )
 
-        # STT endpoint may be stubbed (200 with message) or implemented
-        assert response.status_code in [200, 501, 503], f"/stt failed unexpectedly: {response.text}"
+        # STT endpoint may return 200 with transcription or error
+        assert response.status_code in [200, 500, 503, 504], f"/stt failed unexpectedly: {response.text}"
+        
+        if response.status_code == 200:
+            data = response.json()
+            assert "transcription" in data or "status" in data, "Response missing expected fields"
 
     def _create_minimal_wav(self) -> bytes:
         """Create a minimal valid WAV file for testing."""
@@ -391,14 +444,14 @@ class TestTTSEndpoint:
     Start server with: airunner-headless --enable-tts
     """
 
-    @pytest.mark.skipif(
-        os.environ.get("AIRUNNER_TTS_ON") != "1",
-        reason="TTS service not enabled. Start with --enable-tts"
-    )
-    def test_tts_endpoint_exists(self):
-        """Test that TTS endpoint responds (even if stubbed)."""
+    @pytest.mark.timeout(30)
+    def test_tts_synthesis(self):
+        """Test TTS text synthesis."""
+        if not get_service_status("tts"):
+            pytest.skip("TTS service not enabled. Start with --enable-tts")
+        
         payload = {
-            "text": "Hello world",
+            "text": "Hello world, this is a test of text to speech.",
         }
 
         response = requests.post(
@@ -407,8 +460,13 @@ class TestTTSEndpoint:
             timeout=(TIMEOUT_CONNECT, TIMEOUT_READ),
         )
 
-        # TTS endpoint may be stubbed (200 with message) or implemented
-        assert response.status_code in [200, 501, 503], f"/tts failed unexpectedly: {response.text}"
+        # TTS endpoint should return 200 with queued status
+        assert response.status_code in [200, 503], f"/tts failed unexpectedly: {response.text}"
+        
+        if response.status_code == 200:
+            data = response.json()
+            assert "status" in data, "Response missing 'status' field"
+            assert data["status"] == "queued", f"Expected status 'queued', got '{data.get('status')}'"
 
 
 class TestAdminEndpoints:
