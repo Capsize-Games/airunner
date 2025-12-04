@@ -32,7 +32,9 @@ Usage:
 """
 
 import os
+import io
 import json
+import base64
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler
@@ -41,10 +43,13 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.enums import LLMActionType
+from airunner.enums import LLMActionType, SignalCode, EngineResponseCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
 from airunner.components.application.api.api import API
@@ -458,9 +463,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "/admin/reset_memory": lambda d: self._handle_reset_memory(),
             "/admin/reset_database": lambda d: self._handle_reset_database(),
             "/admin/shutdown": lambda d: self._handle_shutdown(),
-            "/art": lambda d: self._handle_stub("ART not implemented"),
-            "/stt": lambda d: self._handle_stub("STT not implemented"),
-            "/tts": lambda d: self._handle_stub("TTS not implemented"),
+            "/art": self._handle_art,
+            "/stt": self._handle_stt,
+            "/tts": self._handle_tts,
             # Ollama-compatible endpoints (run on port 11434 to emulate Ollama)
             "/api/generate": self._handle_ollama_generate,
             "/api/chat": self._handle_ollama_chat,
@@ -518,10 +523,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         health_data = {
             "status": "ready",
             "services": {
-                "llm": True,
-                "art": True,
-                "tts": False,  # Stub for now
-                "stt": False,  # Stub for now
+                "llm": os.environ.get("AIRUNNER_LLM_ON", "1") == "1",
+                "art": os.environ.get("AIRUNNER_SD_ON", "0") == "1",
+                "tts": os.environ.get("AIRUNNER_TTS_ON", "0") == "1",
+                "stt": os.environ.get("AIRUNNER_STT_ON", "0") == "1",
             },
             "version": "2.0.0",
         }
@@ -2294,6 +2299,25 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     def _handle_art(self, data):
         """Handle art/Stable Diffusion generation request.
         
+        Request format:
+        {
+            "prompt": "A beautiful sunset over mountains",
+            "negative_prompt": "blurry, low quality",
+            "width": 1024,
+            "height": 1024,
+            "steps": 20,
+            "seed": 42,
+            "scale": 7.5,
+            ...
+        }
+        
+        Response format:
+        {
+            "images": ["base64_encoded_image_1", "base64_encoded_image_2", ...],
+            "metadata": {...},
+            "seed": 42
+        }
+        
         Automatically loads the model if not already loaded.
         """
         # Ensure model is loaded (auto-load if needed)
@@ -2306,15 +2330,297 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             }, status=503)
             return
         
-        # For now, just return a stub ImageResponse
-        # TODO: Implement actual art generation
-        response = ImageResponse(
-            images=None,
-            data=None,
-            active_rect=None,
-            is_outpaint=False,
+        # Validate prompt
+        prompt = data.get("prompt", "")
+        if not prompt:
+            self._send_json_response({"error": "Missing 'prompt' field"}, status=400)
+            return
+        
+        # Set up threading event and result holder
+        complete_event = threading.Event()
+        result_holder = {"response": None, "error": None}
+        
+        def on_complete(response):
+            """Callback when image generation completes."""
+            self.logger.info(f"Art generation callback received: {type(response)}")
+            if isinstance(response, ImageResponse):
+                result_holder["response"] = response
+            elif isinstance(response, str):
+                # Error message
+                result_holder["error"] = response
+            else:
+                result_holder["response"] = response
+            complete_event.set()
+        
+        # Create ImageRequest from data with callback
+        image_request = self._create_image_request(data)
+        image_request.callback = on_complete
+        
+        # Get API
+        api = get_api()
+        if not api:
+            self._send_json_response({"error": "API not initialized"}, status=500)
+            return
+        
+        # Emit the generation signal
+        self.logger.info(f"Sending art generation request: prompt='{prompt[:50]}...'")
+        api.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request})
+        
+        # Wait for completion (timeout: 5 minutes for image generation)
+        if complete_event.wait(timeout=300):
+            if result_holder["error"]:
+                self._send_json_response({
+                    "error": result_holder["error"]
+                }, status=500)
+            elif result_holder["response"]:
+                response = result_holder["response"]
+                response_data = self._format_art_response(response)
+                self._send_json_response(response_data)
+            else:
+                self._send_json_response({
+                    "error": "No response received"
+                }, status=500)
+        else:
+            self._send_json_response({
+                "error": "Image generation timeout",
+                "hint": "Generation took longer than 5 minutes"
+            }, status=504)
+    
+    def _create_image_request(self, data: dict) -> ImageRequest:
+        """Create an ImageRequest from HTTP request data.
+        
+        Args:
+            data: Dictionary of request parameters
+            
+        Returns:
+            ImageRequest object with specified parameters
+        """
+        from airunner.enums import GeneratorSection
+        
+        # Map HTTP request fields to ImageRequest fields
+        image_request = ImageRequest(
+            prompt=data.get("prompt", ""),
+            negative_prompt=data.get("negative_prompt", ""),
+            second_prompt=data.get("second_prompt", ""),
+            second_negative_prompt=data.get("second_negative_prompt", ""),
+            width=data.get("width", 1024),
+            height=data.get("height", 1024),
+            steps=data.get("steps", 20),
+            seed=data.get("seed", 42),
+            scale=data.get("scale", 7.5),
+            random_seed=data.get("random_seed", True),
+            n_samples=data.get("n_samples", 1),
+            images_per_batch=data.get("images_per_batch", 1),
+            generator_section=GeneratorSection.TXT2IMG,
+            pipeline_action="txt2img",
         )
-        self._send_json_response(response.to_dict())
+        
+        # Handle model path if specified
+        model_path = data.get("model_path") or os.environ.get("AIRUNNER_ART_MODEL_PATH")
+        if model_path:
+            image_request.model_path = model_path
+        
+        return image_request
+    
+    def _format_art_response(self, response) -> dict:
+        """Format ImageResponse for HTTP response.
+        
+        Converts PIL images to base64 encoded strings.
+        
+        Args:
+            response: ImageResponse object or dict containing images
+            
+        Returns:
+            Dictionary suitable for JSON response
+        """
+        images_base64 = []
+        metadata = {}
+        seed = None
+        
+        # Handle ImageResponse object
+        if isinstance(response, ImageResponse):
+            images = response.images or []
+            metadata = response.data or {}
+            
+            # Extract seed from metadata if available
+            image_request = metadata.get("image_request")
+            if image_request and hasattr(image_request, "seed"):
+                seed = image_request.seed
+        elif isinstance(response, dict):
+            # Handle dict response
+            images = response.get("images", [])
+            metadata = response.get("data", {})
+            seed = metadata.get("seed")
+        else:
+            images = []
+        
+        # Convert PIL images to base64
+        for img in images:
+            if img is not None:
+                try:
+                    # Save PIL image to bytes buffer as PNG
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="PNG")
+                    buffer.seek(0)
+                    
+                    # Encode to base64
+                    img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+                    images_base64.append(img_base64)
+                except Exception as e:
+                    self.logger.error(f"Failed to encode image: {e}")
+        
+        return {
+            "images": images_base64,
+            "metadata": {
+                "width": metadata.get("width"),
+                "height": metadata.get("height"),
+                "steps": metadata.get("steps"),
+                "prompt": metadata.get("prompt"),
+            } if metadata else {},
+            "seed": seed,
+            "count": len(images_base64),
+        }
+
+    def _handle_tts(self, data):
+        """Handle text-to-speech request.
+        
+        Request format:
+        {
+            "text": "Hello, world!",
+            "voice": "optional_voice_name",
+            "speed": 1.0
+        }
+        
+        Response format:
+        {
+            "status": "queued",
+            "message": "Text queued for speech synthesis"
+        }
+        
+        Note: Audio is played through the system's default audio output.
+        For headless servers, ensure audio output is configured.
+        """
+        # Check if TTS is enabled
+        if os.environ.get("AIRUNNER_TTS_ON") != "1":
+            self._send_json_response({
+                "error": "TTS service not enabled",
+                "hint": "Start with --enable-tts flag"
+            }, status=503)
+            return
+        
+        # Validate text
+        text = data.get("text", "")
+        if not text:
+            self._send_json_response({"error": "Missing 'text' field"}, status=400)
+            return
+        
+        api = get_api()
+        if not api:
+            self._send_json_response({"error": "API not initialized"}, status=500)
+            return
+        
+        try:
+            # Queue the text for TTS
+            # The TTS worker will pick this up and generate speech
+            self.logger.info(f"TTS request: '{text[:50]}...'")
+            api.tts.play_audio(text)
+            
+            self._send_json_response({
+                "status": "queued",
+                "message": "Text queued for speech synthesis",
+                "text_length": len(text),
+            })
+        except Exception as e:
+            self.logger.error(f"TTS error: {e}")
+            self._send_json_response({
+                "error": f"TTS failed: {str(e)}"
+            }, status=500)
+
+    def _handle_stt(self, data):
+        """Handle speech-to-text request.
+        
+        Request format (JSON with base64 audio):
+        {
+            "audio": "base64_encoded_audio_data",
+            "format": "wav"  # optional, defaults to wav
+        }
+        
+        Response format:
+        {
+            "transcription": "The transcribed text",
+            "status": "success"
+        }
+        
+        Note: Audio should be 16kHz mono WAV for best results.
+        """
+        # Check if STT is enabled
+        if os.environ.get("AIRUNNER_STT_ON") != "1":
+            self._send_json_response({
+                "error": "STT service not enabled",
+                "hint": "Start with --enable-stt flag"
+            }, status=503)
+            return
+        
+        # Get audio data
+        audio_b64 = data.get("audio", "")
+        if not audio_b64:
+            self._send_json_response({"error": "Missing 'audio' field (base64 encoded)"}, status=400)
+            return
+        
+        api = get_api()
+        if not api:
+            self._send_json_response({"error": "API not initialized"}, status=500)
+            return
+        
+        try:
+            # Decode base64 audio
+            audio_bytes = base64.b64decode(audio_b64)
+            
+            # Set up threading event and result holder
+            complete_event = threading.Event()
+            result_holder = {"transcription": None, "error": None}
+            
+            def on_transcription(signal_data: dict):
+                """Handle transcription result."""
+                transcription = signal_data.get("transcription", "")
+                self.logger.info(f"STT transcription received: '{transcription[:50]}...'")
+                result_holder["transcription"] = transcription
+                complete_event.set()
+            
+            # Register for transcription response
+            from airunner.utils.application.signal_mediator import SignalMediator
+            mediator = SignalMediator()
+            mediator.register(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, on_transcription)
+            
+            try:
+                # Send audio for processing
+                self.logger.info(f"STT request: {len(audio_bytes)} bytes of audio")
+                api.emit_signal(SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL, {"item": audio_bytes})
+                
+                # Wait for transcription (30 second timeout)
+                if complete_event.wait(timeout=30):
+                    if result_holder["transcription"] is not None:
+                        self._send_json_response({
+                            "transcription": result_holder["transcription"],
+                            "status": "success"
+                        })
+                    else:
+                        self._send_json_response({
+                            "error": "No transcription received"
+                        }, status=500)
+                else:
+                    self._send_json_response({
+                        "error": "STT timeout",
+                        "hint": "Transcription took longer than 30 seconds"
+                    }, status=504)
+            finally:
+                mediator.unregister(SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL, on_transcription)
+                
+        except Exception as e:
+            self.logger.error(f"STT error: {e}")
+            self._send_json_response({
+                "error": f"STT failed: {str(e)}"
+            }, status=500)
 
     def _handle_stub(self, msg):
         self._send_json_response({"result": msg})

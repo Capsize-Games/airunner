@@ -239,6 +239,45 @@ curl -X POST http://localhost:8080/llm \
   }'
 ```
 
+### Example: Image Generation (Art)
+
+```bash
+# Requires: airunner-headless --enable-art
+curl -X POST http://localhost:8080/art \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A beautiful sunset over mountains",
+    "negative_prompt": "blurry, low quality",
+    "width": 512,
+    "height": 512,
+    "steps": 20,
+    "seed": 42
+  }'
+# Returns: {"images": ["base64_png_data..."], "count": 1, "seed": 42}
+```
+
+### Example: Text-to-Speech (TTS)
+
+```bash
+# Requires: airunner-headless --enable-tts
+curl -X POST http://localhost:8080/tts \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Hello, world!"}'
+# Returns: {"status": "queued", "message": "Text queued for speech synthesis"}
+# Audio plays through system speakers
+```
+
+### Example: Speech-to-Text (STT)
+
+```bash
+# Requires: airunner-headless --enable-stt
+# Audio must be base64-encoded WAV (16kHz mono recommended)
+curl -X POST http://localhost:8080/stt \
+  -H "Content-Type: application/json" \
+  -d '{"audio": "UklGRi4AAABXQVZFZm10IBAAAAABAAEA..."}'
+# Returns: {"transcription": "Hello world", "status": "success"}
+```
+
 ### Example: Ollama Mode with VS Code
 
 1. Start the headless server in Ollama mode:
