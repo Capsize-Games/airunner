@@ -18,10 +18,14 @@
 
 from airunner.components.art.pipelines.z_image.pipeline_output import ZImagePipelineOutput
 from airunner.components.art.pipelines.z_image.pipeline_z_image import ZImagePipeline
+from airunner.components.art.pipelines.z_image.pipeline_z_image_img2img import ZImageImg2ImgPipeline
 from airunner.components.art.pipelines.z_image.transformer_z_image import ZImageTransformer2DModel
+from airunner.components.art.pipelines.z_image.lora_loader import ZImageLoraLoaderMixin
 
 __all__ = [
     "ZImagePipeline",
+    "ZImageImg2ImgPipeline",
     "ZImagePipelineOutput",
     "ZImageTransformer2DModel",
+    "ZImageLoraLoaderMixin",
 ]

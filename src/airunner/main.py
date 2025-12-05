@@ -61,6 +61,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
 
     activate(
         activate_shadowlogger=True,
+        darklock_os_allow_network=True,  # Allow network access for downloads
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,

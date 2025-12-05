@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# This file is adapted from the diffusers library main branch for airunner.
-# Once ZImagePipeline is available in a stable diffusers release, this
-# local copy should be removed and the diffusers version used instead.
+# This file is adapted from the diffusers library for airunner.
+# Based on SanaSprintImg2ImgPipeline and ZImagePipeline.
 
 import inspect
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
+import torch.nn.functional as F
+from PIL import Image
 from transformers import Qwen2Tokenizer, Qwen2VLForConditionalGeneration
 
-from diffusers.image_processor import VaeImageProcessor
+from diffusers.image_processor import PipelineImageInput, VaeImageProcessor
 from diffusers.loaders import FromSingleFileMixin
 from diffusers.models import AutoencoderKL
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
@@ -51,7 +52,6 @@ def calculate_shift(
     return mu
 
 
-# Copied from diffusers.pipelines.flux.pipeline_flux.retrieve_timesteps
 def retrieve_timesteps(
     scheduler,
     num_inference_steps: Optional[int] = None,
@@ -60,28 +60,8 @@ def retrieve_timesteps(
     sigmas: Optional[List[float]] = None,
     **kwargs,
 ):
-    r"""
-    Calls the scheduler's `set_timesteps` method and retrieves timesteps from the scheduler after the call. Handles
-    custom timesteps. Any kwargs will be supplied to `scheduler.set_timesteps`.
-
-    Args:
-        scheduler (`SchedulerMixin`):
-            The scheduler to get timesteps from.
-        num_inference_steps (`int`):
-            The number of diffusion steps used when generating samples with a pre-trained model. If used, `timesteps`
-            must be `None`.
-        device (`str` or `torch.device`, *optional*):
-            The device to which the timesteps should be moved to. If `None`, the timesteps are not moved.
-        timesteps (`List[int]`, *optional*):
-            Custom timesteps used to override the timestep spacing strategy of the scheduler. If `timesteps` is passed,
-            `num_inference_steps` and `sigmas` must be `None`.
-        sigmas (`List[float]`, *optional*):
-            Custom sigmas used to override the timestep spacing strategy of the scheduler. If `sigmas` is passed,
-            `num_inference_steps` and `timesteps` must be `None`.
-
-    Returns:
-        `Tuple[torch.Tensor, int]`: A tuple where the first element is the timestep schedule from the scheduler and the
-        second element is the number of inference steps.
+    """
+    Calls the scheduler's `set_timesteps` method and retrieves timesteps from the scheduler after the call.
     """
     # Filter kwargs to only include parameters accepted by the scheduler's set_timesteps method
     accepted_params = set(inspect.signature(scheduler.set_timesteps).parameters.keys())
@@ -94,13 +74,13 @@ def retrieve_timesteps(
             filtered_kwargs[flag] = config.get(flag)
     
     if timesteps is not None and sigmas is not None:
-        raise ValueError("Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values")
+        raise ValueError("Only one of `timesteps` or `sigmas` can be passed.")
     if timesteps is not None:
         accepts_timesteps = "timesteps" in accepted_params
         if not accepts_timesteps:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
-                f" timestep schedules. Please check whether you are using the correct scheduler."
+                f" timestep schedules."
             )
         scheduler.set_timesteps(timesteps=timesteps, device=device, **filtered_kwargs)
         timesteps = scheduler.timesteps
@@ -110,7 +90,7 @@ def retrieve_timesteps(
         if not accept_sigmas:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
-                f" sigmas schedules. Please check whether you are using the correct scheduler."
+                f" sigmas schedules."
             )
         scheduler.set_timesteps(sigmas=sigmas, device=device, **filtered_kwargs)
         timesteps = scheduler.timesteps
@@ -121,11 +101,13 @@ def retrieve_timesteps(
     return timesteps, num_inference_steps
 
 
-class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMixin):
+class ZImageImg2ImgPipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMixin):
     r"""
-    The Z-Image pipeline for text-to-image generation.
+    The Z-Image pipeline for image-to-image generation.
 
-    Reference: https://huggingface.co/alibaba-pai/ZImage-Alpha
+    This pipeline takes an input image and a text prompt, and generates a new image
+    based on both. The `strength` parameter controls how much the output differs from
+    the input image.
 
     Args:
         transformer ([`ZImageTransformer2DModel`]):
@@ -137,8 +119,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
         text_encoder ([`Qwen2VLForConditionalGeneration`]):
             [Qwen2-VL](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct) text encoder.
         tokenizer (`Qwen2Tokenizer`):
-            Tokenizer of class
-            [Qwen2Tokenizer](https://huggingface.co/docs/transformers/model_doc/Qwen2#transformers.Qwen2Tokenizer).
+            Tokenizer of class Qwen2Tokenizer.
     """
 
     model_cpu_offload_seq = "text_encoder->transformer->vae"
@@ -174,22 +155,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
         prompt_embeds: Optional[torch.Tensor] = None,
         max_sequence_length: int = 512,
     ):
-        r"""
-        Encodes the prompt into text encoder hidden states.
-
-        Args:
-            prompt (`str` or `List[str]`, *optional*):
-                prompt to be encoded
-            num_images_per_prompt (`int`, *optional*, defaults to 1):
-                number of images that should be generated per prompt
-            device: (`torch.device`, *optional*):
-                torch device
-            prompt_embeds (`torch.Tensor`, *optional*):
-                Pre-generated text embeddings. Can be used to easily tweak text inputs, *e.g.* prompt weighting. If not
-                provided, text embeddings will be generated from `prompt` input argument.
-            max_sequence_length (`int`, *optional*, defaults to 512):
-                Maximum sequence length to use for the prompt.
-        """
+        """Encodes the prompt into text encoder hidden states."""
         if device is None:
             device = self._execution_device
 
@@ -215,7 +181,6 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
                     enable_thinking=True,
                 )
             except TypeError:
-                # Fallback if tokenizer doesn't support all chat template args
                 prompt_item = self.tokenizer.apply_chat_template(
                     messages,
                     tokenize=False,
@@ -254,6 +219,8 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
     def check_inputs(
         self,
         prompt,
+        image,
+        strength,
         height,
         width,
         callback_on_step_end_tensor_inputs=None,
@@ -270,53 +237,111 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
                 f"`width` must be divisible by {self.vae_scale_factor * 2} but is {width}."
             )
 
+        if strength < 0 or strength > 1:
+            raise ValueError(f"The value of strength should be in [0.0, 1.0] but is {strength}")
+
         if callback_on_step_end_tensor_inputs is not None and not all(
             k in self._callback_tensor_inputs for k in callback_on_step_end_tensor_inputs
         ):
             raise ValueError(
-                f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
+                f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}"
             )
 
         if prompt is not None and prompt_embeds is not None:
             raise ValueError(
-                f"Cannot forward both `prompt`: {prompt} and `prompt_embeds`: {prompt_embeds}. Please make sure to"
-                " only forward one of the two."
+                f"Cannot forward both `prompt`: {prompt} and `prompt_embeds`: {prompt_embeds}."
             )
         elif prompt is None and prompt_embeds is None:
             raise ValueError(
-                "Provide either `prompt` or `prompt_embeds`. Cannot leave both `prompt` and `prompt_embeds` undefined."
+                "Provide either `prompt` or `prompt_embeds`."
             )
         elif prompt is not None and (not isinstance(prompt, str) and not isinstance(prompt, list)):
             raise ValueError(f"`prompt` has to be of type `str` or `list` but is {type(prompt)}")
 
-        if prompt_embeds is not None and max_sequence_length is not None:
-            raise ValueError("`max_sequence_length` cannot be provided when `prompt_embeds` is provided.")
+        if image is None:
+            raise ValueError("Image input is required for img2img pipeline.")
+
+    def prepare_image(
+        self,
+        image: PipelineImageInput,
+        width: int,
+        height: int,
+        device: torch.device,
+        dtype: torch.dtype,
+    ):
+        """Preprocess and prepare the input image."""
+        if isinstance(image, torch.Tensor):
+            if image.ndim == 3:
+                image = image.unsqueeze(0)
+            # Resize if current dimensions do not match target dimensions
+            if image.shape[2] != height or image.shape[3] != width:
+                image = F.interpolate(image, size=(height, width), mode="bilinear", align_corners=False)
+            image = self.image_processor.preprocess(image, height=height, width=width)
+        else:
+            image = self.image_processor.preprocess(image, height=height, width=width)
+
+        image = image.to(device=device, dtype=dtype)
+        return image
+
+    def get_timesteps(self, num_inference_steps: int, strength: float, device: torch.device):
+        """Get the timesteps for img2img based on strength."""
+        # Calculate the initial timestep based on strength
+        init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
+        t_start = max(num_inference_steps - init_timestep, 0)
+        timesteps = self.scheduler.timesteps[t_start:]
+        return timesteps, num_inference_steps - t_start
 
     def prepare_latents(
         self,
-        batch_size,
-        num_channels_latents,
-        height,
-        width,
-        dtype,
-        device,
-        generator,
-        latents=None,
+        image: torch.Tensor,
+        timestep: torch.Tensor,
+        batch_size: int,
+        num_channels_latents: int,
+        height: int,
+        width: int,
+        dtype: torch.dtype,
+        device: torch.device,
+        generator: Optional[torch.Generator] = None,
+        latents: Optional[torch.Tensor] = None,
     ):
-        # VAE applies 8x compression on images, and we need to account for packing
-        height = 2 * (int(height) // (self.vae_scale_factor * 2))
-        width = 2 * (int(width) // (self.vae_scale_factor * 2))
+        """Prepare latents for img2img generation."""
+        if latents is not None:
+            return latents.to(device=device, dtype=dtype)
 
-        # 4D shape: (batch, channels, height, width) - no temporal dimension
-        shape = (batch_size, num_channels_latents, height, width)
+        # VAE applies 8x compression, account for packing
+        latent_height = 2 * (int(height) // (self.vae_scale_factor * 2))
+        latent_width = 2 * (int(width) // (self.vae_scale_factor * 2))
+        shape = (batch_size, num_channels_latents, latent_height, latent_width)
 
-        if latents is None:
-            latents = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+        # Encode input image to latents
+        if image.shape[1] != num_channels_latents:
+            image_latents = self.vae.encode(image).latent_dist.sample(generator)
+            image_latents = (image_latents - self.vae.config.shift_factor) * self.vae.config.scaling_factor
         else:
-            if latents.shape != shape:
-                raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {shape}")
-            latents = latents.to(device)
-        return latents
+            image_latents = image
+
+        # Expand for batch
+        if batch_size > image_latents.shape[0] and batch_size % image_latents.shape[0] == 0:
+            additional_image_per_prompt = batch_size // image_latents.shape[0]
+            image_latents = torch.cat([image_latents] * additional_image_per_prompt, dim=0)
+        elif batch_size > image_latents.shape[0] and batch_size % image_latents.shape[0] != 0:
+            raise ValueError(
+                f"Cannot duplicate `image` of batch size {image_latents.shape[0]} to {batch_size} text prompts."
+            )
+        else:
+            image_latents = torch.cat([image_latents], dim=0)
+
+        # Add noise to image latents based on timestep
+        noise = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
+        
+        # Scale timestep for noise addition (Z-Image uses 0-1 timesteps)
+        t = timestep.item() / 1000.0 if timestep.dim() == 0 else timestep[0].item() / 1000.0
+        
+        # Interpolate between image latents and noise based on timestep
+        # At t=0 (end), we want image_latents; at t=1 (start), we want noise
+        latents = (1 - t) * image_latents + t * noise
+        
+        return latents.to(dtype=torch.float32)
 
     @property
     def guidance_scale(self):
@@ -334,8 +359,10 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
     def __call__(
         self,
         prompt: Union[str, List[str]] = None,
-        height: Optional[int] = 1024,
-        width: Optional[int] = 1024,
+        image: PipelineImageInput = None,
+        strength: float = 0.8,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
         num_inference_steps: int = 50,
         sigmas: Optional[List[float]] = None,
         guidance_scale: float = 5.0,
@@ -350,69 +377,70 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
         max_sequence_length: int = 128,
     ):
         r"""
-        Function invoked when calling the pipeline for generation.
+        Function invoked when calling the pipeline for image-to-image generation.
 
         Args:
             prompt (`str` or `List[str]`, *optional*):
-                The prompt or prompts to guide the image generation. If not defined, one has to pass `prompt_embeds`.
-                instead.
-            height (`int`, *optional*, defaults to 1024):
-                The height in pixels of the generated image. This is set to 1024 by default for the best results.
-            width (`int`, *optional*, defaults to 1024):
-                The width in pixels of the generated image. This is set to 1024 by default for the best results.
+                The prompt or prompts to guide the image generation.
+            image (`PipelineImageInput`):
+                The input image to transform. Can be a PIL Image, numpy array, or torch Tensor.
+            strength (`float`, *optional*, defaults to 0.8):
+                Indicates extent to transform the reference `image`. Must be between 0 and 1. A value of 1
+                essentially ignores the input image.
+            height (`int`, *optional*):
+                The height in pixels of the generated image. If None, uses the input image height.
+            width (`int`, *optional*):
+                The width in pixels of the generated image. If None, uses the input image width.
             num_inference_steps (`int`, *optional*, defaults to 50):
-                The number of denoising steps. More denoising steps usually lead to a higher quality image at the
-                expense of slower inference.
+                The number of denoising steps.
             sigmas (`List[float]`, *optional*):
-                Custom sigmas to use for the denoising process with schedulers which support a `sigmas` argument in
-                their `set_timesteps` method. If not defined, the default behavior when `num_inference_steps` is passed
-                will be used.
+                Custom sigmas for the denoising process.
             guidance_scale (`float`, *optional*, defaults to 5.0):
-                Guidance scale as defined in [Classifier-Free Diffusion Guidance](https://arxiv.org/abs/2207.12598).
-                `guidance_scale` is defined as `w` of equation 2. of [Imagen
-                Paper](https://arxiv.org/pdf/2205.11487.pdf). Guidance scale is enabled by setting `guidance_scale >
-                1`. Higher guidance scale encourages to generate images that are closely linked to the text `prompt`,
-                usually at the expense of lower image quality.
+                Guidance scale for classifier-free guidance.
             num_images_per_prompt (`int`, *optional*, defaults to 1):
                 The number of images to generate per prompt.
-            generator (`torch.Generator` or `List[torch.Generator]`, *optional*):
-                One or a list of [torch generator(s)](https://pytorch.org/docs/stable/generated/torch.Generator.html)
-                to make generation deterministic.
+            generator (`torch.Generator`, *optional*):
+                A torch generator for reproducibility.
             latents (`torch.Tensor`, *optional*):
-                Pre-generated noisy latents, sampled from a Gaussian distribution, to be used as inputs for image
-                generation. Can be used to tweak the same generation with different prompts. If not provided, a latents
-                tensor will ge generated by sampling using the supplied random `generator`.
+                Pre-generated noisy latents.
             prompt_embeds (`torch.Tensor`, *optional*):
-                Pre-generated text embeddings. Can be used to easily tweak text inputs, *e.g.* prompt weighting. If not
-                provided, text embeddings will be generated from `prompt` input argument.
+                Pre-generated text embeddings.
             output_type (`str`, *optional*, defaults to `"pil"`):
-                The output format of the generate image. Choose between
-                [PIL](https://pillow.readthedocs.io/en/stable/): `PIL.Image.Image` or `np.array`.
+                Output format: "pil", "np", or "latent".
             return_dict (`bool`, *optional*, defaults to `True`):
-                Whether or not to return a [`~pipelines.flux.FluxPipelineOutput`] instead of a plain tuple.
+                Whether to return a ZImagePipelineOutput.
             callback_on_step_end (`Callable`, *optional*):
-                A function that calls at the end of each denoising steps during the inference. The function is called
-                with the following arguments: `callback_on_step_end(self: DiffusionPipeline, step: int, timestep: int,
-                callback_kwargs: Dict)`. `callback_kwargs` will include a list of all tensors as specified by
-                `callback_on_step_end_tensor_inputs`.
+                Callback function called at each denoising step.
             callback_on_step_end_tensor_inputs (`List`, *optional*):
-                The list of tensor inputs for the `callback_on_step_end` function. The tensors specified in the list
-                will be passed as `callback_kwargs` argument. You will only be able to include variables listed in the
-                `._callback_tensor_inputs` attribute of your pipeline class.
+                Tensor inputs for the callback.
             max_sequence_length (`int`, *optional*, defaults to 128):
-                Maximum sequence length to use with the `prompt`.
-
-        Examples:
+                Maximum sequence length for the prompt.
 
         Returns:
             [`~pipelines.z_image.ZImagePipelineOutput`] or `tuple`:
-            [`~pipelines.z_image.ZImagePipelineOutput`] if `return_dict` is True, otherwise a `tuple`. When returning a
-            tuple, the first element is a list with the generated images.
+                The generated images.
         """
+        # Get image dimensions if not provided
+        if isinstance(image, Image.Image):
+            if height is None:
+                height = image.height
+            if width is None:
+                width = image.width
+        elif isinstance(image, torch.Tensor):
+            if height is None:
+                height = image.shape[-2]
+            if width is None:
+                width = image.shape[-1]
+        
+        # Ensure dimensions are divisible by vae_scale_factor * 2
+        height = height - (height % (self.vae_scale_factor * 2))
+        width = width - (width % (self.vae_scale_factor * 2))
 
-        # 1. Check inputs. Raise error if not correct
+        # 1. Check inputs
         self.check_inputs(
             prompt,
+            image,
+            strength,
             height,
             width,
             callback_on_step_end_tensor_inputs=callback_on_step_end_tensor_inputs,
@@ -434,7 +462,10 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
 
         device = self._execution_device
 
-        # 3. Encode prompt
+        # 3. Preprocess image
+        init_image = self.prepare_image(image, width, height, device, self.vae.dtype)
+
+        # 4. Encode prompt
         prompt_embeds = self.encode_prompt(
             prompt=prompt,
             num_images_per_prompt=num_images_per_prompt,
@@ -443,22 +474,12 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
             max_sequence_length=max_sequence_length,
         )
 
-        # 4. Prepare latents
-        num_channels_latents = self.transformer.config.in_channels
-        latents = self.prepare_latents(
-            batch_size * num_images_per_prompt,
-            num_channels_latents,
-            height,
-            width,
-            torch.float32,  # Latents should be float32 for quality
-            device,
-            generator,
-            latents,
-        )
-        actual_batch_size = batch_size * num_images_per_prompt
-
         # 5. Prepare timesteps
-        image_seq_len = (latents.shape[2] // 2) * (latents.shape[3] // 2)
+        # Calculate image sequence length for shift calculation
+        latent_height = 2 * (int(height) // (self.vae_scale_factor * 2))
+        latent_width = 2 * (int(width) // (self.vae_scale_factor * 2))
+        image_seq_len = (latent_height // 2) * (latent_width // 2)
+        
         mu = calculate_shift(
             image_seq_len,
             self.scheduler.config.get("base_image_seq_len", 256),
@@ -474,17 +495,35 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
             sigmas=sigmas,
             mu=mu,
         )
+
+        # Adjust timesteps based on strength
+        timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, strength, device)
+        if num_inference_steps < 1:
+            raise ValueError(
+                f"After adjusting by strength={strength}, num_inference_steps={num_inference_steps} which is < 1."
+            )
+        latent_timestep = timesteps[:1]
+
+        # 6. Prepare latents
+        num_channels_latents = self.transformer.config.in_channels
+        actual_batch_size = batch_size * num_images_per_prompt
+        latents = self.prepare_latents(
+            init_image,
+            latent_timestep,
+            actual_batch_size,
+            num_channels_latents,
+            height,
+            width,
+            torch.float32,
+            device,
+            generator,
+            latents,
+        )
+
         num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
         self._num_timesteps = len(timesteps)
 
-        # Debug: capture scheduler timesteps/sigmas to verify sampler behavior
-        try:
-            sigmas_list = getattr(self.scheduler, "sigmas", None)
-        except Exception as e:
-            sigmas_list = None
-            print(f"Could not retrieve sigmas from scheduler: {e}")
-
-        # 6. CFG preparation
+        # 7. CFG preparation
         if guidance_scale > 1.0:
             uncond_prompt_embeds = self.encode_prompt(
                 prompt=[""] * batch_size,
@@ -493,13 +532,13 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
                 max_sequence_length=max_sequence_length,
             )
 
-        # 7. Denoising loop
+        # 8. Denoising loop
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
                 if self.interrupt:
                     continue
 
-                # Broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+                # Broadcast to batch dimension
                 timestep = t.expand(latents.shape[0])
                 timestep = (1000 - timestep) / 1000
 
@@ -568,37 +607,7 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMix
                 return (latents,)
             return ZImagePipelineOutput(images=latents)
 
-        # 8. Decode latents
-        # For VRAM-constrained systems, we need to make room for VAE decode
-        # which can require ~1-2GB depending on image size.
-        # Strategy: offload transformer to CPU to free GPU memory for VAE
-        import gc
-        
-        # Check available VRAM before decode
-        _vram_tight = False
-        if torch.cuda.is_available():
-            free_memory = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
-            _vram_tight = free_memory < 2 * 1024**3  # Less than 2GB free
-        
-        # If VRAM is tight, offload transformer to CPU temporarily
-        _transformer_was_on_gpu = False
-        if _vram_tight and hasattr(self, 'transformer') and self.transformer is not None:
-            try:
-                # Check if transformer is on GPU
-                if hasattr(self.transformer, 'device') and str(self.transformer.device).startswith('cuda'):
-                    _transformer_was_on_gpu = True
-                    self.transformer.to('cpu')
-                    gc.collect()
-                    torch.cuda.empty_cache()
-            except Exception:
-                pass  # If offload fails, continue anyway
-        
-        # Clear GPU memory caches
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-        
+        # 9. Decode latents
         latents = latents.to(self.vae.dtype)
         latents = (latents / self.vae.config.scaling_factor) + self.vae.config.shift_factor
         image = self.vae.decode(latents, return_dict=False)[0]
