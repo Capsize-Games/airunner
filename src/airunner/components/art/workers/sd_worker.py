@@ -27,6 +27,7 @@ from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
 from airunner.components.art.data.ai_models import AIModels
+from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
 
@@ -54,6 +55,8 @@ class SDWorker(Worker):
         self._requested_model = None
         self._requested_version = None
         self._requested_pipeline = None
+        self._pending_scheduler: Optional[str] = None  # Deferred scheduler change
+        self._is_generating: bool = False  # Track generation state
         super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
@@ -188,6 +191,12 @@ class SDWorker(Worker):
         )
 
     def on_art_model_changed(self, data: Dict = None):
+        # CRITICAL: Invalidate the generator settings cache so we pick up
+        # the latest precision/dtype settings from the database when the
+        # model is reloaded. Without this, the worker uses stale cached
+        # settings (e.g., old dtype) because the UI and worker have
+        # separate caches.
+        self._invalidate_setting_cache(GeneratorSettings)
         self.unload_model_manager()
 
     def _get_model_path_from_image_request(
@@ -404,10 +413,22 @@ class SDWorker(Worker):
             self.model_manager.interrupt_image_generation()
 
     def on_change_scheduler_signal(self, data: Dict):
+        scheduler_name = data["scheduler"]
+        self.update_generator_settings(scheduler=scheduler_name)
+        
+        if self._is_generating:
+            # Defer scheduler change until generation completes
+            self.logger.debug(
+                f"[SCHEDULER] Deferring scheduler change to '{scheduler_name}' until generation completes"
+            )
+            self._pending_scheduler = scheduler_name
+        elif self.model_manager:
+            # Apply immediately if not generating
+            self.model_manager._load_scheduler(scheduler_name)
+
+    def _apply_scheduler_change(self, scheduler_name: str):
+        """Apply a scheduler change. Used for deferred scheduler changes after generation."""
         if self.model_manager:
-            scheduler_name = data["scheduler"]
-            self.update_generator_settings(scheduler=scheduler_name)
-            # Reload the scheduler in the pipeline
             self.model_manager._load_scheduler(scheduler_name)
 
     def on_model_status_changed_signal(self, message: Dict):
@@ -466,6 +487,7 @@ class SDWorker(Worker):
                 return
 
             try:
+                self._is_generating = True
                 mm.handle_generate_signal(message)
             except (PipeNotLoadedException, TypeError) as e:
                 error_message = getattr(e, "message", str(e))
@@ -486,6 +508,14 @@ class SDWorker(Worker):
                 self.send_missing_model_alert(
                     "An unexpected error occurred during image generation. Please check logs."
                 )
+            finally:
+                self._is_generating = False
+                # Apply any scheduler change that was deferred during generation
+                if self._pending_scheduler is not None:
+                    pending = self._pending_scheduler
+                    self._pending_scheduler = None
+                    self.logger.info(f"Applying deferred scheduler change to: {pending}")
+                    self._apply_scheduler_change(pending)
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")

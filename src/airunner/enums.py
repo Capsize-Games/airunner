@@ -412,6 +412,7 @@ class Scheduler(Enum):
     DPM_2M_SDE_K = "DPM 2M SDE Karras"
     PLMS = "PLMS"
     FLOW_MATCH_EULER = "Flow Match Euler"
+    FLOW_MATCH_LCM = "Flow Match LCM"
     # DDIMInverse = "DDIM Inverse"
     # IPNM = "IPNM"
     # REPAINT = "RePaint"

@@ -439,12 +439,78 @@ class SDPropertiesMixin:
 
     @property
     def data_type(self) -> torch.dtype:
-        """Get appropriate data type for current hardware.
+        """Get appropriate data type based on user settings and hardware.
+
+        Uses the dtype from generator_settings if available, otherwise
+        falls back to float16 for CUDA or float32 for CPU.
+        
+        Note: For quantized modes (4bit, 8bit), this returns the compute dtype
+        (bfloat16/float16). The actual quantization is handled separately.
 
         Returns:
-            torch.float16 for CUDA, torch.float32 for CPU.
+            torch.dtype based on user preference and hardware capability.
         """
+        # Get dtype from settings
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        
+        # For quantized modes, use bfloat16 as compute dtype
+        if dtype_setting in ("4bit", "8bit"):
+            if torch.cuda.is_available():
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                return torch.float16
+            return torch.float32
+        
+        # FP8 support (requires PyTorch 2.1+ and compatible GPU)
+        if dtype_setting == "float8":
+            if torch.cuda.is_available():
+                # FP8 requires Hopper (H100) or Ada Lovelace (RTX 40xx) GPU
+                # Use float8_e4m3fn which is optimized for deep learning
+                try:
+                    # Check if float8 dtype is available
+                    if hasattr(torch, "float8_e4m3fn"):
+                        return torch.float8_e4m3fn
+                except Exception:
+                    pass
+                # Fallback to bfloat16 if FP8 not available
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                return torch.float16
+            return torch.float32
+        
+        if dtype_setting == "bfloat16":
+            if torch.cuda.is_available():
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                # Fallback to float16 if bf16 not supported
+                return torch.float16
+            return torch.float32
+        elif dtype_setting == "float16":
+            return torch.float16 if torch.cuda.is_available() else torch.float32
+        elif dtype_setting == "float32":
+            return torch.float32
+        
+        # Default fallback
         return torch.float16 if torch.cuda.is_available() else torch.float32
+    
+    @property
+    def use_quantization(self) -> bool:
+        """Check if quantization should be used based on dtype setting."""
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        return dtype_setting in ("4bit", "8bit")
+    
+    @property
+    def quantization_bits(self) -> Optional[int]:
+        """Get quantization bits if quantization is enabled."""
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        if dtype_setting == "4bit":
+            return 4
+        elif dtype_setting == "8bit":
+            return 8
+        return None
 
     @property
     def is_txt2img(self) -> bool:

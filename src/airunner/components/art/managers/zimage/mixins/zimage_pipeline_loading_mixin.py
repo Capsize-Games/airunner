@@ -167,9 +167,10 @@ class ZImagePipelineLoadingMixin:
         Since ZImageTransformer2DModel isn't in diffusers yet, we need to manually
         load each component and assemble the pipeline.
         
-        Uses 4-bit quantization for transformer and text encoder to reduce memory:
-        - Transformer: ~5.7GB -> ~1.4GB (75% reduction)
-        - Text Encoder: ~8GB -> ~2.4GB (70% reduction)
+        Quantization depends on user's precision setting:
+        - 4bit: Uses NF4 quantization (~75% memory reduction)
+        - 8bit: Uses 8-bit quantization (~50% memory reduction)  
+        - Otherwise: No quantization, uses selected dtype (bfloat16/float16/float32)
         """
         self.logger.info(f"Loading Z-Image from pretrained: {model_path}")
         
@@ -185,46 +186,98 @@ class ZImagePipelineLoadingMixin:
         
         model_dir = Path(model_path)
         
-        # Configure 4-bit quantization for memory efficiency
-        # NF4 (Normal Float 4) provides best quality for 4-bit
-        transformer_bnb_config = DiffusersBnBConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-        )
+        # Check user's precision/quantization setting
+        use_quant = getattr(self, 'use_quantization', False)
+        quant_bits = getattr(self, 'quantization_bits', None)
+        model_dtype = self.data_type
         
-        text_encoder_bnb_config = TransformersBnBConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-        )
+        self.logger.info(f"Precision settings - use_quantization: {use_quant}, bits: {quant_bits}, dtype: {model_dtype}")
         
-        # Load transformer with 4-bit quantization (~5.7GB -> ~1.4GB)
+        # Calculate max memory for device_map="auto" to leave room for VAE decode
+        # We need ~2-3GB free for VAE decode + activations
+        max_memory_for_models = None
+        if torch.cuda.is_available() and use_quant:
+            total_vram_bytes = torch.cuda.get_device_properties(0).total_memory
+            total_vram_gb = total_vram_bytes / (1024**3)
+            # Reserve 3GB for VAE decode and other operations
+            reserved_gb = 3.0
+            usable_vram_gb = max(total_vram_gb - reserved_gb, 4.0)  # At least 4GB for models
+            max_memory_for_models = {0: f"{usable_vram_gb:.0f}GiB", "cpu": "32GiB"}
+            self.logger.info(f"VRAM budget: {usable_vram_gb:.1f}GB for models (reserving {reserved_gb}GB for VAE/activations)")
+        
+        # Configure quantization if enabled
+        transformer_bnb_config = None
+        text_encoder_bnb_config = None
+        
+        if use_quant and quant_bits == 4:
+            # 4-bit NF4 quantization for maximum memory savings
+            self.logger.info("Using 4-bit NF4 quantization")
+            transformer_bnb_config = DiffusersBnBConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+            text_encoder_bnb_config = TransformersBnBConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+        elif use_quant and quant_bits == 8:
+            # 8-bit quantization
+            self.logger.info("Using 8-bit quantization")
+            transformer_bnb_config = DiffusersBnBConfig(
+                load_in_8bit=True,
+            )
+            text_encoder_bnb_config = TransformersBnBConfig(
+                load_in_8bit=True,
+            )
+        else:
+            self.logger.info(f"No quantization - using dtype: {model_dtype}")
+        
+        # Load transformer
         transformer_path = model_dir / "transformer"
-        self.logger.info(f"Loading transformer from {transformer_path} (4-bit quantized)")
+        quant_info = f"({quant_bits}-bit quantized)" if use_quant else f"(dtype: {model_dtype})"
+        self.logger.info(f"Loading transformer from {transformer_path} {quant_info}")
         try:
+            load_kwargs = {
+                "torch_dtype": model_dtype,
+                "local_files_only": True,
+            }
+            if transformer_bnb_config is not None:
+                load_kwargs["quantization_config"] = transformer_bnb_config
+                # Use device_map and max_memory for consistent VRAM management
+                load_kwargs["device_map"] = "auto"
+                if max_memory_for_models is not None:
+                    load_kwargs["max_memory"] = max_memory_for_models
             transformer = ZImageTransformer2DModel.from_pretrained(
                 str(transformer_path),
-                quantization_config=transformer_bnb_config,
-                torch_dtype=torch.bfloat16,
-                local_files_only=True,
+                **load_kwargs,
             )
         except Exception as e:
             self.logger.error(f"Failed to load transformer: {e}")
             raise
         
-        # Load text encoder with 4-bit quantization (~8GB -> ~2.4GB)
+        # Load text encoder
         text_encoder_path = model_dir / "text_encoder"
         tokenizer_path = model_dir / "tokenizer"
-        self.logger.info(f"Loading text encoder from {text_encoder_path} (4-bit quantized)")
+        self.logger.info(f"Loading text encoder from {text_encoder_path} {quant_info}")
         try:
+            load_kwargs = {
+                "local_files_only": True,
+            }
+            if text_encoder_bnb_config is not None:
+                load_kwargs["quantization_config"] = text_encoder_bnb_config
+                load_kwargs["device_map"] = "auto"
+                # Apply max_memory to prevent accelerate from using all VRAM
+                if max_memory_for_models is not None:
+                    load_kwargs["max_memory"] = max_memory_for_models
+            else:
+                load_kwargs["torch_dtype"] = model_dtype
             text_encoder = AutoModelForCausalLM.from_pretrained(
                 str(text_encoder_path),
-                quantization_config=text_encoder_bnb_config,
-                device_map="auto",
-                local_files_only=True,
+                **load_kwargs,
             )
             tokenizer = AutoTokenizer.from_pretrained(
                 str(tokenizer_path),
@@ -240,24 +293,15 @@ class ZImagePipelineLoadingMixin:
         try:
             vae = AutoencoderKL.from_pretrained(
                 str(vae_path),
-                torch_dtype=torch.bfloat16,
+                torch_dtype=model_dtype,
                 local_files_only=True,
             )
         except Exception as e:
             self.logger.error(f"Failed to load VAE: {e}")
             raise
         
-        # Load scheduler from local scheduler subfolder
-        scheduler_path = model_dir / "scheduler"
-        self.logger.info(f"Loading scheduler from {scheduler_path}")
-        try:
-            scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
-                str(scheduler_path),
-                local_files_only=True,
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load scheduler: {e}")
-            raise
+        # Load scheduler with appropriate configuration based on user selection
+        scheduler = self._load_zimage_scheduler(model_dir / "scheduler")
         
         # Assemble the pipeline
         self.logger.info("Assembling ZImagePipeline from components...")
@@ -269,7 +313,8 @@ class ZImagePipelineLoadingMixin:
                 tokenizer=tokenizer,
                 scheduler=scheduler,
             )
-            self.logger.info("Pipeline assembled successfully (4-bit quantized, ~3.8GB total)")
+            precision_info = f"{quant_bits}-bit quantized" if use_quant else f"dtype: {model_dtype}"
+            self.logger.info(f"Pipeline assembled successfully ({precision_info})")
         except Exception as e:
             self.logger.error(f"Failed to assemble pipeline: {e}")
             raise
@@ -280,32 +325,64 @@ class ZImagePipelineLoadingMixin:
         For single-file loading, the text encoder, VAE, scheduler, and tokenizer
         are loaded from the companion folders in the same directory as the 
         checkpoint file.
+        
+        Respects user's precision/quantization settings.
         """
         self.logger.info(f"Loading Z-Image from single file: {model_path}")
         
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer
+            from transformers import BitsAndBytesConfig as TransformersBnBConfig
             from diffusers import AutoencoderKL, FlowMatchEulerDiscreteScheduler
             from airunner.components.art.pipelines.z_image import ZImageTransformer2DModel
         except ImportError as e:
             self.logger.error(f"Missing required imports: {e}")
             raise
         
+        # Check user's precision/quantization setting
+        use_quant = getattr(self, 'use_quantization', False)
+        quant_bits = getattr(self, 'quantization_bits', None)
+        model_dtype = self.data_type
+        
+        self.logger.info(f"Precision settings - use_quantization: {use_quant}, bits: {quant_bits}, dtype: {model_dtype}")
+        
         # Get the directory containing the checkpoint - companion folders
         # (text_encoder, tokenizer, vae, scheduler) are in the same directory
         model_dir = os.path.dirname(model_path)
         self.logger.info(f"Loading companion files from: {model_dir}")
         
+        # Configure text encoder quantization if enabled
+        text_encoder_bnb_config = None
+        if use_quant and quant_bits == 4:
+            text_encoder_bnb_config = TransformersBnBConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+        elif use_quant and quant_bits == 8:
+            text_encoder_bnb_config = TransformersBnBConfig(
+                load_in_8bit=True,
+            )
+        
         # Load the text encoder from the local text_encoder subfolder
         text_encoder_path = os.path.join(model_dir, "text_encoder")
         tokenizer_path = os.path.join(model_dir, "tokenizer")
         
-        self.logger.info(f"Loading text encoder from {text_encoder_path}")
+        quant_info = f"({quant_bits}-bit quantized)" if use_quant else f"(dtype: {model_dtype})"
+        self.logger.info(f"Loading text encoder from {text_encoder_path} {quant_info}")
         try:
+            load_kwargs = {
+                "local_files_only": True,
+            }
+            if text_encoder_bnb_config is not None:
+                load_kwargs["quantization_config"] = text_encoder_bnb_config
+                load_kwargs["device_map"] = "auto"
+            else:
+                load_kwargs["torch_dtype"] = model_dtype
             text_encoder = AutoModelForCausalLM.from_pretrained(
                 text_encoder_path,
-                torch_dtype=torch.bfloat16,
-                local_files_only=True,
+                **load_kwargs,
             )
             tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_path,
@@ -317,7 +394,7 @@ class ZImagePipelineLoadingMixin:
         
         # Now load the pipeline with the text encoder pre-loaded
         pipe_kwargs = {
-            "torch_dtype": torch.bfloat16,
+            "torch_dtype": model_dtype,
             "text_encoder": text_encoder,
             "tokenizer": tokenizer,
             **data,
@@ -333,7 +410,7 @@ class ZImagePipelineLoadingMixin:
                 model_path,
                 **pipe_kwargs
             )
-            self.logger.info("Pipeline loaded from single file")
+            self.logger.info(f"Pipeline loaded from single file {quant_info}")
         except Exception as e:
             self.logger.error(f"Failed to load from single file: {e}")
             # Fall back to manual assembly
@@ -353,6 +430,8 @@ class ZImagePipelineLoadingMixin:
         
         This is useful when from_single_file fails. We load each component
         separately from the local companion folders.
+        
+        Respects user's precision settings.
         """
         self.logger.info("Attempting fallback: manual component assembly...")
         
@@ -361,14 +440,17 @@ class ZImagePipelineLoadingMixin:
             from diffusers import AutoencoderKL, FlowMatchEulerDiscreteScheduler
             from airunner.components.art.pipelines.z_image import ZImageTransformer2DModel
             
+            # Get user's precision setting
+            model_dtype = self.data_type
+            
             # Get the directory containing the checkpoint
             model_dir = os.path.dirname(model_path)
             
             # Load the transformer from the checkpoint
-            self.logger.info("Loading transformer from checkpoint...")
+            self.logger.info(f"Loading transformer from checkpoint (dtype: {model_dtype})...")
             transformer = ZImageTransformer2DModel.from_single_file(
                 model_path,
-                torch_dtype=torch.bfloat16,
+                torch_dtype=model_dtype,
             )
             
             # Load VAE from local vae subfolder
@@ -376,7 +458,7 @@ class ZImagePipelineLoadingMixin:
             self.logger.info(f"Loading VAE from {vae_path}")
             vae = AutoencoderKL.from_pretrained(
                 vae_path,
-                torch_dtype=torch.bfloat16,
+                torch_dtype=model_dtype,
                 local_files_only=True,
             )
             
@@ -395,7 +477,7 @@ class ZImagePipelineLoadingMixin:
                 self.logger.info(f"Loading text encoder from {text_encoder_path}")
                 text_encoder = AutoModelForCausalLM.from_pretrained(
                     text_encoder_path,
-                    torch_dtype=torch.bfloat16,
+                    torch_dtype=model_dtype,
                     local_files_only=True,
                 )
                 tokenizer = HFAutoTokenizer.from_pretrained(
@@ -411,7 +493,7 @@ class ZImagePipelineLoadingMixin:
                 tokenizer=tokenizer,
                 scheduler=scheduler,
             )
-            self.logger.info("Fallback loading successful - pipeline assembled from components")
+            self.logger.info(f"Fallback loading successful - pipeline assembled (dtype: {model_dtype})")
             
         except Exception as e:
             self.logger.error(f"Fallback loading failed: {e}")
@@ -446,6 +528,79 @@ class ZImagePipelineLoadingMixin:
         # Return None - HuggingFace repo will be used directly
         return None
 
+    def _load_zimage_scheduler(self, scheduler_path):
+        """Load a flow-match scheduler with configuration based on user selection.
+        
+        Args:
+            scheduler_path: Path to the scheduler config directory.
+            
+        Returns:
+            Configured flow-match scheduler instance.
+        """
+        from diffusers import FlowMatchEulerDiscreteScheduler
+        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+            is_flow_match_scheduler,
+            create_flow_match_scheduler,
+            FLOW_MATCH_SCHEDULER_NAMES,
+        )
+        from airunner.enums import Scheduler
+        
+        # Get the scheduler name from the image request or default
+        scheduler_name = None
+        if hasattr(self, 'image_request') and self.image_request:
+            scheduler_name = getattr(self.image_request, 'scheduler', None)
+        if not scheduler_name:
+            scheduler_name = Scheduler.FLOW_MATCH_EULER.value
+        
+        self.logger.info(f"Loading scheduler: {scheduler_name} from {scheduler_path}")
+        
+        # Load base config from disk but strip behavioral flags so the factory
+        # can set them explicitly for the selected scheduler.
+        try:
+            base_scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
+                str(scheduler_path),
+                local_files_only=True,
+            )
+            base_config = dict(base_scheduler.config)
+            for flag in (
+                "use_karras_sigmas",
+                "stochastic_sampling",
+                "use_exponential_sigmas",
+                "use_beta_sigmas",
+            ):
+                base_config.pop(flag, None)
+        except Exception as e:
+            self.logger.warning(f"Could not load base scheduler config: {e}")
+            base_config = None
+        
+        # Create the scheduler with appropriate configuration
+        if is_flow_match_scheduler(scheduler_name):
+            try:
+                scheduler = create_flow_match_scheduler(scheduler_name, base_config)
+                if hasattr(scheduler, "config"):
+                    karras = scheduler.config.get("use_karras_sigmas", False)
+                    stochastic = scheduler.config.get("stochastic_sampling", False)
+                    self.logger.info(
+                        "[ZIMAGE SCHEDULER DEBUG] %s config -> karras=%s, stochastic=%s",
+                        scheduler_name,
+                        karras,
+                        stochastic,
+                    )
+                self.logger.info(
+                    f"Loaded {scheduler.__class__.__name__} with config: "
+                    f"{scheduler_name}"
+                )
+                return scheduler
+            except Exception as e:
+                self.logger.error(f"Failed to create scheduler {scheduler_name}: {e}")
+                # Fall back to default
+                self.logger.info("Falling back to default FlowMatchEulerDiscreteScheduler")
+        
+        # Default fallback
+        if base_config:
+            return FlowMatchEulerDiscreteScheduler.from_config(base_config)
+        return FlowMatchEulerDiscreteScheduler()
+
     def _verify_pipeline_loaded(self) -> bool:
         """Verify that the pipeline was loaded correctly."""
         if self._pipe is None:
@@ -458,3 +613,4 @@ class ZImagePipelineLoadingMixin:
                 return False
         
         return True
+

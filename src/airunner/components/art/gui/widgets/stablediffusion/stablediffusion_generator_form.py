@@ -167,6 +167,20 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
         return self._sd_version not in no_negative_prompt_versions
 
+    @property
+    def supports_compel(self) -> bool:
+        """Check if the current model version supports compel (additional prompts).
+
+        FLUX and Z-Image models don't support compel.
+        """
+        no_compel_versions = (
+            StableDiffusionVersion.FLUX_DEV.value,
+            StableDiffusionVersion.FLUX_SCHNELL.value,
+            StableDiffusionVersion.Z_IMAGE_TURBO.value,
+            StableDiffusionVersion.Z_IMAGE_BASE.value,
+        )
+        return self._sd_version not in no_compel_versions
+
     @Slot()
     def on_generate_button_clicked(self):
         # Validate if generation can proceed
@@ -255,6 +269,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         # Toggle negative prompt visibility based on model version
         self._toggle_negative_prompt_visibility()
 
+        # Toggle add prompt button visibility based on compel support
+        self._toggle_add_prompt_button_visibility()
+
     def _toggle_negative_prompt_visibility(self):
         """Show/hide negative prompt based on whether the model uses it.
 
@@ -264,6 +281,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.ui.layoutWidget1.show()
         else:
             self.ui.layoutWidget1.hide()
+
+    def _toggle_add_prompt_button_visibility(self):
+        """Show/hide add prompt button based on whether the model supports compel.
+
+        FLUX and Z-Image models don't support compel, so the add prompt button
+        should be hidden for these models.
+        """
+        if self.supports_compel:
+            self.ui.add_prompt_button.show()
+        else:
+            self.ui.add_prompt_button.hide()
+            # Also hide any existing additional prompt containers
+            self._toggle_compel_form_elements(False)
 
     @property
     def is_txt2img(self):

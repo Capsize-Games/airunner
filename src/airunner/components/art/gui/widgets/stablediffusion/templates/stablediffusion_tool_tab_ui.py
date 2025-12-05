@@ -115,7 +115,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 648, 756))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 98, 28))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -166,7 +166,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
 
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Stable Diffusion", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Model", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Layers", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Embeddings", None))

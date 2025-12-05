@@ -1749,25 +1749,41 @@ class MainWindow(
             self.ui.actionToggle_Stable_Diffusion.setDisabled(
                 status is ModelStatus.LOADING
             )
-            if status is ModelStatus.FAILED:
+            if status is ModelStatus.LOADED:
+                self.update_application_settings(sd_enabled=True)
+            elif status is ModelStatus.FAILED:
                 self.ui.actionToggle_Stable_Diffusion.setChecked(False)
+            elif status is ModelStatus.UNLOADED:
+                self.update_application_settings(sd_enabled=False)
         elif model is ModelType.LLM:
             self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
-            if status is ModelStatus.FAILED:
+            if status is ModelStatus.LOADED:
+                self.update_application_settings(llm_enabled=True)
+            elif status is ModelStatus.FAILED:
                 self.logger.warning("LLM failed to load")
                 self.ui.actionToggle_LLM.setChecked(False)
+            elif status is ModelStatus.UNLOADED:
+                self.update_application_settings(llm_enabled=False)
         elif model is ModelType.TTS:
             self.ui.actionToggle_Text_to_Speech.setDisabled(
                 status is ModelStatus.LOADING
             )
-            if status is ModelStatus.FAILED:
+            if status is ModelStatus.LOADED:
+                self.update_application_settings(tts_enabled=True)
+            elif status is ModelStatus.FAILED:
                 self.ui.actionToggle_Text_to_Speech.setChecked(False)
+            elif status is ModelStatus.UNLOADED:
+                self.update_application_settings(tts_enabled=False)
         elif model is ModelType.STT:
             self.ui.actionToggle_Speech_to_Text.setDisabled(
                 status is ModelStatus.LOADING
             )
-            if status is ModelStatus.FAILED:
+            if status is ModelStatus.LOADED:
+                self.update_application_settings(stt_enabled=True)
+            elif status is ModelStatus.FAILED:
                 self.ui.actionToggle_Speech_to_Text.setChecked(False)
+            elif status is ModelStatus.UNLOADED:
+                self.update_application_settings(stt_enabled=False)
         self.initialize_widget_elements()
         QApplication.processEvents()
 

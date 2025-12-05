@@ -62,3 +62,4 @@ class GeneratorSettings(BaseModel):
     lora_scale = Column(Integer, default=100)
     use_refiner = Column(Boolean, default=False)
     generate_infinite_images = Column(Boolean, default=False)
+    dtype = Column(String, default="bfloat16")  # Precision: bfloat16, float16, float32

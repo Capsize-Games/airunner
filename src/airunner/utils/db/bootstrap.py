@@ -114,6 +114,10 @@ def set_default_schedulers():
                 display_name=Scheduler.FLOW_MATCH_EULER.value,
                 name="FlowMatchEulerDiscreteScheduler",
             ),
+            dict(
+                display_name=Scheduler.FLOW_MATCH_LCM.value,
+                name="FlowMatchLCMScheduler",
+            ),
         ],
     )
 
