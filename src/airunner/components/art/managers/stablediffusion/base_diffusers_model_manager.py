@@ -536,22 +536,68 @@ class BaseDiffusersModelManager(
         return True
 
     def _set_lora_adapters(self):
-        """Configure LoRA adapter weights and names on the pipeline."""
+        """Configure LoRA adapter weights and names on the pipeline.
+        
+        Only sets adapters if they were actually loaded into the pipeline.
+        Validates that requested adapters exist before calling set_adapters.
+        
+        For Z-Image and other transformer-based pipelines, also checks the
+        transformer's peft_config directly.
+        """
         self.logger.debug("Setting LORA adapters")
+        
+        # Check if pipeline supports adapters and has any loaded
+        if not hasattr(self._pipe, 'get_list_adapters'):
+            self.logger.debug("Pipeline does not support LoRA adapters")
+            return
+            
+        # Get adapters that are actually loaded in the pipeline
+        available_adapters = set()
+        try:
+            pipeline_adapters = self._pipe.get_list_adapters()
+            # get_list_adapters returns a dict like {'transformer': ['adapter1'], 'unet': ['adapter1']}
+            for component_adapters in pipeline_adapters.values():
+                available_adapters.update(component_adapters)
+        except Exception as e:
+            self.logger.debug(f"Could not get list of adapters from pipeline: {e}")
+        
+        # Also check transformer directly if it has peft_config (for Z-Image, FLUX, etc.)
+        if not available_adapters and hasattr(self._pipe, 'transformer'):
+            transformer = self._pipe.transformer
+            if hasattr(transformer, 'peft_config') and transformer.peft_config:
+                available_adapters.update(transformer.peft_config.keys())
+                self.logger.debug(f"Found adapters in transformer.peft_config: {available_adapters}")
+        
+        # Also check unet directly if it has peft_config (for SD pipelines)
+        if not available_adapters and hasattr(self._pipe, 'unet'):
+            unet = self._pipe.unet
+            if hasattr(unet, 'peft_config') and unet.peft_config:
+                available_adapters.update(unet.peft_config.keys())
+                self.logger.debug(f"Found adapters in unet.peft_config: {available_adapters}")
+        
+        if not available_adapters:
+            self.logger.debug("No LoRA adapters loaded in pipeline")
+            return
+            
         loaded_lora_id = [lora.id for lora in self._loaded_lora.values()]
         enabled_lora = Lora.objects.filter(Lora.id.in_(loaded_lora_id))
         adapter_weights = []
         adapter_names = []
         for lora in enabled_lora:
-            adapter_weights.append(lora.scale / 100.0)
             adapter_name = os.path.splitext(os.path.basename(lora.path))[0]
             adapter_name = adapter_name.replace(".", "_")
-            adapter_names.append(adapter_name)
+            # Only include adapters that are actually loaded in the pipeline
+            if adapter_name in available_adapters:
+                adapter_weights.append(lora.scale / 100.0)
+                adapter_names.append(adapter_name)
+            else:
+                self.logger.warning(f"LoRA adapter '{adapter_name}' not found in pipeline, skipping")
+                
         if len(adapter_weights) > 0:
             self._pipe.set_adapters(
                 adapter_names, adapter_weights=adapter_weights
             )
-            self.logger.debug("LORA adapters set")
+            self.logger.debug(f"LORA adapters set: {adapter_names} with weights: {adapter_weights}")
         else:
             self.logger.debug("No LORA adapters to set")
 
