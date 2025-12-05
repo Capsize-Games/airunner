@@ -1,6 +1,7 @@
 from typing import Dict
 from PIL.Image import Image
 from PIL import ImageQt
+from PySide6.QtCore import QPoint
 
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
@@ -28,6 +29,37 @@ class InputImageScene(BrushScene):
     @property
     def settings_key(self):
         return self._settings_key
+
+    def _get_default_image_position(self) -> QPoint:
+        """Override to always place images at (0, 0) in input image scenes.
+        
+        Unlike the main canvas which uses drawing_pad_settings for position,
+        input image scenes are small preview panels that should always display
+        images starting at the origin.
+        
+        Returns:
+            QPoint at (0, 0).
+        """
+        return QPoint(0, 0)
+
+    def _update_item_position(
+        self, root_point: QPoint, canvas_offset
+    ) -> None:
+        """Override to always position items at (0, 0) in input image scenes.
+        
+        Input image scenes are small preview panels that should always display
+        images at the origin, ignoring any stored position or canvas offset.
+        
+        Args:
+            root_point: Ignored - always uses (0, 0).
+            canvas_offset: Ignored - always uses (0, 0).
+        """
+        try:
+            if self.item is not None:
+                self.item.setPos(0, 0)
+        except (RuntimeError, AttributeError):
+            # Item was deleted or is no longer valid
+            pass
 
     @property
     def current_active_image(self) -> Image:
