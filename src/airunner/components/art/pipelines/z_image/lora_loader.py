@@ -194,8 +194,20 @@ class ZImageLoraLoaderMixin(LoraBaseMixin):
             )
 
         logger.info(f"Loading LoRA weights into {cls.transformer_name}")
+        
+        # Z-Image LoRAs use "diffusion_model." prefix in their keys
+        # We need to tell load_lora_adapter to strip this prefix
+        # If the state dict has keys starting with "diffusion_model.", use that as prefix
+        # Otherwise, use None to avoid filtering
+        sample_key = next(iter(state_dict.keys()), "")
+        if sample_key.startswith("diffusion_model."):
+            prefix = "diffusion_model"
+        else:
+            prefix = None
+        
         transformer.load_lora_adapter(
             state_dict,
+            prefix=prefix,
             network_alphas=None,
             adapter_name=adapter_name,
             metadata=metadata,
