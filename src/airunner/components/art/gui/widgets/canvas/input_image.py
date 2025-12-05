@@ -377,7 +377,9 @@ class InputImage(BaseWidget):
 
             # Adjust scene rect to the item bounds if present
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
-                rect = self._scene.item.boundingRect()
+                # Use sceneBoundingRect() to get the rect in scene coordinates
+                # (includes the item's position)
+                rect = self._scene.item.sceneBoundingRect()
                 self._scene.setSceneRect(rect)
 
             # Force scene and view updates
