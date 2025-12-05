@@ -350,11 +350,17 @@ class SDPropertiesMixin:
         """Get the real model version without modifications.
 
         Only use this when checking the actual version of the model.
+        Falls back to generator_settings.version if image_request is not set.
 
         Returns:
             Model version string.
         """
-        return self.image_request.version
+        if self.image_request is not None:
+            return self.image_request.version
+        # Fallback to generator_settings when not in generation context
+        if self.generator_settings is not None:
+            return self.generator_settings.version
+        return ""
 
     @property
     def version(self) -> str:
