@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Union
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
@@ -19,6 +19,9 @@ from airunner.components.art.gui.widgets.canvas.templates.input_image_ui import 
 from airunner.components.art.gui.widgets.canvas.input_image_scene import (
     InputImageScene,
 )
+from airunner.components.art.gui.widgets.canvas.simple_image_scene import (
+    SimpleImageScene,
+)
 
 
 class InputImage(BaseWidget):
@@ -35,6 +38,9 @@ class InputImage(BaseWidget):
         self.settings_key = kwargs.pop("settings_key")
         self.use_generated_image = kwargs.pop("use_generated_image", False)
         self.is_mask = kwargs.pop("is_mask", False)
+        # Use simple scene by default for preview-only widgets
+        # Complex scene is only needed for mask drawing (is_mask=True)
+        self._use_simple_scene = kwargs.pop("use_simple_scene", not self.is_mask)
         self._import_path = ""
         super().__init__(*args, **kwargs)
         self.ui.strength_slider_widget.setProperty(
@@ -43,25 +49,32 @@ class InputImage(BaseWidget):
         self.ui.strength_slider_widget.setProperty(
             f"{self.settings_key}.strength", self.current_settings.strength
         )
-        self._scene: Optional[InputImageScene] = None
+        self._scene: Optional[Union[InputImageScene, SimpleImageScene]] = None
         self.setup_scene()
         self.load_image_from_settings()
 
     def setup_scene(self):
-        """Set up the custom scene for drawing on input images."""
-        self._scene = InputImageScene(
-            canvas_type="input_image",
-            settings_key=self.settings_key,
-            is_mask=self.is_mask,
-        )
-
-        if hasattr(self._scene, "use_generated_image"):
-            # Only allow the scene to consume generated images when the
-            # current settings do not have the input image locked.
-            allow_generated = self.use_generated_image and not getattr(
-                self.current_settings, "lock_input_image", False
+        """Set up the scene for displaying input images.
+        
+        Uses SimpleImageScene for preview-only widgets (most cases).
+        Uses InputImageScene only for mask drawing (is_mask=True).
+        """
+        if self._use_simple_scene:
+            # Simple, reliable scene for preview-only widgets
+            self._scene = SimpleImageScene()
+        else:
+            # Complex scene with drawing capabilities for mask editing
+            self._scene = InputImageScene(
+                canvas_type="input_image",
+                settings_key=self.settings_key,
+                is_mask=self.is_mask,
             )
-            self._scene.use_generated_image = allow_generated
+
+            if hasattr(self._scene, "use_generated_image"):
+                allow_generated = self.use_generated_image and not getattr(
+                    self.current_settings, "lock_input_image", False
+                )
+                self._scene.use_generated_image = allow_generated
 
         # Connect the scene to the graphics view
         self.ui.image_container.setScene(self._scene)
@@ -100,12 +113,17 @@ class InputImage(BaseWidget):
         self.fit_image_to_view()
 
     def fit_image_to_view(self):
-        scene = self.ui.image_container.scene()
-        if scene and scene.items():
-            rect = scene.itemsBoundingRect()
-            if not rect.isNull():
-                scene.setSceneRect(rect)
-                self.ui.image_container.fitInView(rect, Qt.KeepAspectRatio)
+        """Fit the current image to the view bounds."""
+        scene = self._scene
+        if not scene:
+            return
+        
+        # Get the scene rect (already set correctly by SimpleImageScene.set_image)
+        rect = scene.sceneRect()
+        if rect.isNull() or rect.isEmpty():
+            return
+        
+        self.ui.image_container.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
 
     @property
     def current_settings(self):
@@ -283,7 +301,12 @@ class InputImage(BaseWidget):
             )
 
     def load_image_from_grid(self, forced: bool = False):
-        # Explicitly clear cache before reading settings to ensure lock status is fresh
+        """Load the current grid image into this input image panel.
+        
+        Args:
+            forced: If True, load regardless of lock/link settings.
+        """
+        # Clear settings cache to ensure fresh data
         settings_property_name = None
         if self.settings_key == "image_to_image_settings":
             settings_property_name = "image_to_image_settings"
@@ -326,12 +349,18 @@ class InputImage(BaseWidget):
             self.load_image_from_object(image)
 
     def load_image_from_settings(self):
-        # If the input image is locked, do not load any new images from settings
-        # (unless it's the initial load with no scene content yet)
+        """Load image from current settings into the scene."""
+        # Check if image is locked and scene already has content
         is_locked = getattr(self.current_settings, "lock_input_image", False)
-        if is_locked and self._scene and self._scene.item is not None:
-            # User has locked the input image and there's already content displayed
-            # Do not replace the visual display
+        has_content = False
+        if self._scene:
+            if self._use_simple_scene:
+                has_content = self._scene.has_image()
+            else:
+                has_content = getattr(self._scene, "item", None) is not None
+        
+        if is_locked and has_content:
+            # User has locked the input image and there's already content
             return
 
         if self.settings_key == "outpaint_settings":
@@ -352,60 +381,57 @@ class InputImage(BaseWidget):
             self.load_image_from_object(image)
         else:
             if self._scene:
-                # Clear the scene instead of setting to None which would lose drawing capability
-                self._scene.clear()
+                if self._use_simple_scene:
+                    self._scene.clear_image()
+                else:
+                    self._scene.clear()
             else:
                 self.ui.image_container.setScene(None)
 
-    def load_image_from_object(self, image: Image):
+    def load_image_from_object(self, image: Image.Image):
+        """Load a PIL image into the scene.
+        
+        Args:
+            image: PIL Image to display.
+        """
         if image is None:
             self.logger.warning("Image is None, unable to add to scene")
             return
 
-        # Prefer the scene's optimized path when available
-        if hasattr(self, "_scene") and self._scene:
+        if not self._scene:
+            self.logger.warning("Scene is None, cannot load image")
+            return
+
+        if self._use_simple_scene:
+            # Simple path: just set the image directly
+            self._scene.set_image(image)
+        else:
+            # Complex path for InputImageScene (mask drawing support)
             try:
-                # Use optimized pipeline (avoids extra conversions/signals)
                 self._scene._add_image_to_scene(
                     image=image, is_outpaint=False, generated=False
                 )
             except Exception:
-                # Fallback to initialize path
                 qimage = ImageQt(image)
                 self._scene.image = qimage
                 self._scene.initialize_image(image)
 
+            # For input image scenes, ensure item is at origin
+            if self._scene.item is not None:
+                self._scene.item.setPos(0, 0)
+
             # Adjust scene rect to the item bounds if present
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
-                # Use sceneBoundingRect() to get the rect in scene coordinates
-                # (includes the item's position)
                 rect = self._scene.item.sceneBoundingRect()
                 self._scene.setSceneRect(rect)
 
-            # Force scene and view updates
-            self._scene.update()
-            self._scene.invalidate()
-            for view in self._scene.views():
-                view.viewport().update()
-                view.update()
+        # Force view updates
+        self._scene.update()
+        for view in self._scene.views():
+            view.viewport().update()
+            view.update()
 
-            self.fit_image_to_view()
-        else:
-            # Legacy fallback if somehow scene isn't set up
-            qimage = ImageQt(image)
-            qpixmap = QPixmap.fromImage(QImage(qimage))
-            scene = QGraphicsScene()
-            scene.clear()
-            scene.addPixmap(qpixmap)
-            scene.setSceneRect(qpixmap.rect())
-            self.ui.image_container.setScene(scene)
-
-            # Draw a red border around the image
-            pen = QPen(Qt.GlobalColor.red)
-            pen.setWidth(3)
-            scene.addRect(0, 0, qpixmap.width(), qpixmap.height(), pen)
-            self.fit_image_to_view()
-
+        self.fit_image_to_view()
         self.update()
 
     def delete_image(self):
@@ -415,6 +441,9 @@ class InputImage(BaseWidget):
             self.update_current_settings("image", None)
 
         if self._scene:
-            self._scene.clear()
+            if self._use_simple_scene:
+                self._scene.clear_image()
+            else:
+                self._scene.clear()
         else:
             self.ui.image_container.setScene(None)
