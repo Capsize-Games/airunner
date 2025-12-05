@@ -113,7 +113,9 @@ class SDGenerationPreparationMixin:
             data.update({"width": width, "height": height})
 
         if self.is_img2img:
-            image = self.img2img_image
+            # Use image from image_request if available (passed from GUI),
+            # otherwise fall back to img2img_image property
+            image = self.image_request.image if self.image_request.image is not None else self.img2img_image
             if (
                 data["num_inference_steps"]
                 < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
