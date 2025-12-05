@@ -157,6 +157,7 @@ class FileDownloadWorker(QObject):
 
                 with open(self.save_path, "wb") as f:
                     downloaded = 0
+                    last_progress_update = 0
                     for chunk in r.iter_content(chunk_size=8192):
                         if self._is_cancelled:
                             self.logger.info("Download cancelled by user")
@@ -178,7 +179,13 @@ class FileDownloadWorker(QObject):
                         if chunk:
                             f.write(chunk)
                             downloaded += len(chunk)
-                            self.progress.emit(downloaded, self.total_size)
+                            # Throttle progress updates to every ~1MB to avoid flooding the event queue
+                            if downloaded - last_progress_update >= 1024 * 1024:
+                                self.progress.emit(downloaded, self.total_size)
+                                last_progress_update = downloaded
+
+                # Final progress update
+                self.progress.emit(downloaded, self.total_size)
 
                 self.logger.info(
                     f"Download complete: {downloaded} bytes written to {self.save_path}"

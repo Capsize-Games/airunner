@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -10,7 +10,16 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
+import torch
+
 from airunner.components.art.data.ai_models import AIModels
+from airunner.utils.vram_utils import (
+    estimate_vram_from_path,
+    get_available_precisions,
+    PRECISION_DISPLAY_NAMES,
+    is_precision_safe_for_vram,
+)
+from airunner.utils.model_dtype_utils import detect_model_dtype
 from airunner.components.art.data.schedulers import Schedulers
 from airunner.enums import (
     SignalCode,
@@ -56,7 +65,14 @@ VERSION_TO_GENERATOR: dict[str, str] = {
     StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
 }
 
-# Scheduler constraints: only FlowMatchEuler for FLUX/Z-Image
+# All flow-match scheduler options (for FLUX/Z-Image dropdown)
+# Only includes schedulers that work correctly with flow-match models
+FLOW_MATCH_SCHEDULERS = (
+    Scheduler.FLOW_MATCH_EULER.value,
+    Scheduler.FLOW_MATCH_LCM.value,
+)
+
+# Default flow-match scheduler
 FLOW_MATCH_SCHEDULER_NAME = Scheduler.FLOW_MATCH_EULER.value
 
 # Version-specific parameter constraints
@@ -102,6 +118,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self._load_pipelines_combobox()
         self._load_models_combobox()
         self._load_schedulers_combobox()
+        self._load_precision_combobox()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -332,10 +349,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     @Slot(str)
     def on_custom_model_currentTextChanged(self, val: str):
         self.update_generator_settings(custom_path=val)
+        # Reload precision combobox since model changed
+        self._load_precision_combobox()
 
     @Slot(str)
     def on_model_currentTextChanged(self, val: str):
         self._update_model_id()
+        # Reload precision combobox to show VRAM estimates for new model
+        self._load_precision_combobox()
         self.api.art.model_changed(model=val)
 
     def _update_model_id(self):
@@ -603,18 +624,30 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def schedulers(self):
         """Get schedulers filtered by version.
         
-        FLUX and Z-Image models only support FlowMatchEulerDiscreteScheduler.
-        Other versions support all schedulers.
+        FLUX and Z-Image models support multiple flow-match schedulers:
+        - Flow Match Euler (default)
+        - Flow Match Euler Karras (Karras sigma schedule)
+        - Flow Match Euler Stochastic (SDE-like behavior)
+        - Flow Match Heun (2nd order, higher quality)
+        - Flow Match LCM (Latent Consistency)
+        
+        Other versions support all non-flow-match schedulers.
         """
         all_schedulers = Schedulers.objects.all()
         version = self.generator_settings.version
         
         if version in FLOW_MATCH_VERSIONS:
-            # Only return FlowMatchEuler for FLUX/Z-Image
-            return [s for s in all_schedulers if s.display_name == FLOW_MATCH_SCHEDULER_NAME]
+            # Return all flow-match scheduler variants for FLUX/Z-Image
+            return [
+                s for s in all_schedulers 
+                if s.display_name in FLOW_MATCH_SCHEDULERS
+            ]
         
-        # For other versions, return all schedulers except FlowMatchEuler
-        return [s for s in all_schedulers if s.display_name != FLOW_MATCH_SCHEDULER_NAME]
+        # For other versions, return all schedulers except flow-match ones
+        return [
+            s for s in all_schedulers 
+            if s.display_name not in FLOW_MATCH_SCHEDULERS
+        ]
 
     def _load_schedulers_combobox(self):
         self.ui.scheduler.blockSignals(True)
@@ -637,3 +670,155 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def on_scheduler_currentTextChanged(self, name):
         self.update_generator_settings(scheduler=name)
         self.api.art.change_scheduler(name)
+
+    def _get_current_model_path(self) -> Optional[str]:
+        """Get the path of the currently selected model.
+        
+        Returns:
+            Model path string or None if no model selected.
+        """
+        model_id = self.generator_settings.model
+        if model_id is None:
+            return None
+        
+        model = AIModels.objects.filter_first(AIModels.id == model_id)
+        if model is None:
+            return None
+        
+        return model.path
+
+    def _load_precision_combobox(self):
+        """Load precision options into the precision dropdown.
+        
+        Precision options are filtered based on the model's native dtype.
+        Models can only be loaded at their native precision or LOWER
+        (can't add information that isn't in the model).
+        
+        VRAM estimates are shown for each precision option based on
+        the model's file size and the selected precision.
+        
+        Available options (when applicable):
+        - 4-bit: Lowest memory, uses BitsAndBytes NF4 quantization
+        - 8-bit: Low memory, uses BitsAndBytes 8-bit quantization  
+              NOTE: Not available for Z-Image/FLUX on <=16GB cards (requires >20GB)
+        - FP8: 8-bit float, good quality with low memory (requires Hopper/Ada GPU)
+              NOTE: Not available for Z-Image/FLUX (text encoder incompatible)
+        - BF16 (bfloat16): Best quality/speed balance, recommended for most models
+        - FP16 (float16): Lower memory usage, good compatibility
+        - FP32 (float32): Highest precision but uses most memory
+        """
+        self.ui.precision.blockSignals(True)
+        self.ui.precision.clear()
+        
+        # Get model path and detect native dtype
+        model_path = self._get_current_model_path()
+        native_dtype = "bfloat16"  # Default assumption
+        
+        if model_path:
+            native_dtype = detect_model_dtype(model_path)
+            self.logger.debug(f"Detected native dtype: {native_dtype} for model: {model_path}")
+        
+        # Get available precisions based on native dtype
+        available_precisions = get_available_precisions(native_dtype)
+        
+        # Get available VRAM
+        available_vram_gb = 0.0
+        if torch.cuda.is_available():
+            try:
+                available_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            except Exception:
+                pass
+        
+        # Filter precision options for Z-Image/FLUX based on VRAM
+        version = self.generator_settings.version
+        is_large_model = version in FLOW_MATCH_VERSIONS
+        
+        if is_large_model:
+            # FP8 is not supported for Z-Image/FLUX (text encoder doesn't support it)
+            if "float8" in available_precisions:
+                available_precisions.remove("float8")
+            
+            # 8-bit requires >20GB VRAM for Z-Image/FLUX models
+            # On 16GB cards, 8-bit still uses ~14GB leaving no room for VAE decode
+            if available_vram_gb <= 20 and "8bit" in available_precisions:
+                available_precisions.remove("8bit")
+                self.logger.debug(f"Removed 8-bit option: {available_vram_gb:.1f}GB VRAM insufficient for Z-Image/FLUX")
+        
+        # Precision options ordered from lowest memory to highest
+        # Only include options that are valid for this model
+        precision_order = ["4bit", "8bit", "float8", "bfloat16", "float16", "float32"]
+        
+        for precision in precision_order:
+            if precision not in available_precisions:
+                continue
+            
+            display_name = PRECISION_DISPLAY_NAMES.get(precision, precision)
+            
+            # Add VRAM estimate if model path is available
+            if model_path:
+                estimate = estimate_vram_from_path(
+                    model_path, precision, native_dtype
+                )
+                if estimate:
+                    # Check if this precision is safe for current VRAM
+                    if available_vram_gb > 0 and not is_precision_safe_for_vram(estimate, available_vram_gb):
+                        # Add warning indicator for risky precision settings
+                        display_name = f"⚠️ {display_name} ({estimate})"
+                    else:
+                        display_name = f"{display_name} ({estimate})"
+            
+            self.ui.precision.addItem(display_name, precision)
+        
+        # Restore current selection from settings
+        current_dtype = getattr(self.generator_settings, "dtype", "bfloat16") or "bfloat16"
+        
+        # If current dtype is not available, pick the best available option
+        if current_dtype not in available_precisions:
+            # For Z-Image/FLUX on low VRAM, default to 4-bit
+            if is_large_model and available_vram_gb <= 20 and "4bit" in available_precisions:
+                new_dtype = "4bit"
+            elif native_dtype in available_precisions:
+                new_dtype = native_dtype
+            elif available_precisions:
+                new_dtype = available_precisions[0]  # First available
+            else:
+                new_dtype = "bfloat16"  # Fallback
+            
+            self.logger.warning(
+                f"Current dtype {current_dtype} not available for model "
+                f"(native: {native_dtype}, VRAM: {available_vram_gb:.1f}GB). "
+                f"Defaulting to {new_dtype}."
+            )
+            current_dtype = new_dtype
+            self.update_generator_settings(dtype=current_dtype)
+        
+        # Find and select the saved dtype
+        for i in range(self.ui.precision.count()):
+            if self.ui.precision.itemData(i) == current_dtype:
+                self.ui.precision.setCurrentIndex(i)
+                break
+        
+        self.ui.precision.blockSignals(False)
+
+    @Slot(str)
+    def on_precision_currentTextChanged(self, val: str):
+        """Handle precision selection change.
+        
+        Updates the generator settings with the selected dtype/precision.
+        This affects how the model is loaded.
+        """
+        # Get the actual dtype value from item data
+        index = self.ui.precision.currentIndex()
+        dtype = self.ui.precision.itemData(index)
+        if not dtype:
+            return
+        
+        self.logger.info(f"Precision changed to: {dtype}")
+        self.update_generator_settings(dtype=dtype)
+        
+        # Notify that model settings changed (may need to reload)
+        self.api.art.model_changed(
+            model=self.generator_settings.model,
+            version=self.generator_settings.version,
+            pipeline=self.generator_settings.pipeline_action,
+        )

@@ -5,6 +5,7 @@ from typing import Dict, Any
 import torch
 from airunner.components.application.exceptions import InterruptedException
 from airunner.utils.memory import clear_memory
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class ZImageGenerationMixin:
@@ -68,6 +69,122 @@ class ZImageGenerationMixin:
             list(data.keys()),
             debug_fields,
         )
+
+    def _unload_loras(self):
+        """Unload Z-Image LoRA weights if any are loaded.
+        
+        Z-Image supports LoRA weights through ZImageLoraLoaderMixin.
+        """
+        if hasattr(self._pipe, 'unload_lora_weights'):
+            try:
+                self._pipe.unload_lora_weights()
+                self.logger.debug("Unloaded Z-Image LoRA weights")
+            except Exception as e:
+                self.logger.debug(f"No LoRA weights to unload: {e}")
+        self._loaded_lora = {}
+        self._disabled_lora = []
+
+    def _load_scheduler(self, scheduler_name=None):
+        """Load a flow-match scheduler for Z-Image.
+        
+        Overrides base class to use flow-match scheduler factory.
+        
+        Args:
+            scheduler_name: Display name of the scheduler to load.
+        """
+        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+            is_flow_match_scheduler,
+            create_flow_match_scheduler,
+        )
+        from airunner.enums import Scheduler, ModelType, ModelStatus
+        
+        # Get scheduler name
+        requested_name = (
+            scheduler_name
+            or (self.image_request.scheduler if self.image_request else None)
+            or getattr(self, '_scheduler_name', None)
+            or Scheduler.FLOW_MATCH_EULER.value
+        )
+        
+        # Only handle flow-match schedulers
+        if not is_flow_match_scheduler(requested_name):
+            self.logger.warning(
+                f"Scheduler {requested_name} is not a flow-match scheduler. "
+                f"Z-Image requires flow-match schedulers."
+            )
+            requested_name = Scheduler.FLOW_MATCH_EULER.value
+        
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
+        
+        try:
+            # Use base config from current scheduler for structural params, but
+            # strip behavioral flags so the factory sets them explicitly.
+            base_config = None
+            if self._pipe and hasattr(self._pipe, "scheduler"):
+                base_config = dict(self._pipe.scheduler.config)
+                for flag in (
+                    "use_karras_sigmas",
+                    "stochastic_sampling",
+                    "use_exponential_sigmas",
+                    "use_beta_sigmas",
+                ):
+                    base_config.pop(flag, None)
+            
+            # Create the new scheduler
+            scheduler = create_flow_match_scheduler(requested_name, base_config)
+            
+            # Apply to pipeline
+            if self._pipe is not None:
+                self._pipe.scheduler = scheduler
+            
+            self._scheduler = scheduler
+            self._scheduler_name = requested_name
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
+            self.logger.info(f"Loaded Z-Image scheduler: {requested_name}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load scheduler {requested_name}: {e}")
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+
+    def _apply_torch_compile(self):
+        """Apply torch.compile() to transformer for inference speedup.
+        
+        Z-Image uses 'transformer' instead of 'unet', so we override
+        the base class implementation.
+        """
+        settings = get_qsettings()
+        settings.beginGroup("generator_settings")
+        enable_torch_compile = settings.value(
+            "enable_torch_compile", False, type=bool
+        )
+        settings.endGroup()
+        
+        if not enable_torch_compile:
+            self.logger.debug("torch.compile disabled in settings")
+            return
+
+        if self._memory_settings_flags.get("torch_compile_applied"):
+            return  # Already compiled
+
+        if not hasattr(self._pipe, "transformer") or self._pipe.transformer is None:
+            self.logger.debug("No transformer found for torch.compile")
+            return
+
+        try:
+            self.logger.info(
+                "Wrapping Z-Image transformer with torch.compile() - compilation will happen on first generation"
+            )
+            self._pipe.transformer = torch.compile(
+                self._pipe.transformer,
+                mode="reduce-overhead",  # Best for inference
+                fullgraph=False,  # Allow fallback for unsupported ops
+            )
+            self._memory_settings_flags["torch_compile_applied"] = True
+            self.logger.info(
+                "✓ Z-Image transformer wrapped for compilation (first generation will take 2-3 min)"
+            )
+        except Exception as e:
+            self.logger.warning(f"Could not compile Z-Image transformer: {e}")
 
     def _load_deep_cache(self):
         """Deep cache not supported for Z-Image."""
@@ -191,6 +308,19 @@ class ZImageGenerationMixin:
 
     def _generate(self):
         """Override to add cleanup after Z-Image generation."""
+        # Log the active scheduler flags at generation time for debugging
+        try:
+            if self._pipe and hasattr(self._pipe, "scheduler") and hasattr(self._pipe.scheduler, "config"):
+                karras = self._pipe.scheduler.config.get("use_karras_sigmas", False)
+                stochastic = self._pipe.scheduler.config.get("stochastic_sampling", False)
+                self.logger.info(
+                    "[ZIMAGE SCHEDULER DEBUG] generate() using %s (karras=%s, stochastic=%s)",
+                    self._pipe.scheduler.__class__.__name__,
+                    karras,
+                    stochastic,
+                )
+        except Exception:
+            self.logger.debug("Could not log scheduler flags during generation", exc_info=True)
         try:
             super()._generate()
         finally:

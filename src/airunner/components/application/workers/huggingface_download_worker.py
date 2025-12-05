@@ -640,6 +640,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             model_path: Final model directory
             api_key: HuggingFace API key (optional)
         """
+        self.logger.info(f"[DOWNLOAD THREAD] Starting download for {filename} from {repo_id}")
+        
         temp_path = temp_dir / filename
         final_path = model_path / filename
 
@@ -647,6 +649,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         temp_path.parent.mkdir(parents=True, exist_ok=True)
 
         url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
+        self.logger.debug(f"[DOWNLOAD THREAD] URL: {url}")
+        
         headers = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -706,6 +710,13 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     remaining_size = int(content_length)
                     total_file_size = resume_from + remaining_size
                     with self._lock:
+                        # Update total_size if bootstrap had 0 for this file
+                        old_file_size = self._file_sizes.get(filename, 0)
+                        if old_file_size == 0 and total_file_size > 0:
+                            self._total_size += total_file_size
+                        elif old_file_size != total_file_size:
+                            # Adjust total_size for the difference
+                            self._total_size += (total_file_size - old_file_size)
                         self._file_sizes[filename] = total_file_size
                 else:
                     total_file_size = file_size
@@ -745,6 +756,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 self._mark_file_complete(filename)
 
         except Exception as e:
+            import traceback
             self.logger.error(f"Failed to download {filename}: {e}")
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {"message": f"✗ Error downloading {filename}: {e}"},
+            )
             self._mark_file_failed(filename)
             # Don't delete temp file - can resume later

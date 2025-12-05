@@ -107,6 +107,9 @@ class ChatPromptWidget(BaseWidget):
             # Update visibility based on whether model supports thinking
             self._update_thinking_checkbox_visibility()
         
+        # Initialize precision dropdown
+        self._populate_precision_dropdown()
+        
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.ui.prompt.keyPressEvent = self.handle_key_press
         
@@ -1402,6 +1405,9 @@ class ChatPromptWidget(BaseWidget):
         
         # Repopulate model dropdown for new provider
         self._populate_model_dropdown()
+        
+        # Update precision dropdown for new provider
+        self._populate_precision_dropdown()
 
     @Slot(int)
     def on_model_changed(self, index: int) -> None:
@@ -1470,6 +1476,162 @@ class ChatPromptWidget(BaseWidget):
         
         # Update context tokens
         self._refresh_model_context_tokens()
+        
+        # Update precision dropdown for new model
+        self._populate_precision_dropdown()
+
+    @Slot(int)
+    def on_precision_changed(self, index: int) -> None:
+        """Handle precision selection change from dropdown.
+        
+        Updates the LLM generator settings with the selected dtype/precision.
+        This affects how the model is loaded (quantization level).
+        """
+        if index < 0:
+            return
+        
+        if not hasattr(self.ui, "precision_dropdown"):
+            return
+        
+        precision = self.ui.precision_dropdown.itemData(index)
+        if not precision:
+            return
+        
+        self.logger.info(f"Precision changed to: {precision}")
+        self.update_llm_generator_settings(dtype=precision)
+        
+        # Emit signal to reload model with new precision
+        self.emit_signal(
+            SignalCode.LLM_MODEL_CHANGED,
+            {
+                "model_path": getattr(self.llm_generator_settings, "model_path", ""),
+                "model_name": getattr(self.llm_generator_settings, "model_version", ""),
+            },
+        )
+
+    def _populate_precision_dropdown(self) -> None:
+        """Populate the precision dropdown with available options.
+        
+        Options are filtered based on the model's native precision.
+        Lower precision options (more quantization) are always available,
+        while higher precision options are limited by the model's native precision.
+        
+        Precision hierarchy (from highest to lowest):
+        - bf16 (bfloat16) - 16-bit brain float
+        - fp16 (float16) - 16-bit float
+        - 8bit - 8-bit quantization
+        - 4bit - 4-bit quantization (default)
+        """
+        if not hasattr(self.ui, "precision_dropdown"):
+            return
+        
+        self.ui.precision_dropdown.blockSignals(True)
+        self.ui.precision_dropdown.clear()
+        
+        # Get current provider
+        provider = ModelService.LOCAL.value
+        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
+            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        
+        # Remote providers don't support precision selection
+        if provider != ModelService.LOCAL.value:
+            self.ui.precision_dropdown.addItem("Auto", "auto")
+            self.ui.precision_dropdown.setEnabled(False)
+            self.ui.precision_dropdown.setToolTip("Precision selection not available for remote providers")
+            self.ui.precision_dropdown.blockSignals(False)
+            return
+        
+        self.ui.precision_dropdown.setEnabled(True)
+        self.ui.precision_dropdown.setToolTip(
+            "Model precision/quantization. Lower precision uses less memory but may reduce quality."
+        )
+        
+        # Define precision options with display names and values
+        # These are ordered from lowest precision (most memory efficient) to highest
+        precision_options = [
+            ("4-bit", "4bit"),
+            ("8-bit", "8bit"),
+            ("FP16", "float16"),
+            ("BF16", "bfloat16"),
+        ]
+        
+        # Get model's native precision from config if available
+        native_precision = self._get_model_native_precision()
+        
+        # Build list of available options based on native precision
+        precision_hierarchy = ["4bit", "8bit", "float16", "bfloat16"]
+        native_index = precision_hierarchy.index(native_precision) if native_precision in precision_hierarchy else len(precision_hierarchy) - 1
+        
+        for display_name, value in precision_options:
+            option_index = precision_hierarchy.index(value) if value in precision_hierarchy else 0
+            if option_index <= native_index:
+                self.ui.precision_dropdown.addItem(display_name, value)
+        
+        # Restore current selection from settings
+        current_dtype = getattr(self.llm_generator_settings, "dtype", "4bit") or "4bit"
+        
+        # Find and select the saved dtype
+        for i in range(self.ui.precision_dropdown.count()):
+            if self.ui.precision_dropdown.itemData(i) == current_dtype:
+                self.ui.precision_dropdown.setCurrentIndex(i)
+                break
+        else:
+            # If saved dtype is not available (e.g., model changed), default to 4bit
+            self.ui.precision_dropdown.setCurrentIndex(0)
+        
+        self.ui.precision_dropdown.blockSignals(False)
+
+    def _get_model_native_precision(self) -> str:
+        """Determine the native precision of the currently selected model.
+        
+        Checks the model's config.json for torch_dtype or other indicators.
+        Falls back to bfloat16 if unknown (most permissive).
+        
+        Returns:
+            Native precision string (e.g., "bfloat16", "float16", "4bit")
+        """
+        model_path = getattr(self.llm_generator_settings, "model_path", "") or ""
+        
+        if not model_path or not os.path.exists(model_path):
+            # No local model path - assume bfloat16 (most permissive)
+            return "bfloat16"
+        
+        config_path = os.path.join(model_path, "config.json")
+        if not os.path.exists(config_path):
+            return "bfloat16"
+        
+        try:
+            import json
+            with open(config_path, "r") as f:
+                config = json.load(f)
+            
+            # Check torch_dtype in config
+            torch_dtype = config.get("torch_dtype", "")
+            if torch_dtype == "bfloat16":
+                return "bfloat16"
+            elif torch_dtype == "float16":
+                return "float16"
+            elif torch_dtype == "float32":
+                # FP32 models can run at any precision
+                return "bfloat16"
+            
+            # Check for pre-quantized models
+            quantization_config = config.get("quantization_config", {})
+            if quantization_config:
+                quant_method = quantization_config.get("quant_method", "")
+                if quant_method in ["bitsandbytes", "gptq", "awq"]:
+                    bits = quantization_config.get("bits", 4)
+                    if bits == 4:
+                        return "4bit"
+                    elif bits == 8:
+                        return "8bit"
+            
+            # Default to bfloat16 if we can't determine
+            return "bfloat16"
+            
+        except (json.JSONDecodeError, IOError, KeyError) as e:
+            self.logger.warning(f"Failed to read model config: {e}")
+            return "bfloat16"
 
     def _handle_custom_model(self, provider: str, custom_model: str) -> None:
         """Handle custom model entry for any provider."""

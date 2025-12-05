@@ -70,6 +70,7 @@ class BaseDiffusersModelManager(
         ModelType.LORA: ModelStatus.UNLOADED,
         ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
         ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
+        ModelType.SCHEDULER: ModelStatus.UNLOADED,
     }
 
     def __init__(self, *args, **kwargs):
@@ -563,6 +564,7 @@ class BaseDiffusersModelManager(
         """
         if self._pipe is not None:
             self._current_state = HandlerState.READY
+            self.change_model_status(self.model_type, ModelStatus.LOADED)
         else:
             self.logger.error(
                 "Something went wrong with Stable Diffusion loading"
