@@ -2,6 +2,7 @@ from typing import Dict
 from PIL.Image import Image
 from PIL import ImageQt
 from PySide6.QtCore import QPoint
+from PySide6.QtGui import QImage
 
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
@@ -14,6 +15,9 @@ from airunner.utils.image import (
     convert_image_to_binary,
 )
 from airunner.components.art.gui.widgets.canvas.brush_scene import BrushScene
+from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
+    LayerImageItem,
+)
 
 
 class InputImageScene(BrushScene):
@@ -56,10 +60,31 @@ class InputImageScene(BrushScene):
         """
         try:
             if self.item is not None:
+                old_pos = self.item.pos()
                 self.item.setPos(0, 0)
-        except (RuntimeError, AttributeError):
+                self.logger.info(f"[POSITION DEBUG] _update_item_position called, old_pos={old_pos}, new_pos={self.item.pos()}")
+        except (RuntimeError, AttributeError) as e:
             # Item was deleted or is no longer valid
+            self.logger.warning(f"[POSITION DEBUG] _update_item_position failed: {e}")
             pass
+
+    def _create_new_item(self, image: QImage, x: int, y: int) -> None:
+        """Override to create items without layer context for input image scenes.
+        
+        Input image scenes should not read position from drawing_pad_settings,
+        so we create LayerImageItem with use_layer_context=False.
+        
+        Args:
+            image: The QImage to display.
+            x: X position for the item (always 0 for input scenes).
+            y: Y position for the item (always 0 for input scenes).
+        """
+        # Create item without layer context so it doesn't read position from settings
+        self.item = LayerImageItem(image, use_layer_context=False)
+        if self.item.scene() is None:
+            self.addItem(self.item)
+            self.item.setPos(0, 0)  # Always at origin for input image scenes
+            self.original_item_positions[self.item] = self.item.pos()
 
     @property
     def current_active_image(self) -> Image:
