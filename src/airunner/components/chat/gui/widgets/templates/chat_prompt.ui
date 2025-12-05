@@ -537,6 +537,28 @@
           </widget>
          </item>
          <item>
+          <widget class="QComboBox" name="precision_dropdown">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Model precision/quantization. Lower precision uses less memory but may reduce quality.</string>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="footer_spacer">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
@@ -758,6 +780,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>precision_dropdown</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>on_precision_changed(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>300</x>
+     <y>689</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>300</x>
+     <y>2</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>message_type_text_changed(QString)</slot>
@@ -765,5 +803,6 @@
   <slot>on_provider_changed(int)</slot>
   <slot>thinking_toggled(bool)</slot>
   <slot>on_model_changed(int)</slot>
+  <slot>on_precision_changed(int)</slot>
  </slots>
 </ui>

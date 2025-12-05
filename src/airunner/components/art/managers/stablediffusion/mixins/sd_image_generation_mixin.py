@@ -45,8 +45,19 @@ class SDImageGenerationMixin:
         if not self.image_request:
             raise ValueError("ImageRequest is None")
 
-        if self.image_request.scheduler != self.scheduler_name:
-            self._load_scheduler(self.image_request.scheduler)
+        # Always (re)apply the requested scheduler to avoid lingering config
+        requested_scheduler = self.image_request.scheduler
+        current_scheduler = self.scheduler_name
+        self.logger.debug(
+            f"[SCHEDULER CHECK] Requested: '{requested_scheduler}', Current: '{current_scheduler}'"
+        )
+        if requested_scheduler != current_scheduler:
+            self.logger.info(
+                f"[SCHEDULER CHANGE] Switching from '{current_scheduler}' to '{requested_scheduler}'"
+            )
+        # Reload even if names match to guarantee fresh config/flags
+        if requested_scheduler:
+            self._load_scheduler(requested_scheduler)
 
         self._clear_cached_properties()
 

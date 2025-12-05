@@ -906,34 +906,35 @@ class WorkerManager(Worker):
             model_path=model_path,
         )
         
-        # Create download worker
-        self._huggingface_download_worker = create_worker(DownloadHuggingFaceModel)
+        # Create download worker - use local variable to avoid polluting the 
+        # huggingface_download_worker property which is used for STT/TTS downloads
+        llm_download_worker = create_worker(DownloadHuggingFaceModel)
         
         # Connect dialog to download worker signals
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_LOG,
             self._download_dialog.on_log_updated,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_progress_updated,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_file_progress_updated,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self._download_dialog.on_download_complete,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
             self._download_dialog.on_download_failed,
         )
         
         if is_gguf and gguf_filename:
             self.logger.info(f"Starting GGUF download: {repo_id}/{gguf_filename}")
-            self._huggingface_download_worker.download(
+            llm_download_worker.download(
                 repo_id=repo_id,
                 model_type="gguf",
                 output_dir=model_path,
@@ -944,7 +945,7 @@ class WorkerManager(Worker):
             )
         else:
             self.logger.info(f"Starting standard download: {repo_id}")
-            self._huggingface_download_worker.download(
+            llm_download_worker.download(
                 repo_id=repo_id,
                 model_type=model_type,
                 output_dir=model_path,

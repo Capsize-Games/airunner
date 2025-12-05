@@ -269,6 +269,15 @@ class Ui_chat_prompt(object):
 
         self.horizontalLayout_2.addWidget(self.thinking_checkbox)
 
+        self.precision_dropdown = QComboBox(self.footer_container)
+        self.precision_dropdown.setObjectName(u"precision_dropdown")
+        sizePolicy3.setHeightForWidth(self.precision_dropdown.sizePolicy().hasHeightForWidth())
+        self.precision_dropdown.setSizePolicy(sizePolicy3)
+        self.precision_dropdown.setMinimumSize(QSize(80, 30))
+        self.precision_dropdown.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+
+        self.horizontalLayout_2.addWidget(self.precision_dropdown)
+
         self.footer_spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_2.addItem(self.footer_spacer)
@@ -329,6 +338,7 @@ class Ui_chat_prompt(object):
         self.model_dropdown.currentIndexChanged.connect(chat_prompt.on_model_changed)
         self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
         self.thinking_checkbox.toggled.connect(chat_prompt.thinking_toggled)
+        self.precision_dropdown.currentIndexChanged.connect(chat_prompt.on_precision_changed)
 
         self.tabWidget.setCurrentIndex(0)
 
@@ -366,6 +376,9 @@ class Ui_chat_prompt(object):
         self.thinking_checkbox.setToolTip(QCoreApplication.translate("chat_prompt", u"Enable thinking mode (Qwen3). When enabled, the model will reason step-by-step before responding. Slower but more thoughtful responses.", None))
 #endif // QT_CONFIG(tooltip)
         self.thinking_checkbox.setText(QCoreApplication.translate("chat_prompt", u"Thinking", None))
+#if QT_CONFIG(tooltip)
+        self.precision_dropdown.setToolTip(QCoreApplication.translate("chat_prompt", u"Model precision/quantization. Lower precision uses less memory but may reduce quality.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
 #endif // QT_CONFIG(tooltip)
