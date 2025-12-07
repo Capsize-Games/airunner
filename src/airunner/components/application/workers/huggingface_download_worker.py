@@ -12,6 +12,10 @@ from airunner.enums import SignalCode
 from airunner.components.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
+from airunner.components.llm.utils.ministral3_config_patcher import (
+    patch_ministral3_config,
+    is_ministral3_model,
+)
 from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.settings import MODELS_DIR
 from airunner.components.data.bootstrap.unified_model_files import (
@@ -37,6 +41,29 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
     def _failed_signal(self) -> SignalCode:
         """Signal to emit on download failure."""
         return SignalCode.HUGGINGFACE_DOWNLOAD_FAILED
+
+    def _apply_post_download_patches(self, model_path: Path) -> None:
+        """Apply post-download patches for models requiring config fixes.
+
+        Some models like Ministral3 have config files that need patching
+        for transformers compatibility. This method applies necessary patches
+        after download completes.
+
+        Args:
+            model_path: Path to the downloaded model directory.
+        """
+        try:
+            if is_ministral3_model(model_path):
+                self.logger.info(f"Applying Ministral3 config patches to {model_path}")
+                if patch_ministral3_config(model_path):
+                    self.emit_signal(
+                        SignalCode.UPDATE_DOWNLOAD_LOG,
+                        {"message": "Applied Ministral3 config patches for transformers compatibility."},
+                    )
+                else:
+                    self.logger.debug(f"Ministral3 configs already patched at {model_path}")
+        except Exception as e:
+            self.logger.warning(f"Failed to apply post-download patches: {e}")
 
     def _download_model(
         self,
@@ -129,13 +156,14 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # Otherwise, use the comprehensive bootstrap data
         is_art_model = model_type == "art"
         is_stt_tts_model = model_type in ("stt", "tts_openvoice")
+        is_llm_model = model_type in ("llm", "ministral3", "gguf")
 
         # For art/stt/tts models, use bootstrap data directly (no API call)
         # For LLM models, we still need API to discover model shards
         bootstrap_files = None  # Dict of {filename: expected_size} for art models, or list for stt/tts
         full_bootstrap_data = None  # Full bootstrap data for size lookups
 
-        # First, get the full bootstrap data if this is an art model
+        # First, get the full bootstrap data based on model type
         if is_art_model:
             version_names = []
             if version:
@@ -160,6 +188,17 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             if full_bootstrap_data:
                 self.logger.info(
                     f"Found bootstrap data for {model_type}/{repo_id} with {len(full_bootstrap_data)} files"
+                )
+        elif is_llm_model:
+            # For LLM models, get bootstrap data for file size validation
+            full_bootstrap_data = get_required_files_for_model("llm", repo_id)
+            if full_bootstrap_data:
+                self.logger.info(
+                    f"Found bootstrap data for llm/{repo_id} with {len(full_bootstrap_data)} files"
+                )
+            else:
+                self.logger.warning(
+                    f"No bootstrap data found for llm/{repo_id} - file sizes will be fetched from API"
                 )
 
         if missing_files:
@@ -337,8 +376,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 if filename == "consolidated.safetensors":
                     continue
 
-                # Include all config/tokenizer/model files (.json, .txt, .model, .safetensors)
-                if filename.endswith((".safetensors", ".json", ".txt", ".model")):
+                # Include all config/tokenizer/model files (.json, .txt, .model, .jinja, .safetensors)
+                if filename.endswith((".safetensors", ".json", ".txt", ".model", ".jinja")):
                     files_to_download.append(
                         {"filename": filename, "size": expected_size}
                     )
@@ -348,6 +387,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 SignalCode.UPDATE_DOWNLOAD_LOG,
                 {"message": "All files already downloaded!"},
             )
+            # Apply post-download patches even if files exist (may not be patched yet)
+            self._apply_post_download_patches(model_path)
             self.emit_signal(
                 self._complete_signal,
                 {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type, "pipeline_action": self._current_pipeline_action},
@@ -407,6 +448,10 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             return
 
         self._cleanup_temp_files()
+        
+        # Apply post-download patches (e.g., Ministral3 config fixes)
+        self._apply_post_download_patches(model_path)
+        
         self.emit_signal(
             self._complete_signal,
             {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type, "pipeline_action": self._current_pipeline_action},
@@ -535,9 +580,9 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         We just download the single .gguf file directly.
 
         Args:
-            repo_id: HuggingFace repository ID (e.g., "bartowski/Ministral-8B-Instruct-2410-GGUF")
+            repo_id: HuggingFace repository ID (e.g., "bartowski/Ministral-3-8B-Instruct-2512-GGUF")
             output_dir: Directory to save the model
-            gguf_filename: The .gguf file to download (e.g., "Ministral-8B-Instruct-2410-Q4_K_M.gguf")
+            gguf_filename: The .gguf file to download (e.g., "Ministral-3-8B-Instruct-2512-Q4_K_M.gguf")
         """
         settings = get_qsettings()
         api_key = settings.value("huggingface/api_key", "")

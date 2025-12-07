@@ -42,7 +42,7 @@ def main():
     print("AI Runner Model Download Test")
     print("=" * 80)
 
-    print("\nThis will download Ministral-8B-Instruct-2410 (~16GB)")
+    print("\nThis will download Ministral-3-8B-Instruct-2512 (~20GB)")
     print(
         "Quantization will happen at runtime using bitsandbytes (already installed)"
     )
@@ -51,13 +51,13 @@ def main():
     # Initialize downloader
     downloader = HuggingFaceDownloader()
 
-    print("Downloading Ministral-8B-Instruct-2410...")
+    print("Downloading Ministral-3-8B-Instruct-2512...")
     print("-" * 80)
 
     try:
         model_path = downloader.download_model(
-            repo_id="mistralai/Ministral-8B-Instruct-2410",
-            model_type="mistral",
+            repo_id="mistralai/Ministral-3-8B-Instruct-2512",
+            model_type="ministral3",
             include_patterns=["*.safetensors", "*.json"],
             exclude_patterns=["*.bin", "*.msgpack", "*consolidated*"],
             progress_callback=lambda f, d, t: progress_callback(

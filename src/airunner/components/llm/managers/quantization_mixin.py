@@ -330,14 +330,19 @@ class QuantizationMixin:
     def _save_model_and_config_files(
         self, model: AutoModelForCausalLM, base_path: str, quant_path: str
     ) -> None:
-        """Save quantized model and copy configuration files."""
+        """Save quantized model and copy configuration files.
+        
+        Note: We do NOT copy config.json because model.save_pretrained() already
+        saves it with the quantization_config included. Copying from base_path
+        would overwrite the quantization settings needed for reloading.
+        """
         import shutil
 
         self.logger.info(f"Saving quantized model to {quant_path}")
         model.save_pretrained(quant_path, safe_serialization=True)
 
+        # Copy tokenizer and generation config files (but NOT config.json)
         config_files = [
-            "config.json",
             "generation_config.json",
             "tokenizer_config.json",
         ]

@@ -8,6 +8,7 @@ from airunner.components.llm.adapters.chat_model_factory import (
 )
 from airunner.components.llm.adapters.chat_gguf import (
     ChatGGUF,
+    UnsupportedGGUFArchitectureError,
     find_gguf_file,
     is_gguf_model,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "ChatHuggingFaceLocal",
     "ChatModelFactory",
     "ChatGGUF",
+    "UnsupportedGGUFArchitectureError",
     "find_gguf_file",
     "is_gguf_model",
 ]

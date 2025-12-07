@@ -15,7 +15,12 @@ from langchain_core.messages import (
     trim_messages,
 )
 
-from airunner.components.llm.utils.thinking_parser import strip_thinking_tags, has_thinking_content
+from airunner.components.llm.utils.thinking_parser import (
+    strip_thinking_tags,
+    has_thinking_content,
+    detect_thinking_open_tag,
+    detect_thinking_close_tag,
+)
 from airunner.enums import SignalCode
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
@@ -1561,9 +1566,10 @@ Based on the search results above, provide a clear, conversational answer to the
         last_chunk_message: Optional[BaseMessage] = None
         collected_tool_calls: List = []  # Collect tool_calls from ALL chunks
         
-        # Track thinking state for Qwen3 <think>...</think> blocks
+        # Track thinking state for <think>...</think> (Qwen3) or [THINK]...[/THINK] (Ministral3) blocks
         in_thinking_block = False
-        thinking_started = False  # Track if we've already seen <think>
+        thinking_started = False  # Track if we've already seen an opening tag
+        thinking_tag_format = ""  # "angle" or "brackets" - set when opening tag detected
         thinking_content = []
         final_thinking_content = None  # Store completed thinking content for DB persistence
         
@@ -1610,28 +1616,25 @@ Based on the search results above, provide a clear, conversational answer to the
                 # Debug: Log every chunk
                 # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
                 
-                # Detect thinking block boundaries
-                # Check for <think> opening tag - only if we haven't seen one yet
-                if "<think>" in text and not thinking_started:
+                # Detect thinking block boundaries using format-agnostic helpers
+                # Supports both <think>...</think> (Qwen3) and [THINK]...[/THINK] (Ministral 3)
+                found_open, tag_format, _, after_think = detect_thinking_open_tag(text)
+                if found_open and not thinking_started:
                     in_thinking_block = True
                     thinking_started = True
-                    # self.logger.debug("[THINKING] Detected <think> tag - starting thinking block")
+                    thinking_tag_format = tag_format
+                    # self.logger.debug(f"[THINKING] Detected {tag_format} opening tag - starting thinking block")
                     # Emit thinking started signal
                     if hasattr(self, "_signal_emitter") and self._signal_emitter:
                         self._signal_emitter.emit_signal(
                             SignalCode.LLM_THINKING_SIGNAL,
                             {"status": "started", "content": ""}
                         )
-                    # Don't stream the <think> tag itself to the thinking content
-                    # Extract any text after <think> in this chunk
-                    after_think = text.split("<think>", 1)[1] if "<think>" in text else ""
                     
-                    # Check if </think> is also in this chunk (entire thinking block in one chunk)
-                    if "</think>" in after_think:
+                    # Check if closing tag is also in this chunk (entire thinking block in one chunk)
+                    found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
+                    if found_close:
                         # Both tags in same chunk - extract thinking and remaining content
-                        before_close = after_think.split("</think>", 1)[0]
-                        after_close = after_think.split("</think>", 1)[1]
-                        
                         if before_close:
                             thinking_content.append(before_close)
                             if hasattr(self, "_signal_emitter") and self._signal_emitter:
@@ -1652,7 +1655,7 @@ Based on the search results above, provide a clear, conversational answer to the
                             )
                         thinking_content = []
                         
-                        # Stream any content after </think> to the main callback
+                        # Stream any content after closing tag to the main callback
                         if after_close and self._token_callback:
                             try:
                                 self._token_callback(after_close)
@@ -1663,7 +1666,7 @@ Based on the search results above, provide a clear, conversational answer to the
                                     exc_info=True,
                                 )
                     elif after_think:
-                        # Only <think> in this chunk, stream content to thinking
+                        # Only opening tag in this chunk, stream content to thinking
                         thinking_content.append(after_think)
                         if hasattr(self, "_signal_emitter") and self._signal_emitter:
                             self._signal_emitter.emit_signal(
@@ -1674,12 +1677,9 @@ Based on the search results above, provide a clear, conversational answer to the
                 
                 # If we're in a thinking block, emit thinking content
                 if in_thinking_block:
-                    # Check for </think> closing tag first
-                    if "</think>" in text:
-                        # Extract text before </think>
-                        before_close = text.split("</think>", 1)[0]
-                        after_close = text.split("</think>", 1)[1] if "</think>" in text else ""
-                        
+                    # Check for closing tag using the same format as the opening tag
+                    found_close, before_close, after_close = detect_thinking_close_tag(text, thinking_tag_format)
+                    if found_close:
                         if before_close:
                             thinking_content.append(before_close)
                             if hasattr(self, "_signal_emitter") and self._signal_emitter:
@@ -1690,7 +1690,7 @@ Based on the search results above, provide a clear, conversational answer to the
                         
                         # Mark thinking as complete
                         in_thinking_block = False
-                        # self.logger.debug(f"[THINKING] Detected </think> tag - ending thinking block, content len={len(''.join(thinking_content))}")
+                        # self.logger.debug(f"[THINKING] Detected closing tag - ending thinking block, content len={len(''.join(thinking_content))}")
                         
                         # Save thinking content for DB persistence BEFORE clearing the list
                         final_thinking_content = "".join(thinking_content)
@@ -1702,7 +1702,7 @@ Based on the search results above, provide a clear, conversational answer to the
                             )
                         thinking_content = []
                         
-                        # Stream any content after </think> to the main callback
+                        # Stream any content after closing tag to the main callback
                         if after_close and self._token_callback:
                             try:
                                 self._token_callback(after_close)

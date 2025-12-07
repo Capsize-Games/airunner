@@ -614,3 +614,51 @@ class ZImagePipelineLoadingMixin:
         
         return True
 
+    def _swap_pipeline(self):
+        """Swap between Z-Image pipeline types (txt2img <-> img2img).
+        
+        Z-Image pipelines share the same components (transformer, text_encoder,
+        vae, tokenizer, scheduler), so we can create a new pipeline instance
+        reusing the existing components without reloading from disk.
+        """
+        from airunner.components.art.pipelines.z_image import ZImagePipeline, ZImageImg2ImgPipeline
+        
+        pipeline_class = self._pipeline_class
+        if pipeline_class is None:
+            pipeline_class = ZImagePipeline
+        
+        # Check if swap is needed
+        if self._pipe is None:
+            self.logger.debug("No pipeline loaded, nothing to swap")
+            return
+        
+        if self._pipe.__class__ is pipeline_class:
+            self.logger.debug(f"Pipeline already is {pipeline_class.__name__}, no swap needed")
+            return
+        
+        self.logger.info(
+            f"Swapping Z-Image pipeline from {self._pipe.__class__.__name__} to {pipeline_class.__name__}"
+        )
+        
+        try:
+            # Extract components from current pipeline
+            components = {
+                "transformer": self._pipe.transformer,
+                "text_encoder": self._pipe.text_encoder,
+                "tokenizer": self._pipe.tokenizer,
+                "vae": self._pipe.vae,
+                "scheduler": self._pipe.scheduler,
+            }
+            
+            # Create new pipeline with same components
+            self._pipe = pipeline_class(**components)
+            
+            # Re-apply memory optimizations
+            if hasattr(self, "_make_memory_efficient"):
+                self._make_memory_efficient()
+            
+            self.logger.info(f"Successfully swapped to {pipeline_class.__name__}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to swap Z-Image pipeline: {e}", exc_info=True)
+            raise

@@ -72,14 +72,14 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         gpu_memory_gb=5.0,
         priority=100,
     ),
-    "meta-llama/Llama-3.1-8B-Instruct": ModelSpec(
-        model_path="meta-llama/Llama-3.1-8B-Instruct",
+    "Qwen/Qwen3-8B": ModelSpec(
+        model_path="Qwen/Qwen3-8B",
         capabilities=[ModelCapability.PRIMARY_CONVERSATION],
-        max_context=131072,
+        max_context=32768,  # 131K with YaRN
         supports_function_calling=True,
         quantization="4bit",
-        gpu_memory_gb=5.5,
-        priority=90,
+        gpu_memory_gb=8.0,
+        priority=95,  # Higher priority - supports both thinking and instruct modes
     ),
     # Specialized Small Models (2-3B for specific tasks)
     "Qwen/Qwen2.5-3B-Instruct": ModelSpec(
@@ -120,16 +120,16 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         priority=75,
     ),
     # Fallback models
-    "mistralai/Ministral-8B-Instruct-2410": ModelSpec(
-        model_path="mistralai/Ministral-8B-Instruct-2410",
+    "mistralai/Ministral-3-8B-Instruct-2512": ModelSpec(
+        model_path="mistralai/Ministral-3-8B-Instruct-2512",
         capabilities=[
             ModelCapability.SUMMARIZATION,
             ModelCapability.TRANSLATION,
         ],
-        max_context=32768,
-        supports_function_calling=False,  # Poor with many tools
+        max_context=262144,  # 256K context
+        supports_function_calling=True,  # Ministral 3 has native function calling
         quantization="4bit",
-        gpu_memory_gb=4.5,
+        gpu_memory_gb=8.0,
         priority=50,
     ),
 }

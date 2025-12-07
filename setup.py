@@ -11,7 +11,7 @@ extras_require = {
         "controlnet_aux==0.0.10",
         "safetensors==0.6.2",
         "compel==2.1.1",
-        "transformers==4.57.1",
+        "transformers==4.57.3",
         "datasets==4.0.0",
         "peft==0.17.1",
     ],

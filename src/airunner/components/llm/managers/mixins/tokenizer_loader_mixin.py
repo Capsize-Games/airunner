@@ -11,6 +11,10 @@ from typing import TYPE_CHECKING
 from transformers import AutoTokenizer, AutoConfig
 
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner.components.llm.utils.ministral3_config_patcher import (
+    patch_ministral3_config,
+    is_ministral3_model,
+)
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.llm_model_manager import (
@@ -30,19 +34,24 @@ class TokenizerLoaderMixin:
     ) -> bool:
         """Check if config indicates Mistral3 model.
 
+        Uses path-based detection since config model_type is patched
+        from 'ministral3' to 'mistral' for transformers compatibility.
+
         Args:
             config: AutoConfig object from the model.
 
         Returns:
             True if model is Mistral3, False otherwise.
         """
-        is_mistral3_type = (
-            hasattr(config, "model_type") and config.model_type == "mistral3"
-        )
+        # Primary check: use path-based detection (works with patched config)
+        if is_ministral3_model(self.model_path):
+            return True
+        
+        # Fallback: check architecture list (preserved after patching)
         is_mistral3_arch = hasattr(config, "architectures") and any(
             "Mistral3" in arch for arch in (config.architectures or [])
         )
-        return is_mistral3_type or is_mistral3_arch
+        return is_mistral3_arch
 
     def _handle_mistral3_tokenizer(self: "LLMModelManager") -> bool:
         """Handle Mistral3 Tekken tokenizer setup.
@@ -80,60 +89,79 @@ class TokenizerLoaderMixin:
         Attempts to load tokenizer without trust_remote_code first,
         falls back to trusted mode if that fails.
         """
+        # Detect if this is a Mistral model that needs regex fix
+        is_mistral = "mistral" in self.model_path.lower() if self.model_path else False
+        extra_kwargs = {"fix_mistral_regex": True} if is_mistral else {}
+        
         try:
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=False,
+                **extra_kwargs,
             )
         except (KeyError, Exception) as e:
             self.logger.warning(
                 f"Failed to load tokenizer with trust_remote_code=False: "
                 f"{type(e).__name__}"
             )
-            self._load_tokenizer_with_trust_remote_code()
+            self._load_tokenizer_with_trust_remote_code(extra_kwargs)
 
     def _load_tokenizer_with_trust_remote_code(
         self: "LLMModelManager",
+        extra_kwargs: dict = None,
     ) -> None:
         """Load tokenizer with trust_remote_code=True and fallbacks.
 
         Used when standard loading fails. Falls back to slow tokenizer
         if KeyError occurs (tokenizer class not in mapping).
+        
+        Args:
+            extra_kwargs: Additional kwargs to pass to from_pretrained.
         """
+        if extra_kwargs is None:
+            extra_kwargs = {}
         self.logger.info("Retrying with trust_remote_code=True")
         try:
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=True,
+                **extra_kwargs,
             )
         except KeyError as ke:
             self.logger.warning(
                 f"Tokenizer class not in TOKENIZER_MAPPING: "
                 f"{type(ke).__name__}"
             )
-            self._load_slow_tokenizer()
+            self._load_slow_tokenizer(extra_kwargs)
 
-    def _load_slow_tokenizer(self: "LLMModelManager") -> None:
+    def _load_slow_tokenizer(self: "LLMModelManager", extra_kwargs: dict = None) -> None:
         """Load slow tokenizer as final fallback.
 
         Slow tokenizers are Python-based rather than Rust-based,
         guaranteed to work but slower than fast tokenizers.
+        
+        Args:
+            extra_kwargs: Additional kwargs to pass to from_pretrained.
         """
+        if extra_kwargs is None:
+            extra_kwargs = {}
         self.logger.info("Trying with use_fast=False to use slow tokenizer")
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             trust_remote_code=True,
             use_fast=False,
+            **extra_kwargs,
         )
 
     def _load_tokenizer(self: "LLMModelManager") -> None:
         """Load the tokenizer for the selected model.
 
         Handles different tokenizer types:
-        - Mistral3: Uses mistral_common (tekken.json)
+        - Mistral3: Uses mistral_common (tekken.json) for encoding, but
+                    ALSO loads HuggingFace tokenizer for streaming decode
         - Standard: HuggingFace AutoTokenizer with fallbacks
 
         Sets use_default_system_prompt=False for loaded tokenizers.
@@ -145,8 +173,10 @@ class TokenizerLoaderMixin:
             config = self._load_model_config()
 
             if self._is_mistral3_config(config):
-                if self._handle_mistral3_tokenizer():
-                    return
+                # Validate tekken.json exists for mistral_common encoding
+                self._handle_mistral3_tokenizer()
+                # ALSO load HuggingFace tokenizer for TextIteratorStreamer decoding
+                self._load_standard_tokenizer()
             else:
                 self._load_standard_tokenizer()
 
@@ -161,6 +191,10 @@ class TokenizerLoaderMixin:
         Returns:
             AutoConfig object with model configuration.
         """
+        # Patch Ministral3 config if needed before loading
+        if is_ministral3_model(self.model_path):
+            patch_ministral3_config(self.model_path)
+        
         return AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
