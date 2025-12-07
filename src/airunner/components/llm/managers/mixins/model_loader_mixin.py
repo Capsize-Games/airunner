@@ -24,6 +24,10 @@ from transformers import (
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.utils.memory.clear_memory import clear_memory
 from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
+from airunner.components.llm.utils.ministral3_config_patcher import (
+    needs_patching,
+    patch_ministral3_config,
+)
 
 if TYPE_CHECKING:
     pass
@@ -347,6 +351,9 @@ class ModelLoaderMixin:
         Returns:
             Model configuration
         """
+        # Patch Ministral 3 config files if needed (fixes transformers compatibility issues)
+        self._patch_ministral3_if_needed(quantized_path)
+
         return AutoConfig.from_pretrained(
             quantized_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -398,11 +405,35 @@ class ModelLoaderMixin:
         Returns:
             Model configuration
         """
+        # Patch Ministral 3 config files if needed (fixes transformers compatibility issues)
+        self._patch_ministral3_if_needed(self.model_path)
+
         return AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             trust_remote_code=True,
         )
+
+    def _patch_ministral3_if_needed(self, model_path: str) -> None:
+        """Patch Ministral 3 config files if needed for transformers compatibility.
+
+        Ministral 3 models have config bugs that prevent loading:
+        - config.json: text_config.model_type "ministral3" -> "mistral"
+        - tokenizer_config.json: tokenizer_class and extra_special_tokens fixes
+
+        Args:
+            model_path: Path to model directory
+        """
+        if needs_patching(model_path):
+            self.logger.info(
+                f"Patching Ministral 3 config files for transformers compatibility: {model_path}"
+            )
+            if patch_ministral3_config(model_path):
+                self.logger.info("✓ Ministral 3 config patched successfully")
+            else:
+                self.logger.warning(
+                    "⚠ Failed to patch Ministral 3 config - loading may fail"
+                )
 
     def _prepare_runtime_quantization_kwargs(
         self,

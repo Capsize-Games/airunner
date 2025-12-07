@@ -126,14 +126,19 @@ class ValidationMixin:
         return True
     
     def _is_gguf_quantization_selected(self: "LLMModelManager") -> bool:
-        """Check if GGUF quantization is selected in QSettings.
+        """Check if GGUF quantization is selected AND supported for this model.
         
         GGUF uses quantization_bits == 0 as a sentinel value.
-        Since GGUF is the only supported format, this defaults to True.
+        However, some models (like Ministral 3) don't support GGUF yet due to
+        architecture limitations in llama-cpp-python.
         
         Returns:
-            True if GGUF quantization is selected (always True by default).
+            True if GGUF quantization is selected AND the model supports GGUF.
         """
+        # First check if the model supports GGUF
+        if not self._model_supports_gguf():
+            return False
+            
         try:
             qs = get_qsettings()
             saved = qs.value("llm_settings/quantization_bits", None)
@@ -141,8 +146,25 @@ class ValidationMixin:
                 return int(saved) == 0
         except Exception as e:
             self.logger.warning(f"Error reading quantization setting: {e}")
-        # Default to GGUF - it's the only supported format
+        # Default to GGUF if model supports it
         return True
+
+    def _model_supports_gguf(self: "LLMModelManager") -> bool:
+        """Check if the current model supports GGUF format.
+        
+        This checks the provider config to see if GGUF repo/filename is configured.
+        Models without GGUF config (like Ministral 3) will use transformers instead.
+        
+        Returns:
+            True if the model has GGUF support configured.
+        """
+        model_id = self._get_model_id_for_model()
+        if not model_id:
+            # No model_id - can't determine GGUF support, assume no
+            return False
+            
+        gguf_info = LLMProviderConfig.get_gguf_info("local", model_id)
+        return gguf_info is not None
 
     def _verify_model_files(self: "LLMModelManager", model_path: str) -> bool:
         """Verify essential model files exist in directory.
@@ -274,9 +296,10 @@ class ValidationMixin:
         return False
     
     def _trigger_gguf_download(self: "LLMModelManager") -> bool:
-        """Trigger GGUF model download via signal.
+        """Trigger GGUF model download or conversion.
         
-        Gets GGUF info from provider config and emits download signal.
+        First checks if a pre-quantized GGUF is available for download.
+        If not, checks if safetensors exist and can be converted to GGUF.
         
         Returns:
             False to indicate model is not yet available.
@@ -289,32 +312,114 @@ class ValidationMixin:
             )
             return False
         
-        # Get GGUF info
+        # Get GGUF info - check if pre-quantized GGUF is available
         gguf_info = LLMProviderConfig.get_gguf_info("local", model_id)
-        if not gguf_info:
-            self.logger.error(
-                f"Model {model_id} does not have GGUF support configured"
+        
+        if gguf_info:
+            # Pre-quantized GGUF available - download it
+            self.logger.info(
+                f"Triggering GGUF download: {gguf_info['repo_id']} / {gguf_info['filename']}"
+            )
+            
+            signal_data = {
+                "model_path": self.model_path,
+                "model_name": self.model_name,
+                "repo_id": gguf_info["repo_id"],
+                "gguf_filename": gguf_info["filename"],
+                "model_type": "gguf",
+                "quantization_bits": 0,
+            }
+            
+            self.emit_signal(
+                SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+                signal_data,
             )
             return False
         
+        # No pre-quantized GGUF available - check if we can convert from safetensors
+        return self._try_convert_safetensors_to_gguf()
+    
+    def _try_convert_safetensors_to_gguf(self: "LLMModelManager") -> bool:
+        """Attempt to convert existing safetensors to GGUF format.
+        
+        If safetensors exist at model_path, triggers conversion to GGUF.
+        If safetensors don't exist, triggers safetensors download first.
+        
+        Returns:
+            False to indicate model is not yet available.
+        """
+        from airunner.utils.model_optimizer import get_model_optimizer
+        
+        model_path = self.model_path
+        
+        # Check if safetensors exist
+        safetensor_files = list(
+            f for f in os.listdir(model_path) 
+            if f.endswith('.safetensors')
+        ) if os.path.exists(model_path) else []
+        
+        if safetensor_files:
+            # Safetensors exist - convert to GGUF
+            self.logger.info(
+                f"No GGUF available for download. Converting safetensors to GGUF..."
+            )
+            
+            optimizer = get_model_optimizer()
+            
+            # Check if conversion tools are available
+            if not optimizer.has_llama_cpp_convert():
+                self.logger.error(
+                    "GGUF conversion requires llama.cpp tools. "
+                    "Install with: pip install llama-cpp-python "
+                    "or clone llama.cpp from https://github.com/ggerganov/llama.cpp"
+                )
+                # Emit signal to notify user
+                self.emit_signal(
+                    SignalCode.APPLICATION_SETTINGS_ERROR,
+                    {
+                        "error": "GGUF Conversion Not Available",
+                        "message": (
+                            "No pre-quantized GGUF model is available for this model, "
+                            "and automatic conversion requires llama.cpp tools.\n\n"
+                            "Options:\n"
+                            "1. Install llama-cpp-python: pip install llama-cpp-python\n"
+                            "2. Clone llama.cpp and build convert tools\n"
+                            "3. Choose a different model with GGUF support\n"
+                            "4. Disable GGUF quantization in settings"
+                        ),
+                    },
+                )
+                return False
+            
+            # Emit signal to trigger conversion (async in worker)
+            self.emit_signal(
+                SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL,
+                {
+                    "model_path": model_path,
+                    "model_name": self.model_name,
+                    "quantization": "Q4_K_M",
+                },
+            )
+            return False
+        
+        # No safetensors - need to download them first
         self.logger.info(
-            f"Triggering GGUF download: {gguf_info['repo_id']} / {gguf_info['filename']}"
+            f"No GGUF available and no safetensors found. Downloading safetensors first..."
         )
-        
-        # Emit GGUF download signal
-        signal_data = {
-            "model_path": self.model_path,
-            "model_name": self.model_name,
-            "repo_id": gguf_info["repo_id"],
-            "gguf_filename": gguf_info["filename"],
-            "model_type": "gguf",
-            "quantization_bits": 0,
-        }
-        
-        self.emit_signal(
-            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
-            signal_data,
-        )
+        repo_id = self._get_repo_id_for_model()
+        if repo_id:
+            # Download safetensors, then convert
+            signal_data = {
+                "model_path": model_path,
+                "model_name": self.model_name,
+                "repo_id": repo_id,
+                "model_type": "safetensors",
+                "convert_to_gguf": True,  # Flag to trigger conversion after download
+            }
+            self.emit_signal(
+                SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+                signal_data,
+            )
         return False
     
     def _get_model_id_for_model(self: "LLMModelManager") -> str:

@@ -17,9 +17,9 @@ class TestModelRegistry(unittest.TestCase):
         self.assertGreater(len(models), 0)
 
     def test_get_model_by_id(self):
-        model = self.registry.get_model("mistralai/Ministral-8B-Instruct-2410")
+        model = self.registry.get_model("mistralai/Ministral-3-8B-Instruct-2512")
         self.assertIsNotNone(model)
-        self.assertEqual(model.name, "Ministral 8B")
+        self.assertEqual(model.name, "Ministral 3 8B")
         self.assertEqual(model.provider, ModelProvider.MISTRAL)
 
     def test_get_nonexistent_model(self):

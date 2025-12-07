@@ -38,6 +38,7 @@ class HuggingFaceDownloader(
             "tokenizer_config.json",
             "tokenizer.json",
             "special_tokens_map.json",
+            "chat_template.jinja",  # Used by many modern models
         ],
         "mistral": [
             # Keep a minimal core set for Mistral models; some Mistral
@@ -47,6 +48,19 @@ class HuggingFaceDownloader(
             "tokenizer_config.json",
             "tokenizer.json",
             "special_tokens_map.json",
+            "chat_template.jinja",
+        ],
+        "ministral3": [
+            # Ministral 3 models (vision-language) require tekken tokenizer
+            "config.json",
+            "generation_config.json",
+            "tokenizer_config.json",
+            "tokenizer.json",
+            "tekken.json",  # Mistral-specific tokenizer
+            "chat_template.jinja",
+            "processor_config.json",  # For vision capabilities
+            "params.json",
+            "special_tokens_map.json",  # BF16 version has this
         ],
         "flux": [
             # Flux/Stable Diffusion models need all config files
@@ -96,7 +110,7 @@ class HuggingFaceDownloader(
         Get list of files in a HuggingFace repository.
 
         Args:
-            repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
+            repo_id: Repository ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
             revision: Git revision/branch (default: "main")
             recursive: If True, recursively fetch files from subdirectories
 
@@ -157,8 +171,8 @@ class HuggingFaceDownloader(
         Download a single file from HuggingFace.
 
         Args:
-            repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
-            filename: File to download (e.g., "model-00001-of-00002.safetensors")
+            repo_id: Repository ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
+            filename: File to download (e.g., "model-00001-of-00003.safetensors")
             local_dir: Local directory to save file
             revision: Git revision/branch
             progress_callback: Optional callback(downloaded_bytes, total_bytes)
@@ -234,9 +248,9 @@ class HuggingFaceDownloader(
         Download a complete model from HuggingFace.
 
         Args:
-            repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
+            repo_id: Repository ID (e.g., "mistralai/Ministral-3-8B-Instruct-2512")
             local_dir: Local directory (default: cache_dir/repo_name)
-            model_type: "llm" or "mistral" (determines required files)
+            model_type: "llm" or "ministral3" (determines required files)
             include_patterns: File patterns to include (e.g., ["*.safetensors", "*.json"])
             exclude_patterns: File patterns to exclude (e.g., ["*.bin"])
             revision: Git revision/branch
@@ -373,10 +387,10 @@ class HuggingFaceDownloader(
 if __name__ == "__main__":
     downloader = HuggingFaceDownloader()
 
-    # Download Ministral-8B-Instruct-2410 (separate safetensors only)
+    # Download Ministral-3-8B-Instruct-2512 (separate safetensors only)
     model_path = downloader.download_model(
-        repo_id="mistralai/Ministral-8B-Instruct-2410",
-        model_type="mistral",
+        repo_id="mistralai/Ministral-3-8B-Instruct-2512",
+        model_type="ministral3",
         include_patterns=["*.safetensors", "*.json"],
         exclude_patterns=["*.bin", "*consolidated*"],
         progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),
