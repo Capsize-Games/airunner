@@ -64,9 +64,13 @@ class ZImageGenerationMixin:
         """Remove parameters the Z-Image pipeline cannot consume."""
         # Z-Image Turbo does not use negative prompts or CFG in the traditional sense
         # It uses cfg_normalization and cfg_truncation instead
-        # The ZImagePipeline.__call__ doesn't accept negative_prompt
         # cross_attention_kwargs is used for LoRA scaling in SD but not supported in Z-Image
-        for key in ("clip_skip", "strength", "negative_prompt", "cross_attention_kwargs"):
+        drop_keys = ["clip_skip", "negative_prompt", "cross_attention_kwargs"]
+        # Only drop strength for pure txt2img; img2img requires it
+        if not getattr(self, "is_img2img", False):
+            drop_keys.append("strength")
+
+        for key in drop_keys:
             data.pop(key, None)
 
     def _enforce_zimage_guidance(self, data: Dict) -> None:

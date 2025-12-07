@@ -205,6 +205,12 @@ class CanvasAPIService(APIServiceBase):
         else:
             strength = generator_settings.strength
 
+        # DEBUG: Log strength value before conversion
+        self.logger.debug(
+            "[CANVAS_SERVICES DEBUG] is_img2img=%s, raw_strength=%s, strength/100=%s",
+            is_img2img, strength, strength / 100 if strength else 0
+        )
+
         model_path = ""
         model_id = generator_settings.model
         if model_id is not None:
