@@ -8,6 +8,27 @@ from airunner.utils.memory import clear_memory
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 
+def _aggressive_memory_cleanup():
+    """Aggressively clean up memory including bitsandbytes quantized models."""
+    # Multiple gc passes to handle cyclic references
+    gc.collect()
+    gc.collect()
+    gc.collect()
+    
+    if torch.cuda.is_available():
+        # Synchronize to ensure all GPU ops are done
+        torch.cuda.synchronize()
+        # Empty CUDA cache
+        torch.cuda.empty_cache()
+        # Reset peak memory stats
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize()
+    
+    # Final gc passes
+    gc.collect()
+    gc.collect()
+
+
 class ZImageGenerationMixin:
     """Handles generation data preparation for Z-Image models."""
 
@@ -195,80 +216,119 @@ class ZImageGenerationMixin:
 
         Similar to FLUX, Z-Image uses 'transformer' not 'unet', so we must
         explicitly delete it along with the text encoder.
+        
+        CRITICAL: When using bitsandbytes quantization with device_map="auto",
+        the model weights are stored in CPU RAM and moved to GPU on demand.
+        We must properly dequantize and delete these models to free CPU RAM.
         """
         self.logger.info("=== Z-IMAGE _unload_pipe CALLED ===")
         self.logger.debug("Unloading Z-Image pipe")
         
         if self._pipe is None:
             return
-            
+        
+        # Import accelerate hooks removal if available
         try:
-            # Try to use accelerate's official hook removal if available
-            try:
-                from accelerate.hooks import remove_hook_from_module
-                has_accelerate_hooks = True
-            except ImportError:
-                has_accelerate_hooks = False
-                self.logger.debug("accelerate.hooks not available, using manual cleanup")
-            
-            # CRITICAL: Remove Accelerate hooks first
+            from accelerate.hooks import remove_hook_from_module
+            has_accelerate_hooks = True
+        except ImportError:
+            has_accelerate_hooks = False
+            self.logger.debug("accelerate.hooks not available, using manual cleanup")
+        
+        # List of all Z-Image components to clean up (ordered by size)
+        component_names = [
+            "text_encoder",  # Largest, ~8GB - clean first
+            "transformer",   # Second largest
+            "vae",
+            "scheduler",
+            "tokenizer",
+        ]
+        
+        try:
+            # CRITICAL: Remove Accelerate hooks from pipeline first
             if hasattr(self._pipe, "_all_hooks"):
-                self.logger.debug("Removing Accelerate _all_hooks")
+                self.logger.debug("Removing Accelerate _all_hooks from pipeline")
                 for hook in list(self._pipe._all_hooks):
                     try:
                         hook.remove()
                     except Exception as e:
                         self.logger.debug(f"Error removing hook: {e}")
                 self._pipe._all_hooks.clear()
-
-            # List of all Z-Image components to clean up
-            component_names = [
-                "transformer",
-                "vae", 
-                "text_encoder",
-                "scheduler",
-                "tokenizer",
-            ]
-
-            # Remove hooks from each component and delete them
+            
+            # Process each component
             for component_name in component_names:
                 component = getattr(self._pipe, component_name, None)
                 if component is None:
                     continue
-                    
-                # Remove accelerate hooks using official API if available
-                if has_accelerate_hooks and hasattr(component, "_hf_hook"):
+                
+                self.logger.debug(f"Cleaning up {component_name}...")
+                
+                # 1. Remove accelerate hooks using official API
+                if has_accelerate_hooks:
                     try:
                         remove_hook_from_module(component, recurse=True)
-                        self.logger.debug(f"Removed hooks from {component_name} via accelerate")
+                        self.logger.debug(f"Removed hooks from {component_name}")
                     except Exception as e:
-                        self.logger.debug(f"Error removing hooks from {component_name}: {e}")
+                        self.logger.debug(f"Hook removal for {component_name}: {e}")
                 
-                # Manual hook cleanup as fallback
+                # 2. Manual hook cleanup for any remaining hooks
                 if hasattr(component, "_hf_hook"):
                     try:
-                        if hasattr(component._hf_hook, "offload"):
-                            component._hf_hook.offload(component)
+                        hook = component._hf_hook
+                        # Clear any offloaded weights first
+                        if hasattr(hook, "weights_map") and hook.weights_map is not None:
+                            hook.weights_map.clear()
+                        if hasattr(hook, "offload"):
+                            try:
+                                hook.offload(component)
+                            except Exception:
+                                pass
                         delattr(component, "_hf_hook")
                     except Exception as e:
-                        self.logger.debug(f"Error in manual hook cleanup for {component_name}: {e}")
+                        self.logger.debug(f"Manual hook cleanup for {component_name}: {e}")
                 
-                # Move component to CPU to free VRAM, then delete
-                try:
-                    if hasattr(component, "to"):
-                        component.to("cpu")
-                except Exception:
-                    pass
-                    
-                # Explicitly delete the component
+                # 3. For models with device_map (quantized models), clear the device_map state
+                if hasattr(component, "hf_device_map"):
+                    try:
+                        component.hf_device_map = None
+                    except Exception:
+                        pass
+                
+                # 4. CRITICAL: Do NOT move to CPU - this creates new tensors in CPU RAM
+                # Instead, delete tensors in-place on their current device
+                
+                # 5. Clear parameter data to free memory
+                if hasattr(component, "parameters"):
+                    try:
+                        for param in component.parameters():
+                            param.data = torch.empty(0, device=param.device)
+                            if param.grad is not None:
+                                param.grad = None
+                    except Exception as e:
+                        self.logger.debug(f"Error clearing params for {component_name}: {e}")
+                
+                # 6. Detach the component from the pipeline
                 try:
                     setattr(self._pipe, component_name, None)
+                except Exception:
+                    pass
+                
+                # 7. Delete component reference
+                try:
                     del component
-                except Exception as e:
-                    self.logger.debug(f"Error deleting {component_name}: {e}")
-                    
+                except Exception:
+                    pass
+                
+                # 8. Run gc after each large component to free memory immediately
+                if component_name in ("text_encoder", "transformer"):
+                    _aggressive_memory_cleanup()
+            
+            # Clear execution device reference
+            if hasattr(self._pipe, "_execution_device"):
+                self._pipe._execution_device = None
+                
         except Exception as e:
-            self.logger.debug(f"Error removing Accelerate hooks: {e}")
+            self.logger.warning(f"Error during hook removal: {e}")
 
         # Delete the pipeline itself
         try:
@@ -277,35 +337,43 @@ class ZImageGenerationMixin:
             pass
         self._pipe = None
 
-        # Aggressive memory cleanup
-        gc.collect()
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-            
-        gc.collect()
-        gc.collect()
-        
+        # Final aggressive memory cleanup
+        _aggressive_memory_cleanup()
         clear_memory()
 
         self.logger.info("✓ Z-Image pipeline unloaded and memory freed")
 
     def _clear_pipeline_caches(self):
-        """Clear internal pipeline caches to free RAM."""
+        """Clear internal pipeline caches to free RAM and VRAM.
+        
+        This is called after each generation to prevent memory accumulation.
+        """
         if self._pipe is None:
             return
         
         self.logger.debug("Clearing pipeline caches to free RAM")
         
-        gc.collect()
-        gc.collect()
+        # Clear any cached tensors on the pipeline
+        if hasattr(self._pipe, "_callback_tensor_inputs"):
+            self._pipe._callback_tensor_inputs = None
         
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-            
-        gc.collect()
+        # For text encoder, clear any cached key/values
+        text_encoder = getattr(self._pipe, "text_encoder", None)
+        if text_encoder is not None and hasattr(text_encoder, "past_key_values"):
+            text_encoder.past_key_values = None
+        
+        # Clear transformer attention caches if any
+        transformer = getattr(self._pipe, "transformer", None)
+        if transformer is not None:
+            # Clear any attention caches
+            for module in transformer.modules():
+                if hasattr(module, "attention_cache"):
+                    module.attention_cache = None
+                if hasattr(module, "_cached_key_values"):
+                    module._cached_key_values = None
+        
+        # Run memory cleanup
+        _aggressive_memory_cleanup()
 
     def _generate(self):
         """Override to add cleanup after Z-Image generation."""

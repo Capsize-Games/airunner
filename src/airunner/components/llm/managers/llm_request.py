@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict, field
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 
 from llama_cloud import MessageRole
 
@@ -35,6 +35,7 @@ class LLMRequest:
         top_p: Keep the top tokens with cumulative probability >= top_p.
         use_cache: Whether to use the past key/values cache.
         do_tts_reply: Whether to convert the reply to speech.
+        images: List of PIL Image objects for multimodal vision-capable models.
     """
 
     do_sample: bool = True
@@ -79,6 +80,9 @@ class LLMRequest:
     force_tool: Optional[str] = (
         None  # Force a specific tool to be called (from slash commands)
     )
+    images: Optional[List[Any]] = field(
+        default_factory=list
+    )  # List of PIL Image objects for vision-capable models
 
     def to_dict(self) -> Dict:
         """
@@ -119,6 +123,8 @@ class LLMRequest:
         data.pop("node_id")
         data.pop("use_memory")
         data.pop("role")
+        # Images are PIL objects, not JSON serializable - handle separately
+        data.pop("images", None)
 
         return data
 

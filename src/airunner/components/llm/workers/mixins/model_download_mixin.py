@@ -181,6 +181,7 @@ class ModelDownloadMixin:
         Args:
             data: Dictionary containing model_path, model_name, repo_id, model_type
                   For GGUF models, also contains gguf_filename
+                  May contain convert_to_gguf flag to trigger conversion after download
         """
         # Skip embedding model downloads - those are handled by RAGPropertiesMixin
         model_type = data.get("model_type", "llm")
@@ -200,12 +201,16 @@ class ModelDownloadMixin:
         model_name = data.get("model_name", "Unknown Model")
         repo_id = data.get("repo_id", "")
         gguf_filename = data.get("gguf_filename")
+        convert_to_gguf = data.get("convert_to_gguf", False)
+        
+        # Store convert_to_gguf flag for use in completion handler
+        self._pending_convert_to_gguf = convert_to_gguf
         
         # Check if this is a GGUF download
         is_gguf = model_type == "gguf" or gguf_filename is not None
 
         self.logger.info(
-            f"Model download required: {model_name} at {model_path} (GGUF: {is_gguf})"
+            f"Model download required: {model_name} at {model_path} (GGUF: {is_gguf}, convert_after: {convert_to_gguf})"
         )
 
         if not repo_id:
@@ -513,24 +518,46 @@ class ModelDownloadMixin:
 
         After download completes, automatically retry loading the model.
         This enables the seamless workflow: download → auto-quantize → load.
+        
+        If convert_to_gguf flag was set in the original download request,
+        triggers GGUF conversion before loading.
 
         Args:
-            data: Download completion data containing model_path and repo_id
+            data: Download completion data containing model_path, repo_id
         """
         self._download_dialog_showing = False
         self._download_dialog = None
 
         model_path = data.get("model_path", "")
         repo_id = data.get("repo_id", "")
+        
+        # Check for stored convert_to_gguf flag from original download request
+        convert_to_gguf = getattr(self, "_pending_convert_to_gguf", False)
+        self._pending_convert_to_gguf = False  # Reset flag
 
         self.logger.info(
-            f"Download complete for model at: {model_path} (repo_id: {repo_id})"
+            f"Download complete for model at: {model_path} (repo_id: {repo_id}, convert_to_gguf: {convert_to_gguf})"
         )
 
         # Skip auto-load for embedding models - they're handled by RAGPropertiesMixin
         if repo_id == "intfloat/e5-large":
             self.logger.debug("Skipping auto-load for embedding model")
             return
+        
+        # Check if we need to convert to GGUF after download
+        if convert_to_gguf:
+            self.logger.info("Triggering GGUF conversion after safetensors download")
+            # Get model name from model manager or path
+            model_name = self.model_manager.model_name if self.model_manager else "Unknown Model"
+            self.emit_signal(
+                SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL,
+                {
+                    "model_path": model_path,
+                    "model_name": model_name,
+                    "quantization": "Q4_K_M",
+                },
+            )
+            return  # Don't auto-load - wait for conversion to complete
 
         self._emit_download_complete_message()
         self._auto_load_downloaded_model()

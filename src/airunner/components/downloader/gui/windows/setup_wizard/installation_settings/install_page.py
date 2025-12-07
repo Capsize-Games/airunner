@@ -1236,7 +1236,7 @@ class InstallPage(BaseWizard):
         if self.models_enabled["mistral"]:
             self.total_steps += len(
                 LLM_FILE_BOOTSTRAP_DATA[
-                    "w4ffl35/Ministral-8B-Instruct-2410-doublequant"
+                    "mistralai/Ministral-3-8B-Instruct-2512"
                 ]["files"]
             )
 

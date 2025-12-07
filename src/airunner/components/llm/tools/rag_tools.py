@@ -25,8 +25,8 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
     description=(
         "Search through LOADED documents in memory for relevant information. "
         "IMPORTANT: Only works if documents have been loaded into memory first. "
-        "If this fails, use search_knowledge_base_documents to find relevant docs, "
-        "or use search_web instead."
+        "If this fails because no documents are loaded, inform the user that "
+        "documents need to be loaded first."
     ),
     return_direct=False,
     requires_api=True,  # API injection provides access to rag_manager
@@ -48,12 +48,8 @@ def rag_search(
     IMPORTANT: This only works if documents have been loaded into memory first.
     Documents must be actively loaded before searching them.
 
-    If this tool fails because documents aren't loaded, you should:
-    1. First use search_knowledge_base_documents to find relevant documents
-    2. Ask the user to load those documents into memory
-    3. Then try rag_search again
-
-    OR use search_web to find information online instead.
+    If this tool fails because documents aren't loaded, inform the user
+    that the requested documents need to be loaded first.
 
     Args:
         query: Search query for finding relevant document content
@@ -93,8 +89,8 @@ def rag_search(
         if not results:
             msg = (
                 f"No relevant information found for '{query}' in loaded "
-                f"documents. ⚠️ Try search_web('{query}') instead to find information online, "
-                f"then use record_knowledge() to save useful facts."
+                f"documents. The document may not contain information about this topic, "
+                f"or the search query may need to be rephrased."
             )
             logger.info(msg)
             return msg

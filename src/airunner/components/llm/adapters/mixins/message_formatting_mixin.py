@@ -127,13 +127,35 @@ class MessageFormattingMixin:
         from langchain_core.messages import ToolMessage
         
         chat_messages = []
+        extracted_images = []  # Store PIL images for vision models
+        
         for msg in messages:
             if isinstance(msg, SystemMessage):
                 chat_messages.append(
                     {"role": "system", "content": msg.content}
                 )
             elif isinstance(msg, HumanMessage):
-                chat_messages.append({"role": "user", "content": msg.content})
+                # Handle multimodal content (list with text and images)
+                if isinstance(msg.content, list):
+                    content_parts = []
+                    for part in msg.content:
+                        if isinstance(part, dict):
+                            if part.get("type") == "text":
+                                content_parts.append(part)
+                            elif part.get("type") == "image_url":
+                                # Extract image data - keep for processor
+                                content_parts.append({"type": "image"})
+                                # Store image URL for later extraction
+                                image_url = part.get("image_url", {}).get("url", "")
+                                if image_url.startswith("data:image"):
+                                    extracted_images.append(image_url)
+                            elif part.get("type") == "image":
+                                content_parts.append(part)
+                        else:
+                            content_parts.append({"type": "text", "text": str(part)})
+                    chat_messages.append({"role": "user", "content": content_parts})
+                else:
+                    chat_messages.append({"role": "user", "content": msg.content})
             elif isinstance(msg, AIMessage):
                 # Include tool_calls if present (for models that support function calling)
                 msg_dict = {"role": "assistant", "content": msg.content or ""}
@@ -201,6 +223,13 @@ class MessageFormattingMixin:
             
             # Use the determined preference for thinking mode
             template_kwargs["enable_thinking"] = user_wants_thinking
+
+        # Store extracted images for vision model processing
+        if extracted_images:
+            self._pending_images = extracted_images
+            self.logger.info(f"Stored {len(extracted_images)} images for vision processing")
+        else:
+            self._pending_images = []
 
         return self.tokenizer.apply_chat_template(
             chat_messages, **template_kwargs

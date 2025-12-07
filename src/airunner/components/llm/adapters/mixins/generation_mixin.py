@@ -92,16 +92,99 @@ class GenerationMixin:
         Returns:
             Dictionary with input tensors
         """
+        # Check if we have pending images for vision processing
+        pending_images = getattr(self, "_pending_images", [])
+        
+        if pending_images and hasattr(self, "processor") and self.processor:
+            # Vision model with images - use processor
+            return self._prepare_vision_inputs(prompt, pending_images)
+        
         if isinstance(prompt, list):
-            return {"input_ids": torch.tensor([prompt]).to(self.model.device)}
+            # Token list from Mistral native tokenizer - create attention mask too
+            input_ids = torch.tensor([prompt]).to(self.model.device)
+            attention_mask = torch.ones_like(input_ids)
+            return {"input_ids": input_ids, "attention_mask": attention_mask}
         else:
             # Get max length from model config, default to 131072 for modern LLMs
             max_length = getattr(self.model.config, "max_position_embeddings", 131072)
+            # CRITICAL: add_special_tokens=False because the chat template already
+            # includes the BOS token (<s>). Without this, we get double <s><s>
+            # which corrupts the model output.
             return self.tokenizer(
                 prompt,
                 return_tensors="pt",
                 truncation=True,
                 max_length=max_length,
+                add_special_tokens=False,
+            ).to(self.model.device)
+
+    def _prepare_vision_inputs(self, prompt, image_urls):
+        """Prepare inputs for vision model with images.
+        
+        Args:
+            prompt: Text prompt string
+            image_urls: List of base64 data URLs for images
+            
+        Returns:
+            Dictionary with input tensors including pixel_values
+        """
+        import base64
+        import io
+        from PIL import Image
+        
+        # Decode base64 images to PIL
+        pil_images = []
+        for url in image_urls:
+            try:
+                # Extract base64 data from data URL
+                if url.startswith("data:image"):
+                    # Format: data:image/png;base64,<data>
+                    base64_data = url.split(",", 1)[1]
+                    image_bytes = base64.b64decode(base64_data)
+                    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                    pil_images.append(img)
+            except Exception as e:
+                self.logger.error(f"Failed to decode image: {e}")
+        
+        if not pil_images:
+            # No valid images, fall back to text-only
+            # CRITICAL: add_special_tokens=False - chat template already has BOS
+            return self.tokenizer(
+                prompt,
+                return_tensors="pt",
+                truncation=True,
+                add_special_tokens=False,
+            ).to(self.model.device)
+        
+        # Use processor to encode text and images together
+        # The processor handles both tokenization and image preprocessing
+        # CRITICAL: add_special_tokens=False because the chat template already
+        # includes the BOS token (<s>). Without this, we get double <s><s>
+        # which corrupts the model output.
+        try:
+            inputs = self.processor(
+                text=prompt,
+                images=pil_images,
+                return_tensors="pt",
+                padding=True,
+                add_special_tokens=False,
+            )
+            # Move all tensors to model device
+            inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+            self.logger.info(
+                f"Prepared vision inputs with {len(pil_images)} image(s), "
+                f"input_ids shape: {inputs['input_ids'].shape}"
+            )
+            return inputs
+        except Exception as e:
+            self.logger.error(f"Failed to prepare vision inputs: {e}")
+            # Fall back to text-only
+            # CRITICAL: add_special_tokens=False - chat template already has BOS
+            return self.tokenizer(
+                prompt,
+                return_tensors="pt",
+                truncation=True,
+                add_special_tokens=False,
             ).to(self.model.device)
 
     def _get_token_ids(self):
@@ -355,8 +438,13 @@ class GenerationMixin:
         """
         def _generate_with_error_handling():
             try:
+                self.logger.debug("Starting model.generate() in background thread")
                 self.model.generate(**generation_kwargs)
+                self.logger.debug("model.generate() completed successfully")
             except Exception as e:
+                self.logger.error(f"Generation thread error: {type(e).__name__}: {e}")
+                import traceback
+                self.logger.error(f"Generation thread traceback:\n{traceback.format_exc()}")
                 # Signal the streamer that generation failed
                 if "streamer" in generation_kwargs:
                     try:

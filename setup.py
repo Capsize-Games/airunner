@@ -11,7 +11,7 @@ extras_require = {
         "controlnet_aux==0.0.10",
         "safetensors==0.6.2",
         "compel==2.1.1",
-        "transformers==4.57.1",
+        "transformers==4.57.3",
         "datasets==4.0.0",
         "peft==0.17.1",
     ],
@@ -187,7 +187,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="5.3.3",
+    version="5.4.0",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),

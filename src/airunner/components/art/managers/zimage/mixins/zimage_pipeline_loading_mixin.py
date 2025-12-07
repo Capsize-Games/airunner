@@ -54,16 +54,37 @@ class ZImagePipelineLoadingMixin:
         _clear_gpu_memory()
         
         # Determine if we have a complete pretrained directory structure
-        # If so, prefer loading from pretrained (more reliable than single-file)
         model_path = Path(self.model_path)
-        if model_path.is_file():
+        is_single_file = model_path.is_file()
+        
+        if is_single_file:
             model_dir = model_path.parent
         else:
             model_dir = model_path
         
         has_pretrained_structure = self._has_complete_pretrained_structure(model_dir)
         
-        if has_pretrained_structure:
+        # IMPORTANT: If user selected a specific checkpoint file, ALWAYS use single-file loading
+        # even if a pretrained directory structure exists. This ensures FP8/quantized checkpoints
+        # are loaded correctly instead of being ignored in favor of full-precision pretrained weights.
+        #
+        # FP8 scaled checkpoints (e.g., fp8_e4m3fn) use our native implementation for efficient
+        # loading without the full 32GB+ memory spike of diffusers.
+        model_filename = model_path.name.lower()
+        is_fp8_checkpoint = "fp8" in model_filename or "e4m3" in model_filename or "e5m2" in model_filename
+        
+        if is_single_file and is_fp8_checkpoint:
+            self.logger.info(
+                f"FP8 scaled checkpoint detected ({model_path.name}). "
+                f"Using native FP8 pipeline for memory-efficient loading."
+            )
+            self._load_native_fp8_pipeline(str(model_path), str(model_dir), pipeline_class, data)
+        elif is_single_file and self.use_from_single_file:
+            self.logger.info(
+                f"Loading from single-file checkpoint: {model_path.name}"
+            )
+            self._load_from_single_file(self.model_path, pipeline_class, data)
+        elif has_pretrained_structure and not is_single_file:
             self.logger.info(
                 "Complete pretrained structure found - loading from pretrained directory"
             )
@@ -190,6 +211,15 @@ class ZImagePipelineLoadingMixin:
         use_quant = getattr(self, 'use_quantization', False)
         quant_bits = getattr(self, 'quantization_bits', None)
         model_dtype = self.data_type
+        
+        # Check if we're falling back from FP8 - force 4-bit quantization
+        force_quant_for_fp8 = getattr(self, '_force_quantization_for_fp8_fallback', False)
+        if force_quant_for_fp8:
+            self.logger.info("FP8 fallback mode - forcing 4-bit quantization for transformer and text encoder")
+            use_quant = True
+            quant_bits = 4
+            # Clear the flag
+            self._force_quantization_for_fp8_fallback = False
         
         self.logger.info(f"Precision settings - use_quantization: {use_quant}, bits: {quant_bits}, dtype: {model_dtype}")
         
@@ -327,6 +357,10 @@ class ZImagePipelineLoadingMixin:
         checkpoint file.
         
         Respects user's precision/quantization settings.
+        
+        CRITICAL: FP8 pre-quantized checkpoints (like zImageTurboQuantized_fp8*.safetensors)
+        contain transformer weights that are already quantized. We should NOT apply
+        additional bitsandbytes quantization to the transformer, only to the text encoder.
         """
         self.logger.info(f"Loading Z-Image from single file: {model_path}")
         
@@ -344,6 +378,15 @@ class ZImagePipelineLoadingMixin:
         quant_bits = getattr(self, 'quantization_bits', None)
         model_dtype = self.data_type
         
+        # Detect if this is a pre-quantized FP8 checkpoint
+        model_filename = os.path.basename(model_path).lower()
+        is_fp8_checkpoint = "fp8" in model_filename or "e4m3" in model_filename or "e5m2" in model_filename
+        
+        if is_fp8_checkpoint:
+            self.logger.info(
+                f"Detected FP8 pre-quantized checkpoint - transformer is already quantized"
+            )
+        
         self.logger.info(f"Precision settings - use_quantization: {use_quant}, bits: {quant_bits}, dtype: {model_dtype}")
         
         # Get the directory containing the checkpoint - companion folders
@@ -351,7 +394,29 @@ class ZImagePipelineLoadingMixin:
         model_dir = os.path.dirname(model_path)
         self.logger.info(f"Loading companion files from: {model_dir}")
         
+        # Calculate max memory for device_map to prevent all weights going to CPU
+        max_memory_for_text_encoder = None
+        if torch.cuda.is_available():
+            total_vram_bytes = torch.cuda.get_device_properties(0).total_memory
+            total_vram_gb = total_vram_bytes / (1024**3)
+            # For FP8 checkpoints: transformer is ~6GB, reserve 4GB for generation overhead
+            # For text encoder with 4-bit quant: ~2.4GB on GPU, rest can be on CPU
+            if is_fp8_checkpoint:
+                # Reserve more GPU memory for the FP8 transformer
+                text_encoder_vram_budget = max(total_vram_gb - 10.0, 2.0)
+            else:
+                # Non-FP8: more budget for text encoder
+                text_encoder_vram_budget = max(total_vram_gb - 6.0, 2.0)
+            max_memory_for_text_encoder = {
+                0: f"{text_encoder_vram_budget:.0f}GiB",
+                "cpu": "24GiB"  # Limit CPU RAM usage
+            }
+            self.logger.info(
+                f"Text encoder VRAM budget: {text_encoder_vram_budget:.1f}GB (total VRAM: {total_vram_gb:.1f}GB)"
+            )
+        
         # Configure text encoder quantization if enabled
+        # ALWAYS quantize text encoder for FP8 checkpoints to save memory
         text_encoder_bnb_config = None
         if use_quant and quant_bits == 4:
             text_encoder_bnb_config = TransformersBnBConfig(
@@ -364,12 +429,23 @@ class ZImagePipelineLoadingMixin:
             text_encoder_bnb_config = TransformersBnBConfig(
                 load_in_8bit=True,
             )
+        elif is_fp8_checkpoint:
+            # For FP8 checkpoints, default to 4-bit text encoder to save memory
+            self.logger.info(
+                "FP8 checkpoint detected - using 4-bit quantization for text encoder to save memory"
+            )
+            text_encoder_bnb_config = TransformersBnBConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
         
         # Load the text encoder from the local text_encoder subfolder
         text_encoder_path = os.path.join(model_dir, "text_encoder")
         tokenizer_path = os.path.join(model_dir, "tokenizer")
         
-        quant_info = f"({quant_bits}-bit quantized)" if use_quant else f"(dtype: {model_dtype})"
+        quant_info = "(4-bit quantized)" if text_encoder_bnb_config else f"(dtype: {model_dtype})"
         self.logger.info(f"Loading text encoder from {text_encoder_path} {quant_info}")
         try:
             load_kwargs = {
@@ -378,6 +454,8 @@ class ZImagePipelineLoadingMixin:
             if text_encoder_bnb_config is not None:
                 load_kwargs["quantization_config"] = text_encoder_bnb_config
                 load_kwargs["device_map"] = "auto"
+                if max_memory_for_text_encoder is not None:
+                    load_kwargs["max_memory"] = max_memory_for_text_encoder
             else:
                 load_kwargs["torch_dtype"] = model_dtype
             text_encoder = AutoModelForCausalLM.from_pretrained(
@@ -428,14 +506,16 @@ class ZImagePipelineLoadingMixin:
     ):
         """Fallback loading: Manually assemble pipeline from components.
         
-        This is useful when from_single_file fails. We load each component
-        separately from the local companion folders.
+        This is used when from_single_file fails (which is expected since
+        ZImageTransformer2DModel is not in diffusers' FromOriginalModelMixin whitelist).
         
-        Respects user's precision settings.
+        We load the transformer weights directly from the safetensors file and
+        load them into a ZImageTransformer2DModel instance.
         """
         self.logger.info("Attempting fallback: manual component assembly...")
         
         try:
+            from safetensors.torch import load_file as load_safetensors
             from transformers import AutoModelForCausalLM, AutoTokenizer as HFAutoTokenizer
             from diffusers import AutoencoderKL, FlowMatchEulerDiscreteScheduler
             from airunner.components.art.pipelines.z_image import ZImageTransformer2DModel
@@ -446,12 +526,58 @@ class ZImagePipelineLoadingMixin:
             # Get the directory containing the checkpoint
             model_dir = os.path.dirname(model_path)
             
-            # Load the transformer from the checkpoint
-            self.logger.info(f"Loading transformer from checkpoint (dtype: {model_dtype})...")
-            transformer = ZImageTransformer2DModel.from_single_file(
-                model_path,
-                torch_dtype=model_dtype,
-            )
+            # Load the transformer config from the companion folder
+            transformer_config_path = os.path.join(model_dir, "transformer", "config.json")
+            
+            if os.path.exists(transformer_config_path):
+                self.logger.info(f"Loading transformer config from {transformer_config_path}")
+                # Create model from config
+                transformer = ZImageTransformer2DModel.from_config(transformer_config_path)
+            else:
+                self.logger.info("No transformer config found, using default Z-Image config")
+                # Use default Z-Image Turbo config
+                transformer = ZImageTransformer2DModel(
+                    all_patch_size=(2,),
+                    all_f_patch_size=(1,),
+                    in_channels=16,
+                    dim=3840,
+                    n_layers=30,
+                    n_refiner_layers=2,
+                    n_heads=30,
+                    n_kv_heads=30,
+                    norm_eps=1e-5,
+                    qk_norm=True,
+                    cap_feat_dim=2560,
+                    rope_theta=256.0,
+                    t_scale=1000.0,
+                    axes_dims=[32, 48, 48],
+                    axes_lens=[1024, 512, 512],
+                )
+            
+            # Load weights from the safetensors checkpoint
+            self.logger.info(f"Loading transformer weights from {model_path}")
+            state_dict = load_safetensors(model_path)
+            
+            # Filter to only transformer keys (exclude VAE, etc. if present)
+            # Z-Image checkpoints typically have transformer keys without prefix
+            transformer_keys = [k for k in state_dict.keys() if not k.startswith(('vae.', 'text_encoder.'))]
+            if transformer_keys:
+                transformer_state_dict = {k: v for k, v in state_dict.items() if k in transformer_keys}
+            else:
+                transformer_state_dict = state_dict
+            
+            # Load the state dict - use strict=False to handle any key mismatches
+            missing, unexpected = transformer.load_state_dict(transformer_state_dict, strict=False)
+            if missing:
+                self.logger.warning(f"Missing keys when loading transformer: {len(missing)} keys")
+                self.logger.debug(f"Missing keys: {missing[:10]}...")  # Log first 10
+            if unexpected:
+                self.logger.warning(f"Unexpected keys when loading transformer: {len(unexpected)} keys")
+                self.logger.debug(f"Unexpected keys: {unexpected[:10]}...")
+            
+            # Move to correct dtype
+            transformer = transformer.to(model_dtype)
+            self.logger.info(f"Transformer loaded successfully (dtype: {model_dtype})")
             
             # Load VAE from local vae subfolder
             vae_path = os.path.join(model_dir, "vae")
@@ -462,13 +588,10 @@ class ZImagePipelineLoadingMixin:
                 local_files_only=True,
             )
             
-            # Load scheduler from local scheduler subfolder
+            # Load scheduler using the helper method
             scheduler_path = os.path.join(model_dir, "scheduler")
             self.logger.info(f"Loading scheduler from {scheduler_path}")
-            scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
-                scheduler_path,
-                local_files_only=True,
-            )
+            scheduler = self._load_zimage_scheduler(Path(scheduler_path))
             
             # If text encoder wasn't provided, load it from local path
             if text_encoder is None or tokenizer is None:
@@ -614,3 +737,151 @@ class ZImagePipelineLoadingMixin:
         
         return True
 
+    def _load_native_fp8_pipeline(
+        self, 
+        checkpoint_path: str, 
+        model_dir: str, 
+        pipeline_class: Any, 
+        data: dict
+    ) -> None:
+        """Load Z-Image using native FP8 implementation.
+        
+        This uses our native implementation that directly handles FP8 scaled 
+        checkpoints without requiring diffusers' FromOriginalModelMixin support.
+        
+        Key benefits:
+        - Direct FP8 weight loading (no 32GB+ memory spike)
+        - Streaming load for minimal CPU RAM usage
+        - On-the-fly dequantization during inference
+        
+        Args:
+            checkpoint_path: Path to the FP8 safetensors checkpoint
+            model_dir: Directory containing companion files (text_encoder, vae, etc.)
+            pipeline_class: The pipeline class to use for generation
+            data: Additional pipeline configuration data
+        """
+        self.logger.info(f"Loading native FP8 pipeline from {checkpoint_path}")
+        
+        try:
+            from airunner.components.art.managers.zimage.native import (
+                ZImageNativePipeline,
+            )
+        except ImportError as e:
+            self.logger.error(f"Native FP8 implementation not available: {e}")
+            self.logger.warning("Falling back to pretrained loading with 4-bit quantization")
+            self._force_quantization_for_fp8_fallback = True
+            self._load_from_pretrained(model_dir, pipeline_class, data)
+            return
+        
+        # Get paths to companion files
+        text_encoder_path = os.path.join(model_dir, "text_encoder")
+        vae_path = os.path.join(model_dir, "vae")
+        
+        # Determine compute dtype
+        model_dtype = self.data_type
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.logger.info(f"Native FP8 loading with dtype={model_dtype}, device={device}")
+        
+        # Create native pipeline
+        native_pipeline = ZImageNativePipeline(
+            transformer_path=checkpoint_path,
+            text_encoder_path=text_encoder_path,
+            vae_path=vae_path,
+            device=device,
+            dtype=model_dtype,
+            text_encoder_quantization="4bit",  # Always quantize text encoder to save memory
+        )
+        
+        # Load the transformer from FP8 checkpoint
+        self.logger.info("Loading FP8 transformer weights (streaming)...")
+        native_pipeline.load_transformer(stream_load=True)
+        
+        # Load text encoder with 4-bit quantization
+        self.logger.info("Loading text encoder (4-bit quantized)...")
+        native_pipeline.load_text_encoder()
+        
+        # Load VAE (small, no quantization needed)
+        self.logger.info("Loading VAE...")
+        native_pipeline.load_vae()
+        
+        # Store native pipeline - we'll use it directly instead of diffusers pipeline
+        self._native_pipeline = native_pipeline
+        
+        # Create a lightweight wrapper that's compatible with the generation mixin
+        self._pipe = self._create_native_pipeline_wrapper(native_pipeline, pipeline_class)
+        
+        self.logger.info("Native FP8 pipeline loaded successfully")
+        self.logger.info(f"Memory usage: {native_pipeline.memory_usage}")
+
+    def _create_native_pipeline_wrapper(
+        self, 
+        native_pipeline: Any, 
+        pipeline_class: Any
+    ) -> Any:
+        """Create a wrapper around native pipeline for compatibility.
+        
+        This creates a thin wrapper that exposes the same interface as diffusers
+        pipelines so the generation mixin can use it transparently.
+        
+        Args:
+            native_pipeline: The ZImageNativePipeline instance
+            pipeline_class: The target pipeline class
+            
+        Returns:
+            A wrapped pipeline compatible with existing generation code
+        """
+        from airunner.components.art.managers.zimage.native.zimage_native_wrapper import (
+            NativePipelineWrapper,
+        )
+        
+        return NativePipelineWrapper(native_pipeline)
+
+    def _swap_pipeline(self):
+        """Swap between Z-Image pipeline types (txt2img <-> img2img).
+        
+        Z-Image pipelines share the same components (transformer, text_encoder,
+        vae, tokenizer, scheduler), so we can create a new pipeline instance
+        reusing the existing components without reloading from disk.
+        """
+        from airunner.components.art.pipelines.z_image import ZImagePipeline, ZImageImg2ImgPipeline
+        
+        pipeline_class = self._pipeline_class
+        if pipeline_class is None:
+            pipeline_class = ZImagePipeline
+        
+        # Check if swap is needed
+        if self._pipe is None:
+            self.logger.debug("No pipeline loaded, nothing to swap")
+            return
+        
+        if self._pipe.__class__ is pipeline_class:
+            self.logger.debug(f"Pipeline already is {pipeline_class.__name__}, no swap needed")
+            return
+        
+        self.logger.info(
+            f"Swapping Z-Image pipeline from {self._pipe.__class__.__name__} to {pipeline_class.__name__}"
+        )
+        
+        try:
+            # Extract components from current pipeline
+            components = {
+                "transformer": self._pipe.transformer,
+                "text_encoder": self._pipe.text_encoder,
+                "tokenizer": self._pipe.tokenizer,
+                "vae": self._pipe.vae,
+                "scheduler": self._pipe.scheduler,
+            }
+            
+            # Create new pipeline with same components
+            self._pipe = pipeline_class(**components)
+            
+            # Re-apply memory optimizations
+            if hasattr(self, "_make_memory_efficient"):
+                self._make_memory_efficient()
+            
+            self.logger.info(f"Successfully swapped to {pipeline_class.__name__}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to swap Z-Image pipeline: {e}", exc_info=True)
+            raise

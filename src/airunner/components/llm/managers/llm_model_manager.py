@@ -493,9 +493,11 @@ class LLMModelManager(
         )
 
     # Categories that are ALWAYS included regardless of filtering
-    # This ensures the LLM always has access to memory/knowledge and search tools
-    # Search is included so the model can always access the internet when needed
-    ALWAYS_INCLUDE_CATEGORIES = {"knowledge", "search"}
+    # Only knowledge tools are always included - these are safe internal tools
+    # for storing/retrieving user facts and conversation memory.
+    # Search tools (web search) are NOT included by default to prevent
+    # unwanted internet searches when the caller only wants local tools like RAG.
+    ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
 
     def _apply_tool_filter(
         self, tool_categories: List[str], action=None, force_tool: Optional[str] = None
@@ -731,6 +733,7 @@ Reply with ONLY category names (comma-separated) or "none":"""
                     response_text = response.content if hasattr(response, 'content') else str(response)
                     
                     # Strip any thinking tags that might have leaked through
+                    # Supports both Qwen3 <think>...</think> and Ministral 3 [THINK]...[/THINK]
                     if '<think>' in response_text:
                         # Extract content after </think> if present
                         if '</think>' in response_text:
@@ -738,6 +741,12 @@ Reply with ONLY category names (comma-separated) or "none":"""
                         else:
                             # No closing tag - try to get first line after think
                             response_text = response_text.split('<think>')[0]
+                    elif '[THINK]' in response_text.upper():
+                        # Handle Ministral 3 Reasoning [THINK]...[/THINK] tags
+                        import re
+                        response_text = re.sub(r'\[THINK\].*?\[/THINK\]', '', response_text, flags=re.DOTALL | re.IGNORECASE)
+                        # Remove any orphaned tags
+                        response_text = re.sub(r'\[/?THINK\]', '', response_text, flags=re.IGNORECASE)
                     
                     # Parse the response
                     response_text = response_text.strip().lower()

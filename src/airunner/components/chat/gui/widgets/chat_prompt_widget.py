@@ -1,14 +1,26 @@
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from PIL import Image
 from PySide6.QtCore import Slot, Qt, QPoint
-from PySide6.QtWidgets import QApplication, QListWidget, QListWidgetItem, QFrame
-from PySide6.QtGui import QTextCursor, QFont
+from PySide6.QtWidgets import (
+    QApplication,
+    QListWidget,
+    QListWidgetItem,
+    QFrame,
+    QFileDialog,
+    QSpacerItem,
+    QSizePolicy,
+)
+from PySide6.QtGui import QTextCursor, QFont, QDragEnterEvent, QDropEvent
 
 from langchain_core.messages.utils import count_tokens_approximately
 
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
+)
+from airunner.components.chat.gui.widgets.image_attachment_widget import (
+    ImageAttachmentWidget,
 )
 from airunner.components.llm.data.conversation import Conversation
 from airunner.enums import (
@@ -35,6 +47,10 @@ from airunner.settings import (
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 
 
+# MIME type used by ImageWidget for drag operations
+IMAGE_METADATA_MIME_TYPE = "application/x-qt-image-metadata"
+
+
 class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
     icons = [
@@ -43,6 +59,7 @@ class ChatPromptWidget(BaseWidget):
         ("clock", "history_button"),
         ("settings", "settings_button"),
         ("stop-circle", "stop_button"),
+        ("paperclip", "attach_button"),
     ]
     logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -82,6 +99,11 @@ class ChatPromptWidget(BaseWidget):
         self._tokens_received_total: int = 0
         self._current_response_tokens: int = 0  # Accumulator for streaming response
         
+        # Image attachments for vision-capable models
+        self._attached_images: List[Tuple[Image.Image, Optional[str]]] = []
+        self._attachment_widgets: List[ImageAttachmentWidget] = []
+        self._attachments_spacer: Optional[QSpacerItem] = None
+        
         # Initialize provider dropdown
         self._populate_provider_dropdown()
         
@@ -119,6 +141,9 @@ class ChatPromptWidget(BaseWidget):
         
         # Setup slash command autocomplete
         self._setup_slash_command_completer()
+        
+        # Setup image attachment handling
+        self._setup_image_attachments()
         
         self._llm_response_worker = create_worker(
             LLMResponseWorker, sleep_time_in_ms=1
@@ -324,6 +349,19 @@ class ChatPromptWidget(BaseWidget):
         if force_tool:
             llm_request.force_tool = force_tool
             self.logger.info(f"Set force_tool={force_tool} on llm_request")
+        
+        # Add attached images if any
+        attached_images = self._get_attached_images()
+        if attached_images:
+            if self._is_model_vision_capable():
+                llm_request.images = attached_images
+                self.logger.info(f"Added {len(attached_images)} images to llm_request")
+            else:
+                self.logger.warning(
+                    "Images attached but model does not support vision - ignoring"
+                )
+            # Clear attachments after sending
+            self._clear_image_attachments()
         
         self.logger.info(f"Sending request - action={action}, force_tool={llm_request.force_tool}, tool_categories={llm_request.tool_categories}")
         
@@ -895,6 +933,7 @@ class ChatPromptWidget(BaseWidget):
         self._refresh_model_context_tokens()
         self._update_thinking_checkbox_visibility()
         self._update_action_dropdown()
+        self._update_attach_button_visibility()
         prompt_text = (
             self.ui.prompt.toPlainText().strip()
             if hasattr(self.ui, "prompt")
@@ -916,6 +955,7 @@ class ChatPromptWidget(BaseWidget):
         self._refresh_model_context_tokens()
         self._update_thinking_checkbox_visibility()
         self._update_action_dropdown()
+        self._update_attach_button_visibility()
         prompt_text = (
             self.ui.prompt.toPlainText().strip()
             if hasattr(self.ui, "prompt")
@@ -1691,3 +1731,331 @@ class ChatPromptWidget(BaseWidget):
         
         # Handle as custom model
         self._handle_custom_model(provider, custom_text)
+
+    # =========================================================================
+    # Image Attachment Methods
+    # =========================================================================
+
+    def _setup_image_attachments(self) -> None:
+        """Set up image attachment handling (drag-drop, attach button)."""
+        # Enable drag-drop on the prompt widget
+        self.setAcceptDrops(True)
+        if hasattr(self.ui, "prompt"):
+            self.ui.prompt.setAcceptDrops(True)
+            # Install event filter to handle drops on prompt
+            self.ui.prompt.viewport().installEventFilter(self)
+        
+        # Connect attach button
+        if hasattr(self.ui, "attach_button"):
+            self.ui.attach_button.clicked.connect(self._on_attach_button_clicked)
+            # Update visibility based on model capability
+            self._update_attach_button_visibility()
+        
+        # Hide attachments container initially
+        if hasattr(self.ui, "attachments_scroll_area"):
+            self.ui.attachments_scroll_area.setVisible(False)
+        
+        # Add spacer to attachments layout
+        if hasattr(self.ui, "attachments_layout"):
+            self._attachments_spacer = QSpacerItem(
+                40, 20,
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Minimum
+            )
+            self.ui.attachments_layout.addItem(self._attachments_spacer)
+
+    def _update_attach_button_visibility(self) -> None:
+        """Update attach button visibility based on model vision capability."""
+        if not hasattr(self.ui, "attach_button"):
+            return
+        
+        is_vision_capable = self._is_model_vision_capable()
+        self.ui.attach_button.setEnabled(is_vision_capable)
+        
+        if is_vision_capable:
+            self.ui.attach_button.setToolTip("Attach image for vision analysis")
+        else:
+            self.ui.attach_button.setToolTip(
+                "Image attachment requires a vision-capable model "
+                "(e.g., Ministral-3-8B)"
+            )
+
+    def _is_model_vision_capable(self) -> bool:
+        """Check if the currently selected model supports vision/images.
+        
+        Returns:
+            True if the model can process images, False otherwise.
+        """
+        # Get current provider
+        provider = ModelService.LOCAL.value
+        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
+            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        
+        # Get current model
+        model_id = None
+        if hasattr(self.ui, "model_dropdown") and self.ui.model_dropdown.count() > 0:
+            model_id = self.ui.model_dropdown.currentData()
+        
+        if not model_id:
+            return False
+        
+        # Check provider config for vision capability
+        if provider == ModelService.LOCAL.value:
+            model_config = LLMProviderConfig.LOCAL_MODELS.get(model_id, {})
+            return model_config.get("vision_capable", False)
+        elif provider == ModelService.OPENROUTER.value:
+            # OpenRouter models with known vision capability
+            # (simplified check - real implementation would query API)
+            vision_models = [
+                "anthropic/claude-3.5-sonnet",
+                "anthropic/claude-3-opus",
+                "openai/gpt-4-turbo",
+                "openai/gpt-4o",
+                "google/gemini-pro-1.5",
+            ]
+            return model_id in vision_models
+        elif provider == ModelService.OLLAMA.value:
+            # Ollama vision-capable models (llava, bakllava, moondream)
+            vision_models = ["llava", "bakllava", "moondream"]
+            return any(vm in model_id.lower() for vm in vision_models)
+        
+        return False
+
+    @Slot()
+    def _on_attach_button_clicked(self) -> None:
+        """Handle attach button click - open file dialog for images."""
+        if not self._is_model_vision_capable():
+            self.logger.warning("Cannot attach images: model does not support vision")
+            return
+        
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Attach Images",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All Files (*)",
+        )
+        
+        for file_path in file_paths:
+            self._add_image_attachment_from_path(file_path)
+
+    def _add_image_attachment_from_path(self, file_path: str) -> None:
+        """Add an image attachment from a file path.
+        
+        Args:
+            file_path: Path to the image file.
+        """
+        try:
+            image = Image.open(file_path)
+            # Convert to RGB if needed (e.g., for RGBA or P mode images)
+            if image.mode not in ("RGB", "RGBA"):
+                image = image.convert("RGB")
+            self._add_image_attachment(image, file_path)
+        except Exception as e:
+            self.logger.error(f"Failed to load image from {file_path}: {e}")
+
+    def _add_image_attachment(
+        self,
+        image: Image.Image,
+        image_path: Optional[str] = None,
+    ) -> None:
+        """Add an image to the attachments list.
+        
+        Args:
+            image: PIL Image to attach.
+            image_path: Optional path to the source file.
+        """
+        if not self._is_model_vision_capable():
+            self.logger.warning("Cannot attach images: model does not support vision")
+            return
+        
+        # Store the image
+        self._attached_images.append((image, image_path))
+        
+        # Create thumbnail widget
+        widget = ImageAttachmentWidget(image, image_path, self)
+        widget.removed.connect(lambda: self._remove_image_attachment(widget))
+        self._attachment_widgets.append(widget)
+        
+        # Add to layout (before the spacer)
+        if hasattr(self.ui, "attachments_layout"):
+            # Remove spacer, add widget, re-add spacer
+            if self._attachments_spacer:
+                self.ui.attachments_layout.removeItem(self._attachments_spacer)
+            self.ui.attachments_layout.addWidget(widget)
+            if self._attachments_spacer:
+                self.ui.attachments_layout.addItem(self._attachments_spacer)
+        
+        # Show attachments container
+        self._update_attachments_visibility()
+        
+        self.logger.debug(
+            f"Added image attachment: {image_path or 'in-memory'} "
+            f"({image.width}x{image.height})"
+        )
+
+    def _remove_image_attachment(self, widget: ImageAttachmentWidget) -> None:
+        """Remove an image attachment.
+        
+        Args:
+            widget: The attachment widget to remove.
+        """
+        if widget in self._attachment_widgets:
+            idx = self._attachment_widgets.index(widget)
+            self._attachment_widgets.remove(widget)
+            if idx < len(self._attached_images):
+                self._attached_images.pop(idx)
+            widget.deleteLater()
+        
+        self._update_attachments_visibility()
+
+    def _clear_image_attachments(self) -> None:
+        """Clear all image attachments."""
+        for widget in self._attachment_widgets:
+            widget.deleteLater()
+        self._attachment_widgets.clear()
+        self._attached_images.clear()
+        self._update_attachments_visibility()
+
+    def _update_attachments_visibility(self) -> None:
+        """Update visibility of attachments container based on content."""
+        if hasattr(self.ui, "attachments_scroll_area"):
+            has_attachments = len(self._attachment_widgets) > 0
+            self.ui.attachments_scroll_area.setVisible(has_attachments)
+
+    def _get_attached_images(self) -> List[Image.Image]:
+        """Get list of attached PIL Images for LLM request.
+        
+        Returns:
+            List of PIL Image objects.
+        """
+        return [img for img, _ in self._attached_images]
+
+    def eventFilter(self, obj, event) -> bool:
+        """Handle events for installed event filters (prompt drag-drop).
+        
+        Args:
+            obj: The object receiving the event.
+            event: The event.
+            
+        Returns:
+            True if event was handled, False otherwise.
+        """
+        # Handle drag events on prompt viewport
+        if hasattr(self.ui, "prompt") and obj is self.ui.prompt.viewport():
+            if event.type() == event.Type.DragEnter:
+                return self._handle_drag_enter(event)
+            elif event.type() == event.Type.DragMove:
+                event.acceptProposedAction()
+                return True
+            elif event.type() == event.Type.Drop:
+                return self._handle_drop(event)
+        
+        return super().eventFilter(obj, event)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Handle drag enter event for image attachments."""
+        if self._handle_drag_enter(event):
+            return
+        super().dragEnterEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Handle drop event for image attachments."""
+        if self._handle_drop(event):
+            return
+        super().dropEvent(event)
+
+    def _handle_drag_enter(self, event: QDragEnterEvent) -> bool:
+        """Handle drag enter for images.
+        
+        Args:
+            event: The drag enter event.
+            
+        Returns:
+            True if the drag was accepted, False otherwise.
+        """
+        if not self._is_model_vision_capable():
+            return False
+        
+        mime = event.mimeData()
+        
+        # Accept internal image panel drags
+        if mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
+            event.acceptProposedAction()
+            return True
+        
+        # Accept image URLs
+        if mime.hasUrls():
+            for url in mime.urls():
+                url_str = url.toString().lower()
+                if url_str.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')):
+                    event.acceptProposedAction()
+                    return True
+        
+        # Accept raw image data
+        for fmt in mime.formats():
+            if fmt.startswith("image/"):
+                event.acceptProposedAction()
+                return True
+        
+        return False
+
+    def _handle_drop(self, event: QDropEvent) -> bool:
+        """Handle drop event for images.
+        
+        Args:
+            event: The drop event.
+            
+        Returns:
+            True if the drop was handled, False otherwise.
+        """
+        if not self._is_model_vision_capable():
+            return False
+        
+        mime = event.mimeData()
+        
+        # Try internal image panel drag first
+        if mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
+            try:
+                import json
+                data = mime.data(IMAGE_METADATA_MIME_TYPE)
+                metadata_str = bytes(data.data()).decode("utf-8")
+                metadata = json.loads(metadata_str)
+                image_path = metadata.get("path")
+                
+                if image_path and os.path.exists(image_path):
+                    self._add_image_attachment_from_path(image_path)
+                    event.acceptProposedAction()
+                    return True
+            except Exception as e:
+                self.logger.error(f"Failed to handle image metadata drop: {e}")
+        
+        # Try URLs
+        if mime.hasUrls():
+            for url in mime.urls():
+                path = url.toLocalFile()
+                if path and os.path.exists(path):
+                    url_str = path.lower()
+                    if url_str.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')):
+                        self._add_image_attachment_from_path(path)
+                        event.acceptProposedAction()
+                        return True
+        
+        # Try raw image data
+        import io
+        for fmt in mime.formats():
+            if not fmt.startswith("image/"):
+                continue
+            data = mime.data(fmt)
+            if data.size() < 10:
+                continue
+            try:
+                data_bytes = data.data()
+                img = Image.open(io.BytesIO(data_bytes))
+                self._add_image_attachment(img)
+                event.acceptProposedAction()
+                return True
+            except Exception as e:
+                self.logger.debug(f"Failed to load image from {fmt}: {e}")
+        
+        return False
+

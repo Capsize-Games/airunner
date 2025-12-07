@@ -17,7 +17,7 @@ AI Runner uses a **multi-tier model architecture** where different models specia
 │         - Handles conversation                               │
 │         - Makes tool calls                                   │
 │         - Orchestrates workflow                              │
-│         - Examples: Qwen2.5-7B, Llama-3.1-8B                │
+│         - Examples: Qwen3-8B, Qwen2.5-7B, Ministral3-8B     │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          │ Tool Calls
@@ -100,8 +100,9 @@ stable_diffusion.generate(enhanced_prompt)
 
 | Model | Size | Function Calling | Context | Use Case |
 |-------|------|------------------|---------|----------|
-| **Qwen2.5-7B-Instruct** | 7B | ✅ Excellent | 32K | **Default** - Best tool calling |
-| Llama-3.1-8B-Instruct | 8B | ✅ Good | 131K | Alternative with huge context |
+| **Qwen3-8B** | 8B | ✅ Excellent | 32K (131K YaRN) | **Default** - Supports thinking & instruct modes |
+| **Qwen2.5-7B-Instruct** | 7B | ✅ Excellent | 128K | Alternative - great tool calling |
+| **Ministral3-8B-Instruct** | 8B | ✅ Native | 256K | Vision + native function calling |
 
 ### Specialized Models
 
@@ -110,8 +111,8 @@ stable_diffusion.generate(enhanced_prompt)
 | **Qwen2.5-3B-Instruct** | 3B | Prompt Enhancement | Enhance SD prompts |
 | **Qwen2.5-3B-Instruct** | 3B | Summarization | Summarize documents |
 | **Qwen2.5-3B-Instruct** | 3B | Translation | Translate text |
-| **Qwen2.5-Coder-7B** | 7B | Code Generation | Write Python code |
-| **DeepSeek-Coder-6.7B** | 6.7B | Code Generation | Alternative coder |
+| **Qwen2.5-Coder-7B** | 7B | Code Generation | 8GB VRAM code model |
+| **Qwen3-Coder-30B-A3B** | 30B MoE | Code Generation | SOTA agentic coding |
 
 ## Configuration
 

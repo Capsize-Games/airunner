@@ -56,21 +56,21 @@ def main():
             print(f"    {quant}: {vram} GB")
 
     print("\n" + "=" * 80)
-    print("Testing Ministral-8B Download & Quantization")
+    print("Testing Ministral-3-8B Download & Quantization")
     print("=" * 80)
 
-    # Test the pipeline with Ministral-8B
-    # NOTE: This will download ~16GB and requires CUDA for quantization
+    # Test the pipeline with Ministral-3-8B
+    # NOTE: This will download ~20GB and requires CUDA for quantization
     print("\nStarting download and quantization...")
     print("This will:")
-    print("  1. Download ~16GB from HuggingFace")
+    print("  1. Download ~20GB from HuggingFace")
     print("  2. Quantize to 4-bit (~4GB)")
     print("  3. Clean up original files")
     print()
 
     try:
         results = pipeline.download_and_quantize(
-            model_key="ministral-8b",
+            model_key="ministral3-8b",
             quantize_4bit=True,
             quantize_2bit=False,  # Skip 2-bit for initial test
             keep_unquantized=False,  # Clean up to save space

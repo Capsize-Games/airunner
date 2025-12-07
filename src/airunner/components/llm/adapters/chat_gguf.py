@@ -48,6 +48,22 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
+class UnsupportedGGUFArchitectureError(Exception):
+    """Raised when a GGUF model uses an architecture not supported by llama-cpp-python.
+    
+    This allows the factory to catch this specific error and fall back to
+    transformers-based loading.
+    """
+    
+    def __init__(self, architecture: str, model_path: str):
+        self.architecture = architecture
+        self.model_path = model_path
+        super().__init__(
+            f"GGUF model architecture '{architecture}' is not supported by llama-cpp-python. "
+            f"Model: {model_path}. Consider using safetensors with transformers instead."
+        )
+
+
 def _detect_chat_format(model_path: str) -> str:
     """Detect the appropriate chat format based on model filename.
     
@@ -166,7 +182,13 @@ class ChatGGUF(BaseChatModel):
         self._load_model()
 
     def _load_model(self) -> None:
-        """Load the GGUF model via llama-cpp-python."""
+        """Load the GGUF model via llama-cpp-python.
+        
+        Raises:
+            ImportError: If llama-cpp-python is not installed
+            UnsupportedGGUFArchitectureError: If the model architecture is not supported
+            RuntimeError: For other loading errors
+        """
         if self._llama is not None:
             return
 
@@ -216,7 +238,26 @@ class ChatGGUF(BaseChatModel):
             llama_kwargs["yarn_beta_fast"] = 32.0
             llama_kwargs["yarn_beta_slow"] = 1.0
         
-        self._llama = Llama(**llama_kwargs)
+        try:
+            self._llama = Llama(**llama_kwargs)
+        except Exception as e:
+            error_msg = str(e).lower()
+            # Check for unsupported architecture error from llama.cpp
+            if "unknown model architecture" in error_msg:
+                # Extract architecture name from error message if possible
+                # Error format: "unknown model architecture: 'mistral3'"
+                import re
+                arch_match = re.search(r"unknown model architecture[:\s]*['\"]?(\w+)['\"]?", error_msg)
+                architecture = arch_match.group(1) if arch_match else "unknown"
+                raise UnsupportedGGUFArchitectureError(architecture, self.model_path)
+            elif "failed to load model" in error_msg:
+                # Generic llama.cpp load failure - could also be architecture issue
+                raise RuntimeError(
+                    f"Failed to load GGUF model from {self.model_path}: {e}. "
+                    "This may be due to an unsupported model architecture or corrupted file."
+                )
+            else:
+                raise
 
         self.logger.info("✓ GGUF model loaded successfully")
 

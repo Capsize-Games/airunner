@@ -21,7 +21,7 @@ def main():
     print("HuggingFace Download Manager Test")
     print("=" * 80)
     print()
-    print("This will download Ministral-8B-Instruct-2410 to:")
+    print("This will download Ministral-3-8B-Instruct-2512 to:")
     print("  ~/.local/share/airunner/text/models/llm/causallm/")
     print()
     print("The download runs in a background thread")
@@ -59,8 +59,8 @@ def main():
 
     # Start download
     downloader.download(
-        repo_id="mistralai/Ministral-8B-Instruct-2410",
-        model_type="mistral",
+        repo_id="mistralai/Ministral-3-8B-Instruct-2512",
+        model_type="ministral3",
         setup_quantization=True,
         quantization_bits=4,
     )

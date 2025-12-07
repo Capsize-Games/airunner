@@ -46,13 +46,14 @@ class ModelPipeline(
 
     # Supported models with their characteristics
     SUPPORTED_MODELS = {
-        "ministral-8b": {
-            "repo_id": "mistralai/Ministral-8B-Instruct-2410",
-            "model_type": "mistral",
+        "ministral3-8b": {
+            "repo_id": "mistralai/Ministral-3-8B-Instruct-2512",
+            "model_type": "ministral3",
             "supports_function_calling": True,
-            "context_length": 128000,
+            "vision_capable": True,
+            "context_length": 262144,  # 256K context
             "vram_requirements_gb": {
-                "full": 32,
+                "full": 24,
                 "4bit": 8,
                 "2bit": 4,
             },
@@ -132,7 +133,7 @@ class ModelPipeline(
         Complete pipeline: download model and create quantized versions.
 
         Args:
-            model_key: Model key from SUPPORTED_MODELS (e.g., "ministral-8b")
+            model_key: Model key from SUPPORTED_MODELS (e.g., "ministral3-8b")
             quantize_4bit: Create 4-bit quantized version (recommended)
             quantize_2bit: Create 2-bit quantized version (maximum compression)
             keep_unquantized: Keep full-precision model after quantization
@@ -260,7 +261,7 @@ class ModelPipeline(
         Download and quantize a model from a HuggingFace URL.
 
         Args:
-            url: HuggingFace model URL (e.g., "https://huggingface.co/mistralai/Ministral-8B-Instruct-2410")
+            url: HuggingFace model URL (e.g., "https://huggingface.co/mistralai/Ministral-3-8B-Instruct-2512")
             quantize_4bit: Create 4-bit version
             quantize_2bit: Create 2-bit version
             progress_callback: Callback(stage_description, progress_0_to_1)
@@ -403,12 +404,12 @@ if __name__ == "__main__":
         print(f"    Function calling: {info['supports_function_calling']}")
         print(f"    VRAM (4-bit): {info['vram_requirements_gb']['4bit']} GB")
 
-    # Download and quantize Ministral-8B
+    # Download and quantize Ministral-3-8B
     def progress(stage, pct):
         print(f"[{pct * 100:5.1f}%] {stage}")
 
     results = pipeline.download_and_quantize(
-        model_key="ministral-8b",
+        model_key="ministral3-8b",
         quantize_4bit=True,
         quantize_2bit=False,
         progress_callback=progress,

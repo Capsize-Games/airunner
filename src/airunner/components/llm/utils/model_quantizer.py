@@ -285,9 +285,9 @@ if __name__ == "__main__":
 
     quantizer = ModelQuantizer()
 
-    # Example: Quantize Ministral-8B to 4-bit
-    model_path = "/path/to/ministral-8b"
-    output_path = "/path/to/ministral-8b-4bit-gptq"
+    # Example: Quantize Ministral-3-8B to 4-bit
+    model_path = "/path/to/ministral3-8b"
+    output_path = "/path/to/ministral3-8b-4bit-gptq"
 
     def progress(stage, percent):
         print(f"{stage}: {percent * 100:.1f}%")

@@ -66,7 +66,8 @@ class StreamingMixin:
         return result
 
     def stream(
-        self, user_input: str, generation_kwargs: Optional[Dict] = None
+        self, user_input: str, generation_kwargs: Optional[Dict] = None,
+        images: Optional[list] = None
     ):
         """Stream the workflow execution with user input, yielding messages.
 
@@ -74,6 +75,7 @@ class StreamingMixin:
             user_input: The user's message/prompt
             generation_kwargs: Optional dict of generation parameters
                 (max_new_tokens, temperature, etc.)
+            images: Optional list of PIL Image objects for vision-capable models
 
         Yields:
             AIMessage instances as they are generated
@@ -89,7 +91,7 @@ class StreamingMixin:
         self._check_and_update_mood_if_needed(current_user_message=user_input)
 
         initial_state = self._create_initial_state(
-            user_input, generation_kwargs
+            user_input, generation_kwargs, images=images
         )
         config = self._create_config()
 
@@ -150,13 +152,15 @@ class StreamingMixin:
                         last_yielded_count = ai_message_count
 
     def _create_initial_state(
-        self, user_input: str, generation_kwargs: Optional[Dict]
+        self, user_input: str, generation_kwargs: Optional[Dict],
+        images: Optional[list] = None
     ) -> Dict[str, Any]:
         """Create initial state for workflow.
 
         Args:
             user_input: User's message
             generation_kwargs: Optional generation parameters
+            images: Optional list of PIL Image objects for vision models
 
         Returns:
             Initial state dictionary
@@ -164,7 +168,14 @@ class StreamingMixin:
         # The checkpointer handles loading existing messages from the database.
         # We only need to provide the new user message here - the add_messages
         # reducer will merge it with any existing messages from the checkpoint.
-        initial_state = {"messages": [HumanMessage(user_input)]}
+        
+        # Create HumanMessage - multimodal if images provided
+        if images and len(images) > 0:
+            human_message = self._create_multimodal_message(user_input, images)
+        else:
+            human_message = HumanMessage(user_input)
+            
+        initial_state = {"messages": [human_message]}
 
         if generation_kwargs:
             initial_state["generation_kwargs"] = generation_kwargs
@@ -181,6 +192,71 @@ class StreamingMixin:
             "configurable": {"thread_id": self._thread_id},
             "recursion_limit": 20,  # Prevent runaway tool loops
         }
+
+    def _create_multimodal_message(
+        self, text: str, images: list
+    ) -> HumanMessage:
+        """Create a multimodal HumanMessage with text and images.
+
+        For LangChain vision-capable models, the message content should be
+        a list of content parts, each with a type (text or image_url).
+
+        Args:
+            text: The user's text message
+            images: List of PIL Image objects
+
+        Returns:
+            HumanMessage with multimodal content
+        """
+        import base64
+        import io
+        from PIL import Image
+
+        content = []
+
+        # Add text part
+        content.append({"type": "text", "text": text})
+
+        # Add image parts
+        for img in images:
+            if img is None:
+                continue
+
+            try:
+                # Convert PIL Image to base64 data URL
+                if isinstance(img, Image.Image):
+                    # Convert to RGB if needed (handles RGBA, P mode, etc.)
+                    if img.mode not in ("RGB", "L"):
+                        img = img.convert("RGB")
+
+                    # Save to bytes buffer as PNG
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="PNG")
+                    buffer.seek(0)
+
+                    # Encode as base64 data URL
+                    img_base64 = base64.b64encode(buffer.getvalue()).decode(
+                        "utf-8"
+                    )
+                    data_url = f"data:image/png;base64,{img_base64}"
+
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": data_url}
+                    })
+                else:
+                    self.logger.warning(
+                        f"Skipping non-PIL image in multimodal message: {type(img)}"
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error encoding image for multimodal message: {e}"
+                )
+
+        self.logger.info(
+            f"Created multimodal message with {len(images)} image(s)"
+        )
+        return HumanMessage(content=content)
 
     def _get_math_context(self):
         """Get math executor session context manager.

@@ -43,6 +43,7 @@ class WorkerManager(Worker):
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
+            SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL: self.on_llm_convert_to_gguf_signal,
             SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
             SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: self.on_rag_index_selected_documents_signal,
@@ -955,6 +956,112 @@ class WorkerManager(Worker):
             )
         
         self._download_dialog.show()
+
+    def on_llm_convert_to_gguf_signal(self, data):
+        """Handle GGUF conversion request.
+        
+        Converts safetensors to GGUF format when no pre-quantized GGUF is available.
+        
+        Args:
+            data: Dict with model_path, model_name, quantization
+        """
+        self.logger.info(f"WorkerManager received LLM_CONVERT_TO_GGUF_SIGNAL: {data}")
+        
+        from PySide6.QtWidgets import QApplication, QProgressDialog, QMessageBox
+        from PySide6.QtCore import Qt
+        from airunner.utils.model_optimizer import get_model_optimizer
+        
+        model_path = data.get("model_path", "")
+        model_name = data.get("model_name", "Unknown Model")
+        quantization = data.get("quantization", "Q4_K_M")
+        
+        # Get main window
+        main_window = None
+        app = QApplication.instance()
+        for widget in app.topLevelWidgets():
+            if widget.__class__.__name__ == "MainWindow":
+                main_window = widget
+                break
+        
+        if not main_window:
+            self.logger.error("Cannot show conversion dialog - main window not found")
+            return
+        
+        # Show progress dialog
+        progress = QProgressDialog(
+            f"Converting {model_name} to GGUF format...\n\n"
+            "This may take several minutes depending on model size.",
+            "Cancel",
+            0, 0,
+            main_window
+        )
+        progress.setWindowTitle("GGUF Conversion")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+        
+        try:
+            optimizer = get_model_optimizer()
+            
+            # Check for conversion tools
+            if not optimizer.has_llama_cpp_convert():
+                progress.close()
+                QMessageBox.critical(
+                    main_window,
+                    "Conversion Not Available",
+                    "GGUF conversion requires llama.cpp tools.\n\n"
+                    "Install with:\n"
+                    "  pip install llama-cpp-python\n\n"
+                    "Or clone llama.cpp and build convert tools."
+                )
+                return
+            
+            # Perform conversion
+            success, gguf_path, error = optimizer.convert_to_gguf(
+                model_path=model_path,
+                quantization=quantization,
+            )
+            
+            progress.close()
+            
+            if success:
+                self.logger.info(f"GGUF conversion successful: {gguf_path}")
+                QMessageBox.information(
+                    main_window,
+                    "Conversion Complete",
+                    f"Successfully converted to GGUF:\n{gguf_path}\n\n"
+                    "The model will now be loaded."
+                )
+                
+                # Emit signal to reload the model
+                self.emit_signal(
+                    SignalCode.LLM_GGUF_CONVERSION_COMPLETE,
+                    {"model_path": model_path, "gguf_path": gguf_path}
+                )
+                
+                # Trigger model reload
+                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+            else:
+                self.logger.error(f"GGUF conversion failed: {error}")
+                QMessageBox.critical(
+                    main_window,
+                    "Conversion Failed",
+                    f"Failed to convert model to GGUF:\n\n{error}"
+                )
+                self.emit_signal(
+                    SignalCode.LLM_GGUF_CONVERSION_FAILED,
+                    {"model_path": model_path, "error": error}
+                )
+                
+        except Exception as e:
+            progress.close()
+            self.logger.exception(f"GGUF conversion error: {e}")
+            QMessageBox.critical(
+                main_window,
+                "Conversion Error",
+                f"An error occurred during conversion:\n\n{str(e)}"
+            )
 
     def on_huggingface_download_complete_signal(self, data):
         # Use add_to_queue to ensure processing happens in worker thread,
