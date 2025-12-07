@@ -64,16 +64,16 @@ class ModelRegistry:
         """Register Mistral AI models."""
         models = [
             ModelMetadata(
-                name="Ministral 8B",
+                name="Ministral 3 8B",
                 provider=ModelProvider.MISTRAL,
                 model_type=ModelType.LLM,
-                size_gb=8.0,
-                min_vram_gb=6.0,
-                min_ram_gb=8.0,
-                recommended_vram_gb=8.0,
+                size_gb=10.4,
+                min_vram_gb=8.0,
+                min_ram_gb=12.0,
+                recommended_vram_gb=12.0,
                 recommended_ram_gb=16.0,
                 supports_quantization=True,
-                huggingface_id="mistralai/Ministral-8B-Instruct-2410",
+                huggingface_id="mistralai/Ministral-3-8B-Instruct-2512",
             ),
         ]
 
@@ -81,24 +81,14 @@ class ModelRegistry:
             self._models[model.huggingface_id] = model
 
     def _register_llama_models(self) -> None:
-        """Register Llama models."""
-        models = [
-            ModelMetadata(
-                name="Llama 3.1 8B",
-                provider=ModelProvider.LLAMA,
-                model_type=ModelType.LLM,
-                size_gb=8.0,
-                min_vram_gb=6.0,
-                min_ram_gb=8.0,
-                recommended_vram_gb=8.0,
-                recommended_ram_gb=16.0,
-                supports_quantization=True,
-                huggingface_id="meta-llama/Llama-3.1-8B-Instruct",
-            ),
-        ]
-
-        for model in models:
-            self._models[model.huggingface_id] = model
+        """Register Llama models.
+        
+        NOTE: Meta Llama 3.1 8B removed - outdated compared to Qwen3/Ministral3.
+        Llama 3.3 is 70B only (too large for most users).
+        Meta does NOT have a thinking model equivalent.
+        """
+        # No Llama models currently recommended - Qwen3-8B is superior
+        pass
 
     def _register_stable_diffusion_models(self) -> None:
         """Register Stable Diffusion models.

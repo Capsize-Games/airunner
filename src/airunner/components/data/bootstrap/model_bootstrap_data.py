@@ -61,15 +61,15 @@ ai_art_models = [
 
 llm_models = [
     {
-        "name": "Llama 3.1 8B Instruct",
-        "path": "meta-llama/Llama-3.1-8B-Instruct",
+        "name": "Qwen3 8B",
+        "path": "Qwen/Qwen3-8B",
         "branch": "main",
-        "version": "3.1",
+        "version": "3.0",
         "category": "llm",
         "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
-        "is_default": True,
+        "is_default": True,  # Supports both thinking and instruct modes
     },
     {
         "name": "Qwen 2.5 7B Instruct",
@@ -94,25 +94,14 @@ llm_models = [
         "is_default": False,
     },
     {
-        "name": "Ministral 8B Instruct",
-        "path": "mistralai/Ministral-8B-Instruct-2410",
+        "name": "Ministral 3 8B Instruct",
+        "path": "mistralai/Ministral-3-8B-Instruct-2512",
         "branch": "main",
-        "version": "8B-2410",
+        "version": "3-8B-2512",
         "category": "llm",
         "pipeline_action": "causallm",
         "enabled": True,
-        "model_type": "llm",
-        "is_default": False,
-    },
-    {
-        "name": "Ministral 8B Instruct (Quantized)",
-        "path": "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
-        "branch": "main",
-        "version": "8B-2410-4bit",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
+        "model_type": "ministral3",
         "is_default": False,
     },
     {

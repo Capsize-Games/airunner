@@ -8,6 +8,7 @@ from airunner.components.llm.adapters.chat_huggingface_local import (
 )
 from airunner.components.llm.adapters.chat_gguf import (
     ChatGGUF,
+    UnsupportedGGUFArchitectureError,
     find_gguf_file,
     is_gguf_model,
 )
@@ -364,11 +365,21 @@ class ChatModelFactory:
                         if db_value is not None:
                             enable_thinking = db_value
 
-                    return ChatModelFactory.create_gguf_model(
-                        model_path=gguf_path,
-                        enable_thinking=enable_thinking,
-                        **params
-                    )
+                    try:
+                        return ChatModelFactory.create_gguf_model(
+                            model_path=gguf_path,
+                            enable_thinking=enable_thinking,
+                            **params
+                        )
+                    except UnsupportedGGUFArchitectureError as e:
+                        # GGUF model architecture not supported by llama-cpp-python
+                        # This can happen with very new models like Ministral 3
+                        # Raise with clear message - caller must provide transformers model
+                        raise ValueError(
+                            f"GGUF model architecture '{e.architecture}' is not yet supported by llama-cpp-python. "
+                            f"The model '{e.model_path}' requires a newer version of llama-cpp-python. "
+                            "Please try a different model or wait for llama-cpp-python to add support."
+                        ) from e
 
         # Local HuggingFace model
         if getattr(llm_settings, "use_local_llm", True):

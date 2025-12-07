@@ -6,7 +6,10 @@ This mirrors the SD_FILE_BOOTSTRAP_DATA format for consistency.
 
 Capabilities:
 - function_calling: Whether the model can call functions/tools reliably
-- thinking_capable: Whether the model supports "thinking mode" with <think>...</think> reasoning blocks (Qwen3 only)
+- thinking_capable: Whether the model supports "thinking mode" reasoning blocks
+  - Qwen3: <think>...</think> tags
+  - Ministral 3 Reasoning: [THINK]...[/THINK] tags
+- thinking_tag_format: Optional. "brackets" for [THINK], "angle" (default) for <think>
 - rag_capable: Whether the model works well for RAG (retrieval augmented generation)
 - vision_capable: Whether the model can process images
 - code_capable: Whether the model is good at code generation
@@ -14,36 +17,15 @@ Capabilities:
 """
 
 LLM_FILE_BOOTSTRAP_DATA = {
-    "meta-llama/Llama-3.1-8B-Instruct": {
-        "path_settings": "llm_causallm_model_path",
-        "context_length": 131072,
-        "capabilities": {
-            "function_calling": True,
-            "thinking_capable": False,
-            "rag_capable": True,
-            "vision_capable": False,
-            "code_capable": True,
-            "is_embedding_model": False,
-        },
-        "files": {
-            "config.json": 855,
-            "generation_config.json": 184,
-            "model-00001-of-00004.safetensors": 4976698672,
-            "model-00002-of-00004.safetensors": 4999802720,
-            "model-00003-of-00004.safetensors": 4915916176,
-            "model-00004-of-00004.safetensors": 1168138808,
-            "model.safetensors.index.json": 23950,
-            "special_tokens_map.json": 296,
-            "tokenizer.json": 9085657,
-            "tokenizer_config.json": 55351,
-        },
-    },
+    # NOTE: Meta Llama 3.1 8B removed - outdated compared to Qwen3/Ministral3
+    # Meta does not have an 8B model comparable to current generation models
+    # Llama 3.3 is 70B only (too large for most consumer GPUs)
     "Qwen/Qwen3-8B-GGUF": {
         "path_settings": "llm_causallm_model_path",
         "context_length": 32768,
         "capabilities": {
             "function_calling": True,
-            "thinking_capable": True,
+            "thinking_capable": True,  # Supports both modes via enable_thinking flag
             "rag_capable": True,
             "vision_capable": False,
             "code_capable": True,
@@ -51,6 +33,23 @@ LLM_FILE_BOOTSTRAP_DATA = {
         },
         "files": {
             "Qwen3-8B-Q4_K_M.gguf": 5026889920,
+        },
+    },
+    # Code-specialized models
+    "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF": {
+        "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
+        "capabilities": {
+            "function_calling": True,
+            "thinking_capable": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,  # Primary purpose
+            "is_embedding_model": False,
+        },
+        "files": {
+            # Official Qwen GGUF Q4_K_M (4.68GB)
+            "qwen2.5-coder-7b-instruct-q4_k_m.gguf": 4876509632,
         },
     },
     "CohereForAI/c4ai-command-r-08-2024": {
@@ -87,54 +86,114 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "tokenizer_config.json": 21742,
         },
     },
-    "mistralai/Ministral-8B-Instruct-2410": {
+    # NOTE: Using BF16 version because the standard FP8 version cannot be
+    # requantized with BitsAndBytes (FP8 tensors are incompatible with 4-bit quantization)
+    "mistralai/Ministral-3-8B-Instruct-2512-BF16": {
         "path_settings": "llm_causallm_model_path",
-        "context_length": 131072,
+        "context_length": 262144,
         "capabilities": {
             "function_calling": True,
             "thinking_capable": False,
             "rag_capable": True,
-            "vision_capable": False,
+            "vision_capable": True,
             "code_capable": True,
             "is_embedding_model": False,
         },
+        # IMPORTANT: Config files need patching after download:
+        # - config.json: text_config.model_type "ministral3" -> "mistral"
+        # - tokenizer_config.json: tokenizer_class "TokenizersBackend" -> "PreTrainedTokenizerFast"
+        # - tokenizer_config.json: remove extra_special_tokens (wrong format)
+        # See airunner.components.llm.utils.ministral3_config_patcher
+        "requires_config_patch": True,
         "files": {
-            "config.json": 1412,
-            "generation_config.json": 116,
-            "model-00001-of-00004.safetensors": 4983007904,
-            "model-00002-of-00004.safetensors": 4999836776,
-            "model-00003-of-00004.safetensors": 4983067960,
-            "model-00004-of-00004.safetensors": 1073741952,
-            "model.safetensors.index.json": 26922,
-            "params.json": 296,
-            "special_tokens_map.json": 414,
-            "tekken.json": 14801223,
-            "tokenizer.json": 17078136,
-            "tokenizer_config.json": 181258,
+            # Use sharded safetensors (faster download, same model)
+            # consolidated.safetensors (17.8GB) is also available but we use sharded
+            "chat_template.jinja": 7753,
+            # config.json: size 0 = skip validation (file is patched post-download)
+            # Original: 1579 bytes, Patched: ~1575 bytes
+            "config.json": 0,
+            "generation_config.json": 131,
+            "model-00001-of-00004.safetensors": 4984292952,
+            "model-00002-of-00004.safetensors": 4999804256,
+            "model-00003-of-00004.safetensors": 4915917680,
+            "model-00004-of-00004.safetensors": 2936108304,
+            "model.safetensors.index.json": 52675,
+            "params.json": 1098,
+            "processor_config.json": 976,
+            "special_tokens_map.json": 147085,
+            "tekken.json": 16753777,
+            "tokenizer.json": 17078110,
+            # tokenizer_config.json: size 0 = skip validation (file is patched post-download)
+            # Original: 198076 bytes, Patched: ~196KB (extra_special_tokens removed)
+            "tokenizer_config.json": 0,
         },
     },
-    "w4ffl35/Ministral-8B-Instruct-2410-doublequant": {
+    "mistralai/Ministral-3-8B-Instruct-2512-GGUF": {
+        # NOTE: GGUF disabled in provider_config.py - llama-cpp-python 0.3.16 doesn't support
+        # the mistral3 architecture (vision-language model). Keep metadata for future use.
         "path_settings": "llm_causallm_model_path",
-        "context_length": 131072,
+        "context_length": 262144,
         "capabilities": {
             "function_calling": True,
             "thinking_capable": False,
             "rag_capable": True,
-            "vision_capable": False,
+            "vision_capable": True,
             "code_capable": True,
             "is_embedding_model": False,
         },
         "files": {
-            "config.json": 1223,
-            "generation_config.json": 111,
-            "model-00001-of-00002.safetensors": 4657954056,
-            "model-00002-of-00002.safetensors": 1073741952,
-            "model.safetensors.index.json": 148827,
-            "params.json": 257,
-            "special_tokens_map.json": 414,
-            "tekken.json": 14801223,
-            "tokenizer.json": 17078136,
-            "tokenizer_config.json": 181258,
+            # Official Mistral GGUF Q4_K_M (5.2GB)
+            "Ministral-3-8B-Instruct-2512-Q4_K_M.gguf": 5583200704,
+        },
+    },
+    "mistralai/Ministral-3-8B-Reasoning-2512": {
+        "path_settings": "llm_causallm_model_path",
+        "context_length": 262144,
+        "capabilities": {
+            "function_calling": True,
+            "thinking_capable": True,
+            "thinking_tag_format": "brackets",  # [THINK]...[/THINK]
+            "rag_capable": True,
+            "vision_capable": True,
+            "code_capable": True,
+            "is_embedding_model": False,
+        },
+        "files": {
+            # BF16 model - larger than FP8 Instruct variant (~17.8GB total)
+            # Uses sharded safetensors (model-00001/2/3/4-of-00004.safetensors)
+            "chat_template.jinja": 6206,
+            "config.json": 1547,
+            "generation_config.json": 131,
+            "model-00001-of-00004.safetensors": 4984292952,
+            "model-00002-of-00004.safetensors": 4999804256,
+            "model-00003-of-00004.safetensors": 4915917680,
+            "model-00004-of-00004.safetensors": 2936108304,
+            "model.safetensors.index.json": 52675,
+            "params.json": 1098,
+            "processor_config.json": 976,
+            "special_tokens_map.json": 147085,
+            "tekken.json": 16753777,
+            "tokenizer.json": 17078110,
+            "tokenizer_config.json": 198076,
+        },
+    },
+    "mistralai/Ministral-3-8B-Reasoning-2512-GGUF": {
+        # NOTE: GGUF disabled in provider_config.py - llama-cpp-python 0.3.16 doesn't support
+        # the mistral3 architecture (vision-language model). Keep metadata for future use.
+        "path_settings": "llm_causallm_model_path",
+        "context_length": 262144,
+        "capabilities": {
+            "function_calling": True,
+            "thinking_capable": True,
+            "thinking_tag_format": "brackets",  # [THINK]...[/THINK]
+            "rag_capable": True,
+            "vision_capable": True,
+            "code_capable": True,
+            "is_embedding_model": False,
+        },
+        "files": {
+            # Official Mistral GGUF Q4_K_M (5.2GB)
+            "Ministral-3-8B-Reasoning-2512-Q4_K_M.gguf": 5583200704,
         },
     },
     "sentence-transformers/sentence-t5-large": {

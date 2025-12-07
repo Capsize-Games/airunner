@@ -19,44 +19,63 @@ class LLMProviderConfig:
     # Local HuggingFace models available for download
     # Models can have optional GGUF variants via gguf_repo_id and gguf_filename
     LOCAL_MODELS = {
-        "ministral-8b": {
-            "name": "Ministral-8B-Instruct-2410",
-            "repo_id": "mistralai/Ministral-8B-Instruct-2410",
-            "model_type": "mistral",
+        "ministral3-8b": {
+            "name": "Ministral-3-8B-Instruct-2512-BF16",
+            # Use BF16 version - the standard FP8 version cannot be requantized with BitsAndBytes
+            # (FP8 tensors are incompatible with 4-bit quantization)
+            "repo_id": "mistralai/Ministral-3-8B-Instruct-2512-BF16",
+            "model_type": "ministral3",
             "function_calling": True,
-            "tool_calling_mode": "native",  # Uses tekken.json tokenizer
+            # NOTE: Changed from "native" to "react" - mistral_common tekken tokenizer
+            # produces corrupted output with Mistral3ForConditionalGeneration (vision model)
+            "tool_calling_mode": "react",
             "supports_thinking": False,
             "rag_capable": True,
-            "vision_capable": False,
+            "vision_capable": True,  # Ministral 3 has vision capabilities
             "code_capable": True,
-            "context_length": 128000,
+            "context_length": 262144,  # 256K context window
             "vram_2bit_gb": 4,
             "vram_4bit_gb": 8,
-            "vram_8bit_gb": 16,
-            "description": "Mistral 8B with native function calling support",
-            # GGUF variant (bartowski's quantizations are high quality)
-            "gguf_repo_id": "bartowski/Ministral-8B-Instruct-2410-GGUF",
-            "gguf_filename": "Ministral-8B-Instruct-2410-Q4_K_M.gguf",
+            "vram_8bit_gb": 18,  # BF16 is ~17.8GB, requires 24GB for full precision
+            "description": "Ministral 3 8B with vision, native function calling, and 256K context",
+            # IMPORTANT: Config files need patching after download (see ministral3_config_patcher.py):
+            # - config.json: text_config.model_type "ministral3" -> "mistral"
+            # - tokenizer_config.json: tokenizer_class and extra_special_tokens fixes
+            "requires_config_patch": True,
+            # NOTE: GGUF disabled - llama-cpp-python 0.3.16 doesn't support mistral3 architecture yet
+            # Official GGUF exists at mistralai/Ministral-3-8B-Instruct-2512-GGUF (5.2GB Q4_K_M)
+            # Re-enable when llama-cpp-python adds mistral3 support
+            # "gguf_repo_id": "mistralai/Ministral-3-8B-Instruct-2512-GGUF",
+            # "gguf_filename": "Ministral-3-8B-Instruct-2512-Q4_K_M.gguf",
         },
-        "llama-3.1-8b": {
-            "name": "Llama-3.1-8B-Instruct",
-            "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
-            "model_type": "llm",
+        "ministral3-8b-reasoning": {
+            "name": "Ministral-3-8B-Reasoning-2512",
+            "repo_id": "mistralai/Ministral-3-8B-Reasoning-2512",
+            "model_type": "ministral3",
             "function_calling": True,
-            "tool_calling_mode": "json",  # Structured JSON output
-            "supports_thinking": False,
+            # NOTE: Changed from "native" to "react" - mistral_common tekken tokenizer
+            # produces corrupted output with Mistral3ForConditionalGeneration (vision model)
+            "tool_calling_mode": "react",
+            "supports_thinking": True,  # Uses [THINK]...[/THINK] reasoning blocks
+            "thinking_tag_format": "brackets",  # [THINK]...[/THINK] vs angle <think>...</think>
             "rag_capable": True,
-            "vision_capable": False,
+            "vision_capable": True,  # Ministral 3 has vision capabilities
             "code_capable": True,
-            "context_length": 128000,
-            "vram_2bit_gb": 3,
-            "vram_4bit_gb": 5,
-            "vram_8bit_gb": 10,
-            "description": "Meta Llama 3.1 8B with structured JSON tool calling",
-            # GGUF variant
-            "gguf_repo_id": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
-            "gguf_filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+            "context_length": 262144,  # 256K context window
+            "vram_2bit_gb": 5,
+            "vram_4bit_gb": 10,
+            "vram_8bit_gb": 24,  # BF16 requires 24GB, quantization recommended
+            "description": "Ministral 3 8B Reasoning with [THINK] blocks for step-by-step reasoning",
+            # NOTE: GGUF disabled - llama-cpp-python 0.3.16 doesn't support mistral3 architecture yet
+            # Official GGUF exists at mistralai/Ministral-3-8B-Reasoning-2512-GGUF (5.2GB Q4_K_M)
+            # Re-enable when llama-cpp-python adds mistral3 support
+            # "gguf_repo_id": "mistralai/Ministral-3-8B-Reasoning-2512-GGUF",
+            # "gguf_filename": "Ministral-3-8B-Reasoning-2512-Q4_K_M.gguf",
         },
+        # NOTE: Meta Llama - No 8B model comparable to Qwen3/Ministral3
+        # Llama 3.3 is 70B only (42.5GB Q4_K_M GGUF - too large for most users)
+        # Llama 3.1 8B is outdated. Meta does NOT have a "thinking" model.
+        # CodeLlama is outdated - Qwen3-Coder is the better choice for code.
         "qwen2.5-7b": {
             "name": "Qwen2.5-7B-Instruct",
             "repo_id": "Qwen/Qwen2.5-7B-Instruct",
@@ -82,7 +101,7 @@ class LLMProviderConfig:
             "model_type": "llm",
             "function_calling": True,
             "tool_calling_mode": "json",  # Structured JSON output
-            "supports_thinking": True,  # Qwen3 thinking mode (<think>...</think>)
+            "supports_thinking": True,  # Qwen3 supports both modes via enable_thinking flag
             "rag_capable": True,
             "vision_capable": False,
             "code_capable": True,
@@ -90,7 +109,7 @@ class LLMProviderConfig:
             "vram_2bit_gb": 5,
             "vram_4bit_gb": 8,
             "vram_8bit_gb": 16,
-            "description": "Qwen3 8B with built-in reasoning (thinking mode) and superior agent capabilities",
+            "description": "Qwen3 8B - supports both thinking (<think>) and instruct modes via enable_thinking flag",
             # GGUF variant (official Qwen GGUF)
             "gguf_repo_id": "Qwen/Qwen3-8B-GGUF",
             "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
@@ -149,6 +168,26 @@ class LLMProviderConfig:
             "gguf_repo_id": "unsloth/Qwen3-30B-A3B-Instruct-GGUF",
             "gguf_filename": "Qwen3-30B-A3B-Instruct-Q4_K_M.gguf",
         },
+        # Code-specialized models
+        "qwen2.5-coder-7b": {
+            "name": "Qwen2.5-Coder-7B-Instruct",
+            "repo_id": "Qwen/Qwen2.5-Coder-7B-Instruct",
+            "model_type": "llm",
+            "function_calling": True,
+            "tool_calling_mode": "json",
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,  # Primary purpose
+            "context_length": 131072,  # 128K native
+            "vram_2bit_gb": 4,
+            "vram_4bit_gb": 8,
+            "vram_8bit_gb": 16,
+            "description": "Qwen2.5 Coder 7B - excellent code generation for 8GB+ VRAM",
+            # Official Qwen GGUF (4.68GB Q4_K_M)
+            "gguf_repo_id": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+            "gguf_filename": "qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+        },
         "qwen3-coder-30b-a3b": {
             "name": "Qwen3-Coder-30B-A3B-Instruct",
             "repo_id": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
@@ -168,8 +207,9 @@ class LLMProviderConfig:
             "gguf_repo_id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
             "gguf_filename": "Qwen3-Coder-30B-A3B-Instruct-Q3_K_M.gguf",
         },
-        # NOTE: Llama 4 Maverick removed - GGUF is 243GB split across 5 files (impractical)
+        # NOTE: Meta Llama 4 Maverick removed - GGUF is 243GB split across 5 files (impractical)
         # The model has 401B parameters (128 experts) and no single-file GGUF exists
+        # NOTE: CodeLlama removed - outdated, Qwen2.5-Coder is significantly better
         "custom": {
             "name": "Custom Local Path",
             "repo_id": "",

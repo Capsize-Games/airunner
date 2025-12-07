@@ -368,9 +368,17 @@ class GenerationMixin:
                 generation_kwargs.get("max_new_tokens", "NOT SET"),
             )
 
+            # Extract images from llm_request for vision models
+            images = None
+            if llm_request and hasattr(llm_request, "images") and llm_request.images:
+                images = llm_request.images
+                self.logger.info(
+                    f"Passing {len(images)} image(s) to workflow stream"
+                )
+
             result_messages = []
             for message in self._workflow_manager.stream(
-                prompt, generation_kwargs
+                prompt, generation_kwargs, images=images
             ):
                 # Check interrupt flag during streaming
                 if self._interrupted:
