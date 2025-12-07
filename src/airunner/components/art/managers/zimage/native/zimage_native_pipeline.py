@@ -22,14 +22,13 @@ from airunner.components.art.managers.zimage.native.fp8_ops import (
     TensorCoreFP8Layout,
     is_fp8_scaled_checkpoint,
 )
+from diffusers.image_processor import VaeImageProcessor
 from airunner.components.art.managers.zimage.native.nextdit_model import (
     NextDiT,
     ZIMAGE_CONFIG,
     create_zimage_transformer,
 )
-from airunner.components.art.managers.zimage.native.flow_match_scheduler import (
-    FlowMatchEulerScheduler,
-)
+from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
 from airunner.components.art.managers.zimage.native.zimage_text_encoder import (
     ZImageTextEncoder,
     ZImageTokenizer,
@@ -119,13 +118,14 @@ class ZImageNativePipeline:
             self.device = device
         self.dtype = dtype
         self.text_encoder_quantization = text_encoder_quantization
+        self.image_processor: Optional[VaeImageProcessor] = None
         
         # Components
         self.transformer: Optional[NextDiT] = None
         self.text_encoder: Optional[ZImageTextEncoder] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
         self.vae: Optional[nn.Module] = None
-        self.scheduler: Optional[FlowMatchEulerScheduler] = None
+        self.scheduler: Optional[FlowMatchEulerDiscreteScheduler] = None
         
         # Paths
         self.transformer_path = transformer_path
@@ -507,6 +507,13 @@ class ZImageNativePipeline:
                 torch_dtype=self.dtype,
             ).to(self.device)
             self.vae.eval()
+
+            # Create an image processor for encode/decode convenience
+            try:
+                vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+            except Exception:
+                vae_scale_factor = 8
+            self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
             
         except ImportError:
             logger.warning("diffusers not available, VAE must be loaded manually")
@@ -527,9 +534,9 @@ class ZImageNativePipeline:
             num_inference_steps: Number of denoising steps
             shift: Sigma schedule shift (3.0 for Z-Image Turbo)
         """
-        self.scheduler = FlowMatchEulerScheduler(shift=shift)
+        self.scheduler = FlowMatchEulerDiscreteScheduler()
         self.scheduler.set_timesteps(num_inference_steps, device=self.device)
-        logger.info(f"Scheduler setup with {num_inference_steps} steps, shift={shift}")
+        logger.info(f"Scheduler setup with {num_inference_steps} steps (FlowMatchEulerDiscreteScheduler)")
     
     def encode_prompt(
         self,
@@ -575,6 +582,8 @@ class ZImageNativePipeline:
         num_images_per_prompt: int = 1,
         generator: Optional[torch.Generator] = None,
         latents: Optional[torch.Tensor] = None,
+        image: Optional[Any] = None,
+        strength: float = 0.8,
         output_type: str = "pil",
         callback: Optional[Callable[[int, torch.Tensor], None]] = None,
         callback_steps: int = 1,
@@ -604,6 +613,9 @@ class ZImageNativePipeline:
             raise RuntimeError("Transformer not loaded")
         if self.scheduler is None:
             self.setup_scheduler(num_inference_steps)
+        is_img2img = image is not None
+        if is_img2img and (strength < 0 or strength > 1):
+            raise ValueError("Img2img strength must be between 0 and 1")
         
         # Handle batch
         if isinstance(prompt, str):
@@ -649,47 +661,112 @@ class ZImageNativePipeline:
             )
             negative_embeds = None
             attention_mask = None
-        
-        # Setup latents
-        latent_channels = ZIMAGE_CONFIG['in_channels']
-        latent_height = height // 8
-        latent_width = width // 8
-        
-        if latents is None:
-            # Handle generator device mismatch
-            # If generator is CPU but we need CUDA tensors, generate on CPU and move
-            if generator is not None and self.device.type == 'cuda':
-                # Check if generator is CPU-based
-                gen_device = getattr(generator, 'device', torch.device('cpu'))
-                if gen_device.type == 'cpu':
-                    # Generate on CPU with the generator, then move to GPU
-                    latents = torch.randn(
-                        batch_size, latent_channels, latent_height, latent_width,
-                        device='cpu', dtype=self.dtype,
+
+        # Setup scheduler timesteps and handle img2img strength
+        self.scheduler.set_timesteps(num_inference_steps, device=self.device)
+        timesteps = self.scheduler.timesteps
+        sigmas = self.scheduler.sigmas
+        t_start = 0
+        if is_img2img:
+            init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
+            init_timestep = max(init_timestep, 1)
+            t_start = max(num_inference_steps - init_timestep, 0)
+            timesteps = timesteps[t_start:]
+            sigmas = sigmas[t_start:]
+            if timesteps.numel() == 0 or sigmas.numel() <= 1:
+                raise ValueError("Strength setting removed all timesteps; choose lower strength or increase steps.")
+        # Reset scheduler view to the truncated window and restart at step 0
+        self.scheduler.timesteps = timesteps
+        self.scheduler.sigmas = sigmas
+        if hasattr(self.scheduler, "_step_index"):
+            self.scheduler._step_index = 0
+        self.scheduler.num_inference_steps = num_inference_steps
+        num_inference_steps = timesteps.shape[0]
+
+        def _randn(shape: Tuple[int, ...], dtype: torch.dtype = torch.float32) -> torch.Tensor:
+            if generator is not None and self.device.type == "cuda":
+                gen_device = getattr(generator, "device", torch.device("cpu"))
+                if getattr(gen_device, "type", "cpu") == "cpu":
+                    return torch.randn(
+                        shape,
+                        device="cpu",
+                        dtype=dtype,
                         generator=generator,
                     ).to(self.device)
-                else:
-                    latents = torch.randn(
-                        batch_size, latent_channels, latent_height, latent_width,
-                        device=self.device, dtype=self.dtype,
-                        generator=generator,
+            return torch.randn(shape, device=self.device, dtype=dtype, generator=generator)
+
+        # Setup latents
+        latent_channels = ZIMAGE_CONFIG['in_channels']
+
+        if is_img2img:
+            if self.vae is None:
+                raise RuntimeError("VAE must be loaded for img2img generation")
+
+            if self.image_processor is None:
+                try:
+                    vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+                except Exception:
+                    vae_scale_factor = 8
+                self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
+
+            # Derive target size from the input image when not provided
+            if height is None or width is None:
+                if hasattr(image, "height") and hasattr(image, "width"):
+                    height = height or image.height
+                    width = width or image.width
+                elif isinstance(image, torch.Tensor):
+                    height = height or int(image.shape[-2])
+                    width = width or int(image.shape[-1])
+            height = int(height)
+            width = int(width)
+
+            init_image = self.image_processor.preprocess(
+                image,
+                height=height,
+                width=width,
+            ).to(device=self.device, dtype=self.vae.dtype)
+
+            image_latents = self.vae.encode(init_image).latent_dist.sample(generator)
+            shift_factor = getattr(self.vae.config, "shift_factor", 0.0)
+            scaling_factor = getattr(self.vae.config, "scaling_factor", 1.0)
+            image_latents = (image_latents - shift_factor) * scaling_factor
+
+            if batch_size > image_latents.shape[0]:
+                if batch_size % image_latents.shape[0] != 0:
+                    raise ValueError(
+                        f"Cannot duplicate image latents of batch size {image_latents.shape[0]} to {batch_size}"
                     )
+                repeat_count = batch_size // image_latents.shape[0]
+                image_latents = torch.cat([image_latents] * repeat_count, dim=0)
             else:
-                latents = torch.randn(
-                    batch_size, latent_channels, latent_height, latent_width,
-                    device=self.device, dtype=self.dtype,
-                    generator=generator,
-                )
+                image_latents = image_latents[:batch_size]
+
+            image_latents = image_latents.to(device=self.device, dtype=torch.float32)
+
+            if latents is None:
+                noise = _randn(tuple(image_latents.shape), dtype=torch.float32)
+                # Mirror diffusers img2img init: blend by normalized timestep fraction
+                timestep_value = float(timesteps[0].item()) if timesteps.numel() > 0 else 0.0
+                timestep_ratio = timestep_value / max(self.scheduler.config.num_train_timesteps, 1)
+                logger.info(f"[IMG2IMG] strength={strength}, t_start={t_start}, first_timestep={timestep_value}, timestep_ratio={timestep_ratio:.4f}")
+                logger.info(f"[IMG2IMG] image_latents std={image_latents.std().item():.4f}, noise std={noise.std().item():.4f}")
+                latents = (1.0 - timestep_ratio) * image_latents + timestep_ratio * noise
+                logger.info(f"[IMG2IMG] blended latents std={latents.std().item():.4f} (image_weight={1.0-timestep_ratio:.4f}, noise_weight={timestep_ratio:.4f})")
+            else:
+                latents = latents.to(device=self.device, dtype=torch.float32)
         else:
-            latents = latents.to(device=self.device, dtype=self.dtype)
-        
-        # Setup scheduler
-        self.scheduler.set_timesteps(num_inference_steps, device=self.device)
-        
-        # Scale initial noise (only if scheduler has init_noise_sigma)
-        # Flow matching schedulers typically don't scale initial noise
-        if hasattr(self.scheduler, 'init_noise_sigma'):
-            latents = latents * self.scheduler.init_noise_sigma
+            latent_height = height // 8
+            latent_width = width // 8
+            if latents is None:
+                latents = _randn(
+                    (batch_size, latent_channels, latent_height, latent_width),
+                    dtype=self.dtype,
+                )
+            else:
+                latents = latents.to(device=self.device, dtype=self.dtype)
+
+            if hasattr(self.scheduler, 'init_noise_sigma'):
+                latents = latents * self.scheduler.init_noise_sigma
         
         # Denoising loop
         num_tokens = prompt_embeds.shape[1] if prompt_embeds is not None else 77
@@ -697,10 +774,11 @@ class ZImageNativePipeline:
         # Determine if CFG should be used
         # CFG is applied when guidance_scale > 1.0 and we have negative embeddings
         use_cfg = guidance_scale > 1.0 and negative_embeds is not None
-        
-        for i, t in enumerate(self.scheduler.timesteps):
-            # Expand timestep
+
+        for i, t in enumerate(timesteps):
+            # Expand timestep and normalize to [0, 1] like diffusers pipeline
             timestep = t.expand(batch_size)
+            timestep = (self.scheduler.num_train_timesteps - timestep) / max(self.scheduler.num_train_timesteps, 1)
             
             # Prepare conditioning
             if use_cfg:
@@ -740,7 +818,7 @@ class ZImageNativePipeline:
             
             # Scheduler step - extract prev_sample from output
             scheduler_output = self.scheduler.step(noise_pred, t, latents)
-            latents = scheduler_output.prev_sample
+            latents = scheduler_output.prev_sample if hasattr(scheduler_output, "prev_sample") else scheduler_output
             
             # Debug: check latents after scheduler step
             logger.info(f"[DEBUG] Step {i} after: latents std={latents.std().item():.4f}")
