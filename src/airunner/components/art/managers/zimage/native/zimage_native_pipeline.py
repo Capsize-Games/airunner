@@ -135,6 +135,18 @@ class ZImageNativePipeline:
         # State
         self.is_fp8 = False
         self._loaded_components: List[str] = []
+
+    @property
+    def components(self) -> Dict[str, Any]:
+        """Diffusers-style components mapping used by PEFT loaders."""
+        comps: Dict[str, Any] = {
+            "transformer": self.transformer,
+            "text_encoder": self.text_encoder,
+            "tokenizer": self.tokenizer,
+            "vae": self.vae,
+            "scheduler": self.scheduler,
+        }
+        return {k: v for k, v in comps.items() if v is not None}
     
     @property
     def memory_usage(self) -> Dict[str, float]:
@@ -144,6 +156,10 @@ class ZImageNativePipeline:
         
         vram = torch.cuda.memory_allocated() / 1024**3
         cpu = torch.cuda.memory_reserved() / 1024**3  # Approximation
+
+        # PEFT compatibility: diffusers LoRA loader checks hf_device_map
+        # even though native pipeline manages devices internally.
+        self.hf_device_map = None
         
         return {"vram": vram, "cpu": cpu}
     

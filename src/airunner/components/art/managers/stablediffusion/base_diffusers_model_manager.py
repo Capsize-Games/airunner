@@ -288,7 +288,13 @@ class BaseDiffusersModelManager(
         - DeepCache helper
         - Memory optimizations
         """
+        self.logger.debug(
+            f"[LOAD ENTRY] sd_is_loading={self.sd_is_loading}, "
+            f"model_is_loaded={self.model_is_loaded}, "
+            f"model_status={self.model_status}, model_type={self.model_type}"
+        )
         if self.sd_is_loading or self.model_is_loaded:
+            self.logger.debug("[LOAD ENTRY] Returning early - already loading or loaded")
             return
         if self.model_path is None or self.model_path == "":
             self.logger.error("No model selected")
@@ -327,7 +333,9 @@ class BaseDiffusersModelManager(
 
         self.load_controlnet()
 
+        self.logger.debug("[LOAD] About to call _load_pipe()")
         if self._load_pipe():
+            self.logger.debug("[LOAD] _load_pipe() returned True, continuing load sequence")
             self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
             self._load_scheduler()
@@ -507,8 +515,20 @@ class BaseDiffusersModelManager(
         Returns:
             True if loaded successfully, False otherwise
         """
+        self.logger.debug("[_load_pipe] ENTERING METHOD")
+        try:
+            pipeline_class = self._pipeline_class
+            self.logger.debug(f"[_load_pipe] pipeline_class={pipeline_class}")
+            section = self.section
+            self.logger.debug(f"[_load_pipe] section={section}")
+        except Exception as e:
+            self.logger.error(f"[_load_pipe] Error accessing properties: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return False
+        
         self.logger.debug(
-            f"Loading pipe {self._pipeline_class} for {self.section}"
+            f"Loading pipe {pipeline_class} for {section}"
         )
         self.change_model_status(self.model_type, ModelStatus.LOADING)
         data = self._prepare_pipe_data()
