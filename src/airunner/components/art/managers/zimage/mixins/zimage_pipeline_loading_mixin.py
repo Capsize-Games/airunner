@@ -98,13 +98,9 @@ class ZImagePipelineLoadingMixin:
         # Debug: verify _pipe was set
         self.logger.info(f"[ZIMAGE DEBUG] After _set_pipe: self._pipe={self._pipe}, self={id(self)}")
 
-        # Load LoRA adapters if available for this pipeline
-        try:
-            if hasattr(self, "_load_lora") and self._pipe is not None:
-                self.logger.info("[ZIMAGE] Loading LoRA adapters")
-                self._load_lora()
-        except Exception as exc:  # pragma: no cover - defensive logging
-            self.logger.warning(f"[ZIMAGE] Failed to load LoRA adapters: {exc}")
+        # Note: LoRA loading is handled by BaseDiffusersModelManager.load()
+        # after _load_pipe() completes. Do NOT call _load_lora() here to
+        # avoid loading LoRA twice and corrupting the model weights.
         
         _clear_gpu_memory()
 

@@ -169,9 +169,10 @@ def get_fused_attention_module(
     """
     # Check if this is an attention path with to_q/k/v/out
     for lora_name, (model_name, slice_idx) in FUSED_QKV_MAPPING.items():
-        if base_path.endswith(f'.attention.{lora_name}'):
-            # Convert path: layers.X.attention.to_q -> layers.X.attention.qkv
-            attention_base = base_path.rsplit('.', 1)[0]  # layers.X.attention
+        suffix = f'.attention.{lora_name}'
+        if base_path.endswith(suffix):
+            # Strip the lora_name suffix to get the attention base path
+            attention_base = base_path[:-len(lora_name)-1]  # Remove ".to_q" or ".to_out.0" etc.
             fused_path = f"{attention_base}.{model_name}"
             
             module = get_module_by_path(model, fused_path)
