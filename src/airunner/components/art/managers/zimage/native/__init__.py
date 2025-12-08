@@ -50,6 +50,11 @@ from airunner.components.art.managers.zimage.native.zimage_native_pipeline impor
 from airunner.components.art.managers.zimage.native.zimage_native_wrapper import (
     NativePipelineWrapper,
 )
+from airunner.components.art.managers.zimage.native.native_lora import (
+    NativeLoraLoader,
+    load_lora_into_transformer,
+    load_lora_state_dict,
+)
 
 __all__ = [
     # FP8 Operations
@@ -85,4 +90,9 @@ __all__ = [
     "SimpleTextEncoder",
     # Pipeline
     "ZImageNativePipeline",
+    "NativePipelineWrapper",
+    # LoRA
+    "NativeLoraLoader",
+    "load_lora_into_transformer",
+    "load_lora_state_dict",
 ]

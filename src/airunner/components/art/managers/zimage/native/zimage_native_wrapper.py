@@ -13,6 +13,11 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import torch
 from PIL import Image
 
+from airunner.components.art.managers.zimage.native.native_lora import (
+    NativeLoraLoader,
+    load_lora_state_dict,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -115,6 +120,64 @@ class NativePipelineWrapper:
         Similar to enable_model_cpu_offload for native pipeline.
         """
         self.enable_model_cpu_offload(gpu_id)
+
+    def load_lora_weights(
+        self,
+        pretrained_model_name_or_path_or_dict: Union[str, Dict[str, torch.Tensor]],
+        weight_name: Optional[str] = None,
+        adapter_name: Optional[str] = None,
+        scale: float = 1.0,
+        **kwargs,
+    ) -> None:
+        """Load LoRA into the native transformer.
+        
+        Uses native LoRA loader that works with FP8Linear layers.
+        
+        Args:
+            pretrained_model_name_or_path_or_dict: Path to LoRA directory/file or state dict
+            weight_name: Filename of the LoRA weights within the directory
+            adapter_name: Name for the adapter
+            scale: LoRA scale factor (0.0-1.0+)
+            **kwargs: Additional arguments (for compatibility)
+        """
+        import os
+        
+        if self._native.transformer is None:
+            raise ValueError("Transformer not loaded. Cannot apply LoRA.")
+        
+        # Handle the case where base path + weight_name is provided
+        if weight_name is not None and isinstance(pretrained_model_name_or_path_or_dict, str):
+            lora_path = os.path.join(pretrained_model_name_or_path_or_dict, weight_name)
+        else:
+            lora_path = pretrained_model_name_or_path_or_dict
+        
+        # Initialize loader if not exists
+        if not hasattr(self, '_lora_loader') or self._lora_loader is None:
+            self._lora_loader = NativeLoraLoader(self._native.transformer)
+        
+        # Load the LoRA
+        success = self._lora_loader.load_lora(
+            lora_path,
+            scale=scale,
+            adapter_name=adapter_name,
+        )
+        
+        if not success:
+            logger.warning(f"LoRA '{adapter_name}' loaded but no layers were modified")
+
+    def unload_lora_weights(self, adapter_name: Optional[str] = None) -> None:
+        """Note: Native LoRA merges weights, so unload requires model reload."""
+        logger.warning(
+            "Native LoRA loader merges weights at load time. "
+            "To remove LoRA effects, reload the model."
+        )
+    
+    @property
+    def loaded_loras(self) -> Dict[str, Any]:
+        """Get info about loaded LoRAs."""
+        if hasattr(self, '_lora_loader') and self._lora_loader is not None:
+            return self._lora_loader.loaded_loras
+        return {}
     
     def __call__(
         self,

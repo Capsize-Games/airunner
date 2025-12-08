@@ -194,6 +194,29 @@ class ZImageLoraLoaderMixin(LoraBaseMixin):
             )
 
         logger.info(f"Loading LoRA weights into {cls.transformer_name}")
+
+        # Extend PEFT's supported modules to include FP8Linear so native FP8 layers are patchable.
+        # Import here to avoid circular import with fp8_ops -> native -> lora_loader
+        try:
+            from peft.tuners.lora import LoraLayer
+            from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear
+
+            if hasattr(LoraLayer, "SUPPORTED_LORA_MODULES"):
+                if FP8Linear not in LoraLayer.SUPPORTED_LORA_MODULES:
+                    LoraLayer.SUPPORTED_LORA_MODULES = (
+                        *LoraLayer.SUPPORTED_LORA_MODULES,
+                        FP8Linear,
+                    )
+            else:
+                # Older PEFT versions use SUPPORTED_MODULES
+                if hasattr(LoraLayer, "SUPPORTED_MODULES") and FP8Linear not in LoraLayer.SUPPORTED_MODULES:
+                    LoraLayer.SUPPORTED_MODULES = (
+                        *LoraLayer.SUPPORTED_MODULES,
+                        FP8Linear,
+                    )
+        except Exception:
+            # Best effort; fallback to default behavior
+            pass
         
         # Z-Image LoRAs use "diffusion_model." prefix in their keys
         # We need to tell load_lora_adapter to strip this prefix
@@ -208,12 +231,10 @@ class ZImageLoraLoaderMixin(LoraBaseMixin):
         transformer.load_lora_adapter(
             state_dict,
             prefix=prefix,
+            hotswap=hotswap,
             network_alphas=None,
             adapter_name=adapter_name,
-            metadata=metadata,
-            _pipeline=_pipeline,
             low_cpu_mem_usage=low_cpu_mem_usage,
-            hotswap=hotswap,
         )
 
     @classmethod
