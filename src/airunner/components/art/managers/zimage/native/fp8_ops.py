@@ -618,6 +618,10 @@ class FP8Linear(nn.Module):
     
     This layer can hold FP8 weights with per-layer scale factors and
     automatically dequantizes during forward pass for compatibility.
+    
+    The FP8 weight is stored as `fp8_weight_storage` to avoid nn.Module's
+    special handling of 'weight'. Access via `.weight` property is provided
+    for compatibility with LoRA loaders.
     """
     
     def __init__(
@@ -627,6 +631,7 @@ class FP8Linear(nn.Module):
         bias: bool = True,
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
+        compute_dtype: Optional[torch.dtype] = None,
     ):
         """
         Initialize FP8 linear layer.
@@ -636,23 +641,48 @@ class FP8Linear(nn.Module):
             out_features: Output feature dimension  
             bias: Whether to include bias
             device: Target device
-            dtype: Compute dtype (for activations)
+            dtype: Compute dtype (for activations) - deprecated, use compute_dtype
+            compute_dtype: Compute dtype (for activations)
         """
         super().__init__()
         
         self.in_features = in_features
         self.out_features = out_features
-        self.compute_dtype = dtype or torch.bfloat16
+        self.compute_dtype = compute_dtype or dtype or torch.bfloat16
         
-        # Initialize as empty - will be filled during checkpoint loading
-        self.weight: Optional[QuantizedTensor] = None
-        self.bias: Optional[torch.Tensor] = None
+        # Use unique name to avoid nn.Module intercepting 'weight'
+        self.fp8_weight_storage: Optional[QuantizedTensor] = None
+        self._has_bias = bias
         
         if bias:
             self.register_buffer(
                 '_bias',
                 torch.zeros(out_features, device=device, dtype=self.compute_dtype)
             )
+    
+    @property
+    def weight(self) -> Optional[QuantizedTensor]:
+        """Get the FP8 quantized weight (for LoRA compatibility)."""
+        return self.fp8_weight_storage
+    
+    @weight.setter
+    def weight(self, value: Optional[QuantizedTensor]):
+        """Set the FP8 quantized weight."""
+        self.fp8_weight_storage = value
+    
+    @property
+    def bias(self) -> Optional[torch.Tensor]:
+        """Get bias tensor."""
+        return self._bias if self._has_bias and hasattr(self, '_bias') else None
+    
+    @bias.setter  
+    def bias(self, value: Optional[torch.Tensor]):
+        """Set bias tensor."""
+        if value is not None and self._has_bias:
+            if hasattr(self, '_bias'):
+                self._bias.copy_(value)
+            else:
+                self.register_buffer('_bias', value)
     
     def set_fp8_weight(
         self,
@@ -668,7 +698,7 @@ class FP8Linear(nn.Module):
             scale: Per-layer scale factor
             orig_dtype: Original dtype for dequantization
         """
-        self.weight = QuantizedTensor.from_fp8_with_scale(
+        self.fp8_weight_storage = QuantizedTensor.from_fp8_with_scale(
             fp8_weight, scale, orig_dtype
         )
     
@@ -682,13 +712,13 @@ class FP8Linear(nn.Module):
         Returns:
             Output tensor
         """
-        if self.weight is None:
+        if self.fp8_weight_storage is None:
             raise RuntimeError("Weight not set. Call set_fp8_weight first.")
         
         # Dequantize weight for forward pass
-        weight = self.weight.dequantize().to(x.dtype)
+        weight = self.fp8_weight_storage.dequantize().to(x.dtype)
         
-        bias = self.bias if hasattr(self, '_bias') and self._bias is not None else None
+        bias = self._bias if self._has_bias and hasattr(self, '_bias') else None
         if bias is not None:
             bias = bias.to(x.dtype)
         
@@ -748,169 +778,3 @@ def is_fp8_scaled_checkpoint(state_dict: Dict[str, torch.Tensor]) -> bool:
             return True
     
     return has_fp8 and has_scale
-
-
-class FP8Linear(nn.Module):
-    """
-    Linear layer that stores weights in FP8 format and dequantizes on forward.
-    
-    This allows ~50% memory savings compared to BF16 while maintaining
-    numerical accuracy through per-tensor scaling.
-    
-    Args:
-        in_features: Input feature dimension
-        out_features: Output feature dimension
-        bias: Whether to include bias
-        device: Target device
-        compute_dtype: Dtype for computation (default: bfloat16)
-    """
-    
-    def __init__(
-        self,
-        in_features: int,
-        out_features: int,
-        bias: bool = True,
-        device: Optional[torch.device] = None,
-        compute_dtype: torch.dtype = torch.bfloat16,
-    ):
-        super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.compute_dtype = compute_dtype
-        
-        # FP8 weight storage
-        self.register_buffer(
-            'weight_fp8',
-            torch.zeros(out_features, in_features, dtype=torch.float8_e4m3fn, device=device)
-        )
-        # Scale is always a scalar but store as 0-dim tensor
-        self.register_buffer(
-            'weight_scale',
-            torch.tensor(1.0, dtype=torch.float32, device=device)
-        )
-        
-        # Optional bias in compute dtype
-        if bias:
-            self.bias = nn.Parameter(
-                torch.zeros(out_features, dtype=compute_dtype, device=device)
-            )
-        else:
-            self.register_parameter('bias', None)
-    
-    def set_fp8_weight(
-        self,
-        weight_fp8: torch.Tensor,
-        scale: torch.Tensor,
-    ) -> None:
-        """
-        Set the FP8 weight and scale.
-        
-        Args:
-            weight_fp8: Weight tensor in FP8 format
-            scale: Scale factor for dequantization (scalar)
-        """
-        self.weight_fp8.copy_(weight_fp8)
-        # Handle scalar scale - extract the value if it's a tensor
-        if scale.numel() == 1:
-            self.weight_scale.fill_(scale.item())
-        else:
-            self.weight_scale.fill_(scale.flatten()[0].item())
-    
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass with on-the-fly dequantization.
-        
-        Args:
-            x: Input tensor
-            
-        Returns:
-            Output tensor
-        """
-        # Dequantize weight: fp8 * scale -> compute_dtype
-        weight = self.weight_fp8.to(self.compute_dtype) * self.weight_scale.to(self.compute_dtype)
-        
-        # Convert input to compute dtype if needed
-        if x.dtype != self.compute_dtype:
-            x = x.to(self.compute_dtype)
-        
-        # Standard linear operation
-        return F.linear(x, weight, self.bias)
-    
-    @classmethod
-    def from_linear(
-        cls,
-        linear: nn.Linear,
-        device: Optional[torch.device] = None,
-    ) -> 'FP8Linear':
-        """
-        Create FP8Linear from an existing nn.Linear layer.
-        
-        Quantizes weights to FP8 format with computed scale.
-        
-        Args:
-            linear: Source linear layer
-            device: Target device
-            
-        Returns:
-            FP8Linear layer with quantized weights
-        """
-        device = device or linear.weight.device
-        has_bias = linear.bias is not None
-        compute_dtype = linear.weight.dtype
-        
-        fp8_linear = cls(
-            linear.in_features,
-            linear.out_features,
-            bias=has_bias,
-            device=device,
-            compute_dtype=compute_dtype,
-        )
-        
-        # Quantize weight
-        qdata, params = TensorCoreFP8Layout.quantize(
-            linear.weight.detach(),
-            scale="recalculate",
-        )
-        fp8_linear.set_fp8_weight(qdata.to(device), params['scale'].to(device))
-        
-        # Copy bias
-        if has_bias:
-            fp8_linear.bias.data.copy_(linear.bias.data)
-        
-        return fp8_linear
-    
-    def extra_repr(self) -> str:
-        return f'in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None}'
-
-
-def convert_linear_to_fp8(
-    module: nn.Module,
-    device: Optional[torch.device] = None,
-    skip_patterns: Optional[list] = None,
-) -> nn.Module:
-    """
-    Recursively convert all nn.Linear layers to FP8Linear.
-    
-    Args:
-        module: Module to convert
-        device: Target device
-        skip_patterns: List of name patterns to skip
-        
-    Returns:
-        Module with converted layers
-    """
-    skip_patterns = skip_patterns or []
-    
-    for name, child in list(module.named_children()):
-        # Check skip patterns
-        should_skip = any(pattern in name for pattern in skip_patterns)
-        
-        if isinstance(child, nn.Linear) and not should_skip:
-            # Convert to FP8
-            fp8_linear = FP8Linear.from_linear(child, device=device)
-            setattr(module, name, fp8_linear)
-        else:
-            # Recurse
-            convert_linear_to_fp8(child, device=device, skip_patterns=skip_patterns)
-    
-    return module
