@@ -244,9 +244,9 @@ def apply_lora_to_linear(
     scale: float = 1.0,
 ) -> bool:
     """
-    Apply LoRA weights to a Linear or FP8Linear layer.
+    Apply LoRA weights to a Linear, FP8Linear, or UnscaledFP8Linear layer.
     
-    For FP8Linear, we dequantize, merge, and leave as float (no re-quantization).
+    For FP8Linear/UnscaledFP8Linear, we dequantize, merge, and store merged weights.
     
     Args:
         linear: Target linear layer
@@ -259,11 +259,15 @@ def apply_lora_to_linear(
         True if successful, False otherwise
     """
     # Import here to avoid circular imports
-    from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, QuantizedTensor
+    from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, QuantizedTensor, UnscaledFP8Linear
     
     # Get base weight
     try:
-        if isinstance(linear, FP8Linear):
+        if isinstance(linear, UnscaledFP8Linear):
+            # UnscaledFP8Linear stores FP8 weights in fp8_storage buffer
+            # Need to dequantize first
+            base_weight = linear.get_dequantized_weight()
+        elif isinstance(linear, FP8Linear):
             weight_attr = getattr(linear, 'weight', None)
             if weight_attr is None:
                 logger.warning(f"FP8Linear has no weight set (weight is None)")
@@ -302,8 +306,17 @@ def apply_lora_to_linear(
     # Merge weights
     merged_weight = base_weight + delta
     
+    # Free intermediate tensors
+    del base_weight, delta, down_weight, up_weight
+    
     # Update the layer
-    if isinstance(linear, FP8Linear):
+    if isinstance(linear, UnscaledFP8Linear):
+        # Merge LoRA weight back into FP8 for memory efficiency
+        # This avoids storing both FP8 and bfloat16 weights
+        linear.merge_lora_weight(merged_weight)
+        del merged_weight  # Free the bfloat16 copy immediately
+        torch.cuda.empty_cache()
+    elif isinstance(linear, FP8Linear):
         # Convert FP8Linear to regular Linear after LoRA merge
         # (We lose FP8 compression but gain LoRA effects)
         linear.weight = QuantizedTensor.from_fp8_with_scale(

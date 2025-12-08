@@ -150,7 +150,16 @@ class ZImageMemoryMixin:
             self._force_vae_fp32()
 
     def _move_vae_to_gpu(self):
-        """Move VAE to GPU (for use with quantized models)."""
+        """Move VAE to GPU (for use with quantized models).
+        
+        Note: For native FP8 pipelines, VAE is kept on CPU and moved
+        dynamically during decode to conserve VRAM.
+        """
+        # Check if using native FP8 pipeline - skip VAE move
+        if hasattr(self._pipe, "is_native_fp8") and self._pipe.is_native_fp8:
+            self.logger.debug("Native FP8 pipeline: keeping VAE on CPU (dynamic placement during decode)")
+            return
+        
         vae = getattr(self._pipe, "vae", None)
         if vae is not None:
             try:

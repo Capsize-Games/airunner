@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import torch
+from safetensors import safe_open
 
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.enums import SignalCode
@@ -63,15 +64,15 @@ class ZImagePipelineLoadingMixin:
             model_dir = model_path
         
         has_pretrained_structure = self._has_complete_pretrained_structure(model_dir)
-        
+
         # IMPORTANT: If user selected a specific checkpoint file, ALWAYS use single-file loading
         # even if a pretrained directory structure exists. This ensures FP8/quantized checkpoints
         # are loaded correctly instead of being ignored in favor of full-precision pretrained weights.
         #
         # FP8 scaled checkpoints (e.g., fp8_e4m3fn) use our native implementation for efficient
-        # loading without the full 32GB+ memory spike of diffusers.
-        model_filename = model_path.name.lower()
-        is_fp8_checkpoint = "fp8" in model_filename or "e4m3" in model_filename or "e5m2" in model_filename
+        # loading without the full 32GB+ memory spike of diffusers. Detect both by name and by
+        # sampling the safetensors contents to avoid misclassification.
+        is_fp8_checkpoint = self._detect_fp8_checkpoint(model_path)
         
         if is_single_file and is_fp8_checkpoint:
             self.logger.info(
@@ -83,7 +84,7 @@ class ZImagePipelineLoadingMixin:
             self.logger.info(
                 f"Loading from single-file checkpoint: {model_path.name}"
             )
-            self._load_from_single_file(self.model_path, pipeline_class, data)
+            self._load_from_single_file(self.model_path, pipeline_class, data, is_fp8_checkpoint=is_fp8_checkpoint)
         elif has_pretrained_structure and not is_single_file:
             self.logger.info(
                 "Complete pretrained structure found - loading from pretrained directory"
@@ -143,6 +144,46 @@ class ZImagePipelineLoadingMixin:
             return False
             
         return True
+
+    def _detect_fp8_checkpoint(self, model_path: Path) -> bool:
+        """Detect whether the safetensors checkpoint stores FP8 weights.
+
+        We cannot rely solely on filename markers; inspect a small sample of
+        tensors to see if any are stored in float8 or use scale_weight keys.
+
+        Args:
+            model_path: Path to the checkpoint file.
+
+        Returns:
+            True if FP8 tensors are detected, otherwise False.
+        """
+        name_hint = "fp8" in model_path.name.lower() or any(
+            marker in model_path.name.lower() for marker in ("e4m3", "e5m2")
+        )
+
+        if not model_path.is_file() or model_path.suffix != ".safetensors":
+            return name_hint
+
+        try:
+            with safe_open(model_path, framework="pt") as f:
+                has_scale = False
+                for i, key in enumerate(f.keys()):
+                    if "scale_weight" in key:
+                        has_scale = True
+                    tensor = f.get_tensor(key)
+                    if tensor.dtype in (
+                        torch.float8_e4m3fn,
+                        torch.float8_e5m2,
+                        getattr(torch, "float8_e4m3fnuz", None),
+                        getattr(torch, "float8_e5m2fnuz", None),
+                    ):
+                        return True
+                    if i >= 32:  # sample a small subset to avoid CPU blowups
+                        break
+                return name_hint or has_scale
+        except Exception as exc:  # pragma: no cover - defensive
+            self.logger.debug(f"FP8 detection failed for {model_path}: {exc}")
+            return name_hint
 
     def _ensure_zimage_files_available(self) -> None:
         """Ensure Z-Image model files exist locally, otherwise trigger download.
@@ -357,7 +398,14 @@ class ZImagePipelineLoadingMixin:
             self.logger.error(f"Failed to assemble pipeline: {e}")
             raise
 
-    def _load_from_single_file(self, model_path: str, pipeline_class: Any, data: Dict):
+    def _load_from_single_file(
+        self,
+        model_path: str,
+        pipeline_class: Any,
+        data: Dict,
+        *,
+        is_fp8_checkpoint: Optional[bool] = None,
+    ):
         """Load Z-Image from single safetensors file (e.g., from CivitAI).
         
         For single-file loading, the text encoder, VAE, scheduler, and tokenizer
@@ -387,8 +435,11 @@ class ZImagePipelineLoadingMixin:
         model_dtype = self.data_type
         
         # Detect if this is a pre-quantized FP8 checkpoint
-        model_filename = os.path.basename(model_path).lower()
-        is_fp8_checkpoint = "fp8" in model_filename or "e4m3" in model_filename or "e5m2" in model_filename
+        if is_fp8_checkpoint is None:
+            model_filename = os.path.basename(model_path).lower()
+            is_fp8_checkpoint = "fp8" in model_filename or "e4m3" in model_filename or "e5m2" in model_filename
+            if not is_fp8_checkpoint:
+                is_fp8_checkpoint = self._detect_fp8_checkpoint(Path(model_path))
         
         if is_fp8_checkpoint:
             self.logger.info(
@@ -499,6 +550,11 @@ class ZImagePipelineLoadingMixin:
             self.logger.info(f"Pipeline loaded from single file {quant_info}")
         except Exception as e:
             self.logger.error(f"Failed to load from single file: {e}")
+            # Prefer native FP8 loader on failure to avoid CPU-only fallback
+            if is_fp8_checkpoint:
+                self.logger.info("Retrying with native FP8 pipeline after from_single_file failure")
+                self._load_native_fp8_pipeline(model_path, model_dir, pipeline_class, data)
+                return
             # Fall back to manual assembly
             self._load_single_file_with_fallback(
                 model_path, pipeline_class, text_encoder, tokenizer, data
@@ -780,6 +836,17 @@ class ZImagePipelineLoadingMixin:
             self._force_quantization_for_fp8_fallback = True
             self._load_from_pretrained(model_dir, pipeline_class, data)
             return
+        
+        # Force memory cleanup before loading
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            # Log current VRAM state
+            allocated = torch.cuda.memory_allocated() / 1024**3
+            reserved = torch.cuda.memory_reserved() / 1024**3
+            self.logger.info(f"Pre-load VRAM state: {allocated:.2f}GB allocated, {reserved:.2f}GB reserved")
         
         # Get paths to companion files
         text_encoder_path = os.path.join(model_dir, "text_encoder")

@@ -143,6 +143,8 @@ class ZImageTextEncoder(nn.Module):
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
         quantization: Optional[str] = None,
+        device_map: Optional[str] = None,
+        max_memory: Optional[Dict[str, str]] = None,
     ):
         super().__init__()
         
@@ -151,6 +153,8 @@ class ZImageTextEncoder(nn.Module):
         self.dtype = dtype or torch.bfloat16
         self.quantization = quantization
         self._device = device
+        self._device_map = device_map
+        self._max_memory = max_memory
         
         self.model: Optional[nn.Module] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
@@ -204,13 +208,24 @@ class ZImageTextEncoder(nn.Module):
                 )
             
             # Load model
+            # Choose device_map strategy: prefer provided map, else auto when quantized
+            device_map = self._device_map
+            if device_map is None and (quantization_config is not None or self._device is None):
+                device_map = "auto"
+
+            load_kwargs = {
+                "config": config,
+                "quantization_config": quantization_config,
+                "torch_dtype": self.dtype,
+                "device_map": device_map,
+                "trust_remote_code": True,
+            }
+            if device_map is not None and self._max_memory is not None:
+                load_kwargs["max_memory"] = self._max_memory
+
             self.model = AutoModel.from_pretrained(
                 model_path,
-                config=config,
-                quantization_config=quantization_config,
-                torch_dtype=self.dtype,
-                device_map="auto" if self._device is None else None,
-                trust_remote_code=True,
+                **load_kwargs,
             )
             
             if self._device is not None and quantization_config is None:

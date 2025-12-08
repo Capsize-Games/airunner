@@ -729,6 +729,78 @@ class FP8Linear(nn.Module):
 # Checkpoint Loading Utilities
 # =============================================================================
 
+class UnscaledFP8Linear(nn.Module):
+    """
+    Linear layer that stores weights in FP8 format without scale factors.
+    
+    Weights are stored as FP8 (8 bits per param = ~50% memory savings).
+    During forward pass, weights are cast to compute dtype on-the-fly.
+    This is memory efficient - FP8 weights stay FP8 until needed.
+    
+    LoRA support: After merging, we store the merged weight back in FP8
+    to avoid doubling memory usage. The small quantization error from
+    FP8 -> bfloat16 -> merge -> FP8 is acceptable for LoRA effects.
+    """
+    
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        device: Optional[torch.device] = None,
+        compute_dtype: torch.dtype = torch.bfloat16,
+    ):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.compute_dtype = compute_dtype
+        self._has_bias = bias
+        
+        # Register FP8 weight as buffer (not parameter) to avoid grad issues
+        self.register_buffer('fp8_weight', None)
+        if bias:
+            self.register_buffer('bias', torch.zeros(out_features, device=device, dtype=compute_dtype))
+        else:
+            self.register_buffer('bias', None)
+        
+        # Flag to indicate LoRA has been merged (weight is now LoRA-modified FP8)
+        self._lora_merged: bool = False
+    
+    def set_weight(self, fp8_weight: torch.Tensor, bias: Optional[torch.Tensor] = None):
+        """Set the FP8 weight tensor."""
+        self.fp8_weight = fp8_weight
+        if bias is not None and self._has_bias:
+            self.bias = bias.to(self.compute_dtype)
+    
+    def merge_lora_weight(self, merged_weight: torch.Tensor):
+        """Merge LoRA weight by converting back to FP8 for memory efficiency.
+        
+        Args:
+            merged_weight: The merged weight in compute dtype (e.g. bfloat16)
+        """
+        # Convert merged weight back to FP8 to avoid doubling memory
+        # Clamp to FP8 range to avoid overflow
+        lp_amax = torch.finfo(torch.float8_e4m3fn).max
+        clamped = torch.clamp(merged_weight, min=-lp_amax, max=lp_amax)
+        self.fp8_weight = clamped.to(torch.float8_e4m3fn)
+        self._lora_merged = True
+    
+    def get_dequantized_weight(self) -> torch.Tensor:
+        """Get the weight as compute dtype tensor."""
+        return self.fp8_weight.to(self.compute_dtype)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward with on-the-fly FP8 -> compute_dtype conversion."""
+        # Always cast FP8 weight to compute dtype during forward
+        # (works for both original and LoRA-merged weights)
+        weight = self.fp8_weight.to(self.compute_dtype)
+        return F.linear(x, weight, self.bias)
+    
+    def extra_repr(self) -> str:
+        lora_str = ", lora_merged=True" if self._lora_merged else ""
+        return f'in={self.in_features}, out={self.out_features}, fp8=True{lora_str}'
+
+
 def load_fp8_state_dict_entry(
     tensor: torch.Tensor,
     scale_tensor: Optional[torch.Tensor],
