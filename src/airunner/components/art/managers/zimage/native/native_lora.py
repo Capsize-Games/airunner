@@ -135,6 +135,52 @@ def get_module_by_path(model: nn.Module, path: str) -> Optional[nn.Module]:
     return current
 
 
+# Mapping for fused QKV attention layers
+# LoRA expects: attention.to_q, attention.to_k, attention.to_v, attention.to_out.0
+# Model has: attention.qkv (fused), attention.out
+FUSED_QKV_MAPPING = {
+    'to_q': ('qkv', 0),   # Q is first 1/3 of QKV
+    'to_k': ('qkv', 1),   # K is second 1/3 of QKV
+    'to_v': ('qkv', 2),   # V is third 1/3 of QKV
+    'to_out.0': ('out', None),  # out maps directly
+}
+
+
+def get_fused_attention_module(
+    model: nn.Module,
+    base_path: str,
+) -> Optional[Tuple[nn.Module, str, Optional[int]]]:
+    """
+    Get the fused attention module for a LoRA path that expects separate Q/K/V.
+    
+    For models with fused QKV (like NextDiT), maps:
+    - attention.to_q -> attention.qkv (slice 0)
+    - attention.to_k -> attention.qkv (slice 1)  
+    - attention.to_v -> attention.qkv (slice 2)
+    - attention.to_out.0 -> attention.out
+    
+    Args:
+        model: Root model
+        base_path: LoRA module path (e.g., "layers.0.attention.to_q")
+        
+    Returns:
+        Tuple of (module, component_name, slice_idx) or None if not found
+        slice_idx is 0/1/2 for Q/K/V, None for out
+    """
+    # Check if this is an attention path with to_q/k/v/out
+    for lora_name, (model_name, slice_idx) in FUSED_QKV_MAPPING.items():
+        if base_path.endswith(f'.attention.{lora_name}'):
+            # Convert path: layers.X.attention.to_q -> layers.X.attention.qkv
+            attention_base = base_path.rsplit('.', 1)[0]  # layers.X.attention
+            fused_path = f"{attention_base}.{model_name}"
+            
+            module = get_module_by_path(model, fused_path)
+            if module is not None:
+                return module, lora_name, slice_idx
+    
+    return None
+
+
 def compute_lora_weight(
     down_weight: torch.Tensor,
     up_weight: torch.Tensor,
@@ -173,6 +219,101 @@ def compute_lora_weight(
     delta = up_weight @ down_weight
     
     return lora_scale * delta
+
+
+def apply_lora_to_fused_qkv(
+    qkv_module: nn.Module,
+    down_weight: torch.Tensor,
+    up_weight: torch.Tensor,
+    slice_idx: int,
+    alpha: Optional[float] = None,
+    scale: float = 1.0,
+) -> bool:
+    """
+    Apply LoRA weights to a slice of a fused QKV layer.
+    
+    For models with fused QKV (shape [3*hidden, hidden]), we need to:
+    1. Dequantize the full QKV weight
+    2. Apply the LoRA delta to only the Q, K, or V portion
+    3. Re-quantize
+    
+    Args:
+        qkv_module: The fused QKV linear layer
+        down_weight: LoRA down/A weight
+        up_weight: LoRA up/B weight
+        slice_idx: Which slice (0=Q, 1=K, 2=V)
+        alpha: LoRA alpha
+        scale: LoRA scale factor
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, UnscaledFP8Linear
+    
+    try:
+        # Get base weight
+        if isinstance(qkv_module, UnscaledFP8Linear):
+            base_weight = qkv_module.get_dequantized_weight()
+        elif isinstance(qkv_module, FP8Linear):
+            weight_attr = getattr(qkv_module, 'weight', None)
+            if weight_attr is None or not hasattr(weight_attr, 'dequantize'):
+                logger.warning(f"FP8Linear has no valid weight")
+                return False
+            base_weight = weight_attr.dequantize()
+        elif isinstance(qkv_module, nn.Linear):
+            base_weight = qkv_module.weight.data
+        else:
+            logger.warning(f"Unsupported layer type for fused QKV: {type(qkv_module)}")
+            return False
+        
+        # base_weight shape: [3*hidden, hidden] e.g., [11520, 3840]
+        total_out = base_weight.shape[0]
+        hidden_dim = base_weight.shape[1]
+        slice_size = total_out // 3
+        
+        # Compute LoRA delta
+        device = base_weight.device
+        dtype = base_weight.dtype
+        
+        down_weight = down_weight.to(device=device, dtype=dtype)
+        up_weight = up_weight.to(device=device, dtype=dtype)
+        
+        delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
+        
+        # delta shape should be [hidden, hidden] e.g., [3840, 3840]
+        expected_shape = (slice_size, hidden_dim)
+        if delta.shape != expected_shape:
+            logger.warning(
+                f"Shape mismatch for QKV slice: expected {expected_shape}, got {delta.shape}"
+            )
+            return False
+        
+        # Apply delta to the correct slice
+        start_idx = slice_idx * slice_size
+        end_idx = start_idx + slice_size
+        base_weight[start_idx:end_idx] += delta
+        
+        # Free delta
+        del delta, down_weight, up_weight
+        
+        # Update the layer
+        if isinstance(qkv_module, UnscaledFP8Linear):
+            qkv_module.merge_lora_weight(base_weight)
+            del base_weight
+            torch.cuda.empty_cache()
+        elif isinstance(qkv_module, FP8Linear):
+            # Store merged weight
+            if not hasattr(qkv_module, '_merged_weight'):
+                qkv_module._merged_weight = None
+            qkv_module._merged_weight = base_weight
+        else:
+            qkv_module.weight.data = base_weight
+        
+        return True
+        
+    except Exception as e:
+        logger.warning(f"Failed to apply LoRA to fused QKV: {e}")
+        return False
 
 
 def extract_lora_pairs(
@@ -402,26 +543,55 @@ def load_lora_into_transformer(
         up_weight = lora_data['up']
         alpha = lora_data.get('alpha') or default_alpha
         
-        # Find target module
+        # First try direct module lookup
         module = get_module_by_path(transformer, module_path)
         
-        if module is None:
-            logger.debug(f"Module not found: {module_path}")
-            stats["skipped"] += 1
-            continue
-        
-        # Apply LoRA
-        success = apply_lora_to_linear(
-            module,
-            down_weight=down_weight,
-            up_weight=up_weight,
-            alpha=alpha,
-            scale=scale,
-        )
+        if module is not None:
+            # Direct match found
+            success = apply_lora_to_linear(
+                module,
+                down_weight=down_weight,
+                up_weight=up_weight,
+                alpha=alpha,
+                scale=scale,
+            )
+        else:
+            # Try fused QKV mapping for attention layers
+            fused_result = get_fused_attention_module(transformer, module_path)
+            
+            if fused_result is not None:
+                fused_module, component_name, slice_idx = fused_result
+                
+                if slice_idx is not None:
+                    # Q/K/V - apply to slice of fused QKV
+                    success = apply_lora_to_fused_qkv(
+                        fused_module,
+                        down_weight=down_weight,
+                        up_weight=up_weight,
+                        slice_idx=slice_idx,
+                        alpha=alpha,
+                        scale=scale,
+                    )
+                    if success:
+                        logger.debug(f"Applied LoRA to fused QKV slice {slice_idx} for {module_path}")
+                else:
+                    # to_out.0 -> out (direct linear)
+                    success = apply_lora_to_linear(
+                        fused_module,
+                        down_weight=down_weight,
+                        up_weight=up_weight,
+                        alpha=alpha,
+                        scale=scale,
+                    )
+                    if success:
+                        logger.debug(f"Applied LoRA to attention.out for {module_path}")
+            else:
+                logger.debug(f"Module not found: {module_path}")
+                stats["skipped"] += 1
+                continue
         
         if success:
             stats["applied"] += 1
-            logger.debug(f"Applied LoRA to {module_path}")
         else:
             stats["failed"] += 1
             logger.warning(f"Failed to apply LoRA to {module_path}")
