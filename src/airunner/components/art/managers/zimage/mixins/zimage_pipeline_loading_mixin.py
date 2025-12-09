@@ -4,6 +4,28 @@ import gc
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional
+from safetensors.torch import load_file as load_safetensors
+from diffusers import FlowMatchEulerDiscreteScheduler
+from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+    is_flow_match_scheduler,
+    create_flow_match_scheduler,
+    FLOW_MATCH_SCHEDULER_NAMES,
+)
+from airunner.enums import Scheduler
+import importlib.util
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import BitsAndBytesConfig as TransformersBnBConfig
+from diffusers import AutoencoderKL
+from diffusers import BitsAndBytesConfig as DiffusersBnBConfig
+from airunner.components.art.pipelines.z_image import (
+    ZImageTransformer2DModel,
+    ZImagePipeline,
+    ZImageImg2ImgPipeline,
+)
+from airunner.components.art.managers.zimage.native import (
+    ZImageNativePipeline,
+    NativePipelineWrapper,
+)
 
 import torch
 from safetensors import safe_open
@@ -41,8 +63,6 @@ class ZImagePipelineLoadingMixin:
             config_path: Path to pipeline configuration directory (unused for Z-Image).
             data: Dictionary of pipeline initialization parameters.
         """
-        from airunner.components.art.pipelines.z_image import ZImagePipeline
-        
         pipeline_class = self._pipeline_class
         if pipeline_class is None:
             pipeline_class = ZImagePipeline
@@ -240,15 +260,7 @@ class ZImagePipelineLoadingMixin:
         """
         self.logger.info(f"Loading Z-Image from pretrained: {model_path}")
         
-        try:
-            from transformers import AutoModelForCausalLM, AutoTokenizer
-            from transformers import BitsAndBytesConfig as TransformersBnBConfig
-            from diffusers import AutoencoderKL, FlowMatchEulerDiscreteScheduler
-            from diffusers import BitsAndBytesConfig as DiffusersBnBConfig
-            from airunner.components.art.pipelines.z_image import ZImageTransformer2DModel
-        except ImportError as e:
-            self.logger.error(f"Missing required imports: {e}")
-            raise
+        # Use module-level imports for Transformers, Diffusers and Z-Image model
         
         model_dir = Path(model_path)
         
@@ -268,22 +280,13 @@ class ZImagePipelineLoadingMixin:
         
         self.logger.info(f"Precision settings - use_quantization: {use_quant}, bits: {quant_bits}, dtype: {model_dtype}")
         
-        # Calculate max memory for device_map="auto" to leave room for VAE decode
-        # We need ~2-3GB free for VAE decode + activations
-        max_memory_for_models = None
-        if torch.cuda.is_available() and use_quant:
-            total_vram_bytes = torch.cuda.get_device_properties(0).total_memory
-            total_vram_gb = total_vram_bytes / (1024**3)
-            # Reserve 3GB for VAE decode and other operations
-            reserved_gb = 3.0
-            usable_vram_gb = max(total_vram_gb - reserved_gb, 4.0)  # At least 4GB for models
-            max_memory_for_models = {0: f"{usable_vram_gb:.0f}GiB", "cpu": "32GiB"}
-            self.logger.info(f"VRAM budget: {usable_vram_gb:.1f}GB for models (reserving {reserved_gb}GB for VAE/activations)")
+        # Compute memory limits
+        max_memory_for_models = self._compute_max_memory_for_models(use_quant)
         
         # Configure quantization if enabled
         transformer_bnb_config = None
         text_encoder_bnb_config = None
-        
+
         if use_quant and quant_bits == 4:
             # 4-bit NF4 quantization for maximum memory savings
             self.logger.info("Using 4-bit NF4 quantization")
@@ -311,34 +314,28 @@ class ZImagePipelineLoadingMixin:
         else:
             self.logger.info(f"No quantization - using dtype: {model_dtype}")
         
-        # Load transformer
+        # Load transformer (delegated to helper)
         transformer_path = model_dir / "transformer"
         quant_info = f"({quant_bits}-bit quantized)" if use_quant else f"(dtype: {model_dtype})"
         self.logger.info(f"Loading transformer from {transformer_path} {quant_info}")
-        try:
-            load_kwargs = {
-                "torch_dtype": model_dtype,
-                "local_files_only": True,
-            }
-            if transformer_bnb_config is not None:
-                load_kwargs["quantization_config"] = transformer_bnb_config
-                # Use device_map and max_memory for consistent VRAM management
-                load_kwargs["device_map"] = "auto"
-                if max_memory_for_models is not None:
-                    load_kwargs["max_memory"] = max_memory_for_models
-            transformer = ZImageTransformer2DModel.from_pretrained(
-                str(transformer_path),
-                **load_kwargs,
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load transformer: {e}")
-            raise
+        transformer = self._load_transformer_from_pretrained(
+            transformer_path,
+            transformer_bnb_config,
+            model_dtype,
+            max_memory_for_models,
+        )
+        if transformer is None:
+            raise RuntimeError("Failed to load transformer")
         
-        # Load text encoder
+        # Load text encoder (delegated to helper)
         text_encoder_path = model_dir / "text_encoder"
         tokenizer_path = model_dir / "tokenizer"
         self.logger.info(f"Loading text encoder from {text_encoder_path} {quant_info}")
-        try:
+        text_encoder, tokenizer = self._load_text_encoder_from_pretrained(
+            text_encoder_path, tokenizer_path, text_encoder_bnb_config, model_dtype, max_memory_for_models
+        )
+        if text_encoder is None:
+            raise RuntimeError("Failed to load text encoder")
             load_kwargs = {
                 "local_files_only": True,
             }
@@ -358,41 +355,99 @@ class ZImagePipelineLoadingMixin:
                 str(tokenizer_path),
                 local_files_only=True,
             )
-        except Exception as e:
-            self.logger.error(f"Failed to load text encoder: {e}")
-            raise
+        # text encoder loaded via helper
         
-        # Load VAE (small, no quantization needed - ~160MB)
+        # Load VAE (delegated to helper)
         vae_path = model_dir / "vae"
         self.logger.info(f"Loading VAE from {vae_path}")
-        try:
-            vae = AutoencoderKL.from_pretrained(
-                str(vae_path),
-                torch_dtype=model_dtype,
-                local_files_only=True,
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load VAE: {e}")
-            raise
+        vae = self._load_vae_from_pretrained(vae_path, model_dtype)
+        if vae is None:
+            raise RuntimeError("Failed to load VAE")
+        # VAE loaded via helper
         
         # Load scheduler with appropriate configuration based on user selection
         scheduler = self._load_zimage_scheduler(model_dir / "scheduler")
         
-        # Assemble the pipeline
+        # Assemble the pipeline (delegated to helper)
         self.logger.info("Assembling ZImagePipeline from components...")
         try:
-            self._pipe = pipeline_class(
-                transformer=transformer,
-                vae=vae,
-                text_encoder=text_encoder,
-                tokenizer=tokenizer,
-                scheduler=scheduler,
+            self._pipe = self._assemble_pipeline(
+                pipeline_class, transformer, vae, text_encoder, tokenizer, scheduler
             )
             precision_info = f"{quant_bits}-bit quantized" if use_quant else f"dtype: {model_dtype}"
             self.logger.info(f"Pipeline assembled successfully ({precision_info})")
         except Exception as e:
             self.logger.error(f"Failed to assemble pipeline: {e}")
             raise
+
+    def _compute_max_memory_for_models(self, use_quant: bool):
+        """Compute max_memory mapping for device_map when loading quantized models."""
+        max_memory_for_models = None
+        if torch.cuda.is_available() and use_quant:
+            total_vram_bytes = torch.cuda.get_device_properties(0).total_memory
+            total_vram_gb = total_vram_bytes / (1024**3)
+            reserved_gb = 3.0
+            usable_vram_gb = max(total_vram_gb - reserved_gb, 4.0)
+            max_memory_for_models = {0: f"{usable_vram_gb:.0f}GiB", "cpu": "32GiB"}
+            self.logger.info(
+                f"VRAM budget: {usable_vram_gb:.1f}GB for models (reserving {reserved_gb}GB for VAE/activations)"
+            )
+        return max_memory_for_models
+
+    def _load_transformer_from_pretrained(
+        self, transformer_path: Path, transformer_bnb_config, model_dtype, max_memory_for_models
+    ):
+        """Load transformer using ZImageTransformer2DModel.from_pretrained with provided kwargs.
+
+        Returns transformer instance or None on failure.
+        """
+        quant_info = "(quantized)" if transformer_bnb_config is not None else f"(dtype: {model_dtype})"
+        self.logger.info(f"Loading transformer from {transformer_path} {quant_info}")
+        try:
+            load_kwargs = {"torch_dtype": model_dtype, "local_files_only": True}
+            if transformer_bnb_config is not None:
+                load_kwargs["quantization_config"] = transformer_bnb_config
+                load_kwargs["device_map"] = "auto"
+                if max_memory_for_models is not None:
+                    load_kwargs["max_memory"] = max_memory_for_models
+            transformer = ZImageTransformer2DModel.from_pretrained(str(transformer_path), **load_kwargs)
+            return transformer
+        except Exception as e:
+            self.logger.error(f"Failed to load transformer: {e}")
+            return None
+
+    def _load_text_encoder_from_pretrained(self, text_encoder_path, tokenizer_path, text_encoder_bnb_config, model_dtype, max_memory_for_models):
+        """Load text encoder and tokenizer and return them (or None on failure)."""
+        self.logger.info(f"Loading text encoder from {text_encoder_path}")
+        try:
+            load_kwargs = {"local_files_only": True}
+            if text_encoder_bnb_config is not None:
+                load_kwargs["quantization_config"] = text_encoder_bnb_config
+                load_kwargs["device_map"] = "auto"
+                if max_memory_for_models is not None:
+                    load_kwargs["max_memory"] = max_memory_for_models
+            else:
+                load_kwargs["torch_dtype"] = model_dtype
+            text_encoder = AutoModelForCausalLM.from_pretrained(str(text_encoder_path), **load_kwargs)
+            tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_path), local_files_only=True)
+            return text_encoder, tokenizer
+        except Exception as e:
+            self.logger.error(f"Failed to load text encoder: {e}")
+            return None, None
+
+    def _load_vae_from_pretrained(self, vae_path, model_dtype):
+        """Load VAE and return it (or None on failure)."""
+        self.logger.info(f"Loading VAE from {vae_path}")
+        try:
+            vae = AutoencoderKL.from_pretrained(str(vae_path), torch_dtype=model_dtype, local_files_only=True)
+            return vae
+        except Exception as e:
+            self.logger.error(f"Failed to load VAE: {e}")
+            return None
+
+    def _assemble_pipeline(self, pipeline_class, transformer, vae, text_encoder, tokenizer, scheduler):
+        """Create a pipeline instance from components."""
+        return pipeline_class(transformer=transformer, vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, scheduler=scheduler)
 
     def _load_from_single_file(
         self,
@@ -416,14 +471,7 @@ class ZImagePipelineLoadingMixin:
         """
         self.logger.info(f"Loading Z-Image from single file: {model_path}")
         
-        try:
-            from transformers import AutoModelForCausalLM, AutoTokenizer
-            from transformers import BitsAndBytesConfig as TransformersBnBConfig
-            from diffusers import AutoencoderKL, FlowMatchEulerDiscreteScheduler
-            from airunner.components.art.pipelines.z_image import ZImageTransformer2DModel
-        except ImportError as e:
-            self.logger.error(f"Missing required imports: {e}")
-            raise
+        # Use module-level imports for Transformers, Diffusers and Z-Image model
         
         # Check user's precision/quantization setting
         use_quant = getattr(self, 'use_quantization', False)
@@ -449,26 +497,8 @@ class ZImagePipelineLoadingMixin:
         model_dir = os.path.dirname(model_path)
         self.logger.info(f"Loading companion files from: {model_dir}")
         
-        # Calculate max memory for device_map to prevent all weights going to CPU
-        max_memory_for_text_encoder = None
-        if torch.cuda.is_available():
-            total_vram_bytes = torch.cuda.get_device_properties(0).total_memory
-            total_vram_gb = total_vram_bytes / (1024**3)
-            # For FP8 checkpoints: transformer is ~6GB, reserve 4GB for generation overhead
-            # For text encoder with 4-bit quant: ~2.4GB on GPU, rest can be on CPU
-            if is_fp8_checkpoint:
-                # Reserve more GPU memory for the FP8 transformer
-                text_encoder_vram_budget = max(total_vram_gb - 10.0, 2.0)
-            else:
-                # Non-FP8: more budget for text encoder
-                text_encoder_vram_budget = max(total_vram_gb - 6.0, 2.0)
-            max_memory_for_text_encoder = {
-                0: f"{text_encoder_vram_budget:.0f}GiB",
-                "cpu": "24GiB"  # Limit CPU RAM usage
-            }
-            self.logger.info(
-                f"Text encoder VRAM budget: {text_encoder_vram_budget:.1f}GB (total VRAM: {total_vram_gb:.1f}GB)"
-            )
+        # Calculate text encoder VRAM budget
+        max_memory_for_text_encoder = self._compute_max_memory_for_text_encoder(is_fp8_checkpoint)
         
         # Configure text encoder quantization if enabled
         # ALWAYS quantize text encoder for FP8 checkpoints to save memory
@@ -496,34 +526,21 @@ class ZImagePipelineLoadingMixin:
                 bnb_4bit_quant_type="nf4",
             )
         
-        # Load the text encoder from the local text_encoder subfolder
+        # Load the text encoder from the local text_encoder subfolder (reuse helper)
         text_encoder_path = os.path.join(model_dir, "text_encoder")
         tokenizer_path = os.path.join(model_dir, "tokenizer")
         
         quant_info = "(4-bit quantized)" if text_encoder_bnb_config else f"(dtype: {model_dtype})"
         self.logger.info(f"Loading text encoder from {text_encoder_path} {quant_info}")
-        try:
-            load_kwargs = {
-                "local_files_only": True,
-            }
-            if text_encoder_bnb_config is not None:
-                load_kwargs["quantization_config"] = text_encoder_bnb_config
-                load_kwargs["device_map"] = "auto"
-                if max_memory_for_text_encoder is not None:
-                    load_kwargs["max_memory"] = max_memory_for_text_encoder
-            else:
-                load_kwargs["torch_dtype"] = model_dtype
-            text_encoder = AutoModelForCausalLM.from_pretrained(
-                text_encoder_path,
-                **load_kwargs,
-            )
-            tokenizer = AutoTokenizer.from_pretrained(
-                tokenizer_path,
-                local_files_only=True,
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to load text encoder: {e}")
-            raise
+        text_encoder, tokenizer = self._load_text_encoder_from_pretrained(
+            text_encoder_path,
+            tokenizer_path,
+            text_encoder_bnb_config,
+            model_dtype,
+            max_memory_for_text_encoder,
+        )
+        if text_encoder is None:
+            raise RuntimeError("Failed to load text encoder")
         
         # Now load the pipeline with the text encoder pre-loaded
         pipe_kwargs = {
@@ -538,14 +555,12 @@ class ZImagePipelineLoadingMixin:
         if config_path and os.path.isdir(str(config_path)):
             pipe_kwargs["config"] = config_path
         
-        try:
-            self._pipe = pipeline_class.from_single_file(
-                model_path,
-                **pipe_kwargs
-            )
+        pipe = self._load_pipeline_from_single_file(model_path, pipeline_class, pipe_kwargs)
+        if pipe is not None:
+            self._pipe = pipe
             self.logger.info(f"Pipeline loaded from single file {quant_info}")
-        except Exception as e:
-            self.logger.error(f"Failed to load from single file: {e}")
+        else:
+            self.logger.error("Failed to load from single file")
             # Prefer native FP8 loader on failure to avoid CPU-only fallback
             if is_fp8_checkpoint:
                 self.logger.info("Retrying with native FP8 pipeline after from_single_file failure")
@@ -555,6 +570,31 @@ class ZImagePipelineLoadingMixin:
             self._load_single_file_with_fallback(
                 model_path, pipeline_class, text_encoder, tokenizer, data
             )
+
+    def _compute_max_memory_for_text_encoder(self, is_fp8_checkpoint: bool):
+        """Calculate the max memory mapping for text encoder device_map when loading.
+        """
+        max_memory_for_text_encoder = None
+        if torch.cuda.is_available():
+            total_vram_bytes = torch.cuda.get_device_properties(0).total_memory
+            total_vram_gb = total_vram_bytes / (1024**3)
+            if is_fp8_checkpoint:
+                text_encoder_vram_budget = max(total_vram_gb - 10.0, 2.0)
+            else:
+                text_encoder_vram_budget = max(total_vram_gb - 6.0, 2.0)
+            max_memory_for_text_encoder = {0: f"{text_encoder_vram_budget:.0f}GiB", "cpu": "24GiB"}
+            self.logger.info(
+                f"Text encoder VRAM budget: {text_encoder_vram_budget:.1f}GB (total VRAM: {total_vram_gb:.1f}GB)"
+            )
+        return max_memory_for_text_encoder
+
+    def _load_pipeline_from_single_file(self, model_path: str, pipeline_class: Any, pipe_kwargs: Dict):
+        """Attempt to load a pipeline via pipeline_class.from_single_file and return it or None on failure."""
+        try:
+            return pipeline_class.from_single_file(model_path, **pipe_kwargs)
+        except Exception as e:
+            self.logger.error(f"Error loading pipeline from single file: {e}")
+            return None
 
     def _load_single_file_with_fallback(
         self, 
@@ -574,113 +614,103 @@ class ZImagePipelineLoadingMixin:
         """
         self.logger.info("Attempting fallback: manual component assembly...")
         
-        try:
-            from safetensors.torch import load_file as load_safetensors
-            from transformers import AutoModelForCausalLM, AutoTokenizer as HFAutoTokenizer
-            from diffusers import AutoencoderKL, FlowMatchEulerDiscreteScheduler
-            from airunner.components.art.pipelines.z_image import ZImageTransformer2DModel
-            
-            # Get user's precision setting
-            model_dtype = self.data_type
-            
-            # Get the directory containing the checkpoint
-            model_dir = os.path.dirname(model_path)
-            
-            # Load the transformer config from the companion folder
-            transformer_config_path = os.path.join(model_dir, "transformer", "config.json")
-            
-            if os.path.exists(transformer_config_path):
-                self.logger.info(f"Loading transformer config from {transformer_config_path}")
-                # Create model from config
-                transformer = ZImageTransformer2DModel.from_config(transformer_config_path)
-            else:
-                self.logger.info("No transformer config found, using default Z-Image config")
-                # Use default Z-Image Turbo config
-                transformer = ZImageTransformer2DModel(
-                    all_patch_size=(2,),
-                    all_f_patch_size=(1,),
-                    in_channels=16,
-                    dim=3840,
-                    n_layers=30,
-                    n_refiner_layers=2,
-                    n_heads=30,
-                    n_kv_heads=30,
-                    norm_eps=1e-5,
-                    qk_norm=True,
-                    cap_feat_dim=2560,
-                    rope_theta=256.0,
-                    t_scale=1000.0,
-                    axes_dims=[32, 48, 48],
-                    axes_lens=[1024, 512, 512],
-                )
-            
-            # Load weights from the safetensors checkpoint
-            self.logger.info(f"Loading transformer weights from {model_path}")
-            state_dict = load_safetensors(model_path)
-            
-            # Filter to only transformer keys (exclude VAE, etc. if present)
-            # Z-Image checkpoints typically have transformer keys without prefix
-            transformer_keys = [k for k in state_dict.keys() if not k.startswith(('vae.', 'text_encoder.'))]
-            if transformer_keys:
-                transformer_state_dict = {k: v for k, v in state_dict.items() if k in transformer_keys}
-            else:
-                transformer_state_dict = state_dict
-            
-            # Load the state dict - use strict=False to handle any key mismatches
-            missing, unexpected = transformer.load_state_dict(transformer_state_dict, strict=False)
-            if missing:
-                self.logger.warning(f"Missing keys when loading transformer: {len(missing)} keys")
-                self.logger.debug(f"Missing keys: {missing[:10]}...")  # Log first 10
-            if unexpected:
-                self.logger.warning(f"Unexpected keys when loading transformer: {len(unexpected)} keys")
-                self.logger.debug(f"Unexpected keys: {unexpected[:10]}...")
-            
-            # Move to correct dtype
-            transformer = transformer.to(model_dtype)
-            self.logger.info(f"Transformer loaded successfully (dtype: {model_dtype})")
-            
-            # Load VAE from local vae subfolder
-            vae_path = os.path.join(model_dir, "vae")
-            self.logger.info(f"Loading VAE from {vae_path}")
-            vae = AutoencoderKL.from_pretrained(
-                vae_path,
+        # Use module-level imports for AutoencoderKL and ZImageTransformer2DModel
+        
+        # Get user's precision setting
+        model_dtype = self.data_type
+        
+        # Get the directory containing the checkpoint
+        model_dir = os.path.dirname(model_path)
+        
+        # Load the transformer config from the companion folder
+        transformer = self._create_transformer_from_config_or_default(model_dir)
+        
+        # Load weights from the safetensors checkpoint
+        self.logger.info(f"Loading transformer weights from {model_path}")
+        self._load_transformer_weights_from_safetensors(transformer, model_path)
+        
+        # Move to correct dtype
+        transformer = transformer.to(model_dtype)
+        self.logger.info(f"Transformer loaded successfully (dtype: {model_dtype})")
+        
+        # Load VAE from local vae subfolder
+        vae_path = os.path.join(model_dir, "vae")
+        self.logger.info(f"Loading VAE from {vae_path}")
+        vae = self._load_vae_from_pretrained(vae_path, model_dtype)
+        
+        # Load scheduler using the helper method
+        scheduler_path = os.path.join(model_dir, "scheduler")
+        self.logger.info(f"Loading scheduler from {scheduler_path}")
+        scheduler = self._load_zimage_scheduler(Path(scheduler_path))
+        
+        # If text encoder wasn't provided, load it from local path
+        if text_encoder is None or tokenizer is None:
+            text_encoder_path = os.path.join(model_dir, "text_encoder")
+            tokenizer_path = os.path.join(model_dir, "tokenizer")
+            self.logger.info(f"Loading text encoder from {text_encoder_path}")
+            text_encoder = AutoModelForCausalLM.from_pretrained(
+                text_encoder_path,
                 torch_dtype=model_dtype,
                 local_files_only=True,
             )
-            
-            # Load scheduler using the helper method
-            scheduler_path = os.path.join(model_dir, "scheduler")
-            self.logger.info(f"Loading scheduler from {scheduler_path}")
-            scheduler = self._load_zimage_scheduler(Path(scheduler_path))
-            
-            # If text encoder wasn't provided, load it from local path
-            if text_encoder is None or tokenizer is None:
-                text_encoder_path = os.path.join(model_dir, "text_encoder")
-                tokenizer_path = os.path.join(model_dir, "tokenizer")
-                self.logger.info(f"Loading text encoder from {text_encoder_path}")
-                text_encoder = AutoModelForCausalLM.from_pretrained(
-                    text_encoder_path,
-                    torch_dtype=model_dtype,
-                    local_files_only=True,
-                )
-                tokenizer = HFAutoTokenizer.from_pretrained(
-                    tokenizer_path,
-                    local_files_only=True,
-                )
-            
-            # Assemble the pipeline
-            self._pipe = pipeline_class(
-                transformer=transformer,
-                vae=vae,
-                text_encoder=text_encoder,
-                tokenizer=tokenizer,
-                scheduler=scheduler,
+            tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_path,
+                local_files_only=True,
             )
-            self.logger.info(f"Fallback loading successful - pipeline assembled (dtype: {model_dtype})")
-            
-        except Exception as e:
-            self.logger.error(f"Fallback loading failed: {e}")
-            raise
+        
+        # Assemble the pipeline
+        self._pipe = pipeline_class(
+            transformer=transformer,
+            vae=vae,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            scheduler=scheduler,
+        )
+        self.logger.info(f"Fallback loading successful - pipeline assembled (dtype: {model_dtype})")
+
+    def _create_transformer_from_config_or_default(self, model_dir: str):
+        """Create a ZImageTransformer2DModel from a config file if available otherwise create a default model."""
+        transformer_config_path = os.path.join(model_dir, "transformer", "config.json")
+        if os.path.exists(transformer_config_path):
+            self.logger.info(f"Loading transformer config from {transformer_config_path}")
+            transformer = ZImageTransformer2DModel.from_config(transformer_config_path)
+        else:
+            self.logger.info("No transformer config found, using default Z-Image config")
+            transformer = ZImageTransformer2DModel(
+                all_patch_size=(2,),
+                all_f_patch_size=(1,),
+                in_channels=16,
+                dim=3840,
+                n_layers=30,
+                n_refiner_layers=2,
+                n_heads=30,
+                n_kv_heads=30,
+                norm_eps=1e-5,
+                qk_norm=True,
+                cap_feat_dim=2560,
+                rope_theta=256.0,
+                t_scale=1000.0,
+                axes_dims=[32, 48, 48],
+                axes_lens=[1024, 512, 512],
+            )
+        return transformer
+
+    def _load_transformer_weights_from_safetensors(self, transformer, model_path: str):
+        """Load safetensors state dict into transformer and log missing/unexpected keys."""
+        state_dict = load_safetensors(model_path)
+        transformer_keys = [k for k in state_dict.keys() if not k.startswith(('vae.', 'text_encoder.'))]
+        if transformer_keys:
+            transformer_state_dict = {k: v for k, v in state_dict.items() if k in transformer_keys}
+        else:
+            transformer_state_dict = state_dict
+
+        missing, unexpected = transformer.load_state_dict(transformer_state_dict, strict=False)
+        if missing:
+            self.logger.warning(f"Missing keys when loading transformer: {len(missing)} keys")
+            self.logger.debug(f"Missing keys: {missing[:10]}...")
+        if unexpected:
+            self.logger.warning(f"Unexpected keys when loading transformer: {len(unexpected)} keys")
+            self.logger.debug(f"Unexpected keys: {unexpected[:10]}...")
 
     def _get_config_path(self) -> Optional[str]:
         """Get the path to Z-Image config files.
@@ -720,13 +750,7 @@ class ZImagePipelineLoadingMixin:
         Returns:
             Configured flow-match scheduler instance.
         """
-        from diffusers import FlowMatchEulerDiscreteScheduler
-        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
-            is_flow_match_scheduler,
-            create_flow_match_scheduler,
-            FLOW_MATCH_SCHEDULER_NAMES,
-        )
-        from airunner.enums import Scheduler
+        # Scheduler factory and FlowMatch types are imported at module level
         
         # Get the scheduler name from the image request or default
         scheduler_name = None
@@ -822,19 +846,14 @@ class ZImagePipelineLoadingMixin:
         """
         self.logger.info(f"Loading native FP8 pipeline from {checkpoint_path}")
         
-        try:
-            from airunner.components.art.managers.zimage.native import (
-                ZImageNativePipeline,
-            )
-        except ImportError as e:
-            self.logger.error(f"Native FP8 implementation not available: {e}")
-            self.logger.warning("Falling back to pretrained loading with 4-bit quantization")
+        if importlib.util.find_spec('airunner.components.art.managers.zimage.native') is None:
+            self.logger.warning("Native FP8 implementation not available - falling back to pretrained loading with 4-bit quantization")
             self._force_quantization_for_fp8_fallback = True
             self._load_from_pretrained(model_dir, pipeline_class, data)
             return
+        # Native pipeline imported at module-level
         
         # Force memory cleanup before loading
-        import gc
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -902,9 +921,7 @@ class ZImagePipelineLoadingMixin:
         Returns:
             A wrapped pipeline compatible with existing generation code
         """
-        from airunner.components.art.managers.zimage.native.zimage_native_wrapper import (
-            NativePipelineWrapper,
-        )
+        # NativePipelineWrapper imported at module-level
         
         return NativePipelineWrapper(native_pipeline)
 
@@ -915,7 +932,7 @@ class ZImagePipelineLoadingMixin:
         vae, tokenizer, scheduler), so we can create a new pipeline instance
         reusing the existing components without reloading from disk.
         """
-        from airunner.components.art.pipelines.z_image import ZImagePipeline, ZImageImg2ImgPipeline
+        # ZImagePipeline and ZImageImg2ImgPipeline imported at module-level
         
         pipeline_class = self._pipeline_class
         if pipeline_class is None:

@@ -12,10 +12,7 @@ from airunner.components.art.schedulers.flow_match_scheduler_factory import (
 )
 from airunner.enums import Scheduler, ModelType, ModelStatus
 
-try:
-    from accelerate.hooks import remove_hook_from_module
-except Exception:
-    remove_hook_from_module = None
+from accelerate.hooks import remove_hook_from_module
 
 
 def _aggressive_memory_cleanup():
@@ -283,78 +280,12 @@ class ZImageGenerationMixin:
                         self.logger.debug(f"Error removing hook: {e}")
                 self._pipe._all_hooks.clear()
             
-            # Process each component
+            # Process each component via helper
             for component_name in component_names:
                 component = getattr(self._pipe, component_name, None)
                 if component is None:
                     continue
-                
-                self.logger.debug(f"Cleaning up {component_name}...")
-                
-                # 1. Remove accelerate hooks using official API
-                if has_accelerate_hooks:
-                    try:
-                        remove_hook_from_module(component, recurse=True)
-                        self.logger.debug(f"Removed hooks from {component_name}")
-                    except Exception as e:
-                        self.logger.debug(f"Hook removal for {component_name}: {e}")
-                
-                # 2. Manual hook cleanup for any remaining hooks
-                if hasattr(component, "_hf_hook"):
-                    try:
-                        hook = component._hf_hook
-                        # Clear any offloaded weights first
-                        if hasattr(hook, "weights_map") and hook.weights_map is not None:
-                            hook.weights_map.clear()
-                        if hasattr(hook, "offload"):
-                            try:
-                                hook.offload(component)
-                            except Exception:
-                                pass
-                        delattr(component, "_hf_hook")
-                    except Exception as e:
-                        self.logger.debug(f"Manual hook cleanup for {component_name}: {e}")
-                
-                # 3. For models with device_map (quantized models), clear the device_map state
-                if hasattr(component, "hf_device_map"):
-                    try:
-                        component.hf_device_map = None
-                    except Exception:
-                        pass
-                
-                # 4. CRITICAL: Do NOT move to CPU - this creates new tensors in CPU RAM
-                # Instead, delete tensors in-place on their current device
-                
-                # 5. Clear parameter data to free memory
-                if hasattr(component, "parameters"):
-                    try:
-                        for param in component.parameters():
-                            param.data = torch.empty(0, device=param.device)
-                            if param.grad is not None:
-                                param.grad = None
-                    except Exception as e:
-                        self.logger.debug(f"Error clearing params for {component_name}: {e}")
-                
-                # 6. Detach the component from the pipeline
-                try:
-                    setattr(self._pipe, component_name, None)
-                except Exception:
-                    pass
-                
-                # 7. Delete component reference
-                try:
-                    del component
-                except Exception:
-                    pass
-                
-                # 8. Run gc after each large component to free memory immediately
-                if component_name in ("text_encoder", "transformer"):
-                    _aggressive_memory_cleanup()
-            
-            # Clear execution device reference
-            if hasattr(self._pipe, "_execution_device"):
-                self._pipe._execution_device = None
-                
+                self._cleanup_pipeline_component(component_name, component, has_accelerate_hooks)
         except Exception as e:
             self.logger.warning(f"Error during hook removal: {e}")
 
@@ -371,9 +302,39 @@ class ZImageGenerationMixin:
 
         self.logger.info("✓ Z-Image pipeline unloaded and memory freed")
 
-    def _clear_pipeline_caches(self):
-        """Clear internal pipeline caches to free RAM and VRAM.
+    def _cleanup_pipeline_component(self, component_name: str, component: Any, has_accelerate_hooks: bool) -> None:
+        """Cleanup a component attached to the pipeline.
+
+        Extraction from the prior implementation to reduce _unload_pipe size.
+        """
+        self.logger.debug(f"Cleaning up {component_name}...")
+
+        # 1. Remove accelerate hooks using official API
+        if has_accelerate_hooks:
+            try:
+                remove_hook_from_module(component, recurse=True)
+                self.logger.debug(f"Removed hooks from {component_name}")
+            except Exception as e:
+                self.logger.debug(f"Hook removal for {component_name}: {e}")
+
+        # 2. Manual hook cleanup for any remaining hooks
+        if hasattr(component, "_hf_hook"):
+            try:
+                hook = component._hf_hook
+                if hasattr(hook, "weights_map") and hook.weights_map is not None:
+                    hook.weights_map.clear()
+                if hasattr(hook, "offload"):
+                    try:
+                        hook.offload(component)
+                    except Exception:
+                        pass
+                delattr(component, "_hf_hook")
+            except Exception as e:
+                self.logger.debug(f"Manual hook cleanup for {component_name}: {e}")
         
+    def _clear_pipeline_caches(self):
+        """Clear cached tensors and per-component caches on the active pipeline.
+
         This is called after each generation to prevent memory accumulation.
         """
         if self._pipe is None:

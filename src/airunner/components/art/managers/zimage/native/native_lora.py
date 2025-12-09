@@ -230,6 +230,65 @@ def compute_lora_weight(
     return lora_scale * delta
 
 
+def _pad_up_weight_for_slice(
+    up_weight: torch.Tensor, slice_idx: int, slice_size: int, total_out: int
+) -> torch.Tensor:
+    """Pad LoRA up_weight so it only affects the selected Q/K/V slice."""
+    rank = up_weight.shape[1]
+    padded_up = torch.zeros(total_out, rank, device=up_weight.device, dtype=up_weight.dtype)
+    start_idx = slice_idx * slice_size
+    padded_up[start_idx:start_idx + slice_size] = up_weight
+    return padded_up
+
+
+def _extract_qkv_base_weight(qkv_module: nn.Module) -> Optional[torch.Tensor]:
+    """Get the base weight tensor from fused QKV modules."""
+    if isinstance(qkv_module, FP8Linear):
+        weight_attr = getattr(qkv_module, 'weight', None)
+        if weight_attr is None or not hasattr(weight_attr, 'dequantize'):
+            logger.warning("FP8Linear has no valid weight")
+            return None
+        return weight_attr.dequantize()
+    if isinstance(qkv_module, nn.Linear):
+        return qkv_module.weight.data
+    logger.warning(f"Unsupported layer type for fused QKV: {type(qkv_module)}")
+    return None
+
+
+def _merge_qkv_weights(qkv_module: nn.Module, base_weight: torch.Tensor) -> None:
+    """Store merged weights back on the fused QKV module."""
+    if isinstance(qkv_module, FP8Linear):
+        if not hasattr(qkv_module, '_merged_weight'):
+            qkv_module._merged_weight = None
+        qkv_module._merged_weight = base_weight
+    else:
+        qkv_module.weight.data = base_weight
+
+
+def _apply_unscaled_fp8_qkv(
+    qkv_module: UnscaledFP8Linear,
+    down_weight: torch.Tensor,
+    up_weight: torch.Tensor,
+    slice_idx: int,
+    alpha: Optional[float],
+    scale: float,
+    adapter_name: str,
+) -> bool:
+    total_out = qkv_module.out_features
+    slice_size = total_out // 3
+    padded_up = _pad_up_weight_for_slice(up_weight, slice_idx, slice_size, total_out)
+    slice_name = ["q", "k", "v"][slice_idx]
+    full_adapter_name = f"{adapter_name}_{slice_name}"
+    qkv_module.add_lora(
+        adapter_name=full_adapter_name,
+        down_weight=down_weight,
+        up_weight=padded_up,
+        alpha=alpha,
+        scale=scale,
+    )
+    return True
+
+
 def apply_lora_to_fused_qkv(
     qkv_module: nn.Module,
     down_weight: torch.Tensor,
@@ -259,97 +318,42 @@ def apply_lora_to_fused_qkv(
     Returns:
         True if successful, False otherwise
     """
-    # FP8 ops imported at module level
-    
     try:
         if isinstance(qkv_module, UnscaledFP8Linear):
-            # For UnscaledFP8Linear, create a padded LoRA that targets only the slice
-            # The up_weight needs to be padded to [3*hidden, rank] with zeros
-            # so it only affects the target Q/K/V slice
-            
-            total_out = qkv_module.out_features
-            hidden_dim = qkv_module.in_features
-            slice_size = total_out // 3
-            rank = down_weight.shape[0]
-            
-            # Create padded up_weight [3*hidden, rank] with zeros
-            device = down_weight.device
-            dtype = down_weight.dtype
-            padded_up = torch.zeros(total_out, rank, device=device, dtype=dtype)
-            
-            # Place the up_weight in the correct slice
-            start_idx = slice_idx * slice_size
-            end_idx = start_idx + slice_size
-            padded_up[start_idx:end_idx] = up_weight
-            
-            # Use a unique adapter name that includes the slice
-            slice_name = ["q", "k", "v"][slice_idx]
-            full_adapter_name = f"{adapter_name}_{slice_name}"
-            
-            # Add the padded LoRA
-            qkv_module.add_lora(
-                adapter_name=full_adapter_name,
-                down_weight=down_weight,
-                up_weight=padded_up,
-                alpha=alpha,
-                scale=scale,
+            return _apply_unscaled_fp8_qkv(
+                qkv_module,
+                down_weight,
+                up_weight,
+                slice_idx,
+                alpha,
+                scale,
+                adapter_name,
             )
-            return True
-            
-        # For non-UnscaledFP8Linear, fall back to weight merging
-        if isinstance(qkv_module, FP8Linear):
-            weight_attr = getattr(qkv_module, 'weight', None)
-            if weight_attr is None or not hasattr(weight_attr, 'dequantize'):
-                logger.warning(f"FP8Linear has no valid weight")
-                return False
-            base_weight = weight_attr.dequantize()
-        elif isinstance(qkv_module, nn.Linear):
-            base_weight = qkv_module.weight.data
-        else:
-            logger.warning(f"Unsupported layer type for fused QKV: {type(qkv_module)}")
+
+        base_weight = _extract_qkv_base_weight(qkv_module)
+        if base_weight is None:
             return False
-        
-        # base_weight shape: [3*hidden, hidden] e.g., [11520, 3840]
+
         total_out = base_weight.shape[0]
         hidden_dim = base_weight.shape[1]
         slice_size = total_out // 3
-        
-        # Compute LoRA delta
-        device = base_weight.device
-        dtype = base_weight.dtype
-        
-        down_weight = down_weight.to(device=device, dtype=dtype)
-        up_weight = up_weight.to(device=device, dtype=dtype)
-        
+
+        down_weight = down_weight.to(device=base_weight.device, dtype=base_weight.dtype)
+        up_weight = up_weight.to(device=base_weight.device, dtype=base_weight.dtype)
         delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
-        
-        # delta shape should be [hidden, hidden] e.g., [3840, 3840]
+
         expected_shape = (slice_size, hidden_dim)
         if delta.shape != expected_shape:
             logger.warning(
                 f"Shape mismatch for QKV slice: expected {expected_shape}, got {delta.shape}"
             )
             return False
-        
-        # Apply delta to the correct slice
+
         start_idx = slice_idx * slice_size
         end_idx = start_idx + slice_size
         base_weight[start_idx:end_idx] += delta
-        
-        # Free delta
-        del delta, down_weight, up_weight
-        
-        # Update the layer
-        if isinstance(qkv_module, FP8Linear):
-            # Store merged weight
-            if not hasattr(qkv_module, '_merged_weight'):
-                qkv_module._merged_weight = None
-            qkv_module._merged_weight = base_weight
-        else:
-            qkv_module.weight.data = base_weight
-        
+        _merge_qkv_weights(qkv_module, base_weight)
         return True
-        
     except Exception as e:
         logger.warning(f"Failed to apply LoRA to fused QKV: {e}")
         return False
@@ -441,72 +445,102 @@ def apply_lora_to_linear(
     Returns:
         True if successful, False otherwise
     """
-    # Import here to avoid circular imports
-    # FP8 ops imported at module level
-    
     try:
         if isinstance(linear, UnscaledFP8Linear):
-            # Use additive LoRA for UnscaledFP8Linear (non-destructive)
-            linear.add_lora(
-                adapter_name=adapter_name,
-                down_weight=down_weight,
-                up_weight=up_weight,
-                alpha=alpha,
-                scale=scale,
+            return _apply_unscaled_fp8_linear(
+                linear,
+                down_weight,
+                up_weight,
+                alpha,
+                scale,
+                adapter_name,
             )
-            return True
-        elif isinstance(linear, FP8Linear):
-            # FP8Linear with QuantizedTensor - need to merge (destructive)
-            weight_attr = getattr(linear, 'weight', None)
-            if weight_attr is None:
-                logger.warning(f"FP8Linear has no weight set (weight is None)")
-                return False
-            if hasattr(weight_attr, 'dequantize'):
-                base_weight = weight_attr.dequantize()
-            else:
-                logger.warning(f"FP8Linear weight is not a QuantizedTensor: {type(weight_attr)}")
-                return False
-            
-            # Compute and merge
-            device = base_weight.device
-            dtype = base_weight.dtype
-            down_weight = down_weight.to(device=device, dtype=dtype)
-            up_weight = up_weight.to(device=device, dtype=dtype)
-            delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
-            
-            if delta.shape != base_weight.shape:
-                logger.warning(f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}")
-                return False
-            
-            merged_weight = base_weight + delta
-            del base_weight, delta, down_weight, up_weight
-            
-            # Store merged weight
-            if not hasattr(linear, '_merged_weight'):
-                linear._merged_weight = None
-            linear._merged_weight = merged_weight
-            return True
-        elif isinstance(linear, nn.Linear):
-            # Standard Linear - merge directly
-            base_weight = linear.weight.data
-            device = base_weight.device
-            dtype = base_weight.dtype
-            down_weight = down_weight.to(device=device, dtype=dtype)
-            up_weight = up_weight.to(device=device, dtype=dtype)
-            delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
-            
-            if delta.shape != base_weight.shape:
-                logger.warning(f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}")
-                return False
-            
-            linear.weight.data = base_weight + delta
-            return True
-        else:
-            logger.warning(f"Unsupported layer type: {type(linear)}")
-            return False
+        if isinstance(linear, FP8Linear):
+            return _merge_fp8_linear_weights(
+                linear,
+                down_weight,
+                up_weight,
+                alpha,
+                scale,
+            )
+        if isinstance(linear, nn.Linear):
+            return _merge_standard_linear_weights(
+                linear,
+                down_weight,
+                up_weight,
+                alpha,
+                scale,
+            )
+        logger.warning(f"Unsupported layer type: {type(linear)}")
+        return False
     except Exception as e:
         logger.warning(f"Failed to apply LoRA: {e}")
         return False
+
+
+def _apply_unscaled_fp8_linear(
+    linear: UnscaledFP8Linear,
+    down_weight: torch.Tensor,
+    up_weight: torch.Tensor,
+    alpha: Optional[float],
+    scale: float,
+    adapter_name: str,
+) -> bool:
+    linear.add_lora(
+        adapter_name=adapter_name,
+        down_weight=down_weight,
+        up_weight=up_weight,
+        alpha=alpha,
+        scale=scale,
+    )
+    return True
+
+
+def _merge_fp8_linear_weights(
+    linear: FP8Linear,
+    down_weight: torch.Tensor,
+    up_weight: torch.Tensor,
+    alpha: Optional[float],
+    scale: float,
+) -> bool:
+    weight_attr = getattr(linear, 'weight', None)
+    if weight_attr is None or not hasattr(weight_attr, 'dequantize'):
+        logger.warning("FP8Linear has no weight set (weight is None)")
+        return False
+
+    base_weight = weight_attr.dequantize()
+    down_weight = down_weight.to(device=base_weight.device, dtype=base_weight.dtype)
+    up_weight = up_weight.to(device=base_weight.device, dtype=base_weight.dtype)
+    delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
+
+    if delta.shape != base_weight.shape:
+        logger.warning(f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}")
+        return False
+
+    if not hasattr(linear, '_merged_weight'):
+        linear._merged_weight = None
+    linear._merged_weight = base_weight + delta
+    return True
+
+
+def _merge_standard_linear_weights(
+    linear: nn.Linear,
+    down_weight: torch.Tensor,
+    up_weight: torch.Tensor,
+    alpha: Optional[float],
+    scale: float,
+) -> bool:
+    base_weight = linear.weight.data
+    down_weight = down_weight.to(device=base_weight.device, dtype=base_weight.dtype)
+    up_weight = up_weight.to(device=base_weight.device, dtype=base_weight.dtype)
+    delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
+
+    if delta.shape != base_weight.shape:
+        logger.warning(f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}")
+        return False
+
+    linear.weight.data = base_weight + delta
+    return True
 
 
 def load_lora_into_transformer(
@@ -531,118 +565,134 @@ def load_lora_into_transformer(
     Returns:
         Dict with loading stats: {"applied": int, "failed": int, "skipped": int}
     """
-    adapter_name = adapter_name or Path(lora_path).stem if isinstance(lora_path, (str, Path)) else "lora"
-    
+    adapter_name = _resolve_adapter_name(lora_path, adapter_name)
     logger.info(f"Loading LoRA '{adapter_name}' with scale={scale}")
-    
-    # Load state dict
+
     state_dict, metadata = load_lora_state_dict(lora_path)
-    
-    # Extract alpha from metadata if available
-    default_alpha = None
-    if metadata:
-        for key in ['ss_network_alpha', 'lora_alpha', 'alpha']:
-            if key in metadata:
-                try:
-                    default_alpha = float(metadata[key])
-                    logger.debug(f"Using alpha={default_alpha} from metadata")
-                    break
-                except (ValueError, TypeError):
-                    pass
-    
-    # Auto-detect prefix if not provided
-    if prefix is None:
-        sample_key = next((k for k in state_dict.keys() if 'lora' in k.lower()), None)
-        if sample_key:
-            if sample_key.startswith('diffusion_model.'):
-                prefix = 'diffusion_model'
-            elif sample_key.startswith('transformer.'):
-                prefix = 'transformer'
-            elif sample_key.startswith('model.'):
-                prefix = 'model'
-    
-    # Extract LoRA pairs
+    default_alpha = _extract_default_alpha(metadata)
+    prefix = _infer_lora_prefix(prefix, state_dict)
     pairs = extract_lora_pairs(state_dict, prefix=prefix)
-    
+
     if not pairs:
         logger.warning(f"No valid LoRA pairs found in {adapter_name}")
         return {"applied": 0, "failed": 0, "skipped": len(state_dict)}
-    
-    # Apply LoRA to matching modules
+
     stats = {"applied": 0, "failed": 0, "skipped": 0}
-    
     for module_path, lora_data in pairs.items():
-        down_weight = lora_data['down']
-        up_weight = lora_data['up']
-        alpha = lora_data.get('alpha') or default_alpha
-        
-        # First try direct module lookup
-        module = get_module_by_path(transformer, module_path)
-        
-        if module is not None:
-            # Direct match found
-            success = apply_lora_to_linear(
-                module,
-                down_weight=down_weight,
-                up_weight=up_weight,
-                alpha=alpha,
-                scale=scale,
-                adapter_name=adapter_name,
-            )
-        else:
-            # Try fused QKV mapping for attention layers
-            fused_result = get_fused_attention_module(transformer, module_path)
-            
-            if fused_result is not None:
-                fused_module, component_name, slice_idx = fused_result
-                
-                if slice_idx is not None:
-                    # Q/K/V - apply to slice of fused QKV
-                    success = apply_lora_to_fused_qkv(
-                        fused_module,
-                        down_weight=down_weight,
-                        up_weight=up_weight,
-                        slice_idx=slice_idx,
-                        alpha=alpha,
-                        scale=scale,
-                        adapter_name=adapter_name,
-                    )
-                    if success:
-                        logger.debug(f"Applied LoRA to fused QKV slice {slice_idx} for {module_path}")
-                else:
-                    # to_out.0 -> out (direct linear)
-                    success = apply_lora_to_linear(
-                        fused_module,
-                        down_weight=down_weight,
-                        up_weight=up_weight,
-                        alpha=alpha,
-                        scale=scale,
-                        adapter_name=adapter_name,
-                    )
-                    if success:
-                        logger.debug(f"Applied LoRA to attention.out for {module_path}")
-            else:
-                logger.debug(f"Module not found: {module_path}")
-                stats["skipped"] += 1
-                continue
-        
+        success, skipped = _apply_lora_pair(
+            transformer,
+            module_path,
+            lora_data,
+            default_alpha,
+            scale,
+            adapter_name,
+        )
+        if skipped:
+            stats["skipped"] += 1
+            continue
         if success:
             stats["applied"] += 1
         else:
             stats["failed"] += 1
             logger.warning(f"Failed to apply LoRA to {module_path}")
-    
+
     logger.info(
         f"LoRA '{adapter_name}' loaded: "
         f"{stats['applied']} applied, {stats['failed']} failed, {stats['skipped']} skipped"
     )
-    
     return stats
+
+
+def _resolve_adapter_name(
+    lora_path: Union[str, Path, Dict[str, torch.Tensor]], adapter_name: Optional[str]
+) -> str:
+    if adapter_name:
+        return adapter_name
+    if isinstance(lora_path, (str, Path)):
+        return Path(lora_path).stem
+    return "lora"
+
+
+def _extract_default_alpha(metadata: Optional[Dict[str, Any]]) -> Optional[float]:
+    if not metadata:
+        return None
+    for key in ['ss_network_alpha', 'lora_alpha', 'alpha']:
+        if key in metadata:
+            try:
+                return float(metadata[key])
+            except (ValueError, TypeError):
+                continue
+    return None
+
+
+def _infer_lora_prefix(prefix: Optional[str], state_dict: Dict[str, torch.Tensor]) -> Optional[str]:
+    if prefix is not None:
+        return prefix
+    sample_key = next((k for k in state_dict.keys() if 'lora' in k.lower()), None)
+    if sample_key is None:
+        return None
+    if sample_key.startswith('diffusion_model.'):
+        return 'diffusion_model'
+    if sample_key.startswith('transformer.'):
+        return 'transformer'
+    if sample_key.startswith('model.'):
+        return 'model'
+    return None
+
+
+def _apply_lora_pair(
+    transformer: nn.Module,
+    module_path: str,
+    lora_data: Dict[str, Any],
+    default_alpha: Optional[float],
+    scale: float,
+    adapter_name: str,
+) -> tuple[bool, bool]:
+    down_weight = lora_data['down']
+    up_weight = lora_data['up']
+    alpha = lora_data.get('alpha') or default_alpha
+
+    apply_kwargs = {
+        "down_weight": down_weight,
+        "up_weight": up_weight,
+        "alpha": alpha,
+        "scale": scale,
+        "adapter_name": adapter_name,
+    }
+
+    module = get_module_by_path(transformer, module_path)
+    if module is not None:
+        return apply_lora_to_linear(module, **apply_kwargs), False
+
+    fused_result = get_fused_attention_module(transformer, module_path)
+    if fused_result is None:
+        logger.debug(f"Module not found: {module_path}")
+        return False, True
+
+    fused_module, _component_name, slice_idx = fused_result
+    if slice_idx is not None:
+        success = apply_lora_to_fused_qkv(
+            fused_module,
+            down_weight=down_weight,
+            up_weight=up_weight,
+            slice_idx=slice_idx,
+            alpha=alpha,
+            scale=scale,
+            adapter_name=adapter_name,
+        )
+        if success:
+            logger.debug(f"Applied LoRA to fused QKV slice {slice_idx} for {module_path}")
+        return success, False
+
+    success = apply_lora_to_linear(fused_module, **apply_kwargs)
+    if success:
+        logger.debug(f"Applied LoRA to attention.out for {module_path}")
+    return success, False
 
 
 def _iterate_lora_layers(transformer: nn.Module):
     """Iterate over all modules that have LoRA support."""
-    from airunner.components.art.managers.zimage.native.fp8_ops import UnscaledFP8Linear
+    # UnscaledFP8Linear is imported at module level; avoid re-importing.
     
     for module in transformer.modules():
         if isinstance(module, UnscaledFP8Linear) and hasattr(module, '_lora_layers'):

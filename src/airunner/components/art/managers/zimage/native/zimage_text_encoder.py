@@ -11,10 +11,18 @@ from __future__ import annotations
 
 import logging
 import os
+import gc
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from transformers import (
+    Qwen2Tokenizer,
+    AutoTokenizer,
+    AutoModel,
+    AutoConfig,
+    BitsAndBytesConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +58,8 @@ class ZImageTokenizer:
     
     def _load_tokenizer(self, tokenizer_path: str):
         """Load the Qwen tokenizer."""
+        # Use module-level transformers imports
         try:
-            from transformers import Qwen2Tokenizer, AutoTokenizer
-            
             if os.path.isdir(tokenizer_path):
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     tokenizer_path,
@@ -64,7 +71,6 @@ class ZImageTokenizer:
                     "Qwen/Qwen2.5-3B",  # Fallback
                     trust_remote_code=True,
                 )
-            
             logger.info(f"Loaded tokenizer from {tokenizer_path}")
         except Exception as e:
             logger.warning(f"Failed to load tokenizer: {e}")
@@ -185,7 +191,7 @@ class ZImageTextEncoder(nn.Module):
             model_path: Path to model weights
         """
         try:
-            from transformers import AutoModel, AutoConfig, BitsAndBytesConfig
+            # Model imports are handled at module level
             
             # Load config
             config = AutoConfig.from_pretrained(
@@ -318,7 +324,6 @@ class ZImageTextEncoder(nn.Module):
             del self.tokenizer
             self.tokenizer = None
         
-        import gc
         gc.collect()
         torch.cuda.empty_cache()
 
