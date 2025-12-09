@@ -32,6 +32,7 @@ Key Features:
 from typing import Dict, Any, Optional
 import torch
 from diffusers import FlowMatchEulerDiscreteScheduler
+from diffusers import FlowMatchLCMScheduler
 
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
@@ -277,7 +278,6 @@ class ZImageModelManager(
     def _is_zimage_scheduler(scheduler: Optional[Any]) -> bool:
         """Check whether the scheduler is a flow-match compatible type."""
         try:
-            from diffusers import FlowMatchLCMScheduler
             flow_match_types = (FlowMatchEulerDiscreteScheduler, FlowMatchLCMScheduler)
         except ImportError:
             flow_match_types = (FlowMatchEulerDiscreteScheduler,)

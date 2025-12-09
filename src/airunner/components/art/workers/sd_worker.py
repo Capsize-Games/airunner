@@ -154,6 +154,7 @@ class SDWorker(Worker):
             self.model_manager.get_embeddings(message)
 
     def on_update_lora_signal(self, data=None):
+        print("ON UPDATE LORA SIGNAL")
         self._reload_lora()
 
     def _reload_lora(self):

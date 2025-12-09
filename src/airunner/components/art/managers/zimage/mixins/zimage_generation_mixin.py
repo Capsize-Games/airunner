@@ -99,16 +99,37 @@ class ZImageGenerationMixin:
     def _unload_loras(self):
         """Unload Z-Image LoRA weights if any are loaded.
         
-        Z-Image supports LoRA weights through ZImageLoraLoaderMixin.
+        Z-Image uses additive LoRA that can be removed without model reload.
         """
-        if hasattr(self._pipe, 'unload_lora_weights'):
+        self.logger.debug("Unloading Z-Image LoRA weights")
+        if self._pipe is not None and hasattr(self._pipe, 'unload_lora_weights'):
             try:
                 self._pipe.unload_lora_weights()
-                self.logger.debug("Unloaded Z-Image LoRA weights")
+                self.logger.info("✓ Unloaded all Z-Image LoRA weights")
             except Exception as e:
-                self.logger.debug(f"No LoRA weights to unload: {e}")
+                self.logger.warning(f"Error unloading LoRA weights: {e}")
         self._loaded_lora = {}
         self._disabled_lora = []
+    
+    def _disable_lora(self, adapter_name: str):
+        """Disable a specific LoRA adapter without removing it.
+        
+        Args:
+            adapter_name: Name of the adapter to disable
+        """
+        if self._pipe is not None and hasattr(self._pipe, 'set_lora_enabled'):
+            self._pipe.set_lora_enabled(adapter_name, False)
+            self.logger.debug(f"Disabled LoRA: {adapter_name}")
+    
+    def _enable_lora(self, adapter_name: str):
+        """Enable a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter to enable
+        """
+        if self._pipe is not None and hasattr(self._pipe, 'set_lora_enabled'):
+            self._pipe.set_lora_enabled(adapter_name, True)
+            self.logger.debug(f"Enabled LoRA: {adapter_name}")
 
     def _load_scheduler(self, scheduler_name=None):
         """Load a flow-match scheduler for Z-Image.

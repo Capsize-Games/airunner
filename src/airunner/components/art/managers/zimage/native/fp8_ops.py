@@ -11,7 +11,7 @@ Based on ComfyUI's comfy/quant_ops.py implementation.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -737,9 +737,10 @@ class UnscaledFP8Linear(nn.Module):
     During forward pass, weights are cast to compute dtype on-the-fly.
     This is memory efficient - FP8 weights stay FP8 until needed.
     
-    LoRA support: After merging, we store the merged weight back in FP8
-    to avoid doubling memory usage. The small quantization error from
-    FP8 -> bfloat16 -> merge -> FP8 is acceptable for LoRA effects.
+    LoRA support: LoRA weights (A and B matrices) are stored separately
+    and applied additively during forward pass. This allows enabling/disabling
+    LoRA without reloading the base model. Memory overhead is minimal since
+    LoRA matrices are small (rank << hidden_dim).
     """
     
     def __init__(
@@ -763,8 +764,9 @@ class UnscaledFP8Linear(nn.Module):
         else:
             self.register_buffer('bias', None)
         
-        # Flag to indicate LoRA has been merged (weight is now LoRA-modified FP8)
-        self._lora_merged: bool = False
+        # Additive LoRA storage - stored separately, applied during forward
+        # Dict[adapter_name] -> {"down": Tensor, "up": Tensor, "alpha": float, "scale": float, "enabled": bool}
+        self._lora_layers: Dict[str, Dict[str, Any]] = {}
     
     def set_weight(self, fp8_weight: torch.Tensor, bias: Optional[torch.Tensor] = None):
         """Set the FP8 weight tensor."""
@@ -772,32 +774,177 @@ class UnscaledFP8Linear(nn.Module):
         if bias is not None and self._has_bias:
             self.bias = bias.to(self.compute_dtype)
     
-    def merge_lora_weight(self, merged_weight: torch.Tensor):
-        """Merge LoRA weight by converting back to FP8 for memory efficiency.
+    def add_lora(
+        self,
+        adapter_name: str,
+        down_weight: torch.Tensor,
+        up_weight: torch.Tensor,
+        alpha: Optional[float] = None,
+        scale: float = 1.0,
+    ) -> None:
+        """Add LoRA weights to this layer (non-destructive).
+        
+        LoRA weights are stored separately and applied during forward pass.
+        This allows toggling LoRA on/off without reloading the model.
         
         Args:
-            merged_weight: The merged weight in compute dtype (e.g. bfloat16)
+            adapter_name: Unique name for this LoRA adapter
+            down_weight: LoRA down/A weight [rank, in_features]
+            up_weight: LoRA up/B weight [out_features, rank]
+            alpha: LoRA alpha (defaults to rank if not provided)
+            scale: LoRA scale factor (0.0-1.0+)
         """
-        # Convert merged weight back to FP8 to avoid doubling memory
-        # Clamp to FP8 range to avoid overflow
+        rank = down_weight.shape[0]
+        if alpha is None:
+            alpha = float(rank)
+        
+        # Store on same device as base weight, keep in compute dtype for efficiency
+        device = self.fp8_weight.device if self.fp8_weight is not None else down_weight.device
+        self._lora_layers[adapter_name] = {
+            "down": down_weight.to(device=device, dtype=self.compute_dtype),
+            "up": up_weight.to(device=device, dtype=self.compute_dtype),
+            "alpha": alpha,
+            "rank": rank,
+            "scale": scale,
+            "enabled": True,
+        }
+    
+    def remove_lora(self, adapter_name: str) -> bool:
+        """Remove a LoRA adapter from this layer.
+        
+        Args:
+            adapter_name: Name of the adapter to remove
+            
+        Returns:
+            True if removed, False if not found
+        """
+        if adapter_name in self._lora_layers:
+            del self._lora_layers[adapter_name]
+            return True
+        return False
+    
+    def remove_all_loras(self) -> int:
+        """Remove all LoRA adapters from this layer.
+        
+        Returns:
+            Number of adapters removed
+        """
+        count = len(self._lora_layers)
+        self._lora_layers.clear()
+        return count
+    
+    def set_lora_enabled(self, adapter_name: str, enabled: bool) -> bool:
+        """Enable or disable a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter
+            enabled: Whether to enable or disable
+            
+        Returns:
+            True if found and updated, False if not found
+        """
+        if adapter_name in self._lora_layers:
+            self._lora_layers[adapter_name]["enabled"] = enabled
+            return True
+        return False
+    
+    def set_all_loras_enabled(self, enabled: bool) -> None:
+        """Enable or disable all LoRA adapters."""
+        for lora_data in self._lora_layers.values():
+            lora_data["enabled"] = enabled
+    
+    def set_lora_scale(self, adapter_name: str, scale: float) -> bool:
+        """Set the scale for a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter
+            scale: New scale value
+            
+        Returns:
+            True if found and updated, False if not found
+        """
+        if adapter_name in self._lora_layers:
+            self._lora_layers[adapter_name]["scale"] = scale
+            return True
+        return False
+    
+    def get_lora_names(self) -> List[str]:
+        """Get names of all loaded LoRA adapters."""
+        return list(self._lora_layers.keys())
+    
+    def has_lora(self, adapter_name: str) -> bool:
+        """Check if a LoRA adapter is loaded."""
+        return adapter_name in self._lora_layers
+    
+    def _compute_lora_delta(self) -> Optional[torch.Tensor]:
+        """Compute the combined LoRA delta from all enabled adapters.
+        
+        Returns:
+            Combined delta tensor or None if no enabled LoRAs
+        """
+        if not self._lora_layers:
+            return None
+        
+        delta = None
+        for adapter_name, lora_data in self._lora_layers.items():
+            if not lora_data["enabled"]:
+                continue
+            
+            down = lora_data["down"]
+            up = lora_data["up"]
+            alpha = lora_data["alpha"]
+            rank = lora_data["rank"]
+            scale = lora_data["scale"]
+            
+            # LoRA formula: delta = scale * (alpha/rank) * (up @ down)
+            lora_scale = scale * (alpha / rank)
+            adapter_delta = lora_scale * (up @ down)
+            
+            if delta is None:
+                delta = adapter_delta
+            else:
+                delta = delta + adapter_delta
+        
+        return delta
+    
+    # Legacy method for backwards compatibility - now uses additive approach
+    def merge_lora_weight(self, merged_weight: torch.Tensor):
+        """Legacy method - prefer add_lora() for non-destructive LoRA.
+        
+        This method is kept for backwards compatibility but now logs a warning.
+        """
+        logger.warning(
+            "merge_lora_weight() is deprecated. Use add_lora() for non-destructive LoRA."
+        )
+        # Convert merged weight back to FP8
         lp_amax = torch.finfo(torch.float8_e4m3fn).max
         clamped = torch.clamp(merged_weight, min=-lp_amax, max=lp_amax)
         self.fp8_weight = clamped.to(torch.float8_e4m3fn)
-        self._lora_merged = True
     
     def get_dequantized_weight(self) -> torch.Tensor:
         """Get the weight as compute dtype tensor."""
         return self.fp8_weight.to(self.compute_dtype)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward with on-the-fly FP8 -> compute_dtype conversion."""
-        # Always cast FP8 weight to compute dtype during forward
-        # (works for both original and LoRA-merged weights)
+        """Forward with on-the-fly FP8 -> compute_dtype conversion and LoRA.
+        
+        LoRA is applied additively: output = x @ (W + delta).T + bias
+        This is mathematically equivalent to: output = x @ W.T + x @ delta.T + bias
+        """
+        # Cast FP8 weight to compute dtype
         weight = self.fp8_weight.to(self.compute_dtype)
+        
+        # Apply LoRA delta if any enabled adapters exist
+        lora_delta = self._compute_lora_delta()
+        if lora_delta is not None:
+            weight = weight + lora_delta
+        
         return F.linear(x, weight, self.bias)
     
     def extra_repr(self) -> str:
-        lora_str = ", lora_merged=True" if self._lora_merged else ""
+        lora_count = len(self._lora_layers)
+        enabled_count = sum(1 for l in self._lora_layers.values() if l["enabled"])
+        lora_str = f", loras={enabled_count}/{lora_count}" if lora_count > 0 else ""
         return f'in={self.in_features}, out={self.out_features}, fp8=True{lora_str}'
 
 
