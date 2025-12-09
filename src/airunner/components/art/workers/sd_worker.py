@@ -443,7 +443,6 @@ class SDWorker(Worker):
             self.model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
-        self.logger.debug(f"[HANDLE_MESSAGE] Received message: {message}")
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)

@@ -99,9 +99,9 @@ class ZImageModelManager(
         Note: For quantized modes (4bit, 8bit), this returns the compute dtype
         (bfloat16). The actual quantization is handled separately.
         
-        Note: FP8 is NOT supported for Z-Image because the Qwen text encoder
-        doesn't support FP8 loading. FP8 settings will fall back to 4-bit
-        quantization to maintain memory savings on VRAM-constrained systems.
+        Note: FP8 requests are served via 8-bit quantization for the
+        transformer/text encoder to keep everything on GPU while avoiding
+        CPU RAM spikes.
 
         Returns:
             torch.dtype based on user preference and hardware capability.
@@ -142,8 +142,8 @@ class ZImageModelManager(
     def use_quantization(self) -> bool:
         """Check if quantization should be used based on dtype setting.
         
-        Note: FP8 falls back to 4-bit quantization for Z-Image since the
-        text encoder doesn't support FP8.
+        Note: FP8 requests use 8-bit quantization for stability with the
+        bundled text encoder.
         """
         dtype_setting = getattr(self.generator_settings, "dtype", None)
         # FP8 falls back to quantization since it's not supported
@@ -162,11 +162,8 @@ class ZImageModelManager(
         elif dtype_setting == "8bit":
             return 8
         elif dtype_setting == "float8":
-            # FP8 not supported, fall back to 4-bit for memory savings
-            self.logger.warning(
-                "FP8 is not supported for Z-Image. Using 4-bit quantization instead."
-            )
-            return 4
+            # Use 8-bit quantization when user requests FP8
+            return 8
         return None
 
     @property
