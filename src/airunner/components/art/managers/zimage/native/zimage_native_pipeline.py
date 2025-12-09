@@ -27,20 +27,57 @@ from airunner.components.art.managers.zimage.native.fp8_ops import (
     TensorCoreFP8Layout,
     is_fp8_scaled_checkpoint,
 )
-from diffusers.image_processor import VaeImageProcessor
-from diffusers import AutoencoderKL
+from airunner.components.art.managers.zimage.native.flow_match_scheduler import (
+    FlowMatchEulerScheduler,
+)
 from airunner.components.art.managers.zimage.native.nextdit_model import (
     NextDiT,
     ZIMAGE_CONFIG,
     create_zimage_transformer,
 )
-from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
 from airunner.components.art.managers.zimage.native.zimage_text_encoder import (
     ZImageTextEncoder,
     ZImageTokenizer,
 )
+# We still rely on diffusers AutoencoderKL until a native VAE is available.
+from diffusers import AutoencoderKL
 
 logger = logging.getLogger(__name__)
+
+
+class _NativeVaeImageProcessor:
+    """Lightweight VAE image processor to avoid diffusers dependency."""
+
+    def __init__(self, vae_scale_factor: int = 8):
+        self.vae_scale_factor = vae_scale_factor
+
+    def _ensure_multiple(self, value: int) -> int:
+        if self.vae_scale_factor <= 0:
+            return value
+        return int(value // self.vae_scale_factor * self.vae_scale_factor)
+
+    def preprocess(self, image: Union[Image.Image, List[Image.Image], torch.Tensor], height: int, width: int) -> torch.Tensor:
+        """Resize and normalize to [-1, 1] torch tensor batch."""
+        if isinstance(image, torch.Tensor):
+            # Assume already normalized/reshaped (B, C, H, W)
+            return image
+
+        images = image if isinstance(image, list) else [image]
+        target_h = self._ensure_multiple(height)
+        target_w = self._ensure_multiple(width)
+
+        tensors: List[torch.Tensor] = []
+        for img in images:
+            if not isinstance(img, Image.Image):
+                raise ValueError("Expected PIL Image for preprocess")
+            img = img.convert("RGB")
+            img = img.resize((target_w, target_h), resample=Image.Resampling.LANCZOS)
+            arr = np.array(img).astype(np.float32) / 255.0  # HWC, [0,1]
+            arr = torch.from_numpy(arr).permute(2, 0, 1)  # CHW
+            arr = arr * 2.0 - 1.0
+            tensors.append(arr)
+
+        return torch.stack(tensors, dim=0)
 
 
 def set_module_tensor_to_device(
@@ -124,14 +161,14 @@ class ZImageNativePipeline:
             self.device = device
         self.dtype = dtype
         self.text_encoder_quantization = text_encoder_quantization
-        self.image_processor: Optional[VaeImageProcessor] = None
+        self.image_processor: Optional[_NativeVaeImageProcessor] = None
         
         # Components
         self.transformer: Optional[NextDiT] = None
         self.text_encoder: Optional[ZImageTextEncoder] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
         self.vae: Optional[nn.Module] = None
-        self.scheduler: Optional[FlowMatchEulerDiscreteScheduler] = None
+        self.scheduler: Optional[FlowMatchEulerScheduler] = None
         
         # Paths
         self.transformer_path = transformer_path
@@ -701,7 +738,7 @@ class ZImageNativePipeline:
             vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
         except Exception:
             vae_scale_factor = 8
-        self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
+        self.image_processor = _NativeVaeImageProcessor(vae_scale_factor=vae_scale_factor)
         
         
         self._loaded_components.append("vae")
@@ -719,9 +756,9 @@ class ZImageNativePipeline:
             num_inference_steps: Number of denoising steps
             shift: Sigma schedule shift (3.0 for Z-Image Turbo)
         """
-        self.scheduler = FlowMatchEulerDiscreteScheduler()
+        self.scheduler = FlowMatchEulerScheduler()
         self.scheduler.set_timesteps(num_inference_steps, device=self.device)
-        logger.info(f"Scheduler setup with {num_inference_steps} steps (FlowMatchEulerDiscreteScheduler)")
+        logger.info(f"Scheduler setup with {num_inference_steps} steps (FlowMatchEulerScheduler)")
     
     def encode_prompt(
         self,
@@ -892,7 +929,7 @@ class ZImageNativePipeline:
                     vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
                 except Exception:
                     vae_scale_factor = 8
-                self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
+                self.image_processor = _NativeVaeImageProcessor(vae_scale_factor=vae_scale_factor)
 
             # Derive target size from the input image when not provided
             if height is None or width is None:

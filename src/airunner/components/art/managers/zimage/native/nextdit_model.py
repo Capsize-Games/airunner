@@ -14,7 +14,6 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from diffusers.loaders import PeftAdapterMixin
 
 from airunner.components.art.managers.zimage.native.attention import RMSNorm
 from airunner.components.art.managers.zimage.native.embedders import (
@@ -55,7 +54,7 @@ def pad_to_patch_size(
     return x
 
 
-class NextDiT(nn.Module, PeftAdapterMixin):
+class NextDiT(nn.Module):
     """
     NextDiT: Diffusion Transformer for Z-Image/Lumina2.
     

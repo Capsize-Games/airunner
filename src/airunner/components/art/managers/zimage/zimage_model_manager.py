@@ -35,8 +35,6 @@ from airunner.components.art.pipelines.z_image import (
     ZImageImg2ImgPipeline,
 )
 import torch
-from diffusers import FlowMatchEulerDiscreteScheduler
-from diffusers import FlowMatchLCMScheduler
 
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
@@ -54,6 +52,9 @@ from airunner.components.art.managers.zimage.mixins.zimage_pipeline_loading_mixi
     ZImagePipelineLoadingMixin,
 )
 from airunner.enums import ModelType, ModelStatus
+from airunner.components.art.managers.zimage.native.flow_match_scheduler import (
+    FlowMatchEulerScheduler,
+)
 from airunner.components.art.schedulers.flow_match_scheduler_factory import (
     is_flow_match_scheduler,
     create_flow_match_scheduler,
@@ -286,8 +287,7 @@ class ZImageModelManager(
     @staticmethod
     def _is_zimage_scheduler(scheduler: Optional[Any]) -> bool:
         """Check whether the scheduler is a flow-match compatible type."""
-        flow_match_types = (FlowMatchEulerDiscreteScheduler, FlowMatchLCMScheduler)
-        return isinstance(scheduler, flow_match_types)
+        return isinstance(scheduler, FlowMatchEulerScheduler)
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
         """Load the selected flow-match scheduler for Z-Image.
