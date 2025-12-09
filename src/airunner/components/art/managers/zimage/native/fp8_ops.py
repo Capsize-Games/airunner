@@ -677,6 +677,8 @@ class FP8Linear(nn.Module):
         # Use unique name to avoid nn.Module intercepting 'weight'
         self.fp8_weight_storage: Optional[QuantizedTensor] = None
         self._has_bias = bias
+        # Optional merged weight for LoRA (set by native_lora._merge_fp8_linear_weights)
+        self._merged_weight: Optional[torch.Tensor] = None
         
         if bias:
             self.register_buffer(
@@ -739,8 +741,11 @@ class FP8Linear(nn.Module):
         if self.fp8_weight_storage is None:
             raise RuntimeError("Weight not set. Call set_fp8_weight first.")
         
-        # Dequantize weight for forward pass
-        weight = self.fp8_weight_storage.dequantize().to(x.dtype)
+        # If a LoRA merge has been staged, prefer it; otherwise dequantize FP8 weight
+        if self._merged_weight is not None:
+            weight = self._merged_weight.to(x.dtype)
+        else:
+            weight = self.fp8_weight_storage.dequantize().to(x.dtype)
         
         bias = self._bias if self._has_bias and hasattr(self, '_bias') else None
         if bias is not None:

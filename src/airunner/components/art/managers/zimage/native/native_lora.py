@@ -376,6 +376,9 @@ def extract_lora_pairs(
     pairs: Dict[str, Dict[str, Any]] = {}
     
     for key, tensor in state_dict.items():
+        # Skip network alpha maps and metadata entries
+        if key == "network_alphas" or key.startswith("network_alphas."):
+            continue
         # Skip non-LoRA keys
         if 'lora' not in key.lower():
             continue
@@ -570,6 +573,7 @@ def load_lora_into_transformer(
 
     state_dict, metadata = load_lora_state_dict(lora_path)
     default_alpha = _extract_default_alpha(metadata)
+    network_alphas = _extract_network_alphas(state_dict, metadata)
     prefix = _infer_lora_prefix(prefix, state_dict)
     pairs = extract_lora_pairs(state_dict, prefix=prefix)
 
@@ -578,12 +582,18 @@ def load_lora_into_transformer(
         return {"applied": 0, "failed": 0, "skipped": len(state_dict)}
 
     stats = {"applied": 0, "failed": 0, "skipped": 0}
+    skipped_text_encoder = False
     for module_path, lora_data in pairs.items():
+        if _is_text_encoder_path(module_path):
+            skipped_text_encoder = True
+            stats["skipped"] += 1
+            continue
         success, skipped = _apply_lora_pair(
             transformer,
             module_path,
             lora_data,
             default_alpha,
+            network_alphas,
             scale,
             adapter_name,
         )
@@ -595,6 +605,11 @@ def load_lora_into_transformer(
         else:
             stats["failed"] += 1
             logger.warning(f"Failed to apply LoRA to {module_path}")
+
+    if skipped_text_encoder:
+        logger.warning(
+            "Skipped text-encoder LoRA entries (Z-Image text encoder not currently LoRA-patched)."
+        )
 
     logger.info(
         f"LoRA '{adapter_name}' loaded: "
@@ -625,6 +640,31 @@ def _extract_default_alpha(metadata: Optional[Dict[str, Any]]) -> Optional[float
     return None
 
 
+def _extract_network_alphas(
+    state_dict: Dict[str, torch.Tensor], metadata: Optional[Dict[str, Any]]
+) -> Dict[str, float]:
+    """Extract per-layer network_alphas if present (diffusers convention)."""
+    network_alphas: Dict[str, float] = {}
+    # safetensors metadata path
+    if metadata and isinstance(metadata, dict):
+        meta_alphas = metadata.get("network_alphas")
+        if isinstance(meta_alphas, dict):
+            for k, v in meta_alphas.items():
+                try:
+                    network_alphas[k] = float(v)
+                except (TypeError, ValueError):
+                    continue
+    # state_dict path (diffusers saves a tensor/dict under network_alphas)
+    sd_alphas = state_dict.get("network_alphas")
+    if isinstance(sd_alphas, dict):
+        for k, v in sd_alphas.items():
+            try:
+                network_alphas[k] = float(v)
+            except (TypeError, ValueError):
+                continue
+    return network_alphas
+
+
 def _infer_lora_prefix(prefix: Optional[str], state_dict: Dict[str, torch.Tensor]) -> Optional[str]:
     if prefix is not None:
         return prefix
@@ -640,17 +680,28 @@ def _infer_lora_prefix(prefix: Optional[str], state_dict: Dict[str, torch.Tensor
     return None
 
 
+def _is_text_encoder_path(module_path: str) -> bool:
+    """Detect text-encoder LoRA targets to warn/skip (not supported)."""
+    lowered = module_path.lower()
+    return lowered.startswith("text_encoder") or "/text_encoder" in lowered or "text_encoder" in lowered
+
+
 def _apply_lora_pair(
     transformer: nn.Module,
     module_path: str,
     lora_data: Dict[str, Any],
     default_alpha: Optional[float],
+    network_alphas: Dict[str, float],
     scale: float,
     adapter_name: str,
 ) -> tuple[bool, bool]:
     down_weight = lora_data['down']
     up_weight = lora_data['up']
-    alpha = lora_data.get('alpha') or default_alpha
+    alpha = (
+        lora_data.get('alpha')
+        or network_alphas.get(module_path)
+        or default_alpha
+    )
 
     apply_kwargs = {
         "down_weight": down_weight,
