@@ -30,6 +30,10 @@ Key Features:
 """
 
 from typing import Dict, Any, Optional
+from airunner.components.art.pipelines.z_image import (
+    ZImagePipeline,
+    ZImageImg2ImgPipeline,
+)
 import torch
 from diffusers import FlowMatchEulerDiscreteScheduler
 from diffusers import FlowMatchLCMScheduler
@@ -167,14 +171,12 @@ class ZImageModelManager(
     @property
     def img2img_pipelines(self) -> tuple:
         """Get img2img pipeline classes for Z-Image."""
-        from airunner.components.art.pipelines.z_image import ZImageImg2ImgPipeline
-        return (ZImageImg2ImgPipeline,)
+        return (ZImageImg2ImgPipeline,) if ZImageImg2ImgPipeline is not None else tuple()
 
     @property
     def txt2img_pipelines(self) -> tuple:
         """Get txt2img pipeline classes for Z-Image."""
-        from airunner.components.art.pipelines.z_image import ZImagePipeline
-        return (ZImagePipeline,)
+        return (ZImagePipeline,) if ZImagePipeline is not None else tuple()
 
     @property
     def controlnet_pipelines(self) -> tuple:
@@ -199,12 +201,13 @@ class ZImageModelManager(
         Returns:
             Dict mapping operation names to pipeline classes
         """
-        from airunner.components.art.pipelines.z_image import ZImagePipeline, ZImageImg2ImgPipeline
-        return {
-            "txt2img": ZImagePipeline,
-            "img2img": ZImageImg2ImgPipeline,
-            # inpaint, outpaint will be added when Z-Image-Edit is released
-        }
+        mapping: Dict[str, Any] = {}
+        if ZImagePipeline is not None:
+            mapping["txt2img"] = ZImagePipeline
+        if ZImageImg2ImgPipeline is not None:
+            mapping["img2img"] = ZImageImg2ImgPipeline
+        # inpaint, outpaint will be added when Z-Image-Edit is released
+        return mapping
 
     @property
     def _pipeline_class(self) -> Any:
@@ -283,10 +286,7 @@ class ZImageModelManager(
     @staticmethod
     def _is_zimage_scheduler(scheduler: Optional[Any]) -> bool:
         """Check whether the scheduler is a flow-match compatible type."""
-        try:
-            flow_match_types = (FlowMatchEulerDiscreteScheduler, FlowMatchLCMScheduler)
-        except ImportError:
-            flow_match_types = (FlowMatchEulerDiscreteScheduler,)
+        flow_match_types = (FlowMatchEulerDiscreteScheduler, FlowMatchLCMScheduler)
         return isinstance(scheduler, flow_match_types)
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):

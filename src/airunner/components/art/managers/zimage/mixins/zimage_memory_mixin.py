@@ -5,11 +5,7 @@ from contextlib import contextmanager
 from typing import Generator
 
 import torch
-try:
-    from bitsandbytes.nn import Linear8bitLt, Linear4bit  # type: ignore
-except Exception:
-    Linear8bitLt = None
-    Linear4bit = None
+from bitsandbytes.nn import Linear8bitLt, Linear4bit  # type: ignore
 
 
 class ZImageMemoryMixin:

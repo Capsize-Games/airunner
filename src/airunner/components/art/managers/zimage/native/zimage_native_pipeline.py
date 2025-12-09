@@ -21,11 +21,14 @@ from safetensors import safe_open
 from safetensors.torch import load_file as load_safetensors
 
 from airunner.components.art.managers.zimage.native.fp8_ops import (
+    FP8Linear,
+    UnscaledFP8Linear,
     QuantizedTensor,
     TensorCoreFP8Layout,
     is_fp8_scaled_checkpoint,
 )
 from diffusers.image_processor import VaeImageProcessor
+from diffusers import AutoencoderKL
 from airunner.components.art.managers.zimage.native.nextdit_model import (
     NextDiT,
     ZIMAGE_CONFIG,
@@ -260,8 +263,7 @@ class ZImageNativePipeline:
         Args:
             path: Path to safetensors checkpoint
         """
-        import gc
-        from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear
+        # FP8Linear is imported at module level; avoid re-importing here.
         
         # First, detect the number of layers from checkpoint
         n_layers = self._detect_layer_count(path)
@@ -417,7 +419,7 @@ class ZImageNativePipeline:
         Args:
             path: Path to checkpoint file
         """
-        from airunner.components.art.managers.zimage.native.fp8_ops import UnscaledFP8Linear
+        # UnscaledFP8Linear is imported at module level; avoid re-importing here.
         
         # Log pre-load VRAM state
         if torch.cuda.is_available():
@@ -681,32 +683,26 @@ class ZImageNativePipeline:
         
         logger.info(f"Loading VAE from {path}")
         
-        # Try loading with diffusers if available
+        # Load VAE using diffusers' AutoencoderKL
+        self.vae = AutoencoderKL.from_pretrained(
+            path,
+            torch_dtype=self.dtype,
+        ).to(self.device)
+        self.vae.eval()
+
+        # Reduce VRAM during decode by tiling/slicing
+        if hasattr(self.vae, "enable_slicing"):
+            self.vae.enable_slicing()
+        if hasattr(self.vae, "enable_tiling"):
+            self.vae.enable_tiling()
+
+        # Create an image processor for encode/decode convenience
         try:
-            from diffusers import AutoencoderKL
-            
-            self.vae = AutoencoderKL.from_pretrained(
-                path,
-                torch_dtype=self.dtype,
-            ).to(self.device)
-            self.vae.eval()
-
-            # Reduce VRAM during decode by tiling/slicing
-            if hasattr(self.vae, "enable_slicing"):
-                self.vae.enable_slicing()
-            if hasattr(self.vae, "enable_tiling"):
-                self.vae.enable_tiling()
-
-            # Create an image processor for encode/decode convenience
-            try:
-                vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
-            except Exception:
-                vae_scale_factor = 8
-            self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
-            
-        except ImportError:
-            logger.warning("diffusers not available, VAE must be loaded manually")
-            raise
+            vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+        except Exception:
+            vae_scale_factor = 8
+        self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
+        
         
         self._loaded_components.append("vae")
         logger.info("VAE loaded successfully")
