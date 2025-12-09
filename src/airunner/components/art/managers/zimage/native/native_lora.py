@@ -2,13 +2,15 @@
 Native LoRA implementation for FP8 Z-Image models.
 
 This module provides LoRA support for FP8Linear layers without PEFT dependency.
-LoRA weights are merged directly into the base weights during loading.
+LoRA weights are stored separately and applied additively during forward pass,
+allowing LoRAs to be enabled/disabled without reloading the base model.
 
-Key differences from PEFT-based LoRA:
-- Works with FP8Linear layers directly
-- Merges weights at load time (no separate A/B matrices during inference)
-- Simpler implementation, lower memory overhead
-- No hot-swapping - requires reload to change LoRA
+Key features:
+- Works with FP8Linear and UnscaledFP8Linear layers directly
+- Non-destructive: LoRA weights stored separately, applied during forward
+- Enable/disable LoRAs without model reload
+- Adjust LoRA scale dynamically
+- Low memory overhead (LoRA matrices are small)
 """
 
 from __future__ import annotations
@@ -229,22 +231,24 @@ def apply_lora_to_fused_qkv(
     slice_idx: int,
     alpha: Optional[float] = None,
     scale: float = 1.0,
+    adapter_name: str = "default",
 ) -> bool:
     """
     Apply LoRA weights to a slice of a fused QKV layer.
     
-    For models with fused QKV (shape [3*hidden, hidden]), we need to:
-    1. Dequantize the full QKV weight
-    2. Apply the LoRA delta to only the Q, K, or V portion
-    3. Re-quantize
+    For models with fused QKV (shape [3*hidden, hidden]), LoRA targets
+    Q, K, or V individually. We handle this by:
+    - For UnscaledFP8Linear: Store padded LoRA that only affects the target slice
+    - For other types: Merge directly into the weight slice
     
     Args:
         qkv_module: The fused QKV linear layer
         down_weight: LoRA down/A weight
-        up_weight: LoRA up/B weight
+        up_weight: LoRA up/B weight  
         slice_idx: Which slice (0=Q, 1=K, 2=V)
         alpha: LoRA alpha
         scale: LoRA scale factor
+        adapter_name: Name for the LoRA adapter
         
     Returns:
         True if successful, False otherwise
@@ -252,10 +256,42 @@ def apply_lora_to_fused_qkv(
     from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, UnscaledFP8Linear
     
     try:
-        # Get base weight
         if isinstance(qkv_module, UnscaledFP8Linear):
-            base_weight = qkv_module.get_dequantized_weight()
-        elif isinstance(qkv_module, FP8Linear):
+            # For UnscaledFP8Linear, create a padded LoRA that targets only the slice
+            # The up_weight needs to be padded to [3*hidden, rank] with zeros
+            # so it only affects the target Q/K/V slice
+            
+            total_out = qkv_module.out_features
+            hidden_dim = qkv_module.in_features
+            slice_size = total_out // 3
+            rank = down_weight.shape[0]
+            
+            # Create padded up_weight [3*hidden, rank] with zeros
+            device = down_weight.device
+            dtype = down_weight.dtype
+            padded_up = torch.zeros(total_out, rank, device=device, dtype=dtype)
+            
+            # Place the up_weight in the correct slice
+            start_idx = slice_idx * slice_size
+            end_idx = start_idx + slice_size
+            padded_up[start_idx:end_idx] = up_weight
+            
+            # Use a unique adapter name that includes the slice
+            slice_name = ["q", "k", "v"][slice_idx]
+            full_adapter_name = f"{adapter_name}_{slice_name}"
+            
+            # Add the padded LoRA
+            qkv_module.add_lora(
+                adapter_name=full_adapter_name,
+                down_weight=down_weight,
+                up_weight=padded_up,
+                alpha=alpha,
+                scale=scale,
+            )
+            return True
+            
+        # For non-UnscaledFP8Linear, fall back to weight merging
+        if isinstance(qkv_module, FP8Linear):
             weight_attr = getattr(qkv_module, 'weight', None)
             if weight_attr is None or not hasattr(weight_attr, 'dequantize'):
                 logger.warning(f"FP8Linear has no valid weight")
@@ -298,11 +334,7 @@ def apply_lora_to_fused_qkv(
         del delta, down_weight, up_weight
         
         # Update the layer
-        if isinstance(qkv_module, UnscaledFP8Linear):
-            qkv_module.merge_lora_weight(base_weight)
-            del base_weight
-            torch.cuda.empty_cache()
-        elif isinstance(qkv_module, FP8Linear):
+        if isinstance(qkv_module, FP8Linear):
             # Store merged weight
             if not hasattr(qkv_module, '_merged_weight'):
                 qkv_module._merged_weight = None
@@ -384,11 +416,13 @@ def apply_lora_to_linear(
     up_weight: torch.Tensor,
     alpha: Optional[float] = None,
     scale: float = 1.0,
+    adapter_name: str = "default",
 ) -> bool:
     """
     Apply LoRA weights to a Linear, FP8Linear, or UnscaledFP8Linear layer.
     
-    For FP8Linear/UnscaledFP8Linear, we dequantize, merge, and store merged weights.
+    For UnscaledFP8Linear, uses additive LoRA (non-destructive).
+    For other types, falls back to weight merging.
     
     Args:
         linear: Target linear layer
@@ -396,6 +430,7 @@ def apply_lora_to_linear(
         up_weight: LoRA up/B weight
         alpha: LoRA alpha
         scale: LoRA scale factor
+        adapter_name: Name for the LoRA adapter
         
     Returns:
         True if successful, False otherwise
@@ -403,78 +438,69 @@ def apply_lora_to_linear(
     # Import here to avoid circular imports
     from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, QuantizedTensor, UnscaledFP8Linear
     
-    # Get base weight
     try:
         if isinstance(linear, UnscaledFP8Linear):
-            # UnscaledFP8Linear stores FP8 weights in fp8_storage buffer
-            # Need to dequantize first
-            base_weight = linear.get_dequantized_weight()
+            # Use additive LoRA for UnscaledFP8Linear (non-destructive)
+            linear.add_lora(
+                adapter_name=adapter_name,
+                down_weight=down_weight,
+                up_weight=up_weight,
+                alpha=alpha,
+                scale=scale,
+            )
+            return True
         elif isinstance(linear, FP8Linear):
+            # FP8Linear with QuantizedTensor - need to merge (destructive)
             weight_attr = getattr(linear, 'weight', None)
             if weight_attr is None:
                 logger.warning(f"FP8Linear has no weight set (weight is None)")
                 return False
-            # Check if it's a QuantizedTensor
             if hasattr(weight_attr, 'dequantize'):
                 base_weight = weight_attr.dequantize()
             else:
                 logger.warning(f"FP8Linear weight is not a QuantizedTensor: {type(weight_attr)}")
                 return False
+            
+            # Compute and merge
+            device = base_weight.device
+            dtype = base_weight.dtype
+            down_weight = down_weight.to(device=device, dtype=dtype)
+            up_weight = up_weight.to(device=device, dtype=dtype)
+            delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
+            
+            if delta.shape != base_weight.shape:
+                logger.warning(f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}")
+                return False
+            
+            merged_weight = base_weight + delta
+            del base_weight, delta, down_weight, up_weight
+            
+            # Store merged weight
+            if not hasattr(linear, '_merged_weight'):
+                linear._merged_weight = None
+            linear._merged_weight = merged_weight
+            return True
         elif isinstance(linear, nn.Linear):
+            # Standard Linear - merge directly
             base_weight = linear.weight.data
+            device = base_weight.device
+            dtype = base_weight.dtype
+            down_weight = down_weight.to(device=device, dtype=dtype)
+            up_weight = up_weight.to(device=device, dtype=dtype)
+            delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
+            
+            if delta.shape != base_weight.shape:
+                logger.warning(f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}")
+                return False
+            
+            linear.weight.data = base_weight + delta
+            return True
         else:
             logger.warning(f"Unsupported layer type: {type(linear)}")
             return False
     except Exception as e:
-        logger.warning(f"Failed to get base weight: {e}")
+        logger.warning(f"Failed to apply LoRA: {e}")
         return False
-    
-    # Compute LoRA delta
-    device = base_weight.device
-    dtype = base_weight.dtype
-    
-    down_weight = down_weight.to(device=device, dtype=dtype)
-    up_weight = up_weight.to(device=device, dtype=dtype)
-    
-    delta = compute_lora_weight(down_weight, up_weight, alpha=alpha, scale=scale)
-    
-    # Verify shapes match
-    if delta.shape != base_weight.shape:
-        logger.warning(
-            f"Shape mismatch: base={base_weight.shape}, delta={delta.shape}"
-        )
-        return False
-    
-    # Merge weights
-    merged_weight = base_weight + delta
-    
-    # Free intermediate tensors
-    del base_weight, delta, down_weight, up_weight
-    
-    # Update the layer
-    if isinstance(linear, UnscaledFP8Linear):
-        # Merge LoRA weight back into FP8 for memory efficiency
-        # This avoids storing both FP8 and bfloat16 weights
-        linear.merge_lora_weight(merged_weight)
-        del merged_weight  # Free the bfloat16 copy immediately
-        torch.cuda.empty_cache()
-    elif isinstance(linear, FP8Linear):
-        # Convert FP8Linear to regular Linear after LoRA merge
-        # (We lose FP8 compression but gain LoRA effects)
-        linear.weight = QuantizedTensor.from_fp8_with_scale(
-            merged_weight.to(torch.float8_e4m3fn),
-            torch.tensor(1.0, device=device),  # Scale of 1 since already in correct range
-            dtype
-        )
-        # Alternative: Store as regular float weight
-        # This uses more memory but is more accurate
-        if not hasattr(linear, '_merged_weight'):
-            linear._merged_weight = None
-        linear._merged_weight = merged_weight
-    else:
-        linear.weight.data = merged_weight
-    
-    return True
 
 
 def load_lora_into_transformer(
@@ -555,6 +581,7 @@ def load_lora_into_transformer(
                 up_weight=up_weight,
                 alpha=alpha,
                 scale=scale,
+                adapter_name=adapter_name,
             )
         else:
             # Try fused QKV mapping for attention layers
@@ -572,6 +599,7 @@ def load_lora_into_transformer(
                         slice_idx=slice_idx,
                         alpha=alpha,
                         scale=scale,
+                        adapter_name=adapter_name,
                     )
                     if success:
                         logger.debug(f"Applied LoRA to fused QKV slice {slice_idx} for {module_path}")
@@ -583,6 +611,7 @@ def load_lora_into_transformer(
                         up_weight=up_weight,
                         alpha=alpha,
                         scale=scale,
+                        adapter_name=adapter_name,
                     )
                     if success:
                         logger.debug(f"Applied LoRA to attention.out for {module_path}")
@@ -605,6 +634,15 @@ def load_lora_into_transformer(
     return stats
 
 
+def _iterate_lora_layers(transformer: nn.Module):
+    """Iterate over all modules that have LoRA support."""
+    from airunner.components.art.managers.zimage.native.fp8_ops import UnscaledFP8Linear
+    
+    for module in transformer.modules():
+        if isinstance(module, UnscaledFP8Linear) and hasattr(module, '_lora_layers'):
+            yield module
+
+
 class NativeLoraLoader:
     """
     LoRA loader for native FP8 Z-Image pipelines.
@@ -612,9 +650,17 @@ class NativeLoraLoader:
     This class manages LoRA loading for models that use FP8Linear layers,
     bypassing PEFT entirely for compatibility.
     
+    Features:
+    - Non-destructive LoRA loading (additive, not merged)
+    - Enable/disable LoRAs without model reload
+    - Adjust LoRA scale dynamically
+    - Remove LoRAs to free memory
+    
     Usage:
         loader = NativeLoraLoader(transformer)
         loader.load_lora("/path/to/lora.safetensors", scale=1.0)
+        loader.set_lora_enabled("lora_name", False)  # Disable
+        loader.remove_lora("lora_name")  # Remove completely
     """
     
     def __init__(self, transformer: nn.Module):
@@ -659,9 +705,132 @@ class NativeLoraLoader:
             "path": str(path) if isinstance(path, (str, Path)) else "<dict>",
             "scale": scale,
             "stats": stats,
+            "enabled": True,
         }
         
         return stats["applied"] > 0
+    
+    def set_lora_enabled(self, adapter_name: str, enabled: bool) -> bool:
+        """Enable or disable a LoRA adapter.
+        
+        This toggles the LoRA effect without removing the weights from memory.
+        
+        Args:
+            adapter_name: Name of the adapter to toggle
+            enabled: Whether to enable or disable
+            
+        Returns:
+            True if the adapter was found and updated
+        """
+        if adapter_name not in self._loaded_loras:
+            logger.warning(f"LoRA '{adapter_name}' not found")
+            return False
+        
+        # Update all layers that have this adapter
+        found = False
+        for module in _iterate_lora_layers(self.transformer):
+            # Check for exact match and QKV slice variants
+            for name in [adapter_name, f"{adapter_name}_q", f"{adapter_name}_k", f"{adapter_name}_v"]:
+                if module.set_lora_enabled(name, enabled):
+                    found = True
+        
+        if found:
+            self._loaded_loras[adapter_name]["enabled"] = enabled
+            logger.info(f"LoRA '{adapter_name}' {'enabled' if enabled else 'disabled'}")
+        else:
+            logger.warning(f"LoRA '{adapter_name}' not found in any layers")
+        
+        return found
+    
+    def set_all_loras_enabled(self, enabled: bool) -> None:
+        """Enable or disable all LoRA adapters."""
+        for module in _iterate_lora_layers(self.transformer):
+            module.set_all_loras_enabled(enabled)
+        
+        for lora_data in self._loaded_loras.values():
+            lora_data["enabled"] = enabled
+        
+        logger.info(f"All LoRAs {'enabled' if enabled else 'disabled'}")
+    
+    def set_lora_scale(self, adapter_name: str, scale: float) -> bool:
+        """Set the scale for a LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter
+            scale: New scale value (0.0-1.0+)
+            
+        Returns:
+            True if found and updated
+        """
+        if adapter_name not in self._loaded_loras:
+            logger.warning(f"LoRA '{adapter_name}' not found")
+            return False
+        
+        found = False
+        for module in _iterate_lora_layers(self.transformer):
+            for name in [adapter_name, f"{adapter_name}_q", f"{adapter_name}_k", f"{adapter_name}_v"]:
+                if module.set_lora_scale(name, scale):
+                    found = True
+        
+        if found:
+            self._loaded_loras[adapter_name]["scale"] = scale
+            logger.info(f"LoRA '{adapter_name}' scale set to {scale}")
+        
+        return found
+    
+    def remove_lora(self, adapter_name: str) -> bool:
+        """Remove a LoRA adapter completely.
+        
+        This removes the LoRA weights from memory.
+        
+        Args:
+            adapter_name: Name of the adapter to remove
+            
+        Returns:
+            True if found and removed
+        """
+        if adapter_name not in self._loaded_loras:
+            logger.warning(f"LoRA '{adapter_name}' not found")
+            return False
+        
+        removed_count = 0
+        for module in _iterate_lora_layers(self.transformer):
+            for name in [adapter_name, f"{adapter_name}_q", f"{adapter_name}_k", f"{adapter_name}_v"]:
+                if module.remove_lora(name):
+                    removed_count += 1
+        
+        del self._loaded_loras[adapter_name]
+        logger.info(f"LoRA '{adapter_name}' removed from {removed_count} layers")
+        
+        # Clean up memory
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        return removed_count > 0
+    
+    def remove_all_loras(self) -> int:
+        """Remove all LoRA adapters.
+        
+        Returns:
+            Number of layers that had LoRAs removed
+        """
+        total_removed = 0
+        for module in _iterate_lora_layers(self.transformer):
+            total_removed += module.remove_all_loras()
+        
+        count = len(self._loaded_loras)
+        self._loaded_loras.clear()
+        logger.info(f"Removed all LoRAs ({count} adapters, {total_removed} layer instances)")
+        
+        # Clean up memory
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        return total_removed
     
     @property
     def loaded_loras(self) -> Dict[str, Dict[str, Any]]:

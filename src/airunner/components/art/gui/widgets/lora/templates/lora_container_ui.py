@@ -148,7 +148,6 @@ class Ui_lora_container(object):
         self.toggleAllLora.toggled.connect(lora_container.toggle_all)
         self.lineEdit.textEdited.connect(lora_container.search_text_changed)
         self.pushButton.clicked.connect(lora_container.scan_for_lora)
-        self.apply_lora_button.clicked.connect(lora_container.apply_lora)
 
         QMetaObject.connectSlotsByName(lora_container)
     # setupUi

@@ -166,11 +166,46 @@ class NativePipelineWrapper:
             logger.warning(f"LoRA '{adapter_name}' loaded but no layers were modified")
 
     def unload_lora_weights(self, adapter_name: Optional[str] = None) -> None:
-        """Note: Native LoRA merges weights, so unload requires model reload."""
-        logger.warning(
-            "Native LoRA loader merges weights at load time. "
-            "To remove LoRA effects, reload the model."
-        )
+        """Unload LoRA weights from the pipeline.
+        
+        Args:
+            adapter_name: Specific adapter to unload, or None to unload all
+        """
+        if not hasattr(self, '_lora_loader') or self._lora_loader is None:
+            logger.debug("No LoRA loader initialized, nothing to unload")
+            return
+        
+        if adapter_name is not None:
+            self._lora_loader.remove_lora(adapter_name)
+        else:
+            self._lora_loader.remove_all_loras()
+    
+    def set_lora_enabled(self, adapter_name: str, enabled: bool) -> bool:
+        """Enable or disable a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter
+            enabled: Whether to enable or disable
+            
+        Returns:
+            True if successful
+        """
+        if not hasattr(self, '_lora_loader') or self._lora_loader is None:
+            logger.warning("No LoRA loader initialized")
+            return False
+        return self._lora_loader.set_lora_enabled(adapter_name, enabled)
+    
+    def set_all_loras_enabled(self, enabled: bool) -> None:
+        """Enable or disable all LoRA adapters."""
+        if not hasattr(self, '_lora_loader') or self._lora_loader is None:
+            return
+        self._lora_loader.set_all_loras_enabled(enabled)
+    
+    def set_lora_scale(self, adapter_name: str, scale: float) -> bool:
+        """Set the scale for a LoRA adapter."""
+        if not hasattr(self, '_lora_loader') or self._lora_loader is None:
+            return False
+        return self._lora_loader.set_lora_scale(adapter_name, scale)
     
     @property
     def loaded_loras(self) -> Dict[str, Any]:
