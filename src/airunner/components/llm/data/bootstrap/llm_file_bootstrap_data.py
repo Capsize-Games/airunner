@@ -149,6 +149,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
     "mistralai/Ministral-3-8B-Reasoning-2512": {
         "path_settings": "llm_causallm_model_path",
         "context_length": 262144,
+        "requires_config_patch": True,
         "capabilities": {
             "function_calling": True,
             "thinking_capable": True,
@@ -162,7 +163,8 @@ LLM_FILE_BOOTSTRAP_DATA = {
             # BF16 model - larger than FP8 Instruct variant (~17.8GB total)
             # Uses sharded safetensors (model-00001/2/3/4-of-00004.safetensors)
             "chat_template.jinja": 6206,
-            "config.json": 1547,
+            # config.json is patched post-download; skip strict size validation
+            "config.json": 0,
             "generation_config.json": 131,
             "model-00001-of-00004.safetensors": 4984292952,
             "model-00002-of-00004.safetensors": 4999804256,
@@ -174,7 +176,8 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "special_tokens_map.json": 147085,
             "tekken.json": 16753777,
             "tokenizer.json": 17078110,
-            "tokenizer_config.json": 198076,
+            # tokenizer_config.json is patched post-download; skip strict size validation
+            "tokenizer_config.json": 0,
         },
     },
     "mistralai/Ministral-3-8B-Reasoning-2512-GGUF": {

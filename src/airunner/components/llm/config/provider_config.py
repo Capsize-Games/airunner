@@ -56,7 +56,10 @@ class LLMProviderConfig:
             # NOTE: Changed from "native" to "react" - mistral_common tekken tokenizer
             # produces corrupted output with Mistral3ForConditionalGeneration (vision model)
             "tool_calling_mode": "react",
-            "supports_thinking": True,  # Uses [THINK]...[/THINK] reasoning blocks
+            # Disable template thinking blocks to keep streaming responsive
+            # The reasoning model still does step-by-step internally, but we skip
+            # injecting enable_thinking so the template yields a direct answer.
+            "supports_thinking": False,
             "thinking_tag_format": "brackets",  # [THINK]...[/THINK] vs angle <think>...</think>
             "rag_capable": True,
             "vision_capable": True,  # Ministral 3 has vision capabilities

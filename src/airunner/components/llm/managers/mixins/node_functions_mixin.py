@@ -1192,6 +1192,12 @@ Based on the search results above, provide a clear, conversational answer to the
             self._chat_model, "tool_calling_mode", "react"
         )
 
+        # ReAct mode needs explicit, compact tool instructions to nudge tool calls
+        if tool_calling_mode == "react":
+            compact_tools = self._create_compact_tool_list()
+            if compact_tools:
+                system_prompt = f"{system_prompt}\n\n{compact_tools}"
+
         self.logger.debug(
             "Tools (%s) bound via bind_tools() - chat adapter will format them (mode: %s)",
             len(self._tools),

@@ -64,7 +64,6 @@ class ZImageGenerationMixin:
         self._strip_zimage_incompatible_params(data)
         self._enforce_zimage_guidance(data)
         data["max_sequence_length"] = 512
-        self._log_zimage_generation_params(data)
         return data
 
     def _strip_zimage_incompatible_params(self, data: Dict) -> None:
@@ -87,21 +86,6 @@ class ZImageGenerationMixin:
         but we respect whatever the user has configured.
         """
         pass
-
-    def _log_zimage_generation_params(self, data: Dict) -> None:
-        """Log core generation parameters for debugging."""
-        debug_fields = {
-            "prompt": data.get("prompt", "MISSING!")[:50] + "...",
-            "guidance_scale": data.get("guidance_scale", "MISSING!"),
-            "steps": data.get("num_inference_steps", "MISSING!"),
-            "size": f"{data.get('width')}x{data.get('height')}",
-            "max_sequence_length": data.get("max_sequence_length", "MISSING!"),
-        }
-        self.logger.info(
-            "[Z-IMAGE DEBUG] Keys: %s | Values: %s",
-            list(data.keys()),
-            debug_fields,
-        )
 
     def _unload_loras(self):
         """Unload Z-Image LoRA weights if any are loaded.
@@ -341,10 +325,6 @@ class ZImageGenerationMixin:
             return
         
         self.logger.debug("Clearing pipeline caches to free RAM")
-        
-        # Clear any cached tensors on the pipeline
-        if hasattr(self._pipe, "_callback_tensor_inputs"):
-            self._pipe._callback_tensor_inputs = None
         
         # For text encoder, clear any cached key/values
         text_encoder = getattr(self._pipe, "text_encoder", None)

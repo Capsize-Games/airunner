@@ -662,6 +662,9 @@ class LLMModelManager(
         elif action == LLMActionType.CODE:
             # For CODE mode, require tool usage (start_workflow should be called)
             tool_choice = "any"
+        elif tool_categories and ("search" in tool_categories or "research" in tool_categories):
+            # Search intent: require at least one tool call to avoid hallucinated answers
+            tool_choice = "any"
             
         self._workflow_manager.update_tools(
             filtered_tools, tool_choice=tool_choice
@@ -680,6 +683,26 @@ class LLMModelManager(
         Returns:
             List of tool category strings (empty list if no tools needed)
         """
+        # Fast-path: trivial greetings/short chit-chat should not trigger tools
+        prompt_lc = (prompt or "").strip().lower()
+        if len(prompt_lc) <= 40:
+            greeting_tokens = [
+                "hello",
+                "hi",
+                "hey",
+                "hola",
+                "yo",
+                "sup",
+                "morning",
+                "afternoon",
+                "evening",
+                "thanks",
+                "thank you",
+            ]
+            if any(token in prompt_lc for token in greeting_tokens):
+                self.logger.info("Auto mode: greeting detected, disabling tools")
+                return []
+
         # Get available categories from ToolCategory enum
         from airunner.components.llm.core.tool_registry import ToolCategory
         
@@ -749,19 +772,37 @@ Reply with ONLY category names (comma-separated) or "none":"""
                         response_text = re.sub(r'\[/?THINK\]', '', response_text, flags=re.IGNORECASE)
                     
                     # Parse the response
+                    import re
                     response_text = response_text.strip().lower()
-                    self.logger.info(f"LLM classification response: {response_text}")
+                    # Drop echoed category listings so we don't select every tool
+                    response_text = re.sub(
+                        r"categories:\s*[a-z,\s]+", "", response_text, flags=re.IGNORECASE
+                    )
+                    cleaned_lines = [line.strip() for line in response_text.splitlines() if line.strip()]
+                    candidate_text = cleaned_lines[0] if cleaned_lines else response_text
+                    self.logger.info(f"LLM classification response: {candidate_text}")
                     
-                    if response_text == "none" or not response_text:
+                    if candidate_text == "none" or not candidate_text:
                         self.logger.info("Auto mode: LLM determined no tools needed")
                         return []
                     
-                    # Parse comma-separated categories
+                    # Parse comma-separated categories from the first non-empty line
                     selected_categories = []
-                    for cat in response_text.split(","):
-                        cat = cat.strip()
-                        if cat in available_categories:
-                            selected_categories.append(cat)
+                    for cat in candidate_text.split(","):
+                        token = cat.strip()
+                        if token in available_categories and token not in selected_categories:
+                            selected_categories.append(token)
+
+                    # Fallback: try whitespace-separated tokens if comma parsing failed
+                    if not selected_categories:
+                        for token in candidate_text.replace(",", " ").split():
+                            token_clean = token.strip().strip(".;:")
+                            if token_clean in available_categories and token_clean not in selected_categories:
+                                selected_categories.append(token_clean)
+                    
+                    # Limit to a small set to avoid binding every tool
+                    if len(selected_categories) > 5:
+                        selected_categories = selected_categories[:5]
                     
                     # Always include search for questions that might need current info
                     # The LLM should have included it, but ensure it's there for safety

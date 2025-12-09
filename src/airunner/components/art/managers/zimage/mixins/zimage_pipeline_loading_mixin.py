@@ -525,6 +525,20 @@ class ZImagePipelineLoadingMixin:
                 bnb_4bit_use_double_quant=True,
                 bnb_4bit_quant_type="nf4",
             )
+
+        # If user requested quantization for the whole pipeline (float8/8bit/4bit),
+        # configure BitsAndBytes for the transformer when loading from single file.
+        pipeline_quant_config = None
+        if not is_fp8_checkpoint:
+            if use_quant and quant_bits == 4:
+                pipeline_quant_config = DiffusersBnBConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4",
+                )
+            elif use_quant and quant_bits == 8:
+                pipeline_quant_config = DiffusersBnBConfig(load_in_8bit=True)
         
         # Load the text encoder from the local text_encoder subfolder (reuse helper)
         text_encoder_path = os.path.join(model_dir, "text_encoder")
@@ -549,27 +563,29 @@ class ZImagePipelineLoadingMixin:
             "tokenizer": tokenizer,
             **data,
         }
+
+        # Apply pipeline-level quantization/device map when requested so the BF16
+        # safetensors checkpoint loads directly to GPU in 8-bit/4-bit form.
+        if pipeline_quant_config is not None:
+            pipe_kwargs["quantization_config"] = pipeline_quant_config
+            pipe_kwargs["device_map"] = "auto"
+            max_mem = self._compute_max_memory_for_models(use_quant)
+            if max_mem is not None:
+                pipe_kwargs["max_memory"] = max_mem
+            self.logger.info(
+                f"Applying pipeline quantization ({'4bit' if quant_bits == 4 else '8bit'}) with device_map=auto"
+            )
         
         # Get config path if available
         config_path = self._get_config_path()
         if config_path and os.path.isdir(str(config_path)):
             pipe_kwargs["config"] = config_path
         
-        pipe = self._load_pipeline_from_single_file(model_path, pipeline_class, pipe_kwargs)
-        if pipe is not None:
-            self._pipe = pipe
-            self.logger.info(f"Pipeline loaded from single file {quant_info}")
-        else:
-            self.logger.error("Failed to load from single file")
-            # Prefer native FP8 loader on failure to avoid CPU-only fallback
-            if is_fp8_checkpoint:
-                self.logger.info("Retrying with native FP8 pipeline after from_single_file failure")
-                self._load_native_fp8_pipeline(model_path, model_dir, pipeline_class, data)
-                return
-            # Fall back to manual assembly
-            self._load_single_file_with_fallback(
-                model_path, pipeline_class, text_encoder, tokenizer, data
-            )
+        # Skip diffusers from_single_file for Z-Image (unsupported) to avoid extra load attempts
+        self.logger.info("Skipping diffusers.from_single_file for Z-Image; using manual fallback loader")
+        self._load_single_file_with_fallback(
+            model_path, pipeline_class, text_encoder, tokenizer, data
+        )
 
     def _compute_max_memory_for_text_encoder(self, is_fp8_checkpoint: bool):
         """Calculate the max memory mapping for text encoder device_map when loading.
@@ -616,22 +632,44 @@ class ZImagePipelineLoadingMixin:
         
         # Use module-level imports for AutoencoderKL and ZImageTransformer2DModel
         
-        # Get user's precision setting
+        # Get user's precision/quantization setting
         model_dtype = self.data_type
+        use_quant = getattr(self, "use_quantization", False)
+        quant_bits = getattr(self, "quantization_bits", None)
+        max_memory_for_models = self._compute_max_memory_for_models(use_quant)
+        transformer_bnb_config = None
+        if use_quant and quant_bits == 4:
+            transformer_bnb_config = DiffusersBnBConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+        elif use_quant and quant_bits == 8:
+            transformer_bnb_config = DiffusersBnBConfig(load_in_8bit=True)
         
         # Get the directory containing the checkpoint
         model_dir = os.path.dirname(model_path)
+        transformer_path = os.path.join(model_dir, "transformer")
         
-        # Load the transformer config from the companion folder
-        transformer = self._create_transformer_from_config_or_default(model_dir)
+        transformer = None
+        if transformer_bnb_config is not None:
+            self.logger.info(
+                f"Fallback: loading transformer from pretrained with {quant_bits}-bit quantization"
+            )
+            transformer = self._load_transformer_from_pretrained(
+                Path(transformer_path), transformer_bnb_config, model_dtype, max_memory_for_models
+            )
+            if transformer is None:
+                self.logger.warning("Quantized transformer load failed; falling back to safetensors weights")
         
-        # Load weights from the safetensors checkpoint
-        self.logger.info(f"Loading transformer weights from {model_path}")
-        self._load_transformer_weights_from_safetensors(transformer, model_path)
-        
-        # Move to correct dtype
-        transformer = transformer.to(model_dtype)
-        self.logger.info(f"Transformer loaded successfully (dtype: {model_dtype})")
+        if transformer is None:
+            # Load via config + safetensors weights (non-quantized path)
+            transformer = self._create_transformer_from_config_or_default(model_dir)
+            self.logger.info(f"Loading transformer weights from {model_path}")
+            self._load_transformer_weights_from_safetensors(transformer, model_path)
+            transformer = transformer.to(model_dtype)
+            self.logger.info(f"Transformer loaded successfully (dtype: {model_dtype})")
         
         # Load VAE from local vae subfolder
         vae_path = os.path.join(model_dir, "vae")
