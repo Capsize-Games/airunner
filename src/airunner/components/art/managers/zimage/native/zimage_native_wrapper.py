@@ -5,11 +5,13 @@ This module provides a wrapper around ZImageNativePipeline that exposes a
 diffusers-compatible interface for seamless integration with existing code.
 """
 
+
 from __future__ import annotations
 
 import logging
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import os
 import torch
 from PIL import Image
 
@@ -140,8 +142,6 @@ class NativePipelineWrapper:
             scale: LoRA scale factor (0.0-1.0+)
             **kwargs: Additional arguments (for compatibility)
         """
-        import os
-        
         if self._native.transformer is None:
             raise ValueError("Transformer not loaded. Cannot apply LoRA.")
         

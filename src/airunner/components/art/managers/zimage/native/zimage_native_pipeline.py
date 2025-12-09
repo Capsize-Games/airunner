@@ -8,6 +8,9 @@ without diffusers dependency, supporting FP8 scaled checkpoints.
 from __future__ import annotations
 
 import gc
+import os
+import numpy as np
+from PIL import Image
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -627,7 +630,6 @@ class ZImageNativePipeline:
         # Use tokenizer_path if provided, else use sibling 'tokenizer' directory if exists
         tok_path = tokenizer_path
         if tok_path is None:
-            import os
             sibling_tokenizer = os.path.join(os.path.dirname(path), "tokenizer")
             if os.path.isdir(sibling_tokenizer):
                 tok_path = sibling_tokenizer
@@ -1039,8 +1041,6 @@ class ZImageNativePipeline:
         
         # Convert to PIL if requested
         if output_type == "pil":
-            from PIL import Image
-            import numpy as np
             
             # Convert to numpy: (B, C, H, W) -> (B, H, W, C)
             images_np = images.permute(0, 2, 3, 1).cpu().float().numpy()
