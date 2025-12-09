@@ -5,6 +5,11 @@ from contextlib import contextmanager
 from typing import Generator
 
 import torch
+try:
+    from bitsandbytes.nn import Linear8bitLt, Linear4bit  # type: ignore
+except Exception:
+    Linear8bitLt = None
+    Linear4bit = None
 
 
 class ZImageMemoryMixin:
@@ -85,26 +90,20 @@ class ZImageMemoryMixin:
             if hasattr(text_encoder, "config") and hasattr(text_encoder.config, "quantization_config"):
                 return True
             # Check for BitsAndBytes linear layers (8-bit uses these)
-            try:
-                from bitsandbytes.nn import Linear8bitLt, Linear4bit
+            if Linear8bitLt is not None and Linear4bit is not None:
                 for module in text_encoder.modules():
                     if isinstance(module, (Linear8bitLt, Linear4bit)):
                         return True
-            except ImportError:
-                pass
         
         # Check transformer for quantization
         transformer = getattr(self._pipe, "transformer", None)
         if transformer is not None:
             if hasattr(transformer, "hf_quantizer") and transformer.hf_quantizer is not None:
                 return True
-            try:
-                from bitsandbytes.nn import Linear8bitLt, Linear4bit
+            if Linear8bitLt is not None and Linear4bit is not None:
                 for module in transformer.modules():
                     if isinstance(module, (Linear8bitLt, Linear4bit)):
                         return True
-            except ImportError:
-                pass
         
         return False
 

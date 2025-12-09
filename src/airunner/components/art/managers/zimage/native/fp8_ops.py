@@ -11,7 +11,7 @@ Based on ComfyUI's comfy/quant_ops.py implementation.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -24,7 +24,7 @@ _LAYOUT_REGISTRY: Dict[Any, Dict[str, Any]] = {}
 _GENERIC_UTILS: Dict[Any, Any] = {}
 
 
-def register_layout_op(torch_op: Any, layout_type: str):
+def register_layout_op(torch_op: Any, layout_type: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to register a layout-specific operation handler.
     
@@ -32,7 +32,15 @@ def register_layout_op(torch_op: Any, layout_type: str):
         torch_op: PyTorch operation (e.g., torch.ops.aten.linear.default)
         layout_type: Layout type string (e.g., "TensorCoreFP8Layout")
     """
-    def decorator(handler_func):
+    def decorator(handler_func: Callable[..., Any]) -> Callable[..., Any]:
+        """Register a handler function for a specific op/layout.
+
+        Args:
+            handler_func: The function that handles this op for the layout.
+
+        Returns:
+            The original handler function (unchanged).
+        """
         if torch_op not in _LAYOUT_REGISTRY:
             _LAYOUT_REGISTRY[torch_op] = {}
         _LAYOUT_REGISTRY[torch_op][layout_type] = handler_func
@@ -40,14 +48,22 @@ def register_layout_op(torch_op: Any, layout_type: str):
     return decorator
 
 
-def register_generic_util(torch_op: Any):
+def register_generic_util(torch_op: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to register a generic utility that works for all layouts.
     
     Args:
         torch_op: PyTorch operation (e.g., torch.ops.aten.detach.default)
     """
-    def decorator(handler_func):
+    def decorator(handler_func: Callable[..., Any]) -> Callable[..., Any]:
+        """Register a generic utility handler for all layouts.
+
+        Args:
+            handler_func: The utility function to register.
+
+        Returns:
+            The original handler function.
+        """
         _GENERIC_UTILS[torch_op] = handler_func
         return handler_func
     return decorator
@@ -382,9 +398,17 @@ class QuantizedTensor(torch.Tensor):
         return cls._dequant_and_fallback(func, args, kwargs)
     
     @classmethod
-    def _dequant_and_fallback(cls, func, args, kwargs):
+    def _dequant_and_fallback(cls, func: Callable, args: tuple, kwargs: dict) -> Any:
         """Dequantize all quantized tensors and run the operation."""
-        def dequant_arg(arg):
+        def dequant_arg(arg: Any) -> Any:
+            """Recursively dequantizes QuantizedTensor instances in nested structures.
+
+            Args:
+                arg: The argument to dequantize.
+
+            Returns:
+                The same structure with QuantizedTensor objects converted to tensors.
+            """
             if isinstance(arg, QuantizedTensor):
                 return arg.dequantize()
             elif isinstance(arg, (list, tuple)):
@@ -395,19 +419,19 @@ class QuantizedTensor(torch.Tensor):
         new_kwargs = dequant_arg(kwargs)
         return func(*new_args, **new_kwargs)
     
-    def data_ptr(self):
+    def data_ptr(self) -> int:
         """Get raw data pointer."""
         return self._qdata.data_ptr()
     
-    def is_pinned(self):
+    def is_pinned(self) -> bool:
         """Check if tensor is pinned."""
         return self._qdata.is_pinned()
     
-    def is_contiguous(self, *arg, **kwargs):
+    def is_contiguous(self, *arg: Any, **kwargs: Any) -> bool:
         """Check if tensor is contiguous."""
         return self._qdata.is_contiguous(*arg, **kwargs)
     
-    def storage(self):
+    def storage(self) -> Any:
         """Get tensor storage."""
         return self._qdata.storage()
 
@@ -417,7 +441,7 @@ class QuantizedTensor(torch.Tensor):
 # =============================================================================
 
 @register_generic_util(torch.ops.aten.detach.default)
-def generic_detach(func, args, kwargs):
+def generic_detach(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Detach operation - creates a detached copy."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -428,7 +452,7 @@ def generic_detach(func, args, kwargs):
 
 
 @register_generic_util(torch.ops.aten.clone.default)
-def generic_clone(func, args, kwargs):
+def generic_clone(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Clone operation - creates a deep copy."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -439,7 +463,7 @@ def generic_clone(func, args, kwargs):
 
 
 @register_generic_util(torch.ops.aten._to_copy.default)
-def generic_to_copy(func, args, kwargs):
+def generic_to_copy(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Device/dtype transfer operation."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -458,7 +482,7 @@ def generic_to_copy(func, args, kwargs):
 
 
 @register_generic_util(torch.ops.aten.to.dtype_layout)
-def generic_to_dtype_layout(func, args, kwargs):
+def generic_to_dtype_layout(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Handle .to(device) calls using dtype_layout variant."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -481,7 +505,7 @@ def generic_to_dtype_layout(func, args, kwargs):
 # =============================================================================
 
 @register_layout_op(torch.ops.aten.linear.default, "TensorCoreFP8Layout")
-def fp8_linear(func, args, kwargs):
+def fp8_linear(func: Callable, args: tuple, kwargs: dict) -> Any:
     """
     FP8-optimized linear operation.
     
@@ -542,7 +566,7 @@ def fp8_linear(func, args, kwargs):
 
 
 @register_layout_op(torch.ops.aten.mm.default, "TensorCoreFP8Layout")
-def fp8_mm(func, args, kwargs):
+def fp8_mm(func: Callable, args: tuple, kwargs: dict) -> Any:
     """FP8-optimized matrix multiplication."""
     input_tensor = args[0]
     weight = args[1]
@@ -580,7 +604,7 @@ def fp8_mm(func, args, kwargs):
 
 
 @register_layout_op(torch.ops.aten.t.default, "TensorCoreFP8Layout")
-def fp8_transpose(func, args, kwargs):
+def fp8_transpose(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Transpose operation for FP8 tensors."""
     input_tensor = args[0]
     if isinstance(input_tensor, QuantizedTensor):
@@ -594,7 +618,7 @@ def fp8_transpose(func, args, kwargs):
 
 
 @register_layout_op(torch.ops.aten.view.default, "TensorCoreFP8Layout")
-def fp8_view(func, args, kwargs):
+def fp8_view(func: Callable, args: tuple, kwargs: dict) -> Any:
     """View operation for FP8 tensors."""
     input_tensor = args[0]
     if isinstance(input_tensor, QuantizedTensor):
@@ -942,6 +966,10 @@ class UnscaledFP8Linear(nn.Module):
         return F.linear(x, weight, self.bias)
     
     def extra_repr(self) -> str:
+        """Return a short textual description for module debugging.
+
+        Includes basic shape and LoRA counts for quick inspection in debug logs.
+        """
         lora_count = len(self._lora_layers)
         enabled_count = sum(1 for l in self._lora_layers.values() if l["enabled"])
         lora_str = f", loras={enabled_count}/{lora_count}" if lora_count > 0 else ""

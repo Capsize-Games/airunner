@@ -6,6 +6,16 @@ import torch
 from airunner.components.application.exceptions import InterruptedException
 from airunner.utils.memory import clear_memory
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+    is_flow_match_scheduler,
+    create_flow_match_scheduler,
+)
+from airunner.enums import Scheduler, ModelType, ModelStatus
+
+try:
+    from accelerate.hooks import remove_hook_from_module
+except Exception:
+    remove_hook_from_module = None
 
 
 def _aggressive_memory_cleanup():
@@ -139,11 +149,7 @@ class ZImageGenerationMixin:
         Args:
             scheduler_name: Display name of the scheduler to load.
         """
-        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
-            is_flow_match_scheduler,
-            create_flow_match_scheduler,
-        )
-        from airunner.enums import Scheduler, ModelType, ModelStatus
+        # imports moved to module level for performance and clarity
         
         # Get scheduler name
         requested_name = (
@@ -253,11 +259,8 @@ class ZImageGenerationMixin:
             return
         
         # Import accelerate hooks removal if available
-        try:
-            from accelerate.hooks import remove_hook_from_module
-            has_accelerate_hooks = True
-        except ImportError:
-            has_accelerate_hooks = False
+        has_accelerate_hooks = remove_hook_from_module is not None
+        if not has_accelerate_hooks:
             self.logger.debug("accelerate.hooks not available, using manual cleanup")
         
         # List of all Z-Image components to clean up (ordered by size)

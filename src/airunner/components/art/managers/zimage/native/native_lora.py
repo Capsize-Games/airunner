@@ -15,6 +15,7 @@ Key features:
 
 from __future__ import annotations
 
+import gc
 import logging
 import os
 from pathlib import Path
@@ -24,6 +25,11 @@ import torch
 import torch.nn as nn
 from safetensors import safe_open
 from safetensors.torch import load_file as load_safetensors
+from airunner.components.art.managers.zimage.native.fp8_ops import (
+    FP8Linear,
+    QuantizedTensor,
+    UnscaledFP8Linear,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +259,7 @@ def apply_lora_to_fused_qkv(
     Returns:
         True if successful, False otherwise
     """
-    from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, UnscaledFP8Linear
+    # FP8 ops imported at module level
     
     try:
         if isinstance(qkv_module, UnscaledFP8Linear):
@@ -436,7 +442,7 @@ def apply_lora_to_linear(
         True if successful, False otherwise
     """
     # Import here to avoid circular imports
-    from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear, QuantizedTensor, UnscaledFP8Linear
+    # FP8 ops imported at module level
     
     try:
         if isinstance(linear, UnscaledFP8Linear):
@@ -803,7 +809,6 @@ class NativeLoraLoader:
         logger.info(f"LoRA '{adapter_name}' removed from {removed_count} layers")
         
         # Clean up memory
-        import gc
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -825,7 +830,6 @@ class NativeLoraLoader:
         logger.info(f"Removed all LoRAs ({count} adapters, {total_removed} layer instances)")
         
         # Clean up memory
-        import gc
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

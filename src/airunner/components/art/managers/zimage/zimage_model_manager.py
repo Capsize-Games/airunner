@@ -50,6 +50,12 @@ from airunner.components.art.managers.zimage.mixins.zimage_pipeline_loading_mixi
     ZImagePipelineLoadingMixin,
 )
 from airunner.enums import ModelType, ModelStatus
+from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+    is_flow_match_scheduler,
+    create_flow_match_scheduler,
+    FLOW_MATCH_SCHEDULER_NAMES,
+)
+from airunner.enums import Scheduler
 
 
 class ZImageModelManager(
@@ -290,12 +296,7 @@ class ZImageModelManager(
             scheduler_name: Display name of the scheduler to load.
                            Supports all flow-match scheduler variants.
         """
-        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
-            is_flow_match_scheduler,
-            create_flow_match_scheduler,
-            FLOW_MATCH_SCHEDULER_NAMES,
-        )
-        from airunner.enums import Scheduler
+        # flow_match scheduler imports moved to module-level
         
         if self._pipe is None:
             return
