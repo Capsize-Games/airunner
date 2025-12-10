@@ -12,6 +12,7 @@ import torch
 from airunner.components.llm.managers.mixins.model_loader_mixin import (
     ModelLoaderMixin,
 )
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 
 
 class MockLLMManager(ModelLoaderMixin):
@@ -38,6 +39,10 @@ class MockLLMManager(ModelLoaderMixin):
         self._configure_quantization_memory = Mock(return_value={"0": "20GB"})
         self._load_adapters = Mock()
         self._save_loaded_model_quantized = Mock()
+
+        # Context/Yarn settings
+        self.llm_generator_settings = Mock(model_id=None)
+        self.llm_settings = Mock(use_yarn=False)
 
 
 @pytest.fixture
@@ -233,6 +238,57 @@ def test_apply_quantized_kwargs_no_max_memory(manager):
     manager._apply_quantized_kwargs(model_kwargs, quantization_config, "4bit")
 
     assert "max_memory" not in model_kwargs
+
+
+def test_apply_context_settings_with_yarn(manager):
+    """Should apply YaRN rope scaling when supported and enabled."""
+    config = AutoConfig()
+    config.max_position_embeddings = 32768
+
+    manager.llm_generator_settings.model_id = "qwen3-8b"
+    manager.llm_settings.use_yarn = True
+
+    with patch.object(
+        LLMProviderConfig,
+        "get_model_info",
+        return_value={
+            "native_context_length": 32768,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": True,
+        },
+    ):
+        result = manager._apply_context_settings(config)
+
+    assert config.rope_scaling["type"] == "yarn"
+    assert config.rope_scaling["original_max_position_embeddings"] == 32768
+    assert config.max_position_embeddings == 131072
+    assert result["use_yarn"] is True
+    assert result["target_context_length"] == 131072
+
+
+def test_apply_context_settings_without_yarn(manager):
+    """Should leave config unchanged when YaRN disabled."""
+    config = AutoConfig()
+    config.max_position_embeddings = 32768
+
+    manager.llm_generator_settings.model_id = "qwen3-8b"
+    manager.llm_settings.use_yarn = False
+
+    with patch.object(
+        LLMProviderConfig,
+        "get_model_info",
+        return_value={
+            "native_context_length": 32768,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": True,
+        },
+    ):
+        result = manager._apply_context_settings(config)
+
+    assert not hasattr(config, "rope_scaling") or not config.rope_scaling
+    assert config.max_position_embeddings == 32768
+    assert result["use_yarn"] is False
+    assert result["target_context_length"] == 32768
 
 
 # Model Loading Tests

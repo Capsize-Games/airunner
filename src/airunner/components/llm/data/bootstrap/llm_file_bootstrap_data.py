@@ -23,6 +23,8 @@ LLM_FILE_BOOTSTRAP_DATA = {
     "Qwen/Qwen3-8B-GGUF": {
         "path_settings": "llm_causallm_model_path",
         "context_length": 32768,
+        "native_context_length": 32768,
+        "yarn_max_context_length": 131072,
         "capabilities": {
             "function_calling": True,
             "thinking_capable": True,  # Supports both modes via enable_thinking flag

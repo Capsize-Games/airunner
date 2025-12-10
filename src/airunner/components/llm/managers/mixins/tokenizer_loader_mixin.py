@@ -195,11 +195,21 @@ class TokenizerLoaderMixin:
         if is_ministral3_model(self.model_path):
             patch_ministral3_config(self.model_path)
         
-        return AutoConfig.from_pretrained(
+        config = AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             trust_remote_code=True,
         )
+        # Align tokenizer limits with YaRN/target context if available
+        if hasattr(self, "_apply_context_settings"):
+            try:
+                self._apply_context_settings(config)
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to apply context settings to tokenizer config: {e}"
+                )
+
+        return config
 
     def _configure_loaded_tokenizer(self: "LLMModelManager") -> None:
         """Configure tokenizer after successful loading.
@@ -208,6 +218,10 @@ class TokenizerLoaderMixin:
         """
         if self._tokenizer:
             self._tokenizer.use_default_system_prompt = False
+
+            target_ctx = getattr(self, "_target_context_length", None)
+            if target_ctx and hasattr(self._tokenizer, "model_max_length"):
+                self._tokenizer.model_max_length = target_ctx
 
     def _handle_tokenizer_error(
         self: "LLMModelManager", error: Exception

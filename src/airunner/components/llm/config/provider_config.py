@@ -90,6 +90,9 @@ class LLMProviderConfig:
             "vision_capable": False,
             "code_capable": True,
             "context_length": 131072,  # 128K tokens (full context with YaRN scaling)
+            "native_context_length": 131072,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": False,
             "vram_2bit_gb": 4,
             "vram_4bit_gb": 7,
             "vram_8bit_gb": 14,
@@ -109,6 +112,9 @@ class LLMProviderConfig:
             "vision_capable": False,
             "code_capable": True,
             "context_length": 32768,  # 32K native, 131K with YaRN
+            "native_context_length": 32768,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": True,
             "vram_2bit_gb": 5,
             "vram_4bit_gb": 8,
             "vram_8bit_gb": 16,
@@ -128,6 +134,9 @@ class LLMProviderConfig:
             "vision_capable": False,
             "code_capable": True,
             "context_length": 131072,  # 128K with YaRN
+            "native_context_length": 131072,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": False,
             "vram_2bit_gb": 8,
             "vram_4bit_gb": 12,
             "vram_8bit_gb": 28,
@@ -146,6 +155,9 @@ class LLMProviderConfig:
             "vision_capable": False,
             "code_capable": True,
             "context_length": 131072,  # 128K with YaRN
+            "native_context_length": 131072,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": False,
             "vram_2bit_gb": 14,
             "vram_4bit_gb": 24,
             "vram_8bit_gb": 64,
@@ -164,6 +176,9 @@ class LLMProviderConfig:
             "vision_capable": False,
             "code_capable": True,
             "context_length": 131072,  # 128K context
+            "native_context_length": 131072,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": False,
             "vram_2bit_gb": 10,
             "vram_4bit_gb": 19,
             "vram_8bit_gb": 38,
