@@ -242,7 +242,11 @@ def test_apply_quantized_kwargs_no_max_memory(manager):
 
 def test_apply_context_settings_with_yarn(manager):
     """Should apply YaRN rope scaling when supported and enabled."""
-    config = AutoConfig()
+    # Avoid creating AutoConfig() directly (requires network). Use a minimal dummy config.
+    class DummyConfig:
+        pass
+
+    config = DummyConfig()
     config.max_position_embeddings = 32768
 
     manager.llm_generator_settings.model_id = "qwen3-8b"
@@ -268,7 +272,10 @@ def test_apply_context_settings_with_yarn(manager):
 
 def test_apply_context_settings_without_yarn(manager):
     """Should leave config unchanged when YaRN disabled."""
-    config = AutoConfig()
+    class DummyConfig:
+        pass
+
+    config = DummyConfig()
     config.max_position_embeddings = 32768
 
     manager.llm_generator_settings.model_id = "qwen3-8b"
