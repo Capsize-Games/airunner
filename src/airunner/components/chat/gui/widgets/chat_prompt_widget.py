@@ -45,6 +45,7 @@ from airunner.settings import (
     SLASH_COMMANDS,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner.utils.image import convert_binary_to_image
 
 
 # MIME type used by ImageWidget for drag operations
@@ -71,6 +72,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_text_generate_request_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
+            SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
         }
         self._splitters = ["chat_prompt_splitter"]
         self._default_splitter_settings_applied = False
@@ -98,6 +100,7 @@ class ChatPromptWidget(BaseWidget):
         self._tokens_sent_total: int = 0
         self._tokens_received_total: int = 0
         self._current_response_tokens: int = 0  # Accumulator for streaming response
+        self._active_section: Optional[str] = self._resolve_initial_section()
         
         # Image attachments for vision-capable models
         self._attached_images: List[Tuple[Image.Image, Optional[str]]] = []
@@ -350,18 +353,20 @@ class ChatPromptWidget(BaseWidget):
             llm_request.force_tool = force_tool
             self.logger.info(f"Set force_tool={force_tool} on llm_request")
         
-        # Add attached images if any
-        attached_images = self._get_attached_images()
-        if attached_images:
+        # Add attached images (manual + auto canvas) if any
+        images_for_request = self._collect_images_for_llm()
+        if images_for_request:
             if self._is_model_vision_capable():
-                llm_request.images = attached_images
-                self.logger.info(f"Added {len(attached_images)} images to llm_request")
+                llm_request.images = images_for_request
+                self.logger.info(
+                    f"Added {len(images_for_request)} images to llm_request"
+                )
+                if self._attached_images:
+                    self._clear_image_attachments()
             else:
                 self.logger.warning(
                     "Images attached but model does not support vision - ignoring"
                 )
-            # Clear attachments after sending
-            self._clear_image_attachments()
         
         self.logger.info(f"Sending request - action={action}, force_tool={llm_request.force_tool}, tool_categories={llm_request.tool_categories}")
         
@@ -1732,6 +1737,28 @@ class ChatPromptWidget(BaseWidget):
         # Handle as custom model
         self._handle_custom_model(provider, custom_text)
 
+    def on_section_changed_signal(self, data: Dict) -> None:
+        """Track the currently active main window section."""
+        section = data.get("section")
+        if section:
+            self._active_section = section
+
+    def _resolve_initial_section(self) -> Optional[str]:
+        """Determine active section from persisted window settings."""
+        try:
+            index = self.window_settings.active_main_tab_index
+        except Exception:
+            return None
+
+        index_to_section = {
+            0: "home_button",
+            1: "art_editor_button",
+            2: "workflow_editor_button",
+            3: "document_editor_button",
+            4: "calendar_button",
+        }
+        return index_to_section.get(index)
+
     # =========================================================================
     # Image Attachment Methods
     # =========================================================================
@@ -1929,6 +1956,45 @@ class ChatPromptWidget(BaseWidget):
             List of PIL Image objects.
         """
         return [img for img, _ in self._attached_images]
+
+    def _collect_images_for_llm(self) -> List[Image.Image]:
+        """Combine manual attachments with current canvas image when available."""
+        images = list(self._get_attached_images())
+        canvas_image = self._get_canvas_image_attachment()
+        if canvas_image is not None:
+            images.insert(0, canvas_image)
+        return images
+
+    def _get_canvas_image_attachment(self) -> Optional[Image.Image]:
+        """Fetch the active canvas image when the art tab is active."""
+        if not AIRUNNER_ART_ENABLED or not self._is_art_tab_active():
+            return None
+
+        try:
+            binary_image = self.drawing_pad_settings.image
+        except Exception:
+            return None
+
+        if not binary_image:
+            return None
+
+        image = convert_binary_to_image(binary_image)
+        if image is None:
+            return None
+        if image.mode not in ("RGB", "RGBA"):
+            try:
+                image = image.convert("RGB")
+            except Exception:
+                return None
+        return image
+
+    def _is_art_tab_active(self) -> bool:
+        """Return True when the main window art tab is currently active."""
+        if self._active_section:
+            return self._active_section == "art_editor_button"
+
+        self._active_section = self._resolve_initial_section()
+        return self._active_section == "art_editor_button"
 
     def eventFilter(self, obj, event) -> bool:
         """Handle events for installed event filters (prompt drag-drop).
