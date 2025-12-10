@@ -128,6 +128,7 @@ class MessageFormattingMixin:
         
         chat_messages = []
         extracted_images = []  # Store image payloads for vision models
+        image_placeholders = 0  # Count of image placeholders in content
         
         for msg in messages:
             if isinstance(msg, SystemMessage):
@@ -135,6 +136,10 @@ class MessageFormattingMixin:
                     {"role": "system", "content": msg.content}
                 )
             elif isinstance(msg, HumanMessage):
+                # Only keep images from the most recent human turn to avoid
+                # re-sending stale or missing binaries from older turns.
+                extracted_images = []
+                image_placeholders = 0
                 # Handle multimodal content (list with text and images)
                 if isinstance(msg.content, list):
                     content_parts = []
@@ -147,6 +152,7 @@ class MessageFormattingMixin:
                                 image_url = part.get("image_url", {}).get("url", "")
                                 if image_url:
                                     extracted_images.append(image_url)
+                                image_placeholders += 1
                             elif part.get("type") == "image":
                                 content_parts.append({"type": "image"})
                                 image_payload = (
@@ -157,10 +163,12 @@ class MessageFormattingMixin:
                                     or part
                                 )
                                 extracted_images.append(image_payload)
+                                image_placeholders += 1
                         else:
                             if self._is_pil_image(part):
                                 content_parts.append({"type": "image"})
                                 extracted_images.append(part)
+                                image_placeholders += 1
                             else:
                                 content_parts.append({"type": "text", "text": str(part)})
                     chat_messages.append({"role": "user", "content": content_parts})
@@ -197,6 +205,25 @@ class MessageFormattingMixin:
             "tokenize": False,
             "add_generation_prompt": True,
         }
+
+        # If placeholders exist but no images were extracted, replace placeholders
+        # with a text marker to avoid corrupting the prompt for vision models.
+        if image_placeholders > 0 and not extracted_images:
+            try:
+                for message in chat_messages:
+                    content = message.get("content", [])
+                    if isinstance(content, list):
+                        for idx, part in enumerate(content):
+                            if isinstance(part, dict) and part.get("type") == "image":
+                                content[idx] = {
+                                    "type": "text",
+                                    "text": "[image unavailable]",
+                                }
+                self.logger.warning(
+                    "Image placeholders found but no images extracted; replaced with text fallback"
+                )
+            except Exception:
+                pass
 
         # Pass tools ONLY if available, non-empty, AND we're in a tool-supporting mode
         # For JSON mode (Qwen), tools should be passed to the template
