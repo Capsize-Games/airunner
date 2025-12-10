@@ -6,6 +6,13 @@ import torch
 from airunner.components.application.exceptions import InterruptedException
 from airunner.utils.memory import clear_memory
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+    is_flow_match_scheduler,
+    create_flow_match_scheduler,
+)
+from airunner.enums import Scheduler, ModelType, ModelStatus
+
+from accelerate.hooks import remove_hook_from_module
 
 
 def _aggressive_memory_cleanup():
@@ -57,7 +64,6 @@ class ZImageGenerationMixin:
         self._strip_zimage_incompatible_params(data)
         self._enforce_zimage_guidance(data)
         data["max_sequence_length"] = 512
-        self._log_zimage_generation_params(data)
         return data
 
     def _strip_zimage_incompatible_params(self, data: Dict) -> None:
@@ -81,34 +87,40 @@ class ZImageGenerationMixin:
         """
         pass
 
-    def _log_zimage_generation_params(self, data: Dict) -> None:
-        """Log core generation parameters for debugging."""
-        debug_fields = {
-            "prompt": data.get("prompt", "MISSING!")[:50] + "...",
-            "guidance_scale": data.get("guidance_scale", "MISSING!"),
-            "steps": data.get("num_inference_steps", "MISSING!"),
-            "size": f"{data.get('width')}x{data.get('height')}",
-            "max_sequence_length": data.get("max_sequence_length", "MISSING!"),
-        }
-        self.logger.info(
-            "[Z-IMAGE DEBUG] Keys: %s | Values: %s",
-            list(data.keys()),
-            debug_fields,
-        )
-
     def _unload_loras(self):
         """Unload Z-Image LoRA weights if any are loaded.
         
-        Z-Image supports LoRA weights through ZImageLoraLoaderMixin.
+        Z-Image uses additive LoRA that can be removed without model reload.
         """
-        if hasattr(self._pipe, 'unload_lora_weights'):
+        self.logger.debug("Unloading Z-Image LoRA weights")
+        if self._pipe is not None and hasattr(self._pipe, 'unload_lora_weights'):
             try:
                 self._pipe.unload_lora_weights()
-                self.logger.debug("Unloaded Z-Image LoRA weights")
+                self.logger.info("✓ Unloaded all Z-Image LoRA weights")
             except Exception as e:
-                self.logger.debug(f"No LoRA weights to unload: {e}")
+                self.logger.warning(f"Error unloading LoRA weights: {e}")
         self._loaded_lora = {}
         self._disabled_lora = []
+    
+    def _disable_lora(self, adapter_name: str):
+        """Disable a specific LoRA adapter without removing it.
+        
+        Args:
+            adapter_name: Name of the adapter to disable
+        """
+        if self._pipe is not None and hasattr(self._pipe, 'set_lora_enabled'):
+            self._pipe.set_lora_enabled(adapter_name, False)
+            self.logger.debug(f"Disabled LoRA: {adapter_name}")
+    
+    def _enable_lora(self, adapter_name: str):
+        """Enable a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter to enable
+        """
+        if self._pipe is not None and hasattr(self._pipe, 'set_lora_enabled'):
+            self._pipe.set_lora_enabled(adapter_name, True)
+            self.logger.debug(f"Enabled LoRA: {adapter_name}")
 
     def _load_scheduler(self, scheduler_name=None):
         """Load a flow-match scheduler for Z-Image.
@@ -118,11 +130,7 @@ class ZImageGenerationMixin:
         Args:
             scheduler_name: Display name of the scheduler to load.
         """
-        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
-            is_flow_match_scheduler,
-            create_flow_match_scheduler,
-        )
-        from airunner.enums import Scheduler, ModelType, ModelStatus
+        # imports moved to module level for performance and clarity
         
         # Get scheduler name
         requested_name = (
@@ -232,11 +240,8 @@ class ZImageGenerationMixin:
             return
         
         # Import accelerate hooks removal if available
-        try:
-            from accelerate.hooks import remove_hook_from_module
-            has_accelerate_hooks = True
-        except ImportError:
-            has_accelerate_hooks = False
+        has_accelerate_hooks = remove_hook_from_module is not None
+        if not has_accelerate_hooks:
             self.logger.debug("accelerate.hooks not available, using manual cleanup")
         
         # List of all Z-Image components to clean up (ordered by size)
@@ -259,78 +264,12 @@ class ZImageGenerationMixin:
                         self.logger.debug(f"Error removing hook: {e}")
                 self._pipe._all_hooks.clear()
             
-            # Process each component
+            # Process each component via helper
             for component_name in component_names:
                 component = getattr(self._pipe, component_name, None)
                 if component is None:
                     continue
-                
-                self.logger.debug(f"Cleaning up {component_name}...")
-                
-                # 1. Remove accelerate hooks using official API
-                if has_accelerate_hooks:
-                    try:
-                        remove_hook_from_module(component, recurse=True)
-                        self.logger.debug(f"Removed hooks from {component_name}")
-                    except Exception as e:
-                        self.logger.debug(f"Hook removal for {component_name}: {e}")
-                
-                # 2. Manual hook cleanup for any remaining hooks
-                if hasattr(component, "_hf_hook"):
-                    try:
-                        hook = component._hf_hook
-                        # Clear any offloaded weights first
-                        if hasattr(hook, "weights_map") and hook.weights_map is not None:
-                            hook.weights_map.clear()
-                        if hasattr(hook, "offload"):
-                            try:
-                                hook.offload(component)
-                            except Exception:
-                                pass
-                        delattr(component, "_hf_hook")
-                    except Exception as e:
-                        self.logger.debug(f"Manual hook cleanup for {component_name}: {e}")
-                
-                # 3. For models with device_map (quantized models), clear the device_map state
-                if hasattr(component, "hf_device_map"):
-                    try:
-                        component.hf_device_map = None
-                    except Exception:
-                        pass
-                
-                # 4. CRITICAL: Do NOT move to CPU - this creates new tensors in CPU RAM
-                # Instead, delete tensors in-place on their current device
-                
-                # 5. Clear parameter data to free memory
-                if hasattr(component, "parameters"):
-                    try:
-                        for param in component.parameters():
-                            param.data = torch.empty(0, device=param.device)
-                            if param.grad is not None:
-                                param.grad = None
-                    except Exception as e:
-                        self.logger.debug(f"Error clearing params for {component_name}: {e}")
-                
-                # 6. Detach the component from the pipeline
-                try:
-                    setattr(self._pipe, component_name, None)
-                except Exception:
-                    pass
-                
-                # 7. Delete component reference
-                try:
-                    del component
-                except Exception:
-                    pass
-                
-                # 8. Run gc after each large component to free memory immediately
-                if component_name in ("text_encoder", "transformer"):
-                    _aggressive_memory_cleanup()
-            
-            # Clear execution device reference
-            if hasattr(self._pipe, "_execution_device"):
-                self._pipe._execution_device = None
-                
+                self._cleanup_pipeline_component(component_name, component, has_accelerate_hooks)
         except Exception as e:
             self.logger.warning(f"Error during hook removal: {e}")
 
@@ -347,19 +286,45 @@ class ZImageGenerationMixin:
 
         self.logger.info("✓ Z-Image pipeline unloaded and memory freed")
 
-    def _clear_pipeline_caches(self):
-        """Clear internal pipeline caches to free RAM and VRAM.
+    def _cleanup_pipeline_component(self, component_name: str, component: Any, has_accelerate_hooks: bool) -> None:
+        """Cleanup a component attached to the pipeline.
+
+        Extraction from the prior implementation to reduce _unload_pipe size.
+        """
+        self.logger.debug(f"Cleaning up {component_name}...")
+
+        # 1. Remove accelerate hooks using official API
+        if has_accelerate_hooks:
+            try:
+                remove_hook_from_module(component, recurse=True)
+                self.logger.debug(f"Removed hooks from {component_name}")
+            except Exception as e:
+                self.logger.debug(f"Hook removal for {component_name}: {e}")
+
+        # 2. Manual hook cleanup for any remaining hooks
+        if hasattr(component, "_hf_hook"):
+            try:
+                hook = component._hf_hook
+                if hasattr(hook, "weights_map") and hook.weights_map is not None:
+                    hook.weights_map.clear()
+                if hasattr(hook, "offload"):
+                    try:
+                        hook.offload(component)
+                    except Exception:
+                        pass
+                delattr(component, "_hf_hook")
+            except Exception as e:
+                self.logger.debug(f"Manual hook cleanup for {component_name}: {e}")
         
+    def _clear_pipeline_caches(self):
+        """Clear cached tensors and per-component caches on the active pipeline.
+
         This is called after each generation to prevent memory accumulation.
         """
         if self._pipe is None:
             return
         
         self.logger.debug("Clearing pipeline caches to free RAM")
-        
-        # Clear any cached tensors on the pipeline
-        if hasattr(self._pipe, "_callback_tensor_inputs"):
-            self._pipe._callback_tensor_inputs = None
         
         # For text encoder, clear any cached key/values
         text_encoder = getattr(self._pipe, "text_encoder", None)

@@ -251,6 +251,7 @@ class SDModelLoadingMixin:
                 lora_base_path,
                 weight_name=filename,
                 adapter_name=adapter_name,
+                scale=getattr(lora, "scale", 1.0),
             )
             self._loaded_lora[lora.path] = lora
         except AttributeError:

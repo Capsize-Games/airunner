@@ -30,8 +30,11 @@ Key Features:
 """
 
 from typing import Dict, Any, Optional
+from airunner.components.art.pipelines.z_image import (
+    ZImagePipeline,
+    ZImageImg2ImgPipeline,
+)
 import torch
-from diffusers import FlowMatchEulerDiscreteScheduler
 
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
@@ -49,6 +52,15 @@ from airunner.components.art.managers.zimage.mixins.zimage_pipeline_loading_mixi
     ZImagePipelineLoadingMixin,
 )
 from airunner.enums import ModelType, ModelStatus
+from airunner.components.art.managers.zimage.native.flow_match_scheduler import (
+    FlowMatchEulerScheduler,
+)
+from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+    is_flow_match_scheduler,
+    create_flow_match_scheduler,
+    FLOW_MATCH_SCHEDULER_NAMES,
+)
+from airunner.enums import Scheduler
 
 
 class ZImageModelManager(
@@ -87,9 +99,9 @@ class ZImageModelManager(
         Note: For quantized modes (4bit, 8bit), this returns the compute dtype
         (bfloat16). The actual quantization is handled separately.
         
-        Note: FP8 is NOT supported for Z-Image because the Qwen text encoder
-        doesn't support FP8 loading. FP8 settings will fall back to 4-bit
-        quantization to maintain memory savings on VRAM-constrained systems.
+        Note: FP8 requests are served via 8-bit quantization for the
+        transformer/text encoder to keep everything on GPU while avoiding
+        CPU RAM spikes.
 
         Returns:
             torch.dtype based on user preference and hardware capability.
@@ -130,8 +142,8 @@ class ZImageModelManager(
     def use_quantization(self) -> bool:
         """Check if quantization should be used based on dtype setting.
         
-        Note: FP8 falls back to 4-bit quantization for Z-Image since the
-        text encoder doesn't support FP8.
+        Note: FP8 requests use 8-bit quantization for stability with the
+        bundled text encoder.
         """
         dtype_setting = getattr(self.generator_settings, "dtype", None)
         # FP8 falls back to quantization since it's not supported
@@ -150,24 +162,19 @@ class ZImageModelManager(
         elif dtype_setting == "8bit":
             return 8
         elif dtype_setting == "float8":
-            # FP8 not supported, fall back to 4-bit for memory savings
-            self.logger.warning(
-                "FP8 is not supported for Z-Image. Using 4-bit quantization instead."
-            )
-            return 4
+            # Use 8-bit quantization when user requests FP8
+            return 8
         return None
 
     @property
     def img2img_pipelines(self) -> tuple:
         """Get img2img pipeline classes for Z-Image."""
-        from airunner.components.art.pipelines.z_image import ZImageImg2ImgPipeline
-        return (ZImageImg2ImgPipeline,)
+        return (ZImageImg2ImgPipeline,) if ZImageImg2ImgPipeline is not None else tuple()
 
     @property
     def txt2img_pipelines(self) -> tuple:
         """Get txt2img pipeline classes for Z-Image."""
-        from airunner.components.art.pipelines.z_image import ZImagePipeline
-        return (ZImagePipeline,)
+        return (ZImagePipeline,) if ZImagePipeline is not None else tuple()
 
     @property
     def controlnet_pipelines(self) -> tuple:
@@ -192,12 +199,13 @@ class ZImageModelManager(
         Returns:
             Dict mapping operation names to pipeline classes
         """
-        from airunner.components.art.pipelines.z_image import ZImagePipeline, ZImageImg2ImgPipeline
-        return {
-            "txt2img": ZImagePipeline,
-            "img2img": ZImageImg2ImgPipeline,
-            # inpaint, outpaint will be added when Z-Image-Edit is released
-        }
+        mapping: Dict[str, Any] = {}
+        if ZImagePipeline is not None:
+            mapping["txt2img"] = ZImagePipeline
+        if ZImageImg2ImgPipeline is not None:
+            mapping["img2img"] = ZImageImg2ImgPipeline
+        # inpaint, outpaint will be added when Z-Image-Edit is released
+        return mapping
 
     @property
     def _pipeline_class(self) -> Any:
@@ -276,12 +284,7 @@ class ZImageModelManager(
     @staticmethod
     def _is_zimage_scheduler(scheduler: Optional[Any]) -> bool:
         """Check whether the scheduler is a flow-match compatible type."""
-        try:
-            from diffusers import FlowMatchLCMScheduler
-            flow_match_types = (FlowMatchEulerDiscreteScheduler, FlowMatchLCMScheduler)
-        except ImportError:
-            flow_match_types = (FlowMatchEulerDiscreteScheduler,)
-        return isinstance(scheduler, flow_match_types)
+        return isinstance(scheduler, FlowMatchEulerScheduler)
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
         """Load the selected flow-match scheduler for Z-Image.
@@ -290,12 +293,7 @@ class ZImageModelManager(
             scheduler_name: Display name of the scheduler to load.
                            Supports all flow-match scheduler variants.
         """
-        from airunner.components.art.schedulers.flow_match_scheduler_factory import (
-            is_flow_match_scheduler,
-            create_flow_match_scheduler,
-            FLOW_MATCH_SCHEDULER_NAMES,
-        )
-        from airunner.enums import Scheduler
+        # flow_match scheduler imports moved to module-level
         
         if self._pipe is None:
             return

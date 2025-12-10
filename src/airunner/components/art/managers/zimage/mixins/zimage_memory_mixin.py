@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from typing import Generator
 
 import torch
+from bitsandbytes.nn import Linear8bitLt, Linear4bit  # type: ignore
 
 
 class ZImageMemoryMixin:
@@ -85,26 +86,20 @@ class ZImageMemoryMixin:
             if hasattr(text_encoder, "config") and hasattr(text_encoder.config, "quantization_config"):
                 return True
             # Check for BitsAndBytes linear layers (8-bit uses these)
-            try:
-                from bitsandbytes.nn import Linear8bitLt, Linear4bit
+            if Linear8bitLt is not None and Linear4bit is not None:
                 for module in text_encoder.modules():
                     if isinstance(module, (Linear8bitLt, Linear4bit)):
                         return True
-            except ImportError:
-                pass
         
         # Check transformer for quantization
         transformer = getattr(self._pipe, "transformer", None)
         if transformer is not None:
             if hasattr(transformer, "hf_quantizer") and transformer.hf_quantizer is not None:
                 return True
-            try:
-                from bitsandbytes.nn import Linear8bitLt, Linear4bit
+            if Linear8bitLt is not None and Linear4bit is not None:
                 for module in transformer.modules():
                     if isinstance(module, (Linear8bitLt, Linear4bit)):
                         return True
-            except ImportError:
-                pass
         
         return False
 
@@ -150,7 +145,16 @@ class ZImageMemoryMixin:
             self._force_vae_fp32()
 
     def _move_vae_to_gpu(self):
-        """Move VAE to GPU (for use with quantized models)."""
+        """Move VAE to GPU (for use with quantized models).
+        
+        Note: For native FP8 pipelines, VAE is kept on CPU and moved
+        dynamically during decode to conserve VRAM.
+        """
+        # Check if using native FP8 pipeline - skip VAE move
+        if hasattr(self._pipe, "is_native_fp8") and self._pipe.is_native_fp8:
+            self.logger.debug("Native FP8 pipeline: keeping VAE on CPU (dynamic placement during decode)")
+            return
+        
         vae = getattr(self._pipe, "vae", None)
         if vae is not None:
             try:

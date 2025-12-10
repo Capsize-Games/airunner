@@ -28,6 +28,7 @@ from airunner.components.llm.utils.ministral3_config_patcher import (
     needs_patching,
     patch_ministral3_config,
 )
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 
 if TYPE_CHECKING:
     pass
@@ -73,6 +74,75 @@ class ModelLoaderMixin:
             "Mistral3" in arch for arch in (config.architectures or [])
         )
         return is_mistral3_type or is_mistral3_arch
+
+    def _get_model_info_for_context(self) -> Dict[str, Any]:
+        """Lookup model metadata used for context sizing.
+
+        Returns:
+            Model info dict from provider config if available.
+        """
+        model_id = getattr(self.llm_generator_settings, "model_id", None)
+        if model_id:
+            try:
+                return LLMProviderConfig.get_model_info("local", model_id)
+            except Exception:
+                return {}
+        return {}
+
+    def _apply_context_settings(self, config: AutoConfig) -> Dict[str, Any]:
+        """Apply target context and YaRN rope scaling to a config.
+
+        Updates internal tracking fields `_native_context_length`,
+        `_target_context_length`, and `_using_yarn` for downstream
+        tokenizer/model setup.
+        """
+        model_info = self._get_model_info_for_context()
+        native_ctx = model_info.get("native_context_length") or model_info.get(
+            "context_length"
+        )
+        if native_ctx is None:
+            native_ctx = getattr(config, "max_position_embeddings", None)
+
+        yarn_max_ctx = model_info.get("yarn_max_context_length")
+        supports_yarn = model_info.get("supports_yarn", False)
+        target_ctx = native_ctx
+
+        use_yarn_setting = getattr(self.llm_settings, "use_yarn", False)
+        should_scale = (
+            bool(use_yarn_setting)
+            and bool(supports_yarn)
+            and yarn_max_ctx
+            and native_ctx
+            and yarn_max_ctx > native_ctx
+        )
+
+        if should_scale:
+            target_ctx = yarn_max_ctx
+            factor = float(target_ctx) / float(native_ctx)
+            config.rope_scaling = {
+                "type": "yarn",
+                "factor": factor,
+                "original_max_position_embeddings": native_ctx,
+            }
+            self.logger.info(
+                f"Applying YaRN scaling: native={native_ctx}, target={target_ctx}, factor={factor:.2f}"
+            )
+
+        if target_ctx:
+            if hasattr(config, "max_position_embeddings"):
+                config.max_position_embeddings = target_ctx
+            if hasattr(config, "max_sequence_length"):
+                config.max_sequence_length = target_ctx
+
+        self._native_context_length = native_ctx
+        self._target_context_length = target_ctx
+        self._using_yarn = bool(should_scale)
+
+        return {
+            "native_context_length": native_ctx,
+            "target_context_length": target_ctx,
+            "use_yarn": bool(should_scale),
+        }
 
     def _prepare_base_model_kwargs(self, is_mistral3: bool) -> Dict[str, Any]:
         """Prepare base kwargs for model loading.
@@ -151,7 +221,11 @@ class ModelLoaderMixin:
             model_kwargs["max_memory"] = max_memory
 
     def _load_model_from_pretrained(
-        self, model_path: str, is_mistral3: bool, model_kwargs: Dict[str, Any]
+        self,
+        model_path: str,
+        is_mistral3: bool,
+        model_kwargs: Dict[str, Any],
+        config: Optional[AutoConfig] = None,
     ) -> None:
         """Load model from pretrained weights.
 
@@ -161,12 +235,12 @@ class ModelLoaderMixin:
             model_kwargs: Model loading parameters
         """
         if is_mistral3:
-            self._load_mistral3_model(model_path, model_kwargs)
+            self._load_mistral3_model(model_path, model_kwargs, config)
         else:
-            self._load_standard_model(model_path, model_kwargs)
+            self._load_standard_model(model_path, model_kwargs, config)
 
     def _load_mistral3_model(
-        self, model_path: str, model_kwargs: Dict[str, Any]
+        self, model_path: str, model_kwargs: Dict[str, Any], config: Optional[AutoConfig]
     ) -> None:
         """Load Mistral3 model.
 
@@ -186,12 +260,12 @@ class ModelLoaderMixin:
                 "Ensure transformers supports Mistral3 models."
             )
         self._model = Mistral3ForConditionalGeneration.from_pretrained(
-            model_path, **model_kwargs
+            model_path, config=config, **model_kwargs
         )
         self.logger.info("✓ Mistral3 model loaded successfully")
 
     def _load_standard_model(
-        self, model_path: str, model_kwargs: Dict[str, Any]
+        self, model_path: str, model_kwargs: Dict[str, Any], config: Optional[AutoConfig]
     ) -> None:
         """Load standard causal LM model with fallback.
 
@@ -204,7 +278,7 @@ class ModelLoaderMixin:
         """
         try:
             self._model = AutoModelForCausalLM.from_pretrained(
-                model_path, **model_kwargs
+                model_path, config=config, **model_kwargs
             )
         except ValueError as ve:
             if "Unrecognized configuration class" in str(ve):
@@ -335,7 +409,7 @@ class ModelLoaderMixin:
         model_kwargs = self._prepare_pre_quantized_kwargs(is_mistral3)
 
         self._load_model_from_pretrained(
-            quantized_path, is_mistral3, model_kwargs
+            quantized_path, is_mistral3, model_kwargs, config
         )
 
         self.logger.info(
@@ -354,11 +428,13 @@ class ModelLoaderMixin:
         # Patch Ministral 3 config files if needed (fixes transformers compatibility issues)
         self._patch_ministral3_if_needed(quantized_path)
 
-        return AutoConfig.from_pretrained(
+        config = AutoConfig.from_pretrained(
             quantized_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             trust_remote_code=True,
         )
+        self._apply_context_settings(config)
+        return config
 
     def _prepare_pre_quantized_kwargs(
         self, is_mistral3: bool
@@ -394,7 +470,7 @@ class ModelLoaderMixin:
         )
 
         self._load_model_from_pretrained(
-            self.model_path, is_mistral3, model_kwargs
+            self.model_path, is_mistral3, model_kwargs, config
         )
 
         self._save_quantized_if_applicable(dtype, quantization_config)
@@ -408,11 +484,13 @@ class ModelLoaderMixin:
         # Patch Ministral 3 config files if needed (fixes transformers compatibility issues)
         self._patch_ministral3_if_needed(self.model_path)
 
-        return AutoConfig.from_pretrained(
+        config = AutoConfig.from_pretrained(
             self.model_path,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             trust_remote_code=True,
         )
+        self._apply_context_settings(config)
+        return config
 
     def _patch_ministral3_if_needed(self, model_path: str) -> None:
         """Patch Ministral 3 config files if needed for transformers compatibility.

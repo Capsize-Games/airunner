@@ -8,6 +8,9 @@ without diffusers dependency, supporting FP8 scaled checkpoints.
 from __future__ import annotations
 
 import gc
+import os
+import numpy as np
+from PIL import Image
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -18,23 +21,63 @@ from safetensors import safe_open
 from safetensors.torch import load_file as load_safetensors
 
 from airunner.components.art.managers.zimage.native.fp8_ops import (
+    FP8Linear,
+    UnscaledFP8Linear,
     QuantizedTensor,
     TensorCoreFP8Layout,
     is_fp8_scaled_checkpoint,
 )
-from diffusers.image_processor import VaeImageProcessor
+from airunner.components.art.managers.zimage.native.flow_match_scheduler import (
+    FlowMatchEulerScheduler,
+)
 from airunner.components.art.managers.zimage.native.nextdit_model import (
     NextDiT,
     ZIMAGE_CONFIG,
     create_zimage_transformer,
 )
-from diffusers.schedulers import FlowMatchEulerDiscreteScheduler
 from airunner.components.art.managers.zimage.native.zimage_text_encoder import (
     ZImageTextEncoder,
     ZImageTokenizer,
 )
+# We still rely on diffusers AutoencoderKL until a native VAE is available.
+from diffusers import AutoencoderKL
 
 logger = logging.getLogger(__name__)
+
+
+class _NativeVaeImageProcessor:
+    """Lightweight VAE image processor to avoid diffusers dependency."""
+
+    def __init__(self, vae_scale_factor: int = 8):
+        self.vae_scale_factor = vae_scale_factor
+
+    def _ensure_multiple(self, value: int) -> int:
+        if self.vae_scale_factor <= 0:
+            return value
+        return int(value // self.vae_scale_factor * self.vae_scale_factor)
+
+    def preprocess(self, image: Union[Image.Image, List[Image.Image], torch.Tensor], height: int, width: int) -> torch.Tensor:
+        """Resize and normalize to [-1, 1] torch tensor batch."""
+        if isinstance(image, torch.Tensor):
+            # Assume already normalized/reshaped (B, C, H, W)
+            return image
+
+        images = image if isinstance(image, list) else [image]
+        target_h = self._ensure_multiple(height)
+        target_w = self._ensure_multiple(width)
+
+        tensors: List[torch.Tensor] = []
+        for img in images:
+            if not isinstance(img, Image.Image):
+                raise ValueError("Expected PIL Image for preprocess")
+            img = img.convert("RGB")
+            img = img.resize((target_w, target_h), resample=Image.Resampling.LANCZOS)
+            arr = np.array(img).astype(np.float32) / 255.0  # HWC, [0,1]
+            arr = torch.from_numpy(arr).permute(2, 0, 1)  # CHW
+            arr = arr * 2.0 - 1.0
+            tensors.append(arr)
+
+        return torch.stack(tensors, dim=0)
 
 
 def set_module_tensor_to_device(
@@ -118,14 +161,14 @@ class ZImageNativePipeline:
             self.device = device
         self.dtype = dtype
         self.text_encoder_quantization = text_encoder_quantization
-        self.image_processor: Optional[VaeImageProcessor] = None
+        self.image_processor: Optional[_NativeVaeImageProcessor] = None
         
         # Components
         self.transformer: Optional[NextDiT] = None
         self.text_encoder: Optional[ZImageTextEncoder] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
         self.vae: Optional[nn.Module] = None
-        self.scheduler: Optional[FlowMatchEulerDiscreteScheduler] = None
+        self.scheduler: Optional[FlowMatchEulerScheduler] = None
         
         # Paths
         self.transformer_path = transformer_path
@@ -183,20 +226,33 @@ class ZImageNativePipeline:
         
         logger.info(f"Loading transformer from {path}")
         
-        # Check if FP8 checkpoint
+        # Check if FP8 checkpoint (scaled or unscaled)
+        self._is_unscaled_fp8 = False
         if path.endswith('.safetensors'):
-            # Peek at state dict to check format
-            sample_sd = {}
+            has_fp8_dtype = False
+            has_scale_key = False
             with safe_open(path, framework='pt') as f:
-                for i, key in enumerate(f.keys()):
-                    if i > 10:  # Sample first few keys
+                all_keys = list(f.keys())
+                # Check for scale_weight keys anywhere
+                has_scale_key = any('scale_weight' in k for k in all_keys)
+                # Sample tensor dtypes
+                for i, key in enumerate(all_keys):
+                    if i > 50:
                         break
-                    sample_sd[key] = f.get_tensor(key)
+                    t = f.get_tensor(key)
+                    if t.dtype == torch.float8_e4m3fn:
+                        has_fp8_dtype = True
+                        break
             
-            self.is_fp8 = is_fp8_scaled_checkpoint(sample_sd)
-            del sample_sd
+            # Scaled FP8 = has FP8 dtype AND scale weights
+            self.is_fp8 = has_fp8_dtype and has_scale_key
+            # Unscaled FP8 = has FP8 dtype but NO scale weights
+            self._is_unscaled_fp8 = has_fp8_dtype and not has_scale_key
         
-        logger.info(f"Checkpoint is FP8 scaled: {self.is_fp8}")
+        if self._is_unscaled_fp8:
+            logger.info(f"Checkpoint is unscaled FP8 (will cast to {self.dtype})")
+        else:
+            logger.info(f"Checkpoint is FP8 scaled: {self.is_fp8}")
         
         if self.is_fp8 and stream_load:
             self._load_fp8_checkpoint_streaming(path)
@@ -244,8 +300,7 @@ class ZImageNativePipeline:
         Args:
             path: Path to safetensors checkpoint
         """
-        import gc
-        from airunner.components.art.managers.zimage.native.fp8_ops import FP8Linear
+        # FP8Linear is imported at module level; avoid re-importing here.
         
         # First, detect the number of layers from checkpoint
         n_layers = self._detect_layer_count(path)
@@ -393,39 +448,175 @@ class ZImageNativePipeline:
     
     def _load_checkpoint_direct(self, path: str) -> None:
         """
-        Load checkpoint directly (for non-FP8 checkpoints).
+        Load unscaled FP8 checkpoint directly to GPU.
+        
+        Keeps weights in FP8 format (~5.4GB for this model).
+        FP8->bfloat16 conversion happens on-the-fly during forward pass.
         
         Args:
             path: Path to checkpoint file
         """
-        # Load state dict
-        if path.endswith('.safetensors'):
-            state_dict = load_safetensors(path)
-        else:
-            state_dict = torch.load(path, map_location='cpu')
+        # UnscaledFP8Linear is imported at module level; avoid re-importing here.
         
-        # Create model
+        # Log pre-load VRAM state
+        if torch.cuda.is_available():
+            allocated = torch.cuda.memory_allocated() / 1024**3
+            logger.info(f"_load_checkpoint_direct: Pre-load VRAM: {allocated:.2f}GB allocated")
+        
+        # Create model on meta device (0 memory allocation)
         self.transformer = create_zimage_transformer(
-            device=self.device,
+            device=torch.device('meta'),
             dtype=self.dtype,
         )
         
-        # Convert keys if needed
-        converted_sd = {}
-        for key, value in state_dict.items():
-            model_key = self._convert_checkpoint_key(key)
-            if model_key is not None:
-                converted_sd[model_key] = value.to(dtype=self.dtype)
+        # Collect FP8 layer info and non-FP8 tensors from checkpoint
+        fp8_layers = {}  # layer_key -> (weight, bias)
+        non_fp8_weights = {}  # model_key -> tensor (on GPU)
         
-        # Load weights
-        missing, unexpected = self.transformer.load_state_dict(converted_sd, strict=False)
-        if missing:
-            logger.warning(f"Missing keys: {missing[:10]}...")
-        if unexpected:
-            logger.warning(f"Unexpected keys: {unexpected[:10]}...")
+        with safe_open(path, framework='pt') as f:
+            keys = list(f.keys())
+            
+            for key in keys:
+                model_key = self._convert_checkpoint_key(key)
+                if model_key is None:
+                    continue
+                
+                tensor = f.get_tensor(key)
+                
+                if tensor.dtype == torch.float8_e4m3fn:
+                    # FP8 weight - collect for UnscaledFP8Linear replacement
+                    if model_key.endswith('.weight'):
+                        layer_key = model_key[:-7]  # Remove '.weight'
+                        if layer_key not in fp8_layers:
+                            fp8_layers[layer_key] = [None, None]
+                        # Load directly to GPU as FP8 (no dtype conversion)
+                        fp8_layers[layer_key][0] = tensor.to(self.device, copy=True)
+                    elif model_key.endswith('.bias'):
+                        layer_key = model_key[:-5]  # Remove '.bias'
+                        if layer_key not in fp8_layers:
+                            fp8_layers[layer_key] = [None, None]
+                        # Load bias to GPU, convert from FP8
+                        fp8_layers[layer_key][1] = tensor.to(device=self.device, dtype=self.dtype)
+                else:
+                    # Non-FP8 tensor - load directly to GPU
+                    non_fp8_weights[model_key] = tensor.to(device=self.device, dtype=self.dtype)
         
-        self.transformer.to(self.device)
+        # Replace Linear layers with UnscaledFP8Linear first (before materializing)
+        replaced = 0
+        fp8_non_linear = {}  # FP8 tensors that aren't for Linear layers
+        
+        for layer_key, (weight, bias) in fp8_layers.items():
+            if weight is None:
+                continue
+            
+            try:
+                # Navigate to parent module
+                parts = layer_key.split('.')
+                parent = self.transformer
+                for part in parts[:-1]:
+                    if part.isdigit():
+                        parent = parent[int(part)]
+                    else:
+                        parent = getattr(parent, part)
+                
+                layer_name = parts[-1]
+                old_layer = getattr(parent, layer_name, None)
+                
+                # Only replace if it's a Linear layer
+                if old_layer is not None and isinstance(old_layer, nn.Linear):
+                    # Create UnscaledFP8Linear (allocates only bias if present)
+                    in_features = weight.shape[1]
+                    out_features = weight.shape[0]
+                    has_bias = bias is not None
+                    
+                    fp8_linear = UnscaledFP8Linear(
+                        in_features, out_features,
+                        bias=has_bias,
+                        device=self.device,
+                        compute_dtype=self.dtype,
+                    )
+                    fp8_linear.set_weight(weight, bias)
+                    
+                    # Replace the layer
+                    setattr(parent, layer_name, fp8_linear)
+                    replaced += 1
+                else:
+                    # Not a Linear layer - convert FP8 to compute dtype and load normally
+                    fp8_non_linear[f"{layer_key}.weight"] = weight.to(dtype=self.dtype)
+                    if bias is not None:
+                        fp8_non_linear[f"{layer_key}.bias"] = bias
+                
+            except Exception as e:
+                logger.debug(f"Could not replace {layer_key}: {e}")
+                # Try to load as regular tensor
+                fp8_non_linear[f"{layer_key}.weight"] = weight.to(dtype=self.dtype)
+                if bias is not None:
+                    fp8_non_linear[f"{layer_key}.bias"] = bias
+        
+        # Merge FP8 non-linear tensors into non_fp8_weights
+        non_fp8_weights.update(fp8_non_linear)
+        
+        # Now load non-FP8 tensors directly to their locations
+        loaded_other = 0
+        for model_key, tensor in non_fp8_weights.items():
+            try:
+                set_module_tensor_to_device(
+                    self.transformer, model_key, self.device, tensor
+                )
+                loaded_other += 1
+            except Exception as e:
+                logger.debug(f"Could not set {model_key}: {e}")
+        
+        logger.info(f"Loaded transformer: {replaced} FP8 Linear layers, {loaded_other} other tensors")
+        
+        # Initialize any remaining meta tensors (e.g., padding tokens not in checkpoint)
+        self._materialize_meta_tensors()
+        
         self.transformer.eval()
+        
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    
+    def _materialize_meta_tensors(self) -> None:
+        """
+        Materialize any remaining meta tensors in the transformer.
+        
+        Some tensors like padding tokens are created in __init__ but not in checkpoint.
+        These remain on meta device and need to be materialized with actual data.
+        """
+        for name, param in self.transformer.named_parameters():
+            if param.device.type == 'meta':
+                # Create actual tensor on target device with zeros
+                new_param = nn.Parameter(
+                    torch.zeros(param.shape, device=self.device, dtype=self.dtype),
+                    requires_grad=False,
+                )
+                # Set the parameter
+                parts = name.split('.')
+                module = self.transformer
+                for part in parts[:-1]:
+                    if part.isdigit():
+                        module = module[int(part)]
+                    else:
+                        module = getattr(module, part)
+                setattr(module, parts[-1], new_param)
+                logger.debug(f"Materialized meta parameter: {name}")
+        
+        for name, buffer in self.transformer.named_buffers():
+            if buffer.device.type == 'meta':
+                # Create actual tensor on target device with zeros
+                new_buffer = torch.zeros(buffer.shape, device=self.device, dtype=self.dtype)
+                # Set the buffer
+                parts = name.split('.')
+                module = self.transformer
+                for part in parts[:-1]:
+                    if part.isdigit():
+                        module = module[int(part)]
+                    else:
+                        module = getattr(module, part)
+                module.register_buffer(parts[-1], new_buffer)
+                logger.debug(f"Materialized meta buffer: {name}")
     
     def _convert_checkpoint_key(self, key: str) -> Optional[str]:
         """
@@ -439,8 +630,13 @@ class ZImageNativePipeline:
         Returns:
             Model key or None if should skip
         """
-        # Common prefixes to strip
-        prefixes = ['model.', 'transformer.', 'diffusion_model.']
+        # Common prefixes to strip (order matters - compound prefixes first)
+        prefixes = [
+            'model.diffusion_model.',  # ComfyUI FP8 format
+            'diffusion_model.',
+            'model.',
+            'transformer.',
+        ]
         for prefix in prefixes:
             if key.startswith(prefix):
                 key = key[len(prefix):]
@@ -473,7 +669,6 @@ class ZImageNativePipeline:
         # Use tokenizer_path if provided, else use sibling 'tokenizer' directory if exists
         tok_path = tokenizer_path
         if tok_path is None:
-            import os
             sibling_tokenizer = os.path.join(os.path.dirname(path), "tokenizer")
             if os.path.isdir(sibling_tokenizer):
                 tok_path = sibling_tokenizer
@@ -484,13 +679,24 @@ class ZImageNativePipeline:
         
         # Override quantization if use_4bit is specified
         quantization = "4bit" if use_4bit else self.text_encoder_quantization
-        
+
+        # Constrain text encoder GPU budget to avoid 16GB spikes
+        max_memory = None
+        device_map = "auto"
+        if torch.cuda.is_available():
+            total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            # Leave ~8GB for transformer/activations, cap text encoder at remainder
+            usable_gpu = max(total_vram_gb - 8.0, 2.0)
+            max_memory = {0: f"{usable_gpu:.0f}GiB", "cpu": "32GiB"}
+
         self.text_encoder = ZImageTextEncoder(
             model_path=path,
             tokenizer_path=tok_path,
             device=self.device,
             dtype=self.dtype,
             quantization=quantization,
+            device_map=device_map,
+            max_memory=max_memory,
         )
         
         self.tokenizer = self.text_encoder.tokenizer
@@ -514,26 +720,26 @@ class ZImageNativePipeline:
         
         logger.info(f"Loading VAE from {path}")
         
-        # Try loading with diffusers if available
-        try:
-            from diffusers import AutoencoderKL
-            
-            self.vae = AutoencoderKL.from_pretrained(
-                path,
-                torch_dtype=self.dtype,
-            ).to(self.device)
-            self.vae.eval()
+        # Load VAE using diffusers' AutoencoderKL
+        self.vae = AutoencoderKL.from_pretrained(
+            path,
+            torch_dtype=self.dtype,
+        ).to(self.device)
+        self.vae.eval()
 
-            # Create an image processor for encode/decode convenience
-            try:
-                vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
-            except Exception:
-                vae_scale_factor = 8
-            self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
-            
-        except ImportError:
-            logger.warning("diffusers not available, VAE must be loaded manually")
-            raise
+        # Reduce VRAM during decode by tiling/slicing
+        if hasattr(self.vae, "enable_slicing"):
+            self.vae.enable_slicing()
+        if hasattr(self.vae, "enable_tiling"):
+            self.vae.enable_tiling()
+
+        # Create an image processor for encode/decode convenience
+        try:
+            vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+        except Exception:
+            vae_scale_factor = 8
+        self.image_processor = _NativeVaeImageProcessor(vae_scale_factor=vae_scale_factor)
+        
         
         self._loaded_components.append("vae")
         logger.info("VAE loaded successfully")
@@ -550,9 +756,9 @@ class ZImageNativePipeline:
             num_inference_steps: Number of denoising steps
             shift: Sigma schedule shift (3.0 for Z-Image Turbo)
         """
-        self.scheduler = FlowMatchEulerDiscreteScheduler()
+        self.scheduler = FlowMatchEulerScheduler()
         self.scheduler.set_timesteps(num_inference_steps, device=self.device)
-        logger.info(f"Scheduler setup with {num_inference_steps} steps (FlowMatchEulerDiscreteScheduler)")
+        logger.info(f"Scheduler setup with {num_inference_steps} steps (FlowMatchEulerScheduler)")
     
     def encode_prompt(
         self,
@@ -723,7 +929,7 @@ class ZImageNativePipeline:
                     vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
                 except Exception:
                     vae_scale_factor = 8
-                self.image_processor = VaeImageProcessor(vae_scale_factor=vae_scale_factor)
+                self.image_processor = _NativeVaeImageProcessor(vae_scale_factor=vae_scale_factor)
 
             # Derive target size from the input image when not provided
             if height is None or width is None:
@@ -851,11 +1057,15 @@ class ZImageNativePipeline:
         if output_type == "latent":
             return latents
         
-        # Decode latents
+        # Decode latents on GPU
         if self.vae is not None:
-            # Scale latents for VAE and convert to VAE dtype
+            # Scale latents for VAE
             latents = latents / self.vae.config.scaling_factor
-            latents = latents.to(dtype=self.vae.dtype)
+            latents = latents.to(dtype=self.vae.dtype, device=self.device)
+            
+            # Ensure VAE is on GPU
+            self.vae.to(self.device)
+            
             images = self.vae.decode(latents).sample
             images = (images / 2 + 0.5).clamp(0, 1)
         else:
@@ -864,8 +1074,6 @@ class ZImageNativePipeline:
         
         # Convert to PIL if requested
         if output_type == "pil":
-            from PIL import Image
-            import numpy as np
             
             # Convert to numpy: (B, C, H, W) -> (B, H, W, C)
             images_np = images.permute(0, 2, 3, 1).cpu().float().numpy()

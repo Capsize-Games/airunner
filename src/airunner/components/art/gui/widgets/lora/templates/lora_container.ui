@@ -280,8 +280,8 @@
    <slot>toggle_all(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>562</x>
-     <y>91</y>
+     <x>561</x>
+     <y>95</y>
     </hint>
     <hint type="destinationlabel">
      <x>52</x>
@@ -312,28 +312,12 @@
    <slot>scan_for_lora()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>399</x>
-     <y>830</y>
+     <x>409</x>
+     <y>820</y>
     </hint>
     <hint type="destinationlabel">
      <x>486</x>
      <y>-1</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>apply_lora_button</sender>
-   <signal>clicked()</signal>
-   <receiver>lora_container</receiver>
-   <slot>apply_lora()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>532</x>
-     <y>17</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>474</x>
-     <y>-7</y>
     </hint>
    </hints>
   </connection>

@@ -78,6 +78,8 @@ class ModelPipeline(
             "supports_function_calling": True,
             "supports_thinking": True,
             "context_length": 32768,
+            "native_context_length": 32768,
+            "yarn_max_context_length": 131072,
             "vram_requirements_gb": {
                 "full": 32,
                 "4bit": 8,

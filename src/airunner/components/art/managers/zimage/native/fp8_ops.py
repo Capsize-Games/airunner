@@ -11,7 +11,7 @@ Based on ComfyUI's comfy/quant_ops.py implementation.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -24,7 +24,7 @@ _LAYOUT_REGISTRY: Dict[Any, Dict[str, Any]] = {}
 _GENERIC_UTILS: Dict[Any, Any] = {}
 
 
-def register_layout_op(torch_op: Any, layout_type: str):
+def register_layout_op(torch_op: Any, layout_type: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to register a layout-specific operation handler.
     
@@ -32,7 +32,15 @@ def register_layout_op(torch_op: Any, layout_type: str):
         torch_op: PyTorch operation (e.g., torch.ops.aten.linear.default)
         layout_type: Layout type string (e.g., "TensorCoreFP8Layout")
     """
-    def decorator(handler_func):
+    def decorator(handler_func: Callable[..., Any]) -> Callable[..., Any]:
+        """Register a handler function for a specific op/layout.
+
+        Args:
+            handler_func: The function that handles this op for the layout.
+
+        Returns:
+            The original handler function (unchanged).
+        """
         if torch_op not in _LAYOUT_REGISTRY:
             _LAYOUT_REGISTRY[torch_op] = {}
         _LAYOUT_REGISTRY[torch_op][layout_type] = handler_func
@@ -40,14 +48,22 @@ def register_layout_op(torch_op: Any, layout_type: str):
     return decorator
 
 
-def register_generic_util(torch_op: Any):
+def register_generic_util(torch_op: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to register a generic utility that works for all layouts.
     
     Args:
         torch_op: PyTorch operation (e.g., torch.ops.aten.detach.default)
     """
-    def decorator(handler_func):
+    def decorator(handler_func: Callable[..., Any]) -> Callable[..., Any]:
+        """Register a generic utility handler for all layouts.
+
+        Args:
+            handler_func: The utility function to register.
+
+        Returns:
+            The original handler function.
+        """
         _GENERIC_UTILS[torch_op] = handler_func
         return handler_func
     return decorator
@@ -382,9 +398,17 @@ class QuantizedTensor(torch.Tensor):
         return cls._dequant_and_fallback(func, args, kwargs)
     
     @classmethod
-    def _dequant_and_fallback(cls, func, args, kwargs):
+    def _dequant_and_fallback(cls, func: Callable, args: tuple, kwargs: dict) -> Any:
         """Dequantize all quantized tensors and run the operation."""
-        def dequant_arg(arg):
+        def dequant_arg(arg: Any) -> Any:
+            """Recursively dequantizes QuantizedTensor instances in nested structures.
+
+            Args:
+                arg: The argument to dequantize.
+
+            Returns:
+                The same structure with QuantizedTensor objects converted to tensors.
+            """
             if isinstance(arg, QuantizedTensor):
                 return arg.dequantize()
             elif isinstance(arg, (list, tuple)):
@@ -395,19 +419,19 @@ class QuantizedTensor(torch.Tensor):
         new_kwargs = dequant_arg(kwargs)
         return func(*new_args, **new_kwargs)
     
-    def data_ptr(self):
+    def data_ptr(self) -> int:
         """Get raw data pointer."""
         return self._qdata.data_ptr()
     
-    def is_pinned(self):
+    def is_pinned(self) -> bool:
         """Check if tensor is pinned."""
         return self._qdata.is_pinned()
     
-    def is_contiguous(self, *arg, **kwargs):
+    def is_contiguous(self, *arg: Any, **kwargs: Any) -> bool:
         """Check if tensor is contiguous."""
         return self._qdata.is_contiguous(*arg, **kwargs)
     
-    def storage(self):
+    def storage(self) -> Any:
         """Get tensor storage."""
         return self._qdata.storage()
 
@@ -417,7 +441,7 @@ class QuantizedTensor(torch.Tensor):
 # =============================================================================
 
 @register_generic_util(torch.ops.aten.detach.default)
-def generic_detach(func, args, kwargs):
+def generic_detach(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Detach operation - creates a detached copy."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -428,7 +452,7 @@ def generic_detach(func, args, kwargs):
 
 
 @register_generic_util(torch.ops.aten.clone.default)
-def generic_clone(func, args, kwargs):
+def generic_clone(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Clone operation - creates a deep copy."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -439,7 +463,7 @@ def generic_clone(func, args, kwargs):
 
 
 @register_generic_util(torch.ops.aten._to_copy.default)
-def generic_to_copy(func, args, kwargs):
+def generic_to_copy(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Device/dtype transfer operation."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -458,7 +482,7 @@ def generic_to_copy(func, args, kwargs):
 
 
 @register_generic_util(torch.ops.aten.to.dtype_layout)
-def generic_to_dtype_layout(func, args, kwargs):
+def generic_to_dtype_layout(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Handle .to(device) calls using dtype_layout variant."""
     qt = args[0]
     if isinstance(qt, QuantizedTensor):
@@ -481,7 +505,7 @@ def generic_to_dtype_layout(func, args, kwargs):
 # =============================================================================
 
 @register_layout_op(torch.ops.aten.linear.default, "TensorCoreFP8Layout")
-def fp8_linear(func, args, kwargs):
+def fp8_linear(func: Callable, args: tuple, kwargs: dict) -> Any:
     """
     FP8-optimized linear operation.
     
@@ -542,7 +566,7 @@ def fp8_linear(func, args, kwargs):
 
 
 @register_layout_op(torch.ops.aten.mm.default, "TensorCoreFP8Layout")
-def fp8_mm(func, args, kwargs):
+def fp8_mm(func: Callable, args: tuple, kwargs: dict) -> Any:
     """FP8-optimized matrix multiplication."""
     input_tensor = args[0]
     weight = args[1]
@@ -580,7 +604,7 @@ def fp8_mm(func, args, kwargs):
 
 
 @register_layout_op(torch.ops.aten.t.default, "TensorCoreFP8Layout")
-def fp8_transpose(func, args, kwargs):
+def fp8_transpose(func: Callable, args: tuple, kwargs: dict) -> Any:
     """Transpose operation for FP8 tensors."""
     input_tensor = args[0]
     if isinstance(input_tensor, QuantizedTensor):
@@ -594,7 +618,7 @@ def fp8_transpose(func, args, kwargs):
 
 
 @register_layout_op(torch.ops.aten.view.default, "TensorCoreFP8Layout")
-def fp8_view(func, args, kwargs):
+def fp8_view(func: Callable, args: tuple, kwargs: dict) -> Any:
     """View operation for FP8 tensors."""
     input_tensor = args[0]
     if isinstance(input_tensor, QuantizedTensor):
@@ -653,6 +677,8 @@ class FP8Linear(nn.Module):
         # Use unique name to avoid nn.Module intercepting 'weight'
         self.fp8_weight_storage: Optional[QuantizedTensor] = None
         self._has_bias = bias
+        # Optional merged weight for LoRA (set by native_lora._merge_fp8_linear_weights)
+        self._merged_weight: Optional[torch.Tensor] = None
         
         if bias:
             self.register_buffer(
@@ -715,8 +741,11 @@ class FP8Linear(nn.Module):
         if self.fp8_weight_storage is None:
             raise RuntimeError("Weight not set. Call set_fp8_weight first.")
         
-        # Dequantize weight for forward pass
-        weight = self.fp8_weight_storage.dequantize().to(x.dtype)
+        # If a LoRA merge has been staged, prefer it; otherwise dequantize FP8 weight
+        if self._merged_weight is not None:
+            weight = self._merged_weight.to(x.dtype)
+        else:
+            weight = self.fp8_weight_storage.dequantize().to(x.dtype)
         
         bias = self._bias if self._has_bias and hasattr(self, '_bias') else None
         if bias is not None:
@@ -728,6 +757,229 @@ class FP8Linear(nn.Module):
 # =============================================================================
 # Checkpoint Loading Utilities
 # =============================================================================
+
+class UnscaledFP8Linear(nn.Module):
+    """
+    Linear layer that stores weights in FP8 format without scale factors.
+    
+    Weights are stored as FP8 (8 bits per param = ~50% memory savings).
+    During forward pass, weights are cast to compute dtype on-the-fly.
+    This is memory efficient - FP8 weights stay FP8 until needed.
+    
+    LoRA support: LoRA weights (A and B matrices) are stored separately
+    and applied additively during forward pass. This allows enabling/disabling
+    LoRA without reloading the base model. Memory overhead is minimal since
+    LoRA matrices are small (rank << hidden_dim).
+    """
+    
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        device: Optional[torch.device] = None,
+        compute_dtype: torch.dtype = torch.bfloat16,
+    ):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.compute_dtype = compute_dtype
+        self._has_bias = bias
+        
+        # Register FP8 weight as buffer (not parameter) to avoid grad issues
+        self.register_buffer('fp8_weight', None)
+        if bias:
+            self.register_buffer('bias', torch.zeros(out_features, device=device, dtype=compute_dtype))
+        else:
+            self.register_buffer('bias', None)
+        
+        # Additive LoRA storage - stored separately, applied during forward
+        # Dict[adapter_name] -> {"down": Tensor, "up": Tensor, "alpha": float, "scale": float, "enabled": bool}
+        self._lora_layers: Dict[str, Dict[str, Any]] = {}
+    
+    def set_weight(self, fp8_weight: torch.Tensor, bias: Optional[torch.Tensor] = None):
+        """Set the FP8 weight tensor."""
+        self.fp8_weight = fp8_weight
+        if bias is not None and self._has_bias:
+            self.bias = bias.to(self.compute_dtype)
+    
+    def add_lora(
+        self,
+        adapter_name: str,
+        down_weight: torch.Tensor,
+        up_weight: torch.Tensor,
+        alpha: Optional[float] = None,
+        scale: float = 1.0,
+    ) -> None:
+        """Add LoRA weights to this layer (non-destructive).
+        
+        LoRA weights are stored separately and applied during forward pass.
+        This allows toggling LoRA on/off without reloading the model.
+        
+        Args:
+            adapter_name: Unique name for this LoRA adapter
+            down_weight: LoRA down/A weight [rank, in_features]
+            up_weight: LoRA up/B weight [out_features, rank]
+            alpha: LoRA alpha (defaults to rank if not provided)
+            scale: LoRA scale factor (0.0-1.0+)
+        """
+        rank = down_weight.shape[0]
+        if alpha is None:
+            alpha = float(rank)
+        
+        # Store on same device as base weight, keep in compute dtype for efficiency
+        device = self.fp8_weight.device if self.fp8_weight is not None else down_weight.device
+        self._lora_layers[adapter_name] = {
+            "down": down_weight.to(device=device, dtype=self.compute_dtype),
+            "up": up_weight.to(device=device, dtype=self.compute_dtype),
+            "alpha": alpha,
+            "rank": rank,
+            "scale": scale,
+            "enabled": True,
+        }
+    
+    def remove_lora(self, adapter_name: str) -> bool:
+        """Remove a LoRA adapter from this layer.
+        
+        Args:
+            adapter_name: Name of the adapter to remove
+            
+        Returns:
+            True if removed, False if not found
+        """
+        if adapter_name in self._lora_layers:
+            del self._lora_layers[adapter_name]
+            return True
+        return False
+    
+    def remove_all_loras(self) -> int:
+        """Remove all LoRA adapters from this layer.
+        
+        Returns:
+            Number of adapters removed
+        """
+        count = len(self._lora_layers)
+        self._lora_layers.clear()
+        return count
+    
+    def set_lora_enabled(self, adapter_name: str, enabled: bool) -> bool:
+        """Enable or disable a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter
+            enabled: Whether to enable or disable
+            
+        Returns:
+            True if found and updated, False if not found
+        """
+        if adapter_name in self._lora_layers:
+            self._lora_layers[adapter_name]["enabled"] = enabled
+            return True
+        return False
+    
+    def set_all_loras_enabled(self, enabled: bool) -> None:
+        """Enable or disable all LoRA adapters."""
+        for lora_data in self._lora_layers.values():
+            lora_data["enabled"] = enabled
+    
+    def set_lora_scale(self, adapter_name: str, scale: float) -> bool:
+        """Set the scale for a specific LoRA adapter.
+        
+        Args:
+            adapter_name: Name of the adapter
+            scale: New scale value
+            
+        Returns:
+            True if found and updated, False if not found
+        """
+        if adapter_name in self._lora_layers:
+            self._lora_layers[adapter_name]["scale"] = scale
+            return True
+        return False
+    
+    def get_lora_names(self) -> List[str]:
+        """Get names of all loaded LoRA adapters."""
+        return list(self._lora_layers.keys())
+    
+    def has_lora(self, adapter_name: str) -> bool:
+        """Check if a LoRA adapter is loaded."""
+        return adapter_name in self._lora_layers
+    
+    def _compute_lora_delta(self) -> Optional[torch.Tensor]:
+        """Compute the combined LoRA delta from all enabled adapters.
+        
+        Returns:
+            Combined delta tensor or None if no enabled LoRAs
+        """
+        if not self._lora_layers:
+            return None
+        
+        delta = None
+        for adapter_name, lora_data in self._lora_layers.items():
+            if not lora_data["enabled"]:
+                continue
+            
+            down = lora_data["down"]
+            up = lora_data["up"]
+            alpha = lora_data["alpha"]
+            rank = lora_data["rank"]
+            scale = lora_data["scale"]
+            
+            # LoRA formula: delta = scale * (alpha/rank) * (up @ down)
+            lora_scale = scale * (alpha / rank)
+            adapter_delta = lora_scale * (up @ down)
+            
+            if delta is None:
+                delta = adapter_delta
+            else:
+                delta = delta + adapter_delta
+        
+        return delta
+    
+    # Legacy method for backwards compatibility - now uses additive approach
+    def merge_lora_weight(self, merged_weight: torch.Tensor):
+        """Legacy method - prefer add_lora() for non-destructive LoRA.
+        
+        This method is kept for backwards compatibility but now logs a warning.
+        """
+        logger.warning(
+            "merge_lora_weight() is deprecated. Use add_lora() for non-destructive LoRA."
+        )
+        # Convert merged weight back to FP8
+        lp_amax = torch.finfo(torch.float8_e4m3fn).max
+        clamped = torch.clamp(merged_weight, min=-lp_amax, max=lp_amax)
+        self.fp8_weight = clamped.to(torch.float8_e4m3fn)
+    
+    def get_dequantized_weight(self) -> torch.Tensor:
+        """Get the weight as compute dtype tensor."""
+        return self.fp8_weight.to(self.compute_dtype)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward with on-the-fly FP8 -> compute_dtype conversion and LoRA.
+        
+        LoRA is applied additively: output = x @ (W + delta).T + bias
+        This is mathematically equivalent to: output = x @ W.T + x @ delta.T + bias
+        """
+        # Cast FP8 weight to compute dtype
+        weight = self.fp8_weight.to(self.compute_dtype)
+        
+        # Apply LoRA delta if any enabled adapters exist
+        lora_delta = self._compute_lora_delta()
+        if lora_delta is not None:
+            weight = weight + lora_delta
+        
+        return F.linear(x, weight, self.bias)
+    
+    def extra_repr(self) -> str:
+        """Return a short textual description for module debugging.
+
+        Includes basic shape and LoRA counts for quick inspection in debug logs.
+        """
+        lora_count = len(self._lora_layers)
+        enabled_count = sum(1 for l in self._lora_layers.values() if l["enabled"])
+        lora_str = f", loras={enabled_count}/{lora_count}" if lora_count > 0 else ""
+        return f'in={self.in_features}, out={self.out_features}, fp8=True{lora_str}'
+
 
 def load_fp8_state_dict_entry(
     tensor: torch.Tensor,

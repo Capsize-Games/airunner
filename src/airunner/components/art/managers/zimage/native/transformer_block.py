@@ -77,14 +77,54 @@ class JointTransformerBlock(nn.Module):
         dtype=None,
     ):
         super().__init__()
-        
+
         self.dim = dim
         self.head_dim = dim // n_heads
         self.layer_id = layer_id
         self.modulation = modulation
-        
-        # Attention
-        self.attention = JointAttention(
+
+        self.attention = self._build_attention(
+            dim,
+            n_heads,
+            n_kv_heads,
+            qk_norm,
+            attn_out_bias,
+            device,
+            dtype,
+        )
+
+        self.feed_forward = self._build_feedforward(
+            dim,
+            multiple_of,
+            ffn_dim_multiplier,
+            device,
+            dtype,
+        )
+
+        (
+            self.attention_norm1,
+            self.ffn_norm1,
+            self.attention_norm2,
+            self.ffn_norm2,
+        ) = self._build_norm_layers(dim, norm_eps, device, dtype)
+
+        self.adaLN_modulation = (
+            self._build_modulation_layer(dim, z_image_modulation, device, dtype)
+            if modulation
+            else None
+        )
+
+    @staticmethod
+    def _build_attention(
+        dim: int,
+        n_heads: int,
+        n_kv_heads: Optional[int],
+        qk_norm: bool,
+        attn_out_bias: bool,
+        device,
+        dtype,
+    ) -> JointAttention:
+        return JointAttention(
             dim,
             n_heads,
             n_kv_heads,
@@ -93,9 +133,16 @@ class JointTransformerBlock(nn.Module):
             device=device,
             dtype=dtype,
         )
-        
-        # Feedforward
-        self.feed_forward = FeedForward(
+
+    @staticmethod
+    def _build_feedforward(
+        dim: int,
+        multiple_of: int,
+        ffn_dim_multiplier: float,
+        device,
+        dtype,
+    ) -> FeedForward:
+        return FeedForward(
             dim=dim,
             hidden_dim=dim,
             multiple_of=multiple_of,
@@ -103,46 +150,38 @@ class JointTransformerBlock(nn.Module):
             device=device,
             dtype=dtype,
         )
-        
-        # Norms (pre-norm and post-norm for residual)
-        self.attention_norm1 = RMSNorm(
-            dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype
+
+    @staticmethod
+    def _build_norm_layers(dim: int, norm_eps: float, device, dtype):
+        return (
+            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
+            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
+            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
+            RMSNorm(dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype),
         )
-        self.ffn_norm1 = RMSNorm(
-            dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype
+
+    @staticmethod
+    def _build_modulation_layer(dim: int, z_image_modulation: bool, device, dtype):
+        if z_image_modulation:
+            return nn.Sequential(
+                nn.Linear(
+                    min(dim, 256),
+                    4 * dim,
+                    bias=True,
+                    device=device,
+                    dtype=dtype,
+                ),
+            )
+        return nn.Sequential(
+            nn.SiLU(),
+            nn.Linear(
+                min(dim, 1024),
+                4 * dim,
+                bias=True,
+                device=device,
+                dtype=dtype,
+            ),
         )
-        self.attention_norm2 = RMSNorm(
-            dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype
-        )
-        self.ffn_norm2 = RMSNorm(
-            dim, eps=norm_eps, elementwise_affine=True, device=device, dtype=dtype
-        )
-        
-        # AdaLN modulation
-        if modulation:
-            if z_image_modulation:
-                # Z-Image uses 256-dim modulation input, no SiLU activation
-                self.adaLN_modulation = nn.Sequential(
-                    nn.Linear(
-                        min(dim, 256),
-                        4 * dim,
-                        bias=True,
-                        device=device,
-                        dtype=dtype,
-                    ),
-                )
-            else:
-                # Standard Lumina2 uses 1024-dim with SiLU activation
-                self.adaLN_modulation = nn.Sequential(
-                    nn.SiLU(),
-                    nn.Linear(
-                        min(dim, 1024),
-                        4 * dim,
-                        bias=True,
-                        device=device,
-                        dtype=dtype,
-                    ),
-                )
     
     def forward(
         self,

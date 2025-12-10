@@ -24,6 +24,25 @@ from airunner.enums import LLMActionType, SignalCode
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
 
+    def _clamp_generation_tokens(self, generation_kwargs: Dict[str, Any]) -> None:
+        """Ensure max_new_tokens does not exceed target context.
+
+        Uses `_target_context_length` set during model/tokenizer load.
+        """
+        target_ctx = getattr(self, "_target_context_length", None)
+        if not target_ctx:
+            return
+
+        requested = generation_kwargs.get("max_new_tokens")
+        if requested is None:
+            return
+
+        if requested > target_ctx:
+            self.logger.info(
+                f"Clamping max_new_tokens from {requested} to target context {target_ctx}"
+            )
+            generation_kwargs["max_new_tokens"] = target_ctx
+
     def _setup_generation_workflow(
         self,
         action: LLMActionType,
@@ -340,6 +359,8 @@ class GenerationMixin:
                 generation_kwargs["max_new_tokens"] = generation_kwargs.pop(
                     "max_tokens"
                 )
+
+            self._clamp_generation_tokens(generation_kwargs)
 
             self.logger.debug(
                 "llm_request.max_new_tokens=%s",

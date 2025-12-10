@@ -11,10 +11,18 @@ from __future__ import annotations
 
 import logging
 import os
+import gc
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from transformers import (
+    Qwen2Tokenizer,
+    AutoTokenizer,
+    AutoModel,
+    AutoConfig,
+    BitsAndBytesConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +58,8 @@ class ZImageTokenizer:
     
     def _load_tokenizer(self, tokenizer_path: str):
         """Load the Qwen tokenizer."""
+        # Use module-level transformers imports
         try:
-            from transformers import Qwen2Tokenizer, AutoTokenizer
-            
             if os.path.isdir(tokenizer_path):
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     tokenizer_path,
@@ -64,7 +71,6 @@ class ZImageTokenizer:
                     "Qwen/Qwen2.5-3B",  # Fallback
                     trust_remote_code=True,
                 )
-            
             logger.info(f"Loaded tokenizer from {tokenizer_path}")
         except Exception as e:
             logger.warning(f"Failed to load tokenizer: {e}")
@@ -143,6 +149,8 @@ class ZImageTextEncoder(nn.Module):
         device: Optional[torch.device] = None,
         dtype: Optional[torch.dtype] = None,
         quantization: Optional[str] = None,
+        device_map: Optional[str] = None,
+        max_memory: Optional[Dict[str, str]] = None,
     ):
         super().__init__()
         
@@ -151,6 +159,8 @@ class ZImageTextEncoder(nn.Module):
         self.dtype = dtype or torch.bfloat16
         self.quantization = quantization
         self._device = device
+        self._device_map = device_map
+        self._max_memory = max_memory
         
         self.model: Optional[nn.Module] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
@@ -181,7 +191,7 @@ class ZImageTextEncoder(nn.Module):
             model_path: Path to model weights
         """
         try:
-            from transformers import AutoModel, AutoConfig, BitsAndBytesConfig
+            # Model imports are handled at module level
             
             # Load config
             config = AutoConfig.from_pretrained(
@@ -204,13 +214,24 @@ class ZImageTextEncoder(nn.Module):
                 )
             
             # Load model
+            # Choose device_map strategy: prefer provided map, else auto when quantized
+            device_map = self._device_map
+            if device_map is None and (quantization_config is not None or self._device is None):
+                device_map = "auto"
+
+            load_kwargs = {
+                "config": config,
+                "quantization_config": quantization_config,
+                "torch_dtype": self.dtype,
+                "device_map": device_map,
+                "trust_remote_code": True,
+            }
+            if device_map is not None and self._max_memory is not None:
+                load_kwargs["max_memory"] = self._max_memory
+
             self.model = AutoModel.from_pretrained(
                 model_path,
-                config=config,
-                quantization_config=quantization_config,
-                torch_dtype=self.dtype,
-                device_map="auto" if self._device is None else None,
-                trust_remote_code=True,
+                **load_kwargs,
             )
             
             if self._device is not None and quantization_config is None:
@@ -303,7 +324,6 @@ class ZImageTextEncoder(nn.Module):
             del self.tokenizer
             self.tokenizer = None
         
-        import gc
         gc.collect()
         torch.cuda.empty_cache()
 
