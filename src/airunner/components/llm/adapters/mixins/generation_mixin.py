@@ -123,29 +123,23 @@ class GenerationMixin:
         
         Args:
             prompt: Text prompt string
-            image_urls: List of base64 data URLs for images
+            image_urls: List of image sources (data URLs, http/https, file paths, PIL, bytes)
             
         Returns:
             Dictionary with input tensors including pixel_values
         """
-        import base64
-        import io
-        from PIL import Image
-        
-        # Decode base64 images to PIL
         pil_images = []
-        for url in image_urls:
-            try:
-                # Extract base64 data from data URL
-                if url.startswith("data:image"):
-                    # Format: data:image/png;base64,<data>
-                    base64_data = url.split(",", 1)[1]
-                    image_bytes = base64.b64decode(base64_data)
-                    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-                    pil_images.append(img)
-            except Exception as e:
-                self.logger.error(f"Failed to decode image: {e}")
-        
+        for source in image_urls:
+            image = self._load_image_from_source(source)
+            if image is not None:
+                # Resize large images to prevent garbage output from quantized models
+                # 4-bit quantized Mistral3/Pixtral produces corrupted output for images > 640px
+                if self._is_quantized_model():
+                    image = self._resize_image_for_quantized_model(image, max_size=640)
+                pil_images.append(image)
+            else:
+                self.logger.warning("Skipping unusable image source for vision prompt")
+
         if not pil_images:
             # No valid images, fall back to text-only
             # CRITICAL: add_special_tokens=False - chat template already has BOS
@@ -155,7 +149,7 @@ class GenerationMixin:
                 truncation=True,
                 add_special_tokens=False,
             ).to(self.model.device)
-        
+
         # Use processor to encode text and images together
         # The processor handles both tokenization and image preprocessing
         # CRITICAL: add_special_tokens=False because the chat template already
@@ -171,9 +165,18 @@ class GenerationMixin:
             )
             # Move all tensors to model device
             inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+
+            # Align floating tensors with model dtype to avoid Float/Half mismatches
+            model_dtype = self._get_model_dtype()
+            if model_dtype:
+                for key, tensor in inputs.items():
+                    if torch.is_floating_point(tensor) and tensor.dtype != model_dtype:
+                        inputs[key] = tensor.to(dtype=model_dtype)
+
             self.logger.info(
                 f"Prepared vision inputs with {len(pil_images)} image(s), "
-                f"input_ids shape: {inputs['input_ids'].shape}"
+                f"input_ids shape: {inputs['input_ids'].shape}, "
+                f"pixel_values dtype: {inputs.get('pixel_values').dtype if 'pixel_values' in inputs else 'n/a'}"
             )
             return inputs
         except Exception as e:
@@ -186,6 +189,102 @@ class GenerationMixin:
                 truncation=True,
                 add_special_tokens=False,
             ).to(self.model.device)
+
+    def _resize_image_for_quantized_model(self, image, max_size: int = 640):
+        """Resize image to prevent garbage output from quantized vision models.
+        
+        4-bit quantized Mistral3/Pixtral models produce corrupted output when
+        processing images larger than approximately 640x640 pixels. This method
+        resizes images to stay within safe bounds while preserving aspect ratio.
+        
+        Args:
+            image: PIL Image to resize
+            max_size: Maximum dimension (width or height) in pixels
+            
+        Returns:
+            Resized PIL Image if needed, otherwise original image
+        """
+        from PIL import Image as PILImage
+        
+        if image.width <= max_size and image.height <= max_size:
+            return image
+            
+        # Calculate resize ratio to fit within max_size
+        ratio = min(max_size / image.width, max_size / image.height)
+        new_size = (int(image.width * ratio), int(image.height * ratio))
+        
+        self.logger.info(
+            f"Resizing image from {image.size} to {new_size} for quantized model compatibility"
+        )
+        
+        return image.resize(new_size, PILImage.LANCZOS)
+
+    def _load_image_from_source(self, source):
+        """Best-effort conversion of various image sources to PIL.Image."""
+        import base64
+        import io
+        from pathlib import Path
+        from urllib.parse import urlparse
+        from urllib.request import Request, urlopen
+
+        from PIL import Image
+
+        if source is None:
+            return None
+
+        if isinstance(source, Image.Image):
+            return source.convert("RGB")
+
+        if isinstance(source, (bytes, bytearray)):
+            return Image.open(io.BytesIO(source)).convert("RGB")
+
+        if isinstance(source, dict):
+            data_candidate = (
+                source.get("data")
+                or source.get("image")
+                or source.get("content")
+                or source.get("bytes")
+            )
+            path_candidate = source.get("path") or source.get("url")
+            if data_candidate:
+                return self._load_image_from_source(data_candidate)
+            if path_candidate:
+                return self._load_image_from_source(path_candidate)
+
+        if isinstance(source, (str, Path)):
+            path_str = str(source)
+            if path_str.startswith("data:image"):
+                try:
+                    base64_data = path_str.split(",", 1)[1]
+                except IndexError:
+                    base64_data = path_str
+                image_bytes = base64.b64decode(base64_data)
+                return Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+            parsed = urlparse(path_str)
+            if parsed.scheme in {"http", "https"}:
+                try:
+                    req = Request(path_str, headers={"User-Agent": "Mozilla/5.0"})
+                    with urlopen(req, timeout=10) as resp:
+                        return Image.open(io.BytesIO(resp.read())).convert("RGB")
+                except Exception as exc:
+                    self.logger.error(f"Failed to download image: {exc}")
+                    return None
+
+            fs_path = Path(path_str).expanduser()
+            if fs_path.exists():
+                try:
+                    return Image.open(fs_path).convert("RGB")
+                except Exception as exc:
+                    self.logger.error(f"Failed to open image file: {exc}")
+                    return None
+
+            try:
+                return Image.open(io.BytesIO(base64.b64decode(path_str))).convert("RGB")
+            except Exception:
+                return None
+
+        return None
 
     def _get_token_ids(self):
         """Get EOS and PAD token IDs based on tokenizer type.
@@ -205,6 +304,43 @@ class GenerationMixin:
             eos_token_id = 2
             pad_token_id = 2
         return eos_token_id, pad_token_id
+
+    def _is_quantized_model(self) -> bool:
+        """Check if the model is quantized (4-bit or 8-bit).
+        
+        Quantized vision models like Mistral3/Pixtral have issues processing
+        large images, producing garbage output above ~640px.
+        
+        Returns:
+            True if model uses quantization, False otherwise
+        """
+        try:
+            if hasattr(self.model, "config"):
+                config = self.model.config
+                # Check for bitsandbytes quantization config
+                if hasattr(config, "quantization_config"):
+                    return True
+            # Check for quantization attributes set by bitsandbytes
+            if hasattr(self.model, "is_loaded_in_4bit") and self.model.is_loaded_in_4bit:
+                return True
+            if hasattr(self.model, "is_loaded_in_8bit") and self.model.is_loaded_in_8bit:
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _get_model_dtype(self) -> Optional[torch.dtype]:
+        """Safely determine the model's floating dtype if available."""
+        try:
+            if hasattr(self.model, "dtype"):
+                return self.model.dtype
+            param = next(self.model.parameters(), None)
+            if param is not None:
+                return param.dtype
+        except Exception:
+            # Best-effort; fall back to default handling
+            return None
+        return None
 
     def _run_generation(self, inputs, eos_token_id, pad_token_id, kwargs):
         """Run model generation with parameters.

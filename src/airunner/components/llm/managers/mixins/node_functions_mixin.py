@@ -15,6 +15,7 @@ from langchain_core.messages import (
     trim_messages,
 )
 
+from langchain_core.messages import SystemMessage
 from airunner.components.llm.utils.thinking_parser import (
     strip_thinking_tags,
     has_thinking_content,
@@ -1003,8 +1004,12 @@ Based on the search results above, provide a clear, conversational answer to the
 
         generation_kwargs = state.get("generation_kwargs", {})
 
-        # Trim messages
-        trimmed_messages = self._trim_messages(state["messages"])
+        # Trim messages (skip trimming for vision models to preserve multimodal parts)
+        chat_model = getattr(self, "_chat_model", None)
+        if chat_model and getattr(chat_model, "is_vision_model", False):
+            trimmed_messages = state["messages"]
+        else:
+            trimmed_messages = self._trim_messages(state["messages"])
 
         # Build prompt with tool instructions
         prompt = self._build_prompt(trimmed_messages)
@@ -1043,7 +1048,69 @@ Based on the search results above, provide a clear, conversational answer to the
         Returns:
             Formatted prompt
         """
-        # Escape curly braces for LangChain template compatibility
+        chat_model = getattr(self, "_chat_model", None)
+
+        # Vision models: build a direct message list with a minimal system prompt
+        if chat_model and getattr(chat_model, "is_vision_model", False):
+            vision_system = SystemMessage(
+                content=(
+                    "You are a helpful assistant. Respond concisely to the user. "
+                    "If an image is provided, describe it clearly and do not propose or call any tools."
+                )
+            )
+            merged_messages: List[BaseMessage] = []
+
+            for message in trimmed_messages:
+                if message is None:
+                    # Skip invalid entries to avoid NoneType errors downstream
+                    self.logger.warning(
+                        "[VISION PROMPT] Skipping None message while building prompt"
+                    )
+                    continue
+
+                if (
+                    merged_messages
+                    and isinstance(message, HumanMessage)
+                    and isinstance(merged_messages[-1], HumanMessage)
+                ):
+                    # Merge consecutive human messages to keep role alternation for chat templates
+                    current_content = merged_messages[-1].content
+                    new_content = message.content
+
+                    if isinstance(current_content, list) and isinstance(new_content, list):
+                        merged_messages[-1].content = current_content + new_content
+                    elif isinstance(current_content, list):
+                        merged_messages[-1].content = current_content + [new_content]
+                    elif isinstance(new_content, list):
+                        merged_messages[-1].content = [current_content] + new_content
+                    else:
+                        merged_messages[-1].content = f"{current_content}\n{new_content}"
+
+                    self.logger.debug(
+                        "[VISION PROMPT] Merged consecutive HumanMessages to maintain alternation"
+                    )
+                    continue
+
+                merged_messages.append(message)
+
+            vision_messages = [vision_system, *merged_messages]
+
+            # Debugging: ensure we kept the human/image message
+            has_human = any(isinstance(m, HumanMessage) for m in vision_messages)
+            if not has_human:
+                self.logger.warning(
+                    "[VISION PROMPT] No HumanMessage present after vision prompt build; messages len=%s",
+                    len(vision_messages),
+                )
+            else:
+                self.logger.debug(
+                    "[VISION PROMPT] Vision messages count=%s (system + %s user/tool msgs)",
+                    len(vision_messages), len(vision_messages) - 1,
+                )
+
+            return vision_messages
+
+        # Standard flow: escape and inject tool instructions
         escaped_system_prompt = self._escape_system_prompt()
 
         # Add tool instructions for JSON mode (bind_tools doesn't inject them)
@@ -1186,6 +1253,12 @@ Based on the search results above, provide a clear, conversational answer to the
         if not self._tools or len(self._tools) == 0:
             return system_prompt
 
+        # Vision models (e.g., Ministral-3) can be derailed by verbose tool text.
+        # Skip manual tool injection and rely on the adapter/chat template instead.
+        chat_model = getattr(self, "_chat_model", None)
+        if chat_model and getattr(chat_model, "is_vision_model", False):
+            return system_prompt
+
         # Tools are handled by the chat model adapter's apply_chat_template
         # Do NOT manually inject tool lists - this causes model confusion
         tool_calling_mode = getattr(
@@ -1196,7 +1269,9 @@ Based on the search results above, provide a clear, conversational answer to the
         if tool_calling_mode == "react":
             compact_tools = self._create_compact_tool_list()
             if compact_tools:
-                system_prompt = f"{system_prompt}\n\n{compact_tools}"
+                # Escape braces to avoid LangChain template variable parsing
+                escaped_tools = compact_tools.replace("{", "{{").replace("}", "}}")
+                system_prompt = f"{system_prompt}\n\n{escaped_tools}"
 
         self.logger.debug(
             "Tools (%s) bound via bind_tools() - chat adapter will format them (mode: %s)",

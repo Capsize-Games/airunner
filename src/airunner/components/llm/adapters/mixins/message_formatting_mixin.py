@@ -127,7 +127,7 @@ class MessageFormattingMixin:
         from langchain_core.messages import ToolMessage
         
         chat_messages = []
-        extracted_images = []  # Store PIL images for vision models
+        extracted_images = []  # Store image payloads for vision models
         
         for msg in messages:
             if isinstance(msg, SystemMessage):
@@ -143,16 +143,26 @@ class MessageFormattingMixin:
                             if part.get("type") == "text":
                                 content_parts.append(part)
                             elif part.get("type") == "image_url":
-                                # Extract image data - keep for processor
                                 content_parts.append({"type": "image"})
-                                # Store image URL for later extraction
                                 image_url = part.get("image_url", {}).get("url", "")
-                                if image_url.startswith("data:image"):
+                                if image_url:
                                     extracted_images.append(image_url)
                             elif part.get("type") == "image":
-                                content_parts.append(part)
+                                content_parts.append({"type": "image"})
+                                image_payload = (
+                                    part.get("data")
+                                    or part.get("image")
+                                    or part.get("path")
+                                    or part.get("url")
+                                    or part
+                                )
+                                extracted_images.append(image_payload)
                         else:
-                            content_parts.append({"type": "text", "text": str(part)})
+                            if self._is_pil_image(part):
+                                content_parts.append({"type": "image"})
+                                extracted_images.append(part)
+                            else:
+                                content_parts.append({"type": "text", "text": str(part)})
                     chat_messages.append({"role": "user", "content": content_parts})
                 else:
                     chat_messages.append({"role": "user", "content": msg.content})
@@ -231,9 +241,31 @@ class MessageFormattingMixin:
         else:
             self._pending_images = []
 
-        return self.tokenizer.apply_chat_template(
-            chat_messages, **template_kwargs
-        )
+        # Prefer processor chat template for vision models so multimodal tokenization
+        # matches the image processor expectations (reduces garbled outputs).
+        template_target = None
+        if (
+            getattr(self, "is_vision_model", False)
+            and getattr(self, "processor", None) is not None
+            and hasattr(self.processor, "apply_chat_template")
+        ):
+            template_target = self.processor
+        elif self.tokenizer and hasattr(self.tokenizer, "apply_chat_template"):
+            template_target = self.tokenizer
+
+        if template_target is None:
+            return self._fallback_format(messages)
+
+        try:
+            return template_target.apply_chat_template(chat_messages, **template_kwargs)
+        except Exception:
+            # If processor chat templating fails, fall back to tokenizer, then fallback format.
+            if template_target is not self.tokenizer and self.tokenizer and hasattr(self.tokenizer, "apply_chat_template"):
+                try:
+                    return self.tokenizer.apply_chat_template(chat_messages, **template_kwargs)
+                except Exception:
+                    pass
+            return self._fallback_format(messages)
 
     def _fallback_format(self, messages: List[BaseMessage]) -> str:
         """Simple fallback formatting when no chat template available.
@@ -335,3 +367,11 @@ class MessageFormattingMixin:
                     MistralAssistantMessage(content=msg.content)
                 )
         return mistral_messages
+
+    def _is_pil_image(self, value) -> bool:
+        """Check if a value is a PIL image without importing globally."""
+        try:
+            from PIL import Image
+        except Exception:
+            return False
+        return isinstance(value, Image.Image)

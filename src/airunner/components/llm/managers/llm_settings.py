@@ -66,6 +66,10 @@ class LLMSettings:
     use_ollama: bool = False
     use_openai: bool = False
 
+    # YaRN context extension (HF + GGUF)
+    use_yarn: bool = False
+    yarn_target_context: int = 0  # 0 means use model defaults
+
     # Qwen3 thinking mode (enables <think>...</think> reasoning)
     enable_thinking: bool = True
 

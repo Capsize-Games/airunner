@@ -176,12 +176,12 @@ class FormatterExtended:
         return html_content
 
     @staticmethod
-    def format_content(content_string: str) -> dict:
+    def format_content(content_string) -> dict:
         """
         Analyzes the input string, determines its format, and returns a detailed content structure.
 
         Args:
-            content_string (str): The input string to analyze.
+            content_string: The input to analyze (string or list/dict from multimodal messages).
 
         Returns:
             dict: A dictionary containing:
@@ -190,6 +190,18 @@ class FormatterExtended:
                 - 'original_content': The original input string
                 - 'parts': For mixed content, a list of content parts with their types
         """
+        # Normalize non-string inputs (e.g., multimodal message content lists)
+        if not isinstance(content_string, str):
+            if isinstance(content_string, list):
+                # Extract text fields if present; otherwise fallback to repr
+                text_parts = []
+                for part in content_string:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        text_parts.append(str(part.get("text", "")))
+                content_string = " ".join(text_parts) if text_parts else str(content_string)
+            else:
+                content_string = str(content_string)
+
         # Always treat triple-backtick code blocks as markdown, even if mixed
         if re.search(r"```.*```", content_string, re.DOTALL):
             html_content = FormatterExtended.render_markdown_to_html(
