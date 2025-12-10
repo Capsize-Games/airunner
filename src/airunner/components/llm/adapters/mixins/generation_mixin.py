@@ -129,16 +129,24 @@ class GenerationMixin:
             Dictionary with input tensors including pixel_values
         """
         pil_images = []
+        quantized = self._is_quantized_model()
         for source in image_urls:
             image = self._load_image_from_source(source)
-            if image is not None:
-                # Resize large images to prevent garbage output from quantized models
-                # 4-bit quantized Mistral3/Pixtral produces corrupted output for images > 640px
-                if self._is_quantized_model():
-                    image = self._resize_image_for_quantized_model(image, max_size=640)
-                pil_images.append(image)
-            else:
+            if image is None:
                 self.logger.warning("Skipping unusable image source for vision prompt")
+                continue
+
+            # Resize large images to prevent garbage output from quantized models
+            # 4-bit quantized Mistral3/Pixtral produces corrupted output for oversized images
+            if quantized:
+                image = self._resize_image_for_quantized_model(image, max_size=768)
+            pil_images.append(image)
+
+        if quantized and len(pil_images) > 4:
+            self.logger.info(
+                "Quantized vision model: capping images to first 4 to avoid token bloat"
+            )
+            pil_images = pil_images[:4]
 
         if not pil_images:
             # No valid images, fall back to text-only
@@ -190,7 +198,7 @@ class GenerationMixin:
                 add_special_tokens=False,
             ).to(self.model.device)
 
-    def _resize_image_for_quantized_model(self, image, max_size: int = 640):
+    def _resize_image_for_quantized_model(self, image, max_size: int = 768):
         """Resize image to prevent garbage output from quantized vision models.
         
         4-bit quantized Mistral3/Pixtral models produce corrupted output when
@@ -208,16 +216,15 @@ class GenerationMixin:
         
         if image.width <= max_size and image.height <= max_size:
             return image
-            
-        # Calculate resize ratio to fit within max_size
-        ratio = min(max_size / image.width, max_size / image.height)
-        new_size = (int(image.width * ratio), int(image.height * ratio))
-        
+
+        resized = image.copy()
+        resized.thumbnail((max_size, max_size), PILImage.LANCZOS)
+
         self.logger.info(
-            f"Resizing image from {image.size} to {new_size} for quantized model compatibility"
+            f"Resizing image from {image.size} to {resized.size} for quantized model compatibility"
         )
-        
-        return image.resize(new_size, PILImage.LANCZOS)
+
+        return resized
 
     def _load_image_from_source(self, source):
         """Best-effort conversion of various image sources to PIL.Image."""
@@ -544,18 +551,31 @@ class GenerationMixin:
             ExternalConditionStoppingCriteria(self.should_stop_generation)
         ]
 
+        base_temperature = kwargs.get("temperature", self.temperature)
+        base_do_sample = kwargs.get("do_sample", self.do_sample)
+
+        # Make vision descriptions more deterministic on quantized models
+        # to reduce hallucinations on image content.
+        if getattr(self, "is_vision_model", False) and getattr(self, "_pending_images", None):
+            base_temperature = min(base_temperature, 0.2)
+            base_do_sample = False
+            self.logger.debug(
+                "Vision request detected; clamping temperature to %s and disabling sampling",
+                base_temperature,
+            )
+
         return {
             **inputs,
             "max_new_tokens": kwargs.get(
                 "max_new_tokens", self.max_new_tokens
             ),
-            "temperature": kwargs.get("temperature", self.temperature),
+            "temperature": base_temperature,
             "top_p": kwargs.get("top_p", self.top_p),
             "top_k": kwargs.get("top_k", self.top_k),
             "repetition_penalty": kwargs.get(
                 "repetition_penalty", self.repetition_penalty
             ),
-            "do_sample": kwargs.get("do_sample", self.do_sample),
+            "do_sample": base_do_sample,
             "pad_token_id": pad_token_id,
             "eos_token_id": eos_token_id,
             "streamer": streamer,
