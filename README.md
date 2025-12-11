@@ -96,6 +96,15 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
    pip install airunner[all_dev]
    ```
 
+4. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
+  ```bash
+  CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
+    pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
+  ```
+  - Uses GGML_CUDA (CUBLAS flag is deprecated).
+  - `90` matches RTX 5080 class GPUs; drop `-DGGML_CUDA_ARCHITECTURES` if you are unsure and let it auto-detect.
+  - On Python 3.12 you may instead use the prebuilt wheel: `--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"`.
+
 4. **Run:**
    ```bash
    airunner
