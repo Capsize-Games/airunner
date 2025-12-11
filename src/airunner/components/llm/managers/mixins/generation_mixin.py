@@ -139,6 +139,11 @@ class GenerationMixin:
                 return
             complete_response[0] += token_text
             sequence_counter[0] += 1
+            if not getattr(self, "_current_request_id", None):
+                # This should always be set for HTTP streaming; log if missing.
+                self.logger.warning(
+                    "[STREAM] Missing _current_request_id while streaming token"
+                )
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     node_id=llm_request.node_id if llm_request else None,
@@ -447,6 +452,10 @@ class GenerationMixin:
             executed_tools = self._workflow_manager.get_executed_tools()
             
         sequence_counter[0] += 1
+        if not getattr(self, "_current_request_id", None):
+            self.logger.warning(
+                "[STREAM] Missing _current_request_id when sending end-of-message"
+            )
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
