@@ -551,31 +551,18 @@ class GenerationMixin:
             ExternalConditionStoppingCriteria(self.should_stop_generation)
         ]
 
-        base_temperature = kwargs.get("temperature", self.temperature)
-        base_do_sample = kwargs.get("do_sample", self.do_sample)
-
-        # Make vision descriptions more deterministic on quantized models
-        # to reduce hallucinations on image content.
-        if getattr(self, "is_vision_model", False) and getattr(self, "_pending_images", None):
-            base_temperature = min(base_temperature, 0.2)
-            base_do_sample = False
-            self.logger.debug(
-                "Vision request detected; clamping temperature to %s and disabling sampling",
-                base_temperature,
-            )
-
         return {
             **inputs,
             "max_new_tokens": kwargs.get(
                 "max_new_tokens", self.max_new_tokens
             ),
-            "temperature": base_temperature,
+            "temperature": kwargs.get("temperature", self.temperature),
             "top_p": kwargs.get("top_p", self.top_p),
             "top_k": kwargs.get("top_k", self.top_k),
             "repetition_penalty": kwargs.get(
                 "repetition_penalty", self.repetition_penalty
             ),
-            "do_sample": base_do_sample,
+            "do_sample": kwargs.get("do_sample", self.do_sample),
             "pad_token_id": pad_token_id,
             "eos_token_id": eos_token_id,
             "streamer": streamer,

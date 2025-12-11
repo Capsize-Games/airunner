@@ -335,6 +335,10 @@ class SignalMediator(metaclass=SingletonMeta):
                                 f"Error in request callback: {e}",
                                 exc_info=True,
                             )
+        elif "response" in data and not request_id:
+            logger.warning(
+                "SignalMediator.emit_signal received response without request_id; cannot route to pending request"
+            )
 
         if self.backend:
             # Delegate emission to the custom backend

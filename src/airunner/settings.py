@@ -20,7 +20,7 @@ import os
 import sys
 import logging
 
-from airunner.enums import LLMActionType, Scheduler
+from airunner.enums import Scheduler
 
 if os.environ.get("DEV_ENV", "1") == "1":
     load_dotenv(override=True)

@@ -215,29 +215,29 @@ def main():
     else:
         os.environ.setdefault("AIRUNNER_LLM_ON", "1")
     
-    # Art/Stable Diffusion service
+    # Art/Stable Diffusion service (enable by default in headless)
     if args.enable_art is not None:
         os.environ["AIRUNNER_SD_ON"] = "1" if args.enable_art else "0"
     elif args.art_model:
         os.environ["AIRUNNER_SD_ON"] = "1"
     else:
-        os.environ.setdefault("AIRUNNER_SD_ON", "0")
+        os.environ.setdefault("AIRUNNER_SD_ON", "1")
     
-    # TTS service
+    # TTS service (enable by default in headless)
     if args.enable_tts is not None:
         os.environ["AIRUNNER_TTS_ON"] = "1" if args.enable_tts else "0"
     elif args.tts_model:
         os.environ["AIRUNNER_TTS_ON"] = "1"
     else:
-        os.environ.setdefault("AIRUNNER_TTS_ON", "0")
+        os.environ.setdefault("AIRUNNER_TTS_ON", "1")
     
-    # STT service
+    # STT service (enable by default in headless)
     if args.enable_stt is not None:
         os.environ["AIRUNNER_STT_ON"] = "1" if args.enable_stt else "0"
     elif args.stt_model:
         os.environ["AIRUNNER_STT_ON"] = "1"
     else:
-        os.environ.setdefault("AIRUNNER_STT_ON", "0")
+        os.environ.setdefault("AIRUNNER_STT_ON", "1")
 
     # ControlNet defaults to off
     os.environ.setdefault("AIRUNNER_CN_ON", "0")
