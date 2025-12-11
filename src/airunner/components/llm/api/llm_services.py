@@ -141,4 +141,11 @@ class LLMAPIService(APIServiceBase):
         data = {"response": response}
         if response.request_id:
             data["request_id"] = response.request_id
+        else:
+            try:
+                self.logger.warning(
+                    "[STREAM] Emitting streamed response without request_id; pending HTTP callbacks will not be notified"
+                )
+            except Exception:
+                pass
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)

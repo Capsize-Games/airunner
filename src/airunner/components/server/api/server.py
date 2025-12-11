@@ -1732,6 +1732,11 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "repetition_penalty": "repetition_penalty",
             "use_memory": "use_memory",
             "tool_categories": "tool_categories",
+            # Legacy flag from external clients (e.g., uwuchat) to enable
+            # AI Runner's built-in tools. When True, we set tool_categories
+            # to None so the tool classifier can pick the right categories.
+            # When False, we disable tools by setting an empty list.
+            "use_airunner_tools": "tool_categories",
             "model": "model",
             "rag_files": "rag_files",
             # Mode-based routing / override options
@@ -1747,7 +1752,30 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         }
         for client_param, llm_param in param_mapping.items():
             if client_param in data and client_param not in excluded:
-                llm_request_data[llm_param] = data[client_param]
+                value = data[client_param]
+
+                if client_param == "use_airunner_tools":
+                    # Map boolean flag to tool_categories behaviour.
+                    # True  -> None (auto-classify/select tools)
+                    # False -> []   (disable tools)
+                    if value is True:
+                        llm_request_data[llm_param] = None
+                    elif value is False:
+                        llm_request_data[llm_param] = []
+                    # If a non-boolean slips through, fall back to raw value
+                    # to preserve caller intent.
+                    else:
+                        llm_request_data[llm_param] = value
+                else:
+                    llm_request_data[llm_param] = value
+
+        # If the client did not send any tool configuration at all, default to
+        # auto tool selection (None) instead of disabling tools (empty list).
+        # Many external clients omit tool_categories when they actually want
+        # AI Runner's built-in tools. This keeps legacy callers working while
+        # still honoring explicit empty lists to disable tools.
+        if "tool_categories" not in llm_request_data and "tools" not in data:
+            llm_request_data["tool_categories"] = None
 
     def _parse_action_type(self, action_str: str) -> LLMActionType:
         """Parse action string to LLMActionType enum.

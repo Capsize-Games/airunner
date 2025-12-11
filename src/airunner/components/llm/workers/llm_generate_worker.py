@@ -4,6 +4,7 @@ import threading
 import time
 from typing import Dict, Optional
 import os
+import uuid
 from PySide6.QtCore import QThread, QTimer
 
 from airunner.enums import ModelService, SignalCode, LLMActionType
@@ -379,6 +380,14 @@ class LLMGenerateWorker(
         if self._interrupted:
             self.logger.info("Clearing interrupt flag - new message received")
             self._interrupted = False
+
+        # Ensure every request has a request_id for streaming correlation
+        request_id = message.get("request_id") or str(uuid.uuid4())
+        message["request_id"] = request_id
+        if isinstance(message.get("request_data"), dict):
+            # Mirror into request_data so downstream consumers can access it
+            message["request_data"].setdefault("request_id", request_id)
+        self.logger.debug(f"Assigned request_id={request_id} to incoming request")
 
         # Track activity for auto-unload timer
         self._update_activity_timestamp()

@@ -95,6 +95,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
 
+# Build llama-cpp-python from source with CUDA (no prebuilt cp313 wheels)
+# GGML_CUDA enables GPU acceleration; set arch for RTX 5080 (SM90 class)
+ENV CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" \
+    FORCE_CMAKE=1
+RUN pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
+
 # Set working directory
 WORKDIR /app
 

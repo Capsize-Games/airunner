@@ -252,6 +252,10 @@ class LLMModelManager(
 
         # Store request_id for use in response correlation
         self._current_request_id = data.get("request_id")
+        if not self._current_request_id:
+            self.logger.warning("[REQUEST] Missing request_id on incoming request; streaming responses will not be routed")
+        else:
+            self.logger.debug(f"[REQUEST] Set _current_request_id={self._current_request_id}")
 
         # CRITICAL: Clear ALL interrupt flags at the start of a new request
         # This ensures that a new user message can be processed even if
@@ -702,6 +706,26 @@ class LLMModelManager(
             if any(token in prompt_lc for token in greeting_tokens):
                 self.logger.info("Auto mode: greeting detected, disabling tools")
                 return []
+
+        # Fast-path: obvious web search intent should always enable search tools
+        search_triggers = [
+            "search",
+            "look up",
+            "lookup",
+            "find",
+            "google",
+            "bing",
+            "duckduckgo",
+            "ddg",
+            "web",
+            "internet",
+            "news",
+            "latest",
+            "recent",
+        ]
+        if any(trigger in prompt_lc for trigger in search_triggers):
+            self.logger.info("Auto mode: search intent detected, forcing search category")
+            return ["search"]
 
         # Get available categories from ToolCategory enum
         from airunner.components.llm.core.tool_registry import ToolCategory

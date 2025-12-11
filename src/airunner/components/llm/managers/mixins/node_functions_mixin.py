@@ -1050,14 +1050,16 @@ Based on the search results above, provide a clear, conversational answer to the
         """
         chat_model = getattr(self, "_chat_model", None)
 
-        # Vision models: build a direct message list with a minimal system prompt
+        # Vision models: use the same escaped system prompt with tool instructions
+        # as non-vision models. This ensures tools work for vision-capable models.
         if chat_model and getattr(chat_model, "is_vision_model", False):
-            vision_system = SystemMessage(
-                content=(
-                    "You are a helpful assistant. Respond concisely to the user. "
-                    "If an image is provided, describe it clearly and do not propose or call any tools."
-                )
+            # Build system prompt with tool instructions (same as standard flow)
+            escaped_system_prompt = self._escape_system_prompt()
+            escaped_system_prompt = self._add_tool_instructions(escaped_system_prompt)
+            escaped_system_prompt = self._add_post_tool_instructions(
+                escaped_system_prompt, trimmed_messages
             )
+            vision_system = SystemMessage(content=escaped_system_prompt)
             merged_messages: List[BaseMessage] = []
 
             for message in trimmed_messages:
@@ -1253,11 +1255,9 @@ Based on the search results above, provide a clear, conversational answer to the
         if not self._tools or len(self._tools) == 0:
             return system_prompt
 
-        # Vision models (e.g., Ministral-3) can be derailed by verbose tool text.
-        # Skip manual tool injection and rely on the adapter/chat template instead.
-        chat_model = getattr(self, "_chat_model", None)
-        if chat_model and getattr(chat_model, "is_vision_model", False):
-            return system_prompt
+        # NOTE: Vision models (e.g., Ministral-3) previously skipped tool instructions,
+        # but this prevented them from calling tools at all. Now all models get tool
+        # instructions via the ReAct pattern below.
 
         # Tools are handled by the chat model adapter's apply_chat_template
         # Do NOT manually inject tool lists - this causes model confusion

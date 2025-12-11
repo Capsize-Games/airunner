@@ -54,8 +54,11 @@ extras_require = {
         "faster-whisper>=1.0.0",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # GGUF model support via llama.cpp (smaller, faster than BitsAndBytes)
-        # Note: For GPU support, install with: CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
-        "llama-cpp-python>=0.3.0",
+        # For GPU on Python 3.13 (no prebuilt cu121 wheels):
+        #   CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"  # RTX 5080 (SM90). Drop the arch flag if unknown.
+        # On Python 3.12, you may use the cu121 wheel instead:
+        #   pip install --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"
+        "llama-cpp-python==0.3.16",
         # Summarizations (basic)
         "sumy==0.11.0",
         "sentencepiece==0.2.0",
@@ -66,11 +69,20 @@ extras_require = {
         "mistral_common>=1.8.5",
         # Tool search (BM25 ranking for on-demand tool discovery)
         "rank-bm25>=0.2.2",
-        # llama-index (for RAG only)
-        "llama-index-core>=0.13",
-        "llama-index-readers-file>=0.5.0",
-        "llama-index-embeddings-huggingface>=0.6.0",
-        "llama-cloud>=0.1.0",
+        # llama-index (for RAG only) - keep on 0.12.x to satisfy plugin constraints
+        "llama-index==0.12.36",
+        "llama-index-readers-file==0.4.0",
+        "llama-index-embeddings-huggingface==0.4.0",
+        "llama-cloud==0.1.23",
+        # Pin dependent plugins to avoid resolver backtracking
+        "llama-index-core==0.12.36",
+        "llama-index-embeddings-openai==0.3.0",
+        "llama-index-question-gen-openai==0.3.0",
+        "llama-index-program-openai==0.3.0",
+        "llama-index-multi-modal-llms-openai==0.4.0",
+        "llama-index-cli==0.4.1",
+        "llama-index-agent-openai==0.4.8",
+        "llama-index-indices-managed-llama-cloud==0.7.1",
         # LangChain/LangGraph (for agent system)
         "langchain==1.0.0",
         "langchain-core==1.0.0",
@@ -187,7 +199,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="5.6.0",
+    version="5.6.1",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
