@@ -991,7 +991,7 @@
                     
                     <div class="install-step">
                         <h4>Prerequisites</h4>
-                        <p>Ensure you have Python 3.10+ and pip installed. CUDA toolkit recommended for GPU acceleration.</p>
+                        <p>Python 3.13+ recommended. Install CUDA toolkit/driver for GPU acceleration.</p>
                     </div>
 
                     <div class="install-step">
@@ -1002,28 +1002,43 @@
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 2: Install AI Runner</h4>
+                        <h4>Step 2: Install PyTorch (CUDA)</h4>
                         <div class="code-block">
-                            <code>pip install airunner</code>
+                            <code>pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128</code>
                         </div>
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 3: Download Models</h4>
+                        <h4>Step 3: Install llama-cpp-python with CUDA (py3.13, RTX 5080)</h4>
+                        <div class="code-block">
+                            <code>CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \<br>  pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"</code>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Uses GGML_CUDA (CUBLAS is deprecated). Drop the arch flag if unsure. On Python 3.12 you can use the prebuilt wheel:<br><code>--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"</code></p>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 4: Install AI Runner</h4>
+                        <div class="code-block">
+                            <code>pip install airunner[all_dev]</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 5: Download Models</h4>
                         <div class="code-block">
                             <code>airunner-setup</code>
                         </div>
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 4: Run AI Runner</h4>
+                        <h4>Step 6: Run AI Runner</h4>
                         <div class="code-block">
                             <code>airunner</code>
                         </div>
                     </div>
 
                     <div class="note-box">
-                        <strong>💡 Tip:</strong> For GPU acceleration, ensure you have CUDA drivers installed and use the appropriate PyTorch version for your GPU.
+                        <strong>💡 Tip:</strong> Ensure your NVIDIA driver/CUDA toolkit is installed. Use the arch flag `90` for RTX 5080/SM90; omit to auto-detect if unknown.
                     </div>
                 </div>
 
@@ -1046,14 +1061,21 @@
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 3: Install Dependencies</h4>
+                        <h4>Step 3: Install PyTorch + llama-cpp-python (CUDA)</h4>
                         <div class="code-block">
-                            <code>pip install -e ".[all]"</code>
+                            <code>pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128<br><br>CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \<br>  pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"</code>
                         </div>
                     </div>
 
                     <div class="install-step">
-                        <h4>Step 4: Download Models & Run</h4>
+                        <h4>Step 4: Install Dependencies</h4>
+                        <div class="code-block">
+                            <code>pip install -e ".[all_dev]"</code>
+                        </div>
+                    </div>
+
+                    <div class="install-step">
+                        <h4>Step 5: Download Models & Run</h4>
                         <div class="code-block">
                             <code>airunner-setup<br>airunner</code>
                         </div>
