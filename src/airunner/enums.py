@@ -91,6 +91,10 @@ class SignalCode(Enum):
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
+
+    # Backwards-compat alias used by some headless API routes.
+    # Keep the canonical name as APPLICATION_STATUS_ERROR_SIGNAL.
+    APPLICATION_ERROR_SIGNAL = "status_error_signal"
     LLM_START_FINE_TUNE = "llm_start_fine_tune"
     LLM_FINE_TUNE_PROGRESS = "llm_fine_tune_progress"
     LLM_FINE_TUNE_COMPLETE = "llm_fine_tune_complete"
