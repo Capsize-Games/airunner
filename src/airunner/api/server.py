@@ -7,8 +7,10 @@ capabilities including LLM, art generation, TTS, and STT.
 
 from typing import Optional, Any
 from contextlib import asynccontextmanager
+import os
+import secrets
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -16,6 +18,7 @@ import uvicorn
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.api.routes import health, llm, art, tts, stt, vision
+from airunner.api.routes import legacy as legacy_routes
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -65,6 +68,39 @@ def create_app(
     if app_instance:
         app.state.airunner_app = app_instance
 
+    # Optional API key auth for production.
+    # If AIRUNNER_API_KEY is set, requests must provide it via:
+    # - X-API-Key: <key>
+    # - Authorization: Bearer <key>
+    required_api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
+
+    @app.middleware("http")
+    async def api_key_auth_middleware(request: Request, call_next):
+        if not required_api_key:
+            return await call_next(request)
+
+        # Allow unauthenticated health + docs endpoints (for container probes).
+        path = request.url.path
+        if path in {
+            "/health",
+            "/api/v1/health",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+        }:
+            return await call_next(request)
+
+        provided = (request.headers.get("x-api-key") or "").strip()
+        if not provided:
+            auth = (request.headers.get("authorization") or "").strip()
+            if auth.lower().startswith("bearer "):
+                provided = auth.split(" ", 1)[-1].strip()
+
+        if not provided or not secrets.compare_digest(provided, required_api_key):
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+        return await call_next(request)
+
     # Configure CORS
     if enable_cors:
         if allowed_origins is None:
@@ -92,14 +128,11 @@ def create_app(
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
     app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
 
-    # Legacy routes for backwards compatibility (fastsearch uses /vision/*)
-    app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
+    # Legacy endpoints for UwUChat + existing clients.
+    app.include_router(legacy_routes.router, tags=["legacy"])
 
-    # Root health check for simple health probes
-    @app.get("/health")
-    async def root_health():
-        """Root-level health check for container health probes."""
-        return {"status": "ready"}
+    # Legacy routes for backwards compatibility.
+    app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
 
     @app.get("/")
     async def root():
@@ -142,11 +175,7 @@ class APIServer:
         self.host = host
         self.port = port
         self.app_instance = app_instance
-        self.app = create_app(allowed_origins, enable_cors)
-
-        # Store app_instance in FastAPI app state for route handlers to access
-        if app_instance:
-            self.app.state.airunner_app = app_instance
+        self.app = create_app(allowed_origins, enable_cors, app_instance=app_instance)
 
         self.server = None
 

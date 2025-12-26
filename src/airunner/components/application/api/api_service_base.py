@@ -2,6 +2,7 @@
 import os
 
 from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.utils.application.get_logger import get_logger
 
 # Conditionally import Qt and SettingsMixin only if not in headless mode
 _HEADLESS = os.environ.get("AIRUNNER_HEADLESS", "").lower() in ("1", "true", "yes")
@@ -21,6 +22,7 @@ if not _HEADLESS:
 
         def __init__(self):
             super().__init__()
+            self.logger = get_logger(self.__class__.__module__)
 else:
     # Headless mode: no Qt dependencies
     class APIServiceBase(MediatorMixin):
@@ -32,3 +34,4 @@ else:
 
         def __init__(self):
             super().__init__()
+            self.logger = get_logger(self.__class__.__module__)

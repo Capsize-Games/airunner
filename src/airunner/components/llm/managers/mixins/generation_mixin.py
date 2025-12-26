@@ -9,6 +9,7 @@ This mixin handles:
 - Main generation orchestration
 """
 
+import os
 import random
 import traceback
 from typing import Any, Dict, List, Optional
@@ -63,13 +64,48 @@ class GenerationMixin:
         """
         # Extract force_tool from request if present (needed for both branches)
         force_tool = (
-            llm_request.force_tool 
-            if llm_request and hasattr(llm_request, "force_tool") 
+            llm_request.force_tool
+            if llm_request and hasattr(llm_request, "force_tool")
+            else None
+        )
+
+        # Optional prompt augmentation flags (used when caller supplies system_prompt)
+        include_mood = (
+            llm_request.include_mood
+            if llm_request and hasattr(llm_request, "include_mood")
+            else None
+        )
+        include_datetime = (
+            llm_request.include_datetime
+            if llm_request and hasattr(llm_request, "include_datetime")
+            else None
+        )
+        include_style = (
+            llm_request.include_style
+            if llm_request and hasattr(llm_request, "include_style")
+            else None
+        )
+        include_memory = (
+            llm_request.include_memory
+            if llm_request and hasattr(llm_request, "include_memory")
+            else None
+        )
+        include_ui_context = (
+            llm_request.include_ui_context
+            if llm_request and hasattr(llm_request, "include_ui_context")
             else None
         )
         
         if system_prompt:
-            action_system_prompt = system_prompt
+            action_system_prompt = self._augment_custom_system_prompt(
+                base_prompt=system_prompt,
+                action=action,
+                include_mood=include_mood,
+                include_datetime=include_datetime,
+                include_style=include_style,
+                include_memory=include_memory,
+                include_ui_context=include_ui_context,
+            )
         else:
             # Use context-aware system prompt based on tool categories
             tool_categories = (
@@ -334,7 +370,56 @@ class GenerationMixin:
         sequence_counter = [0]
         self._interrupted = False
 
+        if not self._workflow_manager and hasattr(self, "_load_workflow_manager"):
+            try:
+                self._load_workflow_manager()
+            except Exception:
+                pass
+
         if not self._workflow_manager:
+            model_path = None
+            try:
+                model_path = self.model_path
+            except Exception:
+                model_path = None
+
+            if self.llm_settings.use_local_llm and model_path:
+                model_name = os.path.basename(model_path.rstrip("/")) or "(unknown)"
+                is_gguf = False
+                try:
+                    if hasattr(self, "_is_gguf_quantization_selected"):
+                        is_gguf = bool(self._is_gguf_quantization_selected())
+                except Exception:
+                    is_gguf = False
+
+                gguf_present = False
+                if is_gguf:
+                    # In GGUF mode, the configured model path may be a directory.
+                    # Consider the model "ready" only once a .gguf file exists.
+                    try:
+                        if os.path.isdir(model_path):
+                            gguf_present = any(
+                                name.lower().endswith(".gguf")
+                                for name in os.listdir(model_path)
+                            )
+                        else:
+                            gguf_present = model_path.lower().endswith(".gguf") and os.path.exists(model_path)
+                    except Exception:
+                        gguf_present = False
+
+                model_missing = (not os.path.exists(model_path)) or (is_gguf and not gguf_present)
+                if model_missing:
+                    self.logger.error(
+                        "Workflow manager unavailable because model is missing; "
+                        "download likely in progress"
+                    )
+                    return {
+                        "response": (
+                            f"Error: model '{model_name}' is not ready yet (download in progress). "
+                            "Please wait for the download to finish and try again."
+                        )
+                    }
+
             self.logger.error("Workflow manager is not initialized")
             return {"response": "Error: workflow unavailable"}
 

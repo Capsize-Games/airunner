@@ -1017,6 +1017,18 @@ Based on the search results above, provide a clear, conversational answer to the
         # Generate response
         response_message = self._generate_response(prompt, generation_kwargs)
 
+        # Guard against models returning None so LangGraph doesn't try to merge
+        # a None entry into the message list (which raises during add_messages).
+        if response_message is None:
+            self.logger.error(
+                "[CALL MODEL DEBUG] Model returned no message; emitting fallback AIMessage"
+            )
+            response_message = AIMessage(
+                content="",
+                additional_kwargs={"error": "no_message_generated"},
+                tool_calls=[],
+            )
+
         return {"messages": [response_message]}
 
     def _trim_messages(self, messages: List[BaseMessage]) -> List[BaseMessage]:
@@ -1667,6 +1679,11 @@ Based on the search results above, provide a clear, conversational answer to the
         has_streamed_content = False
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
+        # In GUI mode, we suppress <think>/<tool_call> markup from the main token stream.
+        # In headless/HTTP mode there is no GUI to render thinking separately; suppressing
+        # would prevent any tokens from reaching HTTP streaming clients until the thinking
+        # block closes (or forever if it never closes). So only suppress when a GUI emitter exists.
+        suppress_thinking_blocks = bool(has_emitter)
         # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
@@ -1697,111 +1714,109 @@ Based on the search results above, provide a clear, conversational answer to the
                 # Debug: Log every chunk
                 # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
                 
-                # Detect thinking block boundaries using format-agnostic helpers
-                # Supports both <think>...</think> (Qwen3) and [THINK]...[/THINK] (Ministral 3)
-                found_open, tag_format, _, after_think = detect_thinking_open_tag(text)
-                if found_open and not thinking_started:
-                    in_thinking_block = True
-                    thinking_started = True
-                    thinking_tag_format = tag_format
-                    # self.logger.debug(f"[THINKING] Detected {tag_format} opening tag - starting thinking block")
-                    # Emit thinking started signal
-                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                        self._signal_emitter.emit_signal(
-                            SignalCode.LLM_THINKING_SIGNAL,
-                            {"status": "started", "content": ""}
-                        )
-                    
-                    # Check if closing tag is also in this chunk (entire thinking block in one chunk)
-                    found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
-                    if found_close:
-                        # Both tags in same chunk - extract thinking and remaining content
-                        if before_close:
-                            thinking_content.append(before_close)
+                if suppress_thinking_blocks:
+                    # Detect thinking block boundaries using format-agnostic helpers
+                    # Supports both <think>...</think> (Qwen3) and [THINK]...[/THINK] (Ministral 3)
+                    found_open, tag_format, _, after_think = detect_thinking_open_tag(text)
+                    if found_open and not thinking_started:
+                        in_thinking_block = True
+                        thinking_started = True
+                        thinking_tag_format = tag_format
+                        # Emit thinking started signal
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "started", "content": ""}
+                            )
+
+                        # Check if closing tag is also in this chunk (entire thinking block in one chunk)
+                        found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
+                        if found_close:
+                            # Both tags in same chunk - extract thinking and remaining content
+                            if before_close:
+                                thinking_content.append(before_close)
+                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                    self._signal_emitter.emit_signal(
+                                        SignalCode.LLM_THINKING_SIGNAL,
+                                        {"status": "streaming", "content": before_close}
+                                    )
+
+                            # Mark thinking as complete
+                            in_thinking_block = False
+                            final_thinking_content = "".join(thinking_content)
+
                             if hasattr(self, "_signal_emitter") and self._signal_emitter:
                                 self._signal_emitter.emit_signal(
                                     SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": before_close}
+                                    {"status": "completed", "content": final_thinking_content}
                                 )
-                        
-                        # Mark thinking as complete
-                        in_thinking_block = False
-                        final_thinking_content = "".join(thinking_content)
-                        # self.logger.debug(f"[THINKING] Complete thinking block in single chunk, content len={len(final_thinking_content)}")
-                        
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "completed", "content": final_thinking_content}
-                            )
-                        thinking_content = []
-                        
-                        # Stream any content after closing tag to the main callback
-                        if after_close and self._token_callback:
-                            try:
-                                self._token_callback(after_close)
-                            except Exception as callback_error:
-                                self.logger.error(
-                                    "Token callback failed: %s",
-                                    callback_error,
-                                    exc_info=True,
-                                )
-                    elif after_think:
-                        # Only opening tag in this chunk, stream content to thinking
-                        thinking_content.append(after_think)
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "streaming", "content": after_think}
-                            )
-                    continue  # Skip normal processing for this chunk
-                
-                # If we're in a thinking block, emit thinking content
-                if in_thinking_block:
-                    # Check for closing tag using the same format as the opening tag
-                    found_close, before_close, after_close = detect_thinking_close_tag(text, thinking_tag_format)
-                    if found_close:
-                        if before_close:
-                            thinking_content.append(before_close)
+                            thinking_content = []
+
+                            # Stream any content after closing tag to the main callback
+                            if after_close and self._token_callback:
+                                try:
+                                    self._token_callback(after_close)
+                                except Exception as callback_error:
+                                    self.logger.error(
+                                        "Token callback failed: %s",
+                                        callback_error,
+                                        exc_info=True,
+                                    )
+                        elif after_think:
+                            # Only opening tag in this chunk, stream content to thinking
+                            thinking_content.append(after_think)
                             if hasattr(self, "_signal_emitter") and self._signal_emitter:
                                 self._signal_emitter.emit_signal(
                                     SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": before_close}
+                                    {"status": "streaming", "content": after_think}
                                 )
-                        
-                        # Mark thinking as complete
-                        in_thinking_block = False
-                        # self.logger.debug(f"[THINKING] Detected closing tag - ending thinking block, content len={len(''.join(thinking_content))}")
-                        
-                        # Save thinking content for DB persistence BEFORE clearing the list
-                        final_thinking_content = "".join(thinking_content)
-                        
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "completed", "content": final_thinking_content}
-                            )
-                        thinking_content = []
-                        
-                        # Stream any content after closing tag to the main callback
-                        if after_close and self._token_callback:
-                            try:
-                                self._token_callback(after_close)
-                            except Exception as callback_error:
-                                self.logger.error(
-                                    "Token callback failed: %s",
-                                    callback_error,
-                                    exc_info=True,
+                        continue  # Skip normal processing for this chunk
+
+                    # If we're in a thinking block, emit thinking content
+                    if in_thinking_block:
+                        # Check for closing tag using the same format as the opening tag
+                        found_close, before_close, after_close = detect_thinking_close_tag(text, thinking_tag_format)
+                        if found_close:
+                            if before_close:
+                                thinking_content.append(before_close)
+                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                    self._signal_emitter.emit_signal(
+                                        SignalCode.LLM_THINKING_SIGNAL,
+                                        {"status": "streaming", "content": before_close}
+                                    )
+
+                            # Mark thinking as complete
+                            in_thinking_block = False
+
+                            # Save thinking content for DB persistence BEFORE clearing the list
+                            final_thinking_content = "".join(thinking_content)
+
+                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                self._signal_emitter.emit_signal(
+                                    SignalCode.LLM_THINKING_SIGNAL,
+                                    {"status": "completed", "content": final_thinking_content}
                                 )
-                    else:
-                        # Stream thinking content to GUI
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "streaming", "content": text}
-                            )
-                        thinking_content.append(text)
-                    continue  # Don't stream thinking to main callback
+                            thinking_content = []
+
+                            # Stream any content after closing tag to the main callback
+                            if after_close and self._token_callback:
+                                try:
+                                    self._token_callback(after_close)
+                                except Exception as callback_error:
+                                    self.logger.error(
+                                        "Token callback failed: %s",
+                                        callback_error,
+                                        exc_info=True,
+                                    )
+                        else:
+                            # Stream thinking content to GUI
+                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                self._signal_emitter.emit_signal(
+                                    SignalCode.LLM_THINKING_SIGNAL,
+                                    {"status": "streaming", "content": text}
+                                )
+                            thinking_content.append(text)
+                        continue  # Don't stream thinking to main callback
                 
                 # Detect <tool_call> tags and buffer them instead of streaming
                 # This prevents tool call markup from appearing in the chat UI
@@ -1909,6 +1924,23 @@ Based on the search results above, provide a clear, conversational answer to the
                 return self._create_streamed_message(
                     streamed_content, last_chunk_message, collected_tool_calls, thinking_to_save
                 )
+
+            # No chunks were produced (likely interrupted before first token)
+            self.logger.error("No generation chunks were returned; emitting empty AIMessage")
+            if self._token_callback:
+                try:
+                    self._token_callback("[generation stalled]")
+                except Exception as callback_error:
+                    self.logger.error(
+                        "Token callback failed while reporting stalled generation: %s",
+                        callback_error,
+                        exc_info=True,
+                    )
+            return AIMessage(
+                content="",
+                additional_kwargs={"error": "no_generation_chunks"},
+                tool_calls=[],
+            )
 
         except Exception as exc:
             self.logger.error(

@@ -332,6 +332,18 @@ class ToolRegistry:
                         exc,
                     )
                     continue
+
+            # Load optional runtime extensions after built-ins so overrides win.
+            # Use force_reload=True because the default-tool reload above may have
+            # overwritten extension-provided tools with the same name.
+            try:
+                from airunner.components.llm.core.extensions_loader import (
+                    load_extensions,
+                )
+
+                load_extensions(force_reload=True)
+            except Exception:
+                pass
         except Exception:
             # Guard against any unexpected exception while ensuring defaults
             pass

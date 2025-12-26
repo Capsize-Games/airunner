@@ -67,6 +67,16 @@ from airunner.components.calendar.tools import (
     calendar_tools as langchain_calendar_tools,
 )
 
+# Load optional extensions (gitignored `extensions/` folder).
+# Extensions register tools via the same ToolRegistry and can override by name.
+try:
+    from airunner.components.llm.core.extensions_loader import load_extensions
+
+    load_extensions(force_reload=False)
+except Exception:
+    # Extensions are optional and must never break tool import.
+    pass
+
 __all__ = [
     # Code generation infrastructure
     "CodeSession",

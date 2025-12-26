@@ -28,14 +28,19 @@ class StatusManagementMixin:
         Args:
             message: Error message to display to user.
         """
-        response = LLMResponse(message=message, is_end_of_message=True, is_system_message=True)
+        response = LLMResponse(
+            message=message,
+            is_end_of_message=True,
+            is_system_message=True,
+            request_id=getattr(self, "_current_request_id", None),
+        )
 
         try:
             self.api.llm.send_llm_text_streamed_signal(response)
         except Exception:
             self.emit_signal(
                 SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {"response": response},
+                {"response": response, "request_id": response.request_id},
             )
 
     def _send_success_message(self: "LLMModelManager", is_api: bool) -> None:
@@ -50,14 +55,19 @@ class StatusManagementMixin:
             else "✅ Model loaded and ready for chat\n"
         )
 
-        response = LLMResponse(message=message, is_end_of_message=False, is_system_message=True)
+        response = LLMResponse(
+            message=message,
+            is_end_of_message=False,
+            is_system_message=True,
+            request_id=getattr(self, "_current_request_id", None),
+        )
 
         try:
             self.api.llm.send_llm_text_streamed_signal(response)
         except Exception:
             self.emit_signal(
                 SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {"response": response},
+                {"response": response, "request_id": response.request_id},
             )
 
     def _send_quantization_info(self: "LLMModelManager") -> None:
@@ -80,11 +90,12 @@ class StatusManagementMixin:
             is_end_of_message=False,
             action=LLMActionType.CHAT,
             is_system_message=True,
+            request_id=getattr(self, "_current_request_id", None),
         )
 
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            {"response": response},
+            {"response": response, "request_id": response.request_id},
         )
 
     def _handle_pending_conversation(self: "LLMModelManager") -> None:

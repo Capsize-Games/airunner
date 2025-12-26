@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
@@ -268,12 +269,66 @@ class LLMModelManager(
         ):
             self._workflow_manager.set_interrupted(False)
 
+        # Apply request-level settings before loading, so model selection works.
+        llm_request = data["request_data"].get("llm_request")
+        self.llm_request = llm_request
+
+        def _current_service() -> str:
+            if getattr(self.llm_settings, "use_openrouter", False):
+                return "openrouter"
+            if getattr(self.llm_settings, "use_ollama", False):
+                return "ollama"
+            return "local"
+
+        desired_service = (
+            getattr(llm_request, "model_service", None)
+            if llm_request is not None
+            else None
+        )
+        if isinstance(desired_service, str):
+            desired_service = desired_service.strip().lower() or None
+        if desired_service not in ("local", "openrouter", "ollama"):
+            desired_service = None
+
+        if desired_service:
+            current_service = _current_service()
+            # If switching backend types, unload so the chat model rebuilds correctly.
+            if current_service != desired_service:
+                self.logger.info(
+                    f"[LLM] Switching model_service {current_service} -> {desired_service}; unloading"
+                )
+                self.unload()
+
+            # Apply provider flags.
+            self.llm_settings.use_openrouter = desired_service == "openrouter"
+            self.llm_settings.use_ollama = desired_service == "ollama"
+            self.llm_settings.use_local_llm = desired_service == "local"
+
+            # Apply provider-specific model name overrides.
+            api_model = getattr(llm_request, "api_model", None) if llm_request else None
+            if isinstance(api_model, str) and api_model.strip():
+                api_model = api_model.strip()
+                if desired_service == "openrouter":
+                    self.llm_settings.model = api_model
+                elif desired_service == "ollama":
+                    self.llm_settings.ollama_model = api_model
+
         self._do_set_seed()
         self.load()
 
         # Check if use_memory=False - if so, clear conversation history
-        llm_request = data["request_data"].get("llm_request")
-        self.llm_request = llm_request
+
+        request_tool_defaults: Dict[str, Any] = {}
+        search_hints = data.get("request_data", {}).get("search_hints")
+        if isinstance(search_hints, dict):
+            locale = search_hints.get("locale")
+            if isinstance(locale, dict):
+                country = locale.get("country")
+                if isinstance(country, str) and country.strip():
+                    request_tool_defaults["country"] = country.strip()
+                language = locale.get("language")
+                if isinstance(language, str) and language.strip():
+                    request_tool_defaults["language"] = language.strip()
 
         # Check if mode routing parameters changed - if so, reload workflow manager
         if llm_request and (
@@ -327,6 +382,7 @@ class LLMModelManager(
 
         # Check if tool_categories specified - if so, filter tools
         tools_filtered = False
+        selected_categories: List[str] = []
         system_prompt = None  # Extract system prompt from request
         if llm_request:
             self.logger.info(
@@ -487,14 +543,20 @@ class LLMModelManager(
                 "Auto attachment of RAG files failed, continuing without local RAG."
             )
 
-        return self._do_generate(
-            prompt=data["request_data"]["prompt"],
-            action=data["request_data"]["action"],
-            system_prompt=system_prompt,  # Pass extracted system prompt
-            llm_request=data["request_data"]["llm_request"],
-            extra_context=extra_context,
-            skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
-        )
+        if request_tool_defaults and self._tool_manager:
+            self._tool_manager.set_request_tool_defaults(request_tool_defaults)
+        try:
+            return self._do_generate(
+                prompt=data["request_data"]["prompt"],
+                action=data["request_data"]["action"],
+                system_prompt=system_prompt,  # Pass extracted system prompt
+                llm_request=data["request_data"]["llm_request"],
+                extra_context=extra_context,
+                skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
+            )
+        finally:
+            if request_tool_defaults and self._tool_manager:
+                self._tool_manager.clear_request_tool_defaults()
 
     # Categories that are ALWAYS included regardless of filtering
     # Only knowledge tools are always included - these are safe internal tools
@@ -538,6 +600,15 @@ class LLMModelManager(
         from airunner.components.llm.core.tool_registry import ToolCategory
 
         if tool_categories is not None and len(tool_categories) == 0:
+            disable_always = os.environ.get("AIRUNNER_DISABLE_ALWAYS_TOOLS", "0") == "1"
+            if disable_always:
+                self.logger.info(
+                    "tool_categories=[] and AIRUNNER_DISABLE_ALWAYS_TOOLS=1 - disabling all tools"
+                )
+                self._workflow_manager.update_tools([])
+                self._workflow_manager._build_and_compile_workflow()
+                return
+
             # Empty list means: only include ALWAYS_INCLUDE_CATEGORIES
             self.logger.info(
                 "tool_categories=[] - including only always-available tools (knowledge)"

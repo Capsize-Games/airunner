@@ -146,12 +146,48 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self._register_signals()
         self._ensure_mathjax()
 
+        # Load optional runtime extensions early so they can:
+        # - override built-in LLM tools by name (after built-ins are registered)
+        # - apply any UI monkey-patches before widgets are constructed
+        self._load_optional_extensions()
+
         if self.headless:
             self._init_headless_mode()
         else:
             self._init_gui_mode()
 
         self._initialize_knowledge_system()
+
+    def _load_optional_extensions(self) -> None:
+        """Load optional extensions from a local `extensions/` folder.
+
+        Extensions are optional and must never prevent Airunner from starting.
+        """
+        try:
+            # Ensure the built-in web tools are registered first.
+            # Extensions rely on name-based override semantics.
+            try:
+                from airunner.components.llm.tools import web_tools  # noqa: F401
+            except Exception:
+                pass
+
+            from airunner.components.llm.core.extensions_loader import (
+                load_extensions,
+            )
+
+            stats = load_extensions(force_reload=False)
+            if isinstance(stats, dict):
+                self.logger.info(
+                    "Extensions loaded: loaded=%s failed=%s roots=%s",
+                    stats.get("loaded"),
+                    stats.get("failed"),
+                    stats.get("roots"),
+                )
+        except Exception as exc:
+            try:
+                self.logger.debug("Extension loading skipped/failed: %s", exc)
+            except Exception:
+                pass
 
     @property
     def static_dir(self) -> str:
@@ -259,6 +295,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """Initialize headless mode."""
         self.logger.info("Running in headless mode (no GUI)")
         signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
         self._init_headless_services()
         self.is_running = True
 
@@ -975,6 +1012,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.logger.info("DEBUG: Starting Qt event loop")
             ret = self.app.exec()
             self.logger.info(f"DEBUG: Qt event loop returned with {ret}")
+            self.cleanup()
             sys.exit(ret)
         except KeyboardInterrupt:
             self.logger.info("Interrupted by user")
@@ -999,13 +1037,29 @@ class App(MediatorMixin, SettingsMixin, QObject):
         print("\nExiting...")
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
+
+        # Best-effort cleanup: do not create a new API instance here.
         try:
-            app = QApplication.instance()
-            app.quit()
-            sys.exit(0)
-        except Exception as e:
-            print(e)
-            sys.exit(0)
+            from airunner.components.server.api import server as server_module
+
+            api = getattr(server_module, "_api", None)
+            if api is not None:
+                try:
+                    api.cleanup()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Ask Qt event loop to exit; avoid sys.exit() in a signal handler.
+        try:
+            from PySide6.QtCore import QCoreApplication
+
+            qt_app = QCoreApplication.instance() or QApplication.instance()
+            if qt_app is not None:
+                qt_app.quit()
+        except Exception:
+            pass
 
     def display_splash_screen(
         self, app: QApplication
@@ -1160,6 +1214,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Cleanup resources when shutting down.
         Safe to call in both GUI and headless mode.
         """
+        if getattr(self, "_cleaned_up", False):
+            return
+        self._cleaned_up = True
+
         self.logger.info("Cleaning up App resources...")
 
         try:
@@ -1170,7 +1228,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             if hasattr(self, "api_server_thread") and self.api_server_thread:
                 self.logger.info("Stopping API server...")
                 try:
-                    self.api_server_thread.shutdown()
+                    self.api_server_thread.stop()
                     self.api_server_thread.join(timeout=2.0)
                     self.logger.info("API server stopped")
                 except Exception as e:

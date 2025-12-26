@@ -80,7 +80,7 @@ class TestServiceSettingsWidget:
             "run_in_background": True,
             "start_at_login": False,
             "http_server_enabled": True,
-            "http_server_host": "192.168.1.100",
+            "http_server_host": "127.0.0.1",
             "http_server_port": 9090,
             "lna_enabled": True,
         }
@@ -90,7 +90,7 @@ class TestServiceSettingsWidget:
         assert widget.run_background_cb.isChecked() is True
         assert widget.start_login_cb.isChecked() is False
         assert widget.server_enabled_cb.isChecked() is True
-        assert widget.host_input.text() == "192.168.1.100"
+        assert widget.host_input.text() == "127.0.0.1"
         assert widget.port_input.value() == 9090
         assert widget.lna_enabled_cb.isChecked() is True
 

@@ -66,19 +66,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint",
         type=str,
-        default="/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/zImageTurboQuantized_fp8ScaledE4m3fnKJ.safetensors",
+        default=str(
+            Path.home()
+            / ".local/share/airunner/art/models/Z-Image Turbo/txt2img/zImageTurboQuantized_fp8ScaledE4m3fnKJ.safetensors"
+        ),
         help="Path to FP8 checkpoint",
     )
     parser.add_argument(
         "--text-encoder",
         type=str,
-        default="/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/text_encoder",
+        default=str(Path.home() / ".local/share/airunner/art/models/Z-Image Turbo/txt2img/text_encoder"),
         help="Path to text encoder",
     )
     parser.add_argument(
         "--vae",
         type=str,
-        default="/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/vae",
+        default=str(Path.home() / ".local/share/airunner/art/models/Z-Image Turbo/txt2img/vae"),
         help="Path to VAE directory",
     )
     parser.add_argument(

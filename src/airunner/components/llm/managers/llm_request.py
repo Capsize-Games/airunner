@@ -70,7 +70,16 @@ class LLMRequest:
     ephemeral_conversation: bool = (
         False  # If True, conversation stays in memory but not saved to database
     )
+    # Optional prompt augmentation toggles (used when a custom system_prompt is provided)
+    include_mood: Optional[bool] = None
+    include_datetime: Optional[bool] = None
+    include_style: Optional[bool] = None
+    include_memory: Optional[bool] = None
+    include_ui_context: Optional[bool] = None
     model: str = ""
+    # Request-level backend selection (used by headless API)
+    model_service: Optional[str] = None  # local | openrouter | ollama
+    api_model: Optional[str] = None  # provider model name for API backends
     use_mode_routing: bool = (
         False  # Enable mode-based routing (author/code/research/qa/general)
     )
@@ -123,6 +132,15 @@ class LLMRequest:
         data.pop("node_id")
         data.pop("use_memory")
         data.pop("role")
+        # Request-level routing knobs are handled by the manager, not the model.
+        data.pop("model_service", None)
+        data.pop("api_model", None)
+        # Prompt augmentation toggles are consumed by workflow setup, not passed to the model
+        data.pop("include_mood", None)
+        data.pop("include_datetime", None)
+        data.pop("include_style", None)
+        data.pop("include_memory", None)
+        data.pop("include_ui_context", None)
         # Images are PIL objects, not JSON serializable - handle separately
         data.pop("images", None)
 

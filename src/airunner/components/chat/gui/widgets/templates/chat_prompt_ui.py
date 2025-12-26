@@ -142,22 +142,47 @@ class Ui_chat_prompt(object):
         self.gridLayout_7 = QGridLayout(self.chat_container)
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.attachments_scroll_area = QScrollArea(self.chat_container)
-        self.attachments_scroll_area.setObjectName(u"attachments_scroll_area")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.last_message_tokens = QLabel(self.chat_container)
+        self.last_message_tokens.setObjectName(u"last_message_tokens")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.attachments_scroll_area.sizePolicy().hasHeightForWidth())
-        self.attachments_scroll_area.setSizePolicy(sizePolicy1)
+        sizePolicy1.setHeightForWidth(self.last_message_tokens.sizePolicy().hasHeightForWidth())
+        self.last_message_tokens.setSizePolicy(sizePolicy1)
+        self.last_message_tokens.setStyleSheet(u"")
+
+        self.horizontalLayout_4.addWidget(self.last_message_tokens)
+
+        self.total_tokens = QLabel(self.chat_container)
+        self.total_tokens.setObjectName(u"total_tokens")
+        sizePolicy1.setHeightForWidth(self.total_tokens.sizePolicy().hasHeightForWidth())
+        self.total_tokens.setSizePolicy(sizePolicy1)
+        self.total_tokens.setStyleSheet(u"")
+        self.total_tokens.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.horizontalLayout_4.addWidget(self.total_tokens)
+
+
+        self.gridLayout_7.addLayout(self.horizontalLayout_4, 5, 1, 1, 1)
+
+        self.attachments_scroll_area = QScrollArea(self.chat_container)
+        self.attachments_scroll_area.setObjectName(u"attachments_scroll_area")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.attachments_scroll_area.sizePolicy().hasHeightForWidth())
+        self.attachments_scroll_area.setSizePolicy(sizePolicy2)
         self.attachments_scroll_area.setMinimumSize(QSize(0, 0))
         self.attachments_scroll_area.setMaximumSize(QSize(16777215, 80))
         self.attachments_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.attachments_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.attachments_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.attachments_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.attachments_scroll_area.setWidgetResizable(True)
         self.attachments_container = QWidget()
         self.attachments_container.setObjectName(u"attachments_container")
-        self.attachments_container.setGeometry(QRect(0, 0, 0, 0))
+        self.attachments_container.setGeometry(QRect(0, 0, 571, 68))
         self.attachments_layout = QHBoxLayout(self.attachments_container)
         self.attachments_layout.setSpacing(8)
         self.attachments_layout.setObjectName(u"attachments_layout")
@@ -166,18 +191,8 @@ class Ui_chat_prompt(object):
 
         self.gridLayout_7.addWidget(self.attachments_scroll_area, 0, 0, 1, 2)
 
-        self.token_count = QLabel(self.chat_container)
-        self.token_count.setObjectName(u"token_count")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.token_count.sizePolicy().hasHeightForWidth())
-        self.token_count.setSizePolicy(sizePolicy2)
-        self.token_count.setStyleSheet(u"")
-        self.token_count.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-
-        self.gridLayout_7.addWidget(self.token_count, 1, 1, 1, 1)
-
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.attach_button = QPushButton(self.chat_container)
         self.attach_button.setObjectName(u"attach_button")
         sizePolicy.setHeightForWidth(self.attach_button.sizePolicy().hasHeightForWidth())
@@ -188,7 +203,19 @@ class Ui_chat_prompt(object):
         icon3.addFile(u":/light/icons/feather/light/paperclip.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.attach_button.setIcon(icon3)
 
-        self.gridLayout_7.addWidget(self.attach_button, 2, 0, 1, 1)
+        self.horizontalLayout_5.addWidget(self.attach_button)
+
+        self.token_count = QLabel(self.chat_container)
+        self.token_count.setObjectName(u"token_count")
+        sizePolicy1.setHeightForWidth(self.token_count.sizePolicy().hasHeightForWidth())
+        self.token_count.setSizePolicy(sizePolicy1)
+        self.token_count.setStyleSheet(u"")
+        self.token_count.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.horizontalLayout_5.addWidget(self.token_count)
+
+
+        self.gridLayout_7.addLayout(self.horizontalLayout_5, 1, 1, 1, 1)
 
         self.prompt = QPlainTextEdit(self.chat_container)
         self.prompt.setObjectName(u"prompt")
@@ -200,29 +227,7 @@ class Ui_chat_prompt(object):
         self.prompt.setMinimumSize(QSize(0, 150))
         self.prompt.setMaximumSize(QSize(16777215, 16777215))
 
-        self.gridLayout_7.addWidget(self.prompt, 2, 1, 1, 1)
-
-        self.horizontalLayout_4 = QHBoxLayout()
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.last_message_tokens = QLabel(self.chat_container)
-        self.last_message_tokens.setObjectName(u"last_message_tokens")
-        sizePolicy2.setHeightForWidth(self.last_message_tokens.sizePolicy().hasHeightForWidth())
-        self.last_message_tokens.setSizePolicy(sizePolicy2)
-        self.last_message_tokens.setStyleSheet(u"")
-
-        self.horizontalLayout_4.addWidget(self.last_message_tokens)
-
-        self.total_tokens = QLabel(self.chat_container)
-        self.total_tokens.setObjectName(u"total_tokens")
-        sizePolicy2.setHeightForWidth(self.total_tokens.sizePolicy().hasHeightForWidth())
-        self.total_tokens.setSizePolicy(sizePolicy2)
-        self.total_tokens.setStyleSheet(u"")
-        self.total_tokens.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-
-        self.horizontalLayout_4.addWidget(self.total_tokens)
-
-
-        self.gridLayout_7.addLayout(self.horizontalLayout_4, 3, 1, 1, 1)
+        self.gridLayout_7.addWidget(self.prompt, 4, 1, 1, 1)
 
 
         self.gridLayout.addWidget(self.chat_container, 0, 0, 1, 1)
@@ -320,8 +325,8 @@ class Ui_chat_prompt(object):
 
         self.send_button = QPushButton(self.footer_container)
         self.send_button.setObjectName(u"send_button")
-        sizePolicy2.setHeightForWidth(self.send_button.sizePolicy().hasHeightForWidth())
-        self.send_button.setSizePolicy(sizePolicy2)
+        sizePolicy1.setHeightForWidth(self.send_button.sizePolicy().hasHeightForWidth())
+        self.send_button.setSizePolicy(sizePolicy1)
         self.send_button.setMinimumSize(QSize(30, 30))
         self.send_button.setMaximumSize(QSize(30, 30))
         icon4 = QIcon()
@@ -332,8 +337,8 @@ class Ui_chat_prompt(object):
 
         self.stop_button = QPushButton(self.footer_container)
         self.stop_button.setObjectName(u"stop_button")
-        sizePolicy2.setHeightForWidth(self.stop_button.sizePolicy().hasHeightForWidth())
-        self.stop_button.setSizePolicy(sizePolicy2)
+        sizePolicy1.setHeightForWidth(self.stop_button.sizePolicy().hasHeightForWidth())
+        self.stop_button.setSizePolicy(sizePolicy1)
         self.stop_button.setMinimumSize(QSize(30, 30))
         self.stop_button.setMaximumSize(QSize(30, 30))
         icon5 = QIcon()
@@ -396,13 +401,13 @@ class Ui_chat_prompt(object):
         self.settings_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Settings", None))
 #endif // QT_CONFIG(tooltip)
         self.settings_button.setText("")
-        self.token_count.setText(QCoreApplication.translate("chat_prompt", u"~0 tokens", None))
+        self.last_message_tokens.setText("")
+        self.total_tokens.setText("")
 #if QT_CONFIG(tooltip)
         self.attach_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Attach image (vision-capable models only)", None))
 #endif // QT_CONFIG(tooltip)
         self.attach_button.setText("")
-        self.last_message_tokens.setText("")
-        self.total_tokens.setText("")
+        self.token_count.setText(QCoreApplication.translate("chat_prompt", u"~0 tokens", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("chat_prompt", u"Tab 1", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("chat_prompt", u"Tab 2", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("chat_prompt", u"Page", None))

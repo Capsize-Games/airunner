@@ -320,21 +320,29 @@ class SignalMediator(metaclass=SingletonMeta):
             is_response = "response" in data
 
             if is_response:
-                # Route response to pending request queue
+                # Route response to pending request queue.
+                # IMPORTANT: never invoke callbacks while holding _request_lock.
+                # Callbacks may unregister themselves (or other requests), which
+                # would deadlock if they try to re-acquire the same lock.
+                callback: Optional[CallableType] = None
+                response_queue: Optional[queue.Queue] = None
                 with self._request_lock:
-                    if request_id in self._pending_requests:
-                        self._pending_requests[request_id].put(data)
+                    response_queue = self._pending_requests.get(request_id)
+                    callback = self._request_callbacks.get(request_id)
 
-                # Also call registered callback if exists
-                with self._request_lock:
-                    if request_id in self._request_callbacks:
-                        try:
-                            self._request_callbacks[request_id](data)
-                        except Exception as e:
-                            logger.error(
-                                f"Error in request callback: {e}",
-                                exc_info=True,
-                            )
+                    # If a queue exists, enqueue the response while we're still
+                    # holding the lock to avoid a race with unregister.
+                    if response_queue is not None:
+                        response_queue.put(data)
+
+                if callback is not None:
+                    try:
+                        callback(data)
+                    except Exception as e:
+                        logger.error(
+                            f"Error in request callback: {e}",
+                            exc_info=True,
+                        )
         elif "response" in data and not request_id:
             logger.warning(
                 "SignalMediator.emit_signal received response without request_id; cannot route to pending request"

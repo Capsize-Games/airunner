@@ -493,9 +493,46 @@ class LLMGenerateWorker(
             )
             self._load_documents_into_rag(llm_request.rag_files)
 
-        result = manager.handle_request(
-            message, self.context_manager.all_contexts()
-        )
+        try:
+            result = manager.handle_request(
+                message, self.context_manager.all_contexts()
+            )
+        except Exception as e:
+            # In headless API mode, unhandled exceptions would otherwise leave
+            # the HTTP request hanging forever (no streamed end-of-message).
+            self.logger.exception(f"LLM request failed: {e}")
+            try:
+                from airunner.components.llm.managers.llm_response import (
+                    LLMResponse,
+                )
+                from airunner.enums import LLMActionType
+
+                request_id = message.get("request_id")
+                action = None
+                try:
+                    action = message.get("request_data", {}).get("action")
+                except Exception:
+                    action = None
+
+                action_val = action if isinstance(action, LLMActionType) else LLMActionType.CHAT
+
+                response = LLMResponse(
+                    message=f"Error invoking LLM: {e}",
+                    is_first_message=True,
+                    is_end_of_message=True,
+                    sequence_number=0,
+                    action=action_val,
+                    request_id=request_id,
+                    is_system_message=True,
+                )
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    {"response": response, "request_id": request_id},
+                )
+            except Exception:
+                # If even error reporting fails, at least don't crash the worker loop.
+                pass
+            return
 
         # Clear pending request only if request truly completed successfully
         # Check for error responses (response starting with "Error:")
@@ -520,6 +557,40 @@ class LLMGenerateWorker(
                 self.logger.info(
                     f"Request failed with error, keeping pending request for retry after download"
                 )
+
+                # For headless HTTP API consumers, we must still send an
+                # end-of-message response so the request doesn't hang.
+                try:
+                    from airunner.components.llm.managers.llm_response import LLMResponse
+                    from airunner.enums import LLMActionType
+
+                    request_id = message.get("request_id")
+                    action = None
+                    try:
+                        action = message.get("request_data", {}).get("action")
+                    except Exception:
+                        action = None
+                    action_val = action if isinstance(action, LLMActionType) else LLMActionType.CHAT
+
+                    msg = response_text or "Error invoking LLM"
+                    if not isinstance(msg, str):
+                        msg = str(msg)
+
+                    response = LLMResponse(
+                        message=msg,
+                        is_first_message=True,
+                        is_end_of_message=True,
+                        sequence_number=0,
+                        action=action_val,
+                        request_id=request_id,
+                        is_system_message=True,
+                    )
+                    self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        {"response": response, "request_id": request_id},
+                    )
+                except Exception:
+                    pass
 
     def _load_llm_thread(self, data: Optional[Dict] = None) -> None:
         """Load LLM in a separate thread.

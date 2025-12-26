@@ -6,6 +6,7 @@ registered in the ToolRegistry and available to the LLM agent.
 """
 
 import pytest
+import sys
 from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
     ToolCategory,

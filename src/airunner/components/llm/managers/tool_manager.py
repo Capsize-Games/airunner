@@ -1,6 +1,7 @@
 """Manages LangChain tools for the AI Runner agent."""
 
 from typing import List, Callable, Optional, Any
+import inspect
 
 from airunner.components.llm.managers.tools import (
     ImageTools,
@@ -47,7 +48,21 @@ class ToolManager(
             rag_manager: Optional RAG manager instance for document search
         """
         self.rag_manager = rag_manager
+        self._request_tool_defaults: dict[str, Any] = {}
         super().__init__()
+
+    def set_request_tool_defaults(self, defaults: dict[str, Any]) -> None:
+        """Set request-scoped default kwargs for tool calls.
+
+        Args:
+            defaults: Default kwargs to inject when a tool is called and the
+                model did not provide those arguments.
+        """
+        self._request_tool_defaults = dict(defaults or {})
+
+    def clear_request_tool_defaults(self) -> None:
+        """Clear request-scoped tool default kwargs."""
+        self._request_tool_defaults = {}
 
     def _wrap_tool_with_dependencies(self, tool_info):
         """Wrap a tool function with dependency injection for LangChain.
@@ -62,6 +77,24 @@ class ToolManager(
         """
         from airunner.components.server.api.server import get_api
         from functools import wraps
+
+        sig = None
+        accepted_kwargs = set()
+        accepts_var_kwargs = False
+        try:
+            sig = inspect.signature(tool_info.func)
+            for param in sig.parameters.values():
+                if param.kind == inspect.Parameter.VAR_KEYWORD:
+                    accepts_var_kwargs = True
+                elif param.kind in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                ):
+                    accepted_kwargs.add(param.name)
+        except Exception:
+            # If signature introspection fails, fall back to not injecting
+            # request defaults to avoid unexpected kwarg errors.
+            sig = None
 
         @wraps(tool_info.func)
         def wrapped(*args, **kwargs):
@@ -102,6 +135,15 @@ class ToolManager(
                         f"Error: API not available for tool {tool_info.name}"
                     )
                 kwargs["api"] = api
+
+            # Inject request-scoped default kwargs (e.g. locale hints).
+            # Only inject when the tool can accept the kwarg.
+            if self._request_tool_defaults and (accepts_var_kwargs or sig):
+                for key, value in self._request_tool_defaults.items():
+                    if value is None or key in kwargs:
+                        continue
+                    if accepts_var_kwargs or key in accepted_kwargs:
+                        kwargs[key] = value
 
             # Inject agent if required (not yet implemented)
             # if tool_info.requires_agent and self.agent:

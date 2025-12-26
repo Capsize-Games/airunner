@@ -44,6 +44,7 @@ class LLMAPIService(APIServiceBase):
         # Use action-optimized defaults if no explicit request provided
         # Accept backwards-compatible extra kwargs such as 'system_prompt'
         system_prompt = kwargs.pop("system_prompt", None)
+        search_hints = kwargs.pop("search_hints", None)
         llm_request = llm_request or LLMRequest.for_action(action)
         if system_prompt:
             try:
@@ -69,6 +70,9 @@ class LLMAPIService(APIServiceBase):
                 "do_tts_reply": do_tts_reply,
             },
         }
+
+        if search_hints is not None:
+            data["request_data"]["search_hints"] = search_hints
         if conversation_id is not None:
             data["conversation_id"] = conversation_id
         if node_id is not None:

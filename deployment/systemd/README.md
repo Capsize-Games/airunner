@@ -19,10 +19,10 @@ The `airunner-headless.service` file allows AI Runner to run as a background ser
    ```
    
    Update these values if your paths are different:
-   - `User=joe` - Change to your username
-   - `Group=joe` - Change to your group
-   - `WorkingDirectory=/home/joe/Projects/airunner` - Change to your AI Runner path
-   - `ExecStart=/home/joe/Projects/airunner/.venv/bin/python` - Change to your Python path
+   - `User=airunner` - Change to your username
+   - `Group=airunner` - Change to your group
+   - `WorkingDirectory=/opt/airunner` - Change to your AI Runner path
+   - `ExecStart=/opt/airunner/.venv/bin/python` - Change to your Python path
 
 3. **Reload systemd to recognize the new service:**
    ```bash
@@ -85,15 +85,15 @@ sudo systemctl restart airunner-headless
 1. Check logs: `sudo journalctl -u airunner-headless -n 100`
 2. Verify Python path: `which python` in your virtual environment
 3. Verify working directory exists and has correct permissions
-4. Test manually: `cd /home/joe/Projects/airunner && .venv/bin/python -m airunner.main`
+4. Test manually: `cd /opt/airunner && .venv/bin/python -m airunner.main`
 
 **Permission issues:**
 ```bash
-# Ensure user 'joe' can access AI Runner directory
-sudo chown -R joe:joe /home/joe/Projects/airunner
+# Ensure the service user can access AI Runner directory
+sudo chown -R airunner:airunner /opt/airunner
 
 # Check if user can write to logs
-ls -la /home/joe/Projects/airunner/
+ls -la /opt/airunner/
 ```
 
 **Service won't stop:**
@@ -152,7 +152,7 @@ curl -X POST http://localhost:8080/llm \
 Once the service is running, you can use the BookSite classification:
 
 ```bash
-cd /home/joe/Projects/airunner/booksite
+cd /opt/airunner/booksite
 ./manage.py ai_process_books --books 535
 ```
 

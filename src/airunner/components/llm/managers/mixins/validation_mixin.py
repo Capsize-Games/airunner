@@ -51,6 +51,21 @@ class ValidationMixin:
             self._missing_gguf = False
             return False
 
+        # If a GGUF file is already present, treat the model as available and
+        # do not attempt HuggingFace/safetensors validation or downloads.
+        #
+        # This avoids a common failure mode where a directory contains a
+        # quantized `.gguf` but also has an HF `model.safetensors.index.json`
+        # (without the referenced shard files). In that case, we should prefer
+        # GGUF and never stall trying to download missing HF shards.
+        if is_gguf_model(model_path):
+            self.logger.info(
+                f"GGUF model found at {model_path} (preferring GGUF; skipping safetensors validation)"
+            )
+            self._missing_files = None
+            self._missing_gguf = False
+            return True
+
         # Check if GGUF quantization is selected (quantization_bits == 0 is GGUF)
         gguf_selected = self._is_gguf_quantization_selected()
         
@@ -280,6 +295,14 @@ class ValidationMixin:
         Returns:
             False to indicate model is not yet available.
         """
+        # Safety: if a GGUF model is present, we should not trigger any HF
+        # downloads even if other file checks think the model is incomplete.
+        if is_gguf_model(self.model_path):
+            self.logger.info(
+                f"GGUF model present at {self.model_path}; skipping download trigger"
+            )
+            return False
+
         self.logger.info(
             f"Model not found at {self.model_path}, triggering download"
         )

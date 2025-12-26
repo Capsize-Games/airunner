@@ -46,6 +46,21 @@ class ModelManagementMixin:
             column_name: Column to update.
             val: New value.
         """
+        # Layer-scoped settings must flow through the layer-aware update paths
+        # so the per-layer cache is invalidated correctly. Otherwise, callers
+        # would update the DB row while the cached object stays stale.
+        layer_tables = {
+            "image_to_image_settings": self.update_image_to_image_settings,
+            "outpaint_settings": self.update_outpaint_settings,
+            "controlnet_settings": self.update_controlnet_settings,
+            "drawing_pad_settings": self.update_drawing_pad_settings,
+        }
+
+        lower_table = table_name.lower() if table_name else ""
+        if lower_table in layer_tables:
+            layer_tables[lower_table](**{column_name: val})
+            return
+
         model_class_ = table_to_class.get(table_name)
         if model_class_ is None:
             self.logger.error(f"Model class for {table_name} not found")

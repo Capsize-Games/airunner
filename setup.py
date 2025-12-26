@@ -231,6 +231,7 @@ setup(
         "jinja2==3.1.6",
         "pyyaml==6.0.2",
         "fastapi==0.115.0",
+        "python-multipart>=0.0.9",
         "uvicorn[standard]==0.34.0",
     ],
     extras_require=extras_require,

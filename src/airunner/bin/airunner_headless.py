@@ -62,7 +62,7 @@ Examples:
 import argparse
 import sys
 import os
-
+import signal
 
 def main():
     """Main entry point for headless AI Runner server."""
@@ -97,6 +97,9 @@ def main():
     parser.add_argument(
         "--model", "-m",
         type=str,
+        # NOTE: Do not import settings/DB models here.
+        # Importing DB models pulls in airunner.settings at module import time, which
+        # would freeze AIRUNNER_HEADLESS_SERVER_HOST before we set it below.
         default=os.environ.get("AIRUNNER_LLM_MODEL_PATH"),
         help="Path to LLM model to load at startup (or load on first request)",
     )
@@ -161,10 +164,10 @@ def main():
     args = parser.parse_args()
 
     # Determine port based on mode
-    if args.port is not None:
-        port = args.port
-    elif args.ollama_mode:
+    if args.ollama_mode:
         port = 11434  # Ollama's default port
+    elif args.port is not None:
+        port = args.port
     else:
         port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
 
@@ -196,6 +199,10 @@ def main():
     # Now import settings after environment is configured
     from airunner.settings import AIRUNNER_LOG_LEVEL
     from airunner.utils.application import get_logger
+    from airunner.launcher import _configure_test_mode
+    from airunner.setup_database import setup_database
+    from airunner.components.application.api.api import API
+    from airunner.components.server.api import server
 
     # Configure logging
     logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
@@ -284,7 +291,7 @@ def main():
     # Show enabled services and model paths
     services = []
     if os.environ.get("AIRUNNER_LLM_ON") == "1":
-        model_info = f" ({args.model})" if args.model else ""
+        model_info = f" ({os.environ.get('AIRUNNER_LLM_MODEL_PATH')})" if os.environ.get("AIRUNNER_LLM_MODEL_PATH") else ""
         services.append(f"LLM{model_info}")
     if os.environ.get("AIRUNNER_SD_ON") == "1":
         model_info = f" ({args.art_model})" if args.art_model else ""
@@ -301,39 +308,85 @@ def main():
     )
     logger.info("=" * 60)
 
+    api = None
+
+    def _handle_shutdown_signal(_signum, _frame):
+        # Force a Python-level unwind so our `finally` cleanup runs.
+        raise KeyboardInterrupt()
+
+    signal.signal(signal.SIGINT, _handle_shutdown_signal)
+    signal.signal(signal.SIGTERM, _handle_shutdown_signal)
+
     try:
         # Setup database (run migrations)
-        from airunner.setup_database import setup_database
-
         setup_database()
+
+        # If no model was specified, attempt to load the default from DB settings.
+        # This must happen AFTER database setup, and AFTER host/port env vars are set.
+        if not os.environ.get("AIRUNNER_LLM_MODEL_PATH"):
+            try:
+                from airunner.components.llm.data.llm_generator_settings import (
+                    LLMGeneratorSettings,
+                )
+
+                llm_generator_settings = LLMGeneratorSettings.objects.first()
+                if llm_generator_settings and getattr(
+                    llm_generator_settings, "model_path", None
+                ):
+                    os.environ["AIRUNNER_LLM_MODEL_PATH"] = (
+                        llm_generator_settings.model_path
+                    )
+            except Exception:
+                # Non-fatal: server can still start without a preselected model.
+                pass
 
         # Configure test mode if running tests
         if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
-            from airunner.launcher import _configure_test_mode
-
             _configure_test_mode()
 
         # Create API instance (which inherits from App)
-        # This initializes the app, workers, and HTTP server
-        from airunner.components.application.api.api import API
+        # This initializes the app, workers, and HTTP server.
+        #
+        # NOTE: API is implemented as a process-wide singleton. In headless
+        # mode we need to guarantee we get a *fresh* instance configured for
+        # headless operation (and not a previously created GUI-mode instance).
+        try:
+            API._instance = None  # type: ignore[attr-defined]
+        except Exception:
+            pass
 
         api = API(headless=True)
 
         # Store API instance globally so get_api() can access it
-        from airunner.components.server.api import server
-
         server._api = api
 
         logger.info("Starting headless server...")
         api.run()
 
+        # If api.run() ever returns normally, treat it as a clean shutdown.
+        return 0
+
     except KeyboardInterrupt:
         logger.info("Shutdown requested")
-        sys.exit(0)
+        return 0
+    except SystemExit as e:
+        # Some internal components call sys.exit(), including the Qt event-loop
+        # runner. Treat a 0 exit code as normal shutdown.
+        code = e.code
+        if code in (None, 0):
+            return 0
+        logger.error(f"SystemExit: {e}", exc_info=True)
+        return int(code) if isinstance(code, int) else 1
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
-        sys.exit(1)
+        return 1
+    finally:
+        if api is not None:
+            try:
+                api.cleanup()
+            except Exception:
+                logger.exception("Error during headless cleanup")
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
