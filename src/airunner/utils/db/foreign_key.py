@@ -22,14 +22,26 @@ def create_foreign_key(
     """
     from alembic import op
 
+    dialect_name = getattr(getattr(op.get_bind(), "dialect", None), "name", "")
+
     # Alembic batch mode requires a constraint name
     if not constraint_name:
         constraint_name = f"fk_{cls.__tablename__}_{'_'.join(local_cols)}_{referent_table}_{'_'.join(remote_cols)}"
-    with op.batch_alter_table(
-        cls.__tablename__, recreate="always"
-    ) as batch_op:
-        batch_op.create_foreign_key(
+
+    if dialect_name == "sqlite":
+        with op.batch_alter_table(cls.__tablename__, recreate="always") as batch_op:
+            batch_op.create_foreign_key(
+                constraint_name,
+                referent_table,
+                local_cols,
+                remote_cols,
+                ondelete=ondelete,
+                onupdate=onupdate,
+            )
+    else:
+        op.create_foreign_key(
             constraint_name,
+            cls.__tablename__,
             referent_table,
             local_cols,
             remote_cols,

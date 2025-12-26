@@ -51,9 +51,14 @@ def upgrade() -> None:
     constraint_name = "uq_chatbots_voice_id"
 
     if constraint_exists(connection, "chatbots", constraint_name):
-        # Then proceed with the constraint drop
-        with op.batch_alter_table("chatbots", recreate="always") as batch_op:
-            batch_op.drop_constraint(constraint_name, type_="unique")
+        dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
+        if dialect_name == "sqlite":
+            # SQLite needs table recreation to safely drop constraints.
+            with op.batch_alter_table("chatbots", recreate="always") as batch_op:
+                batch_op.drop_constraint(constraint_name, type_="unique")
+        else:
+            # On Postgres, recreating the table drops PK and fails due to dependent FKs.
+            op.drop_constraint(constraint_name, "chatbots", type_="unique")
 
     add_column(WorkflowConnection, "output_port_name")
     add_column(WorkflowConnection, "input_port_name")

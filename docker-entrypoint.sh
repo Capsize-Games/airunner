@@ -42,7 +42,7 @@ if [ "$HEADLESS" = "1" ]; then
     echo "Starting AI Runner in headless mode..."
     if [ "${AIRUNNER_DEV_RELOAD:-0}" = "1" ]; then
         echo "Dev reload enabled (AIRUNNER_DEV_RELOAD=1). Auto-restarting on source changes..."
-        exec python3 -m airunner.dev.autorestart -- airunner-headless $HEADLESS_ARGS
+        exec python3.13 -m airunner.dev.autorestart -- airunner-headless $HEADLESS_ARGS
     else
         exec airunner-headless $HEADLESS_ARGS
     fi

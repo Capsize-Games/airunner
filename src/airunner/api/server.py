@@ -17,8 +17,9 @@ import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.api.routes import health, llm, art, tts, stt, vision
+from airunner.api.routes import health, llm, art, tts, stt, vision, uwuchat
 from airunner.api.routes import legacy as legacy_routes
+from airunner.components.data.tenant import set_tenant_key
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -75,6 +76,14 @@ def create_app(
     required_api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
 
     @app.middleware("http")
+    async def uwuchat_tenant_middleware(request: Request, call_next):
+        # Phase 4: per-user DB isolation keyed by UwUChat user id.
+        # We keep this header name stable so the UwUChat backend can set it.
+        user_id = (request.headers.get("x-uwuchat-user-id") or "").strip()
+        set_tenant_key(user_id or None)
+        return await call_next(request)
+
+    @app.middleware("http")
     async def api_key_auth_middleware(request: Request, call_next):
         if not required_api_key:
             return await call_next(request)
@@ -127,6 +136,7 @@ def create_app(
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
     app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
+    app.include_router(uwuchat.router, prefix="/api/v1/uwuchat", tags=["uwuchat"])
 
     # Legacy endpoints for UwUChat + existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])

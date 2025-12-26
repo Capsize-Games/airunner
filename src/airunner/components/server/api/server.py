@@ -293,7 +293,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     return getattr(manager, 'model_is_loaded', False)
         return False
 
-    def _ensure_art_model_loaded(self) -> tuple[bool, str]:
+    def _ensure_art_model_loaded(self, model_path: str | None = None) -> tuple[bool, str]:
         """Ensure art/Stable Diffusion model is loaded, triggering load if necessary.
         
         Returns:
@@ -311,8 +311,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not api:
             return False, "API not initialized"
         
-        # Get art model path from environment or settings
-        art_model_path = os.environ.get("AIRUNNER_ART_MODEL_PATH")
+        # Prefer an explicit per-request model path if provided.
+        art_model_path = (model_path or "").strip() or os.environ.get("AIRUNNER_ART_MODEL_PATH")
         
         if not art_model_path:
             # Try to get from settings
@@ -584,8 +584,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self._send_json_response({"error": "Missing 'prompt' field"}, status=400)
             return
 
-        # Ensure model is loaded (auto-load if needed)
-        success, error_msg = self._ensure_art_model_loaded()
+        # Ensure model is loaded (auto-load if needed). Allow optional override.
+        model_path = (data.get("model_path") or "").strip() or None
+        success, error_msg = self._ensure_art_model_loaded(model_path=model_path)
         if not success:
             self._send_json_response(
                 {
@@ -623,6 +624,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "n_samples": int(data.get("num_images") or 1),
             "images_per_batch": int(data.get("num_images") or 1),
         }
+
+        # Allow per-request model override.
+        if model_path:
+            native_payload["model_path"] = model_path
 
         def run_job():
             try:
@@ -692,9 +697,57 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self._send_bytes_response(png_bytes, status=200, content_type="image/png")
 
     def _handle_art_v1_models(self):
-        # Minimal endpoint for compatibility.
-        # AIRunner's native model listing lives elsewhere; this returns a safe empty list.
-        self._send_json_response({"models": []}, status=200)
+        # Minimal but useful endpoint for compatibility: list local checkpoint files.
+        import glob
+
+        env_path = (os.environ.get("AIRUNNER_ART_MODEL_PATH") or "").strip()
+
+        candidate_dirs: list[str] = []
+        if env_path and os.path.isdir(env_path):
+            candidate_dirs.append(env_path)
+        elif env_path and os.path.isfile(env_path):
+            candidate_dirs.append(os.path.dirname(env_path))
+
+        # Common locations inside the UwUChat dev container (bind-mounted from host).
+        candidate_dirs.extend(
+            [
+                "/home/airunner/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
+                "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
+            ]
+        )
+
+        # Fallback to $HOME in case we're not on the UwUChat dev stack.
+        home_dir = os.path.expanduser("~")
+        candidate_dirs.append(os.path.join(home_dir, ".local", "share", "airunner", "art", "models", "Z-Image Turbo", "txt2img"))
+
+        base_dir = ""
+        for d in candidate_dirs:
+            if os.path.isdir(d):
+                base_dir = d
+                break
+
+        models: list[dict[str, Any]] = []
+
+        def add_file(path: str):
+            try:
+                st = os.stat(path)
+                models.append(
+                    {
+                        "id": path,
+                        "name": os.path.basename(path),
+                        "path": path,
+                        "size_bytes": int(st.st_size),
+                    }
+                )
+            except Exception:
+                # Best-effort; ignore unreadable files.
+                return
+
+        if base_dir:
+            for p in sorted(glob.glob(os.path.join(base_dir, "*.safetensors"))):
+                add_file(p)
+
+        self._send_json_response({"base_dir": base_dir, "models": models}, status=200)
 
     def _generate_first_png_bytes(self, data: dict) -> bytes:
         """Run a native art generation request and return the first PNG as bytes."""

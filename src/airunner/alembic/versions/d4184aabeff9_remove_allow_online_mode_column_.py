@@ -22,10 +22,8 @@ def upgrade() -> None:
     # SQLite dev DBs can drift (or the column may never have existed), so make
     # this migration tolerant if the column is already absent.
     bind = op.get_bind()
-    cols = {
-        row[1]
-        for row in bind.execute(sa.text("PRAGMA table_info(application_settings)"))
-    }
+    inspector = sa.inspect(bind)
+    cols = {col["name"] for col in inspector.get_columns("application_settings")}
 
     if "allow_online_mode" in cols:
         op.drop_column("application_settings", "allow_online_mode")
@@ -33,10 +31,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     bind = op.get_bind()
-    cols = {
-        row[1]
-        for row in bind.execute(sa.text("PRAGMA table_info(application_settings)"))
-    }
+    inspector = sa.inspect(bind)
+    cols = {col["name"] for col in inspector.get_columns("application_settings")}
 
     if "allow_online_mode" not in cols:
         op.add_column(

@@ -1,13 +1,76 @@
 import os
+import re
 from alembic.config import Config
 from alembic import command
 from pathlib import Path
 
 
-def setup_database():
+def _extract_search_path_schema(db_url: str) -> str | None:
+    try:
+        from sqlalchemy.engine import make_url
+
+        url = make_url(db_url)
+        options = (dict(url.query or {}).get("options") or "").strip()
+        if not options:
+            return None
+        match = re.search(r"(?:^|\s)-csearch_path=([^\s]+)", options)
+        if not match:
+            return None
+        return match.group(1)
+    except Exception:
+        return None
+
+
+def setup_database(db_url: str | None = None):
     base = Path(os.path.dirname(os.path.realpath(__file__)))
     alembic_file = base / "alembic.ini"
     alembic_dir = base / "alembic"
     alembic_cfg = Config(alembic_file)
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
-    command.upgrade(alembic_cfg, "head")
+
+    if db_url:
+        # Alembic's Config wraps ConfigParser which treats '%' as interpolation.
+        # SQLAlchemy URLs may contain percent-encoded sequences (e.g. %3D) when
+        # we add Postgres connection options like search_path.
+        safe_url = db_url.replace("%", "%%")
+        alembic_cfg.set_main_option("sqlalchemy.url", safe_url)
+
+    # Alembic's EnvironmentContext installs a proxy into modules that register
+    # themselves via `EnvironmentContext.create_module_class_proxy()`.
+    # Importing `alembic.context` up-front ensures it has registered before the
+    # EnvironmentContext is entered, otherwise env.py may see an uninitialized
+    # proxy (and `context.configure()` will fail).
+    import alembic.context  # noqa: F401
+
+    old_flag = os.environ.get("AIRUNNER_MIGRATION_RUNNING")
+    os.environ["AIRUNNER_MIGRATION_RUNNING"] = "1"
+
+    tenant_token = None
+    if db_url:
+        schema = _extract_search_path_schema(db_url)
+        if schema:
+            # session_manager derives schema as `uwu_<raw>`; if we're given a
+            # full schema name, strip the prefix so session_scope stays in-sync.
+            raw_tenant = schema[4:] if schema.startswith("uwu_") else schema
+            try:
+                from airunner.components.data.tenant import set_tenant_key
+
+                tenant_token = set_tenant_key(raw_tenant)
+            except Exception:
+                tenant_token = None
+
+    try:
+        command.upgrade(alembic_cfg, "head")
+    finally:
+        if tenant_token is not None:
+            try:
+                from airunner.components.data.tenant import reset_tenant_key
+
+                reset_tenant_key(tenant_token)
+            except Exception:
+                pass
+
+        if old_flag is None:
+            os.environ.pop("AIRUNNER_MIGRATION_RUNNING", None)
+        else:
+            os.environ["AIRUNNER_MIGRATION_RUNNING"] = old_flag

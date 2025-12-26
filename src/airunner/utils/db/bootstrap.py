@@ -222,6 +222,7 @@ def set_default_pipeline_values():
 
 def set_image_filter_settings():
     connection = op.get_bind()
+    dialect_name = getattr(getattr(connection, "dialect", None), "name", "")
     for filter_name, filter_data in imagefilter_bootstrap_data.items():
         # Check if the filter already exists
         existing_filter = connection.execute(
@@ -231,20 +232,31 @@ def set_image_filter_settings():
         if existing_filter:
             # Filter already exists, skip
             continue
-        # Insert the filter
-        result = connection.execute(
-            sa.text(
-                "INSERT INTO image_filter_settings (name, display_name, auto_apply, filter_class) "
-                "VALUES (:name, :display_name, :auto_apply, :filter_class)"
-            ),
-            {
-                "name": filter_data["name"],
-                "display_name": filter_data["display_name"],
-                "auto_apply": filter_data["auto_apply"],
-                "filter_class": filter_data["filter_class"],
-            },
-        )
-        filter_id = result.lastrowid
+        insert_params = {
+            "name": filter_data["name"],
+            "display_name": filter_data["display_name"],
+            "auto_apply": filter_data["auto_apply"],
+            "filter_class": filter_data["filter_class"],
+        }
+        if dialect_name == "postgresql":
+            result = connection.execute(
+                sa.text(
+                    "INSERT INTO image_filter_settings (name, display_name, auto_apply, filter_class) "
+                    "VALUES (:name, :display_name, :auto_apply, :filter_class) "
+                    "RETURNING id"
+                ),
+                insert_params,
+            )
+            filter_id = result.scalar_one()
+        else:
+            result = connection.execute(
+                sa.text(
+                    "INSERT INTO image_filter_settings (name, display_name, auto_apply, filter_class) "
+                    "VALUES (:name, :display_name, :auto_apply, :filter_class)"
+                ),
+                insert_params,
+            )
+            filter_id = result.lastrowid
         for value_name, value_data in filter_data[
             "image_filter_values"
         ].items():

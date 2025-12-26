@@ -371,9 +371,6 @@ class WorkerManager(Worker):
             data: Download info with repo_id, model_path, missing_files, version, etc.
         """
         import os
-        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-            HuggingFaceDownloadDialog,
-        )
 
         repo_id = data.get("repo_id")
         model_path = data.get("model_path")
@@ -418,6 +415,10 @@ class WorkerManager(Worker):
         main_window = self._get_main_window()
         if main_window:
             try:
+                from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+                    HuggingFaceDownloadDialog,
+                )
+
                 # Close any existing download dialog
                 if self._download_dialog:
                     self._download_dialog.close()
@@ -496,6 +497,11 @@ class WorkerManager(Worker):
 
         app = QApplication.instance()
         if app is None:
+            return None
+
+        # In headless mode we often run a QCoreApplication event loop, which
+        # doesn't support QWidget APIs like activeWindow/topLevelWidgets.
+        if not hasattr(app, "activeWindow") or not hasattr(app, "topLevelWidgets"):
             return None
 
         window = app.activeWindow()

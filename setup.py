@@ -223,9 +223,11 @@ setup(
         "optimum==1.25.1",
         "numpy==2.2.5",
         "pillow==12.0.0",
-        "alembic==1.15.2",
+        "alembic==1.13.2",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
+        # Postgres driver (Phase 4: AIRunner DB on Postgres)
+        "psycopg[binary]>=3.2.0",
         "setuptools==80.9.0",
         "etils[epath]==1.12.2",
         "jinja2==3.1.6",
