@@ -10,6 +10,7 @@ emitted in that pipeline, causing jobs to stay RUNNING forever.
 import io
 import asyncio
 import os
+import secrets
 from pathlib import Path
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import Optional, List
@@ -334,6 +335,15 @@ async def generate_image(request: GenerationRequest, req: Request):
 
     logger.info("Resolved art model: version=%s path=%s", model_version, model_path)
 
+    # Important: historically, we treated a blank seed as "random" but still
+    # passed a constant default seed (42) into the worker request. Some worker
+    # paths effectively use that value even when random_seed=True, producing the
+    # same image repeatedly.
+    #
+    # If the caller did not provide a seed, pick one here so each request is
+    # reproducible (if needed) but different across requests.
+    seed_value = int(request.seed) if request.seed is not None else secrets.randbelow(2**31 - 1)
+
     try:
         # Create job
         tracker = JobTracker()
@@ -345,7 +355,7 @@ async def generate_image(request: GenerationRequest, req: Request):
                 "height": request.height,
                 "steps": request.steps,
                 "cfg_scale": request.cfg_scale,
-                "seed": request.seed,
+                "seed": seed_value,
                 "num_images": request.num_images,
             }
         )
@@ -411,8 +421,8 @@ async def generate_image(request: GenerationRequest, req: Request):
             height=request.height,
             steps=request.steps,
             scale=request.cfg_scale,
-            random_seed=request.seed is None,
-            seed=int(request.seed) if request.seed is not None else 42,
+            random_seed=False,
+            seed=seed_value,
             n_samples=request.num_images,
             images_per_batch=request.num_images,
             generator_section=GeneratorSection.TXT2IMG,
