@@ -1,7 +1,7 @@
 """Add UwUChat chat/media tables
 
 Revision ID: 9a9c0d4b2f3a
-Revises: 080398045849
+Revises: 9e321c582dbe
 Create Date: 2025-12-26
 
 """
@@ -19,7 +19,7 @@ from airunner.utils.db.table import add_table, drop_table
 
 # revision identifiers, used by Alembic.
 revision: str = "9a9c0d4b2f3a"
-down_revision: Union[str, None] = "080398045849"
+down_revision: Union[str, None] = "9e321c582dbe"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

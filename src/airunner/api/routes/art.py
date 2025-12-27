@@ -42,7 +42,7 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.enums import GeneratorSection, SignalCode
+from airunner.enums import GeneratorSection, SignalCode, StableDiffusionVersion
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
@@ -123,7 +123,7 @@ def get_art_service(request: Request):
     return airunner_app
 
 
-def _resolve_art_model_path() -> str:
+def _resolve_art_model_path(model_version: Optional[str] = None) -> str:
     """Resolve the art model identifier/path.
 
     Priority:
@@ -179,32 +179,35 @@ def _resolve_art_model_path() -> str:
             model_base = Path(base_path).expanduser() / "art" / "models"
 
             settings = session.query(GeneratorSettings).first()
+
             if settings is not None:
                 custom_path = (getattr(settings, "custom_path", "") or "").strip()
                 if custom_path and Path(custom_path).expanduser().exists():
                     return custom_path
 
-                version = (
-                    (getattr(settings, "version", "") or "").strip()
-                    or (getattr(settings, "image_preset", "") or "").strip()
-                    or ""
-                )
-                action = (getattr(settings, "pipeline_action", "") or "").strip() or "txt2img"
+            # Prefer the caller-provided version (e.g., resolved from local models)
+            # so we don't accidentally mix a default version (Flux) with a Z-Image model path.
+            version = (model_version or "").strip()
+            action = "txt2img"
+            if settings is not None:
+                action = (getattr(settings, "pipeline_action", "") or "").strip() or action
 
-                if version:
-                    action_dir = model_base / version / action
-                    if action_dir.exists():
-                        chosen = _choose_from_action_dir(action_dir)
+            if version:
+                action_dir = model_base / version / action
+                if action_dir.exists():
+                    chosen = _choose_from_action_dir(action_dir)
+                    if chosen:
+                        return chosen
+
+                # Some installs store models directly under the version dir.
+                version_dir = model_base / version
+                if version_dir.exists():
+                    for maybe_action in sorted(
+                        p for p in version_dir.iterdir() if p.is_dir()
+                    ):
+                        chosen = _choose_from_action_dir(maybe_action)
                         if chosen:
                             return chosen
-
-                    # Some installs store models directly under the version dir.
-                    version_dir = model_base / version
-                    if version_dir.exists():
-                        for maybe_action in sorted(p for p in version_dir.iterdir() if p.is_dir()):
-                            chosen = _choose_from_action_dir(maybe_action)
-                            if chosen:
-                                return chosen
 
             # Last resort: pick the first model under the model base path.
             if model_base.exists():
@@ -224,6 +227,27 @@ def _resolve_art_model_version() -> str:
     if configured:
         return configured
 
+    # Determine model base directory for validation + auto-detection.
+    # This avoids defaulting to Flux when only SDXL/Z-Image models are installed.
+    try:
+        from airunner.components.data.session_manager import session_scope
+
+        with session_scope() as session:
+            path_settings = session.query(PathSettings).first()
+            base_path = (
+                (getattr(path_settings, "base_path", "") or "").strip()
+                if path_settings is not None
+                else ""
+            )
+    except Exception:
+        base_path = ""
+
+    base_path = base_path or os.path.expanduser(
+        os.path.join("~", ".local", "share", "airunner")
+    )
+    model_base = Path(base_path).expanduser() / "art" / "models"
+
+    # Prefer a DB-configured version only if it's actually available locally.
     try:
         from airunner.components.data.session_manager import session_scope
 
@@ -231,12 +255,37 @@ def _resolve_art_model_version() -> str:
             settings = session.query(GeneratorSettings).first()
             if settings is not None:
                 version = (getattr(settings, "version", "") or "").strip()
-                if version:
+                if version and (model_base / version).exists():
                     return version
     except Exception:
         pass
 
-    return "Flux.1 S"
+    preferred_versions = [
+        StableDiffusionVersion.Z_IMAGE_TURBO.value,
+        StableDiffusionVersion.SDXL1_0.value,
+        StableDiffusionVersion.FLUX_SCHNELL.value,
+        StableDiffusionVersion.FLUX_DEV.value,
+    ]
+
+    def _has_any_pipeline(version_dir: Path) -> bool:
+        for action in ("txt2img", "img2img", "inpaint", "outpaint"):
+            if (version_dir / action).exists():
+                return True
+        return False
+
+    if model_base.exists():
+        for version in preferred_versions:
+            version_dir = model_base / version
+            if version_dir.exists() and _has_any_pipeline(version_dir):
+                return version
+
+        # Fallback: first folder that looks like a model version.
+        known_values = {v.value for v in StableDiffusionVersion}
+        for version_dir in sorted(p for p in model_base.iterdir() if p.is_dir()):
+            if version_dir.name in known_values and _has_any_pipeline(version_dir):
+                return version_dir.name
+
+    return StableDiffusionVersion.Z_IMAGE_TURBO.value
 
 
 # ====================
@@ -272,7 +321,9 @@ async def generate_image(request: GenerationRequest, req: Request):
             detail="Stable Diffusion service is not enabled (AIRUNNER_SD_ON!=1)",
         )
 
-    model_path = _resolve_art_model_path()
+    model_version = _resolve_art_model_version()
+
+    model_path = _resolve_art_model_path(model_version=model_version)
     if not model_path:
         raise HTTPException(
             status_code=503,
@@ -280,7 +331,8 @@ async def generate_image(request: GenerationRequest, req: Request):
                 "No local art model could be resolved. Set AIRUNNER_ART_MODEL_PATH to an existing local file/dir (or ensure ~/.local/share/airunner/art/models contains a model)."
             ),
         )
-    model_version = _resolve_art_model_version()
+
+    logger.info("Resolved art model: version=%s path=%s", model_version, model_path)
 
     try:
         # Create job

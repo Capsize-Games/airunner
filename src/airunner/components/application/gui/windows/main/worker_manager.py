@@ -648,7 +648,7 @@ class WorkerManager(Worker):
             from airunner.components.settings.data.application_settings import (
                 ApplicationSettings,
             )
-            app_settings = ApplicationSettings.objects.first()
+            app_settings = self._get_or_create_application_settings()
             
             if app_settings.nsfw_filter:
                 self.logger.error(
@@ -708,7 +708,7 @@ class WorkerManager(Worker):
             ApplicationSettings,
         )
 
-        app_settings = ApplicationSettings.objects.first()
+        app_settings = self._get_or_create_application_settings()
 
         # Check if safety checker is enabled
         if not app_settings.nsfw_filter:
@@ -733,6 +733,44 @@ class WorkerManager(Worker):
         )
         self._pending_generation_request = data
         self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
+
+    def _get_or_create_application_settings(self):
+        """Return ApplicationSettings for the current tenant.
+
+        In headless UwUChat mode, tenant schemas may be created on-demand and
+        not have bootstrap rows yet. Image generation expects ApplicationSettings
+        to exist; without it, requests crash and art jobs stay RUNNING forever.
+        """
+        from airunner.components.settings.data.application_settings import (
+            ApplicationSettings,
+        )
+
+        app_settings = ApplicationSettings.objects.first()
+        if app_settings is not None:
+            return app_settings
+
+        # Create a sane default row for this tenant.
+        # - Enable SD if the service is enabled in this headless server.
+        # - Default NSFW filter off in headless mode to avoid blocking generation
+        #   on a safety-checker bootstrap step.
+        try:
+            import os
+
+            ApplicationSettings(
+                sd_enabled=os.environ.get("AIRUNNER_SD_ON") == "1",
+                llm_enabled=True,
+                nsfw_filter=False,
+            ).save()
+        except Exception:
+            # Best-effort; if creation fails, subsequent code will raise a clearer error.
+            pass
+
+        app_settings = ApplicationSettings.objects.first()
+        if app_settings is None:
+            raise RuntimeError(
+                "ApplicationSettings row is missing and could not be created"
+            )
+        return app_settings
 
     def _proceed_with_generation(self, data):
         """

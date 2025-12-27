@@ -119,7 +119,7 @@ def create_chat(req: ChatSessionCreateRequest):
             title=(req.title or "").strip(),
         )
         session.add(chat)
-        session.commit()
+        session.flush()
         session.refresh(chat)
 
         return ChatSessionResponse(
@@ -230,7 +230,7 @@ def archive_chat(chat_id: str):
             raise HTTPException(status_code=404, detail="Chat not found")
         chat.is_archived = True
         session.add(chat)
-        session.commit()
+        session.flush()
         return {"ok": True}
 
 
@@ -268,7 +268,7 @@ def create_message(chat_id: str, req: MessageCreateRequest):
         chat.last_message_at = func.now()
         session.add(chat)
 
-        session.commit()
+        session.flush()
         session.refresh(msg)
         session.refresh(chat)
 
@@ -301,7 +301,7 @@ def patch_message(chat_id: str, message_id: str, req: MessagePatchRequest):
                 msg.original_content_enc = None
 
         session.add(msg)
-        session.commit()
+        session.flush()
         session.refresh(msg)
 
         return MessageResponse(
@@ -359,7 +359,7 @@ def truncate_from_message(chat_id: str, req: TruncateRequest):
             chat.last_message_at = last_message_at
             session.add(chat)
 
-        session.commit()
+        session.flush()
 
         return TruncateResponse(deleted_count=deleted_count, deleted_tokens=deleted_tokens)
 
@@ -371,7 +371,7 @@ def upsert_profile(req: ProfilePatchRequest):
         if profile is None:
             profile = UwUChatProfile(id=1)
             session.add(profile)
-            session.commit()
+            session.flush()
             session.refresh(profile)
 
         if req.avatar_job_id is not None:
@@ -384,7 +384,7 @@ def upsert_profile(req: ProfilePatchRequest):
             profile.banner_media_id = req.banner_media_id or ""
 
         session.add(profile)
-        session.commit()
+        session.flush()
         session.refresh(profile)
 
         return ProfileResponse(
@@ -402,7 +402,7 @@ def get_profile():
         if profile is None:
             profile = UwUChatProfile(id=1)
             session.add(profile)
-            session.commit()
+            session.flush()
             session.refresh(profile)
 
         return ProfileResponse(
@@ -431,7 +431,7 @@ def create_media(req: MediaCreateRequest):
             data_enc=enc,
         )
         session.add(media)
-        session.commit()
+        session.flush()
         return MediaCreateResponse(id=media_id)
 
 

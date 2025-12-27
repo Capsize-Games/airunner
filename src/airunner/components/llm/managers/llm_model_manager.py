@@ -273,6 +273,33 @@ class LLMModelManager(
         llm_request = data["request_data"].get("llm_request")
         self.llm_request = llm_request
 
+        # Optional request-level dtype override (quantization).
+        # This is primarily used by UwUChat admin settings to force 4bit/8bit.
+        desired_dtype = getattr(llm_request, "dtype", None) if llm_request else None
+        if isinstance(desired_dtype, str):
+            desired_dtype = desired_dtype.strip().lower() or None
+        if desired_dtype in ("4-bit", "4bit"):
+            desired_dtype = "4bit"
+        elif desired_dtype in ("8-bit", "8bit"):
+            desired_dtype = "8bit"
+        elif desired_dtype in ("32-bit", "32bit"):
+            desired_dtype = "32bit"
+        elif desired_dtype == "auto":
+            desired_dtype = "auto"
+        else:
+            desired_dtype = None
+
+        if desired_dtype:
+            current_dtype = getattr(self.llm_generator_settings, "dtype", None)
+            if isinstance(current_dtype, str):
+                current_dtype = current_dtype.strip().lower() or None
+            if current_dtype != desired_dtype:
+                self.logger.info(
+                    f"[LLM] Switching dtype {current_dtype} -> {desired_dtype}; unloading"
+                )
+                self.unload()
+                self.llm_generator_settings.dtype = desired_dtype
+
         def _current_service() -> str:
             if getattr(self.llm_settings, "use_openrouter", False):
                 return "openrouter"

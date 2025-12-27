@@ -80,6 +80,10 @@ class LLMRequest:
     # Request-level backend selection (used by headless API)
     model_service: Optional[str] = None  # local | openrouter | ollama
     api_model: Optional[str] = None  # provider model name for API backends
+    # Request-level quantization override for local HF models.
+    # This is consumed by the model manager to set llm_generator_settings.dtype
+    # before loading; it must NOT be passed through to transformers generate().
+    dtype: Optional[str] = None  # auto | 4bit | 8bit | 32bit
     use_mode_routing: bool = (
         False  # Enable mode-based routing (author/code/research/qa/general)
     )
@@ -135,6 +139,7 @@ class LLMRequest:
         # Request-level routing knobs are handled by the manager, not the model.
         data.pop("model_service", None)
         data.pop("api_model", None)
+        data.pop("dtype", None)
         # Prompt augmentation toggles are consumed by workflow setup, not passed to the model
         data.pop("include_mood", None)
         data.pop("include_datetime", None)

@@ -81,7 +81,10 @@ class SDWorker(Worker):
         # simultaneously (e.g., worker thread loading model while main thread handles signal)
         with self._model_manager_lock:
             if self._model_manager is None:
-                version = StableDiffusionVersion(self.generator_settings.version)
+                # IMPORTANT: Use self.version (which can be set from an incoming ImageRequest)
+                # rather than generator_settings.version, otherwise headless API requests
+                # can incorrectly route to the wrong model manager (e.g., Flux).
+                version = self.version
 
                 if version in (
                     StableDiffusionVersion.FLUX_DEV,
