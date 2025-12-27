@@ -531,6 +531,42 @@ class GenerationMixin:
         if final_response:
             complete_response[0] = final_response
 
+        # Best-effort: extract provider token usage from the final AI message.
+        prompt_tokens = None
+        completion_tokens = None
+        total_tokens = None
+        try:
+            last_msg = None
+            msgs = result.get("messages") if isinstance(result, dict) else None
+            if isinstance(msgs, list) and msgs:
+                last_msg = msgs[-1]
+
+            if last_msg is not None:
+                usage = getattr(last_msg, "usage_metadata", None)
+                if isinstance(usage, dict):
+                    # LangChain commonly uses input/output naming.
+                    prompt_tokens = usage.get("input_tokens") or usage.get("prompt_tokens")
+                    completion_tokens = usage.get("output_tokens") or usage.get("completion_tokens")
+                    total_tokens = usage.get("total_tokens")
+
+                # Some providers stash usage in response_metadata.
+                if prompt_tokens is None or completion_tokens is None:
+                    rm = getattr(last_msg, "response_metadata", None)
+                    if isinstance(rm, dict):
+                        token_usage = rm.get("token_usage") or rm.get("usage")
+                        if isinstance(token_usage, dict):
+                            prompt_tokens = prompt_tokens or token_usage.get("prompt_tokens")
+                            completion_tokens = completion_tokens or token_usage.get("completion_tokens")
+                            total_tokens = total_tokens or token_usage.get("total_tokens")
+
+                if total_tokens is None and (prompt_tokens is not None or completion_tokens is not None):
+                    total_tokens = int(prompt_tokens or 0) + int(completion_tokens or 0)
+        except Exception:
+            # Usage extraction is best-effort and must not fail generation.
+            prompt_tokens = None
+            completion_tokens = None
+            total_tokens = None
+
         # Get list of tools that were executed during workflow
         executed_tools = []
         if hasattr(self._workflow_manager, "get_executed_tools"):
@@ -548,6 +584,9 @@ class GenerationMixin:
                 sequence_number=sequence_counter[0],
                 request_id=getattr(self, "_current_request_id", None),
                 tools=executed_tools,  # Include the tools here!
+                prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+                completion_tokens=int(completion_tokens) if completion_tokens is not None else None,
+                total_tokens=int(total_tokens) if total_tokens is not None else None,
             )
         )
 

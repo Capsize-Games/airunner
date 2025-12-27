@@ -229,6 +229,20 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         action_val_str = getattr(action_val, "name", None) or getattr(action_val, "value", action_val)
 
         tools = getattr(response, "tools", None)
+        usage_obj = None
+        try:
+            pt = getattr(response, "prompt_tokens", None)
+            ct = getattr(response, "completion_tokens", None)
+            tt = getattr(response, "total_tokens", None)
+            if pt is not None or ct is not None or tt is not None:
+                usage_obj = {
+                    "prompt_tokens": int(pt) if pt is not None else None,
+                    "completion_tokens": int(ct) if ct is not None else None,
+                    "total_tokens": int(tt) if tt is not None else None,
+                }
+        except Exception:
+            usage_obj = None
+
         payload = {
             "message": getattr(response, "message", "") or "",
             "is_first_message": bool(getattr(response, "is_first_message", False)),
@@ -241,6 +255,9 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
             "tool_calls": tools,
             "tools": tools,
         }
+
+        if usage_obj is not None and payload.get("is_end_of_message"):
+            payload["usage"] = usage_obj
 
         q.put((JSONResponse(content=payload).body or b"") + b"\n")
 

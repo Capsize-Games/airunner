@@ -34,3 +34,9 @@ class LLMResponse:
     request_id: Optional[str] = None
     tools: Optional[list] = None
     is_system_message: bool = False
+
+    # Optional usage metadata (for API providers like OpenRouter/OpenAI).
+    # Included on terminal messages when available.
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
