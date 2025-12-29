@@ -66,13 +66,13 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # /api/v1/art/* compatibility layer
 #
-# UwUChat expects an async-ish job API:
+# Some clients expect an async-ish job API:
 #   POST /api/v1/art/generate -> {job_id, status}
 #   GET  /api/v1/art/status/{job_id} -> {job_id, status, ...}
 #   GET  /api/v1/art/result/{job_id} -> raw PNG bytes
 #
 # The native AIRunner headless endpoint is POST /art (sync, base64 PNGs).
-# We bridge these here to avoid 404s when UwUChat is pointed at headless.
+# We bridge these here to avoid 404s when clients are pointed at headless.
 # ---------------------------------------------------------------------------
 
 _ART_JOBS_LOCK = threading.Lock()
@@ -498,7 +498,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "/admin/reset_database": lambda d: self._handle_reset_database(),
             "/admin/shutdown": lambda d: self._handle_shutdown(),
             "/art": self._handle_art,
-            # UwUChat-compatible art job API
+            # Compatibility art job API
             "/api/v1/art/generate": self._handle_art_v1_generate,
             "/stt": self._handle_stt,
             "/tts": self._handle_tts,
@@ -559,13 +559,13 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self._send_json_response({"error": "Not found"}, status=404)
 
     # =========================================================================
-    # UwUChat-compatible Art Job API (/api/v1/art/*)
+    # Compatibility Art Job API (/api/v1/art/*)
     # =========================================================================
 
     def _handle_art_v1_generate(self, data: dict):
         """Start an art generation job.
 
-        Expected request body (UwUChat):
+        Expected request body (compat clients):
         {
           "prompt": "...",
           "negative_prompt": "...",
@@ -610,7 +610,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "png_bytes": b"",
             }
 
-        # Map UwUChat payload -> native /art payload
+        # Map compat payload -> native /art payload
         native_payload: dict[str, Any] = {
             "prompt": prompt,
             "negative_prompt": data.get("negative_prompt") or "",
@@ -708,7 +708,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         elif env_path and os.path.isfile(env_path):
             candidate_dirs.append(os.path.dirname(env_path))
 
-        # Common locations inside the UwUChat dev container (bind-mounted from host).
+        # Common bind mounts in some dev containers.
         candidate_dirs.extend(
             [
                 "/home/airunner/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
@@ -716,7 +716,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             ]
         )
 
-        # Fallback to $HOME in case we're not on the UwUChat dev stack.
+        # Fallback to $HOME in case we're not on that dev stack.
         home_dir = os.path.expanduser("~")
         candidate_dirs.append(os.path.join(home_dir, ".local", "share", "airunner", "art", "models", "Z-Image Turbo", "txt2img"))
 
@@ -2012,7 +2012,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "repetition_penalty": "repetition_penalty",
             "use_memory": "use_memory",
             "tool_categories": "tool_categories",
-            # Legacy flag from external clients (e.g., uwuchat) to enable
+            # Legacy flag from external clients to enable
             # AI Runner's built-in tools. When True, we set tool_categories
             # to None so the tool classifier can pick the right categories.
             # When False, we disable tools by setting an empty list.

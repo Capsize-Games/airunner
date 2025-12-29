@@ -21,11 +21,11 @@ def _tenant_key() -> str:
     if _tenancy_mode() == "single":
         return "default"
 
-    from airunner.components.data.tenant import get_tenant_key, tenant_schema_for_user_id
+    from airunner.components.data.tenant import get_tenant_key, tenant_schema_for_key
 
     raw = get_tenant_key()
     # Default tenant when no header is provided.
-    return tenant_schema_for_user_id(raw)
+    return tenant_schema_for_key(raw)
 
 
 def _tenant_db_url(base_url: str, tenant_schema: str) -> str:

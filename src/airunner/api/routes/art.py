@@ -579,7 +579,7 @@ def _resolve_zimage_txt2img_dir() -> str:
 
     candidates = [
         str(Path(base_path).expanduser() / "art" / "models" / "Z-Image Turbo" / "txt2img"),
-        # Common bind mounts used in UwUChat dev compose.
+        # Common bind mounts used in some dev compose stacks.
         "/home/airunner/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
         "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
     ]

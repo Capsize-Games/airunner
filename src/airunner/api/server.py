@@ -17,9 +17,9 @@ import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.api.routes import health, llm, art, tts, stt, vision, uwuchat
+from airunner.api.routes import health, llm, art, tts, stt, vision
 from airunner.api.routes import legacy as legacy_routes
-from airunner.components.data.tenant import set_tenant_key
+from airunner.components.llm.core.extensions_loader import load_extensions
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -76,14 +76,6 @@ def create_app(
     required_api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
 
     @app.middleware("http")
-    async def uwuchat_tenant_middleware(request: Request, call_next):
-        # Phase 4: per-user DB isolation keyed by UwUChat user id.
-        # We keep this header name stable so the UwUChat backend can set it.
-        user_id = (request.headers.get("x-uwuchat-user-id") or "").strip()
-        set_tenant_key(user_id or None)
-        return await call_next(request)
-
-    @app.middleware("http")
     async def api_key_auth_middleware(request: Request, call_next):
         if not required_api_key:
             return await call_next(request)
@@ -136,13 +128,44 @@ def create_app(
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
     app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
-    app.include_router(uwuchat.router, prefix="/api/v1/uwuchat", tags=["uwuchat"])
 
-    # Legacy endpoints for UwUChat + existing clients.
+    # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])
 
     # Legacy routes for backwards compatibility.
     app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
+
+    # Optional extensions can register additional routers/middleware.
+    try:
+        stats = load_extensions(force_reload=False)
+        module_names = []
+        if isinstance(stats, dict):
+            module_names = list(stats.get("modules") or [])
+
+        # If extensions were loaded earlier (e.g., by the main App bootstrap),
+        # still discover them deterministically.
+        if not module_names:
+            import sys
+
+            module_names = sorted(
+                name
+                for name in sys.modules.keys()
+                if name.startswith("airunner_extensions.")
+            )
+
+        import sys
+
+        for module_name in module_names:
+            module = sys.modules.get(module_name)
+            hook = getattr(module, "register_fastapi", None) if module else None
+            if callable(hook):
+                try:
+                    hook(app)
+                    logger.info("Registered FastAPI extension: %s", module_name)
+                except Exception:
+                    logger.exception("Failed to register FastAPI extension: %s", module_name)
+    except Exception:
+        logger.exception("Extension registration failed")
 
     @app.get("/")
     async def root():

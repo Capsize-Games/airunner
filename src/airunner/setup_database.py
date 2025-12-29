@@ -28,6 +28,22 @@ def setup_database(db_url: str | None = None):
     alembic_cfg = Config(alembic_file)
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
 
+    # Allow extensions to ship their own migrations.
+    try:
+        repo_root = base.parent.parent
+        extensions_root = repo_root / "extensions"
+        version_locations: list[str] = [str(alembic_dir / "versions")]
+        if extensions_root.exists() and extensions_root.is_dir():
+            for child in sorted(extensions_root.iterdir(), key=lambda p: p.name.lower()):
+                versions_dir = child / "alembic" / "versions"
+                if versions_dir.exists() and versions_dir.is_dir():
+                    version_locations.append(str(versions_dir))
+        alembic_cfg.set_main_option(
+            "version_locations", os.pathsep.join(version_locations)
+        )
+    except Exception:
+        pass
+
     if db_url:
         # Alembic's Config wraps ConfigParser which treats '%' as interpolation.
         # SQLAlchemy URLs may contain percent-encoded sequences (e.g. %3D) when
@@ -49,9 +65,10 @@ def setup_database(db_url: str | None = None):
     if db_url:
         schema = _extract_search_path_schema(db_url)
         if schema:
-            # session_manager derives schema as `uwu_<raw>`; if we're given a
+            # session_manager derives schema as `<prefix><raw>`; if we're given a
             # full schema name, strip the prefix so session_scope stays in-sync.
-            raw_tenant = schema[4:] if schema.startswith("uwu_") else schema
+            prefix = (os.environ.get("AIRUNNER_TENANT_SCHEMA_PREFIX") or "tenant_")
+            raw_tenant = schema[len(prefix) :] if schema.startswith(prefix) else schema
             try:
                 from airunner.components.data.tenant import set_tenant_key
 

@@ -122,6 +122,7 @@ def load_extensions(force_reload: bool = False) -> dict:
     loaded = 0
     failed = 0
     roots = 0
+    modules: List[str] = []
 
     for root in _candidate_extension_dirs():
         if not root.exists() or not root.is_dir():
@@ -154,10 +155,11 @@ def load_extensions(force_reload: bool = False) -> dict:
                 sys.modules[module_name] = module
                 spec.loader.exec_module(module)  # type: ignore[assignment]
                 loaded += 1
+                modules.append(module_name)
                 logger.info("Loaded extension: %s", module_name)
             except Exception as exc:
                 failed += 1
                 logger.exception("Failed to load extension %s: %s", module_name, exc)
 
     setattr(load_extensions, _LOADED_MARKER, True)
-    return {"loaded": loaded, "failed": failed, "roots": roots}
+    return {"loaded": loaded, "failed": failed, "roots": roots, "modules": modules}

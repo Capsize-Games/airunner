@@ -1,7 +1,6 @@
 """Legacy/compatibility endpoints.
 
-UwUChat (and other existing consumers) historically talk to the headless server
-using:
+Some existing consumers historically talk to the headless server using:
 - GET  /health
 - GET  /llm/models
 - POST /llm/generate  (streams NDJSON)
@@ -105,8 +104,7 @@ def _build_llm_request(data: Dict[str, Any]) -> LLMRequest:
     if "max_tokens" in data and "max_new_tokens" not in data:
         data = {**data, "max_new_tokens": data.get("max_tokens")}
 
-    # Map top-level booleans used by UwUChat
-    # Provider alias: UwUChat uses "provider"; AI Runner uses "model_service".
+    # Provider alias used by some clients.
     if "provider" in data and "model_service" not in data:
         data = {**data, "model_service": data.get("provider")}
 
@@ -134,7 +132,7 @@ def _build_llm_request(data: Dict[str, Any]) -> LLMRequest:
 def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
     api = _get_airunner_api(req)
 
-    # This route is used by headless/HTTP streaming clients (e.g. UwUChat backend).
+    # This route is used by headless/HTTP streaming clients.
     # Ensure the LLM streaming pipeline does not suppress JSON/tool-call markup in a
     # way that would prevent tokens from reaching NDJSON clients.
     os.environ.setdefault("AIRUNNER_HEADLESS", "1")
@@ -150,12 +148,8 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         raise HTTPException(status_code=400, detail="Missing 'prompt' field")
 
     action = _parse_action(body.action)
-    uwu_request_id = (
-        req.headers.get("x-uwuchat-request-id")
-        or req.headers.get("x-request-id")
-        or ""
-    ).strip()
-    request_id = uwu_request_id or str(uuid.uuid4())
+    provided_request_id = (req.headers.get("x-request-id") or "").strip()
+    request_id = provided_request_id or str(uuid.uuid4())
 
     raw = body.model_dump()
     llm_request = _build_llm_request(raw)
@@ -213,8 +207,8 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         if not response:
             return
 
-        # System/status messages are useful for GUI, but legacy NDJSON clients
-        # (like UwUChat) treat streamed responses as assistant tokens.
+        # System/status messages are useful for GUI, but some NDJSON clients
+        # treat streamed responses as assistant tokens.
         # Drop non-terminal system messages so we don't pollute chat output.
         try:
             if getattr(response, "is_system_message", False) and not getattr(

@@ -3,7 +3,7 @@
 Runs the headless HTTP API inside uvicorn/FastAPI.
 
 We keep the legacy endpoints (/llm/*, /art, etc.) via a compatibility router
-so existing clients (including UwUChat) continue to work.
+so existing clients continue to work.
 """
 
 import threading

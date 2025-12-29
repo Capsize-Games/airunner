@@ -737,7 +737,7 @@ class WorkerManager(Worker):
     def _get_or_create_application_settings(self):
         """Return ApplicationSettings for the current tenant.
 
-        In headless UwUChat mode, tenant schemas may be created on-demand and
+        In headless multi-tenant mode, tenant schemas may be created on-demand and
         not have bootstrap rows yet. Image generation expects ApplicationSettings
         to exist; without it, requests crash and art jobs stay RUNNING forever.
         """

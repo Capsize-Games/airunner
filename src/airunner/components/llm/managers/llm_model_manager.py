@@ -274,7 +274,7 @@ class LLMModelManager(
         self.llm_request = llm_request
 
         # Optional request-level dtype override (quantization).
-        # This is primarily used by UwUChat admin settings to force 4bit/8bit.
+        # This is primarily used by admin settings to force 4bit/8bit.
         desired_dtype = getattr(llm_request, "dtype", None) if llm_request else None
         if isinstance(desired_dtype, str):
             desired_dtype = desired_dtype.strip().lower() or None
