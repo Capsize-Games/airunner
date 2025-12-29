@@ -111,7 +111,27 @@ def _get_engine(tenant: str):
         engine_key = "__shared__"
 
     if engine_key not in _engines:
-        _engines[engine_key] = create_engine(AIRUNNER_DB_URL)
+        # AI Runner is frequently used under streaming workloads. The default
+        # SQLAlchemy QueuePool settings (pool_size=5, max_overflow=10,
+        # pool_timeout=30) are too small for a multi-request dev stack and can
+        # lead to timeouts when chat history/checkpoints are being persisted.
+        #
+        # Allow tuning via env vars while keeping safe defaults.
+        pool_size = int(os.environ.get("AIRUNNER_DB_POOL_SIZE", "20"))
+        max_overflow = int(os.environ.get("AIRUNNER_DB_MAX_OVERFLOW", "40"))
+        pool_timeout = int(os.environ.get("AIRUNNER_DB_POOL_TIMEOUT", "60"))
+        pool_recycle = int(os.environ.get("AIRUNNER_DB_POOL_RECYCLE", "0"))
+
+        engine_kwargs = {
+            "pool_pre_ping": True,
+            "pool_size": pool_size,
+            "max_overflow": max_overflow,
+            "pool_timeout": pool_timeout,
+        }
+        if pool_recycle > 0:
+            engine_kwargs["pool_recycle"] = pool_recycle
+
+        _engines[engine_key] = create_engine(AIRUNNER_DB_URL, **engine_kwargs)
 
     return _engines[engine_key]
 

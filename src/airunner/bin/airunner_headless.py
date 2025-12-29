@@ -163,6 +163,11 @@ def main():
 
     args = parser.parse_args()
 
+    # Mark this process as headless early so any worker processes inherit it.
+    # Headless/HTTP streaming clients expect raw tokens (especially JSON) to be
+    # forwarded without GUI-only suppression heuristics.
+    os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+
     # Determine port based on mode
     if args.ollama_mode:
         port = 11434  # Ollama's default port

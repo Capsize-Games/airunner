@@ -134,6 +134,11 @@ def _build_llm_request(data: Dict[str, Any]) -> LLMRequest:
 def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
     api = _get_airunner_api(req)
 
+    # This route is used by headless/HTTP streaming clients (e.g. UwUChat backend).
+    # Ensure the LLM streaming pipeline does not suppress JSON/tool-call markup in a
+    # way that would prevent tokens from reaching NDJSON clients.
+    os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+
     def _interrupt_llm_async() -> None:
         try:
             threading.Thread(target=api.llm.interrupt, daemon=True).start()

@@ -4,6 +4,7 @@ Handles LangGraph node implementations (_call_model, _force_response_node, _rout
 These are broken into focused helper methods for maintainability.
 """
 
+import os
 import re
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
@@ -1626,20 +1627,24 @@ Based on the search results above, provide a clear, conversational answer to the
 
     def _is_tool_call_json(self, text: str) -> bool:
         """Check if text looks like a JSON tool call definition.
-        
+
         Args:
             text: Text to check
-            
+
         Returns:
             True if text appears to be a tool call JSON
         """
         stripped = text.strip()
-        # Check for JSON tool call patterns
-        if stripped.startswith('{') and ('"name"' in stripped or '"tool"' in stripped):
-            # Looks like start of a tool call JSON
+        if not stripped.startswith('{'):
+            return False
+
+        # Be conservative: only treat as tool-call JSON when it strongly matches
+        # known tool-call shapes (name/tool + arguments).
+        if ('"name"' in stripped or '"tool"' in stripped) and (
+            '"arguments"' in stripped or '"args"' in stripped
+        ):
             return True
-        if '"arguments"' in stripped or '"query"' in stripped:
-            # Contains argument-like content
+        if '"function"' in stripped and '"arguments"' in stripped:
             return True
         return False
 
@@ -1679,11 +1684,16 @@ Based on the search results above, provide a clear, conversational answer to the
         has_streamed_content = False
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
-        # In GUI mode, we suppress <think>/<tool_call> markup from the main token stream.
-        # In headless/HTTP mode there is no GUI to render thinking separately; suppressing
-        # would prevent any tokens from reaching HTTP streaming clients until the thinking
-        # block closes (or forever if it never closes). So only suppress when a GUI emitter exists.
-        suppress_thinking_blocks = bool(has_emitter)
+        # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
+        # suppress/buffer tokens. Some models can emit the *entire* answer inside <think> blocks;
+        # suppressing thinking would then swallow all output for NDJSON clients.
+        is_headless = os.environ.get("AIRUNNER_HEADLESS", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        suppress_thinking_blocks = bool(has_emitter) and not is_headless
+        suppress_tool_call_markup = bool(has_emitter) and not is_headless
         # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
@@ -1818,81 +1828,78 @@ Based on the search results above, provide a clear, conversational answer to the
                             thinking_content.append(text)
                         continue  # Don't stream thinking to main callback
                 
-                # Detect <tool_call> tags and buffer them instead of streaming
-                # This prevents tool call markup from appearing in the chat UI
                 text_to_stream = text
-                
-                # Check if we're starting a <tool_call> tag
-                if not in_tool_call_tag and '<tool_call>' in text:
-                    in_tool_call_tag = True
-                    # Stream any text before the tag
-                    before_tag = text.split('<tool_call>', 1)[0]
-                    if before_tag.strip():
-                        text_to_stream = before_tag
-                    else:
-                        text_to_stream = ""
-                    # Start buffering from the tag onwards
-                    tool_call_tag_buffer.append(text.split('<tool_call>', 1)[1] if '<tool_call>' in text else "")
-                    continue
-                
-                # If we're in a <tool_call> tag, buffer it
-                if in_tool_call_tag:
-                    if '</tool_call>' in text:
-                        # End of tool call tag - buffer content before closing tag
-                        before_close = text.split('</tool_call>', 1)[0]
-                        tool_call_tag_buffer.append(before_close)
-                        in_tool_call_tag = False
-                        # Stream any content after </tool_call>
-                        after_close = text.split('</tool_call>', 1)[1] if '</tool_call>' in text else ""
-                        if after_close.strip():
-                            text_to_stream = after_close
+
+                if suppress_tool_call_markup:
+                    # Detect <tool_call> tags and buffer them instead of streaming
+                    # This prevents tool call markup from appearing in the chat UI
+                    if not in_tool_call_tag and '<tool_call>' in text:
+                        in_tool_call_tag = True
+                        # Stream any text before the tag
+                        before_tag = text.split('<tool_call>', 1)[0]
+                        if before_tag.strip():
+                            text_to_stream = before_tag
                         else:
                             text_to_stream = ""
-                        tool_call_tag_buffer = []
-                    else:
-                        # Still inside the tag, buffer everything
-                        tool_call_tag_buffer.append(text)
-                        text_to_stream = ""
-                    if not text_to_stream:
+                        # Start buffering from the tag onwards
+                        tool_call_tag_buffer.append(text.split('<tool_call>', 1)[1] if '<tool_call>' in text else "")
                         continue
-                
-                # Detect JSON tool call patterns and buffer them instead of streaming
-                # This prevents tool call JSON from appearing in the chat UI
-                
-                # Check if we're starting a JSON tool call
-                if not in_json_tool_call and '{' in text:
-                    # Check if this looks like a tool call JSON
-                    remaining = text[text.index('{'):]
-                    if self._is_tool_call_json(remaining) or ('"name"' in text and '"arguments"' in text):
-                        in_json_tool_call = True
-                        # Stream any text before the '{'
-                        before_json = text[:text.index('{')]
-                        if before_json.strip():
-                            text_to_stream = before_json
+
+                    # If we're in a <tool_call> tag, buffer it
+                    if in_tool_call_tag:
+                        if '</tool_call>' in text:
+                            # End of tool call tag - buffer content before closing tag
+                            before_close = text.split('</tool_call>', 1)[0]
+                            tool_call_tag_buffer.append(before_close)
+                            in_tool_call_tag = False
+                            # Stream any content after </tool_call>
+                            after_close = text.split('</tool_call>', 1)[1] if '</tool_call>' in text else ""
+                            if after_close.strip():
+                                text_to_stream = after_close
+                            else:
+                                text_to_stream = ""
+                            tool_call_tag_buffer = []
                         else:
+                            # Still inside the tag, buffer everything
+                            tool_call_tag_buffer.append(text)
                             text_to_stream = ""
-                        # Start buffering the JSON part
-                        json_buffer.append(text[text.index('{'):])
-                        json_brace_depth = text.count('{') - text.count('}')
-                
-                # If we're in a JSON tool call, buffer it
-                if in_json_tool_call and text_to_stream == text:
-                    json_buffer.append(text)
-                    json_brace_depth += text.count('{') - text.count('}')
-                    text_to_stream = ""
-                    
-                    # Check if JSON is complete
-                    if json_brace_depth <= 0:
-                        in_json_tool_call = False
-                        # Check if there's text after the closing brace
-                        buffered = "".join(json_buffer)
-                        if '}' in buffered:
-                            last_brace = buffered.rfind('}')
-                            after_json = buffered[last_brace + 1:]
-                            if after_json.strip():
-                                text_to_stream = after_json
-                        json_buffer = []
-                        json_brace_depth = 0
+                        if not text_to_stream:
+                            continue
+
+                    # Detect JSON tool call patterns and buffer them instead of streaming
+                    # This prevents tool call JSON from appearing in the chat UI
+                    if not in_json_tool_call and '{' in text:
+                        remaining = text[text.index('{'):]
+                        if self._is_tool_call_json(remaining):
+                            in_json_tool_call = True
+                            # Stream any text before the '{'
+                            before_json = text[:text.index('{')]
+                            if before_json.strip():
+                                text_to_stream = before_json
+                            else:
+                                text_to_stream = ""
+                            # Start buffering the JSON part
+                            json_buffer.append(text[text.index('{'):])
+                            json_brace_depth = text.count('{') - text.count('}')
+
+                    # If we're in a JSON tool call, buffer it
+                    if in_json_tool_call and text_to_stream == text:
+                        json_buffer.append(text)
+                        json_brace_depth += text.count('{') - text.count('}')
+                        text_to_stream = ""
+
+                        # Check if JSON is complete
+                        if json_brace_depth <= 0:
+                            in_json_tool_call = False
+                            # Check if there's text after the closing brace
+                            buffered = "".join(json_buffer)
+                            if '}' in buffered:
+                                last_brace = buffered.rfind('}')
+                                after_json = buffered[last_brace + 1:]
+                                if after_json.strip():
+                                    text_to_stream = after_json
+                            json_buffer = []
+                            json_brace_depth = 0
                 
                 # Stream non-JSON content to GUI immediately
                 # Skip whitespace-only content to prevent creating empty assistant messages
