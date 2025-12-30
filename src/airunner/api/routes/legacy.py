@@ -21,7 +21,7 @@ import queue
 import time
 import threading
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -88,6 +88,10 @@ class LegacyLLMGenerateRequest(BaseModel):
     stream: bool = True
     system_prompt: Optional[str] = None
     search_hints: Optional[Dict[str, Any]] = None
+
+
+class LegacyInterruptRequest(BaseModel):
+    kind: Literal["process", "image"] = "process"
 
 
 def _parse_action(action_str: str) -> LLMActionType:
@@ -492,6 +496,19 @@ def legacy_art_generate(body: LegacyArtRequest, req: Request):
 
 @router.post("/admin/reset_memory")
 def legacy_admin_reset_memory() -> Dict[str, Any]:
+    return {"status": "ok"}
+
+
+@router.post("/admin/interrupt")
+def legacy_admin_interrupt(body: Optional[LegacyInterruptRequest] = None) -> Dict[str, Any]:
+    kind = getattr(body, "kind", None) or "process"
+    mediator = SignalMediator()
+
+    if kind == "image":
+        mediator.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL, {})
+    else:
+        mediator.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
+
     return {"status": "ok"}
 
 
