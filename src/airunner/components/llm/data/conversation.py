@@ -24,6 +24,7 @@ from sumy.summarizers.lex_rank import LexRankSummarizer
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
+from airunner.components.data.session_manager import session_scope
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -94,11 +95,22 @@ class Conversation(BaseModel):
     def create(
         cls, chatbot: Optional[Chatbot] = None, user: Optional[User] = None
     ):
-        previous_conversation = (
-            cls.objects.options(joinedload(cls.summaries))
-            .order_by(cls.id.desc())
-            .first()
-        )
+        # NOTE: Avoid BaseManager.options()/order_by() here.
+        # Those helpers return a SQLAlchemy Query tied to a closed session,
+        # which can cause this method to silently return None.
+        prev_chatbot_id = None
+        prev_user_id = None
+        try:
+            with session_scope() as session:
+                row = (
+                    session.query(cls.chatbot_id, cls.user_id)
+                    .order_by(cls.id.desc())
+                    .first()
+                )
+                if row:
+                    prev_chatbot_id, prev_user_id = row
+        except Exception as e:
+            logger.error(f"Error retrieving previous conversation: {e}")
 
         # Ensure a valid chatbot exists
         chatbot_id = None
@@ -106,11 +118,6 @@ class Conversation(BaseModel):
         if not chatbot:
             chatbot = None
             # Only try to get if previous_conversation and chatbot_id are valid (not None)
-            prev_chatbot_id = (
-                getattr(previous_conversation, "chatbot_id", None)
-                if previous_conversation
-                else None
-            )
             if prev_chatbot_id is not None:
                 try:
                     chatbot = Chatbot.objects.get(prev_chatbot_id)
@@ -162,8 +169,11 @@ class Conversation(BaseModel):
 
         # Ensure a valid user exists
         if not user:
-            if previous_conversation:
-                user = User.objects.get(previous_conversation.user_id)
+            if prev_user_id:
+                try:
+                    user = User.objects.get(prev_user_id)
+                except Exception as e:
+                    logger.error(f"Error retrieving user from previous conversation: {e}")
             if not user:
                 user = User.objects.first()
             if not user:
@@ -177,7 +187,7 @@ class Conversation(BaseModel):
             user_id = user.id
             user_username = user.username
 
-        conversation = cls.objects.create(
+        conversation_dc = cls.objects.create(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
             key="",
@@ -187,13 +197,12 @@ class Conversation(BaseModel):
             chatbot_name=chatbot_botname,
             user_name=user_username,
         )
-        conversation = (
-            cls.objects.options(joinedload(cls.summaries))
-            .order_by(cls.id.desc())
-            .first()
-        )
-        # Always return a dataclass, not ORM object
-        return conversation.to_dataclass() if conversation else None
+        if conversation_dc and getattr(conversation_dc, "id", None):
+            try:
+                cls.make_current(conversation_dc.id)
+            except Exception:
+                pass
+        return conversation_dc
 
     @classmethod
     def most_recent(cls) -> Optional["Conversation"]:

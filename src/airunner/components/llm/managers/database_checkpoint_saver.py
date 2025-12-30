@@ -112,6 +112,19 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                 
                 # Refresh conversation from database to ensure we have latest state
                 self.message_history._load_conversation()
+                if not self.message_history.conversation_id:
+                    # If we still don't have a conversation_id, DB persistence isn't available.
+                    # Fall back to stateless semantics for this put() call.
+                    self.logger.warning(
+                        "⚠️ No conversation_id available; skipping DB message persistence for this checkpoint"
+                    )
+                    checkpoint_id = checkpoint.get("id") or str(uuid.uuid4())
+                    return {
+                        "configurable": {
+                            "thread_id": str(uuid.uuid4()),
+                            "checkpoint_id": checkpoint_id,
+                        }
+                    }
                 raw_conv = self.message_history._conversation
                 existing_value = raw_conv.value if raw_conv and raw_conv.value else []
                 
