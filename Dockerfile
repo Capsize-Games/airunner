@@ -118,6 +118,7 @@ WORKDIR /app
 # Copy project files
 COPY setup.py pyproject.toml README.md ./
 COPY src/ ./src/
+COPY extensions/ ./extensions/
 
 # Install airunner with all dependencies including computer_use
 RUN python3.13 -m pip install -e ".[all_dev,computer_use]"

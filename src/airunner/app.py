@@ -14,8 +14,14 @@ from PySide6.QtCore import QObject, QTimer, QCoreApplication
 from PySide6.QtGui import QGuiApplication, Qt, QWindow, QSurfaceFormat
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale, qVersion
-from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
-from PySide6.QtWebEngineWidgets import QWebEngineView
+
+# QtWebEngine is GUI-only and can terminate the process at import-time in
+# containerized/headless environments (e.g. root sandbox constraints).
+# Headless AIRunner does not require it.
+_AIRUNNER_IS_HEADLESS = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
+if not _AIRUNNER_IS_HEADLESS:
+    from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
+    from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from airunner.utils.application import get_logger
 from airunner.utils.settings import get_qsettings
@@ -24,9 +30,10 @@ from airunner.settings import (
     AIRUNNER_HEADLESS_SERVER_PORT,
 )
 
-# CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch
-# This prevents fragmentation issues when loading large quantized models
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+# CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch.
+# PYTORCH_CUDA_ALLOC_CONF was deprecated in favor of PYTORCH_ALLOC_CONF.
+os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", os.environ["PYTORCH_ALLOC_CONF"])
 
 from airunner.components.settings.data.language_settings import (
     LanguageSettings,
@@ -99,16 +106,17 @@ def set_global_tooltip_style() -> None:
         )
 
 
-class CapturingWebEnginePage(QWebEnginePage):
-    """QWebEnginePage subclass to capture JS console messages for diagnostics."""
+if not _AIRUNNER_IS_HEADLESS:
+    class CapturingWebEnginePage(QWebEnginePage):
+        """QWebEnginePage subclass to capture JS console messages for diagnostics."""
 
-    def javaScriptConsoleMessage(
-        self, level: int, message: str, lineNumber: int, sourceID: str
-    ) -> None:
-        """Capture JavaScript console messages for diagnostics."""
-        log_message = f"JSCONSOLE::: Level: {level}, Msg: {message}, Src: {sourceID}:{lineNumber}"
-        print(log_message)
-        super().javaScriptConsoleMessage(level, message, lineNumber, sourceID)
+        def javaScriptConsoleMessage(
+            self, level: int, message: str, lineNumber: int, sourceID: str
+        ) -> None:
+            """Capture JavaScript console messages for diagnostics."""
+            log_message = f"JSCONSOLE::: Level: {level}, Msg: {message}, Src: {sourceID}:{lineNumber}"
+            print(log_message)
+            super().javaScriptConsoleMessage(level, message, lineNumber, sourceID)
 
 
 class App(MediatorMixin, SettingsMixin, QObject):
