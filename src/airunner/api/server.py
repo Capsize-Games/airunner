@@ -20,6 +20,7 @@ from airunner.utils.application import get_logger
 from airunner.api.routes import health, llm, art, tts, stt, vision
 from airunner.api.routes import legacy as legacy_routes
 from airunner.components.llm.core.extensions_loader import load_extensions
+from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -68,6 +69,30 @@ def create_app(
 
     if app_instance:
         app.state.airunner_app = app_instance
+
+    @app.middleware("http")
+    async def tenant_middleware(request: Request, call_next):
+        """Scope DB operations to the request's tenant/namespace.
+
+        Airunner supports Postgres schema tenancy. We select the schema via a
+        per-request ContextVar set here.
+
+        Accepted headers (first one wins):
+        - X-Tenant-Key
+        - X-Uwuchat-Namespace
+        - X-Namespace
+        """
+
+        header_value = (
+            (request.headers.get("x-tenant-key") or "").strip()
+            or (request.headers.get("x-uwuchat-namespace") or "").strip()
+            or (request.headers.get("x-namespace") or "").strip()
+        )
+        token = set_tenant_key(header_value or None)
+        try:
+            return await call_next(request)
+        finally:
+            reset_tenant_key(token)
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:
