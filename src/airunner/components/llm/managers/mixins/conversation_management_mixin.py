@@ -97,11 +97,37 @@ class ConversationManagementMixin:
             Conversation object, or None if creation/retrieval failed.
         """
         conversation_id = data.get("conversation_id")
+        if conversation_id:
+            return self._load_existing_conversation(conversation_id)
 
-        if not conversation_id:
-            return self._create_new_conversation(data)
+        # UwUChat convention: pass the chat session UUID in node_id.
+        # Reuse or create a Conversation keyed by that identifier so history and
+        # consciousness metadata attach to the same record.
+        node_id = data.get("node_id")
+        if isinstance(node_id, str):
+            key = node_id.strip()
+            if key:
+                try:
+                    existing = Conversation.objects.filter_by_first(key=key)
+                except Exception:
+                    existing = None
+                if existing:
+                    try:
+                        data["conversation_id"] = existing.id
+                    except Exception:
+                        pass
+                    return existing
 
-        return self._load_existing_conversation(conversation_id)
+                conversation = self._create_new_conversation(data)
+                if conversation:
+                    try:
+                        Conversation.objects.update(conversation.id, key=key)
+                        conversation.key = key
+                    except Exception:
+                        pass
+                return conversation
+
+        return self._create_new_conversation(data)
 
     def _create_new_conversation(
         self: "LLMModelManager", data: Dict

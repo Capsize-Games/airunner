@@ -26,6 +26,7 @@ class LLMAPIService(APIServiceBase):
         request_id: Optional[str] = None,
         callback: Optional[callable] = None,
         conversation_id: Optional[int] = None,
+        enable_consciousness: Optional[bool] = None,
         **kwargs,
     ):
         """Send an LLM generation request.
@@ -77,6 +78,8 @@ class LLMAPIService(APIServiceBase):
             data["conversation_id"] = conversation_id
         if node_id is not None:
             data["node_id"] = node_id
+        if enable_consciousness is not None:
+            data["enable_consciousness"] = enable_consciousness
 
         if request_id is not None:
             data["request_id"] = request_id

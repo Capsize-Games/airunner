@@ -88,6 +88,10 @@ class LegacyLLMGenerateRequest(BaseModel):
     stream: bool = True
     system_prompt: Optional[str] = None
     search_hints: Optional[Dict[str, Any]] = None
+    # Optional conversation identifiers used by UwUChat.
+    conversation_id: Optional[int] = None
+    node_id: Optional[str] = None
+    enable_consciousness: Optional[bool] = None
 
 
 class LegacyInterruptRequest(BaseModel):
@@ -189,6 +193,9 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 request_id=request_id,
                 callback=collect_cb,
                 search_hints=body.search_hints,
+                conversation_id=body.conversation_id,
+                node_id=body.node_id,
+                enable_consciousness=body.enable_consciousness,
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
@@ -225,6 +232,8 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         # Only treat callbacks that we actually forward to the client as
         # progress for the purposes of the idle timeout.
         last_callback_at[0] = time.monotonic()
+        conversation_id=body.conversation_id,
+        node_id=body.node_id,
 
         action_val = getattr(response, "action", None)
         if action_val is None:
@@ -290,6 +299,9 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 request_id=request_id,
                 callback=stream_cb,
                 search_hints=body.search_hints,
+                conversation_id=body.conversation_id,
+                node_id=body.node_id,
+                enable_consciousness=body.enable_consciousness,
             )
             logger.info("llm/generate kickoff send_request returned request_id=%s", request_id)
         except Exception as exc:

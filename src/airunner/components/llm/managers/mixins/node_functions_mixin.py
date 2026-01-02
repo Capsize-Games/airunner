@@ -6,6 +6,7 @@ These are broken into focused helper methods for maintainability.
 
 import os
 import re
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -40,6 +41,74 @@ class NodeFunctionsMixin:
     # Class-level set to track workflow tools that need special handling
     WORKFLOW_TOOLS = {"start_workflow", "transition_phase", "add_todo_item", 
                      "start_todo_item", "complete_todo_item", "get_workflow_status"}
+
+    @dataclass
+    class _ConsciousnessCtx:
+        conversation_id: Optional[int]
+        thread_id: Any
+        messages: Optional[List[Any]]
+
+    def _get_consciousness_engine(self):
+        """Best-effort loader for the optional consciousness extension."""
+        try:
+            from airunner_extensions.consciousness import get_engine
+
+            return get_engine()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _is_consciousness_enabled(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
+
+    def _consciousness_enabled_for_request(self) -> bool:
+        try:
+            data = getattr(self, "data", None) or {}
+            return self._is_consciousness_enabled(data.get("enable_consciousness", None))
+        except Exception:
+            return True
+
+    def _maybe_consciousness_pre_llm(self, messages: List[Any]) -> None:
+        if not self._consciousness_enabled_for_request():
+            return
+        engine = self._get_consciousness_engine()
+        if not engine:
+            return
+        try:
+            ctx = self._ConsciousnessCtx(
+                conversation_id=getattr(self, "_conversation_id", None),
+                thread_id=getattr(self, "_thread_id", "default"),
+                messages=messages,
+            )
+            engine.on_pre_llm(ctx)
+        except Exception:
+            # Never break generation.
+            return
+
+    def _maybe_consciousness_post_llm(self, ai_message: Any, messages: List[Any]) -> None:
+        if not self._consciousness_enabled_for_request():
+            return
+        engine = self._get_consciousness_engine()
+        if not engine:
+            return
+        try:
+            ctx = self._ConsciousnessCtx(
+                conversation_id=getattr(self, "_conversation_id", None),
+                thread_id=getattr(self, "_thread_id", "default"),
+                messages=messages,
+            )
+            engine.on_post_llm(ai_message, ctx)
+        except Exception:
+            # Never break generation.
+            return
 
     def _force_response_node(self, state: "WorkflowState") -> Dict[str, Any]:
         """Node that generates forced response when redundancy detected.
@@ -1005,6 +1074,13 @@ Based on the search results above, provide a clear, conversational answer to the
 
         generation_kwargs = state.get("generation_kwargs", {})
 
+        # Consciousness integration: capture user text + pre-LLM signals.
+        # Best-effort only; must not affect model execution.
+        try:
+            self._maybe_consciousness_pre_llm(state.get("messages") or [])
+        except Exception:
+            pass
+
         # Trim messages (skip trimming for vision models to preserve multimodal parts)
         chat_model = getattr(self, "_chat_model", None)
         if chat_model and getattr(chat_model, "is_vision_model", False):
@@ -1029,6 +1105,12 @@ Based on the search results above, provide a clear, conversational answer to the
                 additional_kwargs={"error": "no_message_generated"},
                 tool_calls=[],
             )
+
+        # Consciousness integration: record assistant output + post-LLM signals.
+        try:
+            self._maybe_consciousness_post_llm(response_message, state.get("messages") or [])
+        except Exception:
+            pass
 
         return {"messages": [response_message]}
 
