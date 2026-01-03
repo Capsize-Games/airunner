@@ -76,6 +76,9 @@ class LLMRequest:
     include_style: Optional[bool] = None
     include_memory: Optional[bool] = None
     include_ui_context: Optional[bool] = None
+    # Request-level thinking toggle (Qwen3-style <think> blocks).
+    # None means "use the global DB/default setting".
+    enable_thinking: Optional[bool] = None
     model: str = ""
     # Request-level backend selection (used by headless API)
     model_service: Optional[str] = None  # local | openrouter | ollama

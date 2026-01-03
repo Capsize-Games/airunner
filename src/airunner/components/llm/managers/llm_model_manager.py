@@ -570,6 +570,25 @@ class LLMModelManager(
                 "Auto attachment of RAG files failed, continuing without local RAG."
             )
 
+        # Apply request-level thinking override (Qwen3 <think> blocks).
+        # This is done at the chat-model instance level because templates read
+        # `enable_thinking` from the model instance or DB settings.
+        thinking_override = getattr(llm_request, "enable_thinking", None) if llm_request else None
+        thinking_patches: list[tuple[Any, Any]] = []
+        if thinking_override is not None:
+            for target in (
+                self._chat_model,
+                getattr(self._workflow_manager, "_original_chat_model", None) if self._workflow_manager else None,
+            ):
+                if target is None:
+                    continue
+                if hasattr(target, "enable_thinking"):
+                    try:
+                        thinking_patches.append((target, getattr(target, "enable_thinking")))
+                        setattr(target, "enable_thinking", bool(thinking_override))
+                    except Exception:
+                        pass
+
         if request_tool_defaults and self._tool_manager:
             self._tool_manager.set_request_tool_defaults(request_tool_defaults)
         try:
@@ -582,6 +601,12 @@ class LLMModelManager(
                 skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
             )
         finally:
+            # Restore thinking setting to avoid leaking across requests.
+            for target, original in thinking_patches:
+                try:
+                    setattr(target, "enable_thinking", original)
+                except Exception:
+                    pass
             if request_tool_defaults and self._tool_manager:
                 self._tool_manager.clear_request_tool_defaults()
 
