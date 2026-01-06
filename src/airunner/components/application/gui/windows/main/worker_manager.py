@@ -14,6 +14,7 @@ from airunner.utils.application.create_worker import create_worker
 class WorkerManager(Worker):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
+            SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
@@ -98,12 +99,88 @@ class WorkerManager(Worker):
         self._huggingface_download_worker = None
         self._image_export_worker = None
         self._model_scanner_worker = None
+        self._background_removal_worker = None
         if self.logger:
             self.logger.debug(
                 f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
             )
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
+
+    def on_remove_background_signal(self, data: Dict):
+        """Handle RMBG background removal request from the canvas.
+
+        Requirements:
+        - If no canvas image exists, show an alert popup.
+        - If an image exists, run RMBG-2.0 (downloading model files if missing).
+        """
+
+        from PySide6.QtWidgets import QMessageBox
+
+        # Resolve the currently selected layer and its image bytes.
+        layer_id = None
+        try:
+            layer_id = self._get_current_selected_layer_id()
+        except Exception:
+            layer_id = None
+
+        # If no layer is selected, fall back to the first layer (by order).
+        if layer_id is None:
+            try:
+                from airunner.components.art.data.canvas_layer import CanvasLayer
+
+                layers = CanvasLayer.objects.order_by("order").all() or []
+                if layers:
+                    layer_id = getattr(layers[0], "id", None)
+            except Exception:
+                layer_id = None
+
+        image_binary = None
+        try:
+            from airunner.components.art.data.drawingpad_settings import (
+                DrawingPadSettings,
+            )
+
+            if layer_id is not None:
+                drawing_pad = DrawingPadSettings.objects.filter_by_first(
+                    layer_id=layer_id
+                )
+                image_binary = getattr(drawing_pad, "image", None)
+            else:
+                # Fallback: best-effort read (may be global settings)
+                image_binary = getattr(self.drawing_pad_settings, "image", None)
+        except Exception:
+            image_binary = None
+
+        if not image_binary:
+            main_window = self._get_main_window()
+            if main_window is not None:
+                QMessageBox.information(
+                    main_window,
+                    "No Image",
+                    "Please import or generate an image first.",
+                )
+            return
+
+        # Lazily create worker to keep WorkerManager responsive.
+        if self._background_removal_worker is None:
+            from airunner.components.art.workers.background_removal_worker import (
+                BackgroundRemovalWorker,
+            )
+
+            self._background_removal_worker = create_worker(
+                BackgroundRemovalWorker
+            )
+
+        self._background_removal_worker.add_to_queue(
+            {
+                "action": "remove_background",
+                "data": {
+                    "layer_id": layer_id,
+                    "image": image_binary,
+                },
+            }
+        )
 
     def handle_message(self, message: Dict):
         if self.logger:

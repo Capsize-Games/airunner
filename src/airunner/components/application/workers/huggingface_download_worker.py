@@ -115,10 +115,11 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         if not output_dir:
             output_dir = os.path.join(MODELS_DIR, "text/models/llm/causallm")
 
-        # For art/stt/tts models, don't create a subdirectory - use output_dir directly
+        # For art/stt/tts/rmbg models, don't create a subdirectory - use output_dir directly
         # since it already points to the correct location
         is_stt_tts = model_type in ("stt", "tts_openvoice")
-        if model_type == "art" or is_stt_tts:
+        is_rmbg = model_type == "rmbg"
+        if model_type == "art" or is_stt_tts or is_rmbg:
             model_path = Path(output_dir)
             self.logger.info(
                 f"Using output_dir directly for {model_type} model: {model_path}"
@@ -156,6 +157,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         # Otherwise, use the comprehensive bootstrap data
         is_art_model = model_type == "art"
         is_stt_tts_model = model_type in ("stt", "tts_openvoice")
+        is_rmbg_model = model_type == "rmbg"
         is_llm_model = model_type in ("llm", "ministral3", "gguf")
 
         # For art/stt/tts models, use bootstrap data directly (no API call)
@@ -188,6 +190,14 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             if full_bootstrap_data:
                 self.logger.info(
                     f"Found bootstrap data for {model_type}/{repo_id} with {len(full_bootstrap_data)} files"
+                )
+        elif is_rmbg_model:
+            full_bootstrap_data = get_required_files_for_model(
+                "rmbg", repo_id
+            )
+            if full_bootstrap_data:
+                self.logger.info(
+                    f"Found bootstrap data for rmbg/{repo_id} with {len(full_bootstrap_data)} files"
                 )
         elif is_llm_model:
             # For LLM models, get bootstrap data for file size validation
@@ -231,7 +241,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     },
                 )
                 return
-        elif is_stt_tts_model:
+        elif is_stt_tts_model or is_rmbg_model:
             # For STT/TTS models, bootstrap data is a list of filenames (no sizes)
             # Convert to dict with size=0 (unknown) for compatibility
             if full_bootstrap_data:
@@ -248,8 +258,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                 )
                 return
 
-        # For art/stt/tts models with bootstrap data, use it directly without API call
-        if (is_art_model or is_stt_tts_model) and bootstrap_files:
+        # For art/stt/tts/rmbg models with bootstrap data, use it directly without API call
+        if (is_art_model or is_stt_tts_model or is_rmbg_model) and bootstrap_files:
             files_to_download = []
 
             for filename, expected_size in bootstrap_files.items():

@@ -10,6 +10,8 @@ extras_require = {
         "diffusers==0.35.1",
         "controlnet_aux==0.0.10",
         "safetensors==0.6.2",
+        "kornia",
+        "timm",
         "compel==2.1.1",
         "transformers==4.57.3",
         "datasets==4.0.0",

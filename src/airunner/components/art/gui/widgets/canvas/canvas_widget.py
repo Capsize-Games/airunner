@@ -65,6 +65,7 @@ class CanvasWidget(BaseWidget):
         ("message-square", "prompt_editor_button"),
         ("tool", "art_tools_button"),
         ("filter", "filter_button"),
+        ("triangle", "remove_background_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -243,6 +244,11 @@ class CanvasWidget(BaseWidget):
         settings.pivot_point_y = value.y()
         self.update_application_settings(pivot_point_x=value.x())
         self.update_application_settings(pivot_point_y=value.y())
+
+    @Slot()
+    def on_remove_background_button_clicked(self) -> None:
+        """Handle remove background button click to remove image background."""
+        self.api.art.canvas.remove_background()
 
     @Slot(bool)
     def on_prompt_editor_button_clicked(self, val: bool) -> None:

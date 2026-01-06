@@ -49,6 +49,7 @@ class CodeOperationType(Enum):
 
 
 class SignalCode(Enum):
+    REMOVE_BACKGROUND = "remove_background_signal"
     IMAGE_EXPORTED = "image_exported_signal"
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"

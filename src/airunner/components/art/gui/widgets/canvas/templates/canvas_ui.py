@@ -317,6 +317,17 @@ class Ui_canvas(object):
 
         self.horizontalLayout_2.addWidget(self.redo_button)
 
+        self.remove_background_button = QPushButton(self.widget1)
+        self.remove_background_button.setObjectName(u"remove_background_button")
+        self.remove_background_button.setMinimumSize(QSize(30, 30))
+        self.remove_background_button.setMaximumSize(QSize(30, 30))
+        self.remove_background_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon17 = QIcon()
+        icon17.addFile(u":/light/icons/feather/light/triangle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.remove_background_button.setIcon(icon17)
+
+        self.horizontalLayout_2.addWidget(self.remove_background_button)
+
         self.horizontalSpacer = QSpacerItem(425, 9, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer)
@@ -503,6 +514,10 @@ class Ui_canvas(object):
         self.redo_button.setToolTip(QCoreApplication.translate("canvas", u"Redo", None))
 #endif // QT_CONFIG(tooltip)
         self.redo_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.remove_background_button.setToolTip(QCoreApplication.translate("canvas", u"Remove Background", None))
+#endif // QT_CONFIG(tooltip)
+        self.remove_background_button.setText("")
 #if QT_CONFIG(tooltip)
         self.brush_size_slider.setToolTip(QCoreApplication.translate("canvas", u"Brush Size", None))
 #endif // QT_CONFIG(tooltip)
