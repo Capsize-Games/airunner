@@ -145,7 +145,9 @@ class WorkerManager(Worker):
 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error processing worker requests: {e}")
+                self.logger.error(
+                    f"Error processing worker requests: {e}", exc_info=True
+                )
 
     @property
     def model_scanner_worker(self):

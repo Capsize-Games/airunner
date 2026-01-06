@@ -67,7 +67,17 @@ class SDWorker(Worker):
         version = self._version
         if version is StableDiffusionVersion.NONE:
             version = StableDiffusionVersion(self.generator_settings.version)
+        # Historical setting name: `sd_enabled`.
+        # AIRunner's art worker now supports multiple backends (SDXL, Flux, Z-Image).
+        # Disabling SD should not prevent non-SD generators (Flux/Z-Image) from running.
         if not self.application_settings.sd_enabled:
+            if version in (
+                StableDiffusionVersion.FLUX_DEV,
+                StableDiffusionVersion.FLUX_SCHNELL,
+                StableDiffusionVersion.Z_IMAGE_TURBO,
+                StableDiffusionVersion.Z_IMAGE_BASE,
+            ):
+                return version
             return StableDiffusionVersion.NONE
         return version
 

@@ -73,9 +73,29 @@ class Worker(
         try:
             msg = self.get_item_from_queue()
             if msg is not None:
-                self.handle_message(msg)
+                try:
+                    self.handle_message(msg)
+                except Exception:
+                    # In PySide/QThread contexts, uncaught exceptions can terminate the
+                    # worker thread and leave the UI "stuck" without surfacing details.
+                    # Log full traceback and keep the worker loop alive.
+                    try:
+                        self.logger.exception(
+                            "Unhandled exception in %s.handle_message (message=%r)",
+                            self.__class__.__name__,
+                            msg,
+                        )
+                    except Exception:
+                        pass
         except queue.Empty:
             pass
+        except Exception:
+            try:
+                self.logger.exception(
+                    "Unhandled exception in %s.run_thread", self.__class__.__name__
+                )
+            except Exception:
+                pass
         if self.paused:
             self.logger.debug("Paused")
             while self.paused:
