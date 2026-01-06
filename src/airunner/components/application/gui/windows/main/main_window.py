@@ -1235,6 +1235,32 @@ class MainWindow(
             }
         )
 
+    def create_saved_prompt(self, data: Dict):
+        """Persist a Stable Diffusion prompt in the SavedPrompt table.
+
+        This is invoked by SD_SAVE_PROMPT_SIGNAL. Previously this method was
+        referenced but not implemented, causing an AttributeError.
+        """
+
+        try:
+            from airunner.components.art.data.saved_prompt import SavedPrompt
+        except Exception as e:
+            self.logger.error(f"Failed to import SavedPrompt: {e}")
+            return
+
+        saved_prompt = SavedPrompt(
+            prompt=data.get("prompt"),
+            negative_prompt=data.get("negative_prompt"),
+            secondary_prompt=data.get("secondary_prompt"),
+            secondary_negative_prompt=data.get("secondary_negative_prompt"),
+        )
+
+        saved_prompt.save()
+        # NOTE: SavedPrompt instances are session-scoped and may be detached
+        # after save(); avoid touching ORM attributes here (e.g. saved_prompt.id)
+        # to prevent DetachedInstanceError.
+        self.logger.info("Saved Stable Diffusion prompt")
+
     def set_path_settings(self, key, val):
         self.update_path_settings(**{key: val})
 
