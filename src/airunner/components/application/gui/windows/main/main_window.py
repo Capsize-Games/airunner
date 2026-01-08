@@ -3,6 +3,9 @@ import re
 import sys
 import urllib
 import webbrowser
+import ipaddress
+import socket
+import uuid
 from functools import partial
 from typing import Dict, Optional
 
@@ -896,41 +899,163 @@ class MainWindow(
     """
 
     @staticmethod
+    def _is_private_or_loopback_host(hostname: Optional[str]) -> bool:
+        if not hostname:
+            return False
+
+        hn = hostname.strip().strip("[]")
+        if not hn:
+            return False
+
+        try:
+            ip = ipaddress.ip_address(hn)
+            ips = [ip]
+        except ValueError:
+            try:
+                infos = socket.getaddrinfo(hn, None)
+                ips = [ipaddress.ip_address(info[4][0]) for info in infos]
+            except Exception:
+                return False
+
+        for addr in ips:
+            if (
+                addr.is_private
+                or addr.is_loopback
+                or addr.is_link_local
+                or addr.is_multicast
+                or addr.is_reserved
+            ):
+                return True
+        return False
+
+    @staticmethod
+    def _validate_http_url(url: str) -> urllib.parse.ParseResult:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in {"http", "https"}:
+            raise ValueError("Only http/https URLs are allowed")
+        if not parsed.netloc:
+            raise ValueError("URL must include a host")
+        return parsed
+
+    @staticmethod
     def download_url(url, save_path):
-        response = requests.get(url)
-        soup = BeautifulSoup(response.content, "html.parser")
-        title = soup.title.string if soup.title else url
-        # Truncate title to 10 words
-        title_words = title.split()[:10]
-        filename = "_".join(title_words) + ".html"
-        # Replace any characters in filename that are not alphanumerics, underscores, or hyphens
-        filename = re.sub(r"[^\w\-_]", "_", filename)
-        save_path = os.path.join(save_path, filename)
-        with open(save_path, "wb") as file:
-            file.write(response.content)
-        return filename
+        parsed = MainWindow._validate_http_url(url)
+        if (
+            MainWindow._is_private_or_loopback_host(parsed.hostname)
+            and os.environ.get("AIRUNNER_ALLOW_PRIVATE_URLS") != "1"
+        ):
+            raise ValueError(
+                "Refusing to download from private/loopback hosts. "
+                "Set AIRUNNER_ALLOW_PRIVATE_URLS=1 to override."
+            )
+
+        timeout = (5, 30)
+        max_bytes = int(os.environ.get("AIRUNNER_MAX_DOWNLOAD_BYTES", str(20 * 1024 * 1024)))
+        sniff_bytes = 1024 * 1024
+
+        tmp_name = f".download-{uuid.uuid4().hex}.tmp"
+        tmp_path = os.path.join(save_path, tmp_name)
+        downloaded = 0
+        sniff = bytearray()
+
+        try:
+            with requests.get(url, timeout=timeout, stream=True) as response:
+                response.raise_for_status()
+
+                with open(tmp_path, "wb") as file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if not chunk:
+                            continue
+                        downloaded += len(chunk)
+                        if downloaded > max_bytes:
+                            raise ValueError(
+                                f"Download exceeded limit ({max_bytes} bytes)"
+                            )
+                        file.write(chunk)
+                        if len(sniff) < sniff_bytes:
+                            take = min(len(chunk), sniff_bytes - len(sniff))
+                            sniff.extend(chunk[:take])
+
+            try:
+                soup = BeautifulSoup(bytes(sniff), "html.parser")
+                title = soup.title.string if soup.title else url
+            except Exception:
+                title = url
+
+            title_words = str(title).split()[:10]
+            filename = "_".join(title_words) + ".html"
+            filename = re.sub(r"[^\w\-_]", "_", filename)
+            final_path = os.path.join(save_path, filename)
+            os.replace(tmp_path, final_path)
+            return filename
+        finally:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
 
     @staticmethod
     def download_pdf(url, save_path):
-        response = requests.get(url)
-        filename = url.split("/")[-1]  # Get the filename from the URL
-        save_path = os.path.join(save_path, filename)
-        with open(save_path, "wb") as file:
-            file.write(response.content)
-        return filename
+        parsed = MainWindow._validate_http_url(url)
+        if (
+            MainWindow._is_private_or_loopback_host(parsed.hostname)
+            and os.environ.get("AIRUNNER_ALLOW_PRIVATE_URLS") != "1"
+        ):
+            raise ValueError(
+                "Refusing to download from private/loopback hosts. "
+                "Set AIRUNNER_ALLOW_PRIVATE_URLS=1 to override."
+            )
+
+        timeout = (5, 60)
+        max_bytes = int(os.environ.get("AIRUNNER_MAX_DOWNLOAD_BYTES", str(50 * 1024 * 1024)))
+
+        filename = os.path.basename(parsed.path or "") or "download.pdf"
+        filename = re.sub(r"[^\w\-.]", "_", filename)
+        if not filename.lower().endswith(".pdf"):
+            filename += ".pdf"
+
+        tmp_name = f".download-{uuid.uuid4().hex}.tmp"
+        tmp_path = os.path.join(save_path, tmp_name)
+        final_path = os.path.join(save_path, filename)
+
+        downloaded = 0
+
+        try:
+            with requests.get(url, timeout=timeout, stream=True) as response:
+                response.raise_for_status()
+                with open(tmp_path, "wb") as file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if not chunk:
+                            continue
+                        downloaded += len(chunk)
+                        if downloaded > max_bytes:
+                            raise ValueError(
+                                f"Download exceeded limit ({max_bytes} bytes)"
+                            )
+                        file.write(chunk)
+
+            os.replace(tmp_path, final_path)
+            return filename
+        finally:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
 
     def on_navigate_to_url(self, _data: Dict = None):
         url, ok = QInputDialog.getText(self, "Browse Web", "Enter your URL:")
         if ok:
             try:
                 result = urllib.parse.urlparse(url)
-                is_url = all([result.scheme, result.netloc])
+                is_url = result.scheme in {"http", "https"} and bool(result.netloc)
             except ValueError:
                 is_url = False
 
             # If the input is a URL, download it
             if is_url:
-                if url.lower().endswith(".pdf"):
+                if (result.path or "").lower().endswith(".pdf"):
                     # Handle PDF file
                     filepath = os.path.expanduser(self.path_settings.pdf_path)
                     filename = self.download_pdf(url, filepath)
