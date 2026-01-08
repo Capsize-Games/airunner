@@ -10,6 +10,7 @@ before registration to prevent dangerous operations.
 import ast
 import json
 import inspect
+import os
 from typing import Any, Callable, Dict, List, Optional
 from functools import wraps
 
@@ -20,6 +21,7 @@ from airunner.components.llm.core.tool_registry import (
     ToolInfo,
 )
 from airunner.components.llm.core.code_sandbox import CodeValidator
+from airunner.components.llm.core.code_sandbox import create_safe_builtins
 from airunner.utils.application import get_logger
 
 
@@ -78,9 +80,9 @@ def {name}({param_str}):
     return result
 '''
     
-    # Execute to create function
+    # Execute to create function with restricted builtins.
     local_ns: Dict[str, Any] = {}
-    exec(func_code, {"__builtins__": __builtins__}, local_ns)
+    exec(func_code, {"__builtins__": create_safe_builtins()}, local_ns)
     
     return local_ns[name]
 
@@ -157,6 +159,9 @@ def create_dynamic_tool(
         
     """
     logger.info(f"Creating dynamic tool: {name}")
+
+    if os.environ.get("AIRUNNER_ENABLE_DYNAMIC_TOOLS", "0") != "1":
+        return "Error: Dynamic tool creation is disabled (set AIRUNNER_ENABLE_DYNAMIC_TOOLS=1 to enable)."
     
     # Validate name
     if not name.isidentifier():

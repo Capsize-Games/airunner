@@ -115,6 +115,30 @@ result = sum(result)
         assert len(errors) > 0
         assert "Syntax" in errors[0] or "syntax" in errors[0].lower()
 
+    def test_blocks_builtins_name_reference(self):
+        """Direct references to __builtins__/builtins should be blocked."""
+        validator = CodeValidator()
+
+        code = "x = __builtins__"
+        errors = validator.validate(code)
+        assert len(errors) > 0
+        assert "__builtins__" in " ".join(errors)
+
+        code = "x = builtins"
+        errors = validator.validate(code)
+        assert len(errors) > 0
+        assert "builtins" in " ".join(errors)
+
+    def test_blocks_indirect_forbidden_call_via_builtins_subscript(self):
+        """Indirect calls like __builtins__[\"eval\"](...) should be blocked."""
+        validator = CodeValidator()
+
+        code = '__builtins__["eval"]("1+1")'
+        errors = validator.validate(code)
+        assert len(errors) > 0
+        joined = " ".join(errors).lower()
+        assert "__builtins__" in joined or "eval" in joined
+
 
 class TestCodeSandbox:
     """Tests for the CodeSandbox execution environment."""

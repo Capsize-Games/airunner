@@ -26,13 +26,13 @@ logger = get_logger(__name__)
 SAFE_BUILTINS = {
     # Core functions
     'abs', 'all', 'any', 'bin', 'bool', 'bytes', 'callable',
-    'chr', 'complex', 'dict', 'dir', 'divmod', 'enumerate',
-    'filter', 'float', 'format', 'frozenset', 'getattr', 'hasattr',
+    'chr', 'complex', 'dict', 'divmod', 'enumerate',
+    'filter', 'float', 'format', 'frozenset', 'hasattr',
     'hash', 'hex', 'id', 'int', 'isinstance', 'issubclass',
     'iter', 'len', 'list', 'map', 'max', 'min', 'next',
     'oct', 'ord', 'pow', 'print', 'range', 'repr', 'reversed',
     'round', 'set', 'slice', 'sorted', 'str', 'sum', 'tuple',
-    'type', 'vars', 'zip',
+    'zip',
     # Exceptions (for error handling)
     'Exception', 'ValueError', 'TypeError', 'KeyError', 'IndexError',
     'RuntimeError', 'StopIteration', 'AttributeError',
@@ -53,6 +53,13 @@ FORBIDDEN_CALLS = {
     'exec', 'eval', 'compile', '__import__', 'open',
     'input', 'breakpoint', 'globals', 'locals',
     'setattr', 'delattr', '__builtins__',
+    'getattr', 'vars', 'dir',
+}
+
+# Forbidden identifiers (even referencing them is disallowed)
+FORBIDDEN_NAMES = {
+    '__builtins__',
+    'builtins',
 }
 
 # Forbidden attribute access patterns
@@ -69,6 +76,16 @@ FORBIDDEN_ATTR_PATTERNS = [
 ]
 
 
+def create_safe_builtins() -> Dict[str, Any]:
+    """Return a dict of builtins allowed in restricted execution."""
+
+    safe_builtins: Dict[str, Any] = {}
+    for name in SAFE_BUILTINS:
+        if hasattr(builtins, name):
+            safe_builtins[name] = getattr(builtins, name)
+    return safe_builtins
+
+
 class SandboxSecurityError(Exception):
     """Raised when sandbox security is violated."""
     pass
@@ -79,6 +96,26 @@ class CodeValidator(ast.NodeVisitor):
     
     def __init__(self):
         self.errors: List[str] = []
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if node.id in FORBIDDEN_NAMES:
+            self.errors.append(
+                f"Access to name '{node.id}' is not allowed"
+            )
+        self.generic_visit(node)
+
+    def _called_symbol_name(self, node: ast.AST) -> Optional[str]:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            return node.attr
+        if isinstance(node, ast.Subscript):
+            # __builtins__["foo"](...)
+            if isinstance(node.value, ast.Name) and node.value.id == "__builtins__":
+                sl = node.slice
+                if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                    return sl.value
+        return None
     
     def visit_Import(self, node: ast.Import) -> None:
         self.errors.append(
@@ -94,11 +131,21 @@ class CodeValidator(ast.NodeVisitor):
     
     def visit_Call(self, node: ast.Call) -> None:
         # Check for forbidden function calls
-        if isinstance(node.func, ast.Name):
-            if node.func.id in FORBIDDEN_CALLS:
-                self.errors.append(
-                    f"Function '{node.func.id}' is not allowed in sandbox"
-                )
+        called = self._called_symbol_name(node.func)
+        if called in FORBIDDEN_CALLS:
+            self.errors.append(
+                f"Function '{called}' is not allowed in sandbox"
+            )
+
+        # Disallow string-based dunder access patterns like getattr(x, "__class__")
+        if called in {"getattr", "setattr", "delattr"} and node.args:
+            for arg in node.args[1:2]:
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    if "__" in arg.value or arg.value.startswith("_"):
+                        self.errors.append(
+                            f"String-based private/dunder attribute access is not allowed: {arg.value!r}"
+                        )
+
         self.generic_visit(node)
     
     def visit_Attribute(self, node: ast.Attribute) -> None:
@@ -162,11 +209,7 @@ class CodeSandbox:
         Returns:
             Dict with safe builtins, allowed modules, and tool functions
         """
-        # Create safe builtins dict
-        safe_builtins = {}
-        for name in SAFE_BUILTINS:
-            if hasattr(builtins, name):
-                safe_builtins[name] = getattr(builtins, name)
+        safe_builtins = create_safe_builtins()
         
         # Create globals dict
         globals_dict: Dict[str, Any] = {
@@ -183,18 +226,18 @@ class CodeSandbox:
         globals_dict.update(self.tools)
         
         return globals_dict
-    
+
     def execute(
         self,
         code: str,
         timeout: float = 30.0,
     ) -> Dict[str, Any]:
         """Execute code in the sandbox.
-        
+
         Args:
             code: Python code to execute
             timeout: Maximum execution time in seconds (currently advisory)
-            
+
         Returns:
             Dict with:
                 - result: Value of 'result' variable if set
@@ -213,17 +256,17 @@ class CodeSandbox:
                 'error': 'Security validation failed:\n' + '\n'.join(errors),
                 'success': False,
             }
-        
+
         # Create isolated local namespace
         local_ns: Dict[str, Any] = {'result': None}
-        
+
         # Capture stdout and stderr
         stdout_capture = io.StringIO()
         stderr_capture = io.StringIO()
-        
+
         result = None
         error = None
-        
+
         try:
             with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
                 # Execute the code
@@ -232,7 +275,7 @@ class CodeSandbox:
         except Exception as e:
             error = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
             logger.error(f"Sandbox execution error: {error}")
-        
+
         return {
             'result': result,
             'stdout': stdout_capture.getvalue(),
@@ -240,20 +283,20 @@ class CodeSandbox:
             'error': error,
             'success': error is None,
         }
-    
+
     def add_tool(self, name: str, func: Callable) -> None:
         """Add a tool function to the sandbox.
-        
+
         Args:
             name: Name to use in sandbox
             func: Tool function
         """
         self.tools[name] = func
         self.globals[name] = func
-    
+
     def remove_tool(self, name: str) -> None:
         """Remove a tool from the sandbox.
-        
+
         Args:
             name: Tool name to remove
         """
