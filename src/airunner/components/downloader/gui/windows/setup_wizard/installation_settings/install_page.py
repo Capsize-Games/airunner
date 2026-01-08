@@ -38,6 +38,7 @@ from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader
+from airunner.utils.zip_utils import safe_extract_zip
 from airunner.utils.os import create_airunner_paths
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
@@ -716,7 +717,7 @@ class InstallWorker(
                     }
                 )
                 with zipfile.ZipFile(self._unidic_zip_path, "r") as zip_ref:
-                    zip_ref.extractall(self._unidic_dir)
+                    safe_extract_zip(zip_ref, self._unidic_dir)
                 os.remove(self._unidic_zip_path)
                 self.parent.update_download_log(
                     {
@@ -774,7 +775,7 @@ class InstallWorker(
                     )
 
                     with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                        zip_ref.extractall(self._openvoice_dir)
+                        safe_extract_zip(zip_ref, self._openvoice_dir)
 
                     os.remove(zip_path)
                     openvoice_extracted = True
@@ -886,7 +887,7 @@ class InstallWorker(
                         {"label": f"Manually unzipping {zip_name}..."}
                     )
                     with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                        zip_ref.extractall(self._openvoice_dir)
+                        safe_extract_zip(zip_ref, self._openvoice_dir)
                     os.remove(zip_path)
                     self.parent.update_download_log(
                         {

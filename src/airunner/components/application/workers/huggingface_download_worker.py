@@ -9,6 +9,7 @@ from airunner.components.application.workers.base_download_worker import (
     BaseDownloadWorker,
 )
 from airunner.enums import SignalCode
+from airunner.utils.zip_utils import safe_extract_zip
 from airunner.components.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
@@ -555,7 +556,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
             # Extract the ZIP
             with zipfile.ZipFile(temp_path, "r") as zip_ref:
-                zip_ref.extractall(model_path)
+                safe_extract_zip(zip_ref, model_path)
 
             # Clean up
             temp_path.unlink()
