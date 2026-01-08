@@ -1269,9 +1269,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # The LLMModelManager/WorkflowManager handles conversation history internally
         prompt = last_user_content
         
-        self.logger.info(f"[Ollama API] Extracted prompt: {prompt[:100]}...")
+        self.logger.info(f"[Ollama API] Extracted prompt (len={len(prompt)})")
         if system_prompt:
-            self.logger.info(f"[Ollama API] System prompt: {system_prompt[:100]}...")
+            self.logger.info(f"[Ollama API] System prompt received (len={len(system_prompt)})")
         
         llm_request = LLMRequest()
         llm_request.temperature = options.get("temperature", 0.7)
@@ -1681,9 +1681,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # The LLMModelManager/WorkflowManager handles conversation history internally
         prompt = last_user_content
         
-        self.logger.info(f"[OpenAI API] Extracted prompt: {prompt[:100]}...")
+        self.logger.info(f"[OpenAI API] Extracted prompt (len={len(prompt)})")
         if system_prompt:
-            self.logger.info(f"[OpenAI API] System prompt: {system_prompt[:100]}...")
+            self.logger.info(f"[OpenAI API] System prompt received (len={len(system_prompt)})")
         
         # Enhance system prompt with tool definitions if tools are provided
         if tools:
@@ -2692,7 +2692,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             return
         
         # Emit the generation signal
-        self.logger.info(f"Sending art generation request: prompt='{prompt[:50]}...'")
+        self.logger.info(f"Sending art generation request (prompt_len={len(prompt)})")
         api.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request})
         
         # Wait for completion (timeout: 5 minutes for image generation)

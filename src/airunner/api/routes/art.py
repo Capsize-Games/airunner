@@ -306,7 +306,7 @@ async def generate_image(request: GenerationRequest, req: Request):
     Returns:
         Job ID for status checking
     """
-    logger.info(f"Image generation request: {request.prompt[:50]}...")
+    logger.info(f"Image generation request (prompt_len={len(request.prompt)})")
 
     # Ensure the app instance exists so signals route to workers.
     art_service = get_art_service(req)
