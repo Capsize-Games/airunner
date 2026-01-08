@@ -178,9 +178,10 @@ airunner-headless --no-preload
 
 | Option | Description |
 |--------|-------------|
-| `--host HOST` | Host address to bind to (default: `0.0.0.0`) |
+| `--host HOST` | Host address to bind to (default: `127.0.0.1`) |
 | `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
 | `--ollama-mode` | Run as Ollama replacement on port 11434 |
+| `--insecure-no-auth` | Allow binding to non-loopback without `AIRUNNER_API_KEY` (not recommended) |
 | `--model, -m PATH` | Path to LLM model to load |
 | `--art-model PATH` | Path to Stable Diffusion model to load |
 | `--tts-model PATH` | Path to TTS model to load |
@@ -199,6 +200,10 @@ airunner-headless --no-preload
 | `AIRUNNER_ART_MODEL_PATH` | Path to art model |
 | `AIRUNNER_TTS_MODEL_PATH` | Path to TTS model |
 | `AIRUNNER_STT_MODEL_PATH` | Path to STT model |
+| `AIRUNNER_API_KEY` | If set, requires auth for API requests and docs (`X-API-Key` / `Authorization: Bearer`) |
+| `AIRUNNER_INSECURE_NO_AUTH` | Set to `1` to allow unauthenticated remote access (not recommended) |
+| `AIRUNNER_ALLOWED_TENANT_KEYS` | Comma-separated allowlist for `X-Tenant-Key` when API key auth is enabled |
+| `AIRUNNER_DEBUG` | Set to `1` to include exception details in 500s for loopback requests |
 | `AIRUNNER_NO_PRELOAD` | Set to `1` to disable model preloading |
 | `AIRUNNER_LLM_ON` | Enable LLM service (`1` or `0`) |
 | `AIRUNNER_SD_ON` | Enable Stable Diffusion (`1` or `0`) |

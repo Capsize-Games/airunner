@@ -4,11 +4,11 @@ FastAPI server implementation for AI Runner.
 Provides REST and WebSocket endpoints for remote access to AI Runner's
 capabilities including LLM, art generation, TTS, and STT.
 """
-
 from typing import Optional, Any
 from contextlib import asynccontextmanager
 import os
 import secrets
+from ipaddress import ip_address
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +24,27 @@ from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def is_loopback_host(host: str) -> bool:
+    if not host:
+        return False
+
+    normalized = host.strip().lower()
+    if normalized in {"localhost", "127.0.0.1", "::1"}:
+        return True
+
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def is_loopback_request(request: Request) -> bool:
+    client = getattr(request, "client", None)
+    if not client:
+        return False
+    return is_loopback_host(getattr(client, "host", ""))
 
 
 @asynccontextmanager
@@ -70,6 +91,17 @@ def create_app(
     if app_instance:
         app.state.airunner_app = app_instance
 
+    # Optional API key auth for production.
+    # If AIRUNNER_API_KEY is set, requests must provide it via:
+    # - X-API-Key: <key>
+    # - Authorization: Bearer <key>
+    api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
+    require_api_key = bool(api_key)
+    insecure_no_auth = os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
+
+    allowed_env = (os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or "").strip()
+    allowed_tenants = {t.strip() for t in allowed_env.split(",") if t.strip()}
+
     @app.middleware("http")
     async def tenant_middleware(request: Request, call_next):
         """Scope DB operations to the request's tenant/namespace.
@@ -88,41 +120,53 @@ def create_app(
             or (request.headers.get("x-uwuchat-namespace") or "").strip()
             or (request.headers.get("x-namespace") or "").strip()
         )
-        token = set_tenant_key(header_value or None)
+
+        # Only allow tenant selection from headers:
+        # - Without API key auth: loopback requests only.
+        # - With API key auth: allowlist-only.
+        tenant_key: Optional[str] = None
+        if header_value:
+            if require_api_key:
+                if allowed_tenants and header_value in allowed_tenants:
+                    tenant_key = header_value
+            else:
+                if is_loopback_request(request):
+                    tenant_key = header_value
+
+        token = set_tenant_key(tenant_key)
         try:
             return await call_next(request)
         finally:
             reset_tenant_key(token)
 
-    # Optional API key auth for production.
-    # If AIRUNNER_API_KEY is set, requests must provide it via:
-    # - X-API-Key: <key>
-    # - Authorization: Bearer <key>
-    required_api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
-
     @app.middleware("http")
     async def api_key_auth_middleware(request: Request, call_next):
-        if not required_api_key:
-            return await call_next(request)
-
-        # Allow unauthenticated health + docs endpoints (for container probes).
         path = request.url.path
-        if path in {
-            "/health",
-            "/api/v1/health",
-            "/docs",
-            "/redoc",
-            "/openapi.json",
-        }:
+
+        # Always allow health checks without auth.
+        if path in {"/health", "/api/v1/health"}:
             return await call_next(request)
 
+        # When API key auth is disabled, default to loopback-only unless explicitly overridden.
+        if not require_api_key:
+            if path.startswith("/admin/"):
+                if is_loopback_request(request):
+                    return await call_next(request)
+                return JSONResponse(status_code=403, content={"error": "Forbidden"})
+
+            if not insecure_no_auth and not is_loopback_request(request):
+                return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+            return await call_next(request)
+
+        # API key auth enabled: require auth for all endpoints except health.
         provided = (request.headers.get("x-api-key") or "").strip()
         if not provided:
             auth = (request.headers.get("authorization") or "").strip()
             if auth.lower().startswith("bearer "):
                 provided = auth.split(" ", 1)[-1].strip()
 
-        if not provided or not secrets.compare_digest(provided, required_api_key):
+        if not provided or not secrets.compare_digest(provided, api_key):
             return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
         return await call_next(request)
@@ -201,10 +245,14 @@ def create_app(
     @app.exception_handler(Exception)
     async def global_exception_handler(request, exc):
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error", "detail": str(exc)},
-        )
+        debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
+        if debug and is_loopback_request(request):
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Internal server error", "detail": str(exc)},
+            )
+
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
     return app
 

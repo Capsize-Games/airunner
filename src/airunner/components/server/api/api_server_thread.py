@@ -8,9 +8,11 @@ so existing clients continue to work.
 
 import threading
 
+import os
+
 import uvicorn
 
-from airunner.api.server import create_app
+from airunner.api.server import create_app, is_loopback_host
 from airunner.components.server.api.server import get_api
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -29,7 +31,7 @@ class APIServerThread(threading.Thread):
     Designed for headless operation without Qt GUI.
 
     Args:
-        host: Host address to bind to (default: 0.0.0.0)
+        host: Host address to bind to (default: localhost)
         port: Port to listen on (default: 8080)
     """
 
@@ -47,6 +49,15 @@ class APIServerThread(threading.Thread):
     def run(self):
         """Start uvicorn and serve requests."""
         try:
+            api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
+            insecure_no_auth = os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
+            if not is_loopback_host(self.host) and not insecure_no_auth and not api_key:
+                logger.error(
+                    "Refusing to bind to non-loopback host without AIRUNNER_API_KEY. "
+                    "Set AIRUNNER_API_KEY or AIRUNNER_INSECURE_NO_AUTH=1 (not recommended)."
+                )
+                return
+
             api = get_api()
             app = create_app(app_instance=api)
 

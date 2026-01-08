@@ -18,8 +18,9 @@ Usage:
 
 Environment Variables:
     AIRUNNER_HEADLESS: Set to 1 (automatically set by this script)
-    AIRUNNER_HTTP_HOST: Override host (default: 0.0.0.0)
+    AIRUNNER_HTTP_HOST: Override host (default: 127.0.0.1)
     AIRUNNER_HTTP_PORT: Override port (default: 8080)
+    AIRUNNER_INSECURE_NO_AUTH: Set to 1 to allow binding to non-loopback without AIRUNNER_API_KEY
     AIRUNNER_OLLAMA_MODE: Run as Ollama replacement (default: 0)
     AIRUNNER_LLM_ON: Enable LLM service (default: 1)
     AIRUNNER_TTS_ON: Enable TTS service (default: 0)
@@ -33,7 +34,7 @@ Environment Variables:
     AIRUNNER_NO_PRELOAD: Set to 1 to disable model preloading
 
 Examples:
-    # Start with defaults (0.0.0.0:8080)
+    # Start with defaults (127.0.0.1:8080)
     airunner-headless
 
     # Start on custom port
@@ -75,8 +76,8 @@ def main():
     parser.add_argument(
         "--host",
         type=str,
-        default=os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0"),
-        help="Host address to bind to (default: 0.0.0.0)",
+        default=os.environ.get("AIRUNNER_HTTP_HOST", "127.0.0.1"),
+        help="Host address to bind to (default: 127.0.0.1)",
     )
 
     parser.add_argument(
@@ -91,6 +92,16 @@ def main():
         action="store_true",
         default=os.environ.get("AIRUNNER_OLLAMA_MODE", "0") == "1",
         help="Run as Ollama replacement on port 11434 for VS Code integration",
+    )
+
+    parser.add_argument(
+        "--insecure-no-auth",
+        action="store_true",
+        default=os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1",
+        help=(
+            "Allow binding to non-loopback addresses without AIRUNNER_API_KEY. "
+            "Not recommended."
+        ),
     )
 
     # Model path arguments
@@ -163,6 +174,20 @@ def main():
 
     args = parser.parse_args()
 
+    # Refuse to bind to non-loopback without auth unless explicitly allowed.
+    # This is the primary safety belt for accidental LAN/public exposure.
+    from airunner.api.server import is_loopback_host
+
+    configured_api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
+    if not is_loopback_host(args.host) and not args.insecure_no_auth:
+        if not configured_api_key:
+            print(
+                "Refusing to bind to a non-loopback host without AIRUNNER_API_KEY.\n"
+                "Set AIRUNNER_API_KEY, or re-run with --insecure-no-auth (NOT recommended).",
+                file=sys.stderr,
+            )
+            return 2
+
     # Mark this process as headless early so any worker processes inherit it.
     # Headless/HTTP streaming clients expect raw tokens (especially JSON) to be
     # forwarded without GUI-only suppression heuristics.
@@ -186,6 +211,9 @@ def main():
     
     # Set Ollama mode flag for server.py to use
     os.environ["AIRUNNER_OLLAMA_MODE"] = "1" if args.ollama_mode else "0"
+
+    # Propagate insecure override so other server entrypoints can apply it.
+    os.environ["AIRUNNER_INSECURE_NO_AUTH"] = "1" if args.insecure_no_auth else "0"
 
     # Set model paths if provided
     if args.model:
