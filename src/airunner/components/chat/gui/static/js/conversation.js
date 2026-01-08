@@ -114,38 +114,122 @@ function initializeChatView() {
 }
 
 function sanitizeContent(html) {
-    // Content is already formatted HTML from FormatterExtended on the backend
-    // Just unescape if it's a JSON string, then return as-is
+    // Content may include HTML from the backend; treat it as untrusted and sanitize.
     let content = html;
 
-    if (typeof content === 'string') {
-        content = content.trim();
+    if (typeof content !== 'string') return '';
+    content = content.trim();
 
-        // If content looks like a JSON string (wrapped in quotes with escaped chars), unescape it
-        if (content.startsWith('"') && content.endsWith('"')) {
-            try {
-                content = JSON.parse(content);
-            } catch (e) {
-                // Manual unescape if JSON.parse fails
-                content = content.slice(1, -1)
-                    .replace(/\\n/g, '\n')
-                    .replace(/\\"/g, '"')
-                    .replace(/\\\\/g, '\\');
-            }
+    // If content looks like a JSON string (wrapped in quotes with escaped chars), unescape it
+    if (content.startsWith('"') && content.endsWith('"')) {
+        try {
+            content = JSON.parse(content);
+        } catch (e) {
+            // Manual unescape if JSON.parse fails
+            content = content.slice(1, -1)
+                .replace(/\\n/g, '\n')
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\');
         }
-
-        // Remove leading/trailing empty paragraphs, divs, and excessive whitespace
-        // This prevents blank space at the start/end of messages
-        content = content
-            .replace(/^(\s*<(p|div|br)[^>]*>\s*<\/(p|div)>\s*)+/gi, '')  // Leading empty block elements
-            .replace(/(\s*<(p|div|br)[^>]*>\s*<\/(p|div)>\s*)+$/gi, '')  // Trailing empty block elements
-            .replace(/^(<br\s*\/?>)+/gi, '')  // Leading <br> tags
-            .replace(/(<br\s*\/?>)+$/gi, '')  // Trailing <br> tags
-            .replace(/^\s+/, '')  // Leading whitespace
-            .replace(/\s+$/, ''); // Trailing whitespace
     }
 
-    return content;
+    // Remove leading/trailing empty paragraphs, divs, and excessive whitespace
+    content = content
+        .replace(/^(\s*<(p|div|br)[^>]*>\s*<\/(p|div)>\s*)+/gi, '')
+        .replace(/(\s*<(p|div|br)[^>]*>\s*<\/(p|div)>\s*)+$/gi, '')
+        .replace(/^(<br\s*\/?>)+/gi, '')
+        .replace(/(<br\s*\/?>)+$/gi, '')
+        .replace(/^\s+/, '')
+        .replace(/\s+$/, '');
+
+    return sanitizeHtmlAllowlist(content);
+}
+
+function isSafeLinkHref(href) {
+    if (!href) return false;
+    const v = String(href).trim().toLowerCase();
+    return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('mailto:') || v.startsWith('#');
+}
+
+function sanitizeHtmlAllowlist(html) {
+    // Allow a minimal set of tags needed for chat formatting.
+    const allowedTags = new Set([
+        'A', 'B', 'BR', 'BLOCKQUOTE', 'CODE', 'DIV', 'EM', 'I',
+        'LI', 'OL', 'P', 'PRE', 'SPAN', 'STRONG', 'UL',
+        'H1', 'H2', 'H3', 'H4', 'H5', 'H6'
+    ]);
+
+    const allowedAttrsByTag = {
+        'A': new Set(['href', 'title', 'target', 'rel']),
+        'CODE': new Set(['class']),
+        'PRE': new Set(['class']),
+        'SPAN': new Set(['class']),
+        'DIV': new Set(['class']),
+        'P': new Set(['class']),
+    };
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+
+    const walk = (node) => {
+        const children = Array.from(node.childNodes);
+        for (const child of children) {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                const tag = child.tagName.toUpperCase();
+
+                if (!allowedTags.has(tag)) {
+                    child.replaceWith(document.createTextNode(child.textContent || ''));
+                    continue;
+                }
+
+                const allowedAttrs = allowedAttrsByTag[tag] || new Set();
+                for (const attr of Array.from(child.attributes)) {
+                    const name = attr.name.toLowerCase();
+
+                    if (name.startsWith('on') || name === 'style' || name === 'src' || name === 'srcset') {
+                        child.removeAttribute(attr.name);
+                        continue;
+                    }
+
+                    if (!allowedAttrs.has(name)) {
+                        child.removeAttribute(attr.name);
+                        continue;
+                    }
+
+                    if (tag === 'A' && name === 'href') {
+                        if (!isSafeLinkHref(attr.value)) {
+                            child.removeAttribute('href');
+                        }
+                    }
+
+                    if (tag === 'A' && name === 'target') {
+                        if (attr.value !== '_blank' && attr.value !== '_self') {
+                            child.setAttribute('target', '_blank');
+                        }
+                    }
+                }
+
+                if (tag === 'A') {
+                    const target = child.getAttribute('target');
+                    if (target === '_blank') {
+                        child.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+
+                walk(child);
+            } else if (child.nodeType === Node.COMMENT_NODE) {
+                child.remove();
+            } else if (child.nodeType === Node.TEXT_NODE) {
+                // ok
+            } else {
+                // Drop other node types (processing instructions, etc.)
+                child.remove();
+            }
+        }
+    };
+
+    walk(template.content);
+    return template.innerHTML;
 }
 
 function createMessageElement(msg) {
@@ -347,24 +431,31 @@ function createToolStatusElement(toolId, toolName, query, status, details = null
     const displayName = getToolDisplayName(toolName);
     const queryPreview = query && query.length > 50 ? query.substring(0, 50) + '...' : (query || '');
 
-    let html = `
-        <div class="tool-status-line tool-status-completed">
-            <span class="tool-checkmark">✅</span>
-            <span class="tool-text">${displayName}${queryPreview ? ` for "${queryPreview}"` : ''}</span>
-        </div>
-    `;
+    const line1 = document.createElement('div');
+    line1.className = 'tool-status-line tool-status-completed';
+    const check1 = document.createElement('span');
+    check1.className = 'tool-checkmark';
+    check1.textContent = '✅';
+    const text1 = document.createElement('span');
+    text1.className = 'tool-text';
+    text1.textContent = `${displayName}${queryPreview ? ` for "${queryPreview}"` : ''}`;
+    line1.appendChild(check1);
+    line1.appendChild(text1);
+    toolElement.appendChild(line1);
 
-    // Add details line if present (e.g., domain names from search results)
-    if (details && details.trim()) {
-        html += `
-            <div class="tool-status-line tool-status-completed">
-                <span class="tool-checkmark">✅</span>
-                <span class="tool-text tool-details">${details}</span>
-            </div>
-        `;
+    if (details && String(details).trim()) {
+        const line2 = document.createElement('div');
+        line2.className = 'tool-status-line tool-status-completed';
+        const check2 = document.createElement('span');
+        check2.className = 'tool-checkmark';
+        check2.textContent = '✅';
+        const text2 = document.createElement('span');
+        text2.className = 'tool-text tool-details';
+        text2.textContent = String(details);
+        line2.appendChild(check2);
+        line2.appendChild(text2);
+        toolElement.appendChild(line2);
     }
-
-    toolElement.innerHTML = html;
     return toolElement;
 }
 
@@ -655,9 +746,9 @@ function renderStatusItem(item, isNew = false) {
     ].filter(Boolean).join(' ');
 
     let html = `
-        <div class="${classes}" data-id="${item.id}">
+        <div class="${classes}" data-id="${escapeAttr(item.id)}">
             <span class="status-item-icon ${isActive ? 'spinning' : ''}">${icon}</span>
-            <span class="status-item-text">${item.text}</span>
+            <span class="status-item-text">${escapeHtml(item.text)}</span>
     `;
 
     // Add expandable thinking content
@@ -680,6 +771,15 @@ function escapeHtml(text) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br>');
+}
+
+function escapeAttr(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 function clearStatusWidget() {

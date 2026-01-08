@@ -271,6 +271,12 @@ class ToolManager(
 
             for tool_record in enabled_tools:
                 try:
+                    if not getattr(tool_record, "safety_validated", False):
+                        self.logger.warning(
+                            f"Skipping custom tool '{tool_record.name}': safety_validated is false"
+                        )
+                        continue
+
                     # Compile and load the tool
                     tool_func = self._compile_custom_tool(tool_record)
                     if tool_func:
@@ -296,11 +302,13 @@ class ToolManager(
         """
         try:
             from langchain.tools import tool
+            from airunner.components.llm.core.code_sandbox import create_safe_builtins
 
             # Create a namespace for execution
             namespace = {
                 "tool": tool,
                 "__name__": f"custom_tool_{tool_record.name}",
+                "__builtins__": create_safe_builtins(),
             }
 
             # Execute the code to define the function

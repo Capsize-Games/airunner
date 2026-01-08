@@ -7,6 +7,7 @@ Provides:
 3. Enhanced math-specific prompting
 """
 
+import ast
 import re
 import io
 import contextlib
@@ -71,6 +72,29 @@ class SafePythonExecutor:
         "scipy",
     }
 
+    _FORBIDDEN_NAMES = {
+        "__builtins__",
+        "builtins",
+        "__import__",
+    }
+
+    _FORBIDDEN_CALLS = {
+        "exec",
+        "eval",
+        "compile",
+        "open",
+        "input",
+        "breakpoint",
+        "globals",
+        "locals",
+        "getattr",
+        "setattr",
+        "delattr",
+        "vars",
+        "dir",
+        "__import__",
+    }
+
     def __init__(self, timeout_seconds: int = 5):
         """Initialize executor.
 
@@ -102,8 +126,26 @@ class SafePythonExecutor:
             "tuple": tuple,
             "pow": pow,
             "print": print,
-            "__import__": __import__,
+            # Needed for `import ...` statements, but restricted.
+            "__import__": self._safe_import,
         }
+
+    def _safe_import(
+        self,
+        name: str,
+        globals: Any = None,
+        locals: Any = None,
+        fromlist: Any = (),
+        level: int = 0,
+    ) -> Any:
+        if level != 0:
+            raise ImportError("Relative imports are not allowed")
+
+        top_level = name.split(".", 1)[0]
+        if top_level not in self.ALLOWED_IMPORTS:
+            raise ImportError(f"Import not allowed: {top_level}")
+
+        return __import__(name, globals, locals, fromlist, level)
 
     def _create_base_namespace(self) -> Dict[str, Any]:
         """Create a fresh namespace with safe builtins and defaults."""
@@ -182,13 +224,57 @@ class SafePythonExecutor:
         Returns:
             (is_safe, error_message)
         """
-        # Check for dangerous operations
-        is_safe, error = self._check_dangerous_operations(code)
-        if not is_safe:
-            return False, error
+        try:
+            tree = ast.parse(code)
+        except SyntaxError as e:
+            return False, f"Syntax error: {e}"
 
-        # Check imports are allowed
-        return self._check_imports(code)
+        errors: list[str] = []
+
+        def called_symbol_name(node: ast.AST) -> Optional[str]:
+            if isinstance(node, ast.Name):
+                return node.id
+            if isinstance(node, ast.Attribute):
+                return node.attr
+            if isinstance(node, ast.Subscript):
+                if isinstance(node.value, ast.Name) and node.value.id in {"__builtins__", "builtins"}:
+                    sl = node.slice
+                    if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                        return sl.value
+            return None
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id in self._FORBIDDEN_NAMES:
+                errors.append(f"Access to name '{node.id}' is not allowed")
+
+            if isinstance(node, ast.Subscript):
+                if isinstance(node.value, ast.Name) and node.value.id in {"__builtins__", "builtins"}:
+                    errors.append("Access to builtins via subscript is not allowed")
+
+            if isinstance(node, ast.Attribute):
+                if node.attr.startswith("_") or "__" in node.attr:
+                    errors.append(f"Access to attribute '{node.attr}' is not allowed")
+
+            if isinstance(node, ast.Call):
+                called = called_symbol_name(node.func)
+                if called in self._FORBIDDEN_CALLS:
+                    errors.append(f"Function '{called}' is not allowed")
+
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    top_level = alias.name.split(".", 1)[0]
+                    if top_level not in self.ALLOWED_IMPORTS:
+                        errors.append(f"Import not allowed: {top_level}")
+
+            if isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                top_level = module.split(".", 1)[0]
+                if top_level and top_level not in self.ALLOWED_IMPORTS:
+                    errors.append(f"Import not allowed: {top_level}")
+
+        if errors:
+            return False, "\n".join(errors)
+        return True, ""
 
     def _check_dangerous_operations(self, code: str) -> Tuple[bool, str]:
         """Check for dangerous patterns in code."""

@@ -11,6 +11,7 @@ import zipfile
 import shutil
 
 from airunner.settings import MATHJAX_VERSION
+from airunner.utils.zip_utils import safe_extract_zip
 
 # Correct MathJax release asset (contains es5/tex-mml-chtml.js)
 MATHJAX_URL = f"https://github.com/mathjax/MathJax/archive/refs/tags/{MATHJAX_VERSION}.zip"
@@ -41,7 +42,7 @@ def ensure_mathjax():
     urllib.request.urlretrieve(MATHJAX_URL, ZIP_PATH)
     print("Extracting MathJax...")
     with zipfile.ZipFile(ZIP_PATH, "r") as zip_ref:
-        zip_ref.extractall(STATIC_DIR)
+        safe_extract_zip(zip_ref, STATIC_DIR)
     os.remove(ZIP_PATH)
     # The zip extracts to MathJax-{VERSION}/ which contains es5/
     # No need to move files - the structure is already correct

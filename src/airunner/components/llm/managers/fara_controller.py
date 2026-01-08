@@ -666,7 +666,8 @@ class FaraActionExecutor:
             elif system == "Darwin":  # macOS
                 subprocess.Popen(["open", "-a", app_name])
             elif system == "Windows":
-                subprocess.Popen(["start", "", app_name], shell=True)
+                import os
+                os.startfile(app_name)
             else:
                 subprocess.Popen([app_name])
 
