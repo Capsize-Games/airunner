@@ -223,10 +223,10 @@ class TestRequestProcessor:
 
         # Temperature was explicitly set, so it overrides
         assert merged.temperature == 0.9
-        # max_new_tokens uses LLMRequest default (200), not db (100)
+        # max_new_tokens uses the LLMRequest default, not db (100)
         # This is current behavior - to use db value, pass None or
         # don't create custom LLMRequest
-        assert merged.max_new_tokens == 200
+        assert merged.max_new_tokens == LLMRequest().max_new_tokens
 
     def test_validate_request_valid(self):
         """Test validation passes for valid request."""

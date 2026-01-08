@@ -49,7 +49,7 @@ def upgrade() -> None:
             SELECT name, COUNT(*) as count 
             FROM fine_tuned_models 
             GROUP BY name 
-            HAVING count > 1
+            HAVING COUNT(*) > 1
         """
         )
     )

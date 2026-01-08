@@ -129,13 +129,14 @@ class PropertyMixin:
         Raises:
             ValueError: If no model path configured
         """
-        if not self.llm_generator_settings.model_path:
+        # Use the resolved model_path so runtime overrides (LLMRequest.model)
+        # and container path normalization are handled consistently.
+        model_path = self.model_path
+        if not model_path:
             raise ValueError(
                 "No model path configured. Please select a model in LLM settings."
             )
-        return os.path.basename(
-            os.path.normpath(self.llm_generator_settings.model_path)
-        )
+        return os.path.basename(os.path.normpath(model_path))
 
     @property
     def llm(self):
@@ -166,11 +167,26 @@ class PropertyMixin:
         """
         model_path = None
         if self.llm_request is not None and self.llm_request.model:
-            model_path = os.path.join(
-                self.path_settings.base_path,
-                "text/models/llm/causallm",
-                self.llm_request.model,
-            )
+            # Request-level override:
+            # - If the request provides a bare model name (e.g. "Qwen3-8B"),
+            #   interpret it as a directory under base_path/text/models/llm/causallm.
+            # - If the request provides an absolute/relative filesystem path
+            #   (contains a path separator or points to a *.gguf), use it as-is
+            #   and let the container path normalization below rewrite host paths
+            #   like /home/<user>/.local/share/airunner/... to the container base.
+            requested = str(self.llm_request.model)
+            if (
+                "/" in requested
+                or "\\" in requested
+                or requested.lower().endswith(".gguf")
+            ):
+                model_path = requested
+            else:
+                model_path = os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/llm/causallm",
+                    requested,
+                )
         else:
             model_path = self.llm_generator_settings.model_path
 
@@ -187,6 +203,18 @@ class PropertyMixin:
             )
 
         model_path = os.path.expanduser(model_path)
+
+        # If a model path was persisted from a host user home (e.g. /home/<user>)
+        # but we're running in a container with a different base path, rewrite
+        # it to the configured AIRunner data dir.
+        try:
+            marker = os.path.join(os.sep, ".local", "share", "airunner") + os.sep
+            if marker in model_path:
+                suffix = model_path.split(marker, 1)[-1]
+                if suffix and getattr(self.path_settings, "base_path", None):
+                    model_path = os.path.join(self.path_settings.base_path, suffix)
+        except Exception:
+            pass
         
         # If model_path doesn't contain a path separator, it's just a model name
         # Construct the full path

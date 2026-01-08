@@ -4,7 +4,9 @@ Handles LangGraph node implementations (_call_model, _force_response_node, _rout
 These are broken into focused helper methods for maintainability.
 """
 
+import os
 import re
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -15,7 +17,13 @@ from langchain_core.messages import (
     trim_messages,
 )
 
-from airunner.components.llm.utils.thinking_parser import strip_thinking_tags, has_thinking_content
+from langchain_core.messages import SystemMessage
+from airunner.components.llm.utils.thinking_parser import (
+    strip_thinking_tags,
+    has_thinking_content,
+    detect_thinking_open_tag,
+    detect_thinking_close_tag,
+)
 from airunner.enums import SignalCode
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
@@ -33,6 +41,74 @@ class NodeFunctionsMixin:
     # Class-level set to track workflow tools that need special handling
     WORKFLOW_TOOLS = {"start_workflow", "transition_phase", "add_todo_item", 
                      "start_todo_item", "complete_todo_item", "get_workflow_status"}
+
+    @dataclass
+    class _ConsciousnessCtx:
+        conversation_id: Optional[int]
+        thread_id: Any
+        messages: Optional[List[Any]]
+
+    def _get_consciousness_engine(self):
+        """Best-effort loader for the optional consciousness extension."""
+        try:
+            from airunner_extensions.consciousness import get_engine
+
+            return get_engine()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _is_consciousness_enabled(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
+
+    def _consciousness_enabled_for_request(self) -> bool:
+        try:
+            data = getattr(self, "data", None) or {}
+            return self._is_consciousness_enabled(data.get("enable_consciousness", None))
+        except Exception:
+            return True
+
+    def _maybe_consciousness_pre_llm(self, messages: List[Any]) -> None:
+        if not self._consciousness_enabled_for_request():
+            return
+        engine = self._get_consciousness_engine()
+        if not engine:
+            return
+        try:
+            ctx = self._ConsciousnessCtx(
+                conversation_id=getattr(self, "_conversation_id", None),
+                thread_id=getattr(self, "_thread_id", "default"),
+                messages=messages,
+            )
+            engine.on_pre_llm(ctx)
+        except Exception:
+            # Never break generation.
+            return
+
+    def _maybe_consciousness_post_llm(self, ai_message: Any, messages: List[Any]) -> None:
+        if not self._consciousness_enabled_for_request():
+            return
+        engine = self._get_consciousness_engine()
+        if not engine:
+            return
+        try:
+            ctx = self._ConsciousnessCtx(
+                conversation_id=getattr(self, "_conversation_id", None),
+                thread_id=getattr(self, "_thread_id", "default"),
+                messages=messages,
+            )
+            engine.on_post_llm(ai_message, ctx)
+        except Exception:
+            # Never break generation.
+            return
 
     def _force_response_node(self, state: "WorkflowState") -> Dict[str, Any]:
         """Node that generates forced response when redundancy detected.
@@ -998,14 +1074,43 @@ Based on the search results above, provide a clear, conversational answer to the
 
         generation_kwargs = state.get("generation_kwargs", {})
 
-        # Trim messages
-        trimmed_messages = self._trim_messages(state["messages"])
+        # Consciousness integration: capture user text + pre-LLM signals.
+        # Best-effort only; must not affect model execution.
+        try:
+            self._maybe_consciousness_pre_llm(state.get("messages") or [])
+        except Exception:
+            pass
+
+        # Trim messages (skip trimming for vision models to preserve multimodal parts)
+        chat_model = getattr(self, "_chat_model", None)
+        if chat_model and getattr(chat_model, "is_vision_model", False):
+            trimmed_messages = state["messages"]
+        else:
+            trimmed_messages = self._trim_messages(state["messages"])
 
         # Build prompt with tool instructions
         prompt = self._build_prompt(trimmed_messages)
 
         # Generate response
         response_message = self._generate_response(prompt, generation_kwargs)
+
+        # Guard against models returning None so LangGraph doesn't try to merge
+        # a None entry into the message list (which raises during add_messages).
+        if response_message is None:
+            self.logger.error(
+                "[CALL MODEL DEBUG] Model returned no message; emitting fallback AIMessage"
+            )
+            response_message = AIMessage(
+                content="",
+                additional_kwargs={"error": "no_message_generated"},
+                tool_calls=[],
+            )
+
+        # Consciousness integration: record assistant output + post-LLM signals.
+        try:
+            self._maybe_consciousness_post_llm(response_message, state.get("messages") or [])
+        except Exception:
+            pass
 
         return {"messages": [response_message]}
 
@@ -1038,7 +1143,71 @@ Based on the search results above, provide a clear, conversational answer to the
         Returns:
             Formatted prompt
         """
-        # Escape curly braces for LangChain template compatibility
+        chat_model = getattr(self, "_chat_model", None)
+
+        # Vision models: use the same escaped system prompt with tool instructions
+        # as non-vision models. This ensures tools work for vision-capable models.
+        if chat_model and getattr(chat_model, "is_vision_model", False):
+            # Build system prompt with tool instructions (same as standard flow)
+            escaped_system_prompt = self._escape_system_prompt()
+            escaped_system_prompt = self._add_tool_instructions(escaped_system_prompt)
+            escaped_system_prompt = self._add_post_tool_instructions(
+                escaped_system_prompt, trimmed_messages
+            )
+            vision_system = SystemMessage(content=escaped_system_prompt)
+            merged_messages: List[BaseMessage] = []
+
+            for message in trimmed_messages:
+                if message is None:
+                    # Skip invalid entries to avoid NoneType errors downstream
+                    self.logger.warning(
+                        "[VISION PROMPT] Skipping None message while building prompt"
+                    )
+                    continue
+
+                if (
+                    merged_messages
+                    and isinstance(message, HumanMessage)
+                    and isinstance(merged_messages[-1], HumanMessage)
+                ):
+                    # Merge consecutive human messages to keep role alternation for chat templates
+                    current_content = merged_messages[-1].content
+                    new_content = message.content
+
+                    if isinstance(current_content, list) and isinstance(new_content, list):
+                        merged_messages[-1].content = current_content + new_content
+                    elif isinstance(current_content, list):
+                        merged_messages[-1].content = current_content + [new_content]
+                    elif isinstance(new_content, list):
+                        merged_messages[-1].content = [current_content] + new_content
+                    else:
+                        merged_messages[-1].content = f"{current_content}\n{new_content}"
+
+                    self.logger.debug(
+                        "[VISION PROMPT] Merged consecutive HumanMessages to maintain alternation"
+                    )
+                    continue
+
+                merged_messages.append(message)
+
+            vision_messages = [vision_system, *merged_messages]
+
+            # Debugging: ensure we kept the human/image message
+            has_human = any(isinstance(m, HumanMessage) for m in vision_messages)
+            if not has_human:
+                self.logger.warning(
+                    "[VISION PROMPT] No HumanMessage present after vision prompt build; messages len=%s",
+                    len(vision_messages),
+                )
+            else:
+                self.logger.debug(
+                    "[VISION PROMPT] Vision messages count=%s (system + %s user/tool msgs)",
+                    len(vision_messages), len(vision_messages) - 1,
+                )
+
+            return vision_messages
+
+        # Standard flow: escape and inject tool instructions
         escaped_system_prompt = self._escape_system_prompt()
 
         # Add tool instructions for JSON mode (bind_tools doesn't inject them)
@@ -1181,11 +1350,23 @@ Based on the search results above, provide a clear, conversational answer to the
         if not self._tools or len(self._tools) == 0:
             return system_prompt
 
+        # NOTE: Vision models (e.g., Ministral-3) previously skipped tool instructions,
+        # but this prevented them from calling tools at all. Now all models get tool
+        # instructions via the ReAct pattern below.
+
         # Tools are handled by the chat model adapter's apply_chat_template
         # Do NOT manually inject tool lists - this causes model confusion
         tool_calling_mode = getattr(
             self._chat_model, "tool_calling_mode", "react"
         )
+
+        # ReAct mode needs explicit, compact tool instructions to nudge tool calls
+        if tool_calling_mode == "react":
+            compact_tools = self._create_compact_tool_list()
+            if compact_tools:
+                # Escape braces to avoid LangChain template variable parsing
+                escaped_tools = compact_tools.replace("{", "{{").replace("}", "}}")
+                system_prompt = f"{system_prompt}\n\n{escaped_tools}"
 
         self.logger.debug(
             "Tools (%s) bound via bind_tools() - chat adapter will format them (mode: %s)",
@@ -1528,20 +1709,24 @@ Based on the search results above, provide a clear, conversational answer to the
 
     def _is_tool_call_json(self, text: str) -> bool:
         """Check if text looks like a JSON tool call definition.
-        
+
         Args:
             text: Text to check
-            
+
         Returns:
             True if text appears to be a tool call JSON
         """
         stripped = text.strip()
-        # Check for JSON tool call patterns
-        if stripped.startswith('{') and ('"name"' in stripped or '"tool"' in stripped):
-            # Looks like start of a tool call JSON
+        if not stripped.startswith('{'):
+            return False
+
+        # Be conservative: only treat as tool-call JSON when it strongly matches
+        # known tool-call shapes (name/tool + arguments).
+        if ('"name"' in stripped or '"tool"' in stripped) and (
+            '"arguments"' in stripped or '"args"' in stripped
+        ):
             return True
-        if '"arguments"' in stripped or '"query"' in stripped:
-            # Contains argument-like content
+        if '"function"' in stripped and '"arguments"' in stripped:
             return True
         return False
 
@@ -1561,9 +1746,10 @@ Based on the search results above, provide a clear, conversational answer to the
         last_chunk_message: Optional[BaseMessage] = None
         collected_tool_calls: List = []  # Collect tool_calls from ALL chunks
         
-        # Track thinking state for Qwen3 <think>...</think> blocks
+        # Track thinking state for <think>...</think> (Qwen3) or [THINK]...[/THINK] (Ministral3) blocks
         in_thinking_block = False
-        thinking_started = False  # Track if we've already seen <think>
+        thinking_started = False  # Track if we've already seen an opening tag
+        thinking_tag_format = ""  # "angle" or "brackets" - set when opening tag detected
         thinking_content = []
         final_thinking_content = None  # Store completed thinking content for DB persistence
         
@@ -1580,6 +1766,16 @@ Based on the search results above, provide a clear, conversational answer to the
         has_streamed_content = False
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
+        # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
+        # suppress/buffer tokens. Some models can emit the *entire* answer inside <think> blocks;
+        # suppressing thinking would then swallow all output for NDJSON clients.
+        is_headless = os.environ.get("AIRUNNER_HEADLESS", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        suppress_thinking_blocks = bool(has_emitter) and not is_headless
+        suppress_tool_call_markup = bool(has_emitter) and not is_headless
         # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
@@ -1610,193 +1806,182 @@ Based on the search results above, provide a clear, conversational answer to the
                 # Debug: Log every chunk
                 # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
                 
-                # Detect thinking block boundaries
-                # Check for <think> opening tag - only if we haven't seen one yet
-                if "<think>" in text and not thinking_started:
-                    in_thinking_block = True
-                    thinking_started = True
-                    # self.logger.debug("[THINKING] Detected <think> tag - starting thinking block")
-                    # Emit thinking started signal
-                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                        self._signal_emitter.emit_signal(
-                            SignalCode.LLM_THINKING_SIGNAL,
-                            {"status": "started", "content": ""}
-                        )
-                    # Don't stream the <think> tag itself to the thinking content
-                    # Extract any text after <think> in this chunk
-                    after_think = text.split("<think>", 1)[1] if "<think>" in text else ""
-                    
-                    # Check if </think> is also in this chunk (entire thinking block in one chunk)
-                    if "</think>" in after_think:
-                        # Both tags in same chunk - extract thinking and remaining content
-                        before_close = after_think.split("</think>", 1)[0]
-                        after_close = after_think.split("</think>", 1)[1]
-                        
-                        if before_close:
-                            thinking_content.append(before_close)
+                if suppress_thinking_blocks:
+                    # Detect thinking block boundaries using format-agnostic helpers
+                    # Supports both <think>...</think> (Qwen3) and [THINK]...[/THINK] (Ministral 3)
+                    found_open, tag_format, _, after_think = detect_thinking_open_tag(text)
+                    if found_open and not thinking_started:
+                        in_thinking_block = True
+                        thinking_started = True
+                        thinking_tag_format = tag_format
+                        # Emit thinking started signal
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "started", "content": ""}
+                            )
+
+                        # Check if closing tag is also in this chunk (entire thinking block in one chunk)
+                        found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
+                        if found_close:
+                            # Both tags in same chunk - extract thinking and remaining content
+                            if before_close:
+                                thinking_content.append(before_close)
+                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                    self._signal_emitter.emit_signal(
+                                        SignalCode.LLM_THINKING_SIGNAL,
+                                        {"status": "streaming", "content": before_close}
+                                    )
+
+                            # Mark thinking as complete
+                            in_thinking_block = False
+                            final_thinking_content = "".join(thinking_content)
+
                             if hasattr(self, "_signal_emitter") and self._signal_emitter:
                                 self._signal_emitter.emit_signal(
                                     SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": before_close}
+                                    {"status": "completed", "content": final_thinking_content}
                                 )
-                        
-                        # Mark thinking as complete
-                        in_thinking_block = False
-                        final_thinking_content = "".join(thinking_content)
-                        # self.logger.debug(f"[THINKING] Complete thinking block in single chunk, content len={len(final_thinking_content)}")
-                        
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "completed", "content": final_thinking_content}
-                            )
-                        thinking_content = []
-                        
-                        # Stream any content after </think> to the main callback
-                        if after_close and self._token_callback:
-                            try:
-                                self._token_callback(after_close)
-                            except Exception as callback_error:
-                                self.logger.error(
-                                    "Token callback failed: %s",
-                                    callback_error,
-                                    exc_info=True,
-                                )
-                    elif after_think:
-                        # Only <think> in this chunk, stream content to thinking
-                        thinking_content.append(after_think)
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "streaming", "content": after_think}
-                            )
-                    continue  # Skip normal processing for this chunk
-                
-                # If we're in a thinking block, emit thinking content
-                if in_thinking_block:
-                    # Check for </think> closing tag first
-                    if "</think>" in text:
-                        # Extract text before </think>
-                        before_close = text.split("</think>", 1)[0]
-                        after_close = text.split("</think>", 1)[1] if "</think>" in text else ""
-                        
-                        if before_close:
-                            thinking_content.append(before_close)
+                            thinking_content = []
+
+                            # Stream any content after closing tag to the main callback
+                            if after_close and self._token_callback:
+                                try:
+                                    self._token_callback(after_close)
+                                except Exception as callback_error:
+                                    self.logger.error(
+                                        "Token callback failed: %s",
+                                        callback_error,
+                                        exc_info=True,
+                                    )
+                        elif after_think:
+                            # Only opening tag in this chunk, stream content to thinking
+                            thinking_content.append(after_think)
                             if hasattr(self, "_signal_emitter") and self._signal_emitter:
                                 self._signal_emitter.emit_signal(
                                     SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": before_close}
+                                    {"status": "streaming", "content": after_think}
                                 )
-                        
-                        # Mark thinking as complete
-                        in_thinking_block = False
-                        # self.logger.debug(f"[THINKING] Detected </think> tag - ending thinking block, content len={len(''.join(thinking_content))}")
-                        
-                        # Save thinking content for DB persistence BEFORE clearing the list
-                        final_thinking_content = "".join(thinking_content)
-                        
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "completed", "content": final_thinking_content}
-                            )
-                        thinking_content = []
-                        
-                        # Stream any content after </think> to the main callback
-                        if after_close and self._token_callback:
-                            try:
-                                self._token_callback(after_close)
-                            except Exception as callback_error:
-                                self.logger.error(
-                                    "Token callback failed: %s",
-                                    callback_error,
-                                    exc_info=True,
+                        continue  # Skip normal processing for this chunk
+
+                    # If we're in a thinking block, emit thinking content
+                    if in_thinking_block:
+                        # Check for closing tag using the same format as the opening tag
+                        found_close, before_close, after_close = detect_thinking_close_tag(text, thinking_tag_format)
+                        if found_close:
+                            if before_close:
+                                thinking_content.append(before_close)
+                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                    self._signal_emitter.emit_signal(
+                                        SignalCode.LLM_THINKING_SIGNAL,
+                                        {"status": "streaming", "content": before_close}
+                                    )
+
+                            # Mark thinking as complete
+                            in_thinking_block = False
+
+                            # Save thinking content for DB persistence BEFORE clearing the list
+                            final_thinking_content = "".join(thinking_content)
+
+                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                self._signal_emitter.emit_signal(
+                                    SignalCode.LLM_THINKING_SIGNAL,
+                                    {"status": "completed", "content": final_thinking_content}
                                 )
-                    else:
-                        # Stream thinking content to GUI
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "streaming", "content": text}
-                            )
-                        thinking_content.append(text)
-                    continue  # Don't stream thinking to main callback
+                            thinking_content = []
+
+                            # Stream any content after closing tag to the main callback
+                            if after_close and self._token_callback:
+                                try:
+                                    self._token_callback(after_close)
+                                except Exception as callback_error:
+                                    self.logger.error(
+                                        "Token callback failed: %s",
+                                        callback_error,
+                                        exc_info=True,
+                                    )
+                        else:
+                            # Stream thinking content to GUI
+                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                                self._signal_emitter.emit_signal(
+                                    SignalCode.LLM_THINKING_SIGNAL,
+                                    {"status": "streaming", "content": text}
+                                )
+                            thinking_content.append(text)
+                        continue  # Don't stream thinking to main callback
                 
-                # Detect <tool_call> tags and buffer them instead of streaming
-                # This prevents tool call markup from appearing in the chat UI
                 text_to_stream = text
-                
-                # Check if we're starting a <tool_call> tag
-                if not in_tool_call_tag and '<tool_call>' in text:
-                    in_tool_call_tag = True
-                    # Stream any text before the tag
-                    before_tag = text.split('<tool_call>', 1)[0]
-                    if before_tag.strip():
-                        text_to_stream = before_tag
-                    else:
-                        text_to_stream = ""
-                    # Start buffering from the tag onwards
-                    tool_call_tag_buffer.append(text.split('<tool_call>', 1)[1] if '<tool_call>' in text else "")
-                    continue
-                
-                # If we're in a <tool_call> tag, buffer it
-                if in_tool_call_tag:
-                    if '</tool_call>' in text:
-                        # End of tool call tag - buffer content before closing tag
-                        before_close = text.split('</tool_call>', 1)[0]
-                        tool_call_tag_buffer.append(before_close)
-                        in_tool_call_tag = False
-                        # Stream any content after </tool_call>
-                        after_close = text.split('</tool_call>', 1)[1] if '</tool_call>' in text else ""
-                        if after_close.strip():
-                            text_to_stream = after_close
+
+                if suppress_tool_call_markup:
+                    # Detect <tool_call> tags and buffer them instead of streaming
+                    # This prevents tool call markup from appearing in the chat UI
+                    if not in_tool_call_tag and '<tool_call>' in text:
+                        in_tool_call_tag = True
+                        # Stream any text before the tag
+                        before_tag = text.split('<tool_call>', 1)[0]
+                        if before_tag.strip():
+                            text_to_stream = before_tag
                         else:
                             text_to_stream = ""
-                        tool_call_tag_buffer = []
-                    else:
-                        # Still inside the tag, buffer everything
-                        tool_call_tag_buffer.append(text)
-                        text_to_stream = ""
-                    if not text_to_stream:
+                        # Start buffering from the tag onwards
+                        tool_call_tag_buffer.append(text.split('<tool_call>', 1)[1] if '<tool_call>' in text else "")
                         continue
-                
-                # Detect JSON tool call patterns and buffer them instead of streaming
-                # This prevents tool call JSON from appearing in the chat UI
-                
-                # Check if we're starting a JSON tool call
-                if not in_json_tool_call and '{' in text:
-                    # Check if this looks like a tool call JSON
-                    remaining = text[text.index('{'):]
-                    if self._is_tool_call_json(remaining) or ('"name"' in text and '"arguments"' in text):
-                        in_json_tool_call = True
-                        # Stream any text before the '{'
-                        before_json = text[:text.index('{')]
-                        if before_json.strip():
-                            text_to_stream = before_json
+
+                    # If we're in a <tool_call> tag, buffer it
+                    if in_tool_call_tag:
+                        if '</tool_call>' in text:
+                            # End of tool call tag - buffer content before closing tag
+                            before_close = text.split('</tool_call>', 1)[0]
+                            tool_call_tag_buffer.append(before_close)
+                            in_tool_call_tag = False
+                            # Stream any content after </tool_call>
+                            after_close = text.split('</tool_call>', 1)[1] if '</tool_call>' in text else ""
+                            if after_close.strip():
+                                text_to_stream = after_close
+                            else:
+                                text_to_stream = ""
+                            tool_call_tag_buffer = []
                         else:
+                            # Still inside the tag, buffer everything
+                            tool_call_tag_buffer.append(text)
                             text_to_stream = ""
-                        # Start buffering the JSON part
-                        json_buffer.append(text[text.index('{'):])
-                        json_brace_depth = text.count('{') - text.count('}')
-                
-                # If we're in a JSON tool call, buffer it
-                if in_json_tool_call and text_to_stream == text:
-                    json_buffer.append(text)
-                    json_brace_depth += text.count('{') - text.count('}')
-                    text_to_stream = ""
-                    
-                    # Check if JSON is complete
-                    if json_brace_depth <= 0:
-                        in_json_tool_call = False
-                        # Check if there's text after the closing brace
-                        buffered = "".join(json_buffer)
-                        if '}' in buffered:
-                            last_brace = buffered.rfind('}')
-                            after_json = buffered[last_brace + 1:]
-                            if after_json.strip():
-                                text_to_stream = after_json
-                        json_buffer = []
-                        json_brace_depth = 0
+                        if not text_to_stream:
+                            continue
+
+                    # Detect JSON tool call patterns and buffer them instead of streaming
+                    # This prevents tool call JSON from appearing in the chat UI
+                    if not in_json_tool_call and '{' in text:
+                        remaining = text[text.index('{'):]
+                        if self._is_tool_call_json(remaining):
+                            in_json_tool_call = True
+                            # Stream any text before the '{'
+                            before_json = text[:text.index('{')]
+                            if before_json.strip():
+                                text_to_stream = before_json
+                            else:
+                                text_to_stream = ""
+                            # Start buffering the JSON part
+                            json_buffer.append(text[text.index('{'):])
+                            json_brace_depth = text.count('{') - text.count('}')
+
+                    # If we're in a JSON tool call, buffer it
+                    if in_json_tool_call and text_to_stream == text:
+                        json_buffer.append(text)
+                        json_brace_depth += text.count('{') - text.count('}')
+                        text_to_stream = ""
+
+                        # Check if JSON is complete
+                        if json_brace_depth <= 0:
+                            in_json_tool_call = False
+                            # Check if there's text after the closing brace
+                            buffered = "".join(json_buffer)
+                            if '}' in buffered:
+                                last_brace = buffered.rfind('}')
+                                after_json = buffered[last_brace + 1:]
+                                if after_json.strip():
+                                    text_to_stream = after_json
+                            json_buffer = []
+                            json_brace_depth = 0
                 
                 # Stream non-JSON content to GUI immediately
                 # Skip whitespace-only content to prevent creating empty assistant messages
@@ -1828,6 +2013,23 @@ Based on the search results above, provide a clear, conversational answer to the
                 return self._create_streamed_message(
                     streamed_content, last_chunk_message, collected_tool_calls, thinking_to_save
                 )
+
+            # No chunks were produced (likely interrupted before first token)
+            self.logger.error("No generation chunks were returned; emitting empty AIMessage")
+            if self._token_callback:
+                try:
+                    self._token_callback("[generation stalled]")
+                except Exception as callback_error:
+                    self.logger.error(
+                        "Token callback failed while reporting stalled generation: %s",
+                        callback_error,
+                        exc_info=True,
+                    )
+            return AIMessage(
+                content="",
+                additional_kwargs={"error": "no_generation_chunks"},
+                tool_calls=[],
+            )
 
         except Exception as exc:
             self.logger.error(

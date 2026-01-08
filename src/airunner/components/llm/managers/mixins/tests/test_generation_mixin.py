@@ -266,6 +266,28 @@ class TestHandleInterruptedGeneration:
         assert call_args.node_id is None
 
 
+class TestClampGenerationTokens:
+    """Tests for max_new_tokens clamping to target context."""
+
+    def test_clamps_when_over_target(self, mixin):
+        mixin._target_context_length = 100
+        generation_kwargs = {"max_new_tokens": 200}
+
+        mixin._clamp_generation_tokens(generation_kwargs)
+
+        assert generation_kwargs["max_new_tokens"] == 100
+        mixin.logger.info.assert_called()
+
+    def test_no_clamp_when_under_target(self, mixin):
+        mixin._target_context_length = 100
+        generation_kwargs = {"max_new_tokens": 50}
+
+        mixin._clamp_generation_tokens(generation_kwargs)
+
+        assert generation_kwargs["max_new_tokens"] == 50
+        mixin.logger.info.assert_not_called()
+
+
 class TestHandleGenerationError:
     """Tests for _handle_generation_error method."""
 

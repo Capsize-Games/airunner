@@ -5,7 +5,8 @@ Handles workflow execution via invoke and stream methods.
 
 import uuid
 from contextlib import nullcontext
-from typing import Optional, Dict, Any
+from dataclasses import dataclass
+from typing import Optional, Dict, Any, List
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -15,6 +16,74 @@ from airunner.utils.application import get_logger
 
 class StreamingMixin:
     """Manages workflow execution and streaming."""
+
+    @dataclass
+    class _ConsciousnessCtx:
+        conversation_id: Optional[int]
+        thread_id: Any
+        messages: Optional[List[Any]]
+
+    def _get_consciousness_engine(self):
+        """Best-effort loader for the optional consciousness extension."""
+        try:
+            from airunner_extensions.consciousness import get_engine
+
+            return get_engine()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _is_consciousness_enabled(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
+
+    def _consciousness_enabled_for_request(self) -> bool:
+        try:
+            data = getattr(self, "data", None) or {}
+            return self._is_consciousness_enabled(data.get("enable_consciousness", None))
+        except Exception:
+            return True
+
+    def _maybe_consciousness_pre_turn(self, messages: List[Any]) -> None:
+        if not self._consciousness_enabled_for_request():
+            return
+        engine = self._get_consciousness_engine()
+        if not engine:
+            return
+        try:
+            ctx = self._ConsciousnessCtx(
+                conversation_id=getattr(self, "_conversation_id", None),
+                thread_id=getattr(self, "_thread_id", "default"),
+                messages=messages,
+            )
+            engine.on_pre_turn(ctx)
+        except Exception:
+            # Never break generation.
+            return
+
+    def _maybe_consciousness_post_turn(self, messages: List[Any]) -> None:
+        if not self._consciousness_enabled_for_request():
+            return
+        engine = self._get_consciousness_engine()
+        if not engine:
+            return
+        try:
+            ctx = self._ConsciousnessCtx(
+                conversation_id=getattr(self, "_conversation_id", None),
+                thread_id=getattr(self, "_thread_id", "default"),
+                messages=messages,
+            )
+            engine.on_post_turn(ctx)
+        except Exception:
+            # Never break generation.
+            return
 
     def __init__(self):
         """Initialize streaming mixin."""
@@ -52,6 +121,7 @@ class StreamingMixin:
         self._executed_tools = []
 
         input_messages = [HumanMessage(user_input)]
+        self._maybe_consciousness_pre_turn(input_messages)
         config = self._create_config()
 
         math_context = self._get_math_context()
@@ -61,12 +131,16 @@ class StreamingMixin:
                 {"messages": input_messages}, config
             )
 
+        # Ensure we emit end-of-turn bookkeeping even for non-streaming calls.
+        self._maybe_consciousness_post_turn(input_messages)
+
         # Add executed tools list to result
         result["tools"] = self._executed_tools.copy()
         return result
 
     def stream(
-        self, user_input: str, generation_kwargs: Optional[Dict] = None
+        self, user_input: str, generation_kwargs: Optional[Dict] = None,
+        images: Optional[list] = None
     ):
         """Stream the workflow execution with user input, yielding messages.
 
@@ -74,6 +148,7 @@ class StreamingMixin:
             user_input: The user's message/prompt
             generation_kwargs: Optional dict of generation parameters
                 (max_new_tokens, temperature, etc.)
+            images: Optional list of PIL Image objects for vision-capable models
 
         Yields:
             AIMessage instances as they are generated
@@ -89,74 +164,90 @@ class StreamingMixin:
         self._check_and_update_mood_if_needed(current_user_message=user_input)
 
         initial_state = self._create_initial_state(
-            user_input, generation_kwargs
+            user_input, generation_kwargs, images=images
         )
+        try:
+            initial_messages = initial_state.get("messages") or []
+            if isinstance(initial_messages, list):
+                self._maybe_consciousness_pre_turn(initial_messages)
+        except Exception:
+            pass
         config = self._create_config()
 
         math_context = self._get_math_context()
         last_yielded_count = 0  # Track how many messages we've yielded
 
         with math_context:
-            for event in self._compiled_workflow.stream(
-                initial_state,
-                config,
-                stream_mode="values",
-            ):
-                # Check interrupt flag on each event
-                if self._interrupted:
-                    break
+            try:
+                for event in self._compiled_workflow.stream(
+                    initial_state,
+                    config,
+                    stream_mode="values",
+                ):
+                    # Check interrupt flag on each event
+                    if self._interrupted:
+                        break
 
-                # Yield only NEW AI messages (not previously yielded)
-                # Note: We don't filter by content because tool_calls may have empty content
-                if self._has_ai_message(event):
-                    messages = event["messages"]
+                    # Yield only NEW AI messages (not previously yielded)
+                    # Note: We don't filter by content because tool_calls may have empty content
+                    if self._has_ai_message(event):
+                        messages = event["messages"]
 
-                    # Only yield AIMessages we haven't yielded yet
-                    # Count how many AIMessages are in the list
-                    ai_message_count = sum(
-                        1 for msg in messages if isinstance(msg, AIMessage)
-                    )
+                        # Only yield AIMessages we haven't yielded yet
+                        # Count how many AIMessages are in the list
+                        ai_message_count = sum(
+                            1 for msg in messages if isinstance(msg, AIMessage)
+                        )
 
-                    # If there are more AIMessages than we've yielded, yield the new ones
-                    if ai_message_count > last_yielded_count:
-                        # Get all AIMessages
-                        ai_messages = [
-                            msg
-                            for msg in messages
-                            if isinstance(msg, AIMessage)
-                        ]
-                        # Yield only the ones we haven't yielded yet
-                        for i in range(last_yielded_count, ai_message_count):
-                            content_preview = (
-                                ai_messages[i].content[:100]
-                                if ai_messages[i].content
-                                else "(empty)"
-                            )
-                            # Attach current mood to AI message for system prompt retrieval
-                            # Use getattr with defaults to avoid AttributeError
-                            current_mood = getattr(
-                                self, "_current_mood", "neutral"
-                            )
-                            current_emoji = getattr(
-                                self, "_current_emoji", "😐"
-                            )
-                            ai_messages[i].additional_kwargs[
-                                "bot_mood"
-                            ] = current_mood
-                            ai_messages[i].additional_kwargs[
-                                "bot_mood_emoji"
-                            ] = current_emoji
-                            yield ai_messages[i]
-                        last_yielded_count = ai_message_count
+                        # If there are more AIMessages than we've yielded, yield the new ones
+                        if ai_message_count > last_yielded_count:
+                            # Get all AIMessages
+                            ai_messages = [
+                                msg
+                                for msg in messages
+                                if isinstance(msg, AIMessage)
+                            ]
+                            # Yield only the ones we haven't yielded yet
+                            for i in range(last_yielded_count, ai_message_count):
+                                content_preview = (
+                                    ai_messages[i].content[:100]
+                                    if ai_messages[i].content
+                                    else "(empty)"
+                                )
+                                # Attach current mood to AI message for system prompt retrieval
+                                # Use getattr with defaults to avoid AttributeError
+                                current_mood = getattr(
+                                    self, "_current_mood", "neutral"
+                                )
+                                current_emoji = getattr(
+                                    self, "_current_emoji", "😐"
+                                )
+                                ai_messages[i].additional_kwargs[
+                                    "bot_mood"
+                                ] = current_mood
+                                ai_messages[i].additional_kwargs[
+                                    "bot_mood_emoji"
+                                ] = current_emoji
+                                yield ai_messages[i]
+                            last_yielded_count = ai_message_count
+            finally:
+                try:
+                    initial_messages = initial_state.get("messages") or []
+                    if isinstance(initial_messages, list):
+                        self._maybe_consciousness_post_turn(initial_messages)
+                except Exception:
+                    pass
 
     def _create_initial_state(
-        self, user_input: str, generation_kwargs: Optional[Dict]
+        self, user_input: str, generation_kwargs: Optional[Dict],
+        images: Optional[list] = None
     ) -> Dict[str, Any]:
         """Create initial state for workflow.
 
         Args:
             user_input: User's message
             generation_kwargs: Optional generation parameters
+            images: Optional list of PIL Image objects for vision models
 
         Returns:
             Initial state dictionary
@@ -164,7 +255,14 @@ class StreamingMixin:
         # The checkpointer handles loading existing messages from the database.
         # We only need to provide the new user message here - the add_messages
         # reducer will merge it with any existing messages from the checkpoint.
-        initial_state = {"messages": [HumanMessage(user_input)]}
+        
+        # Create HumanMessage - multimodal if images provided
+        if images and len(images) > 0:
+            human_message = self._create_multimodal_message(user_input, images)
+        else:
+            human_message = HumanMessage(user_input)
+            
+        initial_state = {"messages": [human_message]}
 
         if generation_kwargs:
             initial_state["generation_kwargs"] = generation_kwargs
@@ -181,6 +279,71 @@ class StreamingMixin:
             "configurable": {"thread_id": self._thread_id},
             "recursion_limit": 20,  # Prevent runaway tool loops
         }
+
+    def _create_multimodal_message(
+        self, text: str, images: list
+    ) -> HumanMessage:
+        """Create a multimodal HumanMessage with text and images.
+
+        For LangChain vision-capable models, the message content should be
+        a list of content parts, each with a type (text or image_url).
+
+        Args:
+            text: The user's text message
+            images: List of PIL Image objects
+
+        Returns:
+            HumanMessage with multimodal content
+        """
+        import base64
+        import io
+        from PIL import Image
+
+        content = []
+
+        # Add text part
+        content.append({"type": "text", "text": text})
+
+        # Add image parts
+        for img in images:
+            if img is None:
+                continue
+
+            try:
+                # Convert PIL Image to base64 data URL
+                if isinstance(img, Image.Image):
+                    # Convert to RGB if needed (handles RGBA, P mode, etc.)
+                    if img.mode not in ("RGB", "L"):
+                        img = img.convert("RGB")
+
+                    # Save to bytes buffer as PNG
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="PNG")
+                    buffer.seek(0)
+
+                    # Encode as base64 data URL
+                    img_base64 = base64.b64encode(buffer.getvalue()).decode(
+                        "utf-8"
+                    )
+                    data_url = f"data:image/png;base64,{img_base64}"
+
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": data_url}
+                    })
+                else:
+                    self.logger.warning(
+                        f"Skipping non-PIL image in multimodal message: {type(img)}"
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error encoding image for multimodal message: {e}"
+                )
+
+        self.logger.info(
+            f"Created multimodal message with {len(images)} image(s)"
+        )
+        return HumanMessage(content=content)
 
     def _get_math_context(self):
         """Get math executor session context manager.

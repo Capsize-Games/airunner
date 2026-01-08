@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=joe
-Group=joe
-WorkingDirectory=/home/joe/Projects/airunner
+User=airunner
+Group=airunner
+WorkingDirectory=/opt/airunner
 Environment="AIRUNNER_HEADLESS=1"
 Environment="AIRUNNER_LLM_ON=1"
 Environment="QT_QPA_PLATFORM=offscreen"
@@ -15,14 +15,14 @@ Environment="AIRUNNER_LOG_LEVEL=DEBUG"
 Environment="AIRUNNER_LOG_FILE=/var/log/airunner/headless.log"
 Environment="AIRUNNER_SAVE_LOG_TO_FILE=1"
 Environment="DEV_ENV=0"
-Environment="PATH=/home/joe/Projects/airunner/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PATH=/opt/airunner/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Create log directory before starting
 ExecStartPre=/bin/mkdir -p /var/log/airunner
-ExecStartPre=/bin/chown joe:joe /var/log/airunner
+ExecStartPre=/bin/chown airunner:airunner /var/log/airunner
 ExecStartPre=/bin/chmod 755 /var/log/airunner
 
-ExecStart=/home/joe/Projects/airunner/.venv/bin/python -m airunner.headless_server
+ExecStart=/opt/airunner/.venv/bin/python -m airunner.headless_server
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=30

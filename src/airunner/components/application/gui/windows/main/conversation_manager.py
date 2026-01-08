@@ -22,5 +22,11 @@ class ConversationManager:
 
     def create_saved_prompt(self, main_window, data):
         if self.logger:
-            self.logger.info(f"Saving prompt: {data}")
+            try:
+                summary = (
+                    f"keys={sorted(list(data.keys()))}" if hasattr(data, "keys") else f"type={type(data).__name__}"
+                )
+            except Exception:
+                summary = "(unavailable)"
+            self.logger.info(f"Saving prompt (redacted): {summary}")
         # Implement actual save logic here

@@ -255,13 +255,69 @@ class SystemPromptMixin:
         
         return parts
 
-    def _get_mood_section(self) -> Optional[str]:
+    def _augment_custom_system_prompt(
+        self,
+        base_prompt: str,
+        action: LLMActionType,
+        include_mood: Optional[bool] = None,
+        include_datetime: Optional[bool] = None,
+        include_style: Optional[bool] = None,
+        include_memory: Optional[bool] = None,
+        include_ui_context: Optional[bool] = None,
+    ) -> str:
+        """Append optional sections to a caller-provided system prompt.
+
+        Only appends sections explicitly requested by flags. This lets callers
+        supply a proprietary system prompt while still reusing Airunner's
+        optional context blocks (mood, datetime, style, memory, UI context).
+        """
+
+        def _should(flag: Optional[bool], default_condition: bool) -> bool:
+            if flag is True:
+                return default_condition
+            if flag is False:
+                return False
+            # With a custom system prompt we only append when explicitly asked
+            return False
+
+        parts = [base_prompt.strip() if base_prompt else ""]
+
+        # Datetime
+        if _should(include_datetime, action in DATETIME_ACTIONS):
+            now = datetime.now()
+            parts.append(f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Mood
+        if _should(include_mood, action in CONVERSATIONAL_ACTIONS):
+            mood_section = self._get_mood_section(force=include_mood is True)
+            if mood_section:
+                parts.append(mood_section)
+
+        # UI context
+        if _should(include_ui_context, action in UI_CONTEXT_ACTIONS):
+            ui_context = self._get_ui_section_context()
+            if ui_context:
+                parts.append(ui_context)
+
+        # Style guidance
+        if _should(include_style, action in {LLMActionType.CHAT}):
+            parts.append(self._get_style_guidelines())
+
+        # Memory instructions
+        if _should(include_memory, action in MEMORY_ACTIONS):
+            parts.append(self._get_memory_instructions())
+
+        # Filter out empties and join
+        parts = [p for p in parts if p]
+        return "\n\n".join(parts)
+
+    def _get_mood_section(self, force: bool = False) -> Optional[str]:
         """Get the mood section for the system prompt if enabled.
         
         Returns:
             Mood section string or None if mood is disabled
         """
-        if not (
+        if not force and not (
             self.llm_settings.use_chatbot_mood
             and hasattr(self, "chatbot")
             and self.chatbot
@@ -653,7 +709,7 @@ class SystemPromptMixin:
                 "\n"
                 "\n**ALWAYS VALIDATE CODE:** After creating or editing a file, call `validate_code(filepath)` to check for syntax errors!"
                 "\n"
-                "\n**CODE FILE LOCATION:** `/home/joe/.local/share/airunner/code/`"
+                "\n**CODE FILE LOCATION:** `$HOME/.local/share/airunner/code/`"
                 "\nUse `create_code_file` to write files to this directory."
                 "\n"
                 "\n**CRITICAL: You MUST call `start_workflow` FIRST. Do NOT skip this step.**"

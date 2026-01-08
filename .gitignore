@@ -17,7 +17,6 @@ settings.pickle
 .run
 *egg-info*
 .venv
-src/airunner/extensions/
 src/airunner/scripts/weights
 gfpgan
 test.json
@@ -33,8 +32,13 @@ htmlcov
 network_access_attempts.log
 *.lprof
 .env*
-processed
-airunner.wiki
+src/airunner/extensions/
+
+# Local convenience-only extensions (not part of the Airunner repo)
+extensions/
+
+# Documentation wiki checkout (separate git repo)
+airunner.wiki/
 .coverage
 coverage_report.txt
 package/asound.conf
@@ -84,3 +88,8 @@ FEATURE_ROADMAP.md
 logs
 .github/scripts
 *.sqlite3
+
+# UI build marker file (generated)
+src/airunner/components/ui_build_marker
+reports/*
+scripts/*

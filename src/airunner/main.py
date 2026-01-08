@@ -61,6 +61,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
 
     activate(
         activate_shadowlogger=True,
+        darklock_os_allow_network=True,  # Allow network access for downloads
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
         darklock_os_whitelisted_directories=[
             airunner_path,
@@ -84,6 +85,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             os.path.join(airunner_path, "certs"),
             os.path.join(os.path.expanduser("~"), ".triton/cache/"),
             os.path.join(os.path.expanduser("~"), ".cache/llama_index/"),
+            os.path.join(os.path.expanduser("~"), "Desktop/"),
             "/dev/",
             "/proc/",
             site_packages_path,

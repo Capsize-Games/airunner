@@ -26,6 +26,7 @@ class LLMAPIService(APIServiceBase):
         request_id: Optional[str] = None,
         callback: Optional[callable] = None,
         conversation_id: Optional[int] = None,
+        enable_consciousness: Optional[bool] = None,
         **kwargs,
     ):
         """Send an LLM generation request.
@@ -44,6 +45,7 @@ class LLMAPIService(APIServiceBase):
         # Use action-optimized defaults if no explicit request provided
         # Accept backwards-compatible extra kwargs such as 'system_prompt'
         system_prompt = kwargs.pop("system_prompt", None)
+        search_hints = kwargs.pop("search_hints", None)
         llm_request = llm_request or LLMRequest.for_action(action)
         if system_prompt:
             try:
@@ -69,10 +71,15 @@ class LLMAPIService(APIServiceBase):
                 "do_tts_reply": do_tts_reply,
             },
         }
+
+        if search_hints is not None:
+            data["request_data"]["search_hints"] = search_hints
         if conversation_id is not None:
             data["conversation_id"] = conversation_id
         if node_id is not None:
             data["node_id"] = node_id
+        if enable_consciousness is not None:
+            data["enable_consciousness"] = enable_consciousness
 
         if request_id is not None:
             data["request_id"] = request_id
@@ -141,4 +148,11 @@ class LLMAPIService(APIServiceBase):
         data = {"response": response}
         if response.request_id:
             data["request_id"] = response.request_id
+        else:
+            try:
+                self.logger.warning(
+                    "[STREAM] Emitting streamed response without request_id; pending HTTP callbacks will not be notified"
+                )
+            except Exception:
+                pass
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)

@@ -11,6 +11,7 @@ import scrapy
 from typing import Callable, Optional, Set, Dict, List
 
 from airunner.components.tools.web_content_extractor import WebContentExtractor
+from airunner.components.tools.url_safety import SSRFBlocked, validate_url_for_fetch
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -128,6 +129,14 @@ class LLMGuidedSpider(scrapy.Spider):
                 # Follow approved URLs
                 for link_url in urls_to_follow[:3]:  # Limit to top 3
                     if link_url not in self.visited:
+                        try:
+                            validate_url_for_fetch(link_url)
+                        except SSRFBlocked as e:
+                            logger.warning(
+                                f"Skipping blocked crawl URL (SSRF policy): {link_url} ({e})"
+                            )
+                            continue
+
                         logger.info(f"Following LLM-selected link: {link_url}")
                         yield scrapy.Request(
                             link_url,

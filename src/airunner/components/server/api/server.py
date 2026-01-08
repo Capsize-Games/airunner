@@ -38,7 +38,7 @@ import base64
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
@@ -61,6 +61,23 @@ from airunner.utils.application.get_logger import get_logger
 # Lazy import to avoid circular dependency
 _api = None
 logger = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# /api/v1/art/* compatibility layer
+#
+# Some clients expect an async-ish job API:
+#   POST /api/v1/art/generate -> {job_id, status}
+#   GET  /api/v1/art/status/{job_id} -> {job_id, status, ...}
+#   GET  /api/v1/art/result/{job_id} -> raw PNG bytes
+#
+# The native AIRunner headless endpoint is POST /art (sync, base64 PNGs).
+# We bridge these here to avoid 404s when clients are pointed at headless.
+# ---------------------------------------------------------------------------
+
+_ART_JOBS_LOCK = threading.Lock()
+_ART_JOBS: dict[str, dict[str, Any]] = {}
+_ART_JOBS_TTL_SECONDS = 60 * 60  # 1 hour
 
 
 def get_api():
@@ -129,6 +146,23 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_bytes_response(self, data: bytes, *, status: int = 200, content_type: str = "application/octet-stream"):
+        body = data or b""
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    @staticmethod
+    def _purge_old_art_jobs() -> None:
+        now = time.time()
+        with _ART_JOBS_LOCK:
+            expired = [job_id for job_id, job in _ART_JOBS.items() if now - float(job.get("created_at", 0.0)) > _ART_JOBS_TTL_SECONDS]
+            for job_id in expired:
+                _ART_JOBS.pop(job_id, None)
 
     def _validate_model_available(self) -> tuple[bool, str, str]:
         """Check if the configured LLM model is available and downloaded.
@@ -259,7 +293,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     return getattr(manager, 'model_is_loaded', False)
         return False
 
-    def _ensure_art_model_loaded(self) -> tuple[bool, str]:
+    def _ensure_art_model_loaded(self, model_path: str | None = None) -> tuple[bool, str]:
         """Ensure art/Stable Diffusion model is loaded, triggering load if necessary.
         
         Returns:
@@ -277,8 +311,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not api:
             return False, "API not initialized"
         
-        # Get art model path from environment or settings
-        art_model_path = os.environ.get("AIRUNNER_ART_MODEL_PATH")
+        # Prefer an explicit per-request model path if provided.
+        art_model_path = (model_path or "").strip() or os.environ.get("AIRUNNER_ART_MODEL_PATH")
         
         if not art_model_path:
             # Try to get from settings
@@ -464,6 +498,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "/admin/reset_database": lambda d: self._handle_reset_database(),
             "/admin/shutdown": lambda d: self._handle_shutdown(),
             "/art": self._handle_art,
+            # Compatibility art job API
+            "/api/v1/art/generate": self._handle_art_v1_generate,
             "/stt": self._handle_stt,
             "/tts": self._handle_tts,
             # Ollama-compatible endpoints (run on port 11434 to emulate Ollama)
@@ -510,9 +546,253 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # OpenAI-compatible endpoints (for VS Code Copilot BYOK)
         elif path == "/v1/models":
             self._handle_openai_models(None)
+        elif path.startswith("/api/v1/art/status/"):
+            job_id = path.split("/api/v1/art/status/", 1)[-1].strip("/")
+            self._handle_art_v1_status(job_id)
+        elif path.startswith("/api/v1/art/result/"):
+            job_id = path.split("/api/v1/art/result/", 1)[-1].strip("/")
+            self._handle_art_v1_result(job_id)
+        elif path == "/api/v1/art/models":
+            self._handle_art_v1_models()
         else:
             self.logger.warning(f"[Ollama API] Unknown GET endpoint: {path}")
             self._send_json_response({"error": "Not found"}, status=404)
+
+    # =========================================================================
+    # Compatibility Art Job API (/api/v1/art/*)
+    # =========================================================================
+
+    def _handle_art_v1_generate(self, data: dict):
+        """Start an art generation job.
+
+        Expected request body (compat clients):
+        {
+          "prompt": "...",
+          "negative_prompt": "...",
+          "width": 1024,
+          "height": 1024,
+          "steps": 20,
+          "cfg_scale": 7.5,
+          "seed": null,
+          "num_images": 1
+        }
+        """
+        self._purge_old_art_jobs()
+
+        prompt = (data.get("prompt") or "").strip()
+        if not prompt:
+            self._send_json_response({"error": "Missing 'prompt' field"}, status=400)
+            return
+
+        # Ensure model is loaded (auto-load if needed). Allow optional override.
+        model_path = (data.get("model_path") or "").strip() or None
+        success, error_msg = self._ensure_art_model_loaded(model_path=model_path)
+        if not success:
+            self._send_json_response(
+                {
+                    "error": "Art model not available",
+                    "details": error_msg,
+                    "hint": "Start with --enable-art flag and configure an art model",
+                },
+                status=503,
+            )
+            return
+
+        job_id = uuid.uuid4().hex
+        created_at = time.time()
+
+        with _ART_JOBS_LOCK:
+            _ART_JOBS[job_id] = {
+                "job_id": job_id,
+                "status": "pending",
+                "created_at": created_at,
+                "error": "",
+                "png_bytes": b"",
+            }
+
+        # Map compat payload -> native /art payload
+        native_payload: dict[str, Any] = {
+            "prompt": prompt,
+            "negative_prompt": data.get("negative_prompt") or "",
+            "width": int(data.get("width") or 1024),
+            "height": int(data.get("height") or 1024),
+            "steps": int(data.get("steps") or 20),
+            "scale": float(data.get("cfg_scale") if data.get("cfg_scale") is not None else data.get("scale") or 7.5),
+            # Native endpoint uses random_seed + seed default; mirror desired behavior.
+            "seed": int(data.get("seed") or 42) if data.get("seed") is not None else 42,
+            "random_seed": data.get("seed") is None,
+            "n_samples": int(data.get("num_images") or 1),
+            "images_per_batch": int(data.get("num_images") or 1),
+        }
+
+        # Allow per-request model override.
+        if model_path:
+            native_payload["model_path"] = model_path
+
+        def run_job():
+            try:
+                png_bytes = self._generate_first_png_bytes(native_payload)
+                with _ART_JOBS_LOCK:
+                    job = _ART_JOBS.get(job_id)
+                    if job is None:
+                        return
+                    job["png_bytes"] = png_bytes
+                    job["status"] = "completed"
+            except Exception as exc:
+                with _ART_JOBS_LOCK:
+                    job = _ART_JOBS.get(job_id)
+                    if job is None:
+                        return
+                    job["status"] = "failed"
+                    job["error"] = str(exc)
+
+        threading.Thread(target=run_job, daemon=True).start()
+
+        self._send_json_response({"job_id": job_id, "status": "pending"}, status=200)
+
+    def _handle_art_v1_status(self, job_id: str):
+        self._purge_old_art_jobs()
+        if not job_id:
+            self._send_json_response({"error": "Missing job_id"}, status=400)
+            return
+
+        with _ART_JOBS_LOCK:
+            job = _ART_JOBS.get(job_id)
+
+        if not job:
+            self._send_json_response({"error": "Job not found", "status": "not_found"}, status=404)
+            return
+
+        payload: dict[str, Any] = {
+            "job_id": job_id,
+            "status": job.get("status") or "pending",
+        }
+        if job.get("error"):
+            payload["error"] = job.get("error")
+        self._send_json_response(payload, status=200)
+
+    def _handle_art_v1_result(self, job_id: str):
+        self._purge_old_art_jobs()
+        if not job_id:
+            self._send_json_response({"error": "Missing job_id"}, status=400)
+            return
+
+        with _ART_JOBS_LOCK:
+            job = _ART_JOBS.get(job_id)
+
+        if not job:
+            self._send_json_response({"error": "Job not found"}, status=404)
+            return
+
+        status_val = (job.get("status") or "pending").lower()
+        if status_val != "completed":
+            self._send_json_response({"error": f"Job not completed (status={status_val})"}, status=409)
+            return
+
+        png_bytes = job.get("png_bytes") or b""
+        if not png_bytes:
+            self._send_json_response({"error": "No image bytes available"}, status=500)
+            return
+
+        self._send_bytes_response(png_bytes, status=200, content_type="image/png")
+
+    def _handle_art_v1_models(self):
+        # Minimal but useful endpoint for compatibility: list local checkpoint files.
+        import glob
+
+        env_path = (os.environ.get("AIRUNNER_ART_MODEL_PATH") or "").strip()
+
+        candidate_dirs: list[str] = []
+        if env_path and os.path.isdir(env_path):
+            candidate_dirs.append(env_path)
+        elif env_path and os.path.isfile(env_path):
+            candidate_dirs.append(os.path.dirname(env_path))
+
+        # Common bind mounts in some dev containers.
+        candidate_dirs.extend(
+            [
+                "/home/airunner/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
+                "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img",
+            ]
+        )
+
+        # Fallback to $HOME in case we're not on that dev stack.
+        home_dir = os.path.expanduser("~")
+        candidate_dirs.append(os.path.join(home_dir, ".local", "share", "airunner", "art", "models", "Z-Image Turbo", "txt2img"))
+
+        base_dir = ""
+        for d in candidate_dirs:
+            if os.path.isdir(d):
+                base_dir = d
+                break
+
+        models: list[dict[str, Any]] = []
+
+        def add_file(path: str):
+            try:
+                st = os.stat(path)
+                models.append(
+                    {
+                        "id": path,
+                        "name": os.path.basename(path),
+                        "path": path,
+                        "size_bytes": int(st.st_size),
+                    }
+                )
+            except Exception:
+                # Best-effort; ignore unreadable files.
+                return
+
+        if base_dir:
+            for p in sorted(glob.glob(os.path.join(base_dir, "*.safetensors"))):
+                add_file(p)
+
+        self._send_json_response({"base_dir": base_dir, "models": models}, status=200)
+
+    def _generate_first_png_bytes(self, data: dict) -> bytes:
+        """Run a native art generation request and return the first PNG as bytes."""
+
+        complete_event = threading.Event()
+        result_holder: dict[str, Any] = {"response": None, "error": None}
+
+        def on_complete(response):
+            if isinstance(response, ImageResponse):
+                result_holder["response"] = response
+            elif isinstance(response, str):
+                result_holder["error"] = response
+            else:
+                result_holder["response"] = response
+            complete_event.set()
+
+        image_request = self._create_image_request(data)
+        image_request.callback = on_complete
+
+        api = get_api()
+        if not api:
+            raise RuntimeError("API not initialized")
+
+        api.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request})
+
+        if not complete_event.wait(timeout=300):
+            raise RuntimeError("Image generation timeout")
+
+        if result_holder.get("error"):
+            raise RuntimeError(str(result_holder.get("error")))
+
+        response = result_holder.get("response")
+        if isinstance(response, ImageResponse):
+            images = response.images or []
+        elif isinstance(response, dict):
+            images = response.get("images") or []
+        else:
+            images = []
+
+        if not images or images[0] is None:
+            raise RuntimeError("No image returned")
+
+        buffer = io.BytesIO()
+        images[0].save(buffer, format="PNG")
+        return buffer.getvalue()
 
     def _handle_ollama_root(self):
         """Handle root endpoint - Ollama returns 'Ollama is running'."""
@@ -989,9 +1269,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # The LLMModelManager/WorkflowManager handles conversation history internally
         prompt = last_user_content
         
-        self.logger.info(f"[Ollama API] Extracted prompt: {prompt[:100]}...")
+        self.logger.info(f"[Ollama API] Extracted prompt (len={len(prompt)})")
         if system_prompt:
-            self.logger.info(f"[Ollama API] System prompt: {system_prompt[:100]}...")
+            self.logger.info(f"[Ollama API] System prompt received (len={len(system_prompt)})")
         
         llm_request = LLMRequest()
         llm_request.temperature = options.get("temperature", 0.7)
@@ -1401,9 +1681,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # The LLMModelManager/WorkflowManager handles conversation history internally
         prompt = last_user_content
         
-        self.logger.info(f"[OpenAI API] Extracted prompt: {prompt[:100]}...")
+        self.logger.info(f"[OpenAI API] Extracted prompt (len={len(prompt)})")
         if system_prompt:
-            self.logger.info(f"[OpenAI API] System prompt: {system_prompt[:100]}...")
+            self.logger.info(f"[OpenAI API] System prompt received (len={len(system_prompt)})")
         
         # Enhance system prompt with tool definitions if tools are provided
         if tools:
@@ -1732,8 +2012,20 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "repetition_penalty": "repetition_penalty",
             "use_memory": "use_memory",
             "tool_categories": "tool_categories",
+            # Legacy flag from external clients to enable
+            # AI Runner's built-in tools. When True, we set tool_categories
+            # to None so the tool classifier can pick the right categories.
+            # When False, we disable tools by setting an empty list.
+            "use_airunner_tools": "tool_categories",
             "model": "model",
             "rag_files": "rag_files",
+            # Optional prompt augmentation toggles (used when caller supplies custom system prompts)
+            "enable_emotions": "include_mood",
+            "include_mood": "include_mood",
+            "include_datetime": "include_datetime",
+            "include_style": "include_style",
+            "include_memory": "include_memory",
+            "include_ui_context": "include_ui_context",
             # Mode-based routing / override options
             "use_mode_routing": "use_mode_routing",
             "mode_override": "mode_override",
@@ -1747,7 +2039,30 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         }
         for client_param, llm_param in param_mapping.items():
             if client_param in data and client_param not in excluded:
-                llm_request_data[llm_param] = data[client_param]
+                value = data[client_param]
+
+                if client_param == "use_airunner_tools":
+                    # Map boolean flag to tool_categories behaviour.
+                    # True  -> None (auto-classify/select tools)
+                    # False -> []   (disable tools)
+                    if value is True:
+                        llm_request_data[llm_param] = None
+                    elif value is False:
+                        llm_request_data[llm_param] = []
+                    # If a non-boolean slips through, fall back to raw value
+                    # to preserve caller intent.
+                    else:
+                        llm_request_data[llm_param] = value
+                else:
+                    llm_request_data[llm_param] = value
+
+        # If the client did not send any tool configuration at all, default to
+        # auto tool selection (None) instead of disabling tools (empty list).
+        # Many external clients omit tool_categories when they actually want
+        # AI Runner's built-in tools. This keeps legacy callers working while
+        # still honoring explicit empty lists to disable tools.
+        if "tool_categories" not in llm_request_data and "tools" not in data:
+            llm_request_data["tool_categories"] = None
 
     def _parse_action_type(self, action_str: str) -> LLMActionType:
         """Parse action string to LLMActionType enum.
@@ -1800,10 +2115,20 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             llm_request.system_prompt = system_prompt
         request_id = str(uuid.uuid4())
         if stream:
-            self._handle_llm_stream(prompt, action, llm_request, request_id)
+            self._handle_llm_stream(
+                prompt,
+                action,
+                llm_request,
+                request_id,
+                search_hints=data.get("search_hints"),
+            )
         else:
             self._handle_llm_non_stream(
-                prompt, action, llm_request, request_id
+                prompt,
+                action,
+                llm_request,
+                request_id,
+                search_hints=data.get("search_hints"),
             )
 
     def _create_llm_request(self, params: Dict) -> LLMRequest:
@@ -1880,6 +2205,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         action: LLMActionType,
         llm_request: LLMRequest,
         request_id: str,
+        search_hints: Optional[Dict] = None,
     ):
         """Handle streaming LLM response as NDJSON.
 
@@ -1955,6 +2281,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 llm_request=llm_request,
                 request_id=request_id,
                 callback=stream_callback,
+                search_hints=search_hints,
             )
             self.logger.debug(
                 "HTTP Server: send_request returned (non-blocking)"
@@ -2017,6 +2344,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         action: LLMActionType,
         llm_request: LLMRequest,
         request_id: str,
+        search_hints: Optional[Dict] = None,
     ):
         """Handle non-streaming LLM response as single JSON object."""
         self.logger.debug(
@@ -2089,6 +2417,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             llm_request=llm_request,
             request_id=request_id,
             callback=collect_callback,
+            search_hints=search_hints,
         )
         self.logger.debug("HTTP Server api.llm.send_request completed")
 
@@ -2363,7 +2692,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             return
         
         # Emit the generation signal
-        self.logger.info(f"Sending art generation request: prompt='{prompt[:50]}...'")
+        self.logger.info(f"Sending art generation request (prompt_len={len(prompt)})")
         api.emit_signal(SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request})
         
         # Wait for completion (timeout: 5 minutes for image generation)

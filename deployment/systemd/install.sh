@@ -66,10 +66,10 @@ cp "$AIRUNNER_DIR/deployment/systemd/airunner-headless.service" /etc/systemd/sys
 
 # Update user in service file
 echo -e "${YELLOW}Updating service file with correct user and paths...${NC}"
-sed -i "s|User=joe|User=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|Group=joe|Group=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|WorkingDirectory=/home/joe/Projects/airunner|WorkingDirectory=$AIRUNNER_DIR|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|ExecStart=/home/joe/Projects/airunner/.venv/bin/python|ExecStart=$AIRUNNER_DIR/.venv/bin/python|g" /etc/systemd/system/airunner-headless.service
+sed -i "s|User=airunner|User=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
+sed -i "s|Group=airunner|Group=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
+sed -i "s|WorkingDirectory=/opt/airunner|WorkingDirectory=$AIRUNNER_DIR|g" /etc/systemd/system/airunner-headless.service
+sed -i "s|ExecStart=/opt/airunner/.venv/bin/python|ExecStart=$AIRUNNER_DIR/.venv/bin/python|g" /etc/systemd/system/airunner-headless.service
 if [ "$SYSTEM_LOG" -eq 1 ]; then
     LOG_DIR="/var/log/airunner"
     LOG_FILE="$LOG_DIR/headless.log"
@@ -78,9 +78,7 @@ else
     LOG_FILE="$LOG_DIR/headless.log"
 fi
 # Update service to use user's log path
-sed -i "s|Environment=\"AIRUNNER_LOG_FILE=/home/joe/.local/share/airunner/headless.log\"|Environment=\"AIRUNNER_LOG_FILE=$LOG_FILE\"|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|StandardOutput=append:/home/joe/.local/share/airunner/headless.log|StandardOutput=append:$LOG_FILE|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|StandardError=append:/home/joe/.local/share/airunner/headless-error.log|StandardError=append:$LOG_DIR/headless-error.log|g" /etc/systemd/system/airunner-headless.service
+sed -i "s|Environment=\"AIRUNNER_LOG_FILE=/var/log/airunner/headless.log\"|Environment=\"AIRUNNER_LOG_FILE=$LOG_FILE\"|g" /etc/systemd/system/airunner-headless.service
 
 # Ensure log directory exists and is owned by the service user
 mkdir -p "$LOG_DIR"

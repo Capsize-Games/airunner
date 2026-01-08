@@ -96,6 +96,15 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
    pip install airunner[all_dev]
    ```
 
+4. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
+  ```bash
+  CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
+    pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
+  ```
+  - Uses GGML_CUDA (CUBLAS flag is deprecated).
+  - `90` matches RTX 5080 class GPUs; drop `-DGGML_CUDA_ARCHITECTURES` if you are unsure and let it auto-detect.
+  - On Python 3.12 you may instead use the prebuilt wheel: `--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"`.
+
 4. **Run:**
    ```bash
    airunner
@@ -131,11 +140,12 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | `airunner` | Launch GUI |
 | `airunner-headless` | Start headless API server |
 | `airunner-hf-download` | Download/manage models from HuggingFace |
+| `airunner-civitai-download` | Download models from CivitAI |
 | `airunner-build-ui` | Rebuild UI from `.ui` files |
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` from the command line.
+**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` / `airunner-civitai-download` from the command line.
 
 ---
 
@@ -168,9 +178,10 @@ airunner-headless --no-preload
 
 | Option | Description |
 |--------|-------------|
-| `--host HOST` | Host address to bind to (default: `0.0.0.0`) |
+| `--host HOST` | Host address to bind to (default: `127.0.0.1`) |
 | `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
 | `--ollama-mode` | Run as Ollama replacement on port 11434 |
+| `--insecure-no-auth` | Allow binding to non-loopback without `AIRUNNER_API_KEY` (not recommended) |
 | `--model, -m PATH` | Path to LLM model to load |
 | `--art-model PATH` | Path to Stable Diffusion model to load |
 | `--tts-model PATH` | Path to TTS model to load |
@@ -189,6 +200,10 @@ airunner-headless --no-preload
 | `AIRUNNER_ART_MODEL_PATH` | Path to art model |
 | `AIRUNNER_TTS_MODEL_PATH` | Path to TTS model |
 | `AIRUNNER_STT_MODEL_PATH` | Path to STT model |
+| `AIRUNNER_API_KEY` | If set, requires auth for API requests and docs (`X-API-Key` / `Authorization: Bearer`) |
+| `AIRUNNER_INSECURE_NO_AUTH` | Set to `1` to allow unauthenticated remote access (not recommended) |
+| `AIRUNNER_ALLOWED_TENANT_KEYS` | Comma-separated allowlist for `X-Tenant-Key` when API key auth is enabled |
+| `AIRUNNER_DEBUG` | Set to `1` to include exception details in 500s for loopback requests |
 | `AIRUNNER_NO_PRELOAD` | Set to `1` to disable model preloading |
 | `AIRUNNER_LLM_ON` | Enable LLM service (`1` or `0`) |
 | `AIRUNNER_SD_ON` | Enable Stable Diffusion (`1` or `0`) |
@@ -331,6 +346,26 @@ airunner-hf-download --delete Qwen3-8B
 
 # Delete without confirmation (for scripts)
 airunner-hf-download --delete Qwen3-8B --force
+```
+
+### Download from CivitAI
+
+```bash
+# Download a model from CivitAI URL
+airunner-civitai-download https://civitai.com/models/995002/70s-sci-fi-movie
+
+# Download a specific version
+airunner-civitai-download https://civitai.com/models/995002?modelVersionId=1880417
+
+# Download to a custom directory
+airunner-civitai-download <url> --output-dir /path/to/models
+
+# Use API key for authentication (for gated models)
+airunner-civitai-download <url> --api-key your_api_key
+
+# Or set CIVITAI_API_KEY environment variable
+export CIVITAI_API_KEY=your_api_key
+airunner-civitai-download <url>
 ```
 
 ---

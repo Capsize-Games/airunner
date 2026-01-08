@@ -13,6 +13,7 @@ from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.tools.scrapy.spiders.llm_guided_spider import (
     LLMGuidedSpider,
 )
+from airunner.components.tools.url_safety import SSRFBlocked, validate_url_for_fetch
 from airunner.components.tools.scrapy.llm_crawler_controller import (
     LLMCrawlerController,
 )
@@ -76,6 +77,11 @@ def intelligent_crawl(
         f"intelligent_crawl: url={start_url}, goal='{research_goal}', "
         f"max_pages={max_pages}, max_depth={max_depth}"
     )
+
+    try:
+        validate_url_for_fetch(start_url)
+    except SSRFBlocked as e:
+        return f"Error: start_url blocked by SSRF policy ({e})"
 
     # Validate parameters
     max_pages = max(1, min(max_pages, 20))  # Clamp to 1-20

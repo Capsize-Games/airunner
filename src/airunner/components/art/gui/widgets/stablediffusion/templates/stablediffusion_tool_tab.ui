@@ -62,7 +62,7 @@
      </property>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
-       <string>Stable Diffusion</string>
+       <string>Model</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
        <property name="leftMargin">
@@ -202,8 +202,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>648</width>
-            <height>756</height>
+            <width>98</width>
+            <height>28</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">

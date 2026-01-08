@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
@@ -252,6 +253,10 @@ class LLMModelManager(
 
         # Store request_id for use in response correlation
         self._current_request_id = data.get("request_id")
+        if not self._current_request_id:
+            self.logger.warning("[REQUEST] Missing request_id on incoming request; streaming responses will not be routed")
+        else:
+            self.logger.debug(f"[REQUEST] Set _current_request_id={self._current_request_id}")
 
         # CRITICAL: Clear ALL interrupt flags at the start of a new request
         # This ensures that a new user message can be processed even if
@@ -264,12 +269,93 @@ class LLMModelManager(
         ):
             self._workflow_manager.set_interrupted(False)
 
+        # Apply request-level settings before loading, so model selection works.
+        llm_request = data["request_data"].get("llm_request")
+        self.llm_request = llm_request
+
+        # Optional request-level dtype override (quantization).
+        # This is primarily used by admin settings to force 4bit/8bit.
+        desired_dtype = getattr(llm_request, "dtype", None) if llm_request else None
+        if isinstance(desired_dtype, str):
+            desired_dtype = desired_dtype.strip().lower() or None
+        if desired_dtype in ("4-bit", "4bit"):
+            desired_dtype = "4bit"
+        elif desired_dtype in ("8-bit", "8bit"):
+            desired_dtype = "8bit"
+        elif desired_dtype in ("32-bit", "32bit"):
+            desired_dtype = "32bit"
+        elif desired_dtype == "auto":
+            desired_dtype = "auto"
+        else:
+            desired_dtype = None
+
+        if desired_dtype:
+            current_dtype = getattr(self.llm_generator_settings, "dtype", None)
+            if isinstance(current_dtype, str):
+                current_dtype = current_dtype.strip().lower() or None
+            if current_dtype != desired_dtype:
+                self.logger.info(
+                    f"[LLM] Switching dtype {current_dtype} -> {desired_dtype}; unloading"
+                )
+                self.unload()
+                self.llm_generator_settings.dtype = desired_dtype
+
+        def _current_service() -> str:
+            if getattr(self.llm_settings, "use_openrouter", False):
+                return "openrouter"
+            if getattr(self.llm_settings, "use_ollama", False):
+                return "ollama"
+            return "local"
+
+        desired_service = (
+            getattr(llm_request, "model_service", None)
+            if llm_request is not None
+            else None
+        )
+        if isinstance(desired_service, str):
+            desired_service = desired_service.strip().lower() or None
+        if desired_service not in ("local", "openrouter", "ollama"):
+            desired_service = None
+
+        if desired_service:
+            current_service = _current_service()
+            # If switching backend types, unload so the chat model rebuilds correctly.
+            if current_service != desired_service:
+                self.logger.info(
+                    f"[LLM] Switching model_service {current_service} -> {desired_service}; unloading"
+                )
+                self.unload()
+
+            # Apply provider flags.
+            self.llm_settings.use_openrouter = desired_service == "openrouter"
+            self.llm_settings.use_ollama = desired_service == "ollama"
+            self.llm_settings.use_local_llm = desired_service == "local"
+
+            # Apply provider-specific model name overrides.
+            api_model = getattr(llm_request, "api_model", None) if llm_request else None
+            if isinstance(api_model, str) and api_model.strip():
+                api_model = api_model.strip()
+                if desired_service == "openrouter":
+                    self.llm_settings.model = api_model
+                elif desired_service == "ollama":
+                    self.llm_settings.ollama_model = api_model
+
         self._do_set_seed()
         self.load()
 
         # Check if use_memory=False - if so, clear conversation history
-        llm_request = data["request_data"].get("llm_request")
-        self.llm_request = llm_request
+
+        request_tool_defaults: Dict[str, Any] = {}
+        search_hints = data.get("request_data", {}).get("search_hints")
+        if isinstance(search_hints, dict):
+            locale = search_hints.get("locale")
+            if isinstance(locale, dict):
+                country = locale.get("country")
+                if isinstance(country, str) and country.strip():
+                    request_tool_defaults["country"] = country.strip()
+                language = locale.get("language")
+                if isinstance(language, str) and language.strip():
+                    request_tool_defaults["language"] = language.strip()
 
         # Check if mode routing parameters changed - if so, reload workflow manager
         if llm_request and (
@@ -323,6 +409,7 @@ class LLMModelManager(
 
         # Check if tool_categories specified - if so, filter tools
         tools_filtered = False
+        selected_categories: List[str] = []
         system_prompt = None  # Extract system prompt from request
         if llm_request:
             self.logger.info(
@@ -483,19 +570,52 @@ class LLMModelManager(
                 "Auto attachment of RAG files failed, continuing without local RAG."
             )
 
-        return self._do_generate(
-            prompt=data["request_data"]["prompt"],
-            action=data["request_data"]["action"],
-            system_prompt=system_prompt,  # Pass extracted system prompt
-            llm_request=data["request_data"]["llm_request"],
-            extra_context=extra_context,
-            skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
-        )
+        # Apply request-level thinking override (Qwen3 <think> blocks).
+        # This is done at the chat-model instance level because templates read
+        # `enable_thinking` from the model instance or DB settings.
+        thinking_override = getattr(llm_request, "enable_thinking", None) if llm_request else None
+        thinking_patches: list[tuple[Any, Any]] = []
+        if thinking_override is not None:
+            for target in (
+                self._chat_model,
+                getattr(self._workflow_manager, "_original_chat_model", None) if self._workflow_manager else None,
+            ):
+                if target is None:
+                    continue
+                if hasattr(target, "enable_thinking"):
+                    try:
+                        thinking_patches.append((target, getattr(target, "enable_thinking")))
+                        setattr(target, "enable_thinking", bool(thinking_override))
+                    except Exception:
+                        pass
+
+        if request_tool_defaults and self._tool_manager:
+            self._tool_manager.set_request_tool_defaults(request_tool_defaults)
+        try:
+            return self._do_generate(
+                prompt=data["request_data"]["prompt"],
+                action=data["request_data"]["action"],
+                system_prompt=system_prompt,  # Pass extracted system prompt
+                llm_request=data["request_data"]["llm_request"],
+                extra_context=extra_context,
+                skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
+            )
+        finally:
+            # Restore thinking setting to avoid leaking across requests.
+            for target, original in thinking_patches:
+                try:
+                    setattr(target, "enable_thinking", original)
+                except Exception:
+                    pass
+            if request_tool_defaults and self._tool_manager:
+                self._tool_manager.clear_request_tool_defaults()
 
     # Categories that are ALWAYS included regardless of filtering
-    # This ensures the LLM always has access to memory/knowledge and search tools
-    # Search is included so the model can always access the internet when needed
-    ALWAYS_INCLUDE_CATEGORIES = {"knowledge", "search"}
+    # Only knowledge tools are always included - these are safe internal tools
+    # for storing/retrieving user facts and conversation memory.
+    # Search tools (web search) are NOT included by default to prevent
+    # unwanted internet searches when the caller only wants local tools like RAG.
+    ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
 
     def _apply_tool_filter(
         self, tool_categories: List[str], action=None, force_tool: Optional[str] = None
@@ -532,6 +652,15 @@ class LLMModelManager(
         from airunner.components.llm.core.tool_registry import ToolCategory
 
         if tool_categories is not None and len(tool_categories) == 0:
+            disable_always = os.environ.get("AIRUNNER_DISABLE_ALWAYS_TOOLS", "0") == "1"
+            if disable_always:
+                self.logger.info(
+                    "tool_categories=[] and AIRUNNER_DISABLE_ALWAYS_TOOLS=1 - disabling all tools"
+                )
+                self._workflow_manager.update_tools([])
+                self._workflow_manager._build_and_compile_workflow()
+                return
+
             # Empty list means: only include ALWAYS_INCLUDE_CATEGORIES
             self.logger.info(
                 "tool_categories=[] - including only always-available tools (knowledge)"
@@ -660,6 +789,9 @@ class LLMModelManager(
         elif action == LLMActionType.CODE:
             # For CODE mode, require tool usage (start_workflow should be called)
             tool_choice = "any"
+        elif tool_categories and ("search" in tool_categories or "research" in tool_categories):
+            # Search intent: require at least one tool call to avoid hallucinated answers
+            tool_choice = "any"
             
         self._workflow_manager.update_tools(
             filtered_tools, tool_choice=tool_choice
@@ -678,6 +810,46 @@ class LLMModelManager(
         Returns:
             List of tool category strings (empty list if no tools needed)
         """
+        # Fast-path: trivial greetings/short chit-chat should not trigger tools
+        prompt_lc = (prompt or "").strip().lower()
+        if len(prompt_lc) <= 40:
+            greeting_tokens = [
+                "hello",
+                "hi",
+                "hey",
+                "hola",
+                "yo",
+                "sup",
+                "morning",
+                "afternoon",
+                "evening",
+                "thanks",
+                "thank you",
+            ]
+            if any(token in prompt_lc for token in greeting_tokens):
+                self.logger.info("Auto mode: greeting detected, disabling tools")
+                return []
+
+        # Fast-path: obvious web search intent should always enable search tools
+        search_triggers = [
+            "search",
+            "look up",
+            "lookup",
+            "find",
+            "google",
+            "bing",
+            "duckduckgo",
+            "ddg",
+            "web",
+            "internet",
+            "news",
+            "latest",
+            "recent",
+        ]
+        if any(trigger in prompt_lc for trigger in search_triggers):
+            self.logger.info("Auto mode: search intent detected, forcing search category")
+            return ["search"]
+
         # Get available categories from ToolCategory enum
         from airunner.components.llm.core.tool_registry import ToolCategory
         
@@ -731,6 +903,7 @@ Reply with ONLY category names (comma-separated) or "none":"""
                     response_text = response.content if hasattr(response, 'content') else str(response)
                     
                     # Strip any thinking tags that might have leaked through
+                    # Supports both Qwen3 <think>...</think> and Ministral 3 [THINK]...[/THINK]
                     if '<think>' in response_text:
                         # Extract content after </think> if present
                         if '</think>' in response_text:
@@ -738,21 +911,45 @@ Reply with ONLY category names (comma-separated) or "none":"""
                         else:
                             # No closing tag - try to get first line after think
                             response_text = response_text.split('<think>')[0]
+                    elif '[THINK]' in response_text.upper():
+                        # Handle Ministral 3 Reasoning [THINK]...[/THINK] tags
+                        import re
+                        response_text = re.sub(r'\[THINK\].*?\[/THINK\]', '', response_text, flags=re.DOTALL | re.IGNORECASE)
+                        # Remove any orphaned tags
+                        response_text = re.sub(r'\[/?THINK\]', '', response_text, flags=re.IGNORECASE)
                     
                     # Parse the response
+                    import re
                     response_text = response_text.strip().lower()
-                    self.logger.info(f"LLM classification response: {response_text}")
+                    # Drop echoed category listings so we don't select every tool
+                    response_text = re.sub(
+                        r"categories:\s*[a-z,\s]+", "", response_text, flags=re.IGNORECASE
+                    )
+                    cleaned_lines = [line.strip() for line in response_text.splitlines() if line.strip()]
+                    candidate_text = cleaned_lines[0] if cleaned_lines else response_text
+                    self.logger.info(f"LLM classification response: {candidate_text}")
                     
-                    if response_text == "none" or not response_text:
+                    if candidate_text == "none" or not candidate_text:
                         self.logger.info("Auto mode: LLM determined no tools needed")
                         return []
                     
-                    # Parse comma-separated categories
+                    # Parse comma-separated categories from the first non-empty line
                     selected_categories = []
-                    for cat in response_text.split(","):
-                        cat = cat.strip()
-                        if cat in available_categories:
-                            selected_categories.append(cat)
+                    for cat in candidate_text.split(","):
+                        token = cat.strip()
+                        if token in available_categories and token not in selected_categories:
+                            selected_categories.append(token)
+
+                    # Fallback: try whitespace-separated tokens if comma parsing failed
+                    if not selected_categories:
+                        for token in candidate_text.replace(",", " ").split():
+                            token_clean = token.strip().strip(".;:")
+                            if token_clean in available_categories and token_clean not in selected_categories:
+                                selected_categories.append(token_clean)
+                    
+                    # Limit to a small set to avoid binding every tool
+                    if len(selected_categories) > 5:
+                        selected_categories = selected_categories[:5]
                     
                     # Always include search for questions that might need current info
                     # The LLM should have included it, but ensure it's there for safety

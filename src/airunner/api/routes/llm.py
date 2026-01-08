@@ -249,7 +249,7 @@ async def text_completion(request: CompletionRequest, req: Request):
     Returns:
         Generated text
     """
-    logger.info(f"Text completion request: {request.prompt[:50]}...")
+    logger.info(f"Text completion request (prompt_len={len(request.prompt)})")
 
     llm_service = get_llm_service(req)
     if not llm_service:

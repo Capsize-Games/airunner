@@ -134,10 +134,18 @@ class ARTAPIService(APIServiceBase):
         data: Optional[Dict] = None,
     ):
         data = data or {}
-        image_request = data.get(
-            "image_request", image_request or ImageRequest()
-        )
-        data.update({"image_request": image_request})
+
+        if "image_request" in data and data["image_request"] is not None:
+            resolved_request = data["image_request"]
+        elif image_request is not None:
+            resolved_request = image_request
+        else:
+            # Default to a request built from current canvas + generator settings.
+            # This is critical for img2img/outpaint/controlnet since those settings
+            # live outside generator_settings and determine generator_section, image, strength, etc.
+            resolved_request = self.canvas.create_image_request()
+
+        data.update({"image_request": resolved_request})
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 
     def interrupt_generate(self):

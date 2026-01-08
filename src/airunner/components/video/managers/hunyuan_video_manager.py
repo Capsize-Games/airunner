@@ -186,7 +186,7 @@ class HunyuanVideoManager(
         self.logger.info(
             f"Generating {num_frames} frames ({total_second_length}s @ {fps}fps)"
         )
-        self.logger.info(f"Prompt: {prompt}")
+        self.logger.info(f"Prompt received (len={len(prompt)})")
 
         # Reset cancellation flag
         self._cancel_requested = False

@@ -97,19 +97,83 @@ class FluxModelManager(
 
     @property
     def data_type(self) -> torch.dtype:
-        """Use bfloat16 on CUDA to avoid FLUX black-image issues.
+        """Get appropriate data type based on user settings and hardware.
+
+        Uses the dtype from generator_settings if available. FLUX models
+        work best with bfloat16 to avoid black-image issues.
+        
+        Note: For quantized modes (4bit, 8bit), this returns the compute dtype
+        (bfloat16). The actual quantization is handled by _get_quantization_config().
+        
+        Note: FP8 is NOT supported for FLUX because the T5 text encoder
+        doesn't support FP8 loading. FP8 settings will fall back to 4-bit
+        quantization to maintain memory savings on VRAM-constrained systems.
 
         Returns:
-            Preferred dtype for FLUX models.
+            torch.dtype based on user preference and hardware capability.
         """
-
+        # Get dtype from settings
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        
+        # For quantized modes (including FP8 fallback), use bfloat16 as compute dtype
+        if dtype_setting in ("4bit", "8bit", "float8"):
+            if torch.cuda.is_available():
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                return torch.float32
+            return torch.float32
+        
+        if dtype_setting == "bfloat16":
+            if torch.cuda.is_available():
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                return torch.float32
+            return torch.float32
+        elif dtype_setting == "float16":
+            return torch.float16 if torch.cuda.is_available() else torch.float32
+        elif dtype_setting == "float32":
+            return torch.float32
+        
+        # Default: bfloat16 for FLUX (avoids black image issues)
         if torch.cuda.is_available():
             is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
             if callable(is_bf16_supported) and is_bf16_supported():
                 return torch.bfloat16
-            # Fallback to float32 when bfloat16 is unavailable
             return torch.float32
         return torch.float32
+    
+    @property
+    def use_quantization(self) -> bool:
+        """Check if quantization should be used based on dtype setting.
+        
+        Note: FP8 falls back to 4-bit quantization for FLUX since the
+        text encoder doesn't support FP8.
+        """
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        # FP8 falls back to quantization since it's not supported
+        return dtype_setting in ("4bit", "8bit", "float8")
+    
+    @property
+    def quantization_bits(self) -> Optional[int]:
+        """Get quantization bits if quantization is enabled.
+        
+        Note: FP8 falls back to 4-bit for FLUX since the text encoder
+        doesn't support FP8.
+        """
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        if dtype_setting == "4bit":
+            return 4
+        elif dtype_setting == "8bit":
+            return 8
+        elif dtype_setting == "float8":
+            # FP8 not supported, fall back to 4-bit for memory savings
+            self.logger.warning(
+                "FP8 is not supported for FLUX. Using 4-bit quantization instead."
+            )
+            return 4
+        return None
 
     @property
     def img2img_pipelines(self) -> tuple:

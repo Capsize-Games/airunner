@@ -18,10 +18,11 @@ class LayerImageItem(DraggablePixmap):
         *,
         layer_id: Optional[int] = None,
         layer_image_data: Optional[Dict] = None,
+        use_layer_context: bool = True,
     ):
         self._layer_id: Optional[int] = layer_id
         self.layer_image_data = layer_image_data or {}
-        super().__init__(qimage, layer_id=layer_id)
+        super().__init__(qimage, layer_id=layer_id, use_layer_context=use_layer_context)
         self.set_layer_context(layer_id)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 

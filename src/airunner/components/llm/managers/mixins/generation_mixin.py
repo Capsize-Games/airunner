@@ -9,6 +9,7 @@ This mixin handles:
 - Main generation orchestration
 """
 
+import os
 import random
 import traceback
 from typing import Any, Dict, List, Optional
@@ -23,6 +24,25 @@ from airunner.enums import LLMActionType, SignalCode
 
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
+
+    def _clamp_generation_tokens(self, generation_kwargs: Dict[str, Any]) -> None:
+        """Ensure max_new_tokens does not exceed target context.
+
+        Uses `_target_context_length` set during model/tokenizer load.
+        """
+        target_ctx = getattr(self, "_target_context_length", None)
+        if not target_ctx:
+            return
+
+        requested = generation_kwargs.get("max_new_tokens")
+        if requested is None:
+            return
+
+        if requested > target_ctx:
+            self.logger.info(
+                f"Clamping max_new_tokens from {requested} to target context {target_ctx}"
+            )
+            generation_kwargs["max_new_tokens"] = target_ctx
 
     def _setup_generation_workflow(
         self,
@@ -44,13 +64,48 @@ class GenerationMixin:
         """
         # Extract force_tool from request if present (needed for both branches)
         force_tool = (
-            llm_request.force_tool 
-            if llm_request and hasattr(llm_request, "force_tool") 
+            llm_request.force_tool
+            if llm_request and hasattr(llm_request, "force_tool")
+            else None
+        )
+
+        # Optional prompt augmentation flags (used when caller supplies system_prompt)
+        include_mood = (
+            llm_request.include_mood
+            if llm_request and hasattr(llm_request, "include_mood")
+            else None
+        )
+        include_datetime = (
+            llm_request.include_datetime
+            if llm_request and hasattr(llm_request, "include_datetime")
+            else None
+        )
+        include_style = (
+            llm_request.include_style
+            if llm_request and hasattr(llm_request, "include_style")
+            else None
+        )
+        include_memory = (
+            llm_request.include_memory
+            if llm_request and hasattr(llm_request, "include_memory")
+            else None
+        )
+        include_ui_context = (
+            llm_request.include_ui_context
+            if llm_request and hasattr(llm_request, "include_ui_context")
             else None
         )
         
         if system_prompt:
-            action_system_prompt = system_prompt
+            action_system_prompt = self._augment_custom_system_prompt(
+                base_prompt=system_prompt,
+                action=action,
+                include_mood=include_mood,
+                include_datetime=include_datetime,
+                include_style=include_style,
+                include_memory=include_memory,
+                include_ui_context=include_ui_context,
+            )
         else:
             # Use context-aware system prompt based on tool categories
             tool_categories = (
@@ -120,6 +175,11 @@ class GenerationMixin:
                 return
             complete_response[0] += token_text
             sequence_counter[0] += 1
+            if not getattr(self, "_current_request_id", None):
+                # This should always be set for HTTP streaming; log if missing.
+                self.logger.warning(
+                    "[STREAM] Missing _current_request_id while streaming token"
+                )
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     node_id=llm_request.node_id if llm_request else None,
@@ -310,7 +370,56 @@ class GenerationMixin:
         sequence_counter = [0]
         self._interrupted = False
 
+        if not self._workflow_manager and hasattr(self, "_load_workflow_manager"):
+            try:
+                self._load_workflow_manager()
+            except Exception:
+                pass
+
         if not self._workflow_manager:
+            model_path = None
+            try:
+                model_path = self.model_path
+            except Exception:
+                model_path = None
+
+            if self.llm_settings.use_local_llm and model_path:
+                model_name = os.path.basename(model_path.rstrip("/")) or "(unknown)"
+                is_gguf = False
+                try:
+                    if hasattr(self, "_is_gguf_quantization_selected"):
+                        is_gguf = bool(self._is_gguf_quantization_selected())
+                except Exception:
+                    is_gguf = False
+
+                gguf_present = False
+                if is_gguf:
+                    # In GGUF mode, the configured model path may be a directory.
+                    # Consider the model "ready" only once a .gguf file exists.
+                    try:
+                        if os.path.isdir(model_path):
+                            gguf_present = any(
+                                name.lower().endswith(".gguf")
+                                for name in os.listdir(model_path)
+                            )
+                        else:
+                            gguf_present = model_path.lower().endswith(".gguf") and os.path.exists(model_path)
+                    except Exception:
+                        gguf_present = False
+
+                model_missing = (not os.path.exists(model_path)) or (is_gguf and not gguf_present)
+                if model_missing:
+                    self.logger.error(
+                        "Workflow manager unavailable because model is missing; "
+                        "download likely in progress"
+                    )
+                    return {
+                        "response": (
+                            f"Error: model '{model_name}' is not ready yet (download in progress). "
+                            "Please wait for the download to finish and try again."
+                        )
+                    }
+
             self.logger.error("Workflow manager is not initialized")
             return {"response": "Error: workflow unavailable"}
 
@@ -341,6 +450,8 @@ class GenerationMixin:
                     "max_tokens"
                 )
 
+            self._clamp_generation_tokens(generation_kwargs)
+
             self.logger.debug(
                 "llm_request.max_new_tokens=%s",
                 llm_request.max_new_tokens if llm_request else "NO REQUEST",
@@ -368,9 +479,17 @@ class GenerationMixin:
                 generation_kwargs.get("max_new_tokens", "NOT SET"),
             )
 
+            # Extract images from llm_request for vision models
+            images = None
+            if llm_request and hasattr(llm_request, "images") and llm_request.images:
+                images = llm_request.images
+                self.logger.info(
+                    f"Passing {len(images)} image(s) to workflow stream"
+                )
+
             result_messages = []
             for message in self._workflow_manager.stream(
-                prompt, generation_kwargs
+                prompt, generation_kwargs, images=images
             ):
                 # Check interrupt flag during streaming
                 if self._interrupted:
@@ -412,12 +531,52 @@ class GenerationMixin:
         if final_response:
             complete_response[0] = final_response
 
+        # Best-effort: extract provider token usage from the final AI message.
+        prompt_tokens = None
+        completion_tokens = None
+        total_tokens = None
+        try:
+            last_msg = None
+            msgs = result.get("messages") if isinstance(result, dict) else None
+            if isinstance(msgs, list) and msgs:
+                last_msg = msgs[-1]
+
+            if last_msg is not None:
+                usage = getattr(last_msg, "usage_metadata", None)
+                if isinstance(usage, dict):
+                    # LangChain commonly uses input/output naming.
+                    prompt_tokens = usage.get("input_tokens") or usage.get("prompt_tokens")
+                    completion_tokens = usage.get("output_tokens") or usage.get("completion_tokens")
+                    total_tokens = usage.get("total_tokens")
+
+                # Some providers stash usage in response_metadata.
+                if prompt_tokens is None or completion_tokens is None:
+                    rm = getattr(last_msg, "response_metadata", None)
+                    if isinstance(rm, dict):
+                        token_usage = rm.get("token_usage") or rm.get("usage")
+                        if isinstance(token_usage, dict):
+                            prompt_tokens = prompt_tokens or token_usage.get("prompt_tokens")
+                            completion_tokens = completion_tokens or token_usage.get("completion_tokens")
+                            total_tokens = total_tokens or token_usage.get("total_tokens")
+
+                if total_tokens is None and (prompt_tokens is not None or completion_tokens is not None):
+                    total_tokens = int(prompt_tokens or 0) + int(completion_tokens or 0)
+        except Exception:
+            # Usage extraction is best-effort and must not fail generation.
+            prompt_tokens = None
+            completion_tokens = None
+            total_tokens = None
+
         # Get list of tools that were executed during workflow
         executed_tools = []
         if hasattr(self._workflow_manager, "get_executed_tools"):
             executed_tools = self._workflow_manager.get_executed_tools()
             
         sequence_counter[0] += 1
+        if not getattr(self, "_current_request_id", None):
+            self.logger.warning(
+                "[STREAM] Missing _current_request_id when sending end-of-message"
+            )
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
@@ -425,6 +584,9 @@ class GenerationMixin:
                 sequence_number=sequence_counter[0],
                 request_id=getattr(self, "_current_request_id", None),
                 tools=executed_tools,  # Include the tools here!
+                prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+                completion_tokens=int(completion_tokens) if completion_tokens is not None else None,
+                total_tokens=int(total_tokens) if total_tokens is not None else None,
             )
         )
 

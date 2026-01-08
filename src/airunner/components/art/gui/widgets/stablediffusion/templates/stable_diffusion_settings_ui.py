@@ -236,12 +236,27 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.gridLayout.addWidget(self.groupBox_5, 4, 0, 1, 2)
 
+        self.groupBox_precision = QGroupBox(self.scrollAreaWidgetContents)
+        self.groupBox_precision.setObjectName(u"groupBox_precision")
+        self.groupBox_precision.setFont(font)
+        self.gridLayout_precision = QGridLayout(self.groupBox_precision)
+        self.gridLayout_precision.setObjectName(u"gridLayout_precision")
+        self.precision = QComboBox(self.groupBox_precision)
+        self.precision.setObjectName(u"precision")
+        sizePolicy.setHeightForWidth(self.precision.sizePolicy().hasHeightForWidth())
+        self.precision.setSizePolicy(sizePolicy)
+
+        self.gridLayout_precision.addWidget(self.precision, 0, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.groupBox_precision, 6, 0, 1, 2)
+
         self.use_compel = QCheckBox(self.scrollAreaWidgetContents)
         self.use_compel.setObjectName(u"use_compel")
         sizePolicy.setHeightForWidth(self.use_compel.sizePolicy().hasHeightForWidth())
         self.use_compel.setSizePolicy(sizePolicy)
 
-        self.gridLayout.addWidget(self.use_compel, 6, 0, 1, 1)
+        self.gridLayout.addWidget(self.use_compel, 7, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
@@ -284,6 +299,17 @@ class Ui_stable_diffusion_settings_widget(object):
         self.groupBox.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Custom path", None))
         self.browse_button.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Browse", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Scheduler", None))
+        self.groupBox_precision.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Precision", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_precision.setToolTip(QCoreApplication.translate("stable_diffusion_settings_widget", u"Model precision/quantization. Lower precision uses less VRAM but may reduce quality.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.precision.setToolTip(QCoreApplication.translate("stable_diffusion_settings_widget", u"4-bit: Lowest VRAM (~4GB), uses NF4 quantization\n"
+"8-bit: Low VRAM (~8GB), good quality\n"
+"BF16: Recommended balance of quality and VRAM\n"
+"FP16: Lower VRAM than BF16, wide compatibility\n"
+"FP32: Highest precision, most VRAM", None))
+#endif // QT_CONFIG(tooltip)
         self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
         self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Art Model", None))
     # retranslateUi

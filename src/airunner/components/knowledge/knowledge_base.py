@@ -63,22 +63,48 @@ def get_daily_template(date_str: str) -> str:
 """
 
 
-# Singleton instance
-_knowledge_base_instance: Optional["KnowledgeBase"] = None
+# Tenant-aware singleton instances.
+#
+# In headless multi-tenant mode, AI Runner runs as a multi-tenant service keyed by
+# a per-request tenant header. We must not mix knowledge across tenants.
+_knowledge_base_instances: dict[str, "KnowledgeBase"] = {}
 _lock = threading.Lock()
 
 
+def _safe_tenant_dir_name(raw: str) -> str:
+    """Return a filesystem-safe identifier for a tenant key."""
+    cleaned = (raw or "").strip()
+    if not cleaned:
+        return "default"
+
+    # Allow UUIDs and similar tokens. Keep it conservative.
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "_", cleaned)
+    return cleaned[:120] or "default"
+
+
 def get_knowledge_base() -> "KnowledgeBase":
-    """Get the singleton KnowledgeBase instance.
-    
-    Returns:
-        KnowledgeBase instance (created on first call)
+    """Get a tenant-scoped KnowledgeBase instance.
+
+    If running under tenancy, facts are isolated per tenant.
+    For non-tenant contexts, falls back to a shared default instance.
     """
-    global _knowledge_base_instance
+    try:
+        from airunner.components.data.tenant import get_tenant_key
+
+        tenant_key = (get_tenant_key() or "").strip()
+    except Exception:
+        tenant_key = ""
+
+    tenant_id = _safe_tenant_dir_name(tenant_key)
+
     with _lock:
-        if _knowledge_base_instance is None:
-            _knowledge_base_instance = KnowledgeBase()
-    return _knowledge_base_instance
+        inst = _knowledge_base_instances.get(tenant_id)
+        if inst is None:
+            tenant_dir = KNOWLEDGE_DIR / "tenants" / tenant_id
+            inst = KnowledgeBase(knowledge_dir=tenant_dir)
+            _knowledge_base_instances[tenant_id] = inst
+
+    return inst
 
 
 class KnowledgeBase:

@@ -7,8 +7,7 @@ Create Date: 2025-05-10 05:41:39.672153
 """
 
 from typing import Sequence, Union
-from airunner.components.art.data.image_filter import ImageFilter
-from airunner.components.art.data.image_filter_value import ImageFilterValue
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -45,11 +44,14 @@ color_balance_data = {
 
 
 def upgrade() -> None:
-    # First, get the color_balance filter
-    color_balance_filter = ImageFilter.objects.first(
-        ImageFilter.name == "color_balance"
-    )
-    if not color_balance_filter:
+    connection = op.get_bind()
+    filter_id = connection.execute(
+        sa.text(
+            "SELECT id FROM image_filter_settings WHERE name = :name LIMIT 1"
+        ),
+        {"name": "color_balance"},
+    ).scalar()
+    if not filter_id:
         return
 
     image_filter_values = color_balance_data
@@ -62,31 +64,48 @@ def upgrade() -> None:
     image_filter_values["yellow_blue"]["min_value"] = -1.0
     image_filter_values["yellow_blue"]["max_value"] = 1.0
 
-    # BUG FIX: Query by parameter name AND filter_id, not by ImageFilter.name
     for param_name, param_data in image_filter_values.items():
-        # Find the specific parameter for THIS filter
-        filter_values = ImageFilterValue.objects.filter_by(
-            image_filter_id=color_balance_filter.id, name=param_name
-        )
-        if not filter_values:
-            continue
-
-        item = filter_values[0]
-        ImageFilterValue.objects.update(
-            item.id,
-            value=param_data["value"],
-            value_type=param_data["value_type"],
-            min_value=param_data["min_value"],
-            max_value=param_data["max_value"],
+        connection.execute(
+            sa.text(
+                "UPDATE image_filter_values "
+                "SET value = :value, value_type = :value_type, min_value = :min_value, max_value = :max_value "
+                "WHERE image_filter_id = :image_filter_id AND name = :name"
+            ),
+            {
+                "image_filter_id": filter_id,
+                "name": param_name,
+                "value": param_data["value"],
+                "value_type": param_data["value_type"],
+                "min_value": param_data["min_value"],
+                "max_value": param_data["max_value"],
+            },
         )
 
 
 def downgrade() -> None:
-    image_filter = ImageFilter.objects.first(
-        ImageFilter.name == "color_balance"
-    )
-    if not image_filter:
+    connection = op.get_bind()
+    filter_id = connection.execute(
+        sa.text(
+            "SELECT id FROM image_filter_settings WHERE name = :name LIMIT 1"
+        ),
+        {"name": "color_balance"},
+    ).scalar()
+    if not filter_id:
         return
-    ImageFilter.objects.update(
-        image_filter.id, image_filter_values=color_balance_data
-    )
+
+    for param_name, param_data in color_balance_data.items():
+        connection.execute(
+            sa.text(
+                "UPDATE image_filter_values "
+                "SET value = :value, value_type = :value_type, min_value = :min_value, max_value = :max_value "
+                "WHERE image_filter_id = :image_filter_id AND name = :name"
+            ),
+            {
+                "image_filter_id": filter_id,
+                "name": param_name,
+                "value": param_data["value"],
+                "value_type": param_data["value_type"],
+                "min_value": param_data["min_value"],
+                "max_value": param_data["max_value"],
+            },
+        )

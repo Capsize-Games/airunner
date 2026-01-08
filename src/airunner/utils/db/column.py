@@ -223,9 +223,13 @@ def create_unique_constraint(
     :param columns: List of column names to include in the unique constraint.
     """
     table_name = cls.__tablename__
+    dialect_name = getattr(getattr(op.get_bind(), "dialect", None), "name", "")
     try:
-        with op.batch_alter_table(table_name, recreate="always") as batch_op:
-            batch_op.create_unique_constraint(constraint_name, columns)
+        if dialect_name == "sqlite":
+            with op.batch_alter_table(table_name, recreate="always") as batch_op:
+                batch_op.create_unique_constraint(constraint_name, columns)
+        else:
+            op.create_unique_constraint(constraint_name, table_name, columns)
         logger.info(
             f"Unique constraint '{constraint_name}' "
             f"created on table '{table_name}' for columns {columns}."
@@ -250,9 +254,13 @@ def drop_constraint(
     :param constraint_type: Type of the constraint (e.g., 'unique', 'foreignkey', etc.).
     """
     table_name = cls.__tablename__
+    dialect_name = getattr(getattr(op.get_bind(), "dialect", None), "name", "")
     try:
-        with op.batch_alter_table(table_name, recreate="always") as batch_op:
-            batch_op.drop_constraint(constraint_name, type_=constraint_type)
+        if dialect_name == "sqlite":
+            with op.batch_alter_table(table_name, recreate="always") as batch_op:
+                batch_op.drop_constraint(constraint_name, type_=constraint_type)
+        else:
+            op.drop_constraint(constraint_name, table_name, type_=constraint_type)
         logger.info(
             f"Constraint '{constraint_name}' of type '{constraint_type}' dropped from table '{table_name}'."
         )

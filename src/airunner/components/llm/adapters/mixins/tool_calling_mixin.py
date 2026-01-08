@@ -475,25 +475,54 @@ class ToolCallingMixin:
 
         # First try to parse ReAct format: Action: tool_name\nAction Input: {...}
         # Note: Observation is added by LangGraph after tool execution, we don't parse it here
+        # Accept both newline and inline ReAct blocks, stopping at the next Action: or string end
         react_pattern = (
-            r"Action:\s*(\w+)(?:\([^)]*\))?\s*\nAction Input:\s*(\{[^}]+\})"
+            r"Action:\s*(\w+)(?:\([^)]*\))?\s*Action Input:\s*(.*?)(?=\s*Action:|$)"
         )
         react_matches = re.findall(react_pattern, response_text, re.DOTALL)
 
-        for tool_name, json_input in react_matches:
-            try:
-                args = json.loads(json_input)
-                tool_calls.append(
-                    {
-                        "name": tool_name,
-                        "args": args,
-                        "id": f"call_{len(tool_calls)}",
-                        "type": "tool_call",
-                    }
-                )
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Failed to parse JSON: {e}")
+        for tool_name, raw_input in react_matches:
+            # Normalize doubled braces and trim any closing tokens
+            normalized = raw_input.strip().rstrip("</s> ")
+            
+            # Handle symmetric double braces {{...}}
+            while normalized.startswith("{{") and normalized.endswith("}}") and len(normalized) > 4:
+                normalized = normalized[1:-1]
+            
+            # Handle asymmetric extra closing braces {..."}}
+            while normalized.startswith("{") and not normalized.startswith("{{") and normalized.endswith("}}"):
+                normalized = normalized[:-1]
+            
+            # Handle asymmetric extra opening braces "{{...}
+            while normalized.startswith("{{") and normalized.endswith("}") and not normalized.endswith("}}"):
+                normalized = normalized[1:]
+
+            # If the model inlined multiple actions, grab the first JSON-ish block
+            if not (normalized.startswith("{") and normalized.endswith("}")):
+                brace_match = re.search(r"\{.*\}", normalized, re.DOTALL)
+                if brace_match:
+                    normalized = brace_match.group(0).strip()
+
+            if not (normalized.startswith("{") and normalized.endswith("}")):
+                # Drop malformed tool call text entirely
                 continue
+
+            try:
+                args = json.loads(normalized)
+            except json.JSONDecodeError as e:
+                snippet = normalized[:200].replace("\n", " ")
+                self.logger.error(f"Failed to parse ReAct JSON for {tool_name}: {e} | snippet={snippet}")
+                # Skip adding a tool call when JSON is broken to avoid leaking raw text
+                continue
+
+            tool_calls.append(
+                {
+                    "name": tool_name,
+                    "args": args,
+                    "id": f"call_{len(tool_calls)}",
+                    "type": "tool_call",
+                }
+            )
 
         # Strip out ReAct format blocks from the response
         if react_matches:

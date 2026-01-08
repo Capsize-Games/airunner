@@ -4,11 +4,13 @@ FastAPI server implementation for AI Runner.
 Provides REST and WebSocket endpoints for remote access to AI Runner's
 capabilities including LLM, art generation, TTS, and STT.
 """
-
 from typing import Optional, Any
 from contextlib import asynccontextmanager
+import os
+import secrets
+from ipaddress import ip_address
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -16,9 +18,33 @@ import uvicorn
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.api.routes import health, llm, art, tts, stt, vision
+from airunner.api.routes import legacy as legacy_routes
+from airunner.components.llm.core.extensions_loader import load_extensions
+from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def is_loopback_host(host: str) -> bool:
+    if not host:
+        return False
+
+    normalized = host.strip().lower()
+    if normalized in {"localhost", "127.0.0.1", "::1"}:
+        return True
+
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def is_loopback_request(request: Request) -> bool:
+    client = getattr(request, "client", None)
+    if not client:
+        return False
+    return is_loopback_host(getattr(client, "host", ""))
 
 
 @asynccontextmanager
@@ -65,6 +91,86 @@ def create_app(
     if app_instance:
         app.state.airunner_app = app_instance
 
+    # Optional API key auth for production.
+    # If AIRUNNER_API_KEY is set, requests must provide it via:
+    # - X-API-Key: <key>
+    # - Authorization: Bearer <key>
+    api_key = (os.environ.get("AIRUNNER_API_KEY") or "").strip()
+    require_api_key = bool(api_key)
+    insecure_no_auth = os.environ.get("AIRUNNER_INSECURE_NO_AUTH", "0") == "1"
+
+    allowed_env = (os.environ.get("AIRUNNER_ALLOWED_TENANT_KEYS") or "").strip()
+    allowed_tenants = {t.strip() for t in allowed_env.split(",") if t.strip()}
+
+    @app.middleware("http")
+    async def tenant_middleware(request: Request, call_next):
+        """Scope DB operations to the request's tenant/namespace.
+
+        Airunner supports Postgres schema tenancy. We select the schema via a
+        per-request ContextVar set here.
+
+        Accepted headers (first one wins):
+        - X-Tenant-Key
+        - X-Uwuchat-Namespace
+        - X-Namespace
+        """
+
+        header_value = (
+            (request.headers.get("x-tenant-key") or "").strip()
+            or (request.headers.get("x-uwuchat-namespace") or "").strip()
+            or (request.headers.get("x-namespace") or "").strip()
+        )
+
+        # Only allow tenant selection from headers:
+        # - Without API key auth: loopback requests only.
+        # - With API key auth: allowlist-only.
+        tenant_key: Optional[str] = None
+        if header_value:
+            if require_api_key:
+                if allowed_tenants and header_value in allowed_tenants:
+                    tenant_key = header_value
+            else:
+                if is_loopback_request(request):
+                    tenant_key = header_value
+
+        token = set_tenant_key(tenant_key)
+        try:
+            return await call_next(request)
+        finally:
+            reset_tenant_key(token)
+
+    @app.middleware("http")
+    async def api_key_auth_middleware(request: Request, call_next):
+        path = request.url.path
+
+        # Always allow health checks without auth.
+        if path in {"/health", "/api/v1/health"}:
+            return await call_next(request)
+
+        # When API key auth is disabled, default to loopback-only unless explicitly overridden.
+        if not require_api_key:
+            if path.startswith("/admin/"):
+                if is_loopback_request(request):
+                    return await call_next(request)
+                return JSONResponse(status_code=403, content={"error": "Forbidden"})
+
+            if not insecure_no_auth and not is_loopback_request(request):
+                return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+            return await call_next(request)
+
+        # API key auth enabled: require auth for all endpoints except health.
+        provided = (request.headers.get("x-api-key") or "").strip()
+        if not provided:
+            auth = (request.headers.get("authorization") or "").strip()
+            if auth.lower().startswith("bearer "):
+                provided = auth.split(" ", 1)[-1].strip()
+
+        if not provided or not secrets.compare_digest(provided, api_key):
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+        return await call_next(request)
+
     # Configure CORS
     if enable_cors:
         if allowed_origins is None:
@@ -92,14 +198,43 @@ def create_app(
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
     app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
 
-    # Legacy routes for backwards compatibility (fastsearch uses /vision/*)
+    # Legacy compatibility endpoints for existing clients.
+    app.include_router(legacy_routes.router, tags=["legacy"])
+
+    # Legacy routes for backwards compatibility.
     app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
 
-    # Root health check for simple health probes
-    @app.get("/health")
-    async def root_health():
-        """Root-level health check for container health probes."""
-        return {"status": "ready"}
+    # Optional extensions can register additional routers/middleware.
+    try:
+        stats = load_extensions(force_reload=False)
+        module_names = []
+        if isinstance(stats, dict):
+            module_names = list(stats.get("modules") or [])
+
+        # If extensions were loaded earlier (e.g., by the main App bootstrap),
+        # still discover them deterministically.
+        if not module_names:
+            import sys
+
+            module_names = sorted(
+                name
+                for name in sys.modules.keys()
+                if name.startswith("airunner_extensions.")
+            )
+
+        import sys
+
+        for module_name in module_names:
+            module = sys.modules.get(module_name)
+            hook = getattr(module, "register_fastapi", None) if module else None
+            if callable(hook):
+                try:
+                    hook(app)
+                    logger.info("Registered FastAPI extension: %s", module_name)
+                except Exception:
+                    logger.exception("Failed to register FastAPI extension: %s", module_name)
+    except Exception:
+        logger.exception("Extension registration failed")
 
     @app.get("/")
     async def root():
@@ -110,10 +245,14 @@ def create_app(
     @app.exception_handler(Exception)
     async def global_exception_handler(request, exc):
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Internal server error", "detail": str(exc)},
-        )
+        debug = os.environ.get("AIRUNNER_DEBUG", "0") == "1"
+        if debug and is_loopback_request(request):
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Internal server error", "detail": str(exc)},
+            )
+
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
     return app
 
@@ -142,11 +281,7 @@ class APIServer:
         self.host = host
         self.port = port
         self.app_instance = app_instance
-        self.app = create_app(allowed_origins, enable_cors)
-
-        # Store app_instance in FastAPI app state for route handlers to access
-        if app_instance:
-            self.app.state.airunner_app = app_instance
+        self.app = create_app(allowed_origins, enable_cors, app_instance=app_instance)
 
         self.server = None
 

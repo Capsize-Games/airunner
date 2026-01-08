@@ -555,6 +555,13 @@ class CivitAIDownloadWorker(BaseDownloadWorker):
         if content_length:
             file_size = int(content_length)
             with self._lock:
+                # Update total_size if bootstrap had 0 for this file
+                old_file_size = self._file_sizes.get(filename, 0)
+                if old_file_size == 0 and file_size > 0:
+                    self._total_size += file_size
+                elif old_file_size != file_size:
+                    # Adjust total_size for the difference
+                    self._total_size += (file_size - old_file_size)
                 self._file_sizes[filename] = file_size
             return file_size
         return default_size

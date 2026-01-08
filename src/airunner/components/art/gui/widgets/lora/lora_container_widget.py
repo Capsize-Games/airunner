@@ -23,7 +23,7 @@ class LoraContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            # SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.LORA_UPDATED_SIGNAL: self.on_lora_updated_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.LORA_STATUS_CHANGED: self.on_lora_modified,
@@ -115,7 +115,7 @@ class LoraContainerWidget(BaseWidget):
         self._load_lora(force_reload=force_reload)
 
     @Slot()
-    def apply_lora(self):
+    def on_apply_lora_button_clicked(self):
         self._apply_button_enabled = False
         self.api.art.lora.update()
 
@@ -197,6 +197,7 @@ class LoraContainerWidget(BaseWidget):
                     if self.search_filter.lower() in lora.name.lower()
                 ]
                 for lora in filtered_loras:
+                    print("adding lora widget for", lora.name)
                     self._add_lora(lora)
                 self.add_spacer()
 

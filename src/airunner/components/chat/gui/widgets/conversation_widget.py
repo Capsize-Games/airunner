@@ -431,27 +431,44 @@ class ConversationWidget(BaseWidget):
             except Exception:
                 mid = message_id
 
+            self.logger.info(f"_handle_copy_message: looking for message id {mid}")
+
             # find message text in streamed messages or conversation
             text = None
             # check streamed buffer first
-            for m in getattr(self, "_streamed_messages", []) or []:
-                if int(m.get("id", -1)) == int(mid):
-                    text = m.get("content") or m.get("text") or ""
-                    break
+            streamed_msgs = getattr(self, "_streamed_messages", []) or []
+            self.logger.info(f"_handle_copy_message: searching {len(streamed_msgs)} streamed messages")
+            for m in streamed_msgs:
+                msg_id = m.get("id", -1)
+                try:
+                    if int(msg_id) == int(mid):
+                        text = m.get("content") or m.get("text") or ""
+                        self.logger.info(f"_handle_copy_message: found in streamed messages, content length={len(text)}")
+                        break
+                except (ValueError, TypeError):
+                    continue
+                    
             # fallback to conversation stored value
             if (
                 text is None
                 and self._conversation
                 and hasattr(self._conversation, "value")
             ):
-                for m in self._conversation.value or []:
-                    if int(m.get("id", -1)) == int(mid):
-                        text = m.get("content") or m.get("text") or ""
-                        break
+                conv_msgs = self._conversation.value or []
+                self.logger.info(f"_handle_copy_message: searching {len(conv_msgs)} conversation messages")
+                for m in conv_msgs:
+                    msg_id = m.get("id", -1)
+                    try:
+                        if int(msg_id) == int(mid):
+                            text = m.get("content") or m.get("text") or ""
+                            self.logger.info(f"_handle_copy_message: found in conversation, content length={len(text)}")
+                            break
+                    except (ValueError, TypeError):
+                        continue
 
             if text is None:
-                self.logger.debug(
-                    f"_handle_copy_message: message id {message_id} not found"
+                self.logger.warning(
+                    f"_handle_copy_message: message id {message_id} not found in {len(streamed_msgs)} streamed or conversation messages"
                 )
                 return
 
@@ -459,16 +476,16 @@ class ConversationWidget(BaseWidget):
             try:
                 clipboard = QApplication.clipboard()
                 clipboard.setText(str(text))
-                self.logger.debug(
-                    f"_handle_copy_message: copied message id {message_id} to clipboard"
+                self.logger.info(
+                    f"_handle_copy_message: copied message id {message_id} to clipboard ({len(text)} chars)"
                 )
-            except Exception:
-                self.logger.debug(
-                    "_handle_copy_message: failed to set clipboard",
+            except Exception as e:
+                self.logger.warning(
+                    f"_handle_copy_message: failed to set clipboard: {e}",
                     exc_info=True,
                 )
-        except Exception:
-            self.logger.debug("_handle_copy_message failed", exc_info=True)
+        except Exception as e:
+            self.logger.warning(f"_handle_copy_message failed: {e}", exc_info=True)
 
     def scroll_to_bottom(self) -> None:
         """Scroll the conversation to the bottom by triggering the parent QScrollArea."""
@@ -874,7 +891,10 @@ class ConversationWidget(BaseWidget):
             # Update or create bot message
             if self._active_stream_message_index is None:
                 # Always create a new message for a new stream to avoid overwriting prior answers
+                # Calculate the ID before creating the message
+                new_message_id = len(self._streamed_messages)
                 new_message = {
+                    "id": new_message_id,  # Store ID in the message for copy lookup
                     "name": self.chatbot.botname,
                     "content": combined_content,
                     "role": MessageRole.ASSISTANT.value,
@@ -890,7 +910,7 @@ class ConversationWidget(BaseWidget):
                 formatted_message = {
                     "content": fmt["content"],
                     "content_type": fmt["type"],
-                    "id": self._active_stream_message_index,
+                    "id": new_message_id,
                     "timestamp": "",
                     "name": self.chatbot.botname,
                     "is_bot": True,

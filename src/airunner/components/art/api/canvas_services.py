@@ -25,6 +25,9 @@ from airunner.utils.image.convert_binary_to_image import (
 
 
 class CanvasAPIService(APIServiceBase):
+    def remove_background(self):
+        self.emit_signal(SignalCode.REMOVE_BACKGROUND)
+
     def recenter_grid(self):
         self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
 
@@ -204,6 +207,12 @@ class CanvasAPIService(APIServiceBase):
             strength = self.image_to_image_settings.strength
         else:
             strength = generator_settings.strength
+
+        # DEBUG: Log strength value before conversion
+        self.logger.debug(
+            "[CANVAS_SERVICES DEBUG] is_img2img=%s, raw_strength=%s, strength/100=%s",
+            is_img2img, strength, strength / 100 if strength else 0
+        )
 
         model_path = ""
         model_id = generator_settings.model

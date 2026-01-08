@@ -20,7 +20,7 @@ import os
 import sys
 import logging
 
-from airunner.enums import LLMActionType, Scheduler
+from airunner.enums import Scheduler
 
 if os.environ.get("DEV_ENV", "1") == "1":
     load_dotenv(override=True)
@@ -40,9 +40,15 @@ NLTK_DOWNLOAD_DIR = os.path.join(
     "..",
     "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/",
 )
-AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
-    "AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH",
-    None,
+# Default LLM model path.
+# Historically this env var name was accidentally duplicated
+# (AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH). Keep supporting it for compatibility,
+# but prefer the correctly named variables.
+AIRUNNER_DEFAULT_LLM_HF_PATH = (
+    os.environ.get("AIRUNNER_DEFAULT_LLM_HF_PATH")
+    or os.environ.get("AIRUNNER_LLM_MODEL_PATH")
+    or os.environ.get("AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH")
+    or None
 )
 AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
     "AIRUNNER_DEFAULT_STT_HF_PATH", "Systran/faster-distil-whisper-large-v3"

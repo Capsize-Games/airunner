@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict, field
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 
 from llama_cloud import MessageRole
 
@@ -35,6 +35,7 @@ class LLMRequest:
         top_p: Keep the top tokens with cumulative probability >= top_p.
         use_cache: Whether to use the past key/values cache.
         do_tts_reply: Whether to convert the reply to speech.
+        images: List of PIL Image objects for multimodal vision-capable models.
     """
 
     do_sample: bool = True
@@ -69,7 +70,23 @@ class LLMRequest:
     ephemeral_conversation: bool = (
         False  # If True, conversation stays in memory but not saved to database
     )
+    # Optional prompt augmentation toggles (used when a custom system_prompt is provided)
+    include_mood: Optional[bool] = None
+    include_datetime: Optional[bool] = None
+    include_style: Optional[bool] = None
+    include_memory: Optional[bool] = None
+    include_ui_context: Optional[bool] = None
+    # Request-level thinking toggle (Qwen3-style <think> blocks).
+    # None means "use the global DB/default setting".
+    enable_thinking: Optional[bool] = None
     model: str = ""
+    # Request-level backend selection (used by headless API)
+    model_service: Optional[str] = None  # local | openrouter | ollama
+    api_model: Optional[str] = None  # provider model name for API backends
+    # Request-level quantization override for local HF models.
+    # This is consumed by the model manager to set llm_generator_settings.dtype
+    # before loading; it must NOT be passed through to transformers generate().
+    dtype: Optional[str] = None  # auto | 4bit | 8bit | 32bit
     use_mode_routing: bool = (
         False  # Enable mode-based routing (author/code/research/qa/general)
     )
@@ -79,6 +96,9 @@ class LLMRequest:
     force_tool: Optional[str] = (
         None  # Force a specific tool to be called (from slash commands)
     )
+    images: Optional[List[Any]] = field(
+        default_factory=list
+    )  # List of PIL Image objects for vision-capable models
 
     def to_dict(self) -> Dict:
         """
@@ -119,6 +139,18 @@ class LLMRequest:
         data.pop("node_id")
         data.pop("use_memory")
         data.pop("role")
+        # Request-level routing knobs are handled by the manager, not the model.
+        data.pop("model_service", None)
+        data.pop("api_model", None)
+        data.pop("dtype", None)
+        # Prompt augmentation toggles are consumed by workflow setup, not passed to the model
+        data.pop("include_mood", None)
+        data.pop("include_datetime", None)
+        data.pop("include_style", None)
+        data.pop("include_memory", None)
+        data.pop("include_ui_context", None)
+        # Images are PIL objects, not JSON serializable - handle separately
+        data.pop("images", None)
 
         return data
 

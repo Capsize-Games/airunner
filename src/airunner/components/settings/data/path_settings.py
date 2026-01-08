@@ -12,7 +12,7 @@ def _resolve_path(stored_path: str) -> str:
     Resolve a stored path to work across different environments.
     
     Handles paths that were stored with a different home directory
-    (e.g., /home/joe/.local/share/airunner stored on host, but running
+    (e.g., /home/<user>/.local/share/airunner stored on host, but running
     in Docker where home is /root).
     
     This allows the same database to work both on the host and in containers.
@@ -38,7 +38,7 @@ class PathSettings(BaseModel):
     """
     Path settings with automatic cross-environment path resolution.
     
-    When paths are stored from one environment (e.g., /home/joe on host)
+    When paths are stored from one environment (e.g., /home/<user> on host)
     and accessed from another (e.g., /root in Docker), they are automatically
     translated to work in the current environment.
     """

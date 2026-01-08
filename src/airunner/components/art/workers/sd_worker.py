@@ -27,6 +27,7 @@ from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
 from airunner.components.art.data.ai_models import AIModels
+from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
 
@@ -54,6 +55,8 @@ class SDWorker(Worker):
         self._requested_model = None
         self._requested_version = None
         self._requested_pipeline = None
+        self._pending_scheduler: Optional[str] = None  # Deferred scheduler change
+        self._is_generating: bool = False  # Track generation state
         super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
@@ -64,7 +67,17 @@ class SDWorker(Worker):
         version = self._version
         if version is StableDiffusionVersion.NONE:
             version = StableDiffusionVersion(self.generator_settings.version)
+        # Historical setting name: `sd_enabled`.
+        # AIRunner's art worker now supports multiple backends (SDXL, Flux, Z-Image).
+        # Disabling SD should not prevent non-SD generators (Flux/Z-Image) from running.
         if not self.application_settings.sd_enabled:
+            if version in (
+                StableDiffusionVersion.FLUX_DEV,
+                StableDiffusionVersion.FLUX_SCHNELL,
+                StableDiffusionVersion.Z_IMAGE_TURBO,
+                StableDiffusionVersion.Z_IMAGE_BASE,
+            ):
+                return version
             return StableDiffusionVersion.NONE
         return version
 
@@ -78,7 +91,10 @@ class SDWorker(Worker):
         # simultaneously (e.g., worker thread loading model while main thread handles signal)
         with self._model_manager_lock:
             if self._model_manager is None:
-                version = StableDiffusionVersion(self.generator_settings.version)
+                # IMPORTANT: Use self.version (which can be set from an incoming ImageRequest)
+                # rather than generator_settings.version, otherwise headless API requests
+                # can incorrectly route to the wrong model manager (e.g., Flux).
+                version = self.version
 
                 if version in (
                     StableDiffusionVersion.FLUX_DEV,
@@ -150,7 +166,8 @@ class SDWorker(Worker):
         if self.model_manager:
             self.model_manager.get_embeddings(message)
 
-    def on_update_lora_signal(self):
+    def on_update_lora_signal(self, data=None):
+        print("ON UPDATE LORA SIGNAL")
         self._reload_lora()
 
     def _reload_lora(self):
@@ -188,6 +205,12 @@ class SDWorker(Worker):
         )
 
     def on_art_model_changed(self, data: Dict = None):
+        # CRITICAL: Invalidate the generator settings cache so we pick up
+        # the latest precision/dtype settings from the database when the
+        # model is reloaded. Without this, the worker uses stale cached
+        # settings (e.g., old dtype) because the UI and worker have
+        # separate caches.
+        self._invalidate_setting_cache(GeneratorSettings)
         self.unload_model_manager()
 
     def _get_model_path_from_image_request(
@@ -404,10 +427,22 @@ class SDWorker(Worker):
             self.model_manager.interrupt_image_generation()
 
     def on_change_scheduler_signal(self, data: Dict):
+        scheduler_name = data["scheduler"]
+        self.update_generator_settings(scheduler=scheduler_name)
+        
+        if self._is_generating:
+            # Defer scheduler change until generation completes
+            self.logger.debug(
+                f"[SCHEDULER] Deferring scheduler change to '{scheduler_name}' until generation completes"
+            )
+            self._pending_scheduler = scheduler_name
+        elif self.model_manager:
+            # Apply immediately if not generating
+            self.model_manager._load_scheduler(scheduler_name)
+
+    def _apply_scheduler_change(self, scheduler_name: str):
+        """Apply a scheduler change. Used for deferred scheduler changes after generation."""
         if self.model_manager:
-            scheduler_name = data["scheduler"]
-            self.update_generator_settings(scheduler=scheduler_name)
-            # Reload the scheduler in the pipeline
             self.model_manager._load_scheduler(scheduler_name)
 
     def on_model_status_changed_signal(self, message: Dict):
@@ -421,7 +456,6 @@ class SDWorker(Worker):
             self.model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
-        self.logger.debug(f"[HANDLE_MESSAGE] Received message: {message}")
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)
@@ -466,6 +500,7 @@ class SDWorker(Worker):
                 return
 
             try:
+                self._is_generating = True
                 mm.handle_generate_signal(message)
             except (PipeNotLoadedException, TypeError) as e:
                 error_message = getattr(e, "message", str(e))
@@ -486,6 +521,14 @@ class SDWorker(Worker):
                 self.send_missing_model_alert(
                     "An unexpected error occurred during image generation. Please check logs."
                 )
+            finally:
+                self._is_generating = False
+                # Apply any scheduler change that was deferred during generation
+                if self._pending_scheduler is not None:
+                    pending = self._pending_scheduler
+                    self._pending_scheduler = None
+                    self.logger.info(f"Applying deferred scheduler change to: {pending}")
+                    self._apply_scheduler_change(pending)
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")

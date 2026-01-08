@@ -14,6 +14,7 @@ from airunner.utils.application.create_worker import create_worker
 class WorkerManager(Worker):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
+            SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
@@ -43,6 +44,7 @@ class WorkerManager(Worker):
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
+            SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL: self.on_llm_convert_to_gguf_signal,
             SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
             SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: self.on_rag_index_selected_documents_signal,
@@ -97,12 +99,88 @@ class WorkerManager(Worker):
         self._huggingface_download_worker = None
         self._image_export_worker = None
         self._model_scanner_worker = None
+        self._background_removal_worker = None
         if self.logger:
             self.logger.debug(
                 f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
             )
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
+
+    def on_remove_background_signal(self, data: Dict):
+        """Handle RMBG background removal request from the canvas.
+
+        Requirements:
+        - If no canvas image exists, show an alert popup.
+        - If an image exists, run RMBG-2.0 (downloading model files if missing).
+        """
+
+        from PySide6.QtWidgets import QMessageBox
+
+        # Resolve the currently selected layer and its image bytes.
+        layer_id = None
+        try:
+            layer_id = self._get_current_selected_layer_id()
+        except Exception:
+            layer_id = None
+
+        # If no layer is selected, fall back to the first layer (by order).
+        if layer_id is None:
+            try:
+                from airunner.components.art.data.canvas_layer import CanvasLayer
+
+                layers = CanvasLayer.objects.order_by("order").all() or []
+                if layers:
+                    layer_id = getattr(layers[0], "id", None)
+            except Exception:
+                layer_id = None
+
+        image_binary = None
+        try:
+            from airunner.components.art.data.drawingpad_settings import (
+                DrawingPadSettings,
+            )
+
+            if layer_id is not None:
+                drawing_pad = DrawingPadSettings.objects.filter_by_first(
+                    layer_id=layer_id
+                )
+                image_binary = getattr(drawing_pad, "image", None)
+            else:
+                # Fallback: best-effort read (may be global settings)
+                image_binary = getattr(self.drawing_pad_settings, "image", None)
+        except Exception:
+            image_binary = None
+
+        if not image_binary:
+            main_window = self._get_main_window()
+            if main_window is not None:
+                QMessageBox.information(
+                    main_window,
+                    "No Image",
+                    "Please import or generate an image first.",
+                )
+            return
+
+        # Lazily create worker to keep WorkerManager responsive.
+        if self._background_removal_worker is None:
+            from airunner.components.art.workers.background_removal_worker import (
+                BackgroundRemovalWorker,
+            )
+
+            self._background_removal_worker = create_worker(
+                BackgroundRemovalWorker
+            )
+
+        self._background_removal_worker.add_to_queue(
+            {
+                "action": "remove_background",
+                "data": {
+                    "layer_id": layer_id,
+                    "image": image_binary,
+                },
+            }
+        )
 
     def handle_message(self, message: Dict):
         if self.logger:
@@ -144,7 +222,9 @@ class WorkerManager(Worker):
 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"Error processing worker requests: {e}")
+                self.logger.error(
+                    f"Error processing worker requests: {e}", exc_info=True
+                )
 
     @property
     def model_scanner_worker(self):
@@ -370,9 +450,6 @@ class WorkerManager(Worker):
             data: Download info with repo_id, model_path, missing_files, version, etc.
         """
         import os
-        from airunner.components.llm.gui.windows.huggingface_download_dialog import (
-            HuggingFaceDownloadDialog,
-        )
 
         repo_id = data.get("repo_id")
         model_path = data.get("model_path")
@@ -417,6 +494,10 @@ class WorkerManager(Worker):
         main_window = self._get_main_window()
         if main_window:
             try:
+                from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+                    HuggingFaceDownloadDialog,
+                )
+
                 # Close any existing download dialog
                 if self._download_dialog:
                     self._download_dialog.close()
@@ -495,6 +576,11 @@ class WorkerManager(Worker):
 
         app = QApplication.instance()
         if app is None:
+            return None
+
+        # In headless mode we often run a QCoreApplication event loop, which
+        # doesn't support QWidget APIs like activeWindow/topLevelWidgets.
+        if not hasattr(app, "activeWindow") or not hasattr(app, "topLevelWidgets"):
             return None
 
         window = app.activeWindow()
@@ -641,7 +727,7 @@ class WorkerManager(Worker):
             from airunner.components.settings.data.application_settings import (
                 ApplicationSettings,
             )
-            app_settings = ApplicationSettings.objects.first()
+            app_settings = self._get_or_create_application_settings()
             
             if app_settings.nsfw_filter:
                 self.logger.error(
@@ -701,7 +787,7 @@ class WorkerManager(Worker):
             ApplicationSettings,
         )
 
-        app_settings = ApplicationSettings.objects.first()
+        app_settings = self._get_or_create_application_settings()
 
         # Check if safety checker is enabled
         if not app_settings.nsfw_filter:
@@ -726,6 +812,44 @@ class WorkerManager(Worker):
         )
         self._pending_generation_request = data
         self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL, {})
+
+    def _get_or_create_application_settings(self):
+        """Return ApplicationSettings for the current tenant.
+
+        In headless multi-tenant mode, tenant schemas may be created on-demand and
+        not have bootstrap rows yet. Image generation expects ApplicationSettings
+        to exist; without it, requests crash and art jobs stay RUNNING forever.
+        """
+        from airunner.components.settings.data.application_settings import (
+            ApplicationSettings,
+        )
+
+        app_settings = ApplicationSettings.objects.first()
+        if app_settings is not None:
+            return app_settings
+
+        # Create a sane default row for this tenant.
+        # - Enable SD if the service is enabled in this headless server.
+        # - Default NSFW filter off in headless mode to avoid blocking generation
+        #   on a safety-checker bootstrap step.
+        try:
+            import os
+
+            ApplicationSettings(
+                sd_enabled=os.environ.get("AIRUNNER_SD_ON") == "1",
+                llm_enabled=True,
+                nsfw_filter=False,
+            ).save()
+        except Exception:
+            # Best-effort; if creation fails, subsequent code will raise a clearer error.
+            pass
+
+        app_settings = ApplicationSettings.objects.first()
+        if app_settings is None:
+            raise RuntimeError(
+                "ApplicationSettings row is missing and could not be created"
+            )
+        return app_settings
 
     def _proceed_with_generation(self, data):
         """
@@ -906,34 +1030,35 @@ class WorkerManager(Worker):
             model_path=model_path,
         )
         
-        # Create download worker
-        self._huggingface_download_worker = create_worker(DownloadHuggingFaceModel)
+        # Create download worker - use local variable to avoid polluting the 
+        # huggingface_download_worker property which is used for STT/TTS downloads
+        llm_download_worker = create_worker(DownloadHuggingFaceModel)
         
         # Connect dialog to download worker signals
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_LOG,
             self._download_dialog.on_log_updated,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.UPDATE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_progress_updated,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
             self._download_dialog.on_file_progress_updated,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self._download_dialog.on_download_complete,
         )
-        self._huggingface_download_worker.register(
+        llm_download_worker.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
             self._download_dialog.on_download_failed,
         )
         
         if is_gguf and gguf_filename:
             self.logger.info(f"Starting GGUF download: {repo_id}/{gguf_filename}")
-            self._huggingface_download_worker.download(
+            llm_download_worker.download(
                 repo_id=repo_id,
                 model_type="gguf",
                 output_dir=model_path,
@@ -944,7 +1069,7 @@ class WorkerManager(Worker):
             )
         else:
             self.logger.info(f"Starting standard download: {repo_id}")
-            self._huggingface_download_worker.download(
+            llm_download_worker.download(
                 repo_id=repo_id,
                 model_type=model_type,
                 output_dir=model_path,
@@ -954,6 +1079,112 @@ class WorkerManager(Worker):
             )
         
         self._download_dialog.show()
+
+    def on_llm_convert_to_gguf_signal(self, data):
+        """Handle GGUF conversion request.
+        
+        Converts safetensors to GGUF format when no pre-quantized GGUF is available.
+        
+        Args:
+            data: Dict with model_path, model_name, quantization
+        """
+        self.logger.info(f"WorkerManager received LLM_CONVERT_TO_GGUF_SIGNAL: {data}")
+        
+        from PySide6.QtWidgets import QApplication, QProgressDialog, QMessageBox
+        from PySide6.QtCore import Qt
+        from airunner.utils.model_optimizer import get_model_optimizer
+        
+        model_path = data.get("model_path", "")
+        model_name = data.get("model_name", "Unknown Model")
+        quantization = data.get("quantization", "Q4_K_M")
+        
+        # Get main window
+        main_window = None
+        app = QApplication.instance()
+        for widget in app.topLevelWidgets():
+            if widget.__class__.__name__ == "MainWindow":
+                main_window = widget
+                break
+        
+        if not main_window:
+            self.logger.error("Cannot show conversion dialog - main window not found")
+            return
+        
+        # Show progress dialog
+        progress = QProgressDialog(
+            f"Converting {model_name} to GGUF format...\n\n"
+            "This may take several minutes depending on model size.",
+            "Cancel",
+            0, 0,
+            main_window
+        )
+        progress.setWindowTitle("GGUF Conversion")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+        QApplication.processEvents()
+        
+        try:
+            optimizer = get_model_optimizer()
+            
+            # Check for conversion tools
+            if not optimizer.has_llama_cpp_convert():
+                progress.close()
+                QMessageBox.critical(
+                    main_window,
+                    "Conversion Not Available",
+                    "GGUF conversion requires llama.cpp tools.\n\n"
+                    "Install with:\n"
+                    "  pip install llama-cpp-python\n\n"
+                    "Or clone llama.cpp and build convert tools."
+                )
+                return
+            
+            # Perform conversion
+            success, gguf_path, error = optimizer.convert_to_gguf(
+                model_path=model_path,
+                quantization=quantization,
+            )
+            
+            progress.close()
+            
+            if success:
+                self.logger.info(f"GGUF conversion successful: {gguf_path}")
+                QMessageBox.information(
+                    main_window,
+                    "Conversion Complete",
+                    f"Successfully converted to GGUF:\n{gguf_path}\n\n"
+                    "The model will now be loaded."
+                )
+                
+                # Emit signal to reload the model
+                self.emit_signal(
+                    SignalCode.LLM_GGUF_CONVERSION_COMPLETE,
+                    {"model_path": model_path, "gguf_path": gguf_path}
+                )
+                
+                # Trigger model reload
+                self.emit_signal(SignalCode.LLM_LOAD_SIGNAL)
+            else:
+                self.logger.error(f"GGUF conversion failed: {error}")
+                QMessageBox.critical(
+                    main_window,
+                    "Conversion Failed",
+                    f"Failed to convert model to GGUF:\n\n{error}"
+                )
+                self.emit_signal(
+                    SignalCode.LLM_GGUF_CONVERSION_FAILED,
+                    {"model_path": model_path, "error": error}
+                )
+                
+        except Exception as e:
+            progress.close()
+            self.logger.exception(f"GGUF conversion error: {e}")
+            QMessageBox.critical(
+                main_window,
+                "Conversion Error",
+                f"An error occurred during conversion:\n\n{str(e)}"
+            )
 
     def on_huggingface_download_complete_signal(self, data):
         # Use add_to_queue to ensure processing happens in worker thread,

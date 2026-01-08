@@ -1,92 +1,45 @@
 import os
 
-from pathlib import Path
+import logging
+import os
 
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+
 from alembic import context
-from airunner.settings import AIRUNNER_DB_URL, AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
+from sqlalchemy import engine_from_config, pool
 
-config = context.config
-config.set_main_option("sqlalchemy.url", AIRUNNER_DB_URL)
+logger = logging.getLogger("alembic.env")
 
-# Check if DB file exists
-if AIRUNNER_DB_URL.__contains__("sqlite"):
-    db_path = AIRUNNER_DB_URL.replace("sqlite:///", "")
-    try:
-        if not os.path.exists(db_path):
-            print(f"Database file not found at {db_path}")
-            # create the file
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
-            with open(db_path, "w") as f:
-                pass
-            print(f"Database file created at {db_path}")
-    except Exception as e:
-        print(f"Error checking DB path: {e}")
-
-# Import your models here
-from airunner.components.data.models.base import Base
-
-# Import all model classes that need to be registered with SQLAlchemy
-# This is especially important for models with relationships
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.image_to_image_settings import (
-    ImageToImageSettings,
-)
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.metadata_settings import MetadataSettings
-from airunner.components.calendar.data.event import Event
-from airunner.components.calendar.data.reminder import Reminder
-from airunner.components.calendar.data.recurring_event import RecurringEvent
-from airunner.components.agents.data.agent_config import AgentConfig
-from airunner.components.llm.data.llm_tool import LLMTool
-from airunner.components.llm.data.fine_tuned_model import (
-    FineTunedModel,
-)  # noqa: F401
-from airunner.components.llm.data.target_files import TargetFiles  # noqa: F401
-from airunner.components.llm.data.target_directories import (
-    TargetDirectories,
-)  # noqa: F401
-from airunner.components.documents.data.models.document import Document
-
-# Knowledge system now uses markdown files instead of database tables
-# See: src/airunner/components/knowledge/knowledge_base.py
-
-from airunner.components.video.data.video_project import VideoProject
-
-# Long-running agent project models
-from airunner.components.llm.long_running.data.project_state import (
-    ProjectState,
-    ProjectFeature,
-    ProgressEntry,
-    SessionState,
-    DecisionMemory,
-)
-
-logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# Alembic configuration object, which provides access to the values within the
+# .ini file in use.
 config = context.config
 
-# Get the path to the alembic.ini file
-config_file_path = Path(__file__).parent / "../alembic.ini"
+def _default_db_url() -> str:
+    # Prefer AIRunner's env var, but allow generic DATABASE_URL as a fallback.
+    return (
+        os.environ.get("AIRUNNER_DATABASE_URL")
+        or os.environ.get("DATABASE_URL")
+        or "sqlite:///airunner.db"
+    )
 
-# Set the config file name explicitly
-config.config_file_name = str(config_file_path)
 
-# Interpret the config file for Python logging
-fileConfig(config.config_file_name)
+# Ensure Alembic has a URL; callers may override via setup_database().
+try:
+    existing_url = config.get_main_option("sqlalchemy.url")
+except Exception:
+    existing_url = None
+if not existing_url:
+    config.set_main_option("sqlalchemy.url", _default_db_url())
 
-target_metadata = Base.metadata
+# Configure Python logging (best-effort).
+try:
+    if getattr(config, "config_file_name", None) and os.path.exists(config.config_file_name):
+        fileConfig(config.config_file_name)
+except Exception:
+    pass
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
+# We don't use autogenerate in this repo's runtime flow; avoid heavy imports.
+target_metadata = None
 # ... etc.
 
 

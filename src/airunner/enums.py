@@ -49,6 +49,7 @@ class CodeOperationType(Enum):
 
 
 class SignalCode(Enum):
+    REMOVE_BACKGROUND = "remove_background_signal"
     IMAGE_EXPORTED = "image_exported_signal"
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
@@ -91,6 +92,10 @@ class SignalCode(Enum):
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
+
+    # Backwards-compat alias used by some headless API routes.
+    # Keep the canonical name as APPLICATION_STATUS_ERROR_SIGNAL.
+    APPLICATION_ERROR_SIGNAL = "status_error_signal"
     LLM_START_FINE_TUNE = "llm_start_fine_tune"
     LLM_FINE_TUNE_PROGRESS = "llm_fine_tune_progress"
     LLM_FINE_TUNE_COMPLETE = "llm_fine_tune_complete"
@@ -200,6 +205,10 @@ class SignalCode(Enum):
     CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
     SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
     LLM_MODEL_DOWNLOAD_REQUIRED = "llm_model_download_required"
+    LLM_CONVERT_TO_GGUF_SIGNAL = "llm_convert_to_gguf_signal"
+    LLM_GGUF_CONVERSION_PROGRESS = "llm_gguf_conversion_progress"
+    LLM_GGUF_CONVERSION_COMPLETE = "llm_gguf_conversion_complete"
+    LLM_GGUF_CONVERSION_FAILED = "llm_gguf_conversion_failed"
     FARA_MODEL_DOWNLOAD_REQUIRED = "fara_model_download_required"
     HUGGINGFACE_DOWNLOAD_WORKER_READY = "huggingface_download_worker_ready"
     HUGGINGFACE_DOWNLOAD_COMPLETE = "huggingface_download_complete"
@@ -412,6 +421,7 @@ class Scheduler(Enum):
     DPM_2M_SDE_K = "DPM 2M SDE Karras"
     PLMS = "PLMS"
     FLOW_MATCH_EULER = "Flow Match Euler"
+    FLOW_MATCH_LCM = "Flow Match LCM"
     # DDIMInverse = "DDIM Inverse"
     # IPNM = "IPNM"
     # REPAINT = "RePaint"

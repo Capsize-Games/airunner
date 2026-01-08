@@ -61,9 +61,11 @@ class ChatHuggingFaceLocal(
 
     model: Any
     tokenizer: Any
+    processor: Optional[Any] = None  # Vision processor for multimodal models
     model_path: Optional[str] = None
     use_mistral_native: bool = False
     use_json_mode: bool = False
+    is_vision_model: bool = False  # True for Ministral-3, Pixtral, etc.
     tool_calling_mode: str = "react"
     max_new_tokens: int = 4096
     temperature: float = 0.7
@@ -88,15 +90,45 @@ class ChatHuggingFaceLocal(
             __context: Pydantic context (unused)
         """
         self._detect_tool_calling_mode()
+        self._detect_vision_model()
 
         if self.use_mistral_native and self.tool_calling_mode == "native":
             self._init_mistral_tokenizer()
+
+    def _detect_vision_model(self) -> None:
+        """Detect if this is a vision model and load processor if needed."""
+        if not self.model_path:
+            return
+            
+        model_path_lower = self.model_path.lower()
+        
+        # Check for known vision model patterns
+        is_ministral3 = "ministral" in model_path_lower or "mistral-3" in model_path_lower
+        is_pixtral = "pixtral" in model_path_lower
+        
+        if is_ministral3 or is_pixtral:
+            self.is_vision_model = True
+            self._load_vision_processor()
+
+    def _load_vision_processor(self) -> None:
+        """Load vision processor for multimodal models like Ministral-3."""
+        try:
+            from transformers import AutoProcessor
+            self.processor = AutoProcessor.from_pretrained(
+                self.model_path,
+                trust_remote_code=True
+            )
+            print(f"✓ Loaded vision processor for {self.model_path}")
+        except Exception as e:
+            print(f"⚠ Failed to load vision processor: {e}")
+            self.processor = None
 
     def _detect_tool_calling_mode(self) -> None:
         """Auto-detect which tool calling mode to use based on model.
 
         Priority:
         1. Native (Mistral with tekken.json) - best reliability
+           EXCEPT: Ministral-3 (vision model) - tekken produces corrupted output
         2. Structured JSON (Qwen, Llama-3.1, Phi-3) - good reliability
         3. ReAct (fallback for all models) - okay reliability
         """
@@ -107,7 +139,12 @@ class ChatHuggingFaceLocal(
         model_path_lower = self.model_path.lower()
         tekken_path = os.path.join(self.model_path, "tekken.json")
 
-        if os.path.exists(tekken_path) and "mistral" in model_path_lower:
+        # Check for Ministral-3 (vision model) - do NOT use native mode
+        # The mistral_common tekken tokenizer produces corrupted output with
+        # Mistral3ForConditionalGeneration architecture
+        is_ministral3 = "ministral" in model_path_lower or "mistral-3" in model_path_lower
+        
+        if os.path.exists(tekken_path) and "mistral" in model_path_lower and not is_ministral3:
             self.tool_calling_mode = "native"
             self.use_mistral_native = True
             return
@@ -208,8 +245,10 @@ class ChatHuggingFaceLocal(
         return self.__class__(
             model=self.model,
             tokenizer=self.tokenizer,
+            processor=self.processor,
             model_path=self.model_path,
             use_mistral_native=self.use_mistral_native,
+            is_vision_model=self.is_vision_model,
             max_new_tokens=self.max_new_tokens,
             temperature=self.temperature,
             top_p=self.top_p,

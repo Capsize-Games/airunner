@@ -65,6 +65,28 @@ class TestCheckModelExists:
 
         assert result is True
 
+    @patch(
+        "airunner.components.llm.managers.mixins.validation_mixin.is_gguf_model",
+        return_value=True,
+    )
+    @patch("os.path.exists")
+    @patch("os.listdir")
+    def test_returns_true_when_gguf_present_even_without_safetensors(
+        self, mock_listdir, mock_exists, _mock_is_gguf
+    ):
+        """If a GGUF exists, do not require HF safetensors or trigger downloads."""
+        mock_exists.return_value = True
+        mock_listdir.return_value = [
+            "config.json",
+            "model.safetensors.index.json",
+            "Qwen3-8B-Q4_K_M.gguf",
+        ]
+        mixin = TestableValidationMixin()
+
+        result = mixin._check_model_exists()
+
+        assert result is True
+
 
 class TestVerifyModelFiles:
     """Tests for _verify_model_files method."""
@@ -255,6 +277,28 @@ class TestCheckAndDownloadModel:
         """Test returns True when model already exists."""
         mock_exists.return_value = True
         mock_listdir.return_value = ["config.json", "model.safetensors"]
+        mixin = TestableValidationMixin()
+
+        result = mixin._check_and_download_model()
+
+        assert result is True
+
+    @patch(
+        "airunner.components.llm.managers.mixins.validation_mixin.is_gguf_model",
+        return_value=True,
+    )
+    @patch("os.path.exists")
+    @patch("os.listdir")
+    def test_returns_true_when_gguf_exists_and_hf_files_missing(
+        self, mock_listdir, mock_exists, _mock_is_gguf
+    ):
+        """GGUF should short-circuit existence checks and avoid download triggers."""
+        mock_exists.return_value = True
+        mock_listdir.return_value = [
+            "config.json",
+            "model.safetensors.index.json",
+            "Qwen3-8B-Q4_K_M.gguf",
+        ]
         mixin = TestableValidationMixin()
 
         result = mixin._check_and_download_model()

@@ -41,7 +41,6 @@ class CanvasGenerationMixin:
             return
 
         image_response = data.get("image_response")
-        self.logger.info(f"[CANVAS DEBUG] image_response: {image_response}")
         self.cached_send_image_to_canvas = None
         if not image_response or not image_response.images:
             self.logger.warning(f"[CANVAS DEBUG] No images in response. image_response={image_response}, images={getattr(image_response, 'images', 'NO ATTR')}")

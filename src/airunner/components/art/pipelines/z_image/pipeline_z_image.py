@@ -32,6 +32,7 @@ from diffusers.utils.torch_utils import randn_tensor
 
 from airunner.components.art.pipelines.z_image.pipeline_output import ZImagePipelineOutput
 from airunner.components.art.pipelines.z_image.transformer_z_image import ZImageTransformer2DModel
+from airunner.components.art.pipelines.z_image.lora_loader import ZImageLoraLoaderMixin
 
 
 logger = logging.get_logger(__name__)
@@ -82,35 +83,45 @@ def retrieve_timesteps(
         `Tuple[torch.Tensor, int]`: A tuple where the first element is the timestep schedule from the scheduler and the
         second element is the number of inference steps.
     """
+    # Filter kwargs to only include parameters accepted by the scheduler's set_timesteps method
+    accepted_params = set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k in accepted_params}
+
+    # Propagate sampler behavioral flags from scheduler.config into set_timesteps when supported
+    config = getattr(scheduler, "config", {}) or {}
+    for flag in ("use_karras_sigmas", "stochastic_sampling"):
+        if flag in accepted_params and flag not in filtered_kwargs and flag in config:
+            filtered_kwargs[flag] = config.get(flag)
+    
     if timesteps is not None and sigmas is not None:
         raise ValueError("Only one of `timesteps` or `sigmas` can be passed. Please choose one to set custom values")
     if timesteps is not None:
-        accepts_timesteps = "timesteps" in set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+        accepts_timesteps = "timesteps" in accepted_params
         if not accepts_timesteps:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
                 f" timestep schedules. Please check whether you are using the correct scheduler."
             )
-        scheduler.set_timesteps(timesteps=timesteps, device=device, **kwargs)
+        scheduler.set_timesteps(timesteps=timesteps, device=device, **filtered_kwargs)
         timesteps = scheduler.timesteps
         num_inference_steps = len(timesteps)
     elif sigmas is not None:
-        accept_sigmas = "sigmas" in set(inspect.signature(scheduler.set_timesteps).parameters.keys())
+        accept_sigmas = "sigmas" in accepted_params
         if not accept_sigmas:
             raise ValueError(
                 f"The current scheduler class {scheduler.__class__}'s `set_timesteps` does not support custom"
                 f" sigmas schedules. Please check whether you are using the correct scheduler."
             )
-        scheduler.set_timesteps(sigmas=sigmas, device=device, **kwargs)
+        scheduler.set_timesteps(sigmas=sigmas, device=device, **filtered_kwargs)
         timesteps = scheduler.timesteps
         num_inference_steps = len(timesteps)
     else:
-        scheduler.set_timesteps(num_inference_steps, device=device, **kwargs)
+        scheduler.set_timesteps(num_inference_steps, device=device, **filtered_kwargs)
         timesteps = scheduler.timesteps
     return timesteps, num_inference_steps
 
 
-class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
+class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin, ZImageLoraLoaderMixin):
     r"""
     The Z-Image pipeline for text-to-image generation.
 
@@ -466,6 +477,13 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
         num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
         self._num_timesteps = len(timesteps)
 
+        # Debug: capture scheduler timesteps/sigmas to verify sampler behavior
+        try:
+            sigmas_list = getattr(self.scheduler, "sigmas", None)
+        except Exception as e:
+            sigmas_list = None
+            print(f"Could not retrieve sigmas from scheduler: {e}")
+
         # 6. CFG preparation
         if guidance_scale > 1.0:
             uncond_prompt_embeds = self.encode_prompt(
@@ -551,6 +569,36 @@ class ZImagePipeline(DiffusionPipeline, FromSingleFileMixin):
             return ZImagePipelineOutput(images=latents)
 
         # 8. Decode latents
+        # For VRAM-constrained systems, we need to make room for VAE decode
+        # which can require ~1-2GB depending on image size.
+        # Strategy: offload transformer to CPU to free GPU memory for VAE
+        import gc
+        
+        # Check available VRAM before decode
+        _vram_tight = False
+        if torch.cuda.is_available():
+            free_memory = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
+            _vram_tight = free_memory < 2 * 1024**3  # Less than 2GB free
+        
+        # If VRAM is tight, offload transformer to CPU temporarily
+        _transformer_was_on_gpu = False
+        if _vram_tight and hasattr(self, 'transformer') and self.transformer is not None:
+            try:
+                # Check if transformer is on GPU
+                if hasattr(self.transformer, 'device') and str(self.transformer.device).startswith('cuda'):
+                    _transformer_was_on_gpu = True
+                    self.transformer.to('cpu')
+                    gc.collect()
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass  # If offload fails, continue anyway
+        
+        # Clear GPU memory caches
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        
         latents = latents.to(self.vae.dtype)
         latents = (latents / self.vae.config.scaling_factor) + self.vae.config.shift_factor
         image = self.vae.decode(latents, return_dict=False)[0]

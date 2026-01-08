@@ -30,8 +30,11 @@ Key Features:
 """
 
 from typing import Dict, Any, Optional
+from airunner.components.art.pipelines.z_image import (
+    ZImagePipeline,
+    ZImageImg2ImgPipeline,
+)
 import torch
-from diffusers import FlowMatchEulerDiscreteScheduler
 
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
@@ -49,6 +52,15 @@ from airunner.components.art.managers.zimage.mixins.zimage_pipeline_loading_mixi
     ZImagePipelineLoadingMixin,
 )
 from airunner.enums import ModelType, ModelStatus
+from airunner.components.art.managers.zimage.native.flow_match_scheduler import (
+    FlowMatchEulerScheduler,
+)
+from airunner.components.art.schedulers.flow_match_scheduler_factory import (
+    is_flow_match_scheduler,
+    create_flow_match_scheduler,
+    FLOW_MATCH_SCHEDULER_NAMES,
+)
+from airunner.enums import Scheduler
 
 
 class ZImageModelManager(
@@ -79,31 +91,90 @@ class ZImageModelManager(
 
     @property
     def data_type(self) -> torch.dtype:
-        """Use bfloat16 on CUDA for Z-Image.
+        """Get appropriate data type based on user settings and hardware.
+
+        Uses the dtype from generator_settings if available. Z-Image models
+        work best with bfloat16.
+        
+        Note: For quantized modes (4bit, 8bit), this returns the compute dtype
+        (bfloat16). The actual quantization is handled separately.
+        
+        Note: FP8 requests are served via 8-bit quantization for the
+        transformer/text encoder to keep everything on GPU while avoiding
+        CPU RAM spikes.
 
         Returns:
-            Preferred dtype for Z-Image models.
+            torch.dtype based on user preference and hardware capability.
         """
+        # Get dtype from settings
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        
+        # For quantized modes (including FP8 fallback), use bfloat16 as compute dtype
+        if dtype_setting in ("4bit", "8bit", "float8"):
+            if torch.cuda.is_available():
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                return torch.float32
+            return torch.float32
+        
+        if dtype_setting == "bfloat16":
+            if torch.cuda.is_available():
+                is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
+                if callable(is_bf16_supported) and is_bf16_supported():
+                    return torch.bfloat16
+                return torch.float32
+            return torch.float32
+        elif dtype_setting == "float16":
+            return torch.float16 if torch.cuda.is_available() else torch.float32
+        elif dtype_setting == "float32":
+            return torch.float32
+        
+        # Default: bfloat16 for Z-Image
         if torch.cuda.is_available():
             is_bf16_supported = getattr(torch.cuda, "is_bf16_supported", None)
             if callable(is_bf16_supported) and is_bf16_supported():
                 return torch.bfloat16
             return torch.float32
         return torch.float32
+    
+    @property
+    def use_quantization(self) -> bool:
+        """Check if quantization should be used based on dtype setting.
+        
+        Note: FP8 requests use 8-bit quantization for stability with the
+        bundled text encoder.
+        """
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        # FP8 falls back to quantization since it's not supported
+        return dtype_setting in ("4bit", "8bit", "float8")
+    
+    @property
+    def quantization_bits(self) -> Optional[int]:
+        """Get quantization bits if quantization is enabled.
+        
+        Note: FP8 falls back to 4-bit for Z-Image since the text encoder
+        doesn't support FP8.
+        """
+        dtype_setting = getattr(self.generator_settings, "dtype", None)
+        if dtype_setting == "4bit":
+            return 4
+        elif dtype_setting == "8bit":
+            return 8
+        elif dtype_setting == "float8":
+            # Use 8-bit quantization when user requests FP8
+            return 8
+        return None
 
     @property
     def img2img_pipelines(self) -> tuple:
-        """Get img2img pipeline classes for Z-Image.
-        
-        Note: Z-Image img2img not yet available in diffusers.
-        """
-        return ()
+        """Get img2img pipeline classes for Z-Image."""
+        return (ZImageImg2ImgPipeline,) if ZImageImg2ImgPipeline is not None else tuple()
 
     @property
     def txt2img_pipelines(self) -> tuple:
         """Get txt2img pipeline classes for Z-Image."""
-        from airunner.components.art.pipelines.z_image import ZImagePipeline
-        return (ZImagePipeline,)
+        return (ZImagePipeline,) if ZImagePipeline is not None else tuple()
 
     @property
     def controlnet_pipelines(self) -> tuple:
@@ -128,11 +199,13 @@ class ZImageModelManager(
         Returns:
             Dict mapping operation names to pipeline classes
         """
-        from airunner.components.art.pipelines.z_image import ZImagePipeline
-        return {
-            "txt2img": ZImagePipeline,
-            # img2img, inpaint, outpaint will be added when available
-        }
+        mapping: Dict[str, Any] = {}
+        if ZImagePipeline is not None:
+            mapping["txt2img"] = ZImagePipeline
+        if ZImageImg2ImgPipeline is not None:
+            mapping["img2img"] = ZImageImg2ImgPipeline
+        # inpaint, outpaint will be added when Z-Image-Edit is released
+        return mapping
 
     @property
     def _pipeline_class(self) -> Any:
@@ -210,41 +283,84 @@ class ZImageModelManager(
 
     @staticmethod
     def _is_zimage_scheduler(scheduler: Optional[Any]) -> bool:
-        """Check whether the scheduler is already the Z-Image-compatible type."""
-        return isinstance(scheduler, FlowMatchEulerDiscreteScheduler)
-
-    def _log_scheduler_loaded(self) -> None:
-        """Emit a consistent log message for scheduler readiness."""
-        self.logger.info(
-            "Loaded scheduler: FlowMatchEulerDiscreteScheduler (Z-Image)"
-        )
+        """Check whether the scheduler is a flow-match compatible type."""
+        return isinstance(scheduler, FlowMatchEulerScheduler)
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
-        """Ensure the active scheduler is FlowMatchEulerDiscreteScheduler."""
+        """Load the selected flow-match scheduler for Z-Image.
+        
+        Args:
+            scheduler_name: Display name of the scheduler to load.
+                           Supports all flow-match scheduler variants.
+        """
+        # flow_match scheduler imports moved to module-level
+        
         if self._pipe is None:
             return
-
-        current_scheduler = getattr(self._pipe, "scheduler", None)
-        if self._is_zimage_scheduler(current_scheduler):
-            self._log_scheduler_loaded()
-            return
-
-        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
-        base_config = getattr(current_scheduler, "config", {})
-        try:
-            self._scheduler = FlowMatchEulerDiscreteScheduler.from_config(
-                base_config
+        
+        # Get scheduler name from request or parameter
+        requested_name = (
+            scheduler_name
+            or (self.image_request.scheduler if self.image_request else None)
+            or getattr(self, '_scheduler_name', None)
+            or Scheduler.FLOW_MATCH_EULER.value
+        )
+        
+        # Validate it's a flow-match scheduler
+        if not is_flow_match_scheduler(requested_name):
+            self.logger.warning(
+                f"Scheduler {requested_name} is not a flow-match scheduler. "
+                f"Z-Image requires flow-match schedulers. Using default."
             )
+            requested_name = Scheduler.FLOW_MATCH_EULER.value
+        
+        # Check if we already have this scheduler loaded
+        current_scheduler = getattr(self._pipe, "scheduler", None)
+        if (
+            current_scheduler is not None
+            and getattr(self, '_scheduler_name', None) == requested_name
+        ):
+            self.logger.debug(f"Scheduler {requested_name} already loaded")
+            return
+        
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
+        
+        # Use base config from current scheduler for structural params, but
+        # strip behavioral flags so the factory sets them explicitly.
+        base_config = None
+        if current_scheduler is not None and hasattr(current_scheduler, "config"):
+            base_config = dict(current_scheduler.config)
+            for flag in (
+                "use_karras_sigmas",
+                "stochastic_sampling",
+                "use_exponential_sigmas",
+                "use_beta_sigmas",
+            ):
+                base_config.pop(flag, None)
+        
+        try:
+            self._scheduler = create_flow_match_scheduler(requested_name, base_config)
+            self._pipe.scheduler = self._scheduler
+            self._scheduler_name = requested_name
+            
+            # Log what config was applied
+            config_info = ""
+            if hasattr(self._scheduler, 'config'):
+                karras = self._scheduler.config.get('use_karras_sigmas', False)
+                stochastic = self._scheduler.config.get('stochastic_sampling', False)
+                if karras or stochastic:
+                    config_info = f" (karras={karras}, stochastic={stochastic})"
+            
+            self.logger.info(
+                f"Loaded scheduler: {requested_name} -> {self._scheduler.__class__.__name__}{config_info}"
+            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
+            
         except Exception as exc:
             self.logger.error(
-                f"Failed to load Z-Image scheduler: {exc}", exc_info=True
+                f"Failed to load Z-Image scheduler {requested_name}: {exc}", exc_info=True
             )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
-            return
-
-        self._pipe.scheduler = self._scheduler
-        self._log_scheduler_loaded()
-        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
 
     def _move_pipe_to_device(self):
         """Override device movement for Z-Image models with CPU offloading."""

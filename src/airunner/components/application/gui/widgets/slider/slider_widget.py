@@ -37,6 +37,13 @@ class SliderWidget(BaseWidget):
         self.ui.slider_spinbox.valueChanged.connect(
             self.handle_spinbox_valueChanged
         )
+        # Commit pending changes when the user finishes editing the spinbox.
+        # This prevents races where a user types a value and immediately
+        # clicks Generate before the 300ms debounce flushes to the DB.
+        if hasattr(self.ui.slider_spinbox, "editingFinished"):
+            self.ui.slider_spinbox.editingFinished.connect(
+                self.on_spinbox_editingFinished
+            )
 
     @property
     def slider_single_step(self):
@@ -157,7 +164,18 @@ class SliderWidget(BaseWidget):
     def on_slider_sliderReleased(self):
         if self.is_loading:
             return
-        self.slider_callback(self.settings_property, self.current_value)
+        # Slider release is already a natural debounce boundary.
+        # Commit immediately so downstream actions (e.g., Generate) don't race
+        # against the 300ms debounce timer and read stale settings.
+        if not self.settings_property:
+            return
+        if self._callback:
+            self._callback(self.settings_property, self.current_value)
+            return
+
+        self._debounce_timer.stop()
+        self._pending_update = (self.settings_property, self.current_value)
+        self._process_pending_update()
 
     @Slot(float)
     def handle_spinbox_valueChanged(self, val: float):
@@ -176,6 +194,25 @@ class SliderWidget(BaseWidget):
             self.ui.slider.setValue(slider_val)
             self.ui.slider.blockSignals(False)
         self.slider_callback(self.settings_property, slider_val)
+
+    @Slot()
+    def on_spinbox_editingFinished(self):
+        if self.is_loading:
+            return
+        if not self.settings_property:
+            return
+
+        slider_val = self.ui.slider.value()
+
+        # If a custom callback is configured, let it handle persistence.
+        if self._callback:
+            self._callback(self.settings_property, slider_val)
+            return
+
+        # Otherwise, flush the debounced update immediately.
+        self._debounce_timer.stop()
+        self._pending_update = (self.settings_property, slider_val)
+        self._process_pending_update()
 
     def showEvent(self, event):
         self.init()
