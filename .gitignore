@@ -91,3 +91,5 @@ logs
 
 # UI build marker file (generated)
 src/airunner/components/ui_build_marker
+reports/*
+scripts/*
