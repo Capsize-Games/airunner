@@ -94,8 +94,8 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             )
             return
 
-        # Validate code safety
-        is_safe, errors = LLMTool.validate_code_safety(code)
+        temp_tool = LLMTool(code=code)
+        is_safe, message = temp_tool.validate_code_safety()
 
         if is_safe:
             QMessageBox.information(
@@ -104,10 +104,11 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
                 "Code passed safety validation!",
             )
         else:
-            error_msg = "Code failed safety validation:\n\n" + "\n".join(
-                errors
+            QMessageBox.critical(
+                self,
+                "Validation Failed",
+                f"Code failed safety validation:\n\n{message}",
             )
-            QMessageBox.critical(self, "Validation Failed", error_msg)
 
     @Slot()
     def on_save_clicked(self):
@@ -129,20 +130,28 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
             return
 
         # Validate code safety before saving
-        is_safe, errors = LLMTool.validate_code_safety(code)
+        temp_tool = LLMTool(code=code)
+        is_safe, message = temp_tool.validate_code_safety()
         if not is_safe:
-            error_msg = "Code failed safety validation:\n\n" + "\n".join(
-                errors
-            )
             reply = QMessageBox.question(
                 self,
                 "Safety Validation Failed",
-                f"{error_msg}\n\nDo you want to save anyway? (Not recommended)",
+                f"Code failed safety validation:\n\n{message}\n\nDo you want to save anyway? (Not recommended)",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return
+
+        enabled_requested = self.ui.enabled_checkbox.isChecked()
+        enabled = bool(enabled_requested and is_safe)
+
+        if enabled_requested and not is_safe:
+            QMessageBox.warning(
+                self,
+                "Tool Saved Disabled",
+                "This tool failed safety validation and will be saved disabled.",
+            )
 
         # Save to database
         try:
@@ -164,7 +173,7 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
                             or None
                         )
                         db_tool.code = code
-                        db_tool.enabled = self.ui.enabled_checkbox.isChecked()
+                        db_tool.enabled = enabled
                         db_tool.safety_validated = is_safe
                         db_tool.version += 1
                         logger.info(
@@ -182,7 +191,7 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
                         description=self.ui.description_input.toPlainText().strip()
                         or None,
                         code=code,
-                        enabled=self.ui.enabled_checkbox.isChecked(),
+                        enabled=enabled,
                         safety_validated=is_safe,
                         created_by="user",
                         version=1,
