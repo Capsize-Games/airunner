@@ -1,5 +1,6 @@
 """Message formatting operations for HuggingFace chat models."""
 
+import os
 from typing import List
 from langchain_core.messages import (
     BaseMessage,
@@ -188,17 +189,25 @@ class MessageFormattingMixin:
                     "tool_call_id": getattr(msg, "tool_call_id", ""),
                 })
 
-        # Debug logging to trace what we send into the chat template
-        try:
-            preview = chat_messages[:]
-            if preview:
-                preview[0] = {
-                    **preview[0],
-                    "content": str(preview[0].get("content", ""))[:200],
-                }
-            self.logger.debug("Chat template input messages: %s", preview)
-        except Exception:
-            pass
+        # Avoid logging raw prompt/message content by default.
+        # If you really need to debug templating, opt-in explicitly.
+        if os.environ.get("AIRUNNER_LOG_SENSITIVE_PROMPTS") == "1":
+            try:
+                preview = []
+                for m in chat_messages[:5]:
+                    role = m.get("role")
+                    content = m.get("content", "")
+                    if isinstance(content, list):
+                        content_len = sum(
+                            len(str(p.get("text", ""))) if isinstance(p, dict) else len(str(p))
+                            for p in content
+                        )
+                    else:
+                        content_len = len(str(content))
+                    preview.append({"role": role, "content_len": content_len})
+                self.logger.debug("Chat template input message preview (redacted): %s", preview)
+            except Exception:
+                pass
 
         # Check if we have tools to pass to the template
         template_kwargs = {
