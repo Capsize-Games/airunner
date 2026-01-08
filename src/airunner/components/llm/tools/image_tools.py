@@ -99,7 +99,13 @@ Enhanced (detailed, specific, no explanations):"""
             else:
                 enhanced_second = second_prompt
 
-        logger.info(f"Prompt enhanced: '{prompt}' -> '{enhanced_prompt}'")
+        logger.info(
+            "Prompt enhanced (prompt_len=%s, enhanced_len=%s, second_prompt_len=%s, enhanced_second_len=%s)",
+            len(prompt or ""),
+            len(enhanced_prompt or ""),
+            len(second_prompt or ""),
+            len(enhanced_second or ""),
+        )
         return enhanced_prompt, enhanced_second
 
     except Exception as e:

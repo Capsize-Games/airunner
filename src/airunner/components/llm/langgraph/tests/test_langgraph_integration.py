@@ -289,6 +289,41 @@ x = 42
 
         assert len(self.runtime.compiled_modules) == 0
 
+    def test_compile_and_load_blocks_disallowed_import(self):
+        code = "import os\nX = 1"
+        with pytest.raises(RuntimeError):
+            self.runtime.compile_and_load(code, "bad_import")
+
+    def test_compile_and_load_blocks_open(self):
+        code = "x = open('somefile', 'w')"
+        with pytest.raises(RuntimeError):
+            self.runtime.compile_and_load(code, "bad_open")
+
+    def test_compile_and_load_allows_langgraph_typing_logging_imports(self):
+        code = """
+from typing import TypedDict
+from langgraph.graph import StateGraph, END
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class S(TypedDict):
+    messages: list[str]
+
+def n(state: S) -> S:
+    state['messages'].append('ok')
+    return state
+
+workflow = StateGraph(S)
+workflow.add_node('n', n)
+workflow.set_entry_point('n')
+workflow.add_edge('n', END)
+app = workflow.compile()
+"""
+        module = self.runtime.compile_and_load(code, "ok_generated")
+        assert hasattr(module, "app")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
