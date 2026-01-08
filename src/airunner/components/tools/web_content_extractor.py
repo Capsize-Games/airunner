@@ -12,6 +12,7 @@ from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 
 from airunner.components.settings.data.path_settings import PathSettings
+from airunner.components.tools.url_safety import SSRFBlocked, safe_fetch_url, validate_url_for_fetch
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -306,8 +307,33 @@ class WebContentExtractor:
             logger.warning(f"Failed to write metadata cache for {url}: {e}")
 
     @staticmethod
+    def _safe_fetch_html(url: str) -> Optional[str]:
+        """Fetch a URL with SSRF guardrails and conservative limits."""
+        try:
+            validate_url_for_fetch(url)
+        except SSRFBlocked as e:
+            logger.warning(f"Blocked URL fetch (SSRF policy): {url} ({e})")
+            return None
+
+        try:
+            headers = WebContentExtractor._get_browser_headers()
+            return safe_fetch_url(url, headers=headers)
+        except SSRFBlocked as e:
+            logger.warning(f"Blocked URL fetch (SSRF policy): {url} ({e})")
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to fetch URL {url}: {e}")
+            return None
+
+    @staticmethod
     def fetch_and_extract(url: str, use_cache: bool = True) -> Optional[str]:
         """Fetch, extract, and summarize main content as plaintext from a URL, using cache if available."""
+        try:
+            validate_url_for_fetch(url)
+        except SSRFBlocked as e:
+            logger.warning(f"Blocked URL (SSRF policy): {url} ({e})")
+            return None
+
         # Check if this domain is blocked
         if WebContentExtractor._is_blocked(url):
             logger.info(
@@ -398,6 +424,12 @@ class WebContentExtractor:
             - publish_date: Publication date if available
             Returns None if extraction fails.
         """
+        try:
+            validate_url_for_fetch(url)
+        except SSRFBlocked as e:
+            logger.warning(f"Blocked URL (SSRF policy): {url} ({e})")
+            return None
+
         # Check if this domain is blocked
         if WebContentExtractor._is_blocked(url):
             logger.info(
@@ -421,17 +453,7 @@ class WebContentExtractor:
                     return result
 
         try:
-            # Fetch raw HTML with browser-like headers to avoid blocking
-            headers = WebContentExtractor._get_browser_headers()
-
-            # Use trafilatura's fetch_url with custom headers and config
-            from trafilatura.settings import use_config
-
-            config = use_config()
-            config.set("DEFAULT", "USER_AGENT", headers["User-Agent"])
-
-            # Fetch with custom headers
-            html_content = trafilatura.fetch_url(url, config=config)
+            html_content = WebContentExtractor._safe_fetch_html(url)
 
             if not html_content:
                 logger.warning(f"Failed to fetch content from {url}")
@@ -536,19 +558,7 @@ class WebContentExtractor:
 
             # Fetch content if not provided
             if content is None:
-                # Create custom config with shorter timeout
-                import configparser
-
-                config = configparser.ConfigParser()
-                config.read_dict(
-                    {
-                        "DEFAULT": {
-                            "DOWNLOAD_TIMEOUT": "8"  # 8 seconds instead of 30
-                        }
-                    }
-                )
-
-                content = trafilatura.fetch_url(url, config=config)
+                content = WebContentExtractor._safe_fetch_html(url)
                 if not content:
                     logger.warning(f"Failed to fetch content from {url}")
                     return None
@@ -788,19 +798,7 @@ class WebContentExtractor:
     ) -> Optional[str]:
         """Fetch and extract content as Markdown from a URL."""
         try:
-            # Create custom config with shorter timeout
-            import configparser
-
-            config = configparser.ConfigParser()
-            config.read_dict(
-                {
-                    "DEFAULT": {
-                        "DOWNLOAD_TIMEOUT": "8"  # 8 seconds instead of 30
-                    }
-                }
-            )
-
-            downloaded = trafilatura.fetch_url(url, config=config)
+            downloaded = WebContentExtractor._safe_fetch_html(url)
             if downloaded:
                 return WebContentExtractor.extract_markdown(downloaded)
         except Exception as e:
@@ -811,19 +809,7 @@ class WebContentExtractor:
     def _fetch_with_trafilatura(url: str) -> Optional[str]:
         """Fetch content using trafilatura with 8-second timeout and browser headers."""
         try:
-            # Get browser headers for masquerading
-            headers = WebContentExtractor._get_browser_headers()
-
-            # Create custom config with shorter timeout and user agent
-            from trafilatura.settings import use_config
-
-            config = use_config()
-            config.set(
-                "DEFAULT", "DOWNLOAD_TIMEOUT", "8"
-            )  # 8 seconds instead of 30
-            config.set("DEFAULT", "USER_AGENT", headers["User-Agent"])
-
-            downloaded = trafilatura.fetch_url(url, config=config)
+            downloaded = WebContentExtractor._safe_fetch_html(url)
             if downloaded:
                 return trafilatura.extract(
                     downloaded, include_comments=False, include_tables=False
