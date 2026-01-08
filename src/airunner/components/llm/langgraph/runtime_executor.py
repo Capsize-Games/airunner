@@ -4,12 +4,17 @@ This module provides functionality to compile and execute LangGraph workflows
 at runtime, enabling dynamic agent creation from visual graphs.
 """
 
+from __future__ import annotations
+
+import ast
+import builtins
 from types import ModuleType
 from typing import Any, Dict, Optional
 from pathlib import Path
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.components.llm.core.code_sandbox import create_safe_builtins
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -26,6 +31,129 @@ class LangGraphRuntime:
     def __init__(self):
         """Initialize the runtime."""
         self.compiled_modules: Dict[str, ModuleType] = {}
+
+    _ALLOWED_IMPORT_PREFIXES: tuple[str, ...] = (
+        "typing",
+        "langgraph",
+        "logging",
+    )
+
+    _FORBIDDEN_CALLS: set[str] = {
+        "exec",
+        "eval",
+        "compile",
+        "open",
+        "__import__",
+        "input",
+        "breakpoint",
+        "globals",
+        "locals",
+        "vars",
+        "dir",
+        "getattr",
+        "setattr",
+        "delattr",
+    }
+
+    _FORBIDDEN_NAMES: set[str] = {
+        "__builtins__",
+        "builtins",
+    }
+
+    def _safe_import(self, name: str, globals=None, locals=None, fromlist=(), level: int = 0):
+        # Disallow relative imports.
+        if level and level != 0:
+            raise ImportError("Relative imports are not allowed")
+
+        normalized = (name or "").strip()
+        if not normalized:
+            raise ImportError("Empty import is not allowed")
+
+        allowed = any(
+            normalized == p or normalized.startswith(p + ".")
+            for p in self._ALLOWED_IMPORT_PREFIXES
+        )
+        if not allowed:
+            raise ImportError(f"Import not allowed: {normalized}")
+
+        return builtins.__import__(name, globals, locals, fromlist, level)
+
+    def _validate_security(self, code: str, module_name: str) -> None:
+        """Validate code for dangerous constructs.
+
+        Note: LangGraph generated code needs imports; we allow only a small
+        allowlist of import prefixes and block common RCE primitives.
+        """
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            # Let the normal compile path raise a friendlier error.
+            return
+
+        errors: list[str] = []
+
+        def called_symbol_name(node: ast.AST) -> Optional[str]:
+            # Only treat direct builtin-style calls as dangerous. Attribute calls
+            # like workflow.compile() are common and should not be flagged.
+            if isinstance(node, ast.Name):
+                return node.id
+            if isinstance(node, ast.Subscript):
+                if (
+                    isinstance(node.value, ast.Name)
+                    and node.value.id in {"__builtins__", "builtins"}
+                ):
+                    sl = node.slice
+                    if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                        return sl.value
+            return None
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id in self._FORBIDDEN_NAMES:
+                errors.append(f"Access to name '{node.id}' is not allowed")
+
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                modules: list[str] = []
+                if isinstance(node, ast.Import):
+                    modules = [a.name for a in node.names]
+                else:
+                    modules = [node.module] if node.module else []
+
+                for mod in modules:
+                    if not mod:
+                        errors.append("Empty import is not allowed")
+                        continue
+                    allowed = any(
+                        mod == p or mod.startswith(p + ".")
+                        for p in self._ALLOWED_IMPORT_PREFIXES
+                    )
+                    if not allowed:
+                        errors.append(f"Import not allowed: {mod}")
+
+            if isinstance(node, ast.Call):
+                called = called_symbol_name(node.func)
+                if called in self._FORBIDDEN_CALLS:
+                    errors.append(f"Function '{called}' is not allowed")
+
+                # Block string-based dunder access attempts.
+                if called in {"getattr", "setattr", "delattr"} and len(node.args) >= 2:
+                    arg = node.args[1]
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        v = arg.value
+                        if v.startswith("_") or "__" in v:
+                            errors.append(
+                                f"String-based private/dunder attribute access is not allowed: {v!r}"
+                            )
+
+            if isinstance(node, ast.Attribute):
+                # Disallow private/dunder attribute access.
+                if node.attr.startswith("_") or "__" in node.attr:
+                    errors.append(f"Access to attribute '{node.attr}' is not allowed")
+
+        if errors:
+            msg = "; ".join(sorted(set(errors)))
+            raise RuntimeError(
+                f"Rejected generated module '{module_name}' for unsafe code: {msg}"
+            )
 
     def compile_and_load(
         self,
@@ -49,6 +177,9 @@ class LangGraphRuntime:
         """
         logger.info(f"Compiling module: {module_name}")
 
+        # Always perform a lightweight security validation pass.
+        self._validate_security(code, module_name)
+
         # Validate syntax first if requested
         if validate:
             try:
@@ -60,7 +191,14 @@ class LangGraphRuntime:
         # Create module
         module = ModuleType(module_name)
         module.__file__ = f"<generated:{module_name}>"
-        module.__dict__["__builtins__"] = __builtins__
+        safe_builtins = create_safe_builtins()
+        # Required for defining classes (e.g., TypedDict state classes).
+        safe_builtins["__build_class__"] = builtins.__build_class__
+        safe_builtins["object"] = builtins.object
+        safe_builtins["type"] = builtins.type
+        safe_builtins["super"] = builtins.super
+        safe_builtins["__import__"] = self._safe_import
+        module.__dict__["__builtins__"] = safe_builtins
 
         # Compile and exec
         try:
