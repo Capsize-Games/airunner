@@ -52,9 +52,9 @@ services:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/home/airunner/.Xauthority
       - QT_X11_NO_MITSHM=1
-      # QtWebEngine sandbox fix
-      - QTWEBENGINE_DISABLE_SANDBOX=1
-      - QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox
+      # QtWebEngine sandbox (set env vars to override if needed)
+      - QTWEBENGINE_DISABLE_SANDBOX=${QTWEBENGINE_DISABLE_SANDBOX:-0}
+      - QTWEBENGINE_CHROMIUM_FLAGS=${QTWEBENGINE_CHROMIUM_FLAGS:-}
       # PulseAudio (for GUI mode with audio)
       - PULSE_SERVER=unix:/tmp/pulse/native
       - PULSE_COOKIE=/tmp/pulse/cookie
