@@ -79,9 +79,10 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
 1. **Install system dependencies:**
    ```bash
    sudo apt update && sudo apt install -y \
-     build-essential cmake git curl wget \
+     build-essential cmake git curl wget pkg-config \
      nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 \
      espeak espeak-ng-espeak qt6-qpa-plugins qt6-wayland \
+     libsentencepiece-dev \
      mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
    ```
 
@@ -91,10 +92,30 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
    ```
 
 3. **Install AI Runner:**
+
+  From PyPI:
    ```bash
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install airunner[all_dev]
    ```
+
+  From a local clone in editable mode:
+  ```bash
+  git clone https://github.com/Capsize-Games/airunner.git
+  cd airunner
+  python -m venv venv
+  source venv/bin/activate
+  pip install --upgrade pip setuptools wheel
+  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+  pip install -e ".[all_dev]"
+  ```
+
+  `all_dev` intentionally excludes the MeCab-backed Japanese/Korean voice extras so a fresh virtual environment can install without additional native build steps.
+
+  To include those language packs after installing the system packages above, use:
+  ```bash
+  pip install -e ".[all_dev_native]"
+  ```
 
 4. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
   ```bash

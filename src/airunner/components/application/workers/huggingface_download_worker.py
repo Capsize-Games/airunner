@@ -22,6 +22,9 @@ from airunner.settings import MODELS_DIR
 from airunner.components.data.bootstrap.unified_model_files import (
     get_required_files_for_model,
 )
+from airunner.components.data.bootstrap.model_bootstrap_data import (
+    model_bootstrap_data,
+)
 
 
 class HuggingFaceDownloadWorker(BaseDownloadWorker):
@@ -66,6 +69,39 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         except Exception as e:
             self.logger.warning(f"Failed to apply post-download patches: {e}")
 
+    @staticmethod
+    def _resolve_art_download_context(
+        repo_id: str,
+        version: str = None,
+        pipeline_action: str = None,
+    ):
+        """Resolve art-model bootstrap lookup keys.
+
+        Art downloads must use the exact version/pipeline pair that matches the
+        bootstrap manifest. Falling back to an unrelated model version causes the
+        downloader to request invalid files.
+        """
+        resolved_version = version
+        resolved_pipeline_action = pipeline_action or "txt2img"
+
+        if resolved_version:
+            return resolved_version, resolved_pipeline_action
+
+        for model in model_bootstrap_data:
+            if model.get("model_type") != "art":
+                continue
+            if model.get("path") != repo_id:
+                continue
+
+            resolved_version = model.get("version")
+            if not pipeline_action:
+                resolved_pipeline_action = (
+                    model.get("pipeline_action") or resolved_pipeline_action
+                )
+            break
+
+        return resolved_version, resolved_pipeline_action
+
     def _download_model(
         self,
         repo_id: str = None,
@@ -90,13 +126,38 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             zip_url: For ZIP downloads, the direct URL to download
 
         """
+        resolved_version = version
+        resolved_pipeline_action = pipeline_action
+        if model_type == "art":
+            resolved_version, resolved_pipeline_action = self._resolve_art_download_context(
+                repo_id=repo_id,
+                version=version,
+                pipeline_action=pipeline_action,
+            )
+            if not resolved_version:
+                error = (
+                    f"Unable to resolve art model version for repo {repo_id}. "
+                    "Provide version/pipeline metadata when queueing the download."
+                )
+                self.logger.error(error)
+                self.emit_signal(self._failed_signal, {"error": error})
+                return
+
+            if not version:
+                self.logger.info(
+                    "Resolved art download context from repo_id=%s to version=%s pipeline_action=%s",
+                    repo_id,
+                    resolved_version,
+                    resolved_pipeline_action,
+                )
+
         # Store model_type and pipeline_action immediately for use in completion signals
         self._current_model_type = model_type
-        self._current_pipeline_action = pipeline_action
+        self._current_pipeline_action = resolved_pipeline_action or pipeline_action
         
         self.logger.info(
             f"_download_model called with repo_id={repo_id}, model_type={model_type}, "
-            f"output_dir={output_dir}, version={version}, pipeline_action={pipeline_action}, "
+            f"output_dir={output_dir}, version={resolved_version}, pipeline_action={resolved_pipeline_action}, "
             f"missing_files={missing_files}, gguf_filename={gguf_filename}, zip_url={zip_url}"
         )
 
@@ -142,8 +203,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._total_downloaded = 0
         self._total_size = 0
 
-        temp_dir = model_path / ".downloading"
-        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_dir = self._prepare_temp_dir(model_path)
 
         self._model_path = model_path
         self._temp_dir = temp_dir
@@ -168,21 +228,16 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # First, get the full bootstrap data based on model type
         if is_art_model:
-            version_names = []
-            if version:
-                version_names.append(version)
-            else:
-                version_names = ["Flux.1 S", "FLUX"]
-
-            for version_name in version_names:
-                full_bootstrap_data = get_required_files_for_model(
-                    "art", version_name, version_name, pipeline_action
+            full_bootstrap_data = get_required_files_for_model(
+                "art",
+                resolved_version,
+                resolved_version,
+                resolved_pipeline_action,
+            )
+            if full_bootstrap_data:
+                self.logger.info(
+                    f"Found bootstrap data for {resolved_version} with {len(full_bootstrap_data)} files"
                 )
-                if full_bootstrap_data:
-                    self.logger.info(
-                        f"Found bootstrap data for {version_name} with {len(full_bootstrap_data)} files"
-                    )
-                    break
         elif is_stt_tts_model:
             # For STT/TTS models, get the list of required files from bootstrap data
             full_bootstrap_data = get_required_files_for_model(
@@ -233,12 +288,12 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
             if bootstrap_files is None or len(bootstrap_files) == 0:
                 self.logger.error(
-                    f"No bootstrap data found for {model_type} (version={version})! Cannot determine required files."
+                    f"No bootstrap data found for {model_type} (version={resolved_version}, pipeline_action={resolved_pipeline_action})! Cannot determine required files."
                 )
                 self.emit_signal(
                     self._failed_signal,
                     {
-                        "error": f"No bootstrap data found for {model_type} (version={version})"
+                        "error": f"No bootstrap data found for {model_type} (version={resolved_version}, pipeline_action={resolved_pipeline_action})"
                     },
                 )
                 return
@@ -492,8 +547,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._total_downloaded = 0
         self._total_size = 0
 
-        temp_dir = model_path / ".downloading"
-        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_dir = self._prepare_temp_dir(model_path)
 
         self._model_path = model_path
         self._temp_dir = temp_dir
@@ -611,8 +665,7 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         self._total_downloaded = 0
         self._total_size = 0
 
-        temp_dir = model_path / ".downloading"
-        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_dir = self._prepare_temp_dir(model_path)
 
         self._model_path = model_path
         self._temp_dir = temp_dir
@@ -741,75 +794,103 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     # Fall through to re-download
 
         try:
-            with requests.get(
-                url, headers=headers, stream=True, timeout=30
-            ) as response:
-                # Check if server supports range requests
-                if resume_from > 0:
-                    if response.status_code == 206:
-                        # Partial content - resume successful
-                        self.logger.info(f"Server accepted range request for {filename}")
-                    elif response.status_code == 200:
-                        # Server doesn't support range requests, start over
-                        self.logger.warning(
-                            f"Server doesn't support range requests for {filename}, restarting download"
-                        )
-                        resume_from = 0
-                        file_mode = "wb"
+            request_attempts = 0
+            while True:
+                request_attempts += 1
+                with requests.get(
+                    url, headers=headers, stream=True, timeout=30
+                ) as response:
+                    # Check if server supports range requests
+                    if resume_from > 0:
+                        if response.status_code == 206:
+                            # Partial content - resume successful
+                            self.logger.info(f"Server accepted range request for {filename}")
+                        elif response.status_code == 200:
+                            # Server doesn't support range requests, start over
+                            self.logger.warning(
+                                f"Server doesn't support range requests for {filename}, restarting download"
+                            )
+                            resume_from = 0
+                            file_mode = "wb"
+                            headers.pop("Range", None)
+                        elif response.status_code == 416 and request_attempts == 1:
+                            # The partial temp file is stale or larger than the current remote file.
+                            self.logger.warning(
+                                "Server rejected range request for %s with HTTP 416; deleting temp file and restarting",
+                                filename,
+                            )
+                            self.emit_signal(
+                                SignalCode.UPDATE_DOWNLOAD_LOG,
+                                {
+                                    "message": f"Stale partial download detected for {filename}. Restarting that file..."
+                                },
+                            )
+                            try:
+                                temp_path.unlink(missing_ok=True)
+                            except Exception as unlink_error:
+                                self.logger.warning(
+                                    f"Failed to delete stale temp file {filename}: {unlink_error}"
+                                )
+                            resume_from = 0
+                            file_mode = "wb"
+                            headers.pop("Range", None)
+                            continue
+                        else:
+                            response.raise_for_status()
                     else:
                         response.raise_for_status()
-                else:
-                    response.raise_for_status()
 
-                content_length = response.headers.get("content-length")
-                if content_length:
-                    remaining_size = int(content_length)
-                    total_file_size = resume_from + remaining_size
-                    with self._lock:
-                        # Update total_size if bootstrap had 0 for this file
-                        old_file_size = self._file_sizes.get(filename, 0)
-                        if old_file_size == 0 and total_file_size > 0:
-                            self._total_size += total_file_size
-                        elif old_file_size != total_file_size:
-                            # Adjust total_size for the difference
-                            self._total_size += (total_file_size - old_file_size)
-                        self._file_sizes[filename] = total_file_size
-                else:
-                    total_file_size = file_size
+                    content_length = response.headers.get("content-length")
+                    if content_length:
+                        remaining_size = int(content_length)
+                        total_file_size = resume_from + remaining_size
+                        with self._lock:
+                            # Update total_size if bootstrap had 0 for this file
+                            old_file_size = self._file_sizes.get(filename, 0)
+                            if old_file_size == 0 and total_file_size > 0:
+                                self._total_size += total_file_size
+                            elif old_file_size != total_file_size:
+                                # Adjust total_size for the difference
+                                self._total_size += (total_file_size - old_file_size)
+                            self._file_sizes[filename] = total_file_size
+                    else:
+                        total_file_size = file_size
 
-                downloaded = resume_from
-                with open(temp_path, file_mode) as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if self.is_cancelled:
-                            f.close()
-                            # Don't delete temp file on cancel - can resume later
-                            return
+                    downloaded = resume_from
+                    with open(temp_path, file_mode) as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if self.is_cancelled:
+                                f.close()
+                                # Don't delete temp file on cancel - can resume later
+                                return
 
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
 
-                            if downloaded % (1024 * 1024) < 8192:
-                                self._update_file_progress(
-                                    filename, downloaded, total_file_size
-                                )
+                                if downloaded % (1024 * 1024) < 8192:
+                                    self._update_file_progress(
+                                        filename, downloaded, total_file_size
+                                    )
 
-                self._update_file_progress(filename, downloaded, total_file_size)
+                    break
 
-                # Verify download is complete
-                if downloaded < file_size:
-                    self.logger.error(
-                        f"Download incomplete for {filename}: {downloaded} bytes vs expected {file_size}"
-                    )
-                    self._mark_file_failed(filename)
-                    return
+            self._update_file_progress(filename, downloaded, total_file_size)
 
-                final_path.parent.mkdir(parents=True, exist_ok=True)
-                if final_path.exists():
-                    final_path.unlink()
-                temp_path.rename(final_path)
+            # Verify download is complete
+            if downloaded < file_size:
+                self.logger.error(
+                    f"Download incomplete for {filename}: {downloaded} bytes vs expected {file_size}"
+                )
+                self._mark_file_failed(filename)
+                return
 
-                self._mark_file_complete(filename)
+            final_path.parent.mkdir(parents=True, exist_ok=True)
+            if final_path.exists():
+                final_path.unlink()
+            temp_path.rename(final_path)
+
+            self._mark_file_complete(filename)
 
         except Exception as e:
             import traceback

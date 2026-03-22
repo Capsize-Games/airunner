@@ -63,7 +63,7 @@ extras_require = {
         "llama-cpp-python==0.3.16",
         # Summarizations (basic)
         "sumy==0.11.0",
-        "sentencepiece==0.2.0",
+        "sentencepiece==0.2.1",
         "lingua-language-detector==2.1.0",
         "markdown==3.8",
         "libzim==3.7.0",
@@ -175,28 +175,43 @@ extras_require = {
     ],
 }
 
-extras_require["all"] = []
-extras_require["all_dev"] = []
-extras_require["windows"] = []
+AGGREGATE_EXTRAS = {
+    "all",
+    "all_dev",
+    "all_native",
+    "all_dev_native",
+    "windows",
+}
+SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
 
-for k, v_list in extras_require.items():
-    if k == "all":
-        continue
-    if k != "dev":
-        extras_require["all"].extend(v_list)
-    extras_require["all_dev"].extend(v_list)
 
-for k, v in extras_require.items():
-    if k in ["all", "all_dev", "windows"]:
-        continue
-    if k != "dev":
-        if k not in extras_require["all"]:
-            extras_require["all"].extend(v)
-    if k not in extras_require["all_dev"]:
-        extras_require["all_dev"].extend(v)
-    if k != "linux":
-        if k not in extras_require["windows"]:
-            extras_require["windows"].extend(v)
+def build_aggregate_extra(include_dev=True, exclude=None):
+    excluded = set(exclude or ())
+    dependencies = []
+    for extra_name, extra_dependencies in extras_require.items():
+        if extra_name in AGGREGATE_EXTRAS or extra_name in excluded:
+            continue
+        if not include_dev and extra_name == "dev":
+            continue
+        dependencies.extend(extra_dependencies)
+    return list(dict.fromkeys(dependencies))
+
+
+# Keep the default aggregate installs pip-only so they work in a fresh venv.
+extras_require["all"] = build_aggregate_extra(
+    include_dev=False,
+    exclude=SYSTEM_DEP_EXTRAS,
+)
+extras_require["all_dev"] = build_aggregate_extra(
+    include_dev=True,
+    exclude=SYSTEM_DEP_EXTRAS,
+)
+extras_require["all_native"] = build_aggregate_extra(include_dev=False)
+extras_require["all_dev_native"] = build_aggregate_extra(include_dev=True)
+extras_require["windows"] = build_aggregate_extra(
+    include_dev=False,
+    exclude={"linux"} | SYSTEM_DEP_EXTRAS,
+)
 
 
 setup(

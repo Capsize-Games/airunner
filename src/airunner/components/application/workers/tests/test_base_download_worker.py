@@ -189,3 +189,20 @@ class TestDownloadThreading:
             call[0][0] == SignalCode.HUGGINGFACE_DOWNLOAD_FAILED
             for call in mock_emit.call_args_list
         )
+
+    def test_wait_for_completion_marks_dead_thread_failed(self):
+        """Dead download threads should not block completion forever."""
+        worker = ConcreteDownloadWorker()
+
+        with patch.object(worker, "emit_signal"):
+            thread = worker._file_threads["file1.bin"] = __import__("threading").Thread(
+                target=lambda: None,
+                daemon=True,
+            )
+            thread.start()
+            thread.join()
+
+            result = worker._wait_for_completion(1)
+
+        assert result is False
+        assert "file1.bin" in worker._failed_files

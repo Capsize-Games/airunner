@@ -323,6 +323,8 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
                         "repo_id": repo_id,
                         "model_type": model["model_type"],
                         "model_name": model["name"],
+                        "version": model.get("version"),
+                        "pipeline_action": model.get("pipeline_action"),
                         "output_dir": os.path.join(
                             self.path_settings.base_path,
                             model["model_type"],
@@ -443,6 +445,8 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
                 "repo_id": download["repo_id"],
                 "model_path": download["output_dir"],
                 "model_type": download["model_type"],
+                "version": download.get("version"),
+                "pipeline_action": download.get("pipeline_action"),
                 "callback": self._on_single_download_complete,
             }
         )

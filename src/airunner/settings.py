@@ -163,9 +163,11 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
     ),
 )
 
-AIRUNNER_BASE_PATH = os.environ.get(
-    "AIRUNNER_BASE_PATH",
-    os.path.expanduser("~/.local/share/airunner")
+AIRUNNER_BASE_PATH = os.path.expanduser(
+    os.environ.get(
+        "AIRUNNER_BASE_PATH",
+        "~/.local/share/airunner",
+    )
 )
 AIRUNNER_USER_DATA_PATH = AIRUNNER_BASE_PATH
 MODELS_DIR = os.path.join(AIRUNNER_BASE_PATH, "models")
@@ -225,9 +227,7 @@ if DEV_ENV:
 AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", default_name)
 
 # Set the database URL
-DB_PATH = os.path.expanduser(
-    os.path.join("~", ".local", "share", "airunner", "data", AIRUNNER_DB_NAME)
-)
+DB_PATH = os.path.join(AIRUNNER_BASE_PATH, "data", AIRUNNER_DB_NAME)
 default_url = "sqlite:///" + DB_PATH
 AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
 if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:

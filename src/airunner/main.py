@@ -151,13 +151,16 @@ def initialize_loggers():
 initialize_loggers()
 
 import sys
-from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
+from airunner.settings import (
+    AIRUNNER_BASE_PATH,
+    AIRUNNER_LOG_FILE,
+    AIRUNNER_SAVE_LOG_TO_FILE,
+)
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.utils.download_temp_cleanup import cleanup_stale_download_dirs
 
-base_path = os.path.join(
-    os.path.expanduser("~"), ".local", "share", "airunner"
-)
+base_path = AIRUNNER_BASE_PATH
 
 ################################################################
 # Ensure that the base directory exists.
@@ -167,6 +170,18 @@ try:
     os.makedirs(base_dir, exist_ok=True)
 except FileExistsError:
     pass
+
+startup_logger = logging.getLogger(__name__)
+removed_temp_dirs = cleanup_stale_download_dirs(
+    AIRUNNER_BASE_PATH,
+    logger=startup_logger,
+)
+if removed_temp_dirs:
+    startup_logger.info(
+        "Removed %d stale download temp director%s during startup",
+        len(removed_temp_dirs),
+        "y" if len(removed_temp_dirs) == 1 else "ies",
+    )
 
 DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:

@@ -47,6 +47,11 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
+try:
+    import torch
+except ImportError:
+    torch = None
+
 
 class UnsupportedGGUFArchitectureError(Exception):
     """Raised when a GGUF model uses an architecture not supported by llama-cpp-python.
@@ -193,11 +198,29 @@ class ChatGGUF(BaseChatModel):
             return
 
         try:
-            from llama_cpp import Llama
+            from llama_cpp import Llama, llama_supports_gpu_offload
         except ImportError:
             raise ImportError(
                 "llama-cpp-python is required for GGUF support. "
                 "Install with: pip install llama-cpp-python"
+            )
+
+        gpu_offload_supported = False
+        try:
+            gpu_offload_supported = bool(llama_supports_gpu_offload())
+        except Exception:
+            gpu_offload_supported = False
+
+        cuda_available = bool(
+            torch is not None
+            and hasattr(torch, "cuda")
+            and torch.cuda.is_available()
+        )
+
+        if self.n_gpu_layers != 0 and cuda_available and not gpu_offload_supported:
+            self.logger.warning(
+                "CUDA is available, but this llama-cpp-python build does not support GPU offload. "
+                "GGUF inference will run on CPU until llama-cpp-python is rebuilt with GGML_CUDA=on."
             )
 
         self.logger.info(f"Loading GGUF model from {self.model_path}")
@@ -205,6 +228,10 @@ class ChatGGUF(BaseChatModel):
             f"  chat_format={self._detected_format}, n_ctx={self.n_ctx}, "
             f"n_gpu_layers={self.n_gpu_layers}"
         )
+        if self.n_gpu_layers != 0:
+            self.logger.info(
+                f"  llama.cpp GPU offload support={gpu_offload_supported}"
+            )
 
         # Use standard chatml format - we handle tool calling via prompt injection
         # and <tool_call> tag parsing (Qwen3 native format)

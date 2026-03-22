@@ -93,6 +93,7 @@ class WorkerManager(Worker):
         self._stt_audio_capture_worker = None
         self._stt_audio_processor_worker = None
         self._tts_generator_worker = None
+        self._tts_generator_worker_import_error = None
         self._tts_vocalizer_worker = None
         self._llm_generate_worker = None
         self._document_worker = None
@@ -303,9 +304,21 @@ class WorkerManager(Worker):
     @property
     def tts_generator_worker(self):
         if self._tts_generator_worker is None:
-            from airunner.components.tts.workers.tts_generator_worker import (
-                TTSGeneratorWorker,
-            )
+            try:
+                from airunner.components.tts.workers.tts_generator_worker import (
+                    TTSGeneratorWorker,
+                )
+            except ModuleNotFoundError as exc:
+                missing_module = getattr(exc, "name", str(exc))
+                if self._tts_generator_worker_import_error != missing_module:
+                    self._tts_generator_worker_import_error = missing_module
+                    if self.logger:
+                        self.logger.warning(
+                            "TTS generator worker unavailable because optional dependency %s is missing",
+                            missing_module,
+                            exc_info=True,
+                        )
+                return None
 
             self._tts_generator_worker = create_worker(TTSGeneratorWorker)
         return self._tts_generator_worker
@@ -1366,7 +1379,7 @@ class WorkerManager(Worker):
         pass
 
     def on_start_huggingface_download_signal(self, data: dict):
-        """Handle START_HUGGINGFACE_DOWNLOAD signal for STT/TTS model downloads.
+        """Handle START_HUGGINGFACE_DOWNLOAD signal for generic queued downloads.
 
         This signal is emitted when model managers detect missing model files
         and need to trigger a download. Uses the same download infrastructure
@@ -1404,6 +1417,8 @@ class WorkerManager(Worker):
         repo_id = data.get("repo_id", "")
         model_path = data.get("model_path", "")
         model_type = data.get("model_type", "")
+        version = data.get("version")
+        pipeline_action = data.get("pipeline_action")
         callback = data.get("callback")
 
         if not repo_id:
@@ -1485,6 +1500,8 @@ class WorkerManager(Worker):
             "repo_id": repo_id,
             "model_type": model_type,
             "output_dir": model_path,
+            "version": version,
+            "pipeline_action": pipeline_action,
         }
 
         if self.logger:

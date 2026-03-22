@@ -12,6 +12,7 @@ from typing import Dict, Set, Any
 
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode, QueueType
+from airunner.utils.download_temp_cleanup import cleanup_stale_download_dir
 
 
 class BaseDownloadWorker(Worker):
@@ -168,6 +169,14 @@ class BaseDownloadWorker(Worker):
             except Exception as e:
                 self.logger.error(f"Failed to cleanup temp files: {e}")
 
+    def _prepare_temp_dir(self, model_path: Path) -> Path:
+        """Prepare the model temp directory, removing stale download state first."""
+        temp_dir = model_path / ".downloading"
+        cleanup_stale_download_dir(temp_dir, logger=self.logger)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        self._temp_dir = temp_dir
+        return temp_dir
+
     def _initialize_download(self, output_dir: str, model_name: str) -> Path:
         """Initialize download state and create directories.
 
@@ -188,8 +197,7 @@ class BaseDownloadWorker(Worker):
         self._total_size = 0
 
         model_path = Path(output_dir) / model_name
-        temp_dir = model_path / ".downloading"
-        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_dir = self._prepare_temp_dir(model_path)
 
         self._model_path = model_path
         self._temp_dir = temp_dir
@@ -239,6 +247,7 @@ class BaseDownloadWorker(Worker):
             True if all files completed successfully, False otherwise
         """
         while not self.is_cancelled:
+            self._mark_orphaned_threads_failed()
             all_done = (
                 len(self._completed_files) + len(self._failed_files)
                 == expected_count
@@ -264,6 +273,29 @@ class BaseDownloadWorker(Worker):
             return False
 
         return True
+
+    def _mark_orphaned_threads_failed(self):
+        """Mark any dead download threads without a terminal status as failed."""
+        for filename, thread in list(self._file_threads.items()):
+            if filename in self._completed_files or filename in self._failed_files:
+                continue
+            if thread.is_alive():
+                continue
+
+            self.logger.error(
+                "Download thread for %s exited without reporting completion or failure",
+                filename,
+            )
+            self.emit_signal(
+                SignalCode.UPDATE_DOWNLOAD_LOG,
+                {
+                    "message": (
+                        f"Download thread ended unexpectedly for {filename}. "
+                        "Marking file as failed."
+                    )
+                },
+            )
+            self._mark_file_failed(filename)
 
     def _mark_file_complete(self, filename: str):
         """Mark a file as successfully downloaded.

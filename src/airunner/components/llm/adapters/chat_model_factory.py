@@ -327,10 +327,10 @@ class ChatModelFactory:
         if model_path:
             # User explicitly wants GGUF (quantization_bits=0)
             use_gguf = quantization_bits == 0
-            
+
             # Also check if GGUF is available even if not explicitly requested
             existing_gguf = optimizer.find_existing_gguf(model_path)
-            
+
             if use_gguf or existing_gguf or is_gguf_model(model_path):
                 # Determine which GGUF file to use
                 gguf_path = existing_gguf or model_path

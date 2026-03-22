@@ -4,6 +4,8 @@ from alembic.config import Config
 from alembic import command
 from pathlib import Path
 
+from airunner.settings import AIRUNNER_DB_URL
+
 
 def _extract_search_path_schema(db_url: str) -> str | None:
     try:
@@ -21,7 +23,20 @@ def _extract_search_path_schema(db_url: str) -> str | None:
         return None
 
 
+def _ensure_sqlite_parent_dir(db_url: str) -> None:
+    if not db_url.startswith("sqlite:///"):
+        return
+
+    db_path = db_url.replace("sqlite:///", "", 1)
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+
+
 def setup_database(db_url: str | None = None):
+    target_db_url = db_url or AIRUNNER_DB_URL
+    _ensure_sqlite_parent_dir(target_db_url)
+
     base = Path(os.path.dirname(os.path.realpath(__file__)))
     alembic_file = base / "alembic.ini"
     alembic_dir = base / "alembic"
@@ -44,12 +59,11 @@ def setup_database(db_url: str | None = None):
     except Exception:
         pass
 
-    if db_url:
-        # Alembic's Config wraps ConfigParser which treats '%' as interpolation.
-        # SQLAlchemy URLs may contain percent-encoded sequences (e.g. %3D) when
-        # we add Postgres connection options like search_path.
-        safe_url = db_url.replace("%", "%%")
-        alembic_cfg.set_main_option("sqlalchemy.url", safe_url)
+    # Alembic's Config wraps ConfigParser which treats '%' as interpolation.
+    # SQLAlchemy URLs may contain percent-encoded sequences (e.g. %3D) when
+    # we add Postgres connection options like search_path.
+    safe_url = target_db_url.replace("%", "%%")
+    alembic_cfg.set_main_option("sqlalchemy.url", safe_url)
 
     # Alembic's EnvironmentContext installs a proxy into modules that register
     # themselves via `EnvironmentContext.create_module_class_proxy()`.

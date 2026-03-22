@@ -59,6 +59,16 @@ _sessions: dict[str, scoped_session] = {}
 _migrated_tenants: set[str] = set()
 
 
+def _ensure_sqlite_parent_dir(url: str) -> None:
+    if not url.startswith("sqlite:///"):
+        return
+
+    db_path = url.replace("sqlite:///", "", 1)
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+
+
 def _ensure_tenant_ready(tenant: str) -> None:
     # Only required for Postgres schema tenancy.
     if _tenancy_mode() == "single":
@@ -111,6 +121,8 @@ def _get_engine(tenant: str):
         engine_key = "__shared__"
 
     if engine_key not in _engines:
+        _ensure_sqlite_parent_dir(AIRUNNER_DB_URL)
+
         # AI Runner is frequently used under streaming workloads. The default
         # SQLAlchemy QueuePool settings (pool_size=5, max_overflow=10,
         # pool_timeout=30) are too small for a multi-request dev stack and can
