@@ -1208,10 +1208,21 @@ class ChatPromptWidget(BaseWidget):
                 if model_id == "custom":
                     continue
                 self.ui.model_dropdown.addItem(model_id, model_id)
-            
+
             # Add custom option
             self.ui.model_dropdown.addItem("-- Custom Model --", "custom")
-        
+
+        elif provider == ModelService.MINIMAX.value:
+            # MiniMax models
+            models = LLMProviderConfig.get_models_for_provider("minimax")
+            for model_id in models:
+                if model_id == "custom":
+                    continue
+                self.ui.model_dropdown.addItem(model_id, model_id)
+
+            # Add custom option
+            self.ui.model_dropdown.addItem("-- Custom Model --", "custom")
+
         # Try to restore current selection
         self._restore_model_selection(provider)
         
@@ -1370,6 +1381,8 @@ class ChatPromptWidget(BaseWidget):
                 self.ui.model_dropdown.setToolTip("Enter a custom model path or HuggingFace repo ID")
             elif provider == ModelService.OLLAMA.value:
                 self.ui.model_dropdown.setToolTip("Enter any Ollama model name (e.g., llama3.2:latest)")
+            elif provider == ModelService.MINIMAX.value:
+                self.ui.model_dropdown.setToolTip("Enter any MiniMax model ID")
             else:
                 self.ui.model_dropdown.setToolTip("Enter any OpenRouter model ID (e.g., anthropic/claude-3-sonnet)")
             return
@@ -1408,6 +1421,10 @@ class ChatPromptWidget(BaseWidget):
             # OpenRouter - show model ID
             self.ui.model_dropdown.setToolTip(f"OpenRouter model: {model_id}\nRequires OpenRouter API key")
 
+        elif provider == ModelService.MINIMAX.value:
+            # MiniMax - show model ID
+            self.ui.model_dropdown.setToolTip(f"MiniMax model: {model_id}\nRequires MINIMAX_API_KEY environment variable")
+
     def _populate_provider_dropdown(self) -> None:
         """Populate the provider dropdown with available providers."""
         if not hasattr(self.ui, "provider_dropdown"):
@@ -1421,6 +1438,7 @@ class ChatPromptWidget(BaseWidget):
             ("HuggingFace", ModelService.LOCAL.value),
             ("Ollama", ModelService.OLLAMA.value),
             ("OpenRouter", ModelService.OPENROUTER.value),
+            ("MiniMax", ModelService.MINIMAX.value),
         ]
         
         for display_name, service_value in providers:

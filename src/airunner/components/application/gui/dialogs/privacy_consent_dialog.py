@@ -29,6 +29,7 @@ SERVICE_DUCKDUCKGO_KEY = "privacy/allow_duckduckgo"
 SERVICE_OPENMETEO_KEY = "privacy/allow_openmeteo"
 SERVICE_OPENROUTER_KEY = "privacy/allow_openrouter"
 SERVICE_OPENAI_KEY = "privacy/allow_openai"
+SERVICE_MINIMAX_KEY = "privacy/allow_minimax"
 
 
 class PrivacyConsentDialog(QDialog):
@@ -236,6 +237,19 @@ class PrivacyConsentDialog(QDialog):
         group_layout.addWidget(openai_desc)
         self._checkboxes[SERVICE_OPENAI_KEY] = openai_checkbox
 
+        # MiniMax
+        minimax_checkbox = QCheckBox("MiniMax")
+        minimax_checkbox.setChecked(True)
+        minimax_desc = QLabel(
+            "Allow using MiniMax API for cloud-based LLM inference.\n"
+            "Your prompts and conversations are sent to MiniMax servers."
+        )
+        minimax_desc.setWordWrap(True)
+        minimax_desc.setStyleSheet("color: #888; margin-left: 20px; font-size: 11px;")
+        group_layout.addWidget(minimax_checkbox)
+        group_layout.addWidget(minimax_desc)
+        self._checkboxes[SERVICE_MINIMAX_KEY] = minimax_checkbox
+
         layout.addWidget(group)
 
     def _load_settings(self) -> None:
@@ -329,3 +343,9 @@ def is_openai_allowed() -> bool:
     """Check if OpenAI API is allowed."""
     settings = get_qsettings()
     return settings.value(SERVICE_OPENAI_KEY, True, type=bool)
+
+
+def is_minimax_allowed() -> bool:
+    """Check if MiniMax API is allowed."""
+    settings = get_qsettings()
+    return settings.value(SERVICE_MINIMAX_KEY, True, type=bool)

@@ -749,6 +749,7 @@ class ModelService(enum.Enum):
     LOCAL = "local"
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
+    MINIMAX = "minimax"
 
 
 class QualityEffects(enum.Enum):

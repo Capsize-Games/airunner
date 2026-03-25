@@ -260,6 +260,15 @@ class LLMProviderConfig:
         "custom",
     ]
 
+    # MiniMax cloud models (OpenAI-compatible API)
+    MINIMAX_MODELS = [
+        "MiniMax-M2.7",
+        "MiniMax-M2.7-highspeed",
+        "MiniMax-M2.5",
+        "MiniMax-M2.5-highspeed",
+        "custom",
+    ]
+
     # Ollama models (common ones)
     OLLAMA_MODELS = [
         "llama3.2",
@@ -297,6 +306,8 @@ class LLMProviderConfig:
             return cls.OPENROUTER_MODELS
         elif provider == "ollama":
             return cls.OLLAMA_MODELS
+        elif provider == "minimax":
+            return cls.MINIMAX_MODELS
         return []
 
     @classmethod

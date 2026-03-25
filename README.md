@@ -124,7 +124,7 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | **TTS** | OpenVoice | 654 MB |
 | **STT** | Whisper Tiny | 155 MB |
 
-**LLM Providers:** Local (HuggingFace), Ollama, OpenRouter, OpenAI
+**LLM Providers:** Local (HuggingFace), Ollama, OpenRouter, OpenAI, [MiniMax](https://www.minimaxi.com)
 
 **Art Models:** Place your models in `~/.local/share/airunner/art/models/`
 
@@ -389,7 +389,7 @@ mkcert -install
 - **Model Downloads:** Connecting to HuggingFace or CivitAI to download models
 - **Web Search / Deep Research:** Search queries sent to DuckDuckGo; web pages scraped for research
 - **Weather Prompt:** Location coordinates sent to Open-Meteo API if enabled
-- **External LLM Providers:** Prompts sent to OpenRouter or OpenAI if configured
+- **External LLM Providers:** Prompts sent to OpenRouter, OpenAI, or MiniMax if configured
 
 **We recommend using a VPN** when using features that connect to external services. See our full [Privacy Policy](src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/privacy_policy.md) for details.
 

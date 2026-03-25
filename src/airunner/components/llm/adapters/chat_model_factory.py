@@ -23,7 +23,8 @@ class ChatModelFactory:
     - HuggingFace local models (with pre-loaded model+tokenizer)
     - OpenRouter API
     - Ollama
-    - OpenAI (future)
+    - OpenAI
+    - MiniMax (OpenAI-compatible API)
     """
 
     @staticmethod
@@ -219,6 +220,61 @@ class ChatModelFactory:
             raise ImportError(
                 "langchain-ollama is required for Ollama support. "
                 "Install with: pip install langchain-ollama"
+            )
+
+    @staticmethod
+    def create_minimax_model(
+        api_key: str,
+        model_name: str = "MiniMax-M2.7",
+        temperature: float = 0.7,
+        max_tokens: int = 500,
+    ) -> BaseChatModel:
+        """
+        Create a ChatModel for MiniMax API.
+
+        MiniMax provides an OpenAI-compatible API at https://api.minimax.io/v1.
+        Available models include MiniMax-M2.7, MiniMax-M2.7-highspeed,
+        MiniMax-M2.5, and MiniMax-M2.5-highspeed.
+
+        Args:
+            api_key: MiniMax API key
+            model_name: MiniMax model identifier
+            temperature: Sampling temperature (0.0 to 1.0)
+            max_tokens: Maximum tokens to generate
+
+        Returns:
+            ChatOpenAI configured for MiniMax API
+
+        Raises:
+            ValueError: If MiniMax is disabled in privacy settings
+            ImportError: If langchain-openai is not installed
+        """
+        from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
+            is_minimax_allowed,
+        )
+        if not is_minimax_allowed():
+            raise ValueError(
+                "MiniMax is disabled in privacy settings. "
+                "Enable it in Preferences → Privacy & Security → External Services."
+            )
+
+        # Clamp temperature to MiniMax's accepted range [0.0, 1.0]
+        temperature = max(0.0, min(1.0, temperature))
+
+        try:
+            from langchain_openai import ChatOpenAI
+
+            return ChatOpenAI(
+                model=model_name,
+                openai_api_key=api_key,
+                openai_api_base="https://api.minimax.io/v1",
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except ImportError:
+            raise ImportError(
+                "langchain-openai is required for MiniMax support. "
+                "Install with: pip install langchain-openai"
             )
 
     @staticmethod
@@ -495,6 +551,33 @@ class ChatModelFactory:
                 max_tokens = getattr(chatbot, "max_new_tokens", 500)
 
             return ChatModelFactory.create_openai_model(
+                api_key=api_key,
+                model_name=model_name,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        # MiniMax
+        if getattr(llm_settings, "use_minimax", False):
+            import os
+
+            api_key = os.getenv("MINIMAX_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "MINIMAX_API_KEY environment variable required for MiniMax"
+                )
+
+            model_name = getattr(
+                llm_settings, "minimax_model", "MiniMax-M2.7"
+            )
+            temperature = 0.7
+            max_tokens = 500
+
+            if chatbot:
+                temperature = getattr(chatbot, "temperature", 700) / 10000.0
+                max_tokens = getattr(chatbot, "max_new_tokens", 500)
+
+            return ChatModelFactory.create_minimax_model(
                 api_key=api_key,
                 model_name=model_name,
                 temperature=temperature,

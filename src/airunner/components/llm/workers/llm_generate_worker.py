@@ -102,6 +102,18 @@ class LLMGenerateWorker(
         )
 
     @property
+    def use_minimax(self) -> bool:
+        """Check if using MiniMax model service.
+
+        Returns:
+            True if MiniMax is configured
+        """
+        return (
+            self.llm_generator_settings.model_service
+            == ModelService.MINIMAX.value
+        )
+
+    @property
     def has_model_manager(self) -> bool:
         """Check if model manager exists without creating it.
 
@@ -127,6 +139,9 @@ class LLMGenerateWorker(
                 elif self.use_ollama:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_ollama = True
+                elif self.use_minimax:
+                    self._model_manager.llm_settings.use_local_llm = False
+                    self._model_manager.llm_settings.use_minimax = True
                 else:
                     self._model_manager.llm_settings.use_local_llm = True
 
@@ -143,6 +158,7 @@ class LLMGenerateWorker(
         manager.llm_settings.use_local_llm = True
         manager.llm_settings.use_openrouter = False
         manager.llm_settings.use_ollama = False
+        manager.llm_settings.use_minimax = False
         return manager
 
     def on_conversation_deleted_signal(self, data: Dict) -> None:

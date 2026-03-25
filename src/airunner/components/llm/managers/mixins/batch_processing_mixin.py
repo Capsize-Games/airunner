@@ -94,7 +94,8 @@ class BatchProcessingMixin:
                 self.llm_settings, "use_openrouter", False
             )
             use_ollama = getattr(self.llm_settings, "use_ollama", False)
-            return use_openrouter or use_ollama
+            use_minimax = getattr(self.llm_settings, "use_minimax", False)
+            return use_openrouter or use_ollama or use_minimax
         return False
 
     def submit_batch_request(
@@ -199,6 +200,8 @@ class BatchProcessingMixin:
                 return self._generate_openrouter_batch(message)
             elif getattr(self.llm_settings, "use_ollama", False):
                 return self._generate_ollama_batch(message)
+            elif getattr(self.llm_settings, "use_minimax", False):
+                return self._generate_openrouter_batch(message)
 
         # For local models, use existing generation
         return self._generate_local_batch(message)

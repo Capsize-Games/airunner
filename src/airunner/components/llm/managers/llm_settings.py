@@ -65,6 +65,7 @@ class LLMSettings:
     use_openrouter: bool = False
     use_ollama: bool = False
     use_openai: bool = False
+    use_minimax: bool = False
 
     # YaRN context extension (HF + GGUF)
     use_yarn: bool = False
@@ -80,12 +81,16 @@ class LLMSettings:
     # OpenAI settings
     openai_model: str = "gpt-4"
 
+    # MiniMax settings
+    minimax_model: str = "MiniMax-M2.7"
+
     @property
     def use_api(self) -> bool:
         return bool(
             getattr(self, "use_openrouter", False)
             or getattr(self, "use_openai", False)
             or getattr(self, "use_ollama", False)
+            or getattr(self, "use_minimax", False)
         )
 
 
