@@ -1,8 +1,9 @@
 from airunner.components.application.api.api_service_base import APIServiceBase
-from airunner.enums import SignalCode
 from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.enums import LLMActionType
 from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.enums import SignalCode
+from airunner.enums import LLMActionType
+import threading
 from typing import Optional, List
 
 
@@ -93,6 +94,19 @@ class LLMAPIService(APIServiceBase):
                 mediator = SignalMediator()
                 mediator.register_pending_request(request_id, callback)
 
+        if self._send_request_via_daemon(
+            prompt,
+            llm_request,
+            action,
+            request_id,
+            search_hints,
+            conversation_id,
+            node_id,
+            enable_consciousness,
+        ):
+            self.logger.info("LLM API: Daemon request started")
+            return
+
         self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
         self.logger.info("LLM API: Signal emitted")
 
@@ -124,6 +138,14 @@ class LLMAPIService(APIServiceBase):
         )
 
     def interrupt(self):
+        client = self._daemon_client()
+        if client is not None:
+            try:
+                client.interrupt_llm()
+                return
+            except RuntimeError:
+                pass
+
         print("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
@@ -156,3 +178,144 @@ class LLMAPIService(APIServiceBase):
             except Exception:
                 pass
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
+
+    def _send_request_via_daemon(
+        self,
+        prompt: str,
+        llm_request: LLMRequest,
+        action: LLMActionType,
+        request_id: Optional[str],
+        search_hints: Optional[dict],
+        conversation_id: Optional[int],
+        node_id: Optional[str],
+        enable_consciousness: Optional[bool],
+    ) -> bool:
+        """Route a GUI request through the daemon when that client is ready."""
+        client = self._daemon_client()
+        if client is None or not request_id:
+            return False
+        if getattr(llm_request, "images", None):
+            return False
+        if not client.ensure_connected():
+            return False
+
+        thread = threading.Thread(
+            target=self._stream_daemon_request,
+            args=(
+                client,
+                prompt,
+                llm_request,
+                action,
+                request_id,
+                search_hints,
+                conversation_id,
+                node_id,
+                enable_consciousness,
+            ),
+            daemon=True,
+        )
+        thread.start()
+        return True
+
+    def _stream_daemon_request(
+        self,
+        client,
+        prompt: str,
+        llm_request: LLMRequest,
+        action: LLMActionType,
+        request_id: str,
+        search_hints: Optional[dict],
+        conversation_id: Optional[int],
+        node_id: Optional[str],
+        enable_consciousness: Optional[bool],
+    ) -> None:
+        """Emit streamed LLM responses received from the daemon client."""
+        try:
+            for chunk in client.stream_llm_request(
+                prompt,
+                llm_request,
+                action,
+                request_id,
+                search_hints=search_hints,
+                conversation_id=conversation_id,
+                node_id=node_id,
+                enable_consciousness=enable_consciousness,
+            ):
+                if chunk.get("keepalive"):
+                    continue
+                self.send_llm_text_streamed_signal(
+                    self._response_from_daemon_chunk(
+                        chunk,
+                        request_id=request_id,
+                        action=action,
+                        node_id=node_id,
+                    )
+                )
+        except RuntimeError as exc:
+            self.send_llm_text_streamed_signal(
+                LLMResponse(
+                    message=f"Error invoking LLM: {exc}",
+                    is_first_message=True,
+                    is_end_of_message=True,
+                    action=action,
+                    node_id=node_id,
+                    request_id=request_id,
+                    is_system_message=True,
+                )
+            )
+
+    def _daemon_client(self):
+        """Return the GUI daemon client when one is available."""
+        api = getattr(self, "api", None)
+        if api is None:
+            api = self._resolve_api_instance()
+            if api is not None:
+                self.api = api
+        if api is None or getattr(api, "headless", False):
+            return None
+        return getattr(api, "daemon_client", None)
+
+    @staticmethod
+    def _resolve_api_instance():
+        """Resolve the live App/API object when service init ran too early."""
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                return getattr(app, "api", None)
+        except Exception:
+            pass
+
+        try:
+            from airunner.components.server.api.server import get_api
+
+            return get_api()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _response_from_daemon_chunk(
+        chunk: dict,
+        *,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> LLMResponse:
+        """Convert one daemon NDJSON chunk into the local response model."""
+        response = LLMResponse(
+            message=chunk.get("message", "") or "",
+            is_first_message=bool(chunk.get("is_first_message", False)),
+            is_end_of_message=bool(chunk.get("is_end_of_message", False)),
+            action=action,
+            node_id=node_id,
+            sequence_number=int(chunk.get("sequence_number", 0) or 0),
+            request_id=request_id,
+            tools=chunk.get("tools") or chunk.get("tool_calls"),
+            is_system_message=bool(chunk.get("error", False)),
+        )
+        usage = chunk.get("usage") or {}
+        response.prompt_tokens = usage.get("prompt_tokens")
+        response.completion_tokens = usage.get("completion_tokens")
+        response.total_tokens = usage.get("total_tokens")
+        return response

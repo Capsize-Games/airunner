@@ -13,6 +13,7 @@ from PySide6.QtCore import QCoreApplication
 
 from airunner.components.data.session_manager import session_scope
 from airunner.components.knowledge import get_knowledge_base
+from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
 )
@@ -134,6 +135,7 @@ class HeadlessRuntimeMixin:
         from airunner.components.server.api.server import set_api
 
         set_api(self)
+        self._ensure_headless_api_services()
         self.logger.info("API instance registered globally")
 
         if self._initialize_headless_lifecycle:
@@ -164,6 +166,11 @@ class HeadlessRuntimeMixin:
             self.logger.info(
                 "API server already running - skipping initialization"
             )
+
+    def _ensure_headless_api_services(self) -> None:
+        """Attach compatibility API services used by legacy daemon routes."""
+        if not hasattr(self, "llm"):
+            self.llm = LLMAPIService()
 
     def ensure_lifecycle_service(self) -> CoreLifecycleService:
         """Return the reusable lifecycle service for this App."""

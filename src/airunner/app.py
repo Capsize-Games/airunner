@@ -30,6 +30,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 )
 from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.utils.application.logging_utils import configure_headless_logging
+from airunner.daemon_client import GuiDaemonClient
 from airunner.runtimes.bootstrap import build_runtime_registry
 
 
@@ -83,6 +84,9 @@ class App(
         )
         super().__init__()
         self.runtime_registry = build_runtime_registry(app_instance=self)
+        self.daemon_client = None
+        if not self.headless:
+            self.daemon_client = GuiDaemonClient()
         self._register_signals()
         self._ensure_mathjax()
 
