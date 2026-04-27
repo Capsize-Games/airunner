@@ -1,4 +1,4 @@
-name: Eval Tests
+name: Eval And Runtime Smoke Tests
 
 on:
   pull_request:
@@ -11,6 +11,42 @@ permissions:
   contents: read
 
 jobs:
+  llm-runtime-smoke:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-timeout
+
+      - name: Run LLM runtime smoke tests
+        run: |
+          python src/airunner/bin/run_tests.py --llm-runtime-smoke --verbose
+
   eval-tests:
     runs-on: ubuntu-latest
     
