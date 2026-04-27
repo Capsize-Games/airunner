@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 ProcessFactory = Callable[..., subprocess.Popen]
 
@@ -18,9 +18,13 @@ class DaemonLauncher:
         config_path: Optional[Path] = None,
         *,
         process_factory: ProcessFactory = subprocess.Popen,
+        stdout: Any = subprocess.DEVNULL,
+        stderr: Any = subprocess.DEVNULL,
     ) -> None:
         self.config_path = config_path
         self._process_factory = process_factory
+        self._stdout = stdout
+        self._stderr = stderr
         self._process: Optional[subprocess.Popen] = None
 
     def command(self) -> list[str]:
@@ -36,8 +40,8 @@ class DaemonLauncher:
             return
         self._process = self._process_factory(
             self.command(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=self._stdout,
+            stderr=self._stderr,
         )
 
     def stop(self) -> None:

@@ -67,3 +67,22 @@ def test_stop_terminates_running_process():
     launcher.stop()
 
     assert process.terminated is True
+
+
+def test_start_uses_configured_stdio_streams():
+    spawned_kwargs = {}
+
+    def fake_process_factory(*args, **kwargs):
+        spawned_kwargs.update(kwargs)
+        return FakeProcess()
+
+    launcher = DaemonLauncher(
+        process_factory=fake_process_factory,
+        stdout=None,
+        stderr=None,
+    )
+
+    launcher.start()
+
+    assert spawned_kwargs["stdout"] is None
+    assert spawned_kwargs["stderr"] is None
