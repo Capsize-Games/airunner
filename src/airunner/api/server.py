@@ -17,7 +17,7 @@ import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.api.routes import health, llm, art, tts, stt, vision
+from airunner.api.routes import art, daemon, health, llm, stt, tts, vision
 from airunner.api.routes import legacy as legacy_routes
 from airunner.components.llm.core.extensions_loader import load_extensions
 from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
@@ -222,6 +222,7 @@ def create_app(
 
     # Register routers
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
+    app.include_router(daemon.router, prefix="/api/v1/daemon", tags=["daemon"])
     app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
