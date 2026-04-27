@@ -5,7 +5,7 @@ Integrates with LLMAPIService via signal-based architecture.
 """
 
 import asyncio
-from typing import List, Optional
+from typing import Any, List, Optional
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -15,12 +15,12 @@ from fastapi import (
 )
 from pydantic import BaseModel
 
+from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.enums import SignalCode, LLMActionType
 from airunner.utils.application.signal_mediator import SignalMediator
-from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
@@ -28,13 +28,14 @@ from airunner.components.llm.data.llm_generator_settings import (
 from airunner.components.model_management.model_registry import (
     ModelRegistry,
 )
-from airunner.enums import SignalCode
-from airunner.utils.application.signal_mediator import SignalMediator
-from airunner.enums import SignalCode
-from airunner.enums import SignalCode, LLMActionType
-from airunner.utils.application.signal_mediator import SignalMediator
-from airunner.components.llm.api.llm_services import LLMAPIService
-from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.runtimes.contracts import (
+    ChatMessage as RuntimeChatMessage,
+    LLMInvocationRequest,
+    MessageRole,
+    RuntimeAction,
+    RuntimeKind,
+)
+from airunner.runtimes.registry import RuntimeRegistry
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -114,6 +115,70 @@ def get_llm_service(request: Request):
 
         return LLMAPIService()
     return None
+
+
+def get_runtime_registry(request: Request) -> Optional[RuntimeRegistry]:
+    """Get the runtime registry from FastAPI app state."""
+    return getattr(request.app.state, "runtime_registry", None)
+
+
+def _to_runtime_messages(
+    messages: List[ChatMessage],
+) -> List[RuntimeChatMessage]:
+    """Convert API chat messages into runtime contract messages."""
+    runtime_messages = []
+    for message in messages:
+        try:
+            role = MessageRole(message.role)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported chat role: {message.role}",
+            ) from exc
+        runtime_messages.append(
+            RuntimeChatMessage(role=role, content=message.content)
+        )
+    return runtime_messages
+
+
+async def _invoke_llm_runtime(
+    registry: RuntimeRegistry,
+    messages: List[RuntimeChatMessage],
+    model: Optional[str],
+    temperature: float,
+    max_tokens: Optional[int],
+) -> str:
+    """Invoke the configured LLM runtime client when available."""
+    client = registry.resolve(
+        RuntimeKind.LLM,
+        provider="local",
+        deployment_mode="local_fallback",
+    )
+    invocation = LLMInvocationRequest(
+        messages=messages,
+        model=model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    envelope = RequestEnvelope(
+        runtime=RuntimeKind.LLM,
+        action=RuntimeAction.INVOKE,
+        provider="local",
+        payload=invocation.model_dump(),
+    )
+    response = await asyncio.to_thread(client.invoke, envelope)
+    return _response_content(response)
+
+
+def _response_content(response: Any) -> str:
+    """Extract successful content from a runtime response."""
+    if response.status is EnvelopeStatus.SUCCEEDED:
+        return str(response.payload.get("content", ""))
+
+    detail = "LLM runtime request failed"
+    if response.error is not None:
+        detail = response.error.message
+    raise HTTPException(status_code=502, detail=detail)
 
 
 async def wait_for_llm_response(
@@ -199,15 +264,33 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
     """
     logger.info(f"Chat completion request: {len(request.messages)} messages")
 
+    # Convert messages to prompt (use last message as prompt)
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    runtime_registry = get_runtime_registry(req)
+    if runtime_registry is not None:
+        try:
+            response = await _invoke_llm_runtime(
+                runtime_registry,
+                _to_runtime_messages(request.messages),
+                request.model,
+                request.temperature,
+                request.max_tokens,
+            )
+            return ChatCompletionResponse(
+                content=response,
+                model=request.model or "default",
+                finish_reason="stop",
+            )
+        except KeyError:
+            logger.info("LLM runtime client unavailable; using legacy path")
+
     llm_service = get_llm_service(req)
     if not llm_service:
         raise HTTPException(
             status_code=503, detail="LLM service not available"
         )
-
-    # Convert messages to prompt (use last message as prompt)
-    if not request.messages:
-        raise HTTPException(status_code=400, detail="No messages provided")
 
     prompt = request.messages[-1].content
 
@@ -250,6 +333,25 @@ async def text_completion(request: CompletionRequest, req: Request):
         Generated text
     """
     logger.info(f"Text completion request (prompt_len={len(request.prompt)})")
+
+    runtime_registry = get_runtime_registry(req)
+    if runtime_registry is not None:
+        try:
+            response = await _invoke_llm_runtime(
+                runtime_registry,
+                [
+                    RuntimeChatMessage(
+                        role=MessageRole.USER,
+                        content=request.prompt,
+                    )
+                ],
+                None,
+                request.temperature,
+                request.max_tokens,
+            )
+            return CompletionResponse(text=response, finish_reason="stop")
+        except KeyError:
+            logger.info("LLM runtime client unavailable; using legacy path")
 
     llm_service = get_llm_service(req)
     if not llm_service:

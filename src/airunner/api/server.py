@@ -21,9 +21,29 @@ from airunner.api.routes import health, llm, art, tts, stt, vision
 from airunner.api.routes import legacy as legacy_routes
 from airunner.components.llm.core.extensions_loader import load_extensions
 from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
+from airunner.runtimes.bootstrap import build_runtime_registry
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def _resolve_runtime_registry(app_instance: Any) -> Optional[Any]:
+    """Return or create the runtime registry for an app instance."""
+    runtime_registry = getattr(app_instance, "runtime_registry", None)
+    if runtime_registry is not None:
+        return runtime_registry
+
+    try:
+        runtime_registry = build_runtime_registry(app_instance=app_instance)
+    except Exception:
+        logger.exception("Failed to build runtime registry")
+        return None
+
+    try:
+        setattr(app_instance, "runtime_registry", runtime_registry)
+    except Exception:
+        logger.debug("Unable to attach runtime registry to app instance")
+    return runtime_registry
 
 
 def is_loopback_host(host: str) -> bool:
@@ -88,8 +108,11 @@ def create_app(
         lifespan=lifespan,
     )
 
+    app.state.runtime_registry = None
+
     if app_instance:
         app.state.airunner_app = app_instance
+        app.state.runtime_registry = _resolve_runtime_registry(app_instance)
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:

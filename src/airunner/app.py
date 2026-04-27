@@ -79,6 +79,7 @@ from airunner.utils.application.logging_utils import configure_headless_logging
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.enums import ModelService
 from airunner.components.art.data.ai_models import AIModels
+from airunner.runtimes.bootstrap import build_runtime_registry
 
 
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
@@ -151,6 +152,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             no_splash, main_window_class, window_class_params
         )
         super().__init__()
+        self.runtime_registry = build_runtime_registry(app_instance=self)
         self._register_signals()
         self._ensure_mathjax()
 

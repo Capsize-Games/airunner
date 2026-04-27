@@ -4,6 +4,7 @@ Speech-to-Text endpoints.
 Integrates with STTAPIService for audio transcription.
 """
 import asyncio
+import base64
 from typing import Optional, List
 from fastapi import (
     APIRouter,
@@ -19,6 +20,8 @@ from pydantic import BaseModel
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.enums import SignalCode
+from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
+from airunner.runtimes.contracts import RuntimeAction, RuntimeKind
 from airunner.utils.application.signal_mediator import SignalMediator
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -58,6 +61,34 @@ def get_stt_service(request: Request):
     return None
 
 
+def get_runtime_registry(request: Request):
+    """Return the runtime registry stored on app state when available."""
+    return getattr(request.app.state, "runtime_registry", None)
+
+
+def _transcription_payload(data: dict) -> dict:
+    """Normalize transcription payloads from the legacy signal path."""
+    transcription = data.get("transcription")
+    if isinstance(transcription, dict):
+        return {
+            "text": transcription.get("text")
+            or transcription.get("transcription", ""),
+            "language": transcription.get("language"),
+        }
+    return {
+        "text": data.get("text") or str(transcription or ""),
+        "language": data.get("language"),
+    }
+
+
+def _runtime_error_status(response) -> int:
+    """Map runtime envelope failures to HTTP status codes."""
+    error = response.error
+    if error and error.code.endswith("_timeout"):
+        return 504
+    return 500
+
+
 # ====================
 # API Endpoints
 # ====================
@@ -87,13 +118,49 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
         # Read audio file
         audio_data = await audio.read()
 
+        runtime_registry = get_runtime_registry(req)
+        if runtime_registry is not None:
+            try:
+                client = runtime_registry.resolve(
+                    RuntimeKind.STT,
+                    provider="local",
+                    deployment_mode="local_fallback",
+                )
+                response = client.invoke(
+                    RequestEnvelope(
+                        runtime=RuntimeKind.STT,
+                        action=RuntimeAction.INVOKE,
+                        payload={
+                            "audio_b64": base64.b64encode(audio_data).decode(
+                                "ascii"
+                            ),
+                            "mime_type": audio.content_type
+                            or "application/octet-stream",
+                        },
+                    )
+                )
+                if response.status is EnvelopeStatus.SUCCEEDED:
+                    return TranscriptionResponse(
+                        text=response.payload.get("text", ""),
+                        language=response.payload.get("language"),
+                    )
+                raise HTTPException(
+                    status_code=_runtime_error_status(response),
+                    detail=response.error.message
+                    if response.error
+                    else "STT request failed",
+                )
+            except KeyError:
+                pass
+
         # Create future for transcription
         transcription_future = asyncio.Future()
 
         def on_transcription_complete(data: dict):
             """Callback for transcription completion."""
-            text = data.get("text")
-            language = data.get("language")
+            result = _transcription_payload(data)
+            text = result.get("text")
+            language = result.get("language")
             if text and not transcription_future.done():
                 transcription_future.set_result(
                     {"text": text, "language": language}
@@ -102,14 +169,15 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
         # Register signal handler
         mediator = SignalMediator()
         mediator.register(
-            SignalCode.STT_COMPLETE_SIGNAL, on_transcription_complete
+            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+            on_transcription_complete,
         )
 
         try:
             # Emit STT request
             stt_service.emit_signal(
-                SignalCode.STT_TRANSCRIBE_SIGNAL,
-                {"audio_data": audio_data, "filename": audio.filename},
+                SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
+                {"item": audio_data},
             )
 
             # Wait for transcription (with timeout)
@@ -128,7 +196,8 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
 
         finally:
             mediator.unregister(
-                SignalCode.STT_COMPLETE_SIGNAL, on_transcription_complete
+                SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+                on_transcription_complete,
             )
 
     except HTTPException:
