@@ -17,7 +17,11 @@ class TestablePropertyMixin(PropertyMixin):
         self._current_model_path = "/path/to/model"
         self._chat_model = Mock()
         self._tool_manager = Mock()
+        self.llm_request = None
+        self.path_settings = Mock()
+        self.path_settings.base_path = "/data"
         self.llm_generator_settings = Mock()
+        self.llm_generator_settings.model_id = None
         self.llm_generator_settings.model_path = "/path/to/model"
         self.llm_generator_settings.override_parameters = False
         self.llm_generator_settings.use_cache = True
@@ -93,6 +97,22 @@ class TestSupportsFunctionCalling:
         "airunner.components.llm.managers.mixins.property_mixin."
         "LLMProviderConfig"
     )
+    def test_uses_saved_model_id_for_shared_directory_paths(
+        self, mock_config, mixin
+    ):
+        """Should use model_id when shared vendor paths no longer encode model name."""
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.llm_generator_settings.model_path = "/data/text/models/llm/causallm/Qwen"
+        mock_config.get_model_info.return_value = {
+            "function_calling": True,
+        }
+
+        assert mixin.supports_function_calling is True
+
+    @patch(
+        "airunner.components.llm.managers.mixins.property_mixin."
+        "LLMProviderConfig"
+    )
     def test_handles_exceptions_gracefully(self, mock_config, mixin):
         """Should return False and log warning on exceptions."""
         mock_config.LOCAL_MODELS = Mock(side_effect=Exception("Config error"))
@@ -107,10 +127,10 @@ class TestTools:
     def test_returns_tools_from_tool_manager(self, mixin):
         """Should return tools from tool manager when available."""
         expected_tools = [Mock(), Mock()]
-        mixin._tool_manager.get_all_tools.return_value = expected_tools
+        mixin._tool_manager.get_immediate_tools.return_value = expected_tools
 
         assert mixin.tools == expected_tools
-        mixin._tool_manager.get_all_tools.assert_called_once()
+        mixin._tool_manager.get_immediate_tools.assert_called_once()
 
     def test_returns_empty_list_when_no_tool_manager(self, mixin):
         """Should return empty list when tool manager is None."""
@@ -266,6 +286,20 @@ class TestModelVersion:
 class TestModelName:
     """Tests for model_name property."""
 
+    @patch(
+        "airunner.components.llm.managers.mixins.property_mixin."
+        "LLMProviderConfig"
+    )
+    def test_prefers_saved_model_id_name_for_shared_directory(
+        self, mock_config, mixin
+    ):
+        """Should preserve the configured model name when storage uses a shared folder."""
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.llm_generator_settings.model_path = "/data/text/models/llm/causallm/Qwen"
+        mock_config.get_model_info.return_value = {"name": "Qwen3-8B"}
+
+        assert mixin.model_name == "Qwen3-8B"
+
     def test_extracts_model_name_from_path(self, mixin):
         """Should return basename of model path."""
         mixin.llm_generator_settings.model_path = "/path/to/mistral-7b"
@@ -321,6 +355,33 @@ class TestModelPath:
         # Should not contain ~ after expansion
         assert "~" not in result
         assert "models/mistral-7b" in result
+
+    def test_resolves_repo_id_override_to_shared_vendor_directory(self, mixin):
+        """Should map repo IDs to the configured shared GGUF storage directory."""
+        mixin.llm_request = Mock(model="Qwen/Qwen3-8B-GGUF")
+
+        assert mixin.model_path == "/data/text/models/llm/causallm/Qwen"
+
+    def test_normalizes_persisted_repo_id_to_shared_vendor_directory(self, mixin):
+        """Should map stored repo IDs to the configured shared GGUF storage directory."""
+        mixin.llm_generator_settings.model_path = "Qwen/Qwen3-8B-GGUF"
+
+        assert mixin.model_path == "/data/text/models/llm/causallm/Qwen"
+
+    @patch("airunner.components.llm.managers.mixins.property_mixin.os.path.exists")
+    def test_recovers_stale_absolute_model_path_to_shared_directory(
+        self, mock_exists, mixin
+    ):
+        """Should recover old per-model directories when the shared GGUF artifact exists."""
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.llm_generator_settings.model_path = "/data/text/models/llm/causallm/Qwen3-8B"
+
+        def exists_side_effect(path):
+            return path == "/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+
+        mock_exists.side_effect = exists_side_effect
+
+        assert mixin.model_path == "/data/text/models/llm/causallm/Qwen"
 
     def test_raises_error_when_no_model_path(self, mixin):
         """Should raise ValueError when model path is not configured."""

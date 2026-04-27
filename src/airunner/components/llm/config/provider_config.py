@@ -10,7 +10,8 @@ GGUF Support:
     the downloader will fetch the single .gguf file instead of safetensors.
 """
 
-from typing import Dict, List, Optional
+import os
+from typing import Any, Dict, List, Optional
 
 
 class LLMProviderConfig:
@@ -333,6 +334,169 @@ class LLMProviderConfig:
         if provider == "local" and model_id in cls.LOCAL_MODELS:
             return cls.LOCAL_MODELS[model_id]
         return {}
+
+    @classmethod
+    def get_model_id_for_name(cls, provider: str, model_name: str) -> str:
+        """Return the local model identifier for a display name."""
+        if provider != "local" or not model_name:
+            return ""
+
+        for model_id, model_info in cls.LOCAL_MODELS.items():
+            if model_info.get("name") == model_name:
+                return model_id
+        return ""
+
+    @classmethod
+    def resolve_model_id(cls, provider: str, identifier: str) -> str:
+        """Resolve a local model identifier from model_id, display name, or repo_id."""
+        if provider != "local" or not identifier:
+            return ""
+
+        if identifier in cls.LOCAL_MODELS:
+            return identifier
+
+        model_id = cls.get_model_id_for_name(provider, identifier)
+        if model_id:
+            return model_id
+
+        return cls.get_model_id_for_repo_id(provider, identifier)
+
+    @classmethod
+    def get_model_id_for_repo_id(cls, provider: str, repo_id: str) -> str:
+        """Return the local model identifier for a base or GGUF repo ID."""
+        if provider != "local" or not repo_id:
+            return ""
+
+        for model_id, model_info in cls.LOCAL_MODELS.items():
+            if repo_id in {
+                model_info.get("repo_id"),
+                model_info.get("gguf_repo_id"),
+            }:
+                return model_id
+        return ""
+
+    @classmethod
+    def resolve_download_target(
+        cls,
+        provider: str,
+        model_id: Optional[str] = None,
+        repo_id: Optional[str] = None,
+        prefer_pre_quantized: bool = True,
+    ) -> Optional[Dict[str, Any]]:
+        """Resolve the preferred downloadable artifact for a local model.
+
+        For local LLMs, AIRunner now prefers vendor-provided GGUF artifacts
+        whenever one is configured. This avoids downloading the full
+        transformer checkpoint and then quantizing it locally.
+        """
+        if provider != "local":
+            return None
+
+        resolved_model_id = model_id or cls.get_model_id_for_repo_id(
+            provider,
+            repo_id or "",
+        )
+        if not resolved_model_id:
+            return None
+
+        model_info = cls.get_model_info(provider, resolved_model_id)
+        if not model_info:
+            return None
+
+        if prefer_pre_quantized:
+            gguf_info = cls.get_gguf_info(provider, resolved_model_id)
+            if gguf_info:
+                return {
+                    "model_id": resolved_model_id,
+                    "model_name": model_info.get("name", resolved_model_id),
+                    "repo_id": gguf_info["repo_id"],
+                    "model_type": "gguf",
+                    "gguf_filename": gguf_info["filename"],
+                    "quantization_bits": 0,
+                }
+
+        return {
+            "model_id": resolved_model_id,
+            "model_name": model_info.get("name", resolved_model_id),
+            "repo_id": model_info.get("repo_id", repo_id or ""),
+            "model_type": model_info.get("model_type", "llm"),
+            "gguf_filename": None,
+            "quantization_bits": None,
+        }
+
+    @staticmethod
+    def _get_repo_owner(repo_id: str) -> str:
+        """Extract the repository owner or organization from a repo ID."""
+        if not repo_id:
+            return ""
+        return str(repo_id).split("/", 1)[0].strip()
+
+    @classmethod
+    def get_local_storage_path(
+        cls,
+        base_path: str,
+        provider: str,
+        model_id: Optional[str] = None,
+        repo_id: Optional[str] = None,
+        prefer_pre_quantized: bool = True,
+    ) -> str:
+        """Return the local directory used to store a model's files.
+
+        GGUF downloads are single-file artifacts, so they are grouped by repo
+        owner instead of by model name.
+        """
+        base_dir = os.path.join(
+            os.path.expanduser(base_path),
+            "text/models/llm/causallm",
+        )
+        resolved = cls.resolve_download_target(
+            provider,
+            model_id=model_id,
+            repo_id=repo_id,
+            prefer_pre_quantized=prefer_pre_quantized,
+        )
+        if not resolved:
+            fallback = str(model_id or repo_id or "model")
+            return os.path.join(base_dir, fallback.split("/")[-1] or "model")
+
+        if resolved.get("model_type") == "gguf":
+            repo_owner = cls._get_repo_owner(resolved.get("repo_id", ""))
+            if repo_owner:
+                return os.path.join(base_dir, repo_owner)
+
+        return os.path.join(
+            base_dir,
+            resolved.get("model_name", model_id or "model"),
+        )
+
+    @classmethod
+    def get_expected_local_artifact_path(
+        cls,
+        base_path: str,
+        provider: str,
+        model_id: Optional[str] = None,
+        repo_id: Optional[str] = None,
+        prefer_pre_quantized: bool = True,
+    ) -> str:
+        """Return the exact local file or directory representing a model."""
+        storage_path = cls.get_local_storage_path(
+            base_path,
+            provider,
+            model_id=model_id,
+            repo_id=repo_id,
+            prefer_pre_quantized=prefer_pre_quantized,
+        )
+        resolved = cls.resolve_download_target(
+            provider,
+            model_id=model_id,
+            repo_id=repo_id,
+            prefer_pre_quantized=prefer_pre_quantized,
+        )
+        if resolved and resolved.get("model_type") == "gguf":
+            gguf_filename = resolved.get("gguf_filename")
+            if gguf_filename:
+                return os.path.join(storage_path, gguf_filename)
+        return storage_path
 
     @classmethod
     def get_vram_for_quantization(

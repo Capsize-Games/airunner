@@ -1,5 +1,6 @@
 """Factory for creating LangChain ChatModel instances based on AI Runner settings."""
 
+import os
 from typing import Any, Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -12,6 +13,7 @@ from airunner.components.llm.adapters.chat_gguf import (
     find_gguf_file,
     is_gguf_model,
 )
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.utils.model_optimizer import get_model_optimizer
 
 
@@ -328,15 +330,37 @@ class ChatModelFactory:
             # User explicitly wants GGUF (quantization_bits=0)
             use_gguf = quantization_bits == 0
 
-            # Also check if GGUF is available even if not explicitly requested
-            existing_gguf = optimizer.find_existing_gguf(model_path)
+            preferred_gguf_path = None
+            gguf_info = None
+            if db_settings is not None:
+                model_id = getattr(db_settings, "model_id", None)
+                if model_id:
+                    gguf_info = LLMProviderConfig.get_gguf_info("local", model_id)
+                if gguf_info and not str(model_path).endswith(".gguf"):
+                    candidate = os.path.join(model_path, gguf_info["filename"])
+                    if os.path.exists(candidate):
+                        preferred_gguf_path = candidate
 
-            if use_gguf or existing_gguf or is_gguf_model(model_path):
+            # Also check if GGUF is available even if not explicitly requested
+            allow_generic_directory_scan = gguf_info is None or str(model_path).endswith(
+                ".gguf"
+            )
+            generic_existing_gguf = (
+                optimizer.find_existing_gguf(model_path)
+                if allow_generic_directory_scan
+                else None
+            )
+            existing_gguf = preferred_gguf_path or generic_existing_gguf
+            generic_gguf_available = (
+                is_gguf_model(model_path) if allow_generic_directory_scan else False
+            )
+
+            if use_gguf or existing_gguf or generic_gguf_available:
                 # Determine which GGUF file to use
                 gguf_path = existing_gguf or model_path
                 
                 # If user wants GGUF but no GGUF exists, try to convert
-                if use_gguf and not existing_gguf and not is_gguf_model(model_path):
+                if use_gguf and not existing_gguf and not generic_gguf_available:
                     quant_type = optimizer.bits_to_gguf_quantization(quantization_bits)
                     converted = optimizer.ensure_gguf(model_path, quant_type)
                     if converted:
@@ -346,7 +370,19 @@ class ChatModelFactory:
                         pass
                 
                 # Only use GGUF if we have a valid path
-                if gguf_path and (is_gguf_model(gguf_path) or optimizer.find_existing_gguf(gguf_path)):
+                has_valid_gguf_path = bool(
+                    gguf_path and (
+                        str(gguf_path).endswith(".gguf")
+                        or (
+                            allow_generic_directory_scan
+                            and (
+                                is_gguf_model(gguf_path)
+                                or optimizer.find_existing_gguf(gguf_path)
+                            )
+                        )
+                    )
+                )
+                if has_valid_gguf_path:
                     # Get generation parameters from chatbot settings
                     params = {}
                     if chatbot:
@@ -434,8 +470,6 @@ class ChatModelFactory:
 
         # OpenRouter
         if getattr(llm_settings, "use_openrouter", False):
-            import os
-
             api_key = os.getenv("OPENROUTER_API_KEY")
             if not api_key:
                 raise ValueError(
@@ -478,8 +512,6 @@ class ChatModelFactory:
 
         # OpenAI (future)
         if getattr(llm_settings, "use_openai", False):
-            import os
-
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError(

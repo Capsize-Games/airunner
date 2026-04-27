@@ -13,7 +13,6 @@ from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.utils.settings.get_qsettings import get_qsettings
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.llm_model_manager import (
@@ -51,6 +50,8 @@ class ValidationMixin:
             self._missing_gguf = False
             return False
 
+        expected_gguf_path = self._get_expected_gguf_path()
+
         # If a GGUF file is already present, treat the model as available and
         # do not attempt HuggingFace/safetensors validation or downloads.
         #
@@ -58,7 +59,14 @@ class ValidationMixin:
         # quantized `.gguf` but also has an HF `model.safetensors.index.json`
         # (without the referenced shard files). In that case, we should prefer
         # GGUF and never stall trying to download missing HF shards.
-        if is_gguf_model(model_path):
+        if expected_gguf_path and os.path.exists(expected_gguf_path):
+            self.logger.info(
+                f"Expected GGUF model found at {expected_gguf_path} (preferring GGUF; skipping safetensors validation)"
+            )
+            self._missing_files = None
+            self._missing_gguf = False
+            return True
+        if expected_gguf_path is None and is_gguf_model(model_path):
             self.logger.info(
                 f"GGUF model found at {model_path} (preferring GGUF; skipping safetensors validation)"
             )
@@ -71,7 +79,12 @@ class ValidationMixin:
         
         if gguf_selected:
             # GGUF mode: check for GGUF file instead of safetensors
-            if is_gguf_model(model_path):
+            if expected_gguf_path and os.path.exists(expected_gguf_path):
+                self.logger.info(f"GGUF model found at {expected_gguf_path}")
+                self._missing_files = None
+                self._missing_gguf = False
+                return True
+            if expected_gguf_path is None and is_gguf_model(model_path):
                 self.logger.info(f"GGUF model found at {model_path}")
                 self._missing_files = None
                 self._missing_gguf = False
@@ -79,7 +92,7 @@ class ValidationMixin:
             else:
                 # GGUF selected but no GGUF file - trigger GGUF download
                 self.logger.info(
-                    f"GGUF quantization selected but no GGUF file found at {model_path}"
+                    f"GGUF quantization selected but no GGUF file found at {expected_gguf_path or model_path}"
                 )
                 self._missing_files = None
                 self._missing_gguf = True
@@ -141,27 +154,15 @@ class ValidationMixin:
         return True
     
     def _is_gguf_quantization_selected(self: "LLMModelManager") -> bool:
-        """Check if GGUF quantization is selected AND supported for this model.
-        
-        GGUF uses quantization_bits == 0 as a sentinel value.
-        However, some models (like Ministral 3) don't support GGUF yet due to
-        architecture limitations in llama-cpp-python.
-        
-        Returns:
-            True if GGUF quantization is selected AND the model supports GGUF.
+        """Return True when the current model should use GGUF downloads.
+
+        AIRunner now prefers vendor-provided GGUF artifacts for any local LLM
+        that has one configured. Legacy 2/4/8-bit settings are treated as a
+        stale preference for those models; we only fall back to transformers
+        downloads when no GGUF artifact is available.
         """
-        # First check if the model supports GGUF
         if not self._model_supports_gguf():
             return False
-            
-        try:
-            qs = get_qsettings()
-            saved = qs.value("llm_settings/quantization_bits", None)
-            if saved is not None:
-                return int(saved) == 0
-        except Exception as e:
-            self.logger.warning(f"Error reading quantization setting: {e}")
-        # Default to GGUF if model supports it
         return True
 
     def _model_supports_gguf(self: "LLMModelManager") -> bool:
@@ -297,7 +298,13 @@ class ValidationMixin:
         """
         # Safety: if a GGUF model is present, we should not trigger any HF
         # downloads even if other file checks think the model is incomplete.
-        if is_gguf_model(self.model_path):
+        expected_gguf_path = self._get_expected_gguf_path()
+        if expected_gguf_path and os.path.exists(expected_gguf_path):
+            self.logger.info(
+                f"Expected GGUF model present at {expected_gguf_path}; skipping download trigger"
+            )
+            return False
+        if expected_gguf_path is None and is_gguf_model(self.model_path):
             self.logger.info(
                 f"GGUF model present at {self.model_path}; skipping download trigger"
             )
@@ -451,14 +458,48 @@ class ValidationMixin:
         Returns:
             Model ID string, or empty string if not found.
         """
-        for model_id, model_info in LLMProviderConfig.LOCAL_MODELS.items():
-            if model_info["name"] == self.model_name:
-                return model_id
+        llm_generator_settings = getattr(self, "llm_generator_settings", None)
+        saved_model_id = getattr(llm_generator_settings, "model_id", None)
+        if saved_model_id:
+            model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+            if model_info:
+                return saved_model_id
+
+        model_id = LLMProviderConfig.resolve_model_id(
+            "local",
+            self.model_name,
+        )
+        if model_id:
+            return model_id
+
+        model_id = LLMProviderConfig.get_model_id_for_name(
+            "local",
+            self.model_name,
+        )
+        if model_id:
+            return model_id
 
         self.logger.error(
             f"Could not find model_id for model: {self.model_name}"
         )
         return ""
+
+    def _get_expected_gguf_path(self: "LLMModelManager") -> str | None:
+        """Return the exact GGUF artifact path expected for the current model."""
+        model_id = self._get_model_id_for_model()
+        path_settings = getattr(self, "path_settings", None)
+        base_path = getattr(path_settings, "base_path", None)
+        if not model_id or not base_path:
+            return None
+
+        artifact_path = LLMProviderConfig.get_expected_local_artifact_path(
+            base_path,
+            "local",
+            model_id=model_id,
+        )
+        if artifact_path.lower().endswith(".gguf"):
+            return artifact_path
+        return None
 
     def _get_repo_id_for_model(self: "LLMModelManager") -> str:
         """Get HuggingFace repo ID for current model.
@@ -466,9 +507,10 @@ class ValidationMixin:
         Returns:
             Repository ID string, or empty string if not found.
         """
-        for model_id, model_info in LLMProviderConfig.LOCAL_MODELS.items():
-            if model_info["name"] == self.model_name:
-                return model_info["repo_id"]
+        model_id = self._get_model_id_for_model()
+        if model_id:
+            model_info = LLMProviderConfig.get_model_info("local", model_id)
+            return model_info.get("repo_id", "")
 
         self.logger.error(
             f"Could not find repo_id for model: {self.model_name}"

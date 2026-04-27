@@ -170,6 +170,19 @@ class NodeFunctionsMixin:
                 "workflow_continuation": True,
             }
         else:
+            if self._should_return_tool_direct(tool_name):
+                self.logger.info(
+                    f"Force response node: returning direct tool result for '{tool_name}'"
+                )
+                return {
+                    "messages": [
+                        self._create_direct_tool_response_message(
+                            tool_messages, tool_name
+                        )
+                    ],
+                    "workflow_continuation": False,
+                }
+
             self.logger.info(
                 f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
             )
@@ -240,6 +253,35 @@ class NodeFunctionsMixin:
                 all_tool_content += tool_msg.content
                 all_tool_content += "\n"
         return all_tool_content
+
+    def _get_bound_tool(self, tool_name: str) -> Optional[Any]:
+        """Return the currently bound tool object by name."""
+        for tool in getattr(self, "_tools", []) or []:
+            if getattr(tool, "name", None) == tool_name:
+                return tool
+        return None
+
+    def _should_return_tool_direct(self, tool_name: str) -> bool:
+        """Check whether a bound tool should bypass the post-tool model pass."""
+        tool = self._get_bound_tool(tool_name)
+        return bool(tool and getattr(tool, "return_direct", False))
+
+    def _create_direct_tool_response_message(
+        self, tool_messages: List[Any], tool_name: str
+    ) -> AIMessage:
+        """Create an assistant message directly from tool output."""
+        direct_content = ""
+        for tool_message in reversed(tool_messages):
+            if getattr(tool_message, "name", None) == tool_name and getattr(
+                tool_message, "content", None
+            ):
+                direct_content = str(tool_message.content).strip()
+                break
+
+        if not direct_content and tool_messages:
+            direct_content = str(getattr(tool_messages[-1], "content", "")).strip()
+
+        return AIMessage(content=direct_content, tool_calls=[])
 
     def _generate_forced_response_message(
         self,
@@ -780,6 +822,12 @@ Based on the search results above, provide a clear, conversational answer to the
             
             if tool_name in NO_RESPONSE_TOOLS:
                 continue
+
+            if self._should_return_tool_direct(tool_name):
+                self.logger.info(
+                    f"[ROUTE DEBUG] Tool '{tool_name}' is return_direct - routing to force_response"
+                )
+                return "force_response"
             
             # Check if tool result indicates success for task-completing tools
             last_tool_content = str(getattr(last_tool_msg, 'content', ''))

@@ -90,8 +90,8 @@ class TestManageModelsDialog:
         # Connect signal
         signal_received = []
 
-        def on_download_requested(model_id, repo_id, quant_bits):
-            signal_received.append((model_id, repo_id, quant_bits))
+        def on_download_requested(payload):
+            signal_received.append(payload)
 
         dialog.download_requested.connect(on_download_requested)
 

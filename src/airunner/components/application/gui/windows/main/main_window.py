@@ -1737,7 +1737,7 @@ class MainWindow(
         self.initialized = True
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
-        
+
         # Show donation dialog after window is fully displayed (only on first show)
         if not hasattr(self, "_donation_dialog_shown"):
             self._donation_dialog_shown = True
@@ -1745,7 +1745,7 @@ class MainWindow(
             # Show privacy consent first, then donation dialog
             QTimer.singleShot(300, self._show_privacy_consent_dialog)
             QTimer.singleShot(500, self._show_donation_dialog)
-    
+
     def _show_privacy_consent_dialog(self):
         """Show the privacy consent dialog on first launch."""
         from airunner.components.application.gui.dialogs.privacy_consent_dialog import (

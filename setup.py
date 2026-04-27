@@ -233,7 +233,6 @@ setup(
         "torch",
         "torchvision",
         "torchaudio",
-        "torchao",
         "accelerate==1.7.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.22.0",

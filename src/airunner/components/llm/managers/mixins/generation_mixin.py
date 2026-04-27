@@ -378,13 +378,23 @@ class GenerationMixin:
 
         if not self._workflow_manager:
             model_path = None
+            expected_gguf_path = None
             try:
                 model_path = self.model_path
             except Exception:
                 model_path = None
 
+            try:
+                if hasattr(self, "_get_expected_gguf_path"):
+                    expected_gguf_path = self._get_expected_gguf_path()
+            except Exception:
+                expected_gguf_path = None
+
             if self.llm_settings.use_local_llm and model_path:
-                model_name = os.path.basename(model_path.rstrip("/")) or "(unknown)"
+                try:
+                    model_name = self.model_name
+                except Exception:
+                    model_name = os.path.basename(model_path.rstrip("/")) or "(unknown)"
                 is_gguf = False
                 try:
                     if hasattr(self, "_is_gguf_quantization_selected"):
@@ -393,7 +403,9 @@ class GenerationMixin:
                     is_gguf = False
 
                 gguf_present = False
-                if is_gguf:
+                if expected_gguf_path:
+                    gguf_present = os.path.exists(expected_gguf_path)
+                elif is_gguf:
                     # In GGUF mode, the configured model path may be a directory.
                     # Consider the model "ready" only once a .gguf file exists.
                     try:
@@ -407,8 +419,26 @@ class GenerationMixin:
                     except Exception:
                         gguf_present = False
 
-                model_missing = (not os.path.exists(model_path)) or (is_gguf and not gguf_present)
-                if model_missing:
+                model_ready = os.path.exists(model_path)
+                if expected_gguf_path:
+                    model_ready = gguf_present
+                elif is_gguf:
+                    model_ready = model_ready and gguf_present
+
+                if model_ready and hasattr(self, "load"):
+                    try:
+                        self.load()
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to load local model before generation"
+                        )
+                    if not self._workflow_manager and hasattr(self, "_load_workflow_manager"):
+                        try:
+                            self._load_workflow_manager()
+                        except Exception:
+                            pass
+
+                if not model_ready:
                     self.logger.error(
                         "Workflow manager unavailable because model is missing; "
                         "download likely in progress"

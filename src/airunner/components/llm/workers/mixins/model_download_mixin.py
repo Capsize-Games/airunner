@@ -202,6 +202,28 @@ class ModelDownloadMixin:
         repo_id = data.get("repo_id", "")
         gguf_filename = data.get("gguf_filename")
         convert_to_gguf = data.get("convert_to_gguf", False)
+
+        resolved_download = LLMProviderConfig.resolve_download_target(
+            "local",
+            repo_id=repo_id,
+            prefer_pre_quantized=True,
+        )
+        if resolved_download and resolved_download.get("model_type") == "gguf":
+            if (
+                repo_id != resolved_download["repo_id"]
+                or model_type != "gguf"
+                or gguf_filename != resolved_download["gguf_filename"]
+            ):
+                self.logger.info(
+                    "Upgrading LLM download request from %s to GGUF artifact %s/%s",
+                    repo_id,
+                    resolved_download["repo_id"],
+                    resolved_download["gguf_filename"],
+                )
+            repo_id = resolved_download["repo_id"]
+            model_type = "gguf"
+            gguf_filename = resolved_download["gguf_filename"]
+            model_name = resolved_download.get("model_name", model_name)
         
         # Store convert_to_gguf flag for use in completion handler
         self._pending_convert_to_gguf = convert_to_gguf
@@ -402,10 +424,9 @@ class ModelDownloadMixin:
         Returns:
             Model info dictionary or None if not found
         """
-        for provider_models in [LLMProviderConfig.LOCAL_MODELS]:
-            for model_id, info in provider_models.items():
-                if info.get("repo_id") == repo_id:
-                    return info
+        model_id = LLMProviderConfig.get_model_id_for_repo_id("local", repo_id)
+        if model_id:
+            return LLMProviderConfig.get_model_info("local", model_id)
 
         # Fallback for auxiliary models (embeddings, etc.) not listed in config
         self.logger.debug(

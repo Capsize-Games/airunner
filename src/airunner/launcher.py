@@ -59,7 +59,8 @@ def build_ui_if_needed():
     if not os.path.exists(ui_build_marker):
         try:
             subprocess.run(
-                [sys.executable, "-m", "airunner_build_ui"], check=True
+                [sys.executable, "-m", "airunner.bin.build_ui"],
+                check=True,
             )
             with open(ui_build_marker, "w") as marker:
                 marker.write("UI files built successfully.")
@@ -309,7 +310,7 @@ def _show_early_splash(existing_app=None):
     from PySide6.QtWidgets import QApplication
     from PySide6.QtGui import QGuiApplication
     from airunner.components.splash_screen.splash_screen import SplashScreen
-    
+
     # Use existing app or create new
     if existing_app is not None:
         app = existing_app

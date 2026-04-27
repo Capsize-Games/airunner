@@ -1,6 +1,7 @@
 import os
+import re
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 from transformers import (
     AutoModelForCausalLM,
@@ -272,6 +273,11 @@ class LLMModelManager(
         # Apply request-level settings before loading, so model selection works.
         llm_request = data["request_data"].get("llm_request")
         self.llm_request = llm_request
+        if llm_request is not None:
+            try:
+                setattr(llm_request, "prompt", data["request_data"].get("prompt", ""))
+            except Exception:
+                pass
 
         # Optional request-level dtype override (quantization).
         # This is primarily used by admin settings to force 4bit/8bit.
@@ -430,31 +436,61 @@ class LLMModelManager(
             self.logger.info(
                 "Auto mode: Analyzing prompt to select relevant tool categories"
             )
+            prompt = data["request_data"]["prompt"]
+            force_tool = getattr(llm_request, "force_tool", None) if llm_request else None
+            direct_categories, direct_force_tool = self._detect_simple_tool_route(prompt)
+            if force_tool is None and direct_force_tool:
+                force_tool = direct_force_tool
             # Emit status signal for UI feedback during classification
             self.emit_signal(
                 SignalCode.LLM_TOOL_STATUS_SIGNAL,
                 {
                     "tool_id": "tool_classification",
                     "tool_name": "tool_analyzer",
-                    "query": data["request_data"]["prompt"][:100],
+                    "query": prompt[:100],
                     "status": "starting",
                     "details": "Analyzing prompt to select tools...",
                     "conversation_id": getattr(self, "_conversation_id", None),
                     "timestamp": datetime.utcnow().isoformat(),
                 },
             )
-            selected_categories = self._classify_prompt_for_tools(
-                data["request_data"]["prompt"]
-            )
+            if direct_categories is not None:
+                selected_categories = direct_categories
+                self.logger.info(
+                    "Auto mode: matched direct system tool route %s for prompt %r",
+                    force_tool,
+                    prompt[:100],
+                )
+            else:
+                selected_categories = self._classify_prompt_for_tools(prompt)
+
+            llm_request.tool_categories = selected_categories
+            llm_request.force_tool = force_tool
+            if (
+                getattr(llm_request, "enable_thinking", None) is None
+                and self._should_disable_thinking_for_prompt(
+                    prompt,
+                    selected_categories,
+                    force_tool,
+                )
+            ):
+                llm_request.enable_thinking = False
+                self.logger.info(
+                    "Auto mode: disabled thinking for simple prompt %r",
+                    prompt[:100],
+                )
             # Emit completion status
+            details = f"Selected: {', '.join(selected_categories) if selected_categories else 'none'}"
+            if force_tool:
+                details += f" | forced tool: {force_tool}"
             self.emit_signal(
                 SignalCode.LLM_TOOL_STATUS_SIGNAL,
                 {
                     "tool_id": "tool_classification",
                     "tool_name": "tool_analyzer",
-                    "query": data["request_data"]["prompt"][:100],
+                    "query": prompt[:100],
                     "status": "completed",
-                    "details": f"Selected: {', '.join(selected_categories) if selected_categories else 'none'}",
+                    "details": details,
                     "conversation_id": getattr(self, "_conversation_id", None),
                     "timestamp": datetime.utcnow().isoformat(),
                 },
@@ -463,7 +499,6 @@ class LLMModelManager(
                 f"Auto mode selected categories: {selected_categories}"
             )
             action = data["request_data"].get("action")
-            force_tool = getattr(llm_request, "force_tool", None) if llm_request else None
             self._apply_tool_filter(
                 selected_categories,
                 action=action,
@@ -616,6 +651,29 @@ class LLMModelManager(
     # Search tools (web search) are NOT included by default to prevent
     # unwanted internet searches when the caller only wants local tools like RAG.
     ALWAYS_INCLUDE_CATEGORIES = {"knowledge"}
+    SIMPLE_SYSTEM_TOOL_PATTERNS: Tuple[Tuple[str, str], ...] = (
+        (r"\bwhat\s+time\s+is\s+it\b", "get_current_datetime"),
+        (r"\bwhat(?:'s| is)?\s+the\s+(?:current\s+)?time\b", "get_current_datetime"),
+        (r"\btell\s+me\s+the\s+(?:current\s+)?time\b", "get_current_datetime"),
+        (r"\bcurrent\s+date\s+and\s+time\b", "get_current_datetime"),
+        (r"\bwhat(?:'s| is)?\s+(?:today'?s\s+)?date\b", "get_current_datetime"),
+        (r"\bwhat(?:'s| is)?\s+the\s+current\s+date\b", "get_current_datetime"),
+        (r"\bwhat\s+day\s+is\s+it\b", "get_current_datetime"),
+        (r"\btoday'?s\s+date\b", "get_current_datetime"),
+        (r"\bdate\s+and\s+time\b", "get_current_datetime"),
+    )
+    SIMPLE_GREETING_PATTERNS: Tuple[str, ...] = (
+        r"^\s*hello[!.?,\s]*$",
+        r"^\s*hi[!.?,\s]*$",
+        r"^\s*hey[!.?,\s]*$",
+        r"^\s*yo[!.?,\s]*$",
+        r"^\s*sup[!.?,\s]*$",
+        r"^\s*good\s+morning[!.?,\s]*$",
+        r"^\s*good\s+afternoon[!.?,\s]*$",
+        r"^\s*good\s+evening[!.?,\s]*$",
+        r"^\s*thanks[!.?,\s]*$",
+        r"^\s*thank\s+you[!.?,\s]*$",
+    )
 
     def _apply_tool_filter(
         self, tool_categories: List[str], action=None, force_tool: Optional[str] = None
@@ -656,6 +714,18 @@ class LLMModelManager(
             if disable_always:
                 self.logger.info(
                     "tool_categories=[] and AIRUNNER_DISABLE_ALWAYS_TOOLS=1 - disabling all tools"
+                )
+                self._workflow_manager.update_tools([])
+                self._workflow_manager._build_and_compile_workflow()
+                return
+
+            current_request = getattr(self, "llm_request", None)
+            current_prompt = ""
+            if current_request and hasattr(current_request, "prompt"):
+                current_prompt = current_request.prompt or ""
+            if self._is_simple_greeting_prompt(current_prompt):
+                self.logger.info(
+                    "tool_categories=[] for simple greeting - disabling all tools"
                 )
                 self._workflow_manager.update_tools([])
                 self._workflow_manager._build_and_compile_workflow()
@@ -756,6 +826,22 @@ class LLMModelManager(
             list(allowed_categories),
             include_deferred=True,  # Include all tools in selected categories
         )
+        if force_tool:
+            forced_tools = [
+                tool
+                for tool in filtered_tools
+                if getattr(tool, "name", getattr(tool, "__name__", None))
+                == force_tool
+            ]
+            if forced_tools:
+                filtered_tools = forced_tools
+                self.logger.info(
+                    f"[TOOL FILTER] Reduced filtered tools to forced tool: {force_tool}"
+                )
+            else:
+                self.logger.warning(
+                    f"[TOOL FILTER] Forced tool '{force_tool}' was not found in filtered tool set"
+                )
         # Debug: Log the filtered tools (names) for verification
         try:
             filtered_names = [
@@ -797,6 +883,52 @@ class LLMModelManager(
             filtered_tools, tool_choice=tool_choice
         )
 
+    @classmethod
+    def _detect_simple_tool_route(
+        cls, prompt: str
+    ) -> Tuple[Optional[List[str]], Optional[str]]:
+        """Detect trivial prompts that should deterministically call a single tool."""
+        prompt_lc = (prompt or "").strip().lower()
+        if not prompt_lc:
+            return None, None
+
+        for pattern, tool_name in cls.SIMPLE_SYSTEM_TOOL_PATTERNS:
+            if re.search(pattern, prompt_lc):
+                return ["system"], tool_name
+
+        return None, None
+
+    @classmethod
+    def _is_simple_greeting_prompt(cls, prompt: str) -> bool:
+        """Return True for trivial greeting-style prompts."""
+        prompt_lc = (prompt or "").strip().lower()
+        if not prompt_lc or len(prompt_lc) > 40:
+            return False
+
+        return any(
+            re.match(pattern, prompt_lc)
+            for pattern in cls.SIMPLE_GREETING_PATTERNS
+        )
+
+    @classmethod
+    def _should_disable_thinking_for_prompt(
+        cls,
+        prompt: str,
+        selected_categories: Optional[List[str]] = None,
+        force_tool: Optional[str] = None,
+    ) -> bool:
+        """Return True when reasoning adds latency but little value."""
+        if force_tool:
+            return True
+
+        if cls._is_simple_greeting_prompt(prompt):
+            return True
+
+        if selected_categories == [] and len((prompt or "").strip()) <= 40:
+            return True
+
+        return False
+
     def _classify_prompt_for_tools(self, prompt: str) -> list:
         """
         Analyze a prompt using the LLM to intelligently select which tool categories are needed.
@@ -810,6 +942,13 @@ class LLMModelManager(
         Returns:
             List of tool category strings (empty list if no tools needed)
         """
+        direct_categories, _ = self._detect_simple_tool_route(prompt)
+        if direct_categories is not None:
+            self.logger.info(
+                "Auto mode: direct tool route detected, forcing system category"
+            )
+            return direct_categories
+
         # Fast-path: trivial greetings/short chit-chat should not trigger tools
         prompt_lc = (prompt or "").strip().lower()
         if len(prompt_lc) <= 40:

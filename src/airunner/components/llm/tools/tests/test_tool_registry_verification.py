@@ -90,6 +90,7 @@ class TestToolRegistryVerification:
         expected_system_tools = [
             "quit_application",
             "toggle_tts",
+            "get_current_datetime",
             "list_directory",
             "read_file",
             "write_file",

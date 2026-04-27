@@ -200,23 +200,22 @@ class App(MediatorMixin, SettingsMixin, QObject):
     @property
     def static_dir(self) -> str:
         """Get the static directory path.
-        
+
         Uses user data directory for writable static files (like MathJax),
         falls back to package directory for bundled static assets.
         """
-        # User-writable static directory
         base_path = os.environ.get(
             "AIRUNNER_DATA_DIR",
-            os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+            os.path.join(
+                os.path.expanduser("~"), ".local", "share", "airunner"
+            ),
         )
         user_static = os.path.join(base_path, "static")
-        
-        # Package static directory (read-only, bundled assets)
+
         pkg_static = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "static")
         )
-        
-        # Return user static if it exists, otherwise package static
+
         if os.path.isdir(user_static):
             return user_static
         return pkg_static
@@ -959,7 +958,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             Qt.ApplicationAttribute.AA_EnableHighDpiScaling
         )
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
-        
+
         # Use launcher's QApplication if available, otherwise create new
         if self._launcher_app is not None:
             self.app = self._launcher_app
@@ -1160,11 +1159,20 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.update_splash_message(self.splash, "Initializing main window...")
             window = window_class(app=self, **self.window_class_params)
             app.main_window = window
+
+            # Make the main window visible explicitly before dismissing splash.
+            # Some startup paths rely on side effects during construction, which
+            # can leave the splash on-screen if the window is not exposed yet.
+            window.show()
+            window.raise_()
+            window.activateWindow()
+            app.processEvents()
             
             # Close splash screen AFTER window is created and shown
             # This ensures the splash stays visible during the entire loading process
             if self.splash:
                 self.splash.finish(window)
+                self.splash.close()
             
             window.raise_()
             # --- LNA/diagnostics: log Qt version, enable dev tools, set custom page if QWebEngineView present ---

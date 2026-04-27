@@ -2,7 +2,7 @@
 
 Provides a comprehensive UI for:
 - Viewing available models from HuggingFace
-- Downloading models with quantization options
+- Downloading models using the preferred artifact format
 - Deleting local models
 - Viewing model details and disk usage
 """
@@ -39,14 +39,14 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
 
     Features:
     - Browse available HuggingFace models
-    - Download models with quantization selection
+    - Download models using AIRunner's preferred artifact
     - View local model disk usage
     - Delete local models
     - View model capabilities and requirements
     """
 
     # Signals
-    download_requested = Signal(str, str, int)  # model_id, repo_id, quant_bits
+    download_requested = Signal(dict)
     delete_requested = Signal(str)  # model_path
 
     def __init__(self, parent: Optional[QDialog] = None):
@@ -168,8 +168,11 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             self.models_table.setItem(row, 3, QTableWidgetItem(tools_text))
 
             # Status (check if downloaded)
-            model_path = self._get_model_path(model_info["name"])
-            is_downloaded = os.path.exists(model_path)
+            artifact_path = self._get_model_artifact_path(
+                model_info["name"],
+                model_id,
+            )
+            is_downloaded = os.path.exists(artifact_path)
             status_text = "Downloaded" if is_downloaded else "Not Downloaded"
             status_item = QTableWidgetItem(status_text)
             if is_downloaded:
@@ -205,16 +208,14 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         button_layout.setContentsMargins(2, 2, 2, 2)
 
         if not is_downloaded:
-            # Download button with quantization selector
-            quant_combo = QComboBox()
-            quant_combo.addItems(["2-bit", "4-bit", "8-bit"])
-            quant_combo.setCurrentIndex(1)  # Default to 4-bit
-            button_layout.addWidget(quant_combo)
-
-            download_btn = QPushButton("Download")
+            has_gguf = LLMProviderConfig.has_gguf_variant(model_id)
+            download_btn = QPushButton(
+                "Download GGUF" if has_gguf else "Download"
+            )
             download_btn.clicked.connect(
-                lambda checked, mid=model_id, mi=model_info, qc=quant_combo: self._on_download_clicked(
-                    mid, mi, qc
+                lambda checked, mid=model_id, mi=model_info: self._on_download_clicked(
+                    mid,
+                    mi,
                 )
             )
             button_layout.addWidget(download_btn)
@@ -229,18 +230,40 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         button_layout.addStretch()
         return button_widget
 
-    def _get_model_path(self, model_name: str) -> str:
-        """Get the local path for a model.
+    def _get_model_path(self, model_name: str, model_id: Optional[str] = None) -> str:
+        """Get the local storage directory for a model.
 
         Args:
             model_name: Model name
+            model_id: Optional provider-config model identifier
 
         Returns:
-            Absolute path to model directory
+            Absolute path to model storage directory
         """
-        return os.path.join(
-            os.path.expanduser(self.path_settings.base_path),
-            f"text/models/llm/causallm/{model_name}",
+        resolved_model_id = model_id or LLMProviderConfig.get_model_id_for_name(
+            "local",
+            model_name,
+        )
+        return LLMProviderConfig.get_local_storage_path(
+            self.path_settings.base_path,
+            "local",
+            model_id=resolved_model_id or None,
+        )
+
+    def _get_model_artifact_path(
+        self,
+        model_name: str,
+        model_id: Optional[str] = None,
+    ) -> str:
+        """Get the exact file or directory that indicates the model is installed."""
+        resolved_model_id = model_id or LLMProviderConfig.get_model_id_for_name(
+            "local",
+            model_name,
+        )
+        return LLMProviderConfig.get_expected_local_artifact_path(
+            self.path_settings.base_path,
+            "local",
+            model_id=resolved_model_id or None,
         )
 
     @Slot()
@@ -293,19 +316,25 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
             )
 
         # Check local status
-        model_path = self._get_model_path(model_info["name"])
-        if os.path.exists(model_path):
+        artifact_path = self._get_model_artifact_path(
+            model_info["name"],
+            model_id,
+        )
+        if os.path.exists(artifact_path):
             # Get disk usage
             try:
-                total_size = 0
-                for dirpath, dirnames, filenames in os.walk(model_path):
-                    for filename in filenames:
-                        filepath = os.path.join(dirpath, filename)
-                        total_size += os.path.getsize(filepath)
+                if os.path.isfile(artifact_path):
+                    total_size = os.path.getsize(artifact_path)
+                else:
+                    total_size = 0
+                    for dirpath, dirnames, filenames in os.walk(artifact_path):
+                        for filename in filenames:
+                            filepath = os.path.join(dirpath, filename)
+                            total_size += os.path.getsize(filepath)
 
                 size_gb = total_size / (1024**3)
                 details.append(f"<br><b>Disk Usage:</b> {size_gb:.2f} GB")
-                details.append(f"<b>Location:</b> {model_path}")
+                details.append(f"<b>Location:</b> {artifact_path}")
             except Exception as e:
                 details.append(
                     f"<br><b>Status:</b> Error reading disk usage: {e}"
@@ -314,37 +343,41 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         self.details_text.setHtml("<br>".join(details))
 
     @Slot()
-    def _on_download_clicked(
-        self, model_id: str, model_info: Dict, quant_combo: QComboBox
-    ):
+    def _on_download_clicked(self, model_id: str, model_info: Dict):
         """Handle download button click.
 
         Args:
             model_id: Model identifier
             model_info: Model information
-            quant_combo: Quantization combo box
         """
-        # Get quantization bits
-        quant_index = quant_combo.currentIndex()
-        quant_bits_map = {0: 2, 1: 4, 2: 8}
-        quant_bits = quant_bits_map.get(quant_index, 4)
-
-        # Confirm download
-        repo_id = model_info.get("repo_id")
-        if not repo_id:
+        download_info = LLMProviderConfig.resolve_download_target(
+            "local",
+            model_id=model_id,
+            prefer_pre_quantized=True,
+        )
+        if not download_info or not download_info.get("repo_id"):
             QMessageBox.warning(
                 self,
                 "Cannot Download",
-                f"No repository ID found for {model_info['name']}",
+                f"No download source found for {model_info['name']}",
             )
             return
 
+        is_gguf = download_info.get("model_type") == "gguf"
+        repo_id = download_info["repo_id"]
+        quant_bits = download_info.get("quantization_bits") or 4
+        format_label = "Pre-quantized GGUF" if is_gguf else "Transformers"
+        file_label = download_info.get("gguf_filename")
+
+        # Confirm download
         msg = (
             f"Download {model_info['name']}?\n\n"
-            f"Quantization: {quant_bits}-bit\n"
+            f"Format: {format_label}\n"
             f"Estimated VRAM: ~{model_info.get(f'vram_{quant_bits}bit_gb', 0)} GB\n"
             f"Repository: {repo_id}"
         )
+        if file_label:
+            msg += f"\nFile: {file_label}"
 
         reply = QMessageBox.question(
             self,
@@ -354,8 +387,18 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         )
 
         if reply == QMessageBox.Yes:
-            # Emit signal to start download
-            self.download_requested.emit(model_id, repo_id, quant_bits)
+            payload = {
+                "model_id": model_id,
+                "model_name": model_info["name"],
+                "model_path": self._get_model_path(model_info["name"], model_id),
+                "repo_id": repo_id,
+                "model_type": download_info.get("model_type", "llm"),
+                "quantization_bits": download_info.get("quantization_bits") or 4,
+            }
+            if file_label:
+                payload["gguf_filename"] = file_label
+
+            self.download_requested.emit(payload)
 
             # Show progress bar
             self.progress_bar.setVisible(True)
@@ -368,7 +411,11 @@ class ManageModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         Args:
             model_info: Model information
         """
-        model_path = self._get_model_path(model_info["name"])
+        model_id = LLMProviderConfig.get_model_id_for_name(
+            "local",
+            model_info["name"],
+        )
+        model_path = self._get_model_artifact_path(model_info["name"], model_id)
 
         # Confirm deletion
         msg = (

@@ -14,7 +14,9 @@ parses <tool_call> tags from responses (matching Qwen3's native format).
 """
 
 import json
+import os
 import re
+import time
 import uuid
 from pathlib import Path
 from typing import (
@@ -94,6 +96,30 @@ def _detect_chat_format(model_path: str) -> str:
     
     # Default to chatml (most compatible)
     return "chatml"
+
+
+def _get_int_env(name: str) -> Optional[int]:
+    """Parse an integer environment variable if present."""
+    value = os.environ.get(name)
+    if value is None or not str(value).strip():
+        return None
+    try:
+        return int(str(value).strip())
+    except ValueError:
+        return None
+
+
+def _get_bool_env(name: str) -> Optional[bool]:
+    """Parse a boolean environment variable if present."""
+    value = os.environ.get(name)
+    if value is None or not str(value).strip():
+        return None
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    return None
 
 
 class ChatGGUF(BaseChatModel):
@@ -186,6 +212,54 @@ class ChatGGUF(BaseChatModel):
         self._detected_format = self.chat_format or _detect_chat_format(self.model_path)
         self._load_model()
 
+    def _resolve_llama_tuning(self) -> Dict[str, Any]:
+        """Resolve optional llama.cpp tuning overrides from the environment."""
+        tuning: Dict[str, Any] = {
+            "n_batch": self.n_batch,
+            "offload_kqv": True,
+        }
+
+        n_batch_override = _get_int_env("AIRUNNER_GGUF_N_BATCH")
+        if n_batch_override is not None:
+            tuning["n_batch"] = n_batch_override
+
+        n_ubatch_override = _get_int_env("AIRUNNER_GGUF_N_UBATCH")
+        if n_ubatch_override is not None:
+            tuning["n_ubatch"] = n_ubatch_override
+
+        n_threads_override = _get_int_env("AIRUNNER_GGUF_N_THREADS")
+        if n_threads_override is not None:
+            tuning["n_threads"] = n_threads_override
+
+        n_threads_batch_override = _get_int_env("AIRUNNER_GGUF_N_THREADS_BATCH")
+        if n_threads_batch_override is not None:
+            tuning["n_threads_batch"] = n_threads_batch_override
+
+        offload_kqv_override = _get_bool_env("AIRUNNER_GGUF_OFFLOAD_KQV")
+        if offload_kqv_override is not None:
+            tuning["offload_kqv"] = offload_kqv_override
+
+        op_offload_override = _get_bool_env("AIRUNNER_GGUF_OP_OFFLOAD")
+        if op_offload_override is not None:
+            tuning["op_offload"] = op_offload_override
+
+        return tuning
+
+    @staticmethod
+    def _format_llama_tuning(tuning: Dict[str, Any]) -> str:
+        """Format tuning fields for concise logging."""
+        keys = [
+            "n_batch",
+            "n_ubatch",
+            "n_threads",
+            "n_threads_batch",
+            "offload_kqv",
+            "op_offload",
+        ]
+        return ", ".join(
+            f"{key}={tuning[key]}" for key in keys if key in tuning
+        )
+
     def _load_model(self) -> None:
         """Load the GGUF model via llama-cpp-python.
         
@@ -233,21 +307,24 @@ class ChatGGUF(BaseChatModel):
                 f"  llama.cpp GPU offload support={gpu_offload_supported}"
             )
 
-        # Use standard chatml format - we handle tool calling via prompt injection
-        # and <tool_call> tag parsing (Qwen3 native format)
-        
+        llama_tuning = self._resolve_llama_tuning()
+
         # Build kwargs with optional YaRN support for extended context
         llama_kwargs = {
             "model_path": self.model_path,
             "n_ctx": self.n_ctx,
             "n_gpu_layers": self.n_gpu_layers,
-            "n_batch": self.n_batch,
             "flash_attn": self.flash_attn,
             "chat_format": self._detected_format,
             "type_k": 8,  # KV cache quantization to save VRAM
             "type_v": 8,
             "verbose": False,
+            **llama_tuning,
         }
+
+        self.logger.info(
+            f"  llama.cpp tuning: {self._format_llama_tuning(llama_tuning)}"
+        )
         
         # Add YaRN parameters for extended context (131K)
         # YaRN (Yet another RoPE extensioN) allows extending context beyond native limit
@@ -294,6 +371,15 @@ class ChatGGUF(BaseChatModel):
         # No special chat format needed
         pass
 
+    def clear_bound_tools(self) -> None:
+        """Clear previously bound tools from the live model instance."""
+        self.tools = None
+        self.tool_choice = None
+
+    def _use_native_tool_calling(self) -> bool:
+        """Return True when llama.cpp native tools should be used."""
+        return bool(self.tools) and self.tool_choice != "none"
+
     def set_interrupted(self, value: bool) -> None:
         """Set the interrupted flag for stopping generation."""
         self._interrupted = value
@@ -313,12 +399,14 @@ class ChatGGUF(BaseChatModel):
         """
         converted = []
         tool_instructions_added = False
+        use_native_tool_calling = self._use_native_tool_calling()
         
         for msg in messages:
             if isinstance(msg, SystemMessage):
                 content = msg.content
-                # Inject Qwen3-style tool instructions into system message
-                if self.tools and not tool_instructions_added:
+                # Legacy XML tool instructions are only needed when native
+                # llama.cpp tool calling is unavailable.
+                if self.tools and not use_native_tool_calling and not tool_instructions_added:
                     content = self._inject_tool_instructions(content)
                     tool_instructions_added = True
                 converted.append({
@@ -344,7 +432,7 @@ class ChatGGUF(BaseChatModel):
                 })
         
         # If no system message but we have tools, add one
-        if self.tools and not tool_instructions_added:
+        if self.tools and not use_native_tool_calling and not tool_instructions_added:
             tool_system = self._inject_tool_instructions("")
             converted.insert(0, {"role": "system", "content": tool_system})
         
@@ -422,6 +510,75 @@ For each function call, return a json object with function name and arguments wi
                 
         return tool_calls
 
+    def _parse_native_tool_calls(
+        self, raw_tool_calls: Optional[List[Dict[str, Any]]]
+    ) -> List[Dict[str, Any]]:
+        """Parse OpenAI-style native tool calls from llama.cpp responses."""
+        tool_calls: List[Dict[str, Any]] = []
+
+        for raw_call in raw_tool_calls or []:
+            function = raw_call.get("function", {}) if isinstance(raw_call, dict) else {}
+            arguments = function.get("arguments", {})
+
+            if isinstance(arguments, str):
+                try:
+                    arguments = json.loads(arguments) if arguments.strip() else {}
+                except json.JSONDecodeError:
+                    self.logger.warning(
+                        "Failed to parse native tool arguments for %s",
+                        function.get("name", "unknown"),
+                    )
+                    arguments = {}
+
+            tool_calls.append(
+                {
+                    "id": raw_call.get("id") or str(uuid.uuid4()),
+                    "name": function.get("name"),
+                    "args": arguments if isinstance(arguments, dict) else {},
+                    "type": "tool_call",
+                }
+            )
+
+        return tool_calls
+
+    def _merge_native_tool_call_deltas(
+        self,
+        tool_call_buffers: Dict[int, Dict[str, Any]],
+        raw_tool_calls: Optional[List[Dict[str, Any]]],
+    ) -> None:
+        """Merge streaming native tool call deltas into a complete structure."""
+        for raw_call in raw_tool_calls or []:
+            index = raw_call.get("index", len(tool_call_buffers))
+            buffer = tool_call_buffers.setdefault(
+                index,
+                {
+                    "id": None,
+                    "type": "function",
+                    "function": {"name": "", "arguments": ""},
+                },
+            )
+
+            if raw_call.get("id"):
+                buffer["id"] = raw_call["id"]
+            if raw_call.get("type"):
+                buffer["type"] = raw_call["type"]
+
+            function = raw_call.get("function") or {}
+            if function.get("name"):
+                buffer["function"]["name"] += function["name"]
+            if function.get("arguments"):
+                buffer["function"]["arguments"] += function["arguments"]
+
+    def _finalize_native_tool_call_deltas(
+        self, tool_call_buffers: Dict[int, Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Convert buffered streaming tool call deltas into normalized tool calls."""
+        if not tool_call_buffers:
+            return []
+
+        ordered_calls = [tool_call_buffers[index] for index in sorted(tool_call_buffers)]
+        return self._parse_native_tool_calls(ordered_calls)
+
     def _generate(
         self,
         messages: List[BaseMessage],
@@ -446,8 +603,6 @@ For each function call, return a json object with function name and arguments wi
         converted_messages = self._convert_messages(messages)
         
         # Build kwargs for create_chat_completion
-        # NOTE: We do NOT pass tools here - they are in the system prompt
-        # and the model will use <tool_call> tags which we parse ourselves
         chat_kwargs = {
             "messages": converted_messages,
             "max_tokens": self.max_tokens,
@@ -462,14 +617,27 @@ For each function call, return a json object with function name and arguments wi
         if stop:
             chat_kwargs["stop"] = stop
 
-        if self.tools:
+        if self._use_native_tool_calling():
+            chat_kwargs["tools"] = self.tools
+            if self.tool_choice is not None:
+                chat_kwargs["tool_choice"] = self.tool_choice
+
+        if self._use_native_tool_calling():
+            self.logger.debug(
+                f"[TOOL CALL] Passing {len(self.tools or [])} native tools to llama.cpp"
+            )
+        elif self.tools:
             self.logger.debug(f"[TOOL CALL] {len(self.tools)} tools injected in system prompt")
         else:
             self.logger.debug("[TOOL CALL] No tools bound")
 
         # Call native chat completion
+        call_started = time.perf_counter()
         self.logger.debug(f"[TOOL CALL] Calling create_chat_completion with chat_format={self._detected_format}")
         response = self._llama.create_chat_completion(**chat_kwargs)
+        self.logger.info(
+            f"[ChatGGUF._generate] create_chat_completion returned in {time.perf_counter() - call_started:.3f}s"
+        )
         self.logger.debug(f"[TOOL CALL] Response: {response}")
         
         # Extract response
@@ -482,8 +650,10 @@ For each function call, return a json object with function name and arguments wi
         if self.enable_thinking and hasattr(message_data, "get"):
             thinking_content = message_data.get("reasoning_content")
         
-        # Parse tool calls from <tool_call> tags in content (Qwen3 format)
-        tool_calls = self._parse_tool_calls(content)
+        raw_native_tool_calls = message_data.get("tool_calls") if hasattr(message_data, "get") else None
+        tool_calls = self._parse_native_tool_calls(raw_native_tool_calls)
+        if not tool_calls:
+            tool_calls = self._parse_tool_calls(content)
         
         if tool_calls:
             self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from response")
@@ -528,7 +698,6 @@ For each function call, return a json object with function name and arguments wi
         converted_messages = self._convert_messages(messages)
         self.logger.info(f"[ChatGGUF._stream] Converted {len(converted_messages)} messages")
         
-        # NOTE: We do NOT pass tools - they are in the system prompt
         chat_kwargs = {
             "messages": converted_messages,
             "max_tokens": self.max_tokens,
@@ -543,9 +712,16 @@ For each function call, return a json object with function name and arguments wi
         if stop:
             chat_kwargs["stop"] = stop
 
+        if self._use_native_tool_calling():
+            chat_kwargs["tools"] = self.tools
+            if self.tool_choice is not None:
+                chat_kwargs["tool_choice"] = self.tool_choice
+
         self._interrupted = False
         full_content = []
+        native_tool_call_buffers: Dict[int, Dict[str, Any]] = {}
         
+        call_started = time.perf_counter()
         self.logger.info(f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}")
         self.logger.info(f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}")
         self.logger.info(f"[ChatGGUF._stream] tool_choice: {self.tool_choice}")
@@ -554,11 +730,19 @@ For each function call, return a json object with function name and arguments wi
         for chunk in self._llama.create_chat_completion(**chat_kwargs):
             chunk_count += 1
             if chunk_count == 1:
-                self.logger.info(f"[ChatGGUF._stream] First chunk received")
+                self.logger.info(
+                    f"[ChatGGUF._stream] First chunk received after {time.perf_counter() - call_started:.3f}s"
+                )
             if self._interrupted:
                 break
 
             delta = chunk.get("choices", [{}])[0].get("delta", {})
+
+            if "tool_calls" in delta and delta["tool_calls"]:
+                self._merge_native_tool_call_deltas(
+                    native_tool_call_buffers,
+                    delta["tool_calls"],
+                )
             
             # Handle content
             if "content" in delta and delta["content"]:
@@ -575,9 +759,14 @@ For each function call, return a json object with function name and arguments wi
                 yield chunk_msg
 
         # After streaming completes, parse <tool_call> tags from full content
-        self.logger.info(f"[ChatGGUF._stream] Stream loop finished. Total chunks: {chunk_count}, content length: {len(''.join(full_content))}")
+        self.logger.info(
+            f"[ChatGGUF._stream] Stream loop finished in {time.perf_counter() - call_started:.3f}s. "
+            f"Total chunks: {chunk_count}, content length: {len(''.join(full_content))}"
+        )
         full_text = "".join(full_content)
-        tool_calls = self._parse_tool_calls(full_text)
+        tool_calls = self._finalize_native_tool_call_deltas(native_tool_call_buffers)
+        if not tool_calls:
+            tool_calls = self._parse_tool_calls(full_text)
         
         if tool_calls:
             self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from streamed response")

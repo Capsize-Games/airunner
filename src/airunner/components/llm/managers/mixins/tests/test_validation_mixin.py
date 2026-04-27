@@ -20,6 +20,10 @@ class TestableValidationMixin(ValidationMixin):
         self.llm_settings.use_local_llm = True
         self.model_path = "/fake/model/path"
         self.model_name = "test-model"
+        self.llm_generator_settings = Mock()
+        self.llm_generator_settings.model_id = None
+        self.path_settings = Mock()
+        self.path_settings.base_path = "/fake"
         self.logger = Mock()
         self.emit_signal = Mock()
         self.model_status = {ModelType.LLM: ModelStatus.UNLOADED}
@@ -177,6 +181,13 @@ class TestTriggerModelDownload:
         mock_config.LOCAL_MODELS = {
             "model1": {"name": "test-model", "repo_id": "org/model"}
         }
+        mock_config.resolve_model_id.return_value = ""
+        mock_config.get_expected_local_artifact_path.return_value = "/fake/model/path"
+        mock_config.get_model_id_for_name.return_value = "model1"
+        mock_config.get_model_info.return_value = {
+            "name": "test-model",
+            "repo_id": "org/model",
+        }
         mixin = TestableValidationMixin()
 
         result = mixin._trigger_model_download()
@@ -194,12 +205,63 @@ class TestTriggerModelDownload:
     def test_returns_false_when_repo_not_found(self, mock_config):
         """Test returns False when repo_id not found."""
         mock_config.LOCAL_MODELS = {}
+        mock_config.resolve_model_id.return_value = ""
+        mock_config.get_expected_local_artifact_path.return_value = "/fake/model/path"
+        mock_config.get_model_id_for_name.return_value = ""
+        mock_config.get_model_info.return_value = {}
         mixin = TestableValidationMixin()
 
         result = mixin._trigger_model_download()
 
         assert result is False
         mixin.logger.error.assert_called()
+
+
+class TestGGUFSelectionPreference:
+    @patch.object(
+        TestableValidationMixin,
+        "_model_supports_gguf",
+        return_value=True,
+    )
+    def test_prefers_gguf_for_supported_models_even_with_legacy_setting(
+        self,
+        _mock_support,
+    ):
+        mixin = TestableValidationMixin()
+
+        assert mixin._is_gguf_quantization_selected() is True
+
+    @patch.object(
+        TestableValidationMixin,
+        "_model_supports_gguf",
+        return_value=False,
+    )
+    def test_disables_gguf_when_model_has_no_gguf_artifact(
+        self,
+        _mock_support,
+    ):
+        mixin = TestableValidationMixin()
+
+        assert mixin._is_gguf_quantization_selected() is False
+
+    def test_requires_expected_gguf_file_in_shared_vendor_directory(
+        self,
+        tmp_path,
+    ):
+        shared_dir = tmp_path / "text" / "models" / "llm" / "causallm" / "Qwen"
+        shared_dir.mkdir(parents=True)
+        (shared_dir / "Qwen2.5-7B-Q4_K_M.gguf").write_text("placeholder")
+
+        mixin = TestableValidationMixin()
+        mixin.model_name = "Qwen3-8B"
+        mixin.model_path = str(shared_dir)
+        mixin.path_settings.base_path = str(tmp_path)
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+
+        result = mixin._check_model_exists()
+
+        assert result is False
+        assert mixin._missing_gguf is True
 
 
 class TestGetRepoIdForModel:
@@ -213,6 +275,12 @@ class TestGetRepoIdForModel:
         mock_config.LOCAL_MODELS = {
             "model1": {"name": "test-model", "repo_id": "org/model"}
         }
+        mock_config.resolve_model_id.return_value = ""
+        mock_config.get_model_id_for_name.return_value = "model1"
+        mock_config.get_model_info.return_value = {
+            "name": "test-model",
+            "repo_id": "org/model",
+        }
         mixin = TestableValidationMixin()
 
         result = mixin._get_repo_id_for_model()
@@ -225,6 +293,9 @@ class TestGetRepoIdForModel:
     def test_returns_empty_when_not_found(self, mock_config):
         """Test returns empty string when model not found."""
         mock_config.LOCAL_MODELS = {}
+        mock_config.resolve_model_id.return_value = ""
+        mock_config.get_model_id_for_name.return_value = ""
+        mock_config.get_model_info.return_value = {}
         mixin = TestableValidationMixin()
 
         result = mixin._get_repo_id_for_model()

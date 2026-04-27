@@ -1004,6 +1004,7 @@ class WorkerManager(Worker):
         This allows downloading models from settings before the LLM is loaded.
         """
         from PySide6.QtWidgets import QApplication
+        from airunner.components.llm.config.provider_config import LLMProviderConfig
         from airunner.components.llm.gui.windows.huggingface_download_dialog import (
             HuggingFaceDownloadDialog,
         )
@@ -1016,6 +1017,17 @@ class WorkerManager(Worker):
         repo_id = data.get("repo_id", "")
         model_type = data.get("model_type", "llm")
         gguf_filename = data.get("gguf_filename")
+
+        resolved_download = LLMProviderConfig.resolve_download_target(
+            "local",
+            repo_id=repo_id,
+            prefer_pre_quantized=True,
+        )
+        if resolved_download and resolved_download.get("model_type") == "gguf":
+            repo_id = resolved_download["repo_id"]
+            model_type = "gguf"
+            gguf_filename = resolved_download["gguf_filename"]
+            model_name = resolved_download.get("model_name", model_name)
         
         if not repo_id:
             self.logger.error("No repo_id provided in download request")
@@ -1085,7 +1097,7 @@ class WorkerManager(Worker):
             llm_download_worker.download(
                 repo_id=repo_id,
                 model_type=model_type,
-                output_dir=model_path,
+                output_dir=os.path.dirname(model_path),
                 setup_quantization=True,
                 quantization_bits=data.get("quantization_bits", 4),
                 missing_files=data.get("missing_files"),

@@ -5,6 +5,7 @@ Tools for controlling the application, managing files, and system operations.
 """
 
 import os
+from datetime import datetime
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
@@ -40,6 +41,33 @@ def toggle_tts(
     api.tts.toggle(enabled)
     status = "enabled" if enabled else "disabled"
     return f"Text-to-speech {status}"
+
+
+@tool(
+    name="get_current_datetime",
+    category=ToolCategory.SYSTEM,
+    description="Get the current local date, time, day of week, and timezone",
+    return_direct=True,
+    requires_api=False,
+    defer_loading=False,
+)
+def get_current_datetime() -> str:
+    """Return the current local date and time."""
+    now = datetime.now().astimezone()
+    tz_name = now.tzname() or "local"
+    offset = now.strftime("%z")
+    formatted_offset = ""
+    if offset:
+        formatted_offset = f"UTC{offset[:3]}:{offset[3:]}"
+
+    timezone_text = tz_name
+    if formatted_offset and formatted_offset not in timezone_text:
+        timezone_text = f"{tz_name} ({formatted_offset})"
+
+    return (
+        f"Current local date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}. "
+        f"Day: {now.strftime('%A')}. Timezone: {timezone_text}."
+    )
 
 
 @tool(

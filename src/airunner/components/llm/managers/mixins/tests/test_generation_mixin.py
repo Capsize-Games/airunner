@@ -24,7 +24,11 @@ class TestableGenerationMixin(GenerationMixin):
         self._interrupted = False
         self._current_model_path = "/path/to/model"
         self.model_path = "/path/to/model"
+        self.model_name = "Qwen3-8B"
+        self.llm_settings = Mock()
+        self.llm_settings.use_local_llm = True
         self.llm_generator_settings = Mock()
+        self.llm_generator_settings.model_id = None
         self.chatbot = Mock()
         self.load = Mock()
         self.unload = Mock()
@@ -38,6 +42,10 @@ class TestableGenerationMixin(GenerationMixin):
     ) -> str:
         """Mock method for getting context-aware system prompt."""
         return "Default system prompt"
+
+    def _augment_custom_system_prompt(self, base_prompt: str, **kwargs) -> str:
+        """Mock prompt augmentation used by the real mixin."""
+        return base_prompt
 
 
 @pytest.fixture
@@ -520,10 +528,43 @@ class TestDoGenerate:
     def test_returns_error_when_no_workflow_manager(self, mock_torch, mixin):
         """Should return error when workflow manager missing."""
         mixin._workflow_manager = None
+        mixin.llm_settings.use_local_llm = False
 
         result = mixin._do_generate("Test", LLMActionType.CHAT)
 
         assert result["response"] == "Error: workflow unavailable"
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.os.path.exists")
+    def test_uses_expected_gguf_artifact_before_reporting_download_in_progress(
+        self,
+        mock_exists,
+        mock_torch,
+        mixin,
+    ):
+        """Should not report download in progress when the expected GGUF exists."""
+        mixin._workflow_manager = None
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.model_path = "/data/text/models/llm/causallm/Qwen3-8B"
+        mixin._get_expected_gguf_path = Mock(
+            return_value="/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+        )
+
+        def exists_side_effect(path):
+            return path == "/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+
+        mock_exists.side_effect = exists_side_effect
+
+        def load_side_effect():
+            mixin._workflow_manager = Mock()
+            mixin._workflow_manager.stream.return_value = []
+
+        mixin.load.side_effect = load_side_effect
+
+        result = mixin._do_generate("Test", LLMActionType.CHAT)
+
+        assert result["response"] == ""
+        mixin.load.assert_called_once()
 
 
 class TestSendFinalMessage:

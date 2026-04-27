@@ -69,6 +69,14 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         if hasattr(self.ui, "line_2"):
             self.ui.line_2.setVisible(False)
 
+    def _get_local_model_storage_path(self, model_id: str) -> str:
+        """Return the configured storage directory for a local model."""
+        return LLMProviderConfig.get_local_storage_path(
+            self.path_settings.base_path,
+            ModelService.LOCAL.value,
+            model_id=model_id,
+        )
+
     @Slot(str)
     def on_model_path_textChanged(self, val: str):
         self.update_llm_generator_settings(model_path=val)
@@ -102,6 +110,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 self.ui.model_path.setPlaceholderText(
                     "Enter custom model path"
                 )
+                self.update_llm_generator_settings(model_id="custom")
                 self.ui.download_model_button.setVisible(False)
             else:
                 # Use standard path for known models
@@ -110,12 +119,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 )
                 if model_info:
                     model_name = model_info["name"]
+                    model_path = self._get_local_model_storage_path(model_id)
                     self.update_llm_generator_settings(
-                        model_version=model_name
-                    )
-                    model_path = os.path.join(
-                        os.path.expanduser(self.path_settings.base_path),
-                        f"text/models/llm/causallm/{model_name}",
+                        model_version=model_name,
+                        model_id=model_id,
+                        model_path=model_path,
                     )
                     print(f"  Setting model_path to: {model_path}")
                     self.ui.model_path.setText(model_path)
@@ -183,10 +191,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             
             gguf_info = LLMProviderConfig.get_gguf_info(provider, model_id)
             model_name = model_info["name"]
-            model_path = os.path.join(
-                os.path.expanduser(self.settings.base_path),
-                f"text/models/llm/causallm/{model_name}",
-            )
+            model_path = self._get_local_model_storage_path(model_id)
             
             # Emit signal for GGUF download
             self.emit_signal(
@@ -207,10 +212,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         quantization_bits = index_to_quant.get(quant_index, 4)
 
         model_name = model_info["name"]
-        model_path = os.path.join(
-            os.path.expanduser(self.settings.base_path),
-            f"text/models/llm/causallm/{model_name}",
-        )
+        model_path = self._get_local_model_storage_path(model_id)
 
         # Emit signal to show download dialog (same as when model is required during chat)
         self.emit_signal(
@@ -298,10 +300,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             
             # Trigger GGUF download
             model_name = model_info["name"]
-            download_path = os.path.join(
-                os.path.expanduser(self.path_settings.base_path),
-                f"text/models/llm/causallm/{model_name}",
-            )
+            download_path = self._get_local_model_storage_path(model_id)
             
             self.logger.info(f"Emitting LLM_MODEL_DOWNLOAD_REQUIRED for GGUF: {model_name} -> {download_path}")
             self.emit_signal(
@@ -501,12 +500,13 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             )
             if model_info:
                 model_name = model_info["name"]
-                model_path = os.path.join(
-                    os.path.expanduser(self.path_settings.base_path),
-                    f"text/models/llm/causallm/{model_name}",
-                )
+                model_path = self._get_local_model_storage_path(default_model_id)
                 # Save to database
-                self.update_llm_generator_settings(model_path=model_path)
+                self.update_llm_generator_settings(
+                    model_path=model_path,
+                    model_id=default_model_id,
+                    model_version=model_name,
+                )
                 # Set dropdown to default model
                 self.ui.model_dropdown.setCurrentText(default_model_id)
 

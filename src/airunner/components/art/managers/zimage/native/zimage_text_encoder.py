@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from safetensors import safe_open
 from transformers import (
     Qwen2Tokenizer,
     AutoTokenizer,
@@ -25,6 +26,56 @@ from transformers import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SAFE_TENSORS_FORMATS = {"pt", "tf", "flax", "mlx"}
+
+
+def _resolve_transformers_weights_override(model_path: str) -> Optional[str]:
+    """Prefer the sharded index when a merged safetensors file is nonstandard.
+
+    Some AIRunner-managed Z-Image text encoder folders contain both:
+    - valid sharded weights referenced by `model.safetensors.index.json`
+    - a merged `model.safetensors` convenience file whose metadata does not
+      advertise a standard transformers format.
+
+    Recent transformers releases prefer the single file when it exists and then
+    reject it during metadata validation. When that happens, forcing the sharded
+    index keeps loading on the supported path.
+    """
+    if not os.path.isdir(model_path):
+        return None
+
+    index_name = "model.safetensors.index.json"
+    index_path = os.path.join(model_path, index_name)
+    merged_path = os.path.join(model_path, "model.safetensors")
+
+    if not os.path.isfile(index_path) or not os.path.isfile(merged_path):
+        return None
+
+    try:
+        with safe_open(merged_path, framework="pt") as handle:
+            metadata = handle.metadata() or {}
+    except Exception as exc:
+        logger.warning(
+            "Failed to inspect merged text encoder safetensors at %s: %s. "
+            "Falling back to sharded index.",
+            merged_path,
+            exc,
+        )
+        return index_name
+
+    file_format = metadata.get("format")
+    if file_format in _SAFE_TENSORS_FORMATS:
+        return None
+
+    logger.info(
+        "Detected nonstandard safetensors metadata for %s (format=%s). "
+        "Using sharded text encoder weights via %s instead.",
+        merged_path,
+        file_format,
+        index_name,
+    )
+    return index_name
 
 
 class ZImageTokenizer:
@@ -198,6 +249,12 @@ class ZImageTextEncoder(nn.Module):
                 model_path,
                 trust_remote_code=True,
             )
+
+            transformers_weights = _resolve_transformers_weights_override(
+                model_path
+            )
+            if transformers_weights is not None:
+                config.transformers_weights = transformers_weights
             
             # Configure quantization
             quantization_config = None
@@ -222,7 +279,7 @@ class ZImageTextEncoder(nn.Module):
             load_kwargs = {
                 "config": config,
                 "quantization_config": quantization_config,
-                "torch_dtype": self.dtype,
+                "dtype": self.dtype,
                 "device_map": device_map,
                 "trust_remote_code": True,
             }

@@ -102,9 +102,15 @@ class SettingsPropertyMixin:
     @property
     def llm_generator_settings(self) -> Any:
         """Get LLM generation settings."""
-        return self._get_or_cache_settings(
+        settings = self._get_or_cache_settings(
             get_settings_model("LLMGeneratorSettings")
         )
+        if settings is not None:
+            if getattr(settings, "enable_tools", None) is None:
+                settings.enable_tools = True
+            if getattr(settings, "n_ctx", None) in (None, 0):
+                settings.n_ctx = 32768
+        return settings
 
     @property
     def generator_settings(self) -> Any:
