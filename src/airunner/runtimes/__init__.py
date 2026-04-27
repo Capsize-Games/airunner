@@ -15,6 +15,7 @@ _EXPORTS = {
     "LocalFallbackSTTClient": "airunner.runtimes.local_fallback",
     "LocalFallbackTTSClient": "airunner.runtimes.local_fallback",
     "MessageRole": "airunner.runtimes.contracts",
+    "WhisperCppRuntimeSettings": "airunner.runtimes.whisper_cpp_runtime_settings",
     "build_runtime_registry": "airunner.runtimes.bootstrap",
     "RuntimeAction": "airunner.runtimes.contracts",
     "RuntimeClient": "airunner.runtimes.base",
@@ -27,6 +28,8 @@ _EXPORTS = {
     "RuntimeRoute": "airunner.runtimes.registry",
     "SidecarLauncher": "airunner.runtimes.sidecar_launcher",
     "SidecarLLMClient": "airunner.runtimes.sidecar_llm_client",
+    "SidecarSTTClient": "airunner.runtimes.sidecar_stt_client",
+    "SidecarSTTLauncher": "airunner.runtimes.sidecar_stt_launcher",
     "STTInvocationRequest": "airunner.runtimes.contracts",
     "STTInvocationResponse": "airunner.runtimes.contracts",
     "TTSInvocationRequest": "airunner.runtimes.contracts",
@@ -34,6 +37,7 @@ _EXPORTS = {
     "TransportKind": "airunner.runtimes.contracts",
     "register_local_fallback_clients": "airunner.runtimes.local_fallback",
     "register_sidecar_llm_client": "airunner.runtimes.sidecar_llm_client",
+    "register_sidecar_stt_client": "airunner.runtimes.sidecar_stt_client",
 }
 
 __all__ = sorted(_EXPORTS)
