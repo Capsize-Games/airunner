@@ -69,6 +69,14 @@ class FakeSession:
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
             return FakeResponse(payload={"status": "ready"})
+        if url.endswith("/api/v1/daemon/status"):
+            if not self.ready_state["ready"]:
+                raise requests.ConnectionError("daemon down")
+            return FakeResponse(payload={"lifecycle": {"loaded_models": ["LLM"]}})
+        if url.endswith("/api/v1/daemon/runtimes/llm/load"):
+            return FakeResponse(payload={"status": "ok"})
+        if url.endswith("/api/v1/daemon/runtimes/llm/unload"):
+            return FakeResponse(payload={"status": "ok"})
         if url.endswith("/llm/generate"):
             return FakeResponse(lines=self.stream_lines)
         if url.endswith("/admin/interrupt"):
@@ -160,3 +168,40 @@ def test_interrupt_requires_existing_connection():
         assert "daemon" in str(exc)
     else:
         raise AssertionError("Expected RuntimeError when daemon is down")
+
+
+def test_daemon_runtime_status_uses_daemon_endpoint():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    status = client.daemon_runtime_status()
+
+    assert status["lifecycle"]["loaded_models"] == ["LLM"]
+    assert session.calls[-1][1].endswith("/api/v1/daemon/status")
+
+
+def test_runtime_control_posts_expected_payload():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    client.load_runtime("llm", request_id="req-1")
+    client.unload_runtime("llm")
+
+    runtime_calls = [
+        call
+        for call in session.calls
+        if "/api/v1/daemon/runtimes/llm/" in call[1]
+    ]
+    load_call = runtime_calls[0]
+    unload_call = runtime_calls[1]
+    assert load_call[1].endswith("/api/v1/daemon/runtimes/llm/load")
+    assert load_call[2]["json"]["request_id"] == "req-1"
+    assert unload_call[1].endswith("/api/v1/daemon/runtimes/llm/unload")

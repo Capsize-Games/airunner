@@ -119,6 +119,57 @@ class GuiDaemonClient:
         )
         return response.json()
 
+    def daemon_runtime_status(
+        self,
+        *,
+        auto_start: bool = False,
+    ) -> Dict[str, Any]:
+        """Return combined daemon lifecycle and runtime status."""
+        response = self._request(
+            "GET",
+            "/api/v1/daemon/status",
+            auto_start=auto_start,
+        )
+        return response.json()
+
+    def load_runtime(
+        self,
+        runtime_name: str,
+        *,
+        provider: str = "local",
+        deployment_mode: str = "default",
+        request_id: Optional[str] = None,
+        auto_start: bool = True,
+    ) -> Dict[str, Any]:
+        """Load one runtime through the daemon control API."""
+        return self._runtime_action(
+            runtime_name,
+            "load",
+            provider=provider,
+            deployment_mode=deployment_mode,
+            request_id=request_id,
+            auto_start=auto_start,
+        )
+
+    def unload_runtime(
+        self,
+        runtime_name: str,
+        *,
+        provider: str = "local",
+        deployment_mode: str = "default",
+        request_id: Optional[str] = None,
+        auto_start: bool = True,
+    ) -> Dict[str, Any]:
+        """Unload one runtime through the daemon control API."""
+        return self._runtime_action(
+            runtime_name,
+            "unload",
+            provider=provider,
+            deployment_mode=deployment_mode,
+            request_id=request_id,
+            auto_start=auto_start,
+        )
+
     def stream_llm_request(
         self,
         prompt: str,
@@ -223,6 +274,29 @@ class GuiDaemonClient:
             self._last_error = str(exc)
             self._set_state(DaemonConnectionState.DISCONNECTED, self._last_error)
             raise RuntimeError(self._last_error) from exc
+
+    def _runtime_action(
+        self,
+        runtime_name: str,
+        action: str,
+        *,
+        provider: str,
+        deployment_mode: str,
+        request_id: Optional[str],
+        auto_start: bool,
+    ) -> Dict[str, Any]:
+        """Call one daemon runtime control endpoint and return its payload."""
+        response = self._request(
+            "POST",
+            f"/api/v1/daemon/runtimes/{runtime_name}/{action}",
+            json_payload={
+                "provider": provider,
+                "deployment_mode": deployment_mode,
+                "request_id": request_id,
+            },
+            auto_start=auto_start,
+        )
+        return response.json()
 
     def _set_state(self, state: DaemonConnectionState, details: str) -> None:
         """Update the tracked daemon connection state."""

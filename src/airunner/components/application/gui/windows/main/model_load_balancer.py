@@ -1,18 +1,27 @@
-"""
-ModelLoadBalancer: Orchestrates model loading/unloading for VRAM/resource management.
+"""Daemon-aware model lifecycle compatibility layer for the GUI."""
 
-- Tracks which models are loaded/unloaded.
-- Delegates actual load/unload to worker manager(s).
-- Can be extended to use VRAM stats and model size for smarter balancing.
-- API: switch_to_art_mode(), switch_to_non_art_mode(), get_loaded_models(), etc.
-
-TDD: See tests/model_load_balancer/test_model_load_balancer.py
-"""
+from __future__ import annotations
 
 from typing import List, Optional
+
 from airunner.enums import ModelType, SignalCode, ModelStatus
 from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 from airunner.utils.application.mediator_mixin import MediatorMixin
+
+
+_DAEMON_MODEL_TYPES = {
+    "LLM": ModelType.LLM,
+    "TTS": ModelType.TTS,
+    "STT": ModelType.STT,
+    "SD": ModelType.SD,
+}
+
+_RUNTIME_NAMES = {
+    ModelType.LLM: "llm",
+    ModelType.TTS: "tts",
+    ModelType.STT: "stt",
+    ModelType.SD: "art",
+}
 
 
 class ModelLoadBalancer(MediatorMixin):
@@ -37,6 +46,12 @@ class ModelLoadBalancer(MediatorMixin):
         Unload all non-art models (LLM, TTS, STT), load SD model.
         Tracks which models were previously loaded for restoration.
         """
+        if self._daemon_client() is not None:
+            daemon_models = self._daemon_loaded_models() or []
+            self._last_non_art_models = self._non_art_models(daemon_models)
+            self._daemon_unload(self._last_non_art_models)
+            return
+
         self._last_non_art_models = []
         for model_type, worker in [
             (ModelType.LLM, self.worker_manager.llm_generate_worker),
@@ -79,6 +94,12 @@ class ModelLoadBalancer(MediatorMixin):
         were not previously enabled.
         """
         additional_types = additional_types or []
+        if self._daemon_client() is not None:
+            restore_types = self._restore_types(additional_types)
+            self._daemon_load(restore_types)
+            self._last_non_art_models = []
+            return
+
         # First reload those that were actually unloaded previously
         for model_type in self._last_non_art_models:
             worker = None
@@ -111,6 +132,9 @@ class ModelLoadBalancer(MediatorMixin):
         self._last_non_art_models = []
 
     def get_loaded_models(self) -> List[ModelType]:
+        if self._daemon_client() is not None:
+            return self._daemon_loaded_models() or []
+
         loaded = []
         for model_type, worker in [
             (ModelType.LLM, self.worker_manager.llm_generate_worker),
@@ -124,3 +148,77 @@ class ModelLoadBalancer(MediatorMixin):
 
     def vram_stats(self, device):
         return gpu_memory_stats(device)
+
+    def _daemon_client(self):
+        """Return the GUI daemon client when daemon-backed control is active."""
+        if self.api is None or getattr(self.api, "headless", False):
+            return None
+        return getattr(self.api, "daemon_client", None)
+
+    def _daemon_loaded_models(self) -> Optional[List[ModelType]]:
+        """Return loaded models from daemon status when available."""
+        client = self._daemon_client()
+        if client is None:
+            return None
+        try:
+            status = client.daemon_runtime_status(auto_start=False)
+        except RuntimeError:
+            return None
+        lifecycle = status.get("lifecycle") or {}
+        loaded = []
+        for name in lifecycle.get("loaded_models") or []:
+            model_type = _DAEMON_MODEL_TYPES.get(str(name).upper())
+            if model_type is not None:
+                loaded.append(model_type)
+        return loaded
+
+    def _daemon_load(self, model_types: List[ModelType]) -> None:
+        """Load models through the daemon control API."""
+        client = self._daemon_client()
+        if client is None:
+            return
+        for model_type in model_types:
+            runtime_name = _RUNTIME_NAMES.get(model_type)
+            if runtime_name is None:
+                continue
+            self._emit_model_status(model_type, ModelStatus.LOADING)
+            try:
+                client.load_runtime(runtime_name)
+            except RuntimeError:
+                self._emit_model_status(model_type, ModelStatus.FAILED)
+                continue
+            self._emit_model_status(model_type, ModelStatus.LOADED)
+
+    def _daemon_unload(self, model_types: List[ModelType]) -> None:
+        """Unload models through the daemon control API."""
+        client = self._daemon_client()
+        if client is None:
+            return
+        for model_type in model_types:
+            runtime_name = _RUNTIME_NAMES.get(model_type)
+            if runtime_name is None:
+                continue
+            try:
+                client.unload_runtime(runtime_name)
+            except RuntimeError:
+                self._emit_model_status(model_type, ModelStatus.FAILED)
+                continue
+            self._emit_model_status(model_type, ModelStatus.UNLOADED)
+
+    @staticmethod
+    def _non_art_models(model_types: List[ModelType]) -> List[ModelType]:
+        """Return only non-art model types from a loaded model list."""
+        return [model_type for model_type in model_types if model_type is not ModelType.SD]
+
+    def _restore_types(
+        self,
+        additional_types: List[ModelType],
+    ) -> List[ModelType]:
+        """Return the non-art models that should be restored for chat mode."""
+        restore_types = list(self._last_non_art_models)
+        for model_type in additional_types:
+            if model_type not in restore_types:
+                restore_types.append(model_type)
+        if not restore_types:
+            restore_types.append(ModelType.LLM)
+        return self._non_art_models(restore_types)

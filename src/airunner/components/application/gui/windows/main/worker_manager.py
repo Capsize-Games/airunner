@@ -433,6 +433,10 @@ class WorkerManager(Worker):
         self.add_to_queue({"data": data, "request_type": "tts_generate"})
 
     def on_enable_tts_signal(self, data: Dict):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("tts", "load", ModelType.TTS):
+            return
         self.add_to_queue(
             {
                 "data": data,
@@ -441,6 +445,10 @@ class WorkerManager(Worker):
         )
 
     def on_stt_load_signal(self, data: Dict):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("stt", "load", ModelType.STT):
+            return
         self.add_to_queue(
             {
                 "data": data,
@@ -610,6 +618,56 @@ class WorkerManager(Worker):
         # Fallback: some components expose the main window via settings API
         return getattr(self.api, "main_window", None)
 
+    def _daemon_client(self):
+        """Return the GUI daemon client when daemon-backed mode is active."""
+        api = getattr(self, "api", None)
+        if api is None or getattr(api, "headless", False):
+            return None
+        return getattr(api, "daemon_client", None)
+
+    def _control_daemon_runtime(
+        self,
+        runtime_name: str,
+        action: str,
+        model_type,
+    ) -> bool:
+        """Translate a GUI lifecycle request into one daemon runtime action."""
+        from airunner.enums import ModelStatus, SignalCode
+
+        client = self._daemon_client()
+        if client is None:
+            return False
+        if action == "load":
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": model_type, "status": ModelStatus.LOADING},
+            )
+        try:
+            if action == "load":
+                client.load_runtime(runtime_name)
+                status = ModelStatus.LOADED
+            else:
+                client.unload_runtime(runtime_name)
+                status = ModelStatus.UNLOADED
+        except RuntimeError as exc:
+            if self.logger:
+                self.logger.warning(
+                    "Daemon %s for %s failed: %s",
+                    action,
+                    runtime_name,
+                    exc,
+                )
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": model_type, "status": ModelStatus.FAILED},
+            )
+            return True
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model_type, "status": status},
+        )
+        return True
+
     def on_huggingface_download_complete(self, data: Dict):
         """Handle download completion and retry pending generation.
 
@@ -680,6 +738,10 @@ class WorkerManager(Worker):
                 )
 
     def on_unload_art_signal(self, data: Dict):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("art", "unload", ModelType.SD):
+            return
         if self._sd_worker is not None:
 
             def callback(res: Dict):
@@ -764,6 +826,14 @@ class WorkerManager(Worker):
             self.stt_audio_capture_worker.on_model_status_changed_signal(data)
 
     def on_load_art_signal(self, data):
+        from airunner.enums import ModelStatus, ModelType, SignalCode
+
+        if self._daemon_client() is not None:
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": ModelType.SD, "status": ModelStatus.READY},
+            )
+            return
         if self.sd_worker is not None:
             self.sd_worker.on_load_art_signal(data)
 
@@ -895,10 +965,18 @@ class WorkerManager(Worker):
             self.sd_worker.delete_missing_embeddings(data)
 
     def on_llm_on_unload_signal(self, data):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("llm", "unload", ModelType.LLM):
+            return
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_llm_on_unload_signal(data)
 
     def on_llm_load_model_signal(self, data):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("llm", "load", ModelType.LLM):
+            return
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_llm_load_model_signal(data)
 
@@ -983,6 +1061,10 @@ class WorkerManager(Worker):
             self.fara_worker.on_fara_model_download_required_signal(data)
 
     def on_llm_model_changed_signal(self, data):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("llm", "unload", ModelType.LLM):
+            return
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_llm_model_changed_signal(data)
 
@@ -1309,6 +1391,10 @@ class WorkerManager(Worker):
             self.stt_audio_processor_worker.update_properties(data)
 
     def on_stt_unload_signal(self, data):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("stt", "unload", ModelType.STT):
+            return
         if self._stt_audio_processor_worker is not None:
             self.stt_audio_processor_worker.on_stt_unload_signal(data)
 
@@ -1356,6 +1442,10 @@ class WorkerManager(Worker):
                 callback()
 
     def on_disable_tts_signal(self, data):
+        from airunner.enums import ModelType
+
+        if self._control_daemon_runtime("tts", "unload", ModelType.TTS):
+            return
         if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_disable_tts_signal(data)
 

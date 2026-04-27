@@ -324,7 +324,14 @@ class MainWindow(
             logger=getattr(self, "logger", None),
             api=self.api,
         )
+        if self.api is not None:
+            self.api.model_load_balancer = self.model_load_balancer
+        self._daemon_status_timer = QTimer(self)
+        self._daemon_status_timer.timeout.connect(
+            self._refresh_model_status_from_daemon
+        )
         self.initialize_ui()
+        self._daemon_status_timer.start(1000)
         self.last_tray_click_time = 0
         self.settings_window = None
 
@@ -1224,6 +1231,7 @@ class MainWindow(
         self.settings_window = None
         self.hide_center_tab_header()
         self._load_plugins()
+        self._refresh_model_status_from_daemon()
 
         self.ui.main_window_splitter.splitterMoved.connect(
             self.on_splitter_changed_sizes
@@ -1889,6 +1897,41 @@ class MainWindow(
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
+
+    def _refresh_model_status_from_daemon(self) -> None:
+        """Refresh GUI model status from daemon lifecycle state."""
+        if self.api is None:
+            return
+        client = getattr(self.api, "daemon_client", None)
+        if client is None:
+            return
+        try:
+            status = client.daemon_runtime_status(auto_start=False)
+        except RuntimeError:
+            return
+        lifecycle = status.get("lifecycle") or {}
+        loaded_models = set(lifecycle.get("loaded_models") or [])
+        self._sync_model_status(ModelType.LLM, "LLM", loaded_models)
+        self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
+        self._sync_model_status(ModelType.STT, "STT", loaded_models)
+        self._sync_model_status(ModelType.SD, "SD", loaded_models)
+
+    def _sync_model_status(
+        self,
+        model_type: ModelType,
+        loaded_name: str,
+        loaded_models: set[str],
+    ) -> None:
+        """Emit one model-status update when daemon truth changed."""
+        status = ModelStatus.LOADED
+        if loaded_name not in loaded_models:
+            status = ModelStatus.UNLOADED
+        if self._model_status[model_type] is status:
+            return
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model_type, "status": status},
+        )
 
     def on_model_status_changed_signal(self, data):
         model = data["model"]
