@@ -13,7 +13,6 @@ import sys
 import signal
 import argparse
 import logging
-import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any
 import time
@@ -24,6 +23,7 @@ from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
 from airunner.app import App
+from airunner.services.daemon_config import DaemonConfig
 from airunner.utils.application import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
@@ -31,84 +31,6 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 # Set PyTorch CUDA config before any torch imports
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
-
-
-class DaemonConfig:
-    """Configuration for daemon mode."""
-
-    def __init__(self, config_path: Optional[Path] = None):
-        """
-        Load daemon configuration.
-
-        Args:
-            config_path: Path to daemon.yaml configuration file
-        """
-        self.config_path = config_path or self._default_config_path()
-        self.config = self._load_config()
-
-    def _default_config_path(self) -> Path:
-        """Get default configuration path."""
-        if sys.platform == "win32":
-            config_dir = Path(os.environ.get("APPDATA", "")) / "airunner"
-        else:
-            config_dir = Path.home() / ".config" / "airunner"
-
-        return config_dir / "daemon.yaml"
-
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from file."""
-        if not self.config_path.exists():
-            return self._default_config()
-
-        try:
-            with open(self.config_path, "r") as f:
-                config = yaml.safe_load(f) or {}
-            return {**self._default_config(), **config}
-        except Exception as e:
-            logger.error(f"Failed to load config from {self.config_path}: {e}")
-            return self._default_config()
-
-    def _default_config(self) -> Dict[str, Any]:
-        """Get default configuration."""
-        return {
-            # Server settings
-            "server": {
-                "host": "127.0.0.1",
-                "port": 8188,
-                "enable_cors": True,
-                "allowed_origins": [
-                    "http://localhost:*",
-                    "http://127.0.0.1:*",
-                ],
-            },
-            # Model persistence
-            "models": {
-                "persistence_mode": "timeout",  # keep_loaded, timeout, per_request
-                "timeout_minutes": 30,
-                "preload": [],  # List of model IDs to preload on startup
-            },
-            # Health monitoring
-            "health": {
-                "heartbeat_interval": 30,  # seconds
-                "heartbeat_file": "~/.airunner/daemon_heartbeat",
-            },
-            # Logging
-            "logging": {
-                "level": "INFO",
-                "file": "~/.airunner/logs/daemon.log",
-                "max_bytes": 50 * 1024 * 1024,  # 50MB
-                "backup_count": 5,
-            },
-        }
-
-    def save(self):
-        """Save configuration to file."""
-        try:
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_path, "w") as f:
-                yaml.safe_dump(self.config, f, default_flow_style=False)
-        except Exception as e:
-            logger.error(f"Failed to save config to {self.config_path}: {e}")
 
 
 class AIRunnerDaemon:
@@ -357,6 +279,7 @@ class AIRunnerDaemon:
             if self.app:
                 logger.info("Cleaning up application...")
                 try:
+                    self._shutdown_runtime_clients()
                     if hasattr(self.app, "cleanup"):
                         self.app.cleanup()
                 except Exception as e:
@@ -370,6 +293,25 @@ class AIRunnerDaemon:
 
         finally:
             sys.exit(0)
+
+    def _shutdown_runtime_clients(self) -> None:
+        """Close runtime clients owned by the daemon-backed app instance."""
+        runtime_registry = getattr(self.app, "runtime_registry", None)
+        if runtime_registry is None:
+            return
+
+        seen_clients = set()
+        for route in runtime_registry.list_routes():
+            client = runtime_registry.resolve(
+                route.runtime,
+                route.provider,
+                route.deployment_mode,
+            )
+            client_id = id(client)
+            if client_id in seen_clients:
+                continue
+            seen_clients.add(client_id)
+            client.close()
 
 
 def main():

@@ -36,3 +36,6 @@ class RuntimeClient(ABC):
         raise NotImplementedError(
             f"Cancellation is not implemented for {request_id}"
         )
+
+    def close(self) -> None:
+        """Release runtime-owned resources during shutdown."""

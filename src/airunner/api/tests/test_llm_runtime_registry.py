@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from airunner.ipc.messages import EnvelopeStatus, ResponseEnvelope
 from airunner.runtimes.contracts import (
     RuntimeDescriptor,
+    RuntimeAction,
     RuntimeKind,
     RuntimeMode,
     TransportKind,
@@ -16,8 +17,8 @@ class FakeRuntimeClient:
         self.descriptor = RuntimeDescriptor(
             runtime=RuntimeKind.LLM,
             provider="local",
-            mode=RuntimeMode.LOCAL_FALLBACK,
-            transport=TransportKind.IN_PROCESS,
+            mode=RuntimeMode.SIDECAR,
+            transport=TransportKind.HTTP,
         )
 
     def invoke(self, request):
@@ -34,7 +35,7 @@ class FakeRegistry:
         self.client = client
         self.calls = []
 
-    def resolve(self, runtime, provider, deployment_mode):
+    def resolve(self, runtime, provider, deployment_mode="default"):
         self.calls.append((runtime, provider, deployment_mode))
         return self.client
 
@@ -70,9 +71,35 @@ def test_chat_endpoint_uses_runtime_registry_when_available():
     response = asyncio.run(chat_completion(request, fake_request))
 
     assert response.content == "runtime hello"
-    assert registry.calls == [(RuntimeKind.LLM, "local", "local_fallback")]
+    assert registry.calls == [(RuntimeKind.LLM, "local", "default")]
     payload = client.requests[0].payload
     assert payload["messages"][0]["role"] == "system"
     assert payload["messages"][1]["content"] == "Say hello"
     assert payload["temperature"] == 0.25
     assert payload["max_tokens"] == 16
+
+
+def test_load_endpoint_uses_runtime_registry(monkeypatch):
+    from airunner.api.routes.llm import ModelLoadRequest, load_model
+
+    client = FakeRuntimeClient()
+    registry = FakeRegistry(client)
+    fake_request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(runtime_registry=registry),
+        )
+    )
+    persisted = []
+
+    monkeypatch.setattr(
+        "airunner.api.routes.llm._persist_model_selection",
+        lambda model_id: persisted.append(model_id) or model_id,
+    )
+
+    response = asyncio.run(
+        load_model(ModelLoadRequest(model_id="qwen3-8b"), fake_request)
+    )
+
+    assert persisted == ["qwen3-8b"]
+    assert client.requests[0].action is RuntimeAction.LOAD_MODEL
+    assert response == {"status": "success", "model": "qwen3-8b"}

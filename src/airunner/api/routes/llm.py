@@ -1,33 +1,27 @@
-"""
-LLM API routes for chat, completion, and model management.
+"""LLM API routes backed by the runtime registry."""
 
-Integrates with LLMAPIService via signal-based architecture.
-"""
+from __future__ import annotations
 
 import asyncio
-from typing import Any, List, Optional
+from typing import Any, Iterable, List, Optional
+
 from fastapi import (
     APIRouter,
     HTTPException,
+    Request,
     WebSocket,
     WebSocketDisconnect,
-    Request,
 )
 from pydantic import BaseModel
 
-from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
-from airunner.settings import AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
-from airunner.components.llm.api.llm_services import LLMAPIService
-from airunner.enums import SignalCode, LLMActionType
-from airunner.utils.application.signal_mediator import SignalMediator
-from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner.components.model_management.model_registry import (
-    ModelRegistry,
-)
+from airunner.components.model_management.model_registry import ModelRegistry
+from airunner.components.settings.data.path_settings import PathSettings
+from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope, StreamDelta
+from airunner.runtimes.base import RuntimeClient
 from airunner.runtimes.contracts import (
     ChatMessage as RuntimeChatMessage,
     LLMInvocationRequest,
@@ -36,19 +30,16 @@ from airunner.runtimes.contracts import (
     RuntimeKind,
 )
 from airunner.runtimes.registry import RuntimeRegistry
+from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 router = APIRouter()
 
 
-# ====================
-# Pydantic Models
-# ====================
-
-
 class ChatMessage(BaseModel):
-    """Chat message."""
+    """Chat message submitted to the HTTP API."""
 
     role: str
     content: str
@@ -102,30 +93,41 @@ class ModelLoadRequest(BaseModel):
     model_id: str
 
 
-# ====================
-# Helper Functions
-# ====================
-
-
-def get_llm_service(request: Request):
-    """Get LLMAPIService from FastAPI app state."""
-    if hasattr(request.app.state, "airunner_app"):
-        # Import here to avoid circular imports
-        from airunner.components.llm.api.llm_services import LLMAPIService
-
-        return LLMAPIService()
-    return None
-
-
 def get_runtime_registry(request: Request) -> Optional[RuntimeRegistry]:
-    """Get the runtime registry from FastAPI app state."""
+    """Return the runtime registry attached to the FastAPI app."""
     return getattr(request.app.state, "runtime_registry", None)
+
+
+def require_runtime_registry(request: Request) -> RuntimeRegistry:
+    """Return the runtime registry or raise when it is unavailable."""
+    runtime_registry = get_runtime_registry(request)
+    if runtime_registry is None:
+        raise HTTPException(status_code=503, detail="LLM runtime unavailable")
+    return runtime_registry
+
+
+def require_websocket_runtime_registry(websocket: WebSocket) -> RuntimeRegistry:
+    """Return the runtime registry for a websocket session."""
+    app = getattr(websocket, "app", None)
+    state = getattr(app, "state", None)
+    runtime_registry = getattr(state, "runtime_registry", None)
+    if runtime_registry is None:
+        raise HTTPException(status_code=503, detail="LLM runtime unavailable")
+    return runtime_registry
+
+
+def resolve_llm_client(registry: RuntimeRegistry) -> RuntimeClient:
+    """Resolve the single local LLM runtime client."""
+    try:
+        return registry.resolve(RuntimeKind.LLM, provider="local")
+    except KeyError as exc:
+        raise HTTPException(status_code=503, detail="LLM runtime unavailable") from exc
 
 
 def _to_runtime_messages(
     messages: List[ChatMessage],
 ) -> List[RuntimeChatMessage]:
-    """Convert API chat messages into runtime contract messages."""
+    """Convert API messages into the neutral runtime contract format."""
     runtime_messages = []
     for message in messages:
         try:
@@ -141,19 +143,76 @@ def _to_runtime_messages(
     return runtime_messages
 
 
+def _selected_model_id(settings: Any) -> str:
+    """Return the configured local model id when one can be resolved."""
+    if settings is None:
+        return ""
+
+    for value in (
+        getattr(settings, "model_id", None),
+        getattr(settings, "model_version", None),
+        getattr(settings, "model_path", None),
+    ):
+        if not value:
+            continue
+        resolved = LLMProviderConfig.resolve_model_id("local", str(value))
+        if resolved:
+            return resolved
+    return ""
+
+
+def _persist_model_selection(model_id: str) -> str:
+    """Persist the selected local model in the existing settings tables."""
+    settings = LLMGeneratorSettings.objects.first()
+    if settings is None:
+        raise HTTPException(status_code=503, detail="LLM settings unavailable")
+
+    resolved_id = LLMProviderConfig.resolve_model_id("local", model_id)
+    if not resolved_id:
+        raise HTTPException(status_code=404, detail="LLM model not found")
+
+    path_settings = PathSettings.objects.first()
+    base_path = getattr(path_settings, "base_path", AIRUNNER_BASE_PATH)
+    settings.model_id = resolved_id
+    settings.model_version = resolved_id
+    settings.model_path = LLMProviderConfig.get_local_storage_path(
+        base_path,
+        "local",
+        model_id=resolved_id,
+    )
+    settings.save()
+    return resolved_id
+
+
+def _runtime_error_status(response: Any) -> int:
+    """Return the best HTTP status code for a runtime failure envelope."""
+    error = getattr(response, "error", None)
+    if error is not None and getattr(error, "code", "").endswith("_timeout"):
+        return 504
+    return 502
+
+
+def _raise_for_runtime_error(response: Any) -> None:
+    """Raise an HTTP exception for a failed runtime response."""
+    if response.status is EnvelopeStatus.SUCCEEDED:
+        return
+    detail = "LLM runtime request failed"
+    if response.error is not None:
+        detail = response.error.message
+    raise HTTPException(
+        status_code=_runtime_error_status(response),
+        detail=detail,
+    )
+
+
 async def _invoke_llm_runtime(
-    registry: RuntimeRegistry,
+    client: RuntimeClient,
     messages: List[RuntimeChatMessage],
     model: Optional[str],
     temperature: float,
     max_tokens: Optional[int],
 ) -> str:
-    """Invoke the configured LLM runtime client when available."""
-    client = registry.resolve(
-        RuntimeKind.LLM,
-        provider="local",
-        deployment_mode="local_fallback",
-    )
+    """Invoke the configured LLM runtime client."""
     invocation = LLMInvocationRequest(
         messages=messages,
         model=model,
@@ -167,152 +226,78 @@ async def _invoke_llm_runtime(
         payload=invocation.model_dump(),
     )
     response = await asyncio.to_thread(client.invoke, envelope)
-    return _response_content(response)
+    _raise_for_runtime_error(response)
+    return str(response.payload.get("content", ""))
 
 
-def _response_content(response: Any) -> str:
-    """Extract successful content from a runtime response."""
-    if response.status is EnvelopeStatus.SUCCEEDED:
-        return str(response.payload.get("content", ""))
+async def _run_runtime_action(
+    client: RuntimeClient,
+    action: RuntimeAction,
+) -> None:
+    """Invoke a control action on the active LLM runtime."""
+    response = await asyncio.to_thread(
+        client.invoke,
+        RequestEnvelope(
+            runtime=RuntimeKind.LLM,
+            action=action,
+            provider="local",
+        ),
+    )
+    _raise_for_runtime_error(response)
 
-    detail = "LLM runtime request failed"
-    if response.error is not None:
-        detail = response.error.message
-    raise HTTPException(status_code=502, detail=detail)
+
+async def _next_stream_delta(iterator: Iterable[StreamDelta]) -> StreamDelta:
+    """Read one runtime stream delta without blocking the event loop."""
+    return await asyncio.to_thread(next, iterator)
 
 
-async def wait_for_llm_response(
-    llm_service, prompt: str, llm_request, timeout: float = 120.0
-) -> str:
-    """
-    Send LLM request and wait for response using signal handlers.
-
-    Args:
-        llm_service: LLMAPIService instance
-        prompt: Prompt text
-        llm_request: LLMRequest configuration
-        timeout: Timeout in seconds
-
-    Returns:
-        Generated text
-
-    Raises:
-        HTTPException: On timeout or error
-    """
-    # Create future for response
-    response_future = asyncio.Future()
-    response_text = []
-
-    def on_llm_response(data: dict):
-        """Callback for LLM response chunks."""
-        response_obj = data.get("response")
-        if response_obj:
-            if hasattr(response_obj, "message"):
-                response_text.append(response_obj.message)
-            if (
-                hasattr(response_obj, "is_end_of_message")
-                and response_obj.is_end_of_message
-            ):
-                if not response_future.done():
-                    response_future.set_result("".join(response_text))
-
-    # Register temporary signal handler
-    mediator = SignalMediator()
-    mediator.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, on_llm_response)
-
-    try:
-        # Send request via signal
-        llm_service.send_request(
-            prompt=prompt,
-            llm_request=llm_request,
-            action=LLMActionType.CHAT,
-            do_tts_reply=False,  # No TTS for API requests
-        )
-
-        # Wait for response (with timeout)
+async def _stream_runtime(
+    client: RuntimeClient,
+    envelope: RequestEnvelope,
+):
+    """Yield runtime stream deltas from a blocking client iterator."""
+    iterator = iter(client.stream(envelope))
+    while True:
         try:
-            response = await asyncio.wait_for(response_future, timeout=timeout)
-            return response
-        except asyncio.TimeoutError:
-            raise HTTPException(
-                status_code=504, detail="LLM request timed out"
-            )
-
-    finally:
-        # Unregister signal handler
-        mediator.unregister(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL, on_llm_response
-        )
+            yield await _next_stream_delta(iterator)
+        except StopIteration:
+            return
 
 
-# ====================
-# API Endpoints
-# ====================
+def _websocket_chunk(delta: StreamDelta) -> dict[str, Any]:
+    """Convert a runtime stream delta into websocket payload shape."""
+    if delta.status is EnvelopeStatus.FAILED:
+        return {
+            "type": "error",
+            "content": delta.metadata.get("error", "LLM runtime failed"),
+            "done": True,
+        }
+
+    payload = {
+        "type": "chunk",
+        "content": delta.delta.get("content", ""),
+        "done": delta.final,
+    }
+    tool_calls = delta.delta.get("tool_calls")
+    if tool_calls:
+        payload["tool_calls"] = tool_calls
+    return payload
 
 
 @router.post("/chat", response_model=ChatCompletionResponse)
 async def chat_completion(request: ChatCompletionRequest, req: Request):
-    """
-    Chat completion endpoint.
-
-    Args:
-        request: Chat completion request
-        req: FastAPI request for accessing app state
-
-    Returns:
-        Chat completion response
-    """
-    logger.info(f"Chat completion request: {len(request.messages)} messages")
-
-    # Convert messages to prompt (use last message as prompt)
+    """Run chat completion against the runtime-backed local LLM."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
-    runtime_registry = get_runtime_registry(req)
-    if runtime_registry is not None:
-        try:
-            response = await _invoke_llm_runtime(
-                runtime_registry,
-                _to_runtime_messages(request.messages),
-                request.model,
-                request.temperature,
-                request.max_tokens,
-            )
-            return ChatCompletionResponse(
-                content=response,
-                model=request.model or "default",
-                finish_reason="stop",
-            )
-        except KeyError:
-            logger.info("LLM runtime client unavailable; using legacy path")
-
-    llm_service = get_llm_service(req)
-    if not llm_service:
-        raise HTTPException(
-            status_code=503, detail="LLM service not available"
-        )
-
-    prompt = request.messages[-1].content
-
-    # Create LLM request with parameters from API request
-    llm_request = LLMRequest.from_default()
-    if request.max_tokens:
-        llm_request.max_new_tokens = request.max_tokens
-        print(
-            f"[LLM ROUTE DEBUG] Set max_new_tokens={request.max_tokens} from request.max_tokens",
-            flush=True,
-        )
-    if request.temperature:
-        llm_request.temperature = request.temperature
-
-    print(
-        f"[LLM ROUTE DEBUG] Final llm_request.max_new_tokens={llm_request.max_new_tokens}",
-        flush=True,
+    client = resolve_llm_client(require_runtime_registry(req))
+    response = await _invoke_llm_runtime(
+        client,
+        _to_runtime_messages(request.messages),
+        request.model,
+        request.temperature,
+        request.max_tokens,
     )
-
-    # Wait for response
-    response = await wait_for_llm_response(llm_service, prompt, llm_request)
-
     return ChatCompletionResponse(
         content=response,
         model=request.model or "default",
@@ -322,267 +307,116 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
 
 @router.post("/completion", response_model=CompletionResponse)
 async def text_completion(request: CompletionRequest, req: Request):
-    """
-    Text completion endpoint.
-
-    Args:
-        request: Completion request
-        req: FastAPI request for accessing app state
-
-    Returns:
-        Generated text
-    """
-    logger.info(f"Text completion request (prompt_len={len(request.prompt)})")
-
-    runtime_registry = get_runtime_registry(req)
-    if runtime_registry is not None:
-        try:
-            response = await _invoke_llm_runtime(
-                runtime_registry,
-                [
-                    RuntimeChatMessage(
-                        role=MessageRole.USER,
-                        content=request.prompt,
-                    )
-                ],
-                None,
-                request.temperature,
-                request.max_tokens,
-            )
-            return CompletionResponse(text=response, finish_reason="stop")
-        except KeyError:
-            logger.info("LLM runtime client unavailable; using legacy path")
-
-    llm_service = get_llm_service(req)
-    if not llm_service:
-        raise HTTPException(
-            status_code=503, detail="LLM service not available"
-        )
-
-    # Create LLM request with parameters
-    llm_request = LLMRequest.from_default()
-    llm_request.max_new_tokens = request.max_tokens
-    llm_request.temperature = request.temperature
-
-    # Wait for response
-    response = await wait_for_llm_response(
-        llm_service, request.prompt, llm_request
+    """Run text completion against the runtime-backed local LLM."""
+    client = resolve_llm_client(require_runtime_registry(req))
+    response = await _invoke_llm_runtime(
+        client,
+        [RuntimeChatMessage(role=MessageRole.USER, content=request.prompt)],
+        None,
+        request.temperature,
+        request.max_tokens,
     )
-
     return CompletionResponse(text=response, finish_reason="stop")
 
 
 @router.get("/models", response_model=List[ModelInfo])
-async def list_models(req: Request):
-    """
-    List available LLM models.
-
-    Args:
-        req: FastAPI request for accessing app state
-
-    Returns:
-        List of available models
-    """
-    # Get current model from settings
+async def list_models(_req: Request):
+    """List available local LLM models."""
     settings = LLMGeneratorSettings.objects.first()
-    current_model = settings.model_version if settings else None
+    current_model_id = _selected_model_id(settings)
 
-    # Get available models from ModelRegistry if possible
     try:
         registry = ModelRegistry()
         models = []
-
         for model_id, model_spec in registry.models.items():
-            if model_spec.model_type.value == "llm":
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        name=model_spec.name,
-                        loaded=(model_id == current_model),
-                        size_mb=model_spec.size_mb,
-                    )
+            if model_spec.model_type.value != "llm":
+                continue
+            models.append(
+                ModelInfo(
+                    id=model_id,
+                    name=model_spec.name,
+                    loaded=(model_id == current_model_id),
+                    size_mb=model_spec.size_mb,
                 )
-
+            )
         return models
-
-    except Exception as e:
-        logger.error(f"Error listing models: {e}")
+    except Exception as exc:
+        logger.error(f"Error listing models: {exc}")
         raise HTTPException(
-            status_code=500, detail=f"Error listing models: {str(e)}"
-        )
+            status_code=500,
+            detail=f"Error listing models: {str(exc)}",
+        ) from exc
 
 
 @router.post("/load")
 async def load_model(request: ModelLoadRequest, req: Request):
-    """
-    Load a specific LLM model.
-
-    Args:
-        request: Model load request
-        req: FastAPI request for accessing app state
-
-    Returns:
-        Success status
-    """
-    logger.info(f"Load model request: {request.model_id}")
-
-    llm_service = get_llm_service(req)
-    if not llm_service:
-        raise HTTPException(
-            status_code=503, detail="LLM service not available"
-        )
-
-    try:
-        # Create future for load completion
-        load_future = asyncio.Future()
-
-        def on_model_loaded(data: dict):
-            if not load_future.done():
-                load_future.set_result(True)
-
-        # Register signal handler
-        mediator = SignalMediator()
-        mediator.register(SignalCode.LLM_LOAD_COMPLETE_SIGNAL, on_model_loaded)
-
-        try:
-            # Update settings to use new model
-            llm_service.model_changed(request.model_id)
-
-            # Emit load signal
-            llm_service.emit_signal(
-                SignalCode.LLM_LOAD_SIGNAL, {"model_path": request.model_id}
-            )
-
-            # Wait for load to complete (with timeout)
-            try:
-                await asyncio.wait_for(load_future, timeout=300.0)
-            except asyncio.TimeoutError:
-                raise HTTPException(
-                    status_code=504, detail="Model load timed out"
-                )
-
-            return {"status": "success", "model": request.model_id}
-
-        finally:
-            mediator.unregister(
-                SignalCode.LLM_LOAD_COMPLETE_SIGNAL, on_model_loaded
-            )
-
-    except Exception as e:
-        logger.error(f"Error loading model: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error loading model: {str(e)}"
-        )
+    """Persist the selected model and load it through the runtime boundary."""
+    resolved_id = _persist_model_selection(request.model_id)
+    client = resolve_llm_client(require_runtime_registry(req))
+    await _run_runtime_action(client, RuntimeAction.LOAD_MODEL)
+    return {"status": "success", "model": resolved_id}
 
 
 @router.post("/unload")
 async def unload_model(req: Request):
-    """
-    Unload current LLM model.
-
-    Args:
-        req: FastAPI request for accessing app state
-
-    Returns:
-        Success status
-    """
-    logger.info("Unload model request")
-
-    llm_service = get_llm_service(req)
-    if not llm_service:
-        raise HTTPException(
-            status_code=503, detail="LLM service not available"
-        )
-
-    try:
-
-        # Emit unload signal
-        llm_service.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {})
-
-        return {"status": "success"}
-
-    except Exception as e:
-        logger.error(f"Error unloading model: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error unloading model: {str(e)}"
-        )
+    """Unload the active local LLM through the runtime boundary."""
+    client = resolve_llm_client(require_runtime_registry(req))
+    await _run_runtime_action(client, RuntimeAction.UNLOAD_MODEL)
+    return {"status": "success"}
 
 
 @router.websocket("/stream")
 async def websocket_chat(websocket: WebSocket):
-    """
-    WebSocket endpoint for streaming chat.
-
-    Args:
-        websocket: WebSocket connection
-    """
+    """Stream chat responses from the runtime-backed local LLM."""
     await websocket.accept()
-    logger.info("WebSocket connection established")
 
     try:
-        llm_service = LLMAPIService()
-        mediator = SignalMediator()
-
-        async def on_llm_chunk(data: dict):
-            """Send LLM response chunks to WebSocket client."""
-            response_obj = data.get("response")
-            if response_obj and hasattr(response_obj, "message"):
+        client = resolve_llm_client(require_websocket_runtime_registry(websocket))
+        while True:
+            data = await websocket.receive_json()
+            prompt = str(data.get("message", "")).strip()
+            if not prompt:
                 await websocket.send_json(
-                    {
-                        "type": "chunk",
-                        "content": response_obj.message,
-                        "done": (
-                            hasattr(response_obj, "is_end_of_message")
-                            and response_obj.is_end_of_message
-                        ),
-                    }
+                    {"type": "error", "content": "No message provided"}
                 )
+                continue
 
-        # Register signal handler for streaming
-        mediator.register(SignalCode.LLM_TEXT_STREAMED_SIGNAL, on_llm_chunk)
-
-        try:
-            while True:
-                # Receive message from client
-                data = await websocket.receive_json()
-                logger.info(f"Received WebSocket message: {data}")
-
-                prompt = data.get("message", "")
-                if not prompt:
-                    await websocket.send_json(
-                        {"type": "error", "content": "No message provided"}
-                    )
-                    continue
-
-                # Create LLM request
-                llm_request = LLMRequest.from_default()
-                if "max_tokens" in data:
-                    llm_request.max_new_tokens = data["max_tokens"]
-                if "temperature" in data:
-                    llm_request.temperature = data["temperature"]
-
-                # Send request (response will stream via signal handler)
-                llm_service.send_request(
-                    prompt=prompt,
-                    llm_request=llm_request,
-                    action=LLMActionType.CHAT,
-                    do_tts_reply=False,
-                )
-
-        except WebSocketDisconnect:
-            logger.info("WebSocket connection closed")
-
-        finally:
-            # Cleanup signal handler
-            mediator.unregister(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL, on_llm_chunk
+            envelope = RequestEnvelope(
+                runtime=RuntimeKind.LLM,
+                action=RuntimeAction.INVOKE,
+                provider="local",
+                stream=True,
+                payload=LLMInvocationRequest(
+                    model=data.get("model"),
+                    messages=[
+                        RuntimeChatMessage(
+                            role=MessageRole.USER,
+                            content=prompt,
+                        )
+                    ],
+                    max_tokens=data.get("max_tokens"),
+                    temperature=float(data.get("temperature", 0.7)),
+                    stream=True,
+                ).model_dump(),
             )
 
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        try:
-            await websocket.send_json(
-                {"type": "error", "content": f"Server error: {str(e)}"}
-            )
-        except:
-            pass
+            async for delta in _stream_runtime(client, envelope):
+                await websocket.send_json(_websocket_chunk(delta))
+                if delta.final:
+                    break
+
+    except WebSocketDisconnect:
+        logger.info("WebSocket connection closed")
+    except HTTPException as exc:
+        await websocket.send_json(
+            {"type": "error", "content": exc.detail, "done": True}
+        )
+    except Exception as exc:
+        logger.error(f"WebSocket error: {exc}")
+        await websocket.send_json(
+            {
+                "type": "error",
+                "content": f"Server error: {str(exc)}",
+                "done": True,
+            }
+        )

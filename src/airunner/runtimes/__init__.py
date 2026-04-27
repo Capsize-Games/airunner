@@ -9,6 +9,7 @@ _EXPORTS = {
     "ChatMessage": "airunner.runtimes.contracts",
     "LLMInvocationRequest": "airunner.runtimes.contracts",
     "LLMInvocationResponse": "airunner.runtimes.contracts",
+    "LlamaCppRuntimeSettings": "airunner.runtimes.llama_cpp_runtime_settings",
     "LocalFallbackArtClient": "airunner.runtimes.local_fallback",
     "LocalFallbackLLMClient": "airunner.runtimes.local_fallback",
     "LocalFallbackSTTClient": "airunner.runtimes.local_fallback",
@@ -24,12 +25,15 @@ _EXPORTS = {
     "RuntimeMode": "airunner.runtimes.contracts",
     "RuntimeRegistry": "airunner.runtimes.registry",
     "RuntimeRoute": "airunner.runtimes.registry",
+    "SidecarLauncher": "airunner.runtimes.sidecar_launcher",
+    "SidecarLLMClient": "airunner.runtimes.sidecar_llm_client",
     "STTInvocationRequest": "airunner.runtimes.contracts",
     "STTInvocationResponse": "airunner.runtimes.contracts",
     "TTSInvocationRequest": "airunner.runtimes.contracts",
     "TTSInvocationResponse": "airunner.runtimes.contracts",
     "TransportKind": "airunner.runtimes.contracts",
     "register_local_fallback_clients": "airunner.runtimes.local_fallback",
+    "register_sidecar_llm_client": "airunner.runtimes.sidecar_llm_client",
 }
 
 __all__ = sorted(_EXPORTS)

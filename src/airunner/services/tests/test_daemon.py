@@ -3,6 +3,9 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+from airunner.runtimes.contracts import RuntimeKind
+from airunner.runtimes.registry import RuntimeRoute
+
 
 def _daemon_config():
     return SimpleNamespace(
@@ -78,3 +81,55 @@ def test_daemon_owns_headless_lifecycle(monkeypatch):
         "api",
         "loop",
     ]
+
+
+def test_daemon_shutdown_closes_runtime_clients(monkeypatch):
+    import airunner.services.daemon as daemon_module
+
+    calls = []
+
+    class FakeClient:
+        def close(self):
+            calls.append("close")
+
+    class FakeRegistry:
+        def __init__(self, client):
+            self.client = client
+
+        def list_routes(self):
+            return (
+                RuntimeRoute(RuntimeKind.LLM, provider="local"),
+                RuntimeRoute(
+                    RuntimeKind.LLM,
+                    provider="local",
+                    deployment_mode="sidecar",
+                ),
+            )
+
+        def resolve(self, runtime, provider, deployment_mode):
+            return self.client
+
+    monkeypatch.setattr(
+        daemon_module.AIRunnerDaemon,
+        "_setup_logging",
+        lambda self: None,
+    )
+    monkeypatch.setattr(
+        daemon_module.AIRunnerDaemon,
+        "_setup_signal_handlers",
+        lambda self: None,
+    )
+    monkeypatch.setattr(
+        daemon_module.sys,
+        "exit",
+        lambda code: calls.append(code),
+    )
+
+    daemon = daemon_module.AIRunnerDaemon(_daemon_config())
+    daemon.app = SimpleNamespace(
+        runtime_registry=FakeRegistry(FakeClient()),
+        cleanup=lambda: calls.append("cleanup"),
+    )
+    daemon.shutdown()
+
+    assert calls == ["close", "cleanup", 0]

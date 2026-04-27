@@ -192,11 +192,7 @@ def test_load_runtime_invokes_control_action():
     client = FakeRuntimeClient(RuntimeKind.LLM)
     registry = FakeRegistry(
         {
-            RuntimeRoute(
-                RuntimeKind.LLM,
-                provider="local",
-                deployment_mode="local_fallback",
-            ).normalized(): client,
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
         }
     )
 
@@ -219,11 +215,7 @@ def test_unload_runtime_invokes_control_action():
     client = FakeRuntimeClient(RuntimeKind.LLM)
     registry = FakeRegistry(
         {
-            RuntimeRoute(
-                RuntimeKind.LLM,
-                provider="local",
-                deployment_mode="local_fallback",
-            ).normalized(): client,
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
         }
     )
 
@@ -246,11 +238,7 @@ def test_cancel_runtime_uses_client_cancellation():
     client = FakeRuntimeClient(RuntimeKind.STT)
     registry = FakeRegistry(
         {
-            RuntimeRoute(
-                RuntimeKind.STT,
-                provider="local",
-                deployment_mode="local_fallback",
-            ).normalized(): client,
+            RuntimeRoute(RuntimeKind.STT, provider="local").normalized(): client,
         }
     )
 
@@ -281,11 +269,7 @@ def test_load_runtime_surfaces_runtime_failures():
     )
     registry = FakeRegistry(
         {
-            RuntimeRoute(
-                RuntimeKind.ART,
-                provider="local",
-                deployment_mode="local_fallback",
-            ).normalized(): client,
+            RuntimeRoute(RuntimeKind.ART, provider="local").normalized(): client,
         }
     )
 

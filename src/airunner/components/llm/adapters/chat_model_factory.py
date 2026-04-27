@@ -1,7 +1,6 @@
 """Factory for creating LangChain ChatModel instances based on AI Runner settings."""
 
 import os
-from types import SimpleNamespace
 from typing import Any, Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -13,6 +12,12 @@ from airunner.components.llm.adapters.chat_gguf import (
     UnsupportedGGUFArchitectureError,
     find_gguf_file,
     is_gguf_model,
+)
+from airunner.components.llm.adapters.chat_model_factory_helpers import (
+    get_chatbot_params,
+    get_db_settings,
+    get_enable_thinking,
+    get_quantization_bits,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.utils.model_optimizer import get_model_optimizer
@@ -279,21 +284,15 @@ class ChatModelFactory:
         model_path: Optional[str],
     ) -> tuple[Any, Any]:
         """Load local transformers components behind the factory boundary."""
-        from airunner.components.llm.managers.llm_model_manager import (
-            LLMModelManager,
+        from airunner.components.llm.adapters.local_execution_component_loader import (
+            LocalExecutionComponentLoader,
         )
 
-        loader = LLMModelManager()
-        loader.llm_settings = llm_settings
-        loader.llm_request = SimpleNamespace(model=model_path)
-        loader._current_model_path = model_path
-        loader._load_local_llm_components()
-
-        model = loader._model
-        tokenizer = loader._tokenizer
-        loader._model = None
-        loader._tokenizer = None
-        return model, tokenizer
+        loader = LocalExecutionComponentLoader(
+            llm_settings=llm_settings,
+            model_path=model_path,
+        )
+        return loader.load_components()
 
     @staticmethod
     def create_from_settings(
@@ -324,29 +323,8 @@ class ChatModelFactory:
         Raises:
             ValueError: If settings are invalid or required components missing
         """
-        # Get quantization preference from settings
-        # Default to GGUF (0) - GGUF is the only supported quantization format
-        from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-        from airunner.utils.settings.get_qsettings import get_qsettings
-        
-        db_settings = LLMGeneratorSettings.objects.first()
-        quantization_bits = 0  # Default to GGUF
-        
-        # Check QSettings first (UI preference)
-        try:
-            qs = get_qsettings()
-            saved = qs.value("llm_settings/quantization_bits", None)
-            if saved is not None:
-                quantization_bits = int(saved)
-        except Exception:
-            pass
-        
-        # Database setting overrides if present
-        if db_settings is not None:
-            db_quant = getattr(db_settings, "quantization_bits", None)
-            if db_quant is not None:
-                quantization_bits = db_quant
-        
+        db_settings = get_db_settings()
+        quantization_bits = get_quantization_bits(db_settings)
         optimizer = get_model_optimizer()
         
         # Check for GGUF model - either explicitly requested or already available
@@ -407,23 +385,11 @@ class ChatModelFactory:
                     )
                 )
                 if has_valid_gguf_path:
-                    # Get generation parameters from chatbot settings
-                    params = {}
-                    if chatbot:
-                        params = {
-                            "max_tokens": getattr(chatbot, "max_new_tokens", 4096),
-                            "temperature": getattr(chatbot, "temperature", 700) / 10000.0,
-                            "top_p": getattr(chatbot, "top_p", 900) / 1000.0,
-                            "top_k": getattr(chatbot, "top_k", 20),
-                            "repeat_penalty": getattr(chatbot, "repetition_penalty", 115) / 100.0,
-                        }
-
-                    # Get enable_thinking from database
-                    enable_thinking = True
-                    if db_settings is not None and hasattr(db_settings, "enable_thinking"):
-                        db_value = getattr(db_settings, "enable_thinking", None)
-                        if db_value is not None:
-                            enable_thinking = db_value
+                    params = get_chatbot_params(chatbot, local_mode=False)
+                    enable_thinking = get_enable_thinking(
+                        db_settings,
+                        llm_settings,
+                    )
 
                     try:
                         return ChatModelFactory.create_gguf_model(
@@ -458,43 +424,15 @@ class ChatModelFactory:
                     "Local LLM mode requires either tokenizer or model_path for Mistral3 models"
                 )
 
-            # Get generation parameters from chatbot settings
-            params = {}
-            if chatbot:
-                params = {
-                    "max_new_tokens": getattr(chatbot, "max_new_tokens", 500),
-                    "temperature": getattr(chatbot, "temperature", 700)
-                    / 10000.0,
-                    "top_p": getattr(chatbot, "top_p", 900) / 1000.0,
-                    "top_k": getattr(chatbot, "top_k", 50),
-                    "repetition_penalty": getattr(
-                        chatbot, "repetition_penalty", 115
-                    )
-                    / 100.0,
-                    "do_sample": getattr(chatbot, "do_sample", True),
-                }
-
-            # Get enable_thinking from database (LLMGeneratorSettings) first,
-            # then fall back to llm_settings dataclass, then default to True
-            from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-            db_settings = LLMGeneratorSettings.objects.first()
-            enable_thinking = True  # Default
-            if db_settings is not None and hasattr(db_settings, "enable_thinking"):
-                db_value = getattr(db_settings, "enable_thinking", None)
-                if db_value is not None:
-                    enable_thinking = db_value
-                else:
-                    # Fall back to llm_settings dataclass
-                    enable_thinking = getattr(llm_settings, "enable_thinking", True)
-            else:
-                enable_thinking = getattr(llm_settings, "enable_thinking", True)
+            params = get_chatbot_params(chatbot, local_mode=True)
+            enable_thinking = get_enable_thinking(db_settings, llm_settings)
 
             return ChatModelFactory.create_local_model(
                 model=model,
                 tokenizer=tokenizer,
                 model_path=model_path,
                 enable_thinking=enable_thinking,
-                **params
+                **params,
             )
 
         # OpenRouter

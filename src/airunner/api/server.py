@@ -116,9 +116,26 @@ def create_app(
     app.state.runtime_registry = None
     app.state.lifecycle_service = None
 
+    try:
+        app.state.runtime_registry = build_runtime_registry(
+            app_instance=app_instance,
+        )
+    except Exception:
+        logger.exception("Failed to build runtime registry")
+
     if app_instance:
         app.state.airunner_app = app_instance
-        app.state.runtime_registry = _resolve_runtime_registry(app_instance)
+        if app.state.runtime_registry is not None:
+            try:
+                setattr(
+                    app_instance,
+                    "runtime_registry",
+                    app.state.runtime_registry,
+                )
+            except Exception:
+                logger.debug("Unable to attach runtime registry to app instance")
+        else:
+            app.state.runtime_registry = _resolve_runtime_registry(app_instance)
         app.state.lifecycle_service = _resolve_lifecycle_service(app_instance)
 
     # Optional API key auth for production.

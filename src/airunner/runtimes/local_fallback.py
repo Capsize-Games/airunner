@@ -919,13 +919,19 @@ def register_local_fallback_clients(
     stt_client: Optional[RuntimeClient] = None,
     tts_client: Optional[RuntimeClient] = None,
     art_client: Optional[RuntimeClient] = None,
+    *,
+    include_llm: bool = True,
 ) -> RuntimeRegistry:
     """Register the current local fallback clients in a runtime registry."""
-    clients = (
-        llm_client or LocalFallbackLLMClient(),
-        stt_client or LocalFallbackSTTClient(),
-        tts_client or LocalFallbackTTSClient(),
-        art_client or LocalFallbackArtClient(),
+    clients = []
+    if include_llm:
+        clients.append(llm_client or LocalFallbackLLMClient())
+    clients.extend(
+        [
+            stt_client or LocalFallbackSTTClient(),
+            tts_client or LocalFallbackTTSClient(),
+            art_client or LocalFallbackArtClient(),
+        ]
     )
     for client in clients:
         for route in _local_fallback_routes(
