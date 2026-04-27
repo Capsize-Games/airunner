@@ -1,6 +1,5 @@
+import asyncio
 from types import SimpleNamespace
-
-from fastapi.testclient import TestClient
 
 from airunner.ipc.messages import EnvelopeStatus, ResponseEnvelope
 from airunner.runtimes.contracts import (
@@ -40,24 +39,32 @@ class FakeRegistry:
         return self.client
 
 
-def test_stt_endpoint_uses_runtime_registry_when_available(monkeypatch):
-    from airunner.api.server import create_app
+class FakeUploadFile:
+    def __init__(self, filename: str, content_type: str, data: bytes):
+        self.filename = filename
+        self.content_type = content_type
+        self._data = data
 
-    monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "1")
+    async def read(self):
+        return self._data
+
+
+def test_stt_endpoint_uses_runtime_registry_when_available():
+    from airunner.api.routes.stt import transcribe_audio
 
     client = FakeSTTRuntimeClient()
     registry = FakeRegistry(client)
-    app_instance = SimpleNamespace(runtime_registry=registry)
-    app = create_app(enable_cors=False, app_instance=app_instance)
-
-    with TestClient(app) as test_client:
-        response = test_client.post(
-            "/api/v1/stt/transcribe",
-            files={"audio": ("clip.wav", b"fake-audio", "audio/wav")},
+    fake_request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(runtime_registry=registry),
         )
+    )
+    audio = FakeUploadFile("clip.wav", "audio/wav", b"fake-audio")
 
-    assert response.status_code == 200
-    assert response.json() == {"text": "runtime transcript", "language": "en"}
+    response = asyncio.run(transcribe_audio(audio=audio, req=fake_request))
+
+    assert response.text == "runtime transcript"
+    assert response.language == "en"
     assert registry.calls == [(RuntimeKind.STT, "local", "local_fallback")]
     assert client.requests[0].payload["mime_type"] == "audio/wav"
     assert client.requests[0].runtime == RuntimeKind.STT

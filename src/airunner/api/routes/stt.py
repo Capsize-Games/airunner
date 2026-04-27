@@ -108,12 +108,6 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
     """
     logger.info(f"STT request: {audio.filename}")
 
-    stt_service = get_stt_service(req)
-    if not stt_service:
-        raise HTTPException(
-            status_code=503, detail="STT service not available"
-        )
-
     try:
         # Read audio file
         audio_data = await audio.read()
@@ -152,6 +146,12 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
                 )
             except KeyError:
                 pass
+
+        stt_service = get_stt_service(req)
+        if not stt_service:
+            raise HTTPException(
+                status_code=503, detail="STT service not available"
+            )
 
         # Create future for transcription
         transcription_future = asyncio.Future()

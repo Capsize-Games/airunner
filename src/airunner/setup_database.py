@@ -4,7 +4,12 @@ from alembic.config import Config
 from alembic import command
 from pathlib import Path
 
-from airunner.settings import AIRUNNER_DB_URL
+from airunner.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+
+
+def _default_db_url() -> str:
+    """Return the configured database URL with a fresh env lookup."""
+    return os.environ.get("AIRUNNER_DATABASE_URL") or DEFAULT_AIRUNNER_DB_URL
 
 
 def _extract_search_path_schema(db_url: str) -> str | None:
@@ -34,7 +39,7 @@ def _ensure_sqlite_parent_dir(db_url: str) -> None:
 
 
 def setup_database(db_url: str | None = None):
-    target_db_url = db_url or AIRUNNER_DB_URL
+    target_db_url = db_url or _default_db_url()
     _ensure_sqlite_parent_dir(target_db_url)
 
     base = Path(os.path.dirname(os.path.realpath(__file__)))

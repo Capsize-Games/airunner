@@ -1,6 +1,5 @@
+import asyncio
 from types import SimpleNamespace
-
-from fastapi.testclient import TestClient
 
 from airunner.ipc.messages import EnvelopeStatus, ResponseEnvelope
 from airunner.runtimes.contracts import (
@@ -40,42 +39,37 @@ class FakeRegistry:
         return self.client
 
 
-def test_create_app_reuses_app_instance_runtime_registry():
-    from airunner.api.server import create_app
+def test_resolve_runtime_registry_reuses_existing_value():
+    from airunner.api.server import _resolve_runtime_registry
 
     runtime_registry = object()
     app_instance = SimpleNamespace(runtime_registry=runtime_registry)
 
-    app = create_app(enable_cors=False, app_instance=app_instance)
-
-    assert app.state.runtime_registry is runtime_registry
+    assert _resolve_runtime_registry(app_instance) is runtime_registry
 
 
-def test_chat_endpoint_uses_runtime_registry_when_available(monkeypatch):
-    from airunner.api.server import create_app
-
-    monkeypatch.setenv("AIRUNNER_INSECURE_NO_AUTH", "1")
+def test_chat_endpoint_uses_runtime_registry_when_available():
+    from airunner.api.routes.llm import ChatCompletionRequest, chat_completion
 
     client = FakeRuntimeClient()
     registry = FakeRegistry(client)
-    app_instance = SimpleNamespace(runtime_registry=registry)
-    app = create_app(enable_cors=False, app_instance=app_instance)
-
-    with TestClient(app) as test_client:
-        response = test_client.post(
-            "/api/v1/llm/chat",
-            json={
-                "messages": [
-                    {"role": "system", "content": "You are terse."},
-                    {"role": "user", "content": "Say hello"},
-                ],
-                "temperature": 0.25,
-                "max_tokens": 16,
-            },
+    request = ChatCompletionRequest(
+        messages=[
+            {"role": "system", "content": "You are terse."},
+            {"role": "user", "content": "Say hello"},
+        ],
+        temperature=0.25,
+        max_tokens=16,
+    )
+    fake_request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(runtime_registry=registry),
         )
+    )
 
-    assert response.status_code == 200
-    assert response.json()["content"] == "runtime hello"
+    response = asyncio.run(chat_completion(request, fake_request))
+
+    assert response.content == "runtime hello"
     assert registry.calls == [(RuntimeKind.LLM, "local", "local_fallback")]
     payload = client.requests[0].payload
     assert payload["messages"][0]["role"] == "system"

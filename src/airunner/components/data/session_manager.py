@@ -5,7 +5,12 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy import pool
 
-from airunner.settings import AIRUNNER_DB_URL
+from airunner.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+
+
+def _db_url() -> str:
+    """Return the active database URL with env overrides applied lazily."""
+    return os.environ.get("AIRUNNER_DATABASE_URL") or DEFAULT_AIRUNNER_DB_URL
 
 
 def _tenancy_mode() -> str:
@@ -80,7 +85,8 @@ def _ensure_tenant_ready(tenant: str) -> None:
     if (os.environ.get("AIRUNNER_MIGRATION_RUNNING") or "").strip() == "1":
         return
 
-    if not _is_postgres(AIRUNNER_DB_URL):
+    db_url = _db_url()
+    if not _is_postgres(db_url):
         return
 
     if tenant in _migrated_tenants:
@@ -96,11 +102,11 @@ def _ensure_tenant_ready(tenant: str) -> None:
     from airunner.setup_database import setup_database
 
     # Create schema in the base DB (public search_path).
-    base_engine = create_engine(AIRUNNER_DB_URL, poolclass=pool.NullPool)
+    base_engine = create_engine(db_url, poolclass=pool.NullPool)
     with base_engine.begin() as conn:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {tenant}"))
 
-    tenant_url = _tenant_db_url(AIRUNNER_DB_URL, tenant)
+    tenant_url = _tenant_db_url(db_url, tenant)
     setup_database(db_url=tenant_url)
     _migrated_tenants.add(tenant)
 
@@ -117,11 +123,12 @@ def _get_engine(tenant: str):
     # That would create an unbounded number of connection pools.
     # Instead, use a single shared engine and set search_path per session.
     engine_key = tenant
-    if _tenancy_mode() != "single" and _is_postgres(AIRUNNER_DB_URL):
+    db_url = _db_url()
+    if _tenancy_mode() != "single" and _is_postgres(db_url):
         engine_key = "__shared__"
 
     if engine_key not in _engines:
-        _ensure_sqlite_parent_dir(AIRUNNER_DB_URL)
+        _ensure_sqlite_parent_dir(db_url)
 
         # AI Runner is frequently used under streaming workloads. The default
         # SQLAlchemy QueuePool settings (pool_size=5, max_overflow=10,
@@ -143,7 +150,7 @@ def _get_engine(tenant: str):
         if pool_recycle > 0:
             engine_kwargs["pool_recycle"] = pool_recycle
 
-        _engines[engine_key] = create_engine(AIRUNNER_DB_URL, **engine_kwargs)
+        _engines[engine_key] = create_engine(db_url, **engine_kwargs)
 
     return _engines[engine_key]
 
@@ -185,7 +192,7 @@ def session_scope():
     Session = _get_session(tenant)
     session = Session()
     try:
-        if _tenancy_mode() != "single" and _is_postgres(AIRUNNER_DB_URL):
+        if _tenancy_mode() != "single" and _is_postgres(_db_url()):
             # Ensure schema + migrations exist, then scope this transaction to
             # the tenant schema.
             _ensure_tenant_ready(tenant)

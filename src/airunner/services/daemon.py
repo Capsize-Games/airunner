@@ -12,13 +12,14 @@ import os
 import sys
 import signal
 import argparse
+import logging
 import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any
 import time
 import threading
 from airunner.api.server import APIServer
-from logger.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
@@ -126,6 +127,7 @@ class AIRunnerDaemon:
         self.shutdown_requested = False
         self._setup_logging()
         self._setup_signal_handlers()
+        self.lifecycle_service = None
 
     def _setup_logging(self):
         """Configure logging for daemon mode."""
@@ -145,18 +147,18 @@ class AIRunnerDaemon:
             backupCount=log_config.get("backup_count", 5),
         )
 
-        formatter = logger.Formatter(
+        formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         handler.setFormatter(formatter)
 
         # Configure root logger
-        root_logger = logger.getLogger()
+        root_logger = logging.getLogger()
         root_logger.setLevel(log_level)
         root_logger.addHandler(handler)
 
         # Also log to console
-        console_handler = logger.StreamHandler()
+        console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
 
@@ -189,8 +191,8 @@ class AIRunnerDaemon:
         logger.info("Starting AI Runner daemon...")
 
         try:
-            # Initialize App in headless mode (no GUI)
-            self.app = App(headless=True, no_splash=True)
+            self.app = self._create_headless_app()
+            self._initialize_lifecycle_service()
 
             logger.info("AI Runner app initialized in headless mode")
 
@@ -211,6 +213,23 @@ class AIRunnerDaemon:
         except Exception as e:
             logger.error(f"Fatal error in daemon: {e}", exc_info=True)
             sys.exit(1)
+
+    def _create_headless_app(self) -> App:
+        """Create the daemon-owned App without embedded server ownership."""
+        return App(
+            headless=True,
+            no_splash=True,
+            start_headless_api_server=False,
+            initialize_headless_lifecycle=False,
+        )
+
+    def _initialize_lifecycle_service(self) -> None:
+        """Initialize runtime lifecycle through the reusable service."""
+        if not self.app:
+            raise RuntimeError("Daemon App must exist before lifecycle init")
+        self.lifecycle_service = self.app.ensure_lifecycle_service()
+        self.lifecycle_service.initialize()
+        self.lifecycle_service.preload_llm_model()
 
     def _preload_models(self):
         """Preload configured models on startup."""

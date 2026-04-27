@@ -46,6 +46,11 @@ def _resolve_runtime_registry(app_instance: Any) -> Optional[Any]:
     return runtime_registry
 
 
+def _resolve_lifecycle_service(app_instance: Any) -> Optional[Any]:
+    """Return the lifecycle service attached to an app instance."""
+    return getattr(app_instance, "lifecycle_service", None)
+
+
 def is_loopback_host(host: str) -> bool:
     if not host:
         return False
@@ -109,10 +114,12 @@ def create_app(
     )
 
     app.state.runtime_registry = None
+    app.state.lifecycle_service = None
 
     if app_instance:
         app.state.airunner_app = app_instance
         app.state.runtime_registry = _resolve_runtime_registry(app_instance)
+        app.state.lifecycle_service = _resolve_lifecycle_service(app_instance)
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:

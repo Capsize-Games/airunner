@@ -80,6 +80,7 @@ from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.enums import ModelService
 from airunner.components.art.data.ai_models import AIModels
 from airunner.runtimes.bootstrap import build_runtime_registry
+from airunner.services.lifecycle_service import CoreLifecycleService
 
 
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
@@ -134,6 +135,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         headless: bool = False,
         launcher_splash=None,
         launcher_app=None,
+        start_headless_api_server: bool = True,
+        initialize_headless_lifecycle: bool = True,
     ):
         """Initialize the application.
 
@@ -144,10 +147,14 @@ class App(MediatorMixin, SettingsMixin, QObject):
             headless: If True, run in headless mode (no GUI)
             launcher_splash: Splash screen passed from launcher (already showing)
             launcher_app: QApplication passed from launcher
+            start_headless_api_server: Start embedded API server in headless mode
+            initialize_headless_lifecycle: Initialize workers during headless boot
         """
         self.headless = headless
         self._launcher_splash = launcher_splash
         self._launcher_app = launcher_app
+        self._start_headless_api_server = start_headless_api_server
+        self._initialize_headless_lifecycle = initialize_headless_lifecycle
         self._init_attributes(
             no_splash, main_window_class, window_class_params
         )
@@ -269,6 +276,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.http_server_thread = None
         self.api_server_thread = None
         self.is_running = False
+        self.lifecycle_service = None
+        self.model_load_balancer = None
+        self._worker_manager = None
+        self._model_load_balancer = None
 
     def _register_signals(self) -> None:
         """Register signal handlers."""
@@ -400,17 +411,17 @@ class App(MediatorMixin, SettingsMixin, QObject):
         set_api(self)
         self.logger.info("API instance registered globally")
 
-        # Initialize workers BEFORE starting HTTP server
-        # so they're ready to handle requests immediately
-        self._initialize_headless_workers()
-
-        # Pre-load LLM model if configured in settings
-        self._preload_llm_model()
+        if self._initialize_headless_lifecycle:
+            self.initialize_headless_lifecycle()
 
         # Start API server for /llm, /art, /stt, /tts endpoints
         # Skip if we're being created from within an HTTP request handler
         # (server is already running in that case)
-        if os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
+        if not self._start_headless_api_server:
+            self.logger.info(
+                "Embedded headless API server disabled for this App instance"
+            )
+        elif os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
             # Import here to avoid circular dependency with API class
             from airunner.components.server.api.api_server_thread import (
                 APIServerThread,
@@ -434,6 +445,22 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.logger.info(
                 "API server already running - skipping initialization"
             )
+
+    def ensure_lifecycle_service(self) -> CoreLifecycleService:
+        """Return the reusable lifecycle service for this App."""
+        if self.lifecycle_service is None:
+            self.lifecycle_service = CoreLifecycleService(
+                signal_source=self,
+                logger=self.logger,
+            )
+        return self.lifecycle_service
+
+    def initialize_headless_lifecycle(self, preload_llm: bool = True) -> None:
+        """Initialize headless workers and optionally preload the local LLM."""
+        lifecycle_service = self.ensure_lifecycle_service()
+        lifecycle_service.initialize()
+        if preload_llm:
+            lifecycle_service.preload_llm_model()
 
     def _initialize_knowledge_system(self):
         """Initialize the markdown-based knowledge system."""
@@ -461,31 +488,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         and ModelLoadBalancer for model lifecycle management.
         """
         try:
-            # Create WorkerManager - it registers LLM_TEXT_GENERATE_REQUEST_SIGNAL
-            # and lazily creates workers (LLMGenerateWorker, SDWorker, etc.) as needed
-            self._worker_manager = create_worker(WorkerManager)
-
-            # CRITICAL: Eagerly initialize LLM worker so it's ready to receive signals
-            # The worker must be created BEFORE any LLM requests are sent
-            _ = self._worker_manager.llm_generate_worker
-            self.logger.info("LLM worker initialized and ready")
-
-            # Register RAG signal handler for headless mode
-            # In GUI mode, this is handled by WorkerManager
-            self.register(
-                SignalCode.RAG_LOAD_DOCUMENTS,
-                self.on_rag_load_documents_signal,
-            )
-            self.logger.info("RAG signal handler registered")
-
-            # Create ModelLoadBalancer to manage model loading/unloading
-            self._model_load_balancer = ModelLoadBalancer(
-                self._worker_manager,
-                logger=getattr(self, "logger", None),
-                api=self,
-            )
-
-            self.logger.info("Headless workers initialized (LLM)")
+            self.ensure_lifecycle_service().initialize()
         except Exception as e:
             self.logger.error(
                 f"Failed to initialize headless workers: {e}", exc_info=True
@@ -498,115 +501,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Respects AIRUNNER_NO_PRELOAD environment variable to skip preloading.
         Uses AIRUNNER_LLM_MODEL_PATH if provided to override settings.
         """
-        # Check if preloading is disabled
-        if os.environ.get("AIRUNNER_NO_PRELOAD") == "1":
-            self.logger.info(
-                "Model preloading disabled (--no-preload flag or AIRUNNER_NO_PRELOAD=1)"
-            )
-            self.logger.info("Models will be loaded on first request")
-            return
-
-        try:
-            # Log which database we're using and dev/prod mode for debugging
-            try:
-                from airunner.settings import AIRUNNER_DB_URL, DEV_ENV
-
-                self.logger.info(
-                    f"DEBUG: Preload LLM - DB URL: {AIRUNNER_DB_URL} DEV_ENV={DEV_ENV}"
-                )
-            except Exception:
-                # Best-effort; not critical if we can't fetch settings
-                pass
-
-            # Check for CLI-provided model path first
-            cli_model_path = os.environ.get("AIRUNNER_LLM_MODEL_PATH")
-            
-            with session_scope() as session:
-                llm_settings = session.query(LLMGeneratorSettings).first()
-                
-                # Determine model path priority:
-                # 1. CLI-provided path (AIRUNNER_LLM_MODEL_PATH)
-                # 2. Existing settings from database
-                # 3. Default path from environment
-                # 4. AIModels table fallback
-                model_path_to_use = None
-                
-                if cli_model_path:
-                    # CLI path takes highest priority
-                    model_path_to_use = cli_model_path
-                    self.logger.info(f"Using CLI-provided model path: {cli_model_path}")
-                    
-                    # Update or create settings with CLI path
-                    if llm_settings:
-                        llm_settings.model_path = cli_model_path
-                        session.commit()
-                    else:
-                        new_settings = LLMGeneratorSettings()
-                        new_settings.model_path = cli_model_path
-                        new_settings.model_service = ModelService.LOCAL.value
-                        session.add(new_settings)
-                        session.commit()
-                        llm_settings = new_settings
-                elif llm_settings and llm_settings.model_path:
-                    model_path_to_use = llm_settings.model_path
-                else:
-                    # Try to find a default model path
-                    default_model_path = (
-                        os.environ.get("AIRUNNER_DEFAULT_LLM_HF_PATH")
-                        or AIRUNNER_DEFAULT_LLM_HF_PATH
-                    )
-                    # If no default path from env, try to find an installed AI model
-                    # for LLMs in the AIModels table and use that as a fallback.
-                    if not default_model_path:
-                        try:
-                            aimodel = (
-                                session.query(AIModels)
-                                .filter(AIModels.model_type == "llm")
-                                .filter(AIModels.enabled.is_(True))
-                                .order_by(AIModels.is_default.desc())
-                                .first()
-                            )
-                            if aimodel and aimodel.path:
-                                default_model_path = aimodel.path
-                                self.logger.info(
-                                    f"No env default model set; using AIModels path: {default_model_path}"
-                                )
-                        except Exception:
-                            # Not critical if we can't access AIModels
-                            pass
-                    if default_model_path:
-                        self.logger.info(
-                            f"No LLM settings row; creating default settings for model: {default_model_path}"
-                        )
-                        new_settings = LLMGeneratorSettings()
-                        new_settings.model_path = default_model_path
-                        new_settings.model_service = ModelService.LOCAL.value
-                        session.add(new_settings)
-                        session.commit()
-                        model_path_to_use = default_model_path
-
-                if model_path_to_use:
-                    self.logger.info(
-                        f"Pre-loading LLM model: {model_path_to_use}"
-                    )
-                    self.logger.info("This may take 30-60 seconds...")
-
-                    # Emit model load signal - WorkerManager will handle it
-                    self.emit_signal(
-                        SignalCode.LLM_LOAD_SIGNAL,
-                        {"model_path": model_path_to_use},
-                    )
-
-                    # Wait a bit for loading to start
-                    time.sleep(5)
-                    self.logger.info("Model loading initiated in background")
-                else:
-                    self.logger.info(
-                        "No LLM model configured - model will load on first request"
-                    )
-        except Exception as e:
-            self.logger.info(f"Warning: Could not pre-load model: {e}")
-            self.logger.info("Model will load on first request")
+        self.ensure_lifecycle_service().preload_llm_model()
 
     @property
     def rag_manager(self) -> Optional[object]:
