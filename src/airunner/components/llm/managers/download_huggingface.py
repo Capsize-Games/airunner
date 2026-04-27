@@ -8,6 +8,7 @@ from airunner.enums import SignalCode, QueueType
 from airunner.components.application.workers.huggingface_download_worker import (
     HuggingFaceDownloadWorker,
 )
+from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.utils.application import create_worker
 
 
@@ -80,6 +81,15 @@ class DownloadHuggingFaceModel(Worker):
             setup_quantization = False
             quantization_bits = 0
             missing_files = None
+
+        if output_dir is None and model_type in {"llm", "gguf", "ministral3"}:
+            output_dir = LLMProviderConfig.get_local_storage_path(
+                AIRUNNER_BASE_PATH,
+                "local",
+                model_id=(resolved_download or {}).get("model_id"),
+                repo_id=repo_id,
+                prefer_pre_quantized=model_type == "gguf",
+            )
 
         # Cancel any existing download
         if self.download_worker and self.download_worker.running:

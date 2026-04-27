@@ -46,7 +46,14 @@ extras_require = {
         "tomesd==0.1.3",
         "gguf==0.17.1",
     ],
-    "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
+    "llm": [  # GGUF-first local LLM runtime plus fallback providers/tools
+        # Preferred local runtime path for GGUF models.
+        # For GPU on Python 3.13 (no prebuilt cu121 wheels):
+        #   CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"  # RTX 5080 (SM90). Drop the arch flag if unknown.
+        # On Python 3.12, you may use the cu121 wheel instead:
+        #   pip install --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"
+        "llama-cpp-python==0.3.16",
+        # Legacy local transformers path kept for fallback and conversion flows.
         "bitsandbytes==0.45.5",
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",
@@ -55,12 +62,6 @@ extras_require = {
         # Speech-to-text: faster-whisper (CTranslate2-based, ~4x faster than transformers)
         "faster-whisper>=1.0.0",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
-        # GGUF model support via llama.cpp (smaller, faster than BitsAndBytes)
-        # For GPU on Python 3.13 (no prebuilt cu121 wheels):
-        #   CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"  # RTX 5080 (SM90). Drop the arch flag if unknown.
-        # On Python 3.12, you may use the cu121 wheel instead:
-        #   pip install --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"
-        "llama-cpp-python==0.3.16",
         # Summarizations (basic)
         "sumy==0.11.0",
         "sentencepiece==0.2.1",

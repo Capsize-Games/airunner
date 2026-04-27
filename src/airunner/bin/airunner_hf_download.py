@@ -41,8 +41,8 @@ Examples:
 import argparse
 import os
 import sys
-import threading
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional
 
 
 def get_all_available_models() -> Dict[str, List[Dict]]:
@@ -65,7 +65,20 @@ def get_all_available_models() -> Dict[str, List[Dict]]:
         for model_key, info in LLMProviderConfig.LOCAL_MODELS.items():
             if model_key == "custom":
                 continue
+            preferred_download = LLMProviderConfig.resolve_download_target(
+                "local",
+                model_id=model_key,
+                prefer_pre_quantized=True,
+            )
+            default_format = "Transformers"
+            default_runtime = "transformers"
+            preferred_repo_id = info.get("repo_id", "")
+            if preferred_download and preferred_download.get("model_type") == "gguf":
+                default_format = "GGUF"
+                default_runtime = "llama.cpp"
+                preferred_repo_id = preferred_download.get("repo_id", preferred_repo_id)
             models["llm"].append({
+                "model_id": model_key,
                 "key": model_key,
                 "name": info.get("name", model_key),
                 "repo_id": info.get("repo_id", ""),
@@ -75,6 +88,9 @@ def get_all_available_models() -> Dict[str, List[Dict]]:
                 "has_gguf": bool(info.get("gguf_repo_id")),
                 "gguf_repo_id": info.get("gguf_repo_id", ""),
                 "gguf_filename": info.get("gguf_filename", ""),
+                "default_format": default_format,
+                "default_runtime": default_runtime,
+                "preferred_repo_id": preferred_repo_id,
                 "type": "llm",
             })
     except ImportError:
@@ -174,8 +190,14 @@ def find_model(identifier: str, models: Dict[str, List[Dict]]) -> Optional[Dict]
             # Match by key
             if model["key"].lower() == identifier_lower:
                 return model
+            # Match by canonical model id
+            if model.get("model_id", "").lower() == identifier_lower:
+                return model
             # Match by repo_id (case-insensitive)
             if model["repo_id"].lower() == identifier_lower:
+                return model
+            # Match by GGUF repo_id (case-insensitive)
+            if model.get("gguf_repo_id", "").lower() == identifier_lower:
                 return model
             # Match by name
             if model["name"].lower() == identifier_lower:
@@ -240,6 +262,10 @@ def print_model_list(models: Dict[str, List[Dict]], model_type: Optional[str] = 
                 specs.append(vram_info)
             if ctx_info:
                 specs.append(ctx_info)
+            default_runtime = model.get("default_runtime")
+            default_format = model.get("default_format")
+            if default_format and default_runtime:
+                specs.append(f"Default: {default_format}/{default_runtime}")
             if specs:
                 print(f"    {dim}{' | '.join(specs)}{reset}")
             
@@ -267,6 +293,7 @@ def download_model(
     """
     from huggingface_hub import hf_hub_download, snapshot_download
     from huggingface_hub.utils import HfHubHTTPError
+    from airunner.components.llm.config.provider_config import LLMProviderConfig
     
     model_type = model_info.get("type", "llm")
     repo_id = model_info["repo_id"]
@@ -274,31 +301,66 @@ def download_model(
     
     # For LLMs, prefer GGUF by default if available
     gguf_filename = None
-    if model_type == "llm" and use_gguf and model_info.get("has_gguf"):
-        repo_id = model_info["gguf_repo_id"]
-        gguf_filename = model_info["gguf_filename"]
-        model_name = f"{model_name} (GGUF: {gguf_filename})"
-    elif model_type == "llm" and use_gguf and not model_info.get("has_gguf"):
-        print(f"\n⚠️  Model '{model_name}' does not have a GGUF variant, downloading full model...")
+    resolved_model_id = None
+    if model_type == "llm":
+        resolved_model_id = model_info.get("model_id")
+        if not resolved_model_id:
+            resolved_model_id = LLMProviderConfig.get_model_id_for_repo_id(
+                "local",
+                repo_id,
+            )
+        resolved_download = LLMProviderConfig.resolve_download_target(
+            "local",
+            model_id=resolved_model_id,
+            repo_id=repo_id,
+            prefer_pre_quantized=use_gguf,
+        )
+        if resolved_download:
+            repo_id = resolved_download["repo_id"]
+            gguf_filename = resolved_download.get("gguf_filename")
+            if resolved_download.get("model_type") == "gguf" and gguf_filename:
+                model_name = f"{model_name} (GGUF: {gguf_filename})"
+            elif use_gguf:
+                print(
+                    f"\n⚠️  Model '{model_name}' does not have a GGUF variant, "
+                    "downloading full model..."
+                )
     
     # Determine output directory
     if output_dir is None:
-        from airunner.settings import MODELS_DIR
+        from airunner.settings import AIRUNNER_BASE_PATH, MODELS_DIR
         if model_type == "llm":
-            output_dir = os.path.join(MODELS_DIR, "text/models/llm/causallm")
+            if resolved_model_id:
+                output_dir = LLMProviderConfig.get_local_storage_path(
+                    AIRUNNER_BASE_PATH,
+                    "local",
+                    model_id=resolved_model_id,
+                    prefer_pre_quantized=use_gguf,
+                )
+            else:
+                output_dir = os.path.join(
+                    MODELS_DIR,
+                    "text/models/llm/causallm",
+                    model_info["name"],
+                )
         elif model_type == "art":
-            output_dir = os.path.join(MODELS_DIR, "art/models")
+            output_dir = os.path.join(MODELS_DIR, "art/models", model_info["name"])
         elif model_type == "tts":
-            output_dir = os.path.join(MODELS_DIR, "text/models/tts")
+            output_dir = os.path.join(MODELS_DIR, "text/models/tts", model_info["name"])
         elif model_type == "stt":
-            output_dir = os.path.join(MODELS_DIR, "text/models/stt")
+            output_dir = os.path.join(MODELS_DIR, "text/models/stt", model_info["name"])
         elif model_type == "embedding":
-            output_dir = os.path.join(MODELS_DIR, "text/models/llm/embedding")
+            output_dir = os.path.join(
+                MODELS_DIR,
+                "text/models/llm/embedding",
+                model_info["name"],
+            )
         else:
-            output_dir = os.path.join(MODELS_DIR, "models")
-    
-    # Create model subdirectory
-    model_output_dir = os.path.join(output_dir, model_info["name"])
+            output_dir = os.path.join(MODELS_DIR, "models", model_info["name"])
+    else:
+        output_dir = os.path.join(output_dir, model_info["name"])
+
+    model_output_dir = output_dir
     os.makedirs(model_output_dir, exist_ok=True)
     
     print(f"\n📦 Downloading: {model_name}")
@@ -396,25 +458,43 @@ def get_downloaded_models() -> Dict[str, List[Dict]]:
     if os.path.exists(llm_dir):
         for name in os.listdir(llm_dir):
             model_path = os.path.join(llm_dir, name)
-            if os.path.isdir(model_path):
-                # Check for GGUF files
-                gguf_files = [f for f in os.listdir(model_path) if f.endswith('.gguf')]
-                safetensor_files = [f for f in os.listdir(model_path) if f.endswith('.safetensors')]
-                
-                # Calculate size
+            if os.path.isfile(model_path) and model_path.endswith(".gguf"):
+                downloaded["llm"].append({
+                    "name": Path(model_path).stem,
+                    "path": model_path,
+                    "size_gb": os.path.getsize(model_path) / (1024 ** 3),
+                    "format": "GGUF",
+                    "files": 1,
+                })
+                continue
+
+            if not os.path.isdir(model_path):
+                continue
+
+            gguf_files = sorted(Path(model_path).rglob("*.gguf"))
+            if gguf_files:
+                for gguf_file in gguf_files:
+                    downloaded["llm"].append({
+                        "name": gguf_file.stem,
+                        "path": str(gguf_file),
+                        "size_gb": gguf_file.stat().st_size / (1024 ** 3),
+                        "format": "GGUF",
+                        "files": 1,
+                    })
+                continue
+
+            safetensor_files = list(Path(model_path).glob("*.safetensors"))
+            if safetensor_files or (Path(model_path) / "config.json").exists():
                 size_bytes = sum(
                     os.path.getsize(os.path.join(model_path, f))
                     for f in os.listdir(model_path)
                     if os.path.isfile(os.path.join(model_path, f))
                 )
-                size_gb = size_bytes / (1024 ** 3)
-                
-                model_type = "GGUF" if gguf_files else ("Safetensors" if safetensor_files else "Unknown")
                 downloaded["llm"].append({
                     "name": name,
                     "path": model_path,
-                    "size_gb": size_gb,
-                    "format": model_type,
+                    "size_gb": size_bytes / (1024 ** 3),
+                    "format": "Safetensors",
                     "files": len(os.listdir(model_path)),
                 })
     
@@ -567,6 +647,8 @@ def delete_model(model_name: str, force: bool = False) -> bool:
         True if deletion succeeded, False otherwise
     """
     import shutil
+
+    from airunner.settings import MODELS_DIR
     
     downloaded = get_downloaded_models()
     
@@ -607,7 +689,14 @@ def delete_model(model_name: str, force: bool = False) -> bool:
         print("\n(Force mode: skipping confirmation)")
     
     try:
-        shutil.rmtree(model_path)
+        if os.path.isfile(model_path):
+            os.remove(model_path)
+            llm_root = os.path.join(MODELS_DIR, "text/models/llm/causallm")
+            parent_dir = os.path.dirname(model_path)
+            if parent_dir.startswith(llm_root) and not os.listdir(parent_dir):
+                os.rmdir(parent_dir)
+        else:
+            shutil.rmtree(model_path)
         print(f"\n✅ Successfully deleted: {found_model['name']} ({size_gb:.1f}GB freed)")
         return True
     except Exception as e:

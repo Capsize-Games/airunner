@@ -168,6 +168,18 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
 
         # Handle GGUF downloads specially - just download the single file
         if model_type == "gguf" and gguf_filename:
+            if not output_dir:
+                from airunner.components.llm.config.provider_config import (
+                    LLMProviderConfig,
+                )
+                from airunner.settings import AIRUNNER_BASE_PATH
+
+                output_dir = LLMProviderConfig.get_local_storage_path(
+                    AIRUNNER_BASE_PATH,
+                    "local",
+                    repo_id=repo_id,
+                    prefer_pre_quantized=True,
+                )
             self._download_gguf_model(repo_id, output_dir, gguf_filename)
             return
 
