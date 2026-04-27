@@ -4,6 +4,7 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
 import threading
+import uuid
 from typing import Optional, List
 
 
@@ -62,14 +63,18 @@ class LLMAPIService(APIServiceBase):
             )
         llm_request.do_tts_reply = do_tts_reply
 
+        resolved_request_id = request_id or str(uuid.uuid4())
+
         data = {
             "llm_request": True,
+            "request_id": resolved_request_id,
             "request_data": {
                 "action": action,
                 "prompt": prompt,
                 "command": command,
                 "llm_request": llm_request,
                 "do_tts_reply": do_tts_reply,
+                "request_id": resolved_request_id,
             },
         }
 
@@ -82,23 +87,19 @@ class LLMAPIService(APIServiceBase):
         if enable_consciousness is not None:
             data["enable_consciousness"] = enable_consciousness
 
-        if request_id is not None:
-            data["request_id"] = request_id
+        if callback:
+            from airunner.utils.application.signal_mediator import (
+                SignalMediator,
+            )
 
-            # Register pending request if callback provided
-            if callback:
-                from airunner.utils.application.signal_mediator import (
-                    SignalMediator,
-                )
-
-                mediator = SignalMediator()
-                mediator.register_pending_request(request_id, callback)
+            mediator = SignalMediator()
+            mediator.register_pending_request(resolved_request_id, callback)
 
         if self._send_request_via_daemon(
             prompt,
             llm_request,
             action,
-            request_id,
+            resolved_request_id,
             search_hints,
             conversation_id,
             node_id,
