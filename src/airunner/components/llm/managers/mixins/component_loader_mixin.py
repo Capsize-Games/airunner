@@ -23,6 +23,44 @@ if TYPE_CHECKING:
 class ComponentLoaderMixin:
     """Mixin for LLM component loading and unloading functionality."""
 
+    def _local_execution_component_state(self) -> tuple[bool, bool]:
+        """Return whether local execution components are available.
+
+        Local HuggingFace execution now treats the chat adapter as the primary
+        execution owner after construction. That lets orchestration code keep
+        working through the chat-model boundary without retaining direct model
+        and tokenizer ownership.
+        """
+        chat_model = getattr(self, "_chat_model", None)
+        has_model = self._model is not None or getattr(
+            chat_model,
+            "model",
+            None,
+        ) is not None
+        has_tokenizer = self._tokenizer is not None or getattr(
+            chat_model,
+            "tokenizer",
+            None,
+        ) is not None
+        return has_model, has_tokenizer
+
+    def _release_local_execution_ownership(self) -> None:
+        """Let the chat adapter own local execution components.
+
+        The manager still orchestrates prompts, tools, workflows, and RAG, but
+        the chat adapter becomes the long-lived owner of the local model and
+        tokenizer once it has been constructed successfully.
+        """
+        if not getattr(self.llm_settings, "use_local_llm", False):
+            return
+        if self._chat_model is None:
+            return
+
+        if getattr(self._chat_model, "model", None) is self._model:
+            self._model = None
+        if getattr(self._chat_model, "tokenizer", None) is self._tokenizer:
+            self._tokenizer = None
+
     def _load_chat_model(self) -> None:
         """Create the appropriate LangChain ChatModel based on settings.
 
@@ -44,6 +82,7 @@ class ComponentLoaderMixin:
                 chatbot=getattr(self, "chatbot", None),
                 model_path=self._current_model_path,
             )
+            self._release_local_execution_ownership()
             self.logger.info(
                 f"ChatModel created: {type(self._chat_model).__name__}"
             )

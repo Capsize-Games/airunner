@@ -1,6 +1,7 @@
 """Factory for creating LangChain ChatModel instances based on AI Runner settings."""
 
 import os
+from types import SimpleNamespace
 from typing import Any, Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -272,6 +273,29 @@ class ChatModelFactory:
             )
 
     @staticmethod
+    def _load_local_execution_components(
+        *,
+        llm_settings: Any,
+        model_path: Optional[str],
+    ) -> tuple[Any, Any]:
+        """Load local transformers components behind the factory boundary."""
+        from airunner.components.llm.managers.llm_model_manager import (
+            LLMModelManager,
+        )
+
+        loader = LLMModelManager()
+        loader.llm_settings = llm_settings
+        loader.llm_request = SimpleNamespace(model=model_path)
+        loader._current_model_path = model_path
+        loader._load_local_llm_components()
+
+        model = loader._model
+        tokenizer = loader._tokenizer
+        loader._model = None
+        loader._tokenizer = None
+        return model, tokenizer
+
+    @staticmethod
     def create_from_settings(
         llm_settings: Any,
         model: Optional[Any] = None,
@@ -420,7 +444,12 @@ class ChatModelFactory:
         # Local HuggingFace model
         if getattr(llm_settings, "use_local_llm", True):
             if not model:
-                raise ValueError("Local LLM mode requires pre-loaded model")
+                model, tokenizer = ChatModelFactory._load_local_execution_components(
+                    llm_settings=llm_settings,
+                    model_path=model_path,
+                )
+            if not model:
+                raise ValueError("Local LLM mode requires a loadable model")
 
             # Tokenizer is optional for Mistral3 models (they use mistral_common)
             # For other models, tokenizer is required

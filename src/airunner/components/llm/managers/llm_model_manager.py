@@ -196,8 +196,6 @@ class LLMModelManager(
         if self.llm_settings.use_local_llm:
             self._send_quantization_info()
 
-        self._load_local_llm_components()
-
         self._load_chat_model()
         self.logger.info(
             f"[LLM LOAD] Chat model loaded: {self._chat_model is not None}"

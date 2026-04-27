@@ -658,11 +658,18 @@ class ValidationMixin:
                 self._chat_model is not None
                 and self._workflow_manager is not None
             )
+
+        has_model = self._model is not None
+        has_tokenizer = self._tokenizer is not None
+        if hasattr(self, "_local_execution_component_state"):
+            has_model, has_tokenizer = self._local_execution_component_state()
+        if self._is_mistral3_model():
+            has_tokenizer = True
         
         # Standard HuggingFace mode - need all components
         return (
-            self._model is not None
-            and self._tokenizer is not None
+            has_model
+            and has_tokenizer
             and self._chat_model is not None
             and self._workflow_manager is not None
         )

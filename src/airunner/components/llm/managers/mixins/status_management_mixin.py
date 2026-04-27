@@ -132,11 +132,16 @@ class StatusManagementMixin:
             is_gguf = getattr(self, '_is_gguf_quantization_selected', lambda: False)()
             
             if not is_gguf:
-                if not self._model:
+                has_model = self._model is not None
+                has_tokenizer = self._tokenizer is not None
+                if hasattr(self, "_local_execution_component_state"):
+                    has_model, has_tokenizer = self._local_execution_component_state()
+
+                if not has_model:
                     self.logger.error("Model failed to load")
 
                 is_mistral3 = self._is_mistral3_model()
-                if not self._tokenizer and not is_mistral3:
+                if not has_tokenizer and not is_mistral3:
                     self.logger.error("Tokenizer failed to load")
 
     def _update_model_status(self: "LLMModelManager") -> None:
