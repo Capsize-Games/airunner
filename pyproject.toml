@@ -13,6 +13,7 @@ markers = [
     "eval: evaluation tests for LLM/model quality testing",
     "streaming: tests for streaming response functionality",
     "llm_runtime_smoke: safe llama.cpp runtime smoke tests using doubles only",
+    "stt_runtime_smoke: safe STT runtime smoke tests using doubles only",
     "llm_required: tests that require an LLM model to be loaded",
     "benchmark: tests using standard benchmark datasets (GSM8K, MATH, HumanEval)",
     "code: tests for code generation capabilities",

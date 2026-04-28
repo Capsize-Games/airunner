@@ -6,6 +6,7 @@ This script provides a unified interface for running different test suites:
 - Unit tests: Component-level tests in src/airunner/components/*/tests/
 - Eval tests: Evaluation framework tests in src/airunner/components/llm/tests/eval/
 - LLM runtime smoke tests: safe route/runtime checks with no app startup
+- STT runtime smoke tests: safe route/worker checks with no app startup
 
 Usage:
     python run_tests.py --unit              # Run unit tests only
@@ -14,6 +15,7 @@ Usage:
     python run_tests.py --unit --verbose    # Run unit tests with verbose output
     python run_tests.py --component llm     # Run tests for specific component
     python run_tests.py --llm-runtime-smoke # Run safe LLM runtime smoke tests
+    python run_tests.py --stt-runtime-smoke # Run safe STT runtime smoke tests
 
 Note: Eval tests use pytest fixtures to automatically manage the headless server.
       The server will start/stop automatically when tests run.
@@ -222,6 +224,25 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
     return run_command(cmd, "LLM runtime smoke tests")
 
 
+def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
+    """Run the safe STT runtime smoke suite."""
+    test_path = Path("src/airunner/api/tests")
+    cmd = [
+        "pytest",
+        str(test_path),
+        "-m",
+        "stt_runtime_smoke",
+    ]
+
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.append("--tb=short")
+
+    cmd.extend(["--color=yes", "-ra"])
+    return run_command(cmd, "STT runtime smoke tests")
+
+
 def main():
     """Main entry point for test runner."""
     parser = argparse.ArgumentParser(
@@ -232,6 +253,7 @@ Examples:
   %(prog)s --unit                    Run all unit tests
     %(prog)s --eval                    Run eval tests only
     %(prog)s --llm-runtime-smoke       Run safe llama.cpp runtime smoke tests
+        %(prog)s --stt-runtime-smoke       Run safe STT runtime smoke tests
   %(prog)s --eval --model /path/to/model    Test with specific model
   %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
   %(prog)s --eval --skip-slow        Run only fast eval tests
@@ -255,6 +277,12 @@ Examples:
         "--llm-runtime-smoke",
         action="store_true",
         help="Run safe llama.cpp runtime smoke tests",
+    )
+
+    parser.add_argument(
+        "--stt-runtime-smoke",
+        action="store_true",
+        help="Run safe STT runtime smoke tests",
     )
 
     parser.add_argument(
@@ -294,7 +322,13 @@ Examples:
     args = parser.parse_args()
 
     # Default to running unit tests if no flags specified
-    if not (args.unit or args.eval or args.llm_runtime_smoke or args.all):
+    if not (
+        args.unit
+        or args.eval
+        or args.llm_runtime_smoke
+        or args.stt_runtime_smoke
+        or args.all
+    ):
         args.unit = True
 
     exit_codes = []
@@ -308,6 +342,10 @@ Examples:
 
     if args.llm_runtime_smoke or args.all:
         exit_code = run_llm_runtime_smoke_tests(verbose=args.verbose)
+        exit_codes.append(exit_code)
+
+    if args.stt_runtime_smoke or args.all:
+        exit_code = run_stt_runtime_smoke_tests(verbose=args.verbose)
         exit_codes.append(exit_code)
 
     # Run eval tests
