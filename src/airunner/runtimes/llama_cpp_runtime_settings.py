@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner.runtimes.bundled_runtime_paths import (
+    resolve_runtime_executable,
+)
 from airunner.runtime_layout import resolve_runtime_bind_host
 from airunner.settings import AIRUNNER_BASE_PATH
 
@@ -192,7 +195,7 @@ def resolve_llama_cpp_runtime_settings() -> LlamaCppRuntimeSettings:
     default_ctx = _context_length(model_id or "")
 
     return LlamaCppRuntimeSettings(
-        executable=os.environ.get(
+        executable=resolve_runtime_executable(
             "AIRUNNER_LLAMA_SERVER_BIN",
             "llama-server",
         ),

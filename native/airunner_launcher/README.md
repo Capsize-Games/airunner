@@ -28,7 +28,6 @@ It does not yet:
 - bundle embedded Python
 - supervise sidecars directly from C++
 - produce Linux or Windows installer artifacts
-- vendored-build `llama.cpp` or `whisper.cpp`
 
 Those remain tracked in issue #82 and its follow-on child issues.
 
@@ -59,6 +58,12 @@ That flow uses the repository `venv` when present and sets `PYTHONPATH` to
 
 Production mode expects a manifest file with relative runtime paths.
 See `runtime_manifest.example.env` for the current contract.
+
+Issue #85 adds a pinned sidecar build flow in
+`native/runtime_sidecars/` and `scripts/build_runtime_sidecars.sh`.
+That script emits bundle-ready `llama-server` and `whisper-server`
+artifacts plus a platform-specific runtime manifest under
+`share/airunner/runtime_manifest.env`.
 
 For the full launcher contract, including mode resolution, required and
 optional manifest keys, exported environment variables, and failure modes, see

@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+from airunner.runtimes.bundled_runtime_paths import (
+    resolve_runtime_executable,
+)
 from airunner.runtime_layout import resolve_runtime_bind_host
 from airunner.settings import AIRUNNER_BASE_PATH
 
@@ -150,7 +153,7 @@ def resolve_whisper_cpp_runtime_settings() -> WhisperCppRuntimeSettings:
     cpu_count = os.cpu_count() or 4
 
     return WhisperCppRuntimeSettings(
-        executable=os.environ.get(
+        executable=resolve_runtime_executable(
             "AIRUNNER_WHISPER_SERVER_BIN",
             "whisper-server",
         ),

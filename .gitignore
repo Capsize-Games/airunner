@@ -93,5 +93,6 @@ src/airunner/components/ui_build_marker
 reports/*
 scripts/*
 !scripts/build_airunner_launcher.sh
+!scripts/build_runtime_sidecars.sh
 !scripts/run_airunner_dev.sh
 !scripts/security_audit.sh
