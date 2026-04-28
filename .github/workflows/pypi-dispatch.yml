@@ -1,37 +1,118 @@
-name: PyPi
+name: PyPI And Linux Bundles
 
 on:
   release:
-    types: [ published ]
+    types: [published]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
-  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
-  CR_PAT: ${{ secrets.CR_PAT }}
-  CR_REPO: ${{ secrets.CR_REPO }}
-  CR_USERNAME: ${{ secrets.CR_USERNAME }}
+  PYTHON_VERSION: "3.13"
 
 jobs:
-  buildAndDeployPyPi:
+  build-python-package:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install build
+
       - name: Build package
         run: python -m build
+
+      - name: Upload Python distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+
       - name: Publish package
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  build-linux-bundle-layouts:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        bundle:
+          - name: headless
+            profiles: core,llm-native,stt-native,art-python,tts-python
+            launchers: airunner-headless
+          - name: desktop
+            profiles: core,llm-native,stt-native,art-python,tts-python,gui,computer-use
+            launchers: airunner,airunner-headless
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Linux bundle layout archive
+        run: |
+          bundle_dir="bundle/${{ matrix.bundle.name }}"
+          mkdir -p "$bundle_dir/deployment"
+          cp -R deployment/systemd "$bundle_dir/deployment/"
+          cp install.sh README.md pyproject.toml setup.py "$bundle_dir/"
+          cat > "$bundle_dir/BUNDLE_LAYOUT.json" <<EOF
+          {
+            "bundle": "${{ matrix.bundle.name }}",
+            "profiles": "${{ matrix.bundle.profiles }}",
+            "launchers": "${{ matrix.bundle.launchers }}",
+            "runtime_root": "~/.local/share/airunner/runtime",
+            "model_root": "~/.local/share/airunner/models",
+            "service_template": "deployment/systemd/airunner-headless.service"
+          }
+          EOF
+          mkdir -p dist
+          tar -czf \
+            "dist/airunner-linux-${{ matrix.bundle.name }}-bundle-layout.tar.gz" \
+            -C "$bundle_dir" .
+
+      - name: Upload Linux bundle layout artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle-${{ matrix.bundle.name }}
+          path: dist/airunner-linux-${{ matrix.bundle.name }}-bundle-layout.tar.gz
+
+  publish-release-assets:
+    if: github.event_name == 'release'
+    needs:
+      - build-python-package
+      - build-linux-bundle-layouts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Python distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: release-assets/python-dist
+
+      - name: Download Linux bundle layout artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: linux-bundle-*
+          path: release-assets/linux-bundles
+          merge-multiple: true
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/python-dist/*
+            release-assets/linux-bundles/*.tar.gz
+          overwrite_files: true
