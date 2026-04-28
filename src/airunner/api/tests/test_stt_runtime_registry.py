@@ -34,7 +34,7 @@ class FakeRegistry:
         self.client = client
         self.calls = []
 
-    def resolve(self, runtime, provider, deployment_mode):
+    def resolve(self, runtime, provider, deployment_mode="default"):
         self.calls.append((runtime, provider, deployment_mode))
         return self.client
 
@@ -65,6 +65,23 @@ def test_stt_endpoint_uses_runtime_registry_when_available():
 
     assert response.text == "runtime transcript"
     assert response.language == "en"
-    assert registry.calls == [(RuntimeKind.STT, "local", "local_fallback")]
+    assert registry.calls == [(RuntimeKind.STT, "local", "default")]
     assert client.requests[0].payload["mime_type"] == "audio/wav"
     assert client.requests[0].runtime == RuntimeKind.STT
+
+
+def test_stt_endpoint_requires_runtime_registry():
+    from fastapi import HTTPException
+
+    from airunner.api.routes.stt import transcribe_audio
+
+    fake_request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
+    audio = FakeUploadFile("clip.wav", "audio/wav", b"fake-audio")
+
+    try:
+        asyncio.run(transcribe_audio(audio=audio, req=fake_request))
+    except HTTPException as exc:
+        assert exc.status_code == 503
+        assert exc.detail == "STT runtime unavailable"
+    else:
+        raise AssertionError("Expected HTTPException when runtime is missing")

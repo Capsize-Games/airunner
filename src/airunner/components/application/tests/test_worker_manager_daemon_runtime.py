@@ -68,3 +68,39 @@ def test_sd_unload_signal_uses_daemon_runtime():
             {"model": ModelType.SD, "status": ModelStatus.UNLOADED},
         )
     ]
+
+
+def test_stt_load_signal_uses_daemon_runtime():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+
+    WorkerManager.on_stt_load_signal(manager, {})
+
+    assert client.calls == [("load", "stt")]
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.STT, "status": ModelStatus.LOADING},
+        ),
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.STT, "status": ModelStatus.LOADED},
+        ),
+        (SignalCode.STT_START_CAPTURE_SIGNAL, {}),
+    ]
+
+
+def test_stt_unload_signal_uses_daemon_runtime():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+
+    WorkerManager.on_stt_unload_signal(manager, {})
+
+    assert client.calls == [("unload", "stt")]
+    assert emitted == [
+        (SignalCode.STT_STOP_CAPTURE_SIGNAL, {}),
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.STT, "status": ModelStatus.UNLOADED},
+        )
+    ]

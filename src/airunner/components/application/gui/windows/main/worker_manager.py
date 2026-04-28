@@ -447,7 +447,15 @@ class WorkerManager(Worker):
     def on_stt_load_signal(self, data: Dict):
         from airunner.enums import ModelType
 
-        if self._control_daemon_runtime("stt", "load", ModelType.STT):
+        if self._control_daemon_runtime(
+            "stt",
+            "load",
+            ModelType.STT,
+            after_success=lambda: self.emit_signal(
+                SignalCode.STT_START_CAPTURE_SIGNAL,
+                data,
+            ),
+        ):
             return
         self.add_to_queue(
             {
@@ -630,6 +638,8 @@ class WorkerManager(Worker):
         runtime_name: str,
         action: str,
         model_type,
+        before_request=None,
+        after_success=None,
     ) -> bool:
         """Translate a GUI lifecycle request into one daemon runtime action."""
         from airunner.enums import ModelStatus, SignalCode
@@ -637,6 +647,8 @@ class WorkerManager(Worker):
         client = self._daemon_client()
         if client is None:
             return False
+        if before_request is not None:
+            before_request()
         if action == "load":
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
@@ -666,6 +678,8 @@ class WorkerManager(Worker):
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             {"model": model_type, "status": status},
         )
+        if after_success is not None:
+            after_success()
         return True
 
     def on_huggingface_download_complete(self, data: Dict):
@@ -1393,7 +1407,15 @@ class WorkerManager(Worker):
     def on_stt_unload_signal(self, data):
         from airunner.enums import ModelType
 
-        if self._control_daemon_runtime("stt", "unload", ModelType.STT):
+        if self._control_daemon_runtime(
+            "stt",
+            "unload",
+            ModelType.STT,
+            before_request=lambda: self.emit_signal(
+                SignalCode.STT_STOP_CAPTURE_SIGNAL,
+                data,
+            ),
+        ):
             return
         if self._stt_audio_processor_worker is not None:
             self.stt_audio_processor_worker.on_stt_unload_signal(data)

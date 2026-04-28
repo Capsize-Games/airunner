@@ -132,6 +132,29 @@ class GuiDaemonClient:
         )
         return response.json()
 
+    def transcribe_audio(
+        self,
+        audio_bytes: bytes,
+        *,
+        mime_type: str = "application/octet-stream",
+        auto_start: bool = True,
+    ) -> Dict[str, Any]:
+        """Submit one STT transcription request through the daemon API."""
+        response = self._request(
+            "POST",
+            "/api/v1/stt/transcribe",
+            files={
+                "audio": (
+                    "audio.bin",
+                    audio_bytes,
+                    mime_type,
+                )
+            },
+            auto_start=auto_start,
+            timeout_seconds=120.0,
+        )
+        return response.json()
+
     def load_runtime(
         self,
         runtime_name: str,
@@ -250,9 +273,11 @@ class GuiDaemonClient:
         path: str,
         *,
         json_payload: Optional[Dict[str, Any]] = None,
+        files: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
         stream: bool = False,
         auto_start: bool = True,
+        timeout_seconds: Optional[float] = None,
     ) -> requests.Response:
         """Perform an HTTP request against the daemon."""
         if not self.ensure_connected(auto_start=auto_start):
@@ -263,9 +288,10 @@ class GuiDaemonClient:
                 method,
                 f"{self.base_url}{path}",
                 json=json_payload,
+                files=files,
                 headers=headers,
                 stream=stream,
-                timeout=self._request_timeout_seconds,
+                timeout=timeout_seconds or self._request_timeout_seconds,
             )
             response.raise_for_status()
             self._set_state(DaemonConnectionState.CONNECTED, "connected")

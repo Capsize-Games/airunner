@@ -77,6 +77,8 @@ class FakeSession:
             return FakeResponse(payload={"status": "ok"})
         if url.endswith("/api/v1/daemon/runtimes/llm/unload"):
             return FakeResponse(payload={"status": "ok"})
+        if url.endswith("/api/v1/stt/transcribe"):
+            return FakeResponse(payload={"text": "hello", "language": "en"})
         if url.endswith("/llm/generate"):
             return FakeResponse(lines=self.stream_lines)
         if url.endswith("/admin/interrupt"):
@@ -205,3 +207,23 @@ def test_runtime_control_posts_expected_payload():
     assert load_call[1].endswith("/api/v1/daemon/runtimes/llm/load")
     assert load_call[2]["json"]["request_id"] == "req-1"
     assert unload_call[1].endswith("/api/v1/daemon/runtimes/llm/unload")
+
+
+def test_transcribe_audio_posts_multipart_request():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    response = client.transcribe_audio(b"pcm", mime_type="audio/wav")
+
+    assert response == {"text": "hello", "language": "en"}
+    method, url, kwargs = session.calls[-1]
+    assert method == "POST"
+    assert url.endswith("/api/v1/stt/transcribe")
+    file_info = kwargs["files"]["audio"]
+    assert file_info[0] == "audio.bin"
+    assert file_info[1] == b"pcm"
+    assert file_info[2] == "audio/wav"

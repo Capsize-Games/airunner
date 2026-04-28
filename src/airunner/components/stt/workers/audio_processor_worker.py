@@ -31,6 +31,13 @@ class AudioProcessorWorker(Worker):
         """Create the local STT executor used by the processor worker."""
         return WhisperLocalExecutor()
 
+    def _daemon_client(self):
+        """Return the GUI daemon client when STT is running remotely."""
+        api = getattr(self, "api", None)
+        if api is None or getattr(api, "headless", False):
+            return None
+        return getattr(api, "daemon_client", None)
+
     def on_stt_load_signal(self, data: dict = None):
         if self._executor is None:
             self._initialize_stt_handler()
@@ -50,11 +57,15 @@ class AudioProcessorWorker(Worker):
         self._stt_load()
 
     def _stt_load(self):
+        if self._daemon_client() is not None:
+            return
         if self._executor:
             self._executor.load()
             self.emit_signal(SignalCode.STT_START_CAPTURE_SIGNAL)
 
     def _stt_unload(self):
+        if self._daemon_client() is not None:
+            return
         self.emit_signal(SignalCode.STT_STOP_CAPTURE_SIGNAL)
         if self._executor:
             self._executor.unload()
@@ -68,6 +79,15 @@ class AudioProcessorWorker(Worker):
             f"handle_message called, _executor={self._executor}, "
             f"audio_data keys: {audio_data.keys() if audio_data else 'None'}"
         )
+        daemon_client = self._daemon_client()
+        if daemon_client is not None:
+            transcription = self._transcribe_via_daemon(
+                daemon_client,
+                audio_data,
+            )
+            if transcription:
+                self.api.stt.audio_processor_response(transcription)
+            return
         if self._executor is None:
             self.logger.warning("STT handler not initialized, skipping audio")
             return
@@ -78,6 +98,24 @@ class AudioProcessorWorker(Worker):
         transcription = self._executor.transcribe(audio_data)
         if transcription:
             self.api.stt.audio_processor_response(transcription)
+
+    def _transcribe_via_daemon(self, daemon_client, audio_data) -> str:
+        """Send one live-capture payload through the daemon STT route."""
+        item = audio_data.get("item") if audio_data else None
+        if not item:
+            return ""
+        try:
+            response = daemon_client.transcribe_audio(
+                item,
+                mime_type=audio_data.get(
+                    "mime_type",
+                    "application/octet-stream",
+                ),
+            )
+        except RuntimeError as exc:
+            self.logger.warning("Daemon STT request failed: %s", exc)
+            return ""
+        return str(response.get("text", "") or "")
 
     def update_properties(self):
         self.fs = self.stt_settings.fs
