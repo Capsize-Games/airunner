@@ -9,16 +9,21 @@ from airunner.components.art.utils.model_file_checker import ModelFileChecker
 class TestModelFileChecker:
     """Test suite for ModelFileChecker utility."""
 
+    _ART_VERSION = "Flux.1 S"
+    _LLM_MODEL_ID = "Qwen/Qwen3-8B-GGUF"
+    _STT_MODEL_ID = "Systran/faster-distil-whisper-large-v3"
+    _TTS_MODEL_ID = "myshell-ai/MeloTTS-English"
+
     def test_get_required_files_art_model(self):
         """Test getting required files for art models."""
         files = ModelFileChecker.get_required_files(
             model_type="art",
-            model_id="SD 1.5",
-            version="SD 1.5",
+            model_id=self._ART_VERSION,
+            version=self._ART_VERSION,
             pipeline_action="txt2img",
         )
         assert files is not None
-        assert isinstance(files, list)
+        assert isinstance(files, dict)
         assert "model_index.json" in files
         assert "scheduler/scheduler_config.json" in files
 
@@ -26,28 +31,28 @@ class TestModelFileChecker:
         """Test getting required files for LLM models."""
         files = ModelFileChecker.get_required_files(
             model_type="llm",
-            model_id="meta-llama/Llama-3.1-8B-Instruct",
+            model_id=self._LLM_MODEL_ID,
         )
         assert files is not None
-        assert isinstance(files, list)
-        assert "config.json" in files
+        assert isinstance(files, dict)
+        assert "Qwen3-8B-Q4_K_M.gguf" in files
 
     def test_get_required_files_stt_model(self):
         """Test getting required files for STT models."""
         files = ModelFileChecker.get_required_files(
             model_type="stt",
-            model_id="openai/whisper-tiny",
+            model_id=self._STT_MODEL_ID,
         )
         assert files is not None
         assert isinstance(files, list)
         assert "config.json" in files
-        assert "model.safetensors" in files
+        assert "model.bin" in files
 
     def test_get_required_files_tts_openvoice(self):
         """Test getting required files for OpenVoice TTS models."""
         files = ModelFileChecker.get_required_files(
             model_type="tts_openvoice",
-            model_id="myshell-ai/MeloTTS-English",
+            model_id=self._TTS_MODEL_ID,
         )
         assert files is not None
         assert isinstance(files, list)
@@ -66,43 +71,44 @@ class TestModelFileChecker:
         """Test checking files when all are present."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create required files
-            Path(tmpdir, "config.json").touch()
-            Path(tmpdir, "model.safetensors").touch()
+            required_files = ModelFileChecker.get_required_files(
+                model_type="stt",
+                model_id=self._STT_MODEL_ID,
+            )
+            for file_path in required_files:
+                Path(tmpdir, file_path).touch()
 
-            # This should pass even though we don't have bootstrap data for this path
-            # because if no bootstrap data exists, we assume files are present
             all_exist, missing = ModelFileChecker.check_missing_files(
                 model_path=tmpdir,
                 model_type="stt",
-                model_id="openai/whisper-tiny",
+                model_id=self._STT_MODEL_ID,
             )
 
-            # When files don't exist, it returns them as missing
-            assert not all_exist
-            assert len(missing) > 0
+            assert all_exist
+            assert missing == []
 
     def test_check_missing_files_some_missing(self):
         """Test checking files when some are missing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create only some files
             Path(tmpdir, "config.json").touch()
-            # model.safetensors is missing
+            # model.bin is missing
 
             all_exist, missing = ModelFileChecker.check_missing_files(
                 model_path=tmpdir,
                 model_type="stt",
-                model_id="openai/whisper-tiny",
+                model_id=self._STT_MODEL_ID,
             )
 
             assert not all_exist
-            assert "model.safetensors" in missing
+            assert "model.bin" in missing
 
     def test_check_missing_files_path_not_exist(self):
         """Test checking files when path doesn't exist."""
         all_exist, missing = ModelFileChecker.check_missing_files(
             model_path="/nonexistent/path",
             model_type="stt",
-            model_id="openai/whisper-tiny",
+            model_id=self._STT_MODEL_ID,
         )
 
         assert not all_exist
@@ -133,14 +139,14 @@ class TestModelFileChecker:
     def test_should_trigger_download_missing_files_hf_repo(self):
         """Test download trigger for missing files with HF repo."""
         should_download, info = ModelFileChecker.should_trigger_download(
-            model_path="openai/whisper-tiny",
+            model_path=self._STT_MODEL_ID,
             model_type="stt",
-            model_id="openai/whisper-tiny",
+            model_id=self._STT_MODEL_ID,
         )
 
         # Should trigger download since files don't exist
         assert should_download
-        assert info["repo_id"] == "openai/whisper-tiny"
+        assert info["repo_id"] == self._STT_MODEL_ID
         assert "missing_files" in info
 
     def test_should_trigger_download_local_path_missing_files(self):
@@ -148,21 +154,21 @@ class TestModelFileChecker:
         should_download, info = ModelFileChecker.should_trigger_download(
             model_path="/local/path/to/model",
             model_type="stt",
-            model_id="openai/whisper-tiny",
+            model_id=self._STT_MODEL_ID,
         )
 
         # Should trigger download using model_id as fallback repo_id
         assert should_download
-        assert info["repo_id"] == "openai/whisper-tiny"
+        assert info["repo_id"] == self._STT_MODEL_ID
         assert "missing_files" in info
 
     def test_should_trigger_download_all_files_present(self):
         """Test download trigger when all files are present."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create all required files for whisper-tiny
+            # Create all required files for the STT model
             required_files = ModelFileChecker.get_required_files(
                 model_type="stt",
-                model_id="openai/whisper-tiny",
+                model_id=self._STT_MODEL_ID,
             )
 
             for file_path in required_files:
@@ -173,7 +179,7 @@ class TestModelFileChecker:
             should_download, info = ModelFileChecker.should_trigger_download(
                 model_path=tmpdir,
                 model_type="stt",
-                model_id="openai/whisper-tiny",
+                model_id=self._STT_MODEL_ID,
             )
 
             # Should not trigger download when all files present
@@ -190,7 +196,10 @@ class TestUnifiedModelFiles:
             UNIFIED_MODEL_FILES,
         )
 
-        assert \"art\" in UNIFIED_MODEL_FILES\n        assert \"llm\" in UNIFIED_MODEL_FILES\n        assert \"stt\" in UNIFIED_MODEL_FILES\n        assert \"tts_openvoice\" in UNIFIED_MODEL_FILES
+        assert "art" in UNIFIED_MODEL_FILES
+        assert "llm" in UNIFIED_MODEL_FILES
+        assert "stt" in UNIFIED_MODEL_FILES
+        assert "tts_openvoice" in UNIFIED_MODEL_FILES
 
     def test_get_required_files_for_model_art(self):
         """Test get_required_files_for_model for art models."""
@@ -200,13 +209,13 @@ class TestUnifiedModelFiles:
 
         files = get_required_files_for_model(
             model_type="art",
-            model_id="SD 1.5",
-            version="SD 1.5",
+            model_id="Flux.1 S",
+            version="Flux.1 S",
             pipeline_action="txt2img",
         )
 
         assert files is not None
-        assert isinstance(files, list)
+        assert isinstance(files, dict)
         assert len(files) > 0
 
     def test_get_required_files_for_model_llm(self):
@@ -217,13 +226,13 @@ class TestUnifiedModelFiles:
 
         files = get_required_files_for_model(
             model_type="llm",
-            model_id="meta-llama/Llama-3.1-8B-Instruct",
+            model_id="Qwen/Qwen3-8B-GGUF",
         )
 
         assert files is not None
         # LLM files are now a dict of {filename: expected_size}
         assert isinstance(files, dict)
-        assert "config.json" in files
+        assert "Qwen3-8B-Q4_K_M.gguf" in files
 
     def test_get_required_files_for_model_stt(self):
         """Test get_required_files_for_model for STT models."""
@@ -233,13 +242,13 @@ class TestUnifiedModelFiles:
 
         files = get_required_files_for_model(
             model_type="stt",
-            model_id="openai/whisper-tiny",
+            model_id="Systran/faster-distil-whisper-large-v3",
         )
 
         assert files is not None
         assert isinstance(files, list)
         assert "config.json" in files
-        assert "model.safetensors" in files
+        assert "model.bin" in files
 
     def test_get_required_files_for_model_invalid(self):
         """Test get_required_files_for_model with invalid type."""

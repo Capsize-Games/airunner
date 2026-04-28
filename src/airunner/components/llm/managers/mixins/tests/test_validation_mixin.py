@@ -32,6 +32,7 @@ class TestableValidationMixin(ValidationMixin):
         self._workflow_manager = None
         self._model = None
         self._tokenizer = None
+        self._is_mistral3_model = Mock(return_value=False)
 
 
 class TestCheckModelExists:
@@ -70,7 +71,7 @@ class TestCheckModelExists:
         assert result is True
 
     @patch(
-        "airunner.components.llm.managers.mixins.validation_mixin.is_gguf_model",
+        "airunner.components.llm.managers.mixins.model_availability_mixin.is_gguf_model",
         return_value=True,
     )
     @patch("os.path.exists")
@@ -355,7 +356,7 @@ class TestCheckAndDownloadModel:
         assert result is True
 
     @patch(
-        "airunner.components.llm.managers.mixins.validation_mixin.is_gguf_model",
+        "airunner.components.llm.managers.mixins.model_availability_mixin.is_gguf_model",
         return_value=True,
     )
     @patch("os.path.exists")

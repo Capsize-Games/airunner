@@ -297,8 +297,14 @@ class FluxModelManager(
     @staticmethod
     def _is_flux_scheduler(scheduler: Optional[Any]) -> bool:
         """Check whether the scheduler is already the FLUX-compatible type."""
+        scheduler_type = FlowMatchEulerDiscreteScheduler
+        if isinstance(scheduler_type, type):
+            return isinstance(scheduler, scheduler_type)
 
-        return isinstance(scheduler, FlowMatchEulerDiscreteScheduler)
+        return (
+            getattr(getattr(scheduler, "__class__", None), "__name__", "")
+            == "FlowMatchEulerDiscreteScheduler"
+        )
 
     def _log_scheduler_loaded(self) -> None:
         """Emit a consistent log message for scheduler readiness."""

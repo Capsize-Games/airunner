@@ -12,6 +12,25 @@ from airunner.components.application.gui.windows.main.settings_model_factory imp
 from airunner.utils.settings import get_qsettings
 
 
+_MAIN_TAB_INDEX_VERSION = 2
+
+
+def _normalize_active_main_tab_index(settings: Any) -> int:
+    """Normalize persisted main-tab indexes after workflow/video removal."""
+    active_index = settings.value("active_main_tab_index", 0, type=int)
+    version = settings.value("main_tab_index_version", 1, type=int)
+    if version >= _MAIN_TAB_INDEX_VERSION:
+        return active_index
+    if active_index == 2 or active_index >= 6:
+        active_index = 0
+    elif active_index > 2:
+        active_index -= 1
+    settings.setValue("active_main_tab_index", active_index)
+    settings.setValue("main_tab_index_version", _MAIN_TAB_INDEX_VERSION)
+    settings.sync()
+    return active_index
+
+
 class SettingsPropertyMixin:
     """Provides @property access to all settings models using factory pattern."""
 
@@ -52,6 +71,7 @@ class SettingsPropertyMixin:
         WindowSettings = get_settings_model("WindowSettings")
         settings = get_qsettings()
         settings.beginGroup("window_settings")
+        active_main_tab_index = _normalize_active_main_tab_index(settings)
         window_settings = WindowSettings(
             is_maximized=settings.value("is_maximized", False, type=bool),
             is_fullscreen=settings.value("is_fullscreen", False, type=bool),
@@ -59,9 +79,7 @@ class SettingsPropertyMixin:
             height=settings.value("height", 600, type=int),
             x_pos=settings.value("x_pos", 0, type=int),
             y_pos=settings.value("y_pos", 0, type=int),
-            active_main_tab_index=settings.value(
-                "active_main_tab_index", 0, type=int
-            ),
+            active_main_tab_index=active_main_tab_index,
         )
         settings.endGroup()
         return window_settings
@@ -77,6 +95,7 @@ class SettingsPropertyMixin:
             else:
                 value = int(value)
             settings.setValue(key, value)
+        settings.setValue("main_tab_index_version", _MAIN_TAB_INDEX_VERSION)
         settings.endGroup()
         settings.sync()
         self._notify_setting_updated(

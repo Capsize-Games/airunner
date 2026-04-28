@@ -38,6 +38,19 @@ from airunner.runtimes.bootstrap import build_runtime_registry
 LNA_ENABLED = os.environ.get("AIRUNNER_LNA_ENABLED", "0") == "1"
 
 
+def _assert_test_gui_launch_allowed(headless: bool) -> None:
+    """Block real GUI startup while automated tests are running."""
+    if headless:
+        return
+    if os.environ.get("AIRUNNER_ALLOW_GUI_TEST_LAUNCH") == "1":
+        return
+    if os.environ.get("AIRUNNER_TEST_NO_GUI_LAUNCH") != "1":
+        return
+    raise RuntimeError(
+        "GUI AIRunner startup is disabled during automated tests."
+    )
+
+
 class App(
     HeadlessRuntimeMixin,
     LocalizationMixin,
@@ -74,6 +87,7 @@ class App(
             start_headless_api_server: Start embedded API server in headless mode
             initialize_headless_lifecycle: Initialize workers during headless boot
         """
+        _assert_test_gui_launch_allowed(headless)
         self.headless = headless
         self._launcher_splash = launcher_splash
         self._launcher_app = launcher_app

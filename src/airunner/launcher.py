@@ -33,6 +33,17 @@ COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
 logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
 
+def _assert_test_gui_launch_allowed() -> None:
+    """Block launcher-driven GUI startup during automated tests."""
+    if os.environ.get("AIRUNNER_ALLOW_GUI_TEST_LAUNCH") == "1":
+        return
+    if os.environ.get("AIRUNNER_TEST_NO_GUI_LAUNCH") != "1":
+        return
+    raise RuntimeError(
+        "GUI AIRunner startup is disabled during automated tests."
+    )
+
+
 def deep_merge(defaults, current):
     """Recursively merge defaults into current, overwriting type mismatches and adding missing fields."""
     if not isinstance(defaults, dict) or not isinstance(current, dict):
@@ -307,6 +318,7 @@ def _check_first_run_agreement():
 
 def _show_early_splash(existing_app=None):
     """Show splash screen as early as possible, before heavy initialization."""
+    _assert_test_gui_launch_allowed()
     from PySide6.QtWidgets import QApplication
     from PySide6.QtGui import QGuiApplication
     from airunner.components.splash_screen.splash_screen import SplashScreen
@@ -365,6 +377,7 @@ def _update_splash(splash, message):
 
 
 def main():
+    _assert_test_gui_launch_allowed()
     # Check first-run agreement BEFORE splash screen
     app, proceed = _check_first_run_agreement()
     if not proceed:

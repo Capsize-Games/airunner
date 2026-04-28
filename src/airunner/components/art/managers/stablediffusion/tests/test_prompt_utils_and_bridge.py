@@ -14,7 +14,7 @@ def test_format_prompt_with_preset_and_additional():
     out = prompt_utils.format_prompt(
         "a", preset="b", additional_prompts=[{"prompt": "c"}]
     )
-    assert "and()" in out
+    assert out == '"a, b", "c"'
 
 
 def test_apply_negative_and_preset():

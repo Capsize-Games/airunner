@@ -178,11 +178,11 @@ The completed migration issue tree establishes the runtime architecture needed
 for end-user distribution, but it does not by itself ship AIRunner as a
 consumer-ready desktop application.
 
-The missing product requirement is tracked in #82: ship AIRunner as a
-no-Python end-user application with a single `airunner` entry point on Linux
-and Windows.
+That follow-on product requirement was implemented in #82: AIRunner now has a
+native launcher, embedded-Python bundle assembly, pinned bundled sidecars,
+and installable Linux and Windows artifacts with installer validation.
 
-That follow-on scope includes:
+That delivered scope includes:
 - a native launcher/bootstrapper built for each target platform
 - embedded Python bundled inside the install artifact
 - pinned `llama.cpp` and `whisper.cpp` binaries included in the package
@@ -191,8 +191,8 @@ That follow-on scope includes:
 This distinction matters:
 - the hybrid migration is complete as an architecture and runtime-boundary
   project
-- end-user distribution is still open as a packaging and release-engineering
-  project
+- end-user distribution was separate packaging and release-engineering work
+  built on top of that runtime foundation
 
 ## Rollout Gates Summary
 
@@ -262,12 +262,12 @@ This distinction matters:
 
 ### Follow-On Epic #82: No-Python End-User Distribution
 
-- [ ] Define the distribution contract and bundle manifest for end-user
+- [x] Define the distribution contract and bundle manifest for end-user
   installs
-- [ ] Build a native AIRunner launcher/bootstrapper
-- [ ] Produce pinned llama.cpp and whisper.cpp binaries for Linux and Windows
-- [ ] Assemble embedded Python and AIRunner into installable bundles
-- [ ] Add installer/runtime smoke tests and release validation
+- [x] Build a native AIRunner launcher/bootstrapper
+- [x] Produce pinned llama.cpp and whisper.cpp binaries for Linux and Windows
+- [x] Assemble embedded Python and AIRunner into installable bundles
+- [x] Add installer/runtime smoke tests and release validation
 
 ## Operational Rule For Future Work
 

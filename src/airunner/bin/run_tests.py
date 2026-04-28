@@ -3,7 +3,7 @@
 Test runner script for AI Runner project.
 
 This script provides a unified interface for running different test suites:
-- Unit tests: Component-level tests in src/airunner/components/*/tests/
+- Unit tests: Safe component tests excluding GUI/widget-only suites
 - Eval tests: Evaluation framework tests in src/airunner/components/llm/tests/eval/
 - LLM runtime smoke tests: safe route/runtime checks with no app startup
 - STT runtime smoke tests: safe route/worker checks with no app startup
@@ -23,6 +23,7 @@ Usage:
 
 Note: Eval tests use pytest fixtures to automatically manage the headless server.
       The server will start/stop automatically when tests run.
+    The default unit suite skips GUI-only tests and blocks GUI app startup.
 """
 
 import argparse
@@ -30,6 +31,16 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
+
+def _build_pytest_env(skip_gui: bool = False) -> dict[str, str]:
+    """Return environment guards for pytest subprocesses."""
+    env = {"AIRUNNER_TEST_NO_GUI_LAUNCH": "1"}
+    if skip_gui:
+        env["AIRUNNER_SKIP_GUI_TESTS"] = "1"
+        env["AIRUNNER_SKIP_EVAL_TESTS"] = "1"
+        env["AIRUNNER_SKIP_FUNCTIONAL_TESTS"] = "1"
+    return env
 
 
 def kill_stale_servers():
@@ -121,10 +132,10 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
                 f"Error: Component '{component}' has no tests directory at {test_path}"
             )
             return 1
-        description = f"Unit tests for {component} component"
+        description = f"Safe unit tests for {component} component"
     else:
         test_path = base_path
-        description = "All unit tests"
+        description = "Safe unit tests (GUI suites excluded)"
 
     cmd = ["pytest", str(test_path)]
 
@@ -138,11 +149,14 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         [
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
+            "-m",
+            "not gui and not eval and not benchmark and not integration",
             "--ignore=src/airunner/components/eval",  # Exclude eval tests
+            "--ignore=src/airunner/components/server/tests/functional",
         ]
     )
 
-    return run_command(cmd, description)
+    return run_command(cmd, description, env=_build_pytest_env(skip_gui=True))
 
 
 def run_eval_tests(
@@ -196,7 +210,7 @@ def run_eval_tests(
         cmd.extend(["-m", "not slow"])
 
     # Pass model argument to pytest if specified
-    env = {}
+    env = _build_pytest_env()
     if model:
         env["AIRUNNER_TEST_MODEL_PATH"] = model
         # Also pass to pytest as --model flag
@@ -225,7 +239,11 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(cmd, "LLM runtime smoke tests")
+    return run_command(
+        cmd,
+        "LLM runtime smoke tests",
+        env=_build_pytest_env(),
+    )
 
 
 def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -244,7 +262,11 @@ def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(cmd, "STT runtime smoke tests")
+    return run_command(
+        cmd,
+        "STT runtime smoke tests",
+        env=_build_pytest_env(),
+    )
 
 
 def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -263,7 +285,11 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(cmd, "Art runtime smoke tests")
+    return run_command(
+        cmd,
+        "Art runtime smoke tests",
+        env=_build_pytest_env(),
+    )
 
 
 def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
@@ -282,7 +308,11 @@ def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
         cmd.append("--tb=short")
 
     cmd.extend(["--color=yes", "-ra"])
-    return run_command(cmd, "TTS runtime smoke tests")
+    return run_command(
+        cmd,
+        "TTS runtime smoke tests",
+        env=_build_pytest_env(),
+    )
 
 
 def main():

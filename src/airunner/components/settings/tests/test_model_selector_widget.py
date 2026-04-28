@@ -2,20 +2,18 @@
 
 import pytest
 
-# Qt imports
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.usefixtures("qapp"),
+]
+
 try:
-    from PySide6.QtWidgets import QApplication
-    import sys
+    from airunner.components.settings.gui.widgets.model_selector_widget import (
+        ModelSelectorWidget,
+    )
+except ImportError as exc:
+    pytest.skip(str(exc), allow_module_level=True)
 
-    # Create QApplication if it doesn't exist
-    if not QApplication.instance():
-        app = QApplication(sys.argv)
-except ImportError:
-    pytest.skip("PySide6 not available", allow_module_level=True)
-
-from airunner.components.settings.gui.widgets.model_selector_widget import (
-    ModelSelectorWidget,
-)
 from airunner.enums import ModelService
 
 

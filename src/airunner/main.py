@@ -55,9 +55,6 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         os.path.join(os.path.dirname(__file__), "..", "..")
     )
     airunner_src_path = os.path.join(project_root, "src", "airunner")
-    airunner_egg_info_path = os.path.join(
-        project_root, "src", "airunner.egg-info"
-    )
 
     activate(
         activate_shadowlogger=True,
@@ -91,7 +88,6 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             site_packages_path,
             "/usr/share/zoneinfo/",
             airunner_src_path,
-            airunner_egg_info_path,
             "/tmp/",
             "/etc/",
             "/var/log/airunner/",  # Add headless server log directory

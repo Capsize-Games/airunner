@@ -128,16 +128,36 @@ def load_lora_weights(
     filename = os.path.basename(lora.path)
     adapter_name = os.path.splitext(filename)[0].replace(".", "_")
     # Scale is stored as 0-100 integer, convert to 0.0-1.0 float
-    scale = lora.scale / 100.0 if hasattr(lora, 'scale') else 1.0
+    scale = lora.scale / 100.0 if hasattr(lora, "scale") else 1.0
     try:
         pipe.load_lora_weights(
-            lora_base_path, weight_name=filename, adapter_name=adapter_name, scale=scale
+            lora_base_path,
+            weight_name=filename,
+            adapter_name=adapter_name,
+            scale=scale,
         )
         logger.info(f"Loaded LORA weights: {filename} (scale={scale:.2f})")
         return True
+    except TypeError as error:
+        if "scale" not in str(error):
+            logger.warning(f"Failed to load LORA {filename}: {error}")
+            return False
+
+        try:
+            pipe.load_lora_weights(
+                lora_base_path,
+                weight_name=filename,
+                adapter_name=adapter_name,
+            )
+            logger.info(f"Loaded LORA weights: {filename}")
+            return True
+        except Exception as retry_error:
+            logger.warning(f"Failed to load LORA {filename}: {retry_error}")
+            return False
     except Exception as e:
         logger.warning(f"Failed to load LORA {filename}: {e}")
         return False
+
 
 def unload_lora(pipe: Any, logger: Any) -> None:
     """Unload all LORA weights from the pipeline."""

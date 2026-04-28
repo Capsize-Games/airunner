@@ -10,8 +10,8 @@ from airunner.components.art.workers.sd_worker import SDWorker
 from airunner.enums import EngineResponseCode, GeneratorSection
 
 PNG_BYTES = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
-    "/w8AAn8B9pN96QAAAABJRU5ErkJggg=="
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4"
+    "//8/AwAI/AL+KDvWyAAAAABJRU5ErkJggg=="
 )
 
 

@@ -104,9 +104,6 @@ LLM_NATIVE_REQUIREMENTS = [
     "langsmith>=0.1.0",
     "langchain-ollama==1.0.0",
     "EbookLib==0.19",
-    "html2text==2025.4.15",
-    "rake_nltk==1.0.6",
-    "markdownify>=0.13.1",
 ]
 
 STT_NATIVE_REQUIREMENTS = [
@@ -118,7 +115,6 @@ LLM_WEATHER_REQUIREMENTS = [
     "requests-cache==1.2.1",
     "retry-requests==2.0.0",
     "openmeteo_requests==1.4.0",
-    "uszipcode==1.0.1",
 ]
 
 TTS_REQUIREMENTS = [
@@ -140,7 +136,6 @@ OPENVOICE_REQUIREMENTS = [
 
 MELOTTS_REQUIREMENTS = [
     "txtsplit==1.0.0",
-    "cached_path==1.7.3",
     "num2words==0.5.14",
     "g2p_en==2.1.0",
     "anyascii==0.3.2",
@@ -332,8 +327,6 @@ setup(
             # Static files (HTML, CSS, JS templates for web views)
             "components/**/static/**/*",
             "static/**/*",
-            # Vendor resources
-            "vendor/nodegraphqt/widgets/icons/*",
         ],
     },
     include_package_data=True,

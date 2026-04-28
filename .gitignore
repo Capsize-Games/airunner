@@ -44,7 +44,6 @@ coverage_report.txt
 package/asound.conf
 .secrets
 *.log
-FramePack
 OpenVoice
 docker-compose.local.yml
 *.pickle

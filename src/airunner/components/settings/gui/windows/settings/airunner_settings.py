@@ -283,12 +283,6 @@ class SettingsWindow(BaseWindow):
                         "description": "If enabled, AI Runner will check for updates on startup.",
                     },
                     {
-                        "name": "enable_workflows",
-                        "display_name": "Enable Workflows",
-                        "checkable": True,
-                        "description": "Enable experimental agent workflows.",
-                    },
-                    {
                         "name": "sound_settings",
                         "display_name": "Sound Settings",
                         "checkable": False,
@@ -354,12 +348,7 @@ class SettingsWindow(BaseWindow):
         item = QStandardItem(name)
         item.setCheckable(checkable)
         if checkable:
-            checked = False
-            if name == "enable_workflows":
-                checked = self.enable_workflows
-            item.setCheckState(
-                Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
-            )
+            item.setCheckState(Qt.CheckState.Unchecked)
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         item.setData(name, Qt.ItemDataRole.DisplayRole)
         item.setSizeHint(QSize(0, 24))
@@ -383,8 +372,6 @@ class SettingsWindow(BaseWindow):
                 checked = self.application_settings.image_to_new_layer is True
             elif name == "check_for_updates":
                 checked = self.application_settings.latest_version_check
-            elif name == "enable_workflows":
-                checked = self.enable_workflows
 
             file_item.setCheckState(
                 Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
@@ -396,16 +383,6 @@ class SettingsWindow(BaseWindow):
         file_item.setData(description, Qt.ItemDataRole.ToolTipRole)
         file_item.setSizeHint(QSize(0, 24))
         parent_item.appendRow(file_item)
-
-    @property
-    def enable_workflows(self) -> bool:
-        return self.qsettings.value("enable_workflows") == "true"
-
-    @enable_workflows.setter
-    def enable_workflows(self, val: bool):
-        self.qsettings.setValue("enable_workflows", val)
-        self.emit_signal(SignalCode.ENABLE_WORKFLOWS_TOGGLED, {"enabled": val})
-        self.qsettings.sync()
 
     def on_item_clicked(self, index):
         if not self.model:
@@ -429,9 +406,6 @@ class SettingsWindow(BaseWindow):
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings(latest_version_check=checked)
-        elif name == "enable_workflows":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.enable_workflows = checked
         elif name == "reset_settings":
             self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
 

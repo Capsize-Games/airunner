@@ -1,6 +1,6 @@
 # Native AIRunner Launcher
 
-This directory contains the first scaffold for the native AIRunner launcher.
+This directory contains the native AIRunner launcher implementation.
 
 ## Goal
 
@@ -13,12 +13,12 @@ The launcher gives AIRunner two explicit runtime modes:
 This matches the product requirement discussed in issue #82:
 - developers should be able to build and run the native bootstrap locally
   without installing a separate packaged AIRunner build
-- end users should eventually receive one installed AIRunner product with no
+- end users should receive one installed AIRunner product with no
   system Python dependency
 
 ## Current Scope
 
-The scaffold does three things:
+The current launcher does three things:
 
 1. resolves a runtime plan for `dev` or `prod`
 2. sets the key AIRunner environment variables
@@ -28,7 +28,9 @@ It does not yet:
 - supervise sidecars directly from C++
 - move sidecar supervision into native code
 
-Those remain tracked in issue #82 and its follow-on child issues.
+Those responsibilities remain intentionally in Python. The native launcher is
+responsible for startup layout selection, environment export, and Python
+process launch.
 
 ## Development Flow
 

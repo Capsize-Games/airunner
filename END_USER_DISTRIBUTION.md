@@ -49,9 +49,9 @@ Current scaffold in this repo:
 - `scripts/run_airunner_dev.sh` runs AIRunner through the native launcher in
 	dev mode using the repository `venv`
 
-The scaffold currently launches Python and sets runtime environment variables.
-It does not yet replace the Python-side sidecar supervision or installer
-assembly work.
+The launcher currently owns bundle-plan resolution, runtime environment
+export, and Python process launch. Python still owns runtime-client and
+sidecar supervision inside the packaged product.
 
 ### Bundled runtime tree
 
@@ -73,22 +73,27 @@ The installer should create a single desktop entry and a single primary
 
 ## Current Implementation
 
-The first end-user packaging pass now includes:
+The no-Python end-user distribution delivery now includes:
+- a native launcher in `native/airunner_launcher/` plus
+	`scripts/build_airunner_launcher.sh`
+- pinned `llama.cpp` and `whisper.cpp` sidecar build inputs in
+	`native/runtime_sidecars/` plus `scripts/build_runtime_sidecars.sh`
 - pinned embedded Python metadata in `native/embedded_python/`
 - staged bundle assembly in `src/airunner/bin/build_end_user_bundle.py`
 - a local Linux bundle wrapper in `scripts/build_airunner_bundle.sh`
 - AppImage packaging in `scripts/package_linux_appimage.sh`
 - Windows NSIS packaging in `scripts/package_windows_nsis.ps1`
 - Linux tarball installation support in `install.sh --bundle-archive`
+- launcher and bundle smoke coverage in
+	`src/airunner/distribution/tests/test_launcher_smoke.py`
+- Linux and Windows installer validation in
+	`.github/workflows/pypi-dispatch.yml`
 
 The bundle layout currently stages:
 - `python/` for the embedded runtime
 - `app/site-packages/` for AIRunner and Python dependencies
 - `bin/` for the native launcher plus sidecar binaries
 - `share/airunner/` for runtime manifest and bundle metadata
-
-Issue #87 remains responsible for fresh-machine smoke coverage and installer
-validation.
 
 ## Non-Goals
 
@@ -101,7 +106,7 @@ These are not the target:
 
 ## Engineering Work Breakdown
 
-This work is tracked in #82 and should be split into at least these slices:
+Issue #82 is satisfied in-repo by these slices:
 
 1. Define the distribution contract and manifest.
 2. Build the native launcher/bootstrapper with CMake.
@@ -117,6 +122,10 @@ work:
 - LLM and STT can run behind native sidecar launchers
 - art and TTS already use isolated Python runtimes
 - runtime filesystem layout and service templates are explicit
+
+The follow-on productization work for #82 now exists in-repo as a native
+launcher, pinned sidecar build flow, embedded-Python bundle builder,
+installer packagers, and installer validation pipeline.
 
 What remains is productization and distribution engineering, not another
 full runtime rewrite.

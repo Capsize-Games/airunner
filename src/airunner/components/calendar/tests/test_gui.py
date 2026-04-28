@@ -12,6 +12,9 @@ from airunner.components.calendar.gui.calendar_tab import CalendarTab
 from airunner.components.calendar.data.event import Event
 
 
+pytestmark = pytest.mark.gui
+
+
 @pytest.fixture(scope="module")
 def qapp():
     """Create QApplication instance for tests."""

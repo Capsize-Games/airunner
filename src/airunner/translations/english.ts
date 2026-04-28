@@ -3250,54 +3250,6 @@ li.checked::marker { content: & quot; \2612 & quot;; }
                     </message>
                     </context>
                     < context >
-                    <name>node_graph_widget </name>
-                    < message >
-                    <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "14" />
-                        <source>Form </source>
-                        < translation type = "unfinished" > </translation>
-                            </message>
-                            < message >
-                            <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "68" />
-                                <source>New workflow </source>
-                                    < translation type = "unfinished" > </translation>
-                                        </message>
-                                        < message >
-                                        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "85" />
-                                            <source>Delete workflow </source>
-                                                < translation type = "unfinished" > </translation>
-                                                    </message>
-                                                    < message >
-                                                    <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "102" />
-                                                        <source>Stop workflow </source>
-                                                            < translation type = "unfinished" > </translation>
-                                                                </message>
-                                                                < message >
-                                                                <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "116" />
-                                                                    <source>Clear workflow </source>
-                                                                        < translation type = "unfinished" > </translation>
-                                                                            </message>
-                                                                            < message >
-                                                                            <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "133" />
-                                                                                <source>Run workflow </source>
-                                                                                    < translation type = "unfinished" > </translation>
-                                                                                        </message>
-                                                                                        < message >
-                                                                                        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "150" />
-                                                                                            <source>Load workflow </source>
-                                                                                                < translation type = "unfinished" > </translation>
-                                                                                                    </message>
-                                                                                                    < message >
-                                                                                                    <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "167" />
-                                                                                                        <source>Save workflow </source>
-                                                                                                            < translation type = "unfinished" > </translation>
-                                                                                                                </message>
-                                                                                                                < message >
-                                                                                                                <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line = "197" />
-                                                                                                                    <source>Pause workflow </source>
-                                                                                                                        < translation type = "unfinished" > </translation>
-                                                                                                                            </message>
-                                                                                                                            </context>
-                                                                                                                            < context >
                                                                                                                             <name>open_voice_preferences </name>
                                                                                                                             < message >
                                                                                                                             <location filename="../gui/widgets/tts/templates/open_voice_preferences.ui" line = "17" />

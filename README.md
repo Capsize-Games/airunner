@@ -54,8 +54,8 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 ## 💾 Installation
 
 Current status:
-The hybrid-runtime branch completed the runtime refactor, but AIRunner does
-now have embedded-Python bundle builders and installer packagers.
+The hybrid-runtime branch completed the runtime refactor, and AIRunner now
+has embedded-Python bundle builders and installer packagers.
 
 Available packaging paths:
 - Linux staged bundle archive: `./scripts/build_airunner_bundle.sh`
@@ -65,8 +65,8 @@ Available packaging paths:
 - Windows NSIS installer: `pwsh ./scripts/package_windows_nsis.ps1`
 
 The manual and Docker paths below are still useful developer/operator
-installation flows. The end-user packaging contract is tracked in #82 and
-summarized in [END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
+installation flows. The bundled end-user packaging contract is summarized in
+[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
 
 ### Docker (Recommended)
 
@@ -184,10 +184,9 @@ foundation, LLM cutover, STT isolation, art/TTS isolation, then packaging,
 bundles, CI, and rollout hardening. The phase order, rollout gates, and full
 issue-tree checklist live in [HYBRID_RUNTIME_MIGRATION.md](./HYBRID_RUNTIME_MIGRATION.md).
 
-That migration is the runtime architecture foundation, not the final
-consumer-distribution story. The missing product requirement is a no-system-
-Python AIRunner install with one primary `airunner` entry point. That
-follow-on work is tracked in #82 and described in
+That migration is the runtime architecture foundation. AIRunner now also
+includes the no-system-Python distribution layer with one primary
+`airunner` entry point, described in
 [END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
 
 ---

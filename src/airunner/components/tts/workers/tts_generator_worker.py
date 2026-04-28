@@ -6,13 +6,7 @@ from typing import Optional, Type, Dict
 
 import soundfile as sf
 
-from airunner.components.tts.managers.espeak_model_manager import (
-    EspeakModelManager,
-)
 from airunner.components.tts.managers.exceptions import OpenVoiceError
-from airunner.components.tts.managers.openvoice_model_manager import (
-    OpenVoiceModelManager,
-)
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -183,8 +177,16 @@ class TTSGeneratorWorker(Worker):
             return
         self._current_model = model
         if model_type is TTSModel.OPENVOICE:
+            from airunner.components.tts.managers.openvoice_model_manager import (
+                OpenVoiceModelManager,
+            )
+
             tts_model_manager_class_ = OpenVoiceModelManager
         else:
+            from airunner.components.tts.managers.espeak_model_manager import (
+                EspeakModelManager,
+            )
+
             tts_model_manager_class_ = EspeakModelManager
         self.tts = tts_model_manager_class_()
         self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")

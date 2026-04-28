@@ -209,24 +209,14 @@ class MainWindow(
         ("message-square", "actionDiscord"),
         ("download", "actionImport_image"),
         ("upload", "actionExport_image_button"),
-        ("codesandbox", "menuWorkflow"),
-        ("trash-2", "workflow_actionClear"),
-        ("edit", "workflow_actionEdit"),
-        ("folder", "workflow_actionOpen"),
-        ("pause-circle", "workflow_actionPause"),
-        ("play", "workflow_actionRun"),
-        ("save", "workflow_actionSave"),
-        ("stop-circle", "workflow_actionStop"),
         ("save", "actionSave_As"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
         ("calendar", "calendar_button"),
-        ("codesandbox", "workflow_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
         ("radio", "visualizer_button"),
-        ("video", "video_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
         ("file-text", "menuDocuments"),
@@ -240,8 +230,6 @@ class MainWindow(
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
-        self.tab_backup = {}
-        self.workflow_tab = None
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -290,7 +278,6 @@ class MainWindow(
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL: self.on_ai_models_save_or_update_signal,
             SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
-            SignalCode.ENABLE_WORKFLOWS_TOGGLED: self.on_enable_workflows_toggled,
             SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
         }
@@ -353,10 +340,6 @@ class MainWindow(
     @property
     def document_name(self):
         return "Untitled"
-
-    @property
-    def enable_workflows(self) -> bool:
-        return self.qsettings.value("enable_workflows") == "true"
 
     """
     Slot functions
@@ -572,34 +555,6 @@ class MainWindow(
         QApplication.processEvents()
         self.update_application_settings(stt_enabled=val)
 
-    @Slot()
-    def on_workflow_actionClear_triggered(self):
-        self.ui.graph.clear_graph()
-
-    @Slot()
-    def on_workflow_actionRun_triggered(self):
-        self.ui.graph.run_workflow()
-
-    @Slot()
-    def on_workflow_actionEdit_triggered(self):
-        self.ui.graph.edit_workflow()
-
-    @Slot()
-    def on_workflow_actionPause_triggered(self):
-        self.ui.graph.pause_workflow()
-
-    @Slot()
-    def on_workflow_actionSave_triggered(self):
-        self.ui.graph.save_workflow()
-
-    @Slot()
-    def on_workflow_actionStop_triggered(self):
-        self.ui.graph.stop_workflow()
-
-    @Slot()
-    def on_workflow_actionOpen_triggered(self):
-        self.ui.graph.load_workflow()
-
     @Slot(bool)
     def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
         self.on_toggle_tts(val=val)
@@ -795,9 +750,7 @@ class MainWindow(
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
             "calendar_button": self.ui.calendar_tab,
-            "workflow_editor_button": self.ui.agent_workflow_tab,
             "visualizer_button": self.ui.visualizer_tab,
-            "video_button": self.ui.video_tab,
         }
 
     def _restore_tab(self):
@@ -817,9 +770,9 @@ class MainWindow(
         buttons = {
             0: "home_button",
             1: "art_editor_button",
-            2: "workflow_editor_button",
-            3: "document_editor_button",
-            4: "calendar_button",
+            2: "document_editor_button",
+            3: "calendar_button",
+            4: "visualizer_button",
         }
 
         if saved_index in buttons:
@@ -862,14 +815,6 @@ class MainWindow(
     @Slot(bool)
     def on_calendar_button_toggled(self, val: bool):
         self._set_current_button_and_tab("calendar_button")
-
-    @Slot(bool)
-    def on_workflow_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("workflow_editor_button")
-
-    @Slot(bool)
-    def on_video_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("video_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
@@ -1176,7 +1121,6 @@ class MainWindow(
         self.ui.setupUi(self)
 
         # Disable innactive features
-        self.ui.video_button.hide()
         self.ui.calendar_button.hide()
         
         # Add legal document menu items to Help menu
@@ -1350,8 +1294,6 @@ class MainWindow(
         if current_active_tab_index == 1:
             self.api.art.canvas.new_document()
         elif current_active_tab_index == 2:
-            self.api.nodegraph.new_document()
-        elif current_active_tab_index == 3:
             self.api.document.new_document()
         self.api.llm.clear_history()
 
@@ -1661,51 +1603,8 @@ class MainWindow(
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
 
-    def on_enable_workflows_toggled(self, message: Dict):
-        self._toggle_agent_workflow_feature(message.get("enabled", False))
-
     def on_retranslate_ui_signal(self):
         self.ui.retranslateUi(self)
-
-    def _toggle_agent_workflow_feature(self, enabled: bool):
-        """
-        Toggles the visibility of the workflow tab and menu based on the given value.
-        """
-        # --- Tab handling ---
-        tab_widget = self.ui.center_tab_container
-        if not self.workflow_tab:
-            self.workflow_tab = self.ui.agent_workflow_tab
-
-        if enabled:
-            # Only add if not present
-            if self.tab_backup != {}:
-                tab_widget.addTab(
-                    self.tab_backup["tab_widget"],
-                    self.tab_backup["tab_text"],
-                )
-                self.tab_backup = {}
-        else:
-            # Remove if present
-            index = tab_widget.indexOf(self.workflow_tab)
-            self.tab_backup = dict(
-                tab_text=tab_widget.tabText(index),
-                tab_widget=tab_widget.widget(index),
-            )
-            if index != -1:
-                tab_widget.removeTab(index)
-
-        # --- Menu handling ---
-        # If menuWorkflow is a QMenu, use menuBar(). If it's an action, use setVisible.
-        if hasattr(self.ui, "menuWorkflow"):
-            menu = self.ui.menuWorkflow
-            # Try both methods for robustness
-            try:
-                menu.menuAction().setVisible(enabled)
-            except Exception:
-                try:
-                    menu.setVisible(enabled)
-                except Exception:
-                    pass
 
     ###### End window handlers ######
 

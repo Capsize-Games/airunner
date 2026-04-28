@@ -1,4 +1,4 @@
-"""Video project data model for storing video generation metadata."""
+"""Legacy video project model retained for migration compatibility."""
 
 from sqlalchemy import (
     Column,
@@ -14,7 +14,7 @@ from airunner.components.data.models.base import BaseModel
 
 class VideoProject(BaseModel):
     """
-    Stores metadata and settings for video generation projects.
+    Stores persisted legacy video project metadata.
 
     Attributes:
         id: Primary key

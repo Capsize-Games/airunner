@@ -240,8 +240,9 @@ def update_calendar_event(
                 event.category = category
 
             session.commit()
+            updated_title = event.title
 
-        return f"Updated event '{event.title}' (ID: {event_id})"
+        return f"Updated event '{updated_title}' (ID: {event_id})"
     except Exception as e:
         return f"Error updating event: {str(e)}"
 

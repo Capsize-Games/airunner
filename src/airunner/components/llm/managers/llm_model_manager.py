@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from transformers import (
     AutoModelForCausalLM,
@@ -139,102 +139,95 @@ class LLMModelManager(
             self._load_model()
 
     def load(self) -> None:
-
-                    # Fallback: try whitespace-separated tokens if comma parsing failed
-                    if not selected_categories:
-                        for token in candidate_text.replace(",", " ").split():
-                            token_clean = token.strip().strip(".;:")
-                            if token_clean in available_categories and token_clean not in selected_categories:
-                                selected_categories.append(token_clean)
-                    
-                    # Limit to a small set to avoid binding every tool
-                    if len(selected_categories) > 5:
-                        selected_categories = selected_categories[:5]
-                    
-                    # Always include search for questions that might need current info
-                    # The LLM should have included it, but ensure it's there for safety
-                    if not selected_categories:
-                        self.logger.info("Auto mode: No valid categories parsed, defaulting to search")
-                        selected_categories = ["search"]
-                    
-                    self.logger.info(
-                        f"Auto mode (LLM): Selected {len(selected_categories)} categories: {selected_categories}"
-                    )
-                    return selected_categories
-        except Exception as e:
-            self.logger.warning(f"LLM classification failed: {e}, falling back to all tools")
-        
-        # Fallback: provide all common categories if LLM classification fails
-        self.logger.info("Auto mode: Classification unavailable, providing broad tool access")
-        return ["search", "knowledge", "system", "math"]
-
-    def _should_use_harness(self, prompt: str) -> bool:
-        """Check if a prompt should use the long-running harness.
-
-        The harness is used for:
-        - Multi-step tasks (e.g., "implement these 5 features")
-        - Complex coding projects (e.g., "refactor and add tests")
-        - Multi-topic research (e.g., "research 5 papers on X")
-
-        Args:
-            prompt: User's input text
-
-        Returns:
-            True if the harness should be used
-        """
-        try:
-            from airunner.components.llm.long_running import should_use_harness
-
-            use_harness, analysis = should_use_harness(prompt)
-            if use_harness and analysis:
-                self.logger.info(
-                    f"Harness recommended: {analysis.task_type.value} "
-                    f"(confidence: {analysis.confidence:.2f}) - {analysis.reason}"
-                )
-            return use_harness
-        except ImportError:
-            self.logger.debug("Long-running harness not available")
-            return False
-        except Exception as e:
-            self.logger.warning(f"Error checking harness applicability: {e}")
-            return False
-
-    def _restore_all_tools(self) -> None:
-        """Restore all tools to workflow manager (called after filtered request)."""
-        if self._workflow_manager and self._tool_manager:
-            all_tools = self._tool_manager.get_all_tools()
-            self._workflow_manager.update_tools(all_tools)
-
-    def do_interrupt(self) -> None:
-        """Interrupt ongoing generation."""
-        self.logger.info(f"do_interrupt called on instance {id(self)}")
-        self._interrupted = True
-
-        if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
-            self.logger.info(
-                f"Setting interrupt on chat_model {id(self._chat_model)}"
-            )
-            self._chat_model.set_interrupted(True)
-        else:
-            self.logger.warning(
-                f"Chat model not available or missing set_interrupted: {self._chat_model}"
-            )
-
-        if self._workflow_manager and hasattr(
-            self._workflow_manager, "set_interrupted"
+        """Load the LLM model and its supporting orchestration components."""
+        self.logger.info(
+            "load() called, current status: %s",
+            self.model_status[ModelType.LLM],
+        )
+        if self.model_status[ModelType.LLM] in (
+            ModelStatus.LOADING,
+            ModelStatus.LOADED,
         ):
             self.logger.info(
-                f"Setting interrupt on workflow_manager {id(self._workflow_manager)}"
+                "Returning early - model already in state: %s",
+                self.model_status[ModelType.LLM],
             )
-            self._workflow_manager.set_interrupted(True)
-        else:
-            self.logger.warning(
-                f"Workflow manager not available: {self._workflow_manager}"
-            )
+            return
 
-    def on_section_changed(self) -> None:
-        """Handle section change events."""
-        self.logger.info("Section changed, clearing history")
-        self.clear_history()
+        if not self._validate_model_path():
+            return
+
+        if not self._check_and_download_model():
+            return
+
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self.unload()
+        self._current_model_path = self.model_path
+
+        resource_manager = ModelResourceManager()
+        prepare_result = resource_manager.prepare_model_loading(
+            model_id=self.model_path,
+            model_type="llm",
+        )
+
+        if not prepare_result["can_load"]:
+            self.logger.error(
+                "Cannot load model: %s",
+                prepare_result.get("reason", "Unknown reason"),
+            )
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            self.logger.info(
+                "[LLM LOAD] Model cannot be loaded - resource conflict"
+            )
+            return
+
+        if self.llm_settings.use_local_llm:
+            self._send_quantization_info()
+
+        self._load_local_llm_components()
+        self._load_chat_model()
+        self.logger.info(
+            "[LLM LOAD] Chat model loaded: %s",
+            self._chat_model is not None,
+        )
+
+        self._load_tool_manager()
+        self.logger.info(
+            "[LLM LOAD] Tool manager loaded: %s",
+            self._tool_manager is not None,
+        )
+
+        self._load_workflow_manager()
+        self.logger.info(
+            "[LLM LOAD] Workflow manager loaded: %s",
+            self._workflow_manager is not None,
+        )
+
+        self._update_model_status()
+        self.logger.info(
+            "[LLM LOAD] Model status updated to: %s",
+            self.model_status[ModelType.LLM],
+        )
+        resource_manager.model_loaded(self.model_path)
+
+    def unload(self) -> None:
+        """Unload all LLM components and clear reserved resources."""
+        if self.model_status[ModelType.LLM] in (
+            ModelStatus.LOADING,
+            ModelStatus.UNLOADED,
+        ):
+            return
+
+        self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self._unload_components()
+
+        resource_manager = ModelResourceManager()
+        resource_manager.cleanup_model(
+            model_id=self._current_model_path or self.model_path,
+            model_type="llm",
+        )
+
+        clear_memory(self.device)
+        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
     # Specialized model methods

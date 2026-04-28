@@ -23,11 +23,6 @@ from airunner.utils.application.ui_loader import (
     load_ui_from_string,
 )
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
-
-from airunner.components.nodegraph.api.nodegraph_services import (
-    NodegraphAPIService,
-)
-from airunner.components.art.api.video_services import VideoAPIService
 from airunner.components.stt.api.stt_services import STTAPIService
 from airunner.components.tts.api.tts_services import TTSAPIService
 from airunner.components.art.api.art_services import ARTAPIService
@@ -162,8 +157,6 @@ class API(App):
         self.document = DocumentEditorService()
         self.tts = TTSAPIService()
         self.stt = STTAPIService()
-        self.video = VideoAPIService()
-        self.nodegraph = NodegraphAPIService()
         self.sounddevice_manager = SoundDeviceManager()
 
         # Extract the initialize_app flag and pass the rest to the parent App class
