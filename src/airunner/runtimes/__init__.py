@@ -4,6 +4,7 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS = {
+    "ArtDaemonRuntimeSettings": "airunner.runtimes.art_daemon_runtime_settings",
     "ArtInvocationResponse": "airunner.runtimes.contracts",
     "ArtInvocationRequest": "airunner.runtimes.contracts",
     "ChatMessage": "airunner.runtimes.contracts",
@@ -27,6 +28,8 @@ _EXPORTS = {
     "RuntimeRegistry": "airunner.runtimes.registry",
     "RuntimeRoute": "airunner.runtimes.registry",
     "SidecarLauncher": "airunner.runtimes.sidecar_launcher",
+    "SidecarArtClient": "airunner.runtimes.sidecar_art_client",
+    "SidecarArtLauncher": "airunner.runtimes.sidecar_art_launcher",
     "SidecarLLMClient": "airunner.runtimes.sidecar_llm_client",
     "SidecarSTTClient": "airunner.runtimes.sidecar_stt_client",
     "SidecarSTTLauncher": "airunner.runtimes.sidecar_stt_launcher",
@@ -36,6 +39,7 @@ _EXPORTS = {
     "TTSInvocationResponse": "airunner.runtimes.contracts",
     "TransportKind": "airunner.runtimes.contracts",
     "register_local_fallback_clients": "airunner.runtimes.local_fallback",
+    "register_sidecar_art_client": "airunner.runtimes.sidecar_art_client",
     "register_sidecar_llm_client": "airunner.runtimes.sidecar_llm_client",
     "register_sidecar_stt_client": "airunner.runtimes.sidecar_stt_client",
 }
