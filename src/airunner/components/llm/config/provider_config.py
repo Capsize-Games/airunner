@@ -123,6 +123,67 @@ class LLMProviderConfig:
             # GGUF variant (official Qwen GGUF)
             "gguf_repo_id": "Qwen/Qwen3-8B-GGUF",
             "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
+            "local_storage_subdir": "Qwen",
+            "aliases": [
+                "Qwen 3 8B",
+                "Qwen3 8B",
+                "Qwen3-8B-Q4_K_M.gguf",
+            ],
+        },
+        "qwen3.5-9b": {
+            "name": "Qwen3.5-9B",
+            "repo_id": "Qwen/Qwen3.5-9B",
+            "model_type": "llm",
+            "function_calling": True,
+            "tool_calling_mode": "json",
+            "supports_thinking": True,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
+            "context_length": 262144,
+            "native_context_length": 262144,
+            "yarn_max_context_length": 262144,
+            "supports_yarn": False,
+            "vram_2bit_gb": 6,
+            "vram_4bit_gb": 10,
+            "vram_8bit_gb": 12,
+            "description": "Qwen3.5 9B long-context local GGUF model for conversation and analysis",
+            "gguf_repo_id": "unsloth/Qwen3.5-9B-GGUF",
+            "gguf_filename": "Qwen3.5-9B-Q8_0.gguf",
+            "local_storage_subdir": "Qwen",
+            "aliases": [
+                "Qwen 3.5 9B",
+                "Qwen3.5 9B",
+                "Qwen3.5-9B-Q8_0.gguf",
+            ],
+        },
+        "gpt-oss-20b": {
+            "name": "GPT-OSS 20B",
+            "repo_id": "openai/gpt-oss-20b",
+            "model_type": "llm",
+            "function_calling": False,
+            "tool_calling_mode": "react",
+            "supports_thinking": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
+            "context_length": 131072,
+            "native_context_length": 4096,
+            "yarn_max_context_length": 131072,
+            "supports_yarn": True,
+            "vram_2bit_gb": 10,
+            "vram_4bit_gb": 14,
+            "vram_8bit_gb": 20,
+            "description": "GPT-OSS 20B GGUF for local llama.cpp code and reasoning workloads",
+            "gguf_repo_id": "unsloth/gpt-oss-20b-GGUF",
+            "gguf_filename": "gpt-oss-20b-F16.gguf",
+            "local_storage_subdir": "gpt_oss",
+            "aliases": [
+                "GPT-OSS",
+                "GPT OSS",
+                "gpt_oss",
+                "gpt-oss-20b-F16.gguf",
+            ],
         },
         "qwen3-14b": {
             "name": "Qwen3-14B",
@@ -281,6 +342,28 @@ class LLMProviderConfig:
         "custom",
     ]
 
+    @staticmethod
+    def _normalize_identifier(identifier: str) -> str:
+        """Normalize an identifier for loose alias comparisons."""
+        return "".join(
+            character
+            for character in str(identifier or "").lower()
+            if character.isalnum()
+        )
+
+    @classmethod
+    def _iter_model_aliases(
+        cls,
+        model_info: Dict[str, Any],
+    ) -> List[str]:
+        """Return configured aliases for one local model."""
+        aliases = list(model_info.get("aliases", []))
+        for key in ("name", "gguf_filename"):
+            value = model_info.get(key)
+            if value:
+                aliases.append(str(value))
+        return aliases
+
     @classmethod
     def get_models_for_provider(cls, provider: str) -> List[str]:
         """
@@ -337,23 +420,27 @@ class LLMProviderConfig:
 
     @classmethod
     def get_model_id_for_name(cls, provider: str, model_name: str) -> str:
-        """Return the local model identifier for a display name."""
-        if provider != "local" or not model_name:
+        """Return the local model identifier for a display name or alias."""
+        target = cls._normalize_identifier(model_name)
+        if provider != "local" or not target:
             return ""
 
         for model_id, model_info in cls.LOCAL_MODELS.items():
-            if model_info.get("name") == model_name:
-                return model_id
+            for alias in cls._iter_model_aliases(model_info):
+                if cls._normalize_identifier(alias) == target:
+                    return model_id
         return ""
 
     @classmethod
     def resolve_model_id(cls, provider: str, identifier: str) -> str:
-        """Resolve a local model identifier from model_id, display name, or repo_id."""
+        """Resolve a local model identifier from model_id, alias, or repo_id."""
         if provider != "local" or not identifier:
             return ""
 
-        if identifier in cls.LOCAL_MODELS:
-            return identifier
+        normalized = cls._normalize_identifier(identifier)
+        for model_id in cls.LOCAL_MODELS:
+            if cls._normalize_identifier(model_id) == normalized:
+                return model_id
 
         model_id = cls.get_model_id_for_name(provider, identifier)
         if model_id:
@@ -367,11 +454,14 @@ class LLMProviderConfig:
         if provider != "local" or not repo_id:
             return ""
 
+        target = str(repo_id).strip().lower()
+
         for model_id, model_info in cls.LOCAL_MODELS.items():
-            if repo_id in {
-                model_info.get("repo_id"),
-                model_info.get("gguf_repo_id"),
-            }:
+            candidates = {
+                str(model_info.get("repo_id", "")).lower(),
+                str(model_info.get("gguf_repo_id", "")).lower(),
+            }
+            if target in candidates:
                 return model_id
         return ""
 
@@ -460,6 +550,14 @@ class LLMProviderConfig:
             return os.path.join(base_dir, fallback.split("/")[-1] or "model")
 
         if resolved.get("model_type") == "gguf":
+            resolved_model_id = str(resolved.get("model_id", ""))
+            model_info = cls.get_model_info(provider, resolved_model_id)
+            storage_subdir = str(
+                model_info.get("local_storage_subdir", "")
+            ).strip()
+            if storage_subdir:
+                return os.path.join(base_dir, storage_subdir)
+
             repo_owner = cls._get_repo_owner(resolved.get("repo_id", ""))
             if repo_owner:
                 return os.path.join(base_dir, repo_owner)

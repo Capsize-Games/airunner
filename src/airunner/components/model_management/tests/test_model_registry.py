@@ -30,6 +30,21 @@ class TestModelRegistry(unittest.TestCase):
         self.assertIsNotNone(model)
         self.assertEqual(model.model_id, "qwen3-8b")
 
+    def test_get_qwen35_model_by_download_alias(self):
+        model = self.registry.get_model("unsloth/Qwen3.5-9B-GGUF")
+
+        self.assertIsNotNone(model)
+        self.assertEqual(model.model_id, "qwen3.5-9b")
+        self.assertEqual(model.provider, ModelProvider.QWEN)
+
+    def test_get_gpt_oss_model_by_filename_alias(self):
+        model = self.registry.get_model("gpt-oss-20b-F16.gguf")
+
+        self.assertIsNotNone(model)
+        self.assertEqual(model.model_id, "gpt-oss-20b")
+        self.assertEqual(model.provider, ModelProvider.OPENAI)
+        self.assertEqual(model.runtime_backend, "llama.cpp")
+
     def test_get_nonexistent_model(self):
         model = self.registry.get_model("nonexistent/model")
         self.assertIsNone(model)

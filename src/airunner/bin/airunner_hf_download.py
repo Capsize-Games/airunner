@@ -45,6 +45,15 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
+def _normalize_model_identifier(identifier: str) -> str:
+    """Normalize a model identifier for CLI alias matching."""
+    return "".join(
+        character
+        for character in str(identifier or "").lower()
+        if character.isalnum()
+    )
+
+
 def get_all_available_models() -> Dict[str, List[Dict]]:
     """Get all available models organized by type.
     
@@ -88,6 +97,7 @@ def get_all_available_models() -> Dict[str, List[Dict]]:
                 "has_gguf": bool(info.get("gguf_repo_id")),
                 "gguf_repo_id": info.get("gguf_repo_id", ""),
                 "gguf_filename": info.get("gguf_filename", ""),
+                "aliases": info.get("aliases", []),
                 "default_format": default_format,
                 "default_runtime": default_runtime,
                 "preferred_repo_id": preferred_repo_id,
@@ -182,25 +192,26 @@ def find_model(identifier: str, models: Dict[str, List[Dict]]) -> Optional[Dict]
     Returns:
         Model info dict if found, None otherwise
     """
-    identifier_lower = identifier.lower()
+    normalized_identifier = _normalize_model_identifier(identifier)
     
     # Search all model types
     for model_type, model_list in models.items():
         for model in model_list:
-            # Match by key
-            if model["key"].lower() == identifier_lower:
-                return model
-            # Match by canonical model id
-            if model.get("model_id", "").lower() == identifier_lower:
-                return model
-            # Match by repo_id (case-insensitive)
-            if model["repo_id"].lower() == identifier_lower:
-                return model
-            # Match by GGUF repo_id (case-insensitive)
-            if model.get("gguf_repo_id", "").lower() == identifier_lower:
-                return model
-            # Match by name
-            if model["name"].lower() == identifier_lower:
+            candidates = [
+                model["key"],
+                model.get("model_id", ""),
+                model["repo_id"],
+                model.get("gguf_repo_id", ""),
+                model["name"],
+                model.get("gguf_filename", ""),
+                *model.get("aliases", []),
+            ]
+            if any(
+                _normalize_model_identifier(candidate)
+                == normalized_identifier
+                for candidate in candidates
+                if candidate
+            ):
                 return model
     
     return None

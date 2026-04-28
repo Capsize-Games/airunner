@@ -10,6 +10,7 @@ class ModelProvider(Enum):
     """Supported model providers."""
 
     MISTRAL = "mistral"
+    OPENAI = "openai"
     QWEN = "qwen"
     LLAMA = "llama"
     STABLE_DIFFUSION = "stable_diffusion"
@@ -47,6 +48,7 @@ class ModelMetadata:
     preferred_download_repo_id: Optional[str] = None
     preferred_download_filename: Optional[str] = None
     runtime_backend: Optional[str] = None
+    aliases: tuple[str, ...] = ()
     compute_capability_min: Optional[tuple] = None
 
     @property
@@ -136,6 +138,7 @@ class ModelRegistry:
             preferred_download_repo_id=preferred_repo_id,
             preferred_download_filename=preferred_filename,
             runtime_backend=runtime_backend,
+            aliases=self._llm_aliases(model_info),
         )
 
     @staticmethod
@@ -144,6 +147,8 @@ class ModelRegistry:
         owner = str(repo_id).split("/", 1)[0].strip().lower()
         if owner == "mistralai" or "ministral" in model_id:
             return ModelProvider.MISTRAL
+        if owner == "openai" or "gpt-oss" in model_id:
+            return ModelProvider.OPENAI
         if owner == "qwen" or "qwen" in model_id:
             return ModelProvider.QWEN
         return ModelProvider.LLAMA
@@ -161,17 +166,47 @@ class ModelRegistry:
             prefer_pre_quantized=True,
         )
 
+    @staticmethod
+    def _normalize_alias(alias: str) -> str:
+        """Normalize one registry alias for case-insensitive lookups."""
+        return "".join(
+            character
+            for character in str(alias or "").lower()
+            if character.isalnum()
+        )
+
+    @staticmethod
+    def _llm_aliases(model_info: Dict[str, object]) -> tuple[str, ...]:
+        """Return stable aliases for one local LLM registry entry."""
+        aliases = list(model_info.get("aliases", []))
+        for key in ("name", "gguf_filename"):
+            value = model_info.get(key)
+            if value:
+                aliases.append(str(value))
+        return tuple(dict.fromkeys(alias for alias in aliases if alias))
+
+    def _register_alias(self, alias: str, canonical_id: str) -> None:
+        """Register one exact and normalized alias for model lookup."""
+        if not alias:
+            return
+        self._aliases[alias] = canonical_id
+        normalized = self._normalize_alias(alias)
+        if normalized:
+            self._aliases[normalized] = canonical_id
+
     def _register_model_metadata(self, metadata: ModelMetadata) -> None:
         """Register one model along with compatible lookup aliases."""
         canonical_id = metadata.model_id or metadata.huggingface_id
         self._models[canonical_id] = metadata
         for alias in (
             canonical_id,
+            metadata.name,
             metadata.huggingface_id,
             metadata.preferred_download_repo_id,
+            metadata.preferred_download_filename,
+            *metadata.aliases,
         ):
-            if alias:
-                self._aliases[alias] = canonical_id
+            self._register_alias(str(alias), canonical_id)
 
     def _register_stable_diffusion_models(self) -> None:
         """Register Stable Diffusion models.
@@ -236,7 +271,12 @@ class ModelRegistry:
 
     def get_model(self, model_id: str) -> Optional[ModelMetadata]:
         """Get model metadata by ID."""
-        canonical_id = self._aliases.get(model_id, model_id)
+        canonical_id = self._aliases.get(model_id)
+        if canonical_id is None:
+            canonical_id = self._aliases.get(
+                self._normalize_alias(model_id),
+                model_id,
+            )
         return self._models.get(canonical_id)
 
     def list_models(

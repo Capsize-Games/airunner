@@ -33,6 +33,28 @@ class TestPreferredDownloadResolution:
         assert download_info["gguf_filename"] == "Qwen3-8B-Q4_K_M.gguf"
         assert download_info["quantization_bits"] == 0
 
+    def test_resolve_download_target_prefers_qwen35_shipped_gguf(self):
+        download_info = LLMProviderConfig.resolve_download_target(
+            "local",
+            model_id="qwen3.5-9b",
+        )
+
+        assert download_info is not None
+        assert download_info["repo_id"] == "unsloth/Qwen3.5-9B-GGUF"
+        assert download_info["model_type"] == "gguf"
+        assert download_info["gguf_filename"] == "Qwen3.5-9B-Q8_0.gguf"
+
+    def test_resolve_download_target_prefers_gpt_oss_shipped_gguf(self):
+        download_info = LLMProviderConfig.resolve_download_target(
+            "local",
+            model_id="gpt-oss-20b",
+        )
+
+        assert download_info is not None
+        assert download_info["repo_id"] == "unsloth/gpt-oss-20b-GGUF"
+        assert download_info["model_type"] == "gguf"
+        assert download_info["gguf_filename"] == "gpt-oss-20b-F16.gguf"
+
     def test_resolve_download_target_keeps_transformers_when_gguf_missing(self):
         download_info = LLMProviderConfig.resolve_download_target(
             "local",
@@ -56,6 +78,24 @@ class TestPreferredDownloadResolution:
 
         assert storage_path == "/models/text/models/llm/causallm/Qwen"
 
+    def test_get_local_storage_path_uses_shipped_qwen_folder_for_qwen35(self):
+        storage_path = LLMProviderConfig.get_local_storage_path(
+            "/models",
+            "local",
+            model_id="qwen3.5-9b",
+        )
+
+        assert storage_path == "/models/text/models/llm/causallm/Qwen"
+
+    def test_get_local_storage_path_uses_gpt_oss_storage_override(self):
+        storage_path = LLMProviderConfig.get_local_storage_path(
+            "/models",
+            "local",
+            model_id="gpt-oss-20b",
+        )
+
+        assert storage_path == "/models/text/models/llm/causallm/gpt_oss"
+
     def test_get_expected_local_artifact_path_returns_exact_gguf_file(self):
         artifact_path = LLMProviderConfig.get_expected_local_artifact_path(
             "/models",
@@ -65,6 +105,45 @@ class TestPreferredDownloadResolution:
 
         assert artifact_path == (
             "/models/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+        )
+
+    def test_get_expected_local_artifact_path_returns_qwen35_file(self):
+        artifact_path = LLMProviderConfig.get_expected_local_artifact_path(
+            "/models",
+            "local",
+            model_id="qwen3.5-9b",
+        )
+
+        assert artifact_path == (
+            "/models/text/models/llm/causallm/Qwen/Qwen3.5-9B-Q8_0.gguf"
+        )
+
+    def test_get_expected_local_artifact_path_returns_gpt_oss_file(self):
+        artifact_path = LLMProviderConfig.get_expected_local_artifact_path(
+            "/models",
+            "local",
+            model_id="gpt-oss-20b",
+        )
+
+        assert artifact_path == (
+            "/models/text/models/llm/causallm/gpt_oss/gpt-oss-20b-F16.gguf"
+        )
+
+    def test_resolve_model_id_accepts_shipped_aliases(self):
+        assert (
+            LLMProviderConfig.resolve_model_id("local", "Qwen 3.5 9B")
+            == "qwen3.5-9b"
+        )
+        assert (
+            LLMProviderConfig.resolve_model_id("local", "GPT-OSS")
+            == "gpt-oss-20b"
+        )
+        assert (
+            LLMProviderConfig.resolve_model_id(
+                "local",
+                "gpt-oss-20b-F16.gguf",
+            )
+            == "gpt-oss-20b"
         )
 
 

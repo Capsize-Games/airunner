@@ -1239,10 +1239,10 @@ class ChatPromptWidget(BaseWidget):
                             model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                             if model_info:
                                 model_name = model_info.get("name", saved_model_id)
-                                base_path = os.path.expanduser(
-                                    getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                                correct_path = self._get_local_model_storage_path(
+                                    saved_model_id,
+                                    str(model_info.get("repo_id", "")),
                                 )
-                                correct_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
                                 self.logger.info(
                                     f"Rebuilding corrupted model_path from model_id '{saved_model_id}': {correct_path}"
                                 )
@@ -1270,10 +1270,10 @@ class ChatPromptWidget(BaseWidget):
                         model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                         if model_info:
                             model_name = model_info.get("name", saved_model_id)
-                            base_path = os.path.expanduser(
-                                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                            correct_path = self._get_local_model_storage_path(
+                                saved_model_id,
+                                str(model_info.get("repo_id", "")),
                             )
-                            correct_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
                             self.logger.info(f"Recovered corrupted model_path to: {correct_path}")
                             self.update_llm_generator_settings(
                                 model_path=correct_path,
@@ -1291,7 +1291,19 @@ class ChatPromptWidget(BaseWidget):
                     model_info = LLMProviderConfig.get_model_info("local", model_id)
                     if model_info:
                         model_name = model_info.get("name", "")
-                        if model_name and model_name in current_path:
+                        expected_path = self._get_local_model_storage_path(
+                            model_id,
+                            str(model_info.get("repo_id", "")),
+                        )
+                        normalized_current = os.path.normpath(current_path)
+                        normalized_expected = os.path.normpath(expected_path)
+                        if model_name and (
+                            model_name in current_path
+                            or normalized_current == normalized_expected
+                            or normalized_current.startswith(
+                                normalized_expected + os.sep
+                            )
+                        ):
                             self.ui.model_dropdown.setCurrentIndex(i)
                             self._update_model_tooltip(model_id)
                             return
@@ -1328,10 +1340,10 @@ class ChatPromptWidget(BaseWidget):
                     model_info = LLMProviderConfig.get_model_info("local", model_id)
                     if model_info:
                         model_name = model_info.get("name", model_id)
-                        base_path = os.path.expanduser(
-                            getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                        model_path = self._get_local_model_storage_path(
+                            model_id,
+                            str(model_info.get("repo_id", "")),
                         )
-                        model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
                         
                         # Save to database
                         self.update_llm_generator_settings(
@@ -1399,6 +1411,22 @@ class ChatPromptWidget(BaseWidget):
                 tooltip += f"\n{description}"
             
             self.ui.model_dropdown.setToolTip(tooltip)
+
+        def _get_local_model_storage_path(
+            self,
+            model_id: str,
+            repo_id: str = "",
+        ) -> str:
+            """Return the configured local storage path for one local model."""
+            base_path = os.path.expanduser(
+                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+            )
+            return LLMProviderConfig.get_local_storage_path(
+                base_path,
+                "local",
+                model_id=model_id,
+                repo_id=repo_id,
+            )
             
         elif provider == ModelService.OLLAMA.value:
             # Ollama - simpler tooltip
@@ -1486,10 +1514,10 @@ class ChatPromptWidget(BaseWidget):
                 return
             
             model_name = model_info.get("name", model_id)
-            base_path = os.path.expanduser(
-                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+            model_path = self._get_local_model_storage_path(
+                model_id,
+                str(model_info.get("repo_id", "")),
             )
-            model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
             
             self.update_llm_generator_settings(
                 model_path=model_path,
@@ -1682,7 +1710,21 @@ class ChatPromptWidget(BaseWidget):
         """Handle custom model entry for any provider."""
         if provider == ModelService.LOCAL.value:
             # Could be a path or HuggingFace repo ID
-            if "/" in custom_model and not os.path.exists(custom_model):
+            resolved_model_id = LLMProviderConfig.resolve_model_id(
+                "local",
+                custom_model,
+            )
+            if resolved_model_id:
+                model_info = LLMProviderConfig.get_model_info(
+                    "local",
+                    resolved_model_id,
+                )
+                model_name = model_info.get("name", resolved_model_id)
+                model_path = self._get_local_model_storage_path(
+                    resolved_model_id,
+                    str(model_info.get("repo_id", custom_model)),
+                )
+            elif "/" in custom_model and not os.path.exists(custom_model):
                 # Likely a HuggingFace repo ID
                 base_path = os.path.expanduser(
                     getattr(self.path_settings, "base_path", "~/.local/share/airunner")

@@ -362,6 +362,15 @@ class TestModelPath:
 
         assert mixin.model_path == "/data/text/models/llm/causallm/Qwen"
 
+    def test_resolves_gpt_oss_repo_id_override_to_shipped_directory(
+        self,
+        mixin,
+    ):
+        """Should map GPT-OSS repo IDs to the configured shipped directory."""
+        mixin.llm_request = Mock(model="unsloth/gpt-oss-20b-GGUF")
+
+        assert mixin.model_path == "/data/text/models/llm/causallm/gpt_oss"
+
     def test_normalizes_persisted_repo_id_to_shared_vendor_directory(self, mixin):
         """Should map stored repo IDs to the configured shared GGUF storage directory."""
         mixin.llm_generator_settings.model_path = "Qwen/Qwen3-8B-GGUF"

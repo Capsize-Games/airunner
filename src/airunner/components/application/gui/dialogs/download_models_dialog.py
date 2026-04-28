@@ -40,6 +40,7 @@ from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
 from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ART_ENABLED
@@ -362,18 +363,30 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
                     None
                 )
                 if model:
+                    output_dir = os.path.join(
+                        self.path_settings.base_path,
+                        "text",
+                        "models",
+                        model["category"],
+                        model["pipeline_action"],
+                        model["path"],
+                    )
+                    model_id = LLMProviderConfig.resolve_model_id(
+                        "local",
+                        repo_id,
+                    )
+                    if model_id:
+                        output_dir = LLMProviderConfig.get_local_storage_path(
+                            self.path_settings.base_path,
+                            "local",
+                            model_id=model_id,
+                            repo_id=repo_id,
+                        )
                     self._download_queue.append({
                         "repo_id": repo_id,
                         "model_type": "llm",
                         "model_name": model["name"],
-                        "output_dir": os.path.join(
-                            self.path_settings.base_path,
-                            "text",
-                            "models",
-                            model["category"],
-                            model["pipeline_action"],
-                            model["path"],
-                        ),
+                        "output_dir": output_dir,
                     })
                     
             elif key.startswith("stt_"):
