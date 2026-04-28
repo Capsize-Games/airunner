@@ -20,3 +20,4 @@
 - When you need to check code quality, use the `src/airunner/bin/code_quality_report.py` script
 - When you need to check code coverage use the `src/airunner/bin/coverage_report.py` script
 - Always run automated tests to ensure that your code changes do not break existing functionality. Use the `src/airunner/bin/run_tests.py` script to run tests.
+- Avoid multiple classes in a single file - we prefer one class per file for better organization and readability. Subdirectories are a good way to group related classes together while keeping each file focused and manageable.
