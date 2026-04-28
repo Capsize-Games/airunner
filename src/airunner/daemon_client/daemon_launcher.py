@@ -20,11 +20,15 @@ class DaemonLauncher:
         process_factory: ProcessFactory = subprocess.Popen,
         stdout: Any = subprocess.DEVNULL,
         stderr: Any = subprocess.DEVNULL,
+        working_directory: Optional[Path] = None,
+        environment: Optional[dict[str, str]] = None,
     ) -> None:
         self.config_path = config_path
         self._process_factory = process_factory
         self._stdout = stdout
         self._stderr = stderr
+        self._working_directory = working_directory
+        self._environment = environment
         self._process: Optional[subprocess.Popen] = None
 
     def command(self) -> list[str]:
@@ -42,6 +46,12 @@ class DaemonLauncher:
             self.command(),
             stdout=self._stdout,
             stderr=self._stderr,
+            cwd=(
+                str(self._working_directory)
+                if self._working_directory is not None
+                else None
+            ),
+            env=self._environment,
         )
 
     def stop(self) -> None:

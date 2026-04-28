@@ -163,7 +163,8 @@ def test_connect_only_fails_when_daemon_missing(monkeypatch, tmp_path):
     assert client.calls == [False]
 
 
-def test_prepare_daemon_config_overrides_server_only(tmp_path):
+def test_prepare_daemon_config_overrides_server_only(monkeypatch, tmp_path):
+    monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
     base_config = tmp_path / "daemon.yaml"
     base_config.write_text(
         yaml.safe_dump(
@@ -188,6 +189,7 @@ def test_prepare_daemon_config_overrides_server_only(tmp_path):
     finally:
         session_config.unlink(missing_ok=True)
 
+    assert session_config.parent.name == "configs"
     assert config["server"]["host"] == "0.0.0.0"
     assert config["server"]["port"] == 9000
     assert config["server"]["enable_cors"] is True

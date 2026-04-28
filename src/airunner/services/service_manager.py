@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 from enum import Enum
 
+from airunner.linux_bundle_layout import build_linux_bundle_layout
 from airunner.runtime_layout import build_runtime_directory_layout
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -265,12 +266,15 @@ class LinuxSystemdHandler(ServiceHandlerBase):
     def install(self, config_path: Path, **kwargs) -> bool:
         """Install systemd user service."""
         # Get Python executable and airunner-daemon path
-        python_exe = sys.executable
-        daemon_script = Path(python_exe).parent / "airunner-daemon"
+        bundle_layout = build_linux_bundle_layout(python_executable=sys.executable)
+        daemon_script = bundle_layout.daemon_executable()
 
-        if not daemon_script.exists():
+        if daemon_script is None:
             # Fallback to module execution
-            daemon_cmd = f"{python_exe} -m airunner.services.daemon"
+            daemon_cmd = (
+                f"{bundle_layout.python_executable} "
+                "-m airunner.services.daemon"
+            )
         else:
             daemon_cmd = str(daemon_script)
 
@@ -279,6 +283,7 @@ class LinuxSystemdHandler(ServiceHandlerBase):
         service_content = self._generate_service_content(
             daemon_cmd,
             config_path,
+            bundle_layout,
         )
 
         try:
@@ -315,9 +320,13 @@ class LinuxSystemdHandler(ServiceHandlerBase):
         self,
         daemon_cmd: str,
         config_path: Path,
+        bundle_layout=None,
     ) -> str:
         """Return the full systemd unit content for the daemon service."""
-        environment = "\n".join(self._environment_lines(config_path))
+        bundle_layout = bundle_layout or build_linux_bundle_layout()
+        environment = "\n".join(
+            self._environment_lines(config_path, bundle_layout)
+        )
         prestart = "\n".join(self._prestart_lines())
         security = "\n".join(self._security_lines())
         return f"""[Unit]
@@ -326,6 +335,7 @@ After=network.target
 
 [Service]
 Type=simple
+WorkingDirectory={bundle_layout.bundle_root}
 {environment}
 {prestart}
 ExecStart={daemon_cmd} --config {config_path}
@@ -339,20 +349,23 @@ StandardError=journal
 WantedBy=default.target
 """
 
-    def _environment_lines(self, config_path: Path) -> list[str]:
+    def _environment_lines(self, config_path: Path, bundle_layout) -> list[str]:
         """Return environment lines for the systemd unit."""
         layout = build_runtime_directory_layout()
         environment = layout.as_environment(config_path)
         environment.update(
             {
+                "AIRUNNER_BUNDLE_ROOT": str(bundle_layout.bundle_root),
                 "AIRUNNER_HEADLESS": "1",
                 "AIRUNNER_HTTP_HOST": "127.0.0.1",
                 "AIRUNNER_RUNTIME_BIND_HOST": "127.0.0.1",
                 "AIRUNNER_LLM_ON": "1",
+                "AIRUNNER_PYTHON": str(bundle_layout.python_executable),
                 "AIRUNNER_LOG_LEVEL": "INFO",
                 "QT_QPA_PLATFORM": "offscreen",
                 "QT_LOGGING_RULES": "*.debug=false;qt.qpa.*=false",
                 "DEV_ENV": "0",
+                "PATH": bundle_layout.path_environment(),
             }
         )
         return [

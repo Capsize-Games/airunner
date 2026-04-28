@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from airunner.linux_bundle_layout import build_linux_bundle_layout
 from airunner.runtime_layout import (
     DEFAULT_RUNTIME_HOST,
     build_runtime_directory_layout,
@@ -68,13 +69,30 @@ def test_linux_systemd_service_content_includes_runtime_boundary(
     tmp_path,
 ):
     monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
+    monkeypatch.setenv("AIRUNNER_BUNDLE_ROOT", str(tmp_path / "bundle"))
     handler = LinuxSystemdHandler()
     config_path = tmp_path / "runtime" / "configs" / "daemon.yaml"
 
     content = handler._generate_service_content("python -m airunner.services.daemon", config_path)
 
+    assert "AIRUNNER_BUNDLE_ROOT" in content
     assert "AIRUNNER_RUNTIME_ROOT" in content
     assert "AIRUNNER_RUNTIME_BIND_HOST=127.0.0.1" in content
+    assert f"WorkingDirectory={tmp_path / 'bundle'}" in content
     assert f"ExecStart=python -m airunner.services.daemon --config {config_path}" in content
     assert "NoNewPrivileges=yes" in content
     assert f"ReadWritePaths={tmp_path}" in content
+
+
+def test_build_linux_bundle_layout_prefers_install_venv(monkeypatch, tmp_path):
+    bundle_root = tmp_path / "bundle"
+    python_path = bundle_root / "venv" / "bin" / "python"
+    python_path.parent.mkdir(parents=True)
+    python_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("AIRUNNER_BUNDLE_ROOT", str(bundle_root))
+
+    layout = build_linux_bundle_layout()
+
+    assert layout.bundle_root == bundle_root
+    assert layout.python_executable == python_path
+    assert layout.bin_dir == python_path.parent

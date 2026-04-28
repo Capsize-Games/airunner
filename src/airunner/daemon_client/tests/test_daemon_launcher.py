@@ -86,3 +86,24 @@ def test_start_uses_configured_stdio_streams():
 
     assert spawned_kwargs["stdout"] is None
     assert spawned_kwargs["stderr"] is None
+
+
+def test_start_forwards_working_directory_and_environment(tmp_path):
+    spawned_kwargs = {}
+
+    def fake_process_factory(*args, **kwargs):
+        spawned_kwargs.update(kwargs)
+        return FakeProcess()
+
+    launcher = DaemonLauncher(
+        process_factory=fake_process_factory,
+        working_directory=tmp_path,
+        environment={"AIRUNNER_BUNDLE_ROOT": str(tmp_path)},
+    )
+
+    launcher.start()
+
+    assert spawned_kwargs["cwd"] == str(tmp_path)
+    assert spawned_kwargs["env"] == {
+        "AIRUNNER_BUNDLE_ROOT": str(tmp_path),
+    }

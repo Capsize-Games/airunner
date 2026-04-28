@@ -1,28 +1,50 @@
 # AI Runner Headless Server Deployment
 
-This directory contains configuration files for deploying AI Runner headless server as a system service.
+This directory contains configuration files for deploying AI Runner headless
+server as a Linux system service.
+
+The packaged `airunner-headless.service` file is a relocatable template. Use
+`deployment/systemd/install.sh` to render it with the actual bundle root,
+Python executable, and runtime data directories for the current install.
+
+## Bundle Layout
+
+Linux desktop and headless installs are expected to keep the AIRunner bundle
+root separate from the writable runtime data root.
+
+- Bundle root: the installed application directory, for example
+   `~/.local/airunner` or `/opt/airunner`
+- Bundle Python: one of `<bundle>/venv/bin/python`,
+   `<bundle>/.venv/bin/python`, or `<bundle>/bin/python`
+- Runtime data root: `~/.local/share/airunner` unless `AIRUNNER_DATA_DIR`
+   overrides it
+- Runtime configs: `<data>/runtime/configs`
+- Runtime logs: `<data>/runtime/logs`
+- Runtime sockets: `<data>/runtime/sockets`
+- Runtime cache: `<data>/cache`
+- Models: `<data>/models`
+
+The desktop launchers created by the top-level installer export
+`AIRUNNER_BUNDLE_ROOT`, `AIRUNNER_PYTHON`, and the standardized runtime
+directory variables so the daemon and sidecars can discover the bundle and
+runtime roots predictably after relocation.
 
 ## Systemd Service Setup (Ubuntu/Debian)
 
-The `airunner-headless.service` file allows AI Runner to run as a background service that starts automatically at system boot.
+The rendered `airunner-headless.service` file allows AI Runner to run as a
+background service that starts automatically at system boot.
 
 ### Installation Steps
 
-1. **Copy the service file to systemd directory:**
+1. **Render and install the service template:**
    ```bash
-   sudo cp deployment/systemd/airunner-headless.service /etc/systemd/system/
+   sudo bash deployment/systemd/install.sh
    ```
 
-2. **Edit the service file if needed:**
-   ```bash
-   sudo nano /etc/systemd/system/airunner-headless.service
-   ```
-   
-   Update these values if your paths are different:
-   - `User=airunner` - Change to your username
-   - `Group=airunner` - Change to your group
-   - `WorkingDirectory=/opt/airunner` - Change to your AI Runner path
-   - `ExecStart=/opt/airunner/.venv/bin/python` - Change to your Python path
+2. **Optional overrides before rendering:**
+   - `AIRUNNER_BUNDLE_ROOT=/path/to/bundle`
+   - `AIRUNNER_PYTHON=/path/to/python`
+   - `AIRUNNER_DATA_DIR=/path/to/runtime-data`
 
 3. **Reload systemd to recognize the new service:**
    ```bash
@@ -83,17 +105,17 @@ sudo systemctl restart airunner-headless
 
 **Service fails to start:**
 1. Check logs: `sudo journalctl -u airunner-headless -n 100`
-2. Verify Python path: `which python` in your virtual environment
-3. Verify working directory exists and has correct permissions
-4. Test manually: `cd /opt/airunner && .venv/bin/python -m airunner.main`
+2. Verify the rendered Python path exists under your bundle root
+3. Verify the runtime data directory exists and has correct permissions
+4. Test manually from the bundle root with the rendered Python path
 
 **Permission issues:**
 ```bash
-# Ensure the service user can access AI Runner directory
-sudo chown -R airunner:airunner /opt/airunner
+# Ensure the service user can access the runtime data directory
+sudo chown -R airunner:airunner ~/.local/share/airunner
 
-# Check if user can write to logs
-ls -la /opt/airunner/
+# Check if user can write to runtime logs
+ls -la ~/.local/share/airunner/runtime/
 ```
 
 **Service won't stop:**
@@ -122,8 +144,10 @@ The service sets these environment variables:
 - `AIRUNNER_HEADLESS=1` - Run in headless mode (no GUI)
 - `AIRUNNER_LLM_ON=1` - Enable LLM service
 - `AIRUNNER_RUNTIME_BIND_HOST=127.0.0.1` - Keep managed runtimes on loopback by default
-- `AIRUNNER_DAEMON_CONFIG=~/.local/share/airunner/runtime/configs/daemon.yaml` - Standard daemon config path
-- `PATH` - Includes virtual environment Python
+- `AIRUNNER_BUNDLE_ROOT` - Resolved install root for the rendered bundle
+- `AIRUNNER_PYTHON` - Resolved bundle Python executable
+- `AIRUNNER_DAEMON_CONFIG` - Standard daemon config path
+- `PATH` - Prefers the rendered bundle's `bin` directory
 
 The standardized runtime layout is:
 - `~/.local/share/airunner/runtime/configs` for daemon and sidecar config files
@@ -163,7 +187,7 @@ curl -X POST http://localhost:8080/llm \
 Once the service is running, you can use the BookSite classification:
 
 ```bash
-cd /opt/airunner/booksite
+cd /path/to/airunner/booksite
 ./manage.py ai_process_books --books 535
 ```
 

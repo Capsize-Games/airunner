@@ -16,7 +16,8 @@ Usage:
     airunner-headless
     airunner-headless --host 0.0.0.0 --port 8080
         airunner-headless --connect-only
-        airunner-headless --daemon-config ~/.config/airunner/daemon.yaml
+        airunner-headless \
+            --daemon-config ~/.local/share/airunner/runtime/configs/daemon.yaml
     airunner-headless --ollama-mode  # Run as Ollama replacement on port 11434
     airunner-headless --model /path/to/llm/model  # Load specific LLM model
     airunner-headless --art-model /path/to/art/model  # Load specific art model
@@ -150,12 +151,15 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _default_daemon_config() -> Optional[Path]:
-    """Return the optional daemon config path from the environment."""
+def _default_daemon_config() -> Path:
+    """Return the default daemon config path for this bundle/runtime."""
     config_path = os.environ.get("AIRUNNER_DAEMON_CONFIG")
-    if not config_path:
-        return None
-    return Path(config_path)
+    if config_path:
+        return Path(config_path)
+
+    from airunner.runtime_layout import build_runtime_directory_layout
+
+    return build_runtime_directory_layout().config_file("daemon")
 
 
 def _add_model_args(parser: argparse.ArgumentParser) -> None:
@@ -250,7 +254,18 @@ def _validate_host_binding(args: argparse.Namespace) -> bool:
 
 def _configure_environment(args: argparse.Namespace, port: int) -> None:
     """Set headless environment variables inherited by the daemon."""
+    from airunner.linux_bundle_layout import build_linux_bundle_layout
+
+    bundle_layout = build_linux_bundle_layout()
     os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+    os.environ.setdefault(
+        "AIRUNNER_BUNDLE_ROOT",
+        str(bundle_layout.bundle_root),
+    )
+    os.environ.setdefault(
+        "AIRUNNER_PYTHON",
+        str(bundle_layout.python_executable),
+    )
     os.environ["AIRUNNER_HEADLESS_SERVER_HOST"] = args.host
     os.environ["AIRUNNER_HEADLESS_SERVER_PORT"] = str(port)
     os.environ["AIRUNNER_HTTP_HOST"] = args.host
@@ -379,13 +394,17 @@ def _service_description(
 def _prepare_daemon_config(args: argparse.Namespace, port: int) -> Path:
     """Clone daemon config with per-invocation host and port overrides."""
     from airunner.services.daemon_config import DaemonConfig
+    from airunner.runtime_layout import build_runtime_directory_layout
 
     base_config = DaemonConfig(args.daemon_config)
     config = copy.deepcopy(base_config.config)
     server = config.setdefault("server", {})
     server["host"] = args.host
     server["port"] = port
+    layout = build_runtime_directory_layout()
+    layout.ensure_exists()
     fd, temp_path = tempfile.mkstemp(
+        dir=layout.config_dir,
         prefix="airunner-headless-",
         suffix=".yaml",
     )
@@ -400,11 +419,15 @@ def _build_daemon_client(config_path: Path):
     """Create the daemon client used by the headless supervisor."""
     from airunner.daemon_client.daemon_launcher import DaemonLauncher
     from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
+    from airunner.linux_bundle_layout import build_linux_bundle_layout
+
+    bundle_layout = build_linux_bundle_layout()
 
     launcher = DaemonLauncher(
         config_path=config_path,
         stdout=None,
         stderr=None,
+        working_directory=bundle_layout.bundle_root,
     )
     return GuiDaemonClient(
         config_path=config_path,
