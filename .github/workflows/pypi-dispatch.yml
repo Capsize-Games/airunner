@@ -175,12 +175,145 @@ jobs:
             dist/*.zip
             dist/windows-installer/*.exe
 
+  validate-linux-installers:
+    needs: build-linux-installers
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux installers
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-installers
+          path: validation/linux
+
+      - name: Validate Linux tarball install and AppImage
+        run: |
+          set -euo pipefail
+          mkdir -p validation/linux/logs
+          bundle_archive="$(find validation/linux -name '*.tar.gz' -print -quit)"
+          appimage_path="$(find validation/linux -name '*.AppImage' -print -quit)"
+          if [[ -z "$bundle_archive" || -z "$appimage_path" ]]; then
+            echo "Missing Linux installer artifacts" >&2
+            exit 1
+          fi
+          chmod +x "$appimage_path"
+          temp_root="$(mktemp -d)"
+          install_home="$temp_root/home"
+          HOME="$install_home" \
+          XDG_DATA_HOME="$install_home/.local/share" \
+            bash ./install.sh --bundle-archive "$bundle_archive" \
+            2>&1 | tee validation/linux/logs/install-log.txt
+          "$install_home/.local/bin/airunner" \
+            --mode prod \
+            --manifest "$install_home/.local/airunner/share/airunner/runtime_manifest.env" \
+            --dry-run \
+            2>&1 | tee validation/linux/logs/tarball-dry-run.txt
+          APPIMAGE_EXTRACT_AND_RUN=1 \
+            "$appimage_path" \
+            --mode prod \
+            --dry-run \
+            2>&1 | tee validation/linux/logs/appimage-dry-run.txt
+
+      - name: Upload Linux validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-validation-logs
+          path: validation/linux/logs/*
+
+  validate-windows-installers:
+    needs: build-windows-installers
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installers
+          path: validation/windows
+
+      - name: Validate Windows bundle and installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $logDir = Join-Path $PWD "validation/windows/logs"
+          New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+          $bundleZip = Get-ChildItem `
+            -Path "validation/windows" `
+            -Filter "*.zip" `
+            -Recurse | Select-Object -First 1
+          if (-not $bundleZip) {
+            throw "Missing Windows bundle zip"
+          }
+
+          $extractDir = Join-Path $PWD "validation/windows/extracted"
+          if (Test-Path $extractDir) {
+            Remove-Item -Recurse -Force $extractDir
+          }
+          Expand-Archive -Path $bundleZip.FullName -DestinationPath $extractDir
+
+          $bundleRoot = Get-ChildItem -Path $extractDir |
+            Where-Object { $_.PSIsContainer } |
+            Select-Object -First 1
+          if (-not $bundleRoot) {
+            $bundleRoot = Get-Item $extractDir
+          }
+
+          $bundleLog = Join-Path $logDir "bundle-dry-run.txt"
+          & (Join-Path $bundleRoot.FullName "bin/airunner.exe") `
+            --mode prod `
+            --manifest (Join-Path $bundleRoot.FullName "share/airunner/runtime_manifest.env") `
+            --dry-run 2>&1 | Tee-Object $bundleLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "Bundle dry-run failed with exit code $LASTEXITCODE"
+          }
+
+          $installer = Get-ChildItem `
+            -Path "validation/windows" `
+            -Filter "*.exe" `
+            -Recurse | Select-Object -First 1
+          if (-not $installer) {
+            throw "Missing Windows installer exe"
+          }
+
+          $installDir = Join-Path $env:RUNNER_TEMP "airunner-test-install"
+          if (Test-Path $installDir) {
+            Remove-Item -Recurse -Force $installDir
+          }
+          $process = Start-Process -FilePath $installer.FullName `
+            -ArgumentList @('/S', "/D=$installDir") `
+            -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 0) {
+            throw "Installer exited with code $($process.ExitCode)"
+          }
+
+          $installerLog = Join-Path $logDir "installer-dry-run.txt"
+          & (Join-Path $installDir "bin/airunner.exe") `
+            --mode prod `
+            --manifest (Join-Path $installDir "share/airunner/runtime_manifest.env") `
+            --dry-run 2>&1 | Tee-Object $installerLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed bundle dry-run failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Upload Windows validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-validation-logs
+          path: validation/windows/logs/*
+
   publish-release-assets:
     if: github.event_name == 'release'
     needs:
       - build-python-package
-      - build-linux-installers
-      - build-windows-installers
+      - validate-linux-installers
+      - validate-windows-installers
     runs-on: ubuntu-latest
 
     steps:

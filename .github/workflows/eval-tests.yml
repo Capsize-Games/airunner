@@ -66,6 +66,50 @@ jobs:
           name: runtime-contract-results
           path: runtime-contracts.xml
 
+  launcher-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install launcher build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Create repo-local test venv
+        run: |
+          python -m venv venv
+          . venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Build Linux launcher
+        run: ./scripts/build_airunner_launcher.sh --clean --target-platform linux
+
+      - name: Run launcher smoke tests
+        run: |
+          . venv/bin/activate
+          pytest \
+            src/airunner/distribution/tests/test_launcher_smoke.py \
+            --tb=short \
+            --junitxml=launcher-smoke.xml | tee launcher-smoke.txt
+
+      - name: Upload launcher smoke results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-smoke-results
+          path: |
+            launcher-smoke.xml
+            launcher-smoke.txt
+
   runtime-smoke:
     runs-on: ubuntu-latest
 
