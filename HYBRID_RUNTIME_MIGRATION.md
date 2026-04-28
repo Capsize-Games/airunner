@@ -8,6 +8,13 @@ current gate is satisfied. Each phase has a cutover target, explicit issues,
 and a stop condition that keeps the rewrite incremental instead of all at
 once.
 
+Scope note:
+This migration plan covers the hybrid runtime refactor through daemon-backed
+runtime boundaries, Linux bundle metadata, and CI alignment. It does not yet
+deliver the final end-user packaging target of "install AIRunner, click run,
+no system Python required". That productization work is tracked separately in
+#82.
+
 ## Delivery Order
 
 ### Phase 0: Runtime Foundation
@@ -165,6 +172,28 @@ Cutover criteria:
 - The team can resume the plan from the issue tree and docs without reconstructing
   the architecture from memory.
 
+## Post-Migration Productization
+
+The completed migration issue tree establishes the runtime architecture needed
+for end-user distribution, but it does not by itself ship AIRunner as a
+consumer-ready desktop application.
+
+The missing product requirement is tracked in #82: ship AIRunner as a
+no-Python end-user application with a single `airunner` entry point on Linux
+and Windows.
+
+That follow-on scope includes:
+- a native launcher/bootstrapper built for each target platform
+- embedded Python bundled inside the install artifact
+- pinned `llama.cpp` and `whisper.cpp` binaries included in the package
+- installable Linux and Windows artifacts with fresh-machine smoke coverage
+
+This distinction matters:
+- the hybrid migration is complete as an architecture and runtime-boundary
+  project
+- end-user distribution is still open as a packaging and release-engineering
+  project
+
 ## Rollout Gates Summary
 
 | Gate | Required outcome | Cutover target |
@@ -173,8 +202,9 @@ Cutover criteria:
 | LLM | llama.cpp path is primary and daemon-backed | LLM cutover |
 | STT | whisper.cpp client path is live with recovery coverage | STT cutover |
 | Art/TTS | supervised Python runtimes own modality execution | Art/TTS cutover |
-| Packaging/CI | profiles, bundles, service templates, and CI artifacts match the runtime graph | Linux-first delivery |
+| Packaging/CI | profiles, bundles, service templates, and CI artifacts match the runtime graph | Linux bundle and CI alignment |
 | Rollout docs | sequence and gates are durable and auditable | Migration handoff |
+| End-user distribution | embedded runtime, native launcher, and installer artifacts exist | No-Python product delivery |
 
 ## Implementation Checklist
 
@@ -229,6 +259,15 @@ Cutover criteria:
 - [x] #79 Refactor CI for sidecars, bundles, and contract tests
 - [x] #80 Write migration docs, rollout gates, and a phased implementation
   checklist
+
+### Follow-On Epic #82: No-Python End-User Distribution
+
+- [ ] Define the distribution contract and bundle manifest for end-user
+  installs
+- [ ] Build a native AIRunner launcher/bootstrapper
+- [ ] Produce pinned llama.cpp and whisper.cpp binaries for Linux and Windows
+- [ ] Assemble embedded Python and AIRunner into installable bundles
+- [ ] Add installer/runtime smoke tests and release validation
 
 ## Operational Rule For Future Work
 

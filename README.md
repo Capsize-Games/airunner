@@ -53,6 +53,13 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 
 ## 💾 Installation
 
+Current status:
+The hybrid-runtime branch completed the runtime refactor, but AIRunner does
+not yet ship as a self-contained end-user installer with embedded Python.
+The manual and Docker paths below are still developer/operator installation
+flows. The follow-on end-user packaging requirement is tracked in #82 and
+summarized in [END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
+
 ### Docker (Recommended)
 
 **GUI Mode:**
@@ -168,6 +175,12 @@ The hybrid-runtime rewrite is being delivered in explicit phases: runtime
 foundation, LLM cutover, STT isolation, art/TTS isolation, then packaging,
 bundles, CI, and rollout hardening. The phase order, rollout gates, and full
 issue-tree checklist live in [HYBRID_RUNTIME_MIGRATION.md](./HYBRID_RUNTIME_MIGRATION.md).
+
+That migration is the runtime architecture foundation, not the final
+consumer-distribution story. The missing product requirement is a no-system-
+Python AIRunner install with one primary `airunner` entry point. That
+follow-on work is tracked in #82 and described in
+[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
 
 ---
 
