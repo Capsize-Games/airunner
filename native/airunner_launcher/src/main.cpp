@@ -30,6 +30,7 @@ struct CliOptions {
     std::optional<fs::path> python_executable;
     bool print_plan = false;
     bool dry_run = false;
+    bool diagnose = false;
     std::vector<std::string> app_args;
 };
 
@@ -44,6 +45,16 @@ struct LaunchPlan {
     std::optional<fs::path> llama_server_bin;
     std::optional<fs::path> whisper_server_bin;
     std::vector<std::string> app_args;
+};
+
+struct ValidationResult {
+    std::vector<std::string> errors;
+    std::vector<std::string> warnings;
+
+    [[nodiscard]] bool ok() const
+    {
+        return errors.empty();
+    }
 };
 
 std::string trim(std::string value)
@@ -270,6 +281,11 @@ CliOptions parse_args(int argc, char **argv)
             options.dry_run = true;
             continue;
         }
+        if (arg == "--diagnose") {
+            options.print_plan = true;
+            options.diagnose = true;
+            continue;
+        }
         if (arg == "--help" || arg == "-h") {
             std::cout
                 << "Usage: airunner [launcher-options] [-- app-args]\n\n"
@@ -279,7 +295,8 @@ CliOptions parse_args(int argc, char **argv)
                 << "  --repo-root <path>\n"
                 << "  --python <path>\n"
                 << "  --print-plan\n"
-                << "  --dry-run\n";
+                << "  --dry-run\n"
+                << "  --diagnose\n";
             std::exit(0);
         }
 
@@ -462,6 +479,67 @@ void print_plan(const LaunchPlan &plan)
     }
 }
 
+ValidationResult validate_plan(const LaunchPlan &plan)
+{
+    ValidationResult result;
+
+    if (!fs::exists(plan.bundle_root)) {
+        result.errors.push_back(
+            "bundle root does not exist: " + plan.bundle_root.string());
+    }
+
+    if (!fs::exists(plan.python_executable)) {
+        result.errors.push_back(
+            "python executable does not exist: "
+            + plan.python_executable.string());
+    }
+
+    if (plan.mode == "dev") {
+        if (!plan.repo_root.has_value() || !fs::exists(*plan.repo_root)) {
+            result.errors.push_back("dev mode repository root is missing");
+        }
+        if (!plan.pythonpath.has_value() || !fs::exists(*plan.pythonpath)) {
+            result.errors.push_back("dev mode PYTHONPATH root is missing");
+        }
+    }
+
+    if (plan.mode == "prod") {
+        if (!plan.manifest_path.has_value() || !fs::exists(*plan.manifest_path)) {
+            result.errors.push_back("prod mode runtime manifest is missing");
+        }
+        if (plan.pythonpath.has_value() && !fs::exists(*plan.pythonpath)) {
+            result.errors.push_back(
+                "configured AIRUNNER_PYTHONPATH does not exist: "
+                + plan.pythonpath->string());
+        }
+    }
+
+    if (plan.llama_server_bin.has_value() && !fs::exists(*plan.llama_server_bin)) {
+        result.warnings.push_back(
+            "configured AIRUNNER_LLAMA_SERVER_BIN does not exist: "
+            + plan.llama_server_bin->string());
+    }
+
+    if (plan.whisper_server_bin.has_value()
+        && !fs::exists(*plan.whisper_server_bin)) {
+        result.warnings.push_back(
+            "configured AIRUNNER_WHISPER_SERVER_BIN does not exist: "
+            + plan.whisper_server_bin->string());
+    }
+
+    return result;
+}
+
+void print_validation(const ValidationResult &validation)
+{
+    for (const auto &warning : validation.warnings) {
+        std::cerr << "warning: " << warning << '\n';
+    }
+    for (const auto &error : validation.errors) {
+        std::cerr << "error: " << error << '\n';
+    }
+}
+
 std::map<std::string, std::string> build_environment(const LaunchPlan &plan)
 {
     std::map<std::string, std::string> env;
@@ -579,8 +657,17 @@ int main(int argc, char **argv)
     try {
         const auto options = parse_args(argc, argv);
         const auto plan = resolve_plan(options);
+        const auto validation = validate_plan(plan);
         if (options.print_plan) {
             print_plan(plan);
+        }
+        print_validation(validation);
+
+        if (options.diagnose) {
+            return validation.ok() ? 0 : 2;
+        }
+        if (!validation.ok()) {
+            return 2;
         }
         if (options.dry_run) {
             return 0;

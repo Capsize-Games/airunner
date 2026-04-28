@@ -40,6 +40,12 @@ Build the launcher:
 ./scripts/build_airunner_launcher.sh
 ```
 
+Cross-build the Windows launcher from Linux when MinGW-w64 is available:
+
+```bash
+./scripts/build_airunner_launcher.sh --target-platform windows
+```
+
 Run AIRunner through the native launcher in dev mode:
 
 ```bash
@@ -65,6 +71,11 @@ The launcher reads:
 - `AIRUNNER_ENTRYPOINT`
 - `AIRUNNER_LLAMA_SERVER_BIN`
 - `AIRUNNER_WHISPER_SERVER_BIN`
+
+For diagnostics and support workflows, the launcher also supports:
+- `--print-plan` to print the resolved launch plan
+- `--dry-run` to print the plan without starting Python
+- `--diagnose` to print the plan plus validation warnings and errors
 
 At the current boundary, Python still owns runtime-client and sidecar
 supervision. The native launcher is responsible for startup layout selection,
