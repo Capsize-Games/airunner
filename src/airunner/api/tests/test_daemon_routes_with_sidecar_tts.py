@@ -1,4 +1,4 @@
-"""Tests for daemon routes with the explicit art sidecar runtime."""
+"""Tests for daemon routes with the explicit TTS sidecar runtime."""
 
 import asyncio
 from types import SimpleNamespace
@@ -13,16 +13,16 @@ from airunner.runtimes.contracts import (
 from airunner.runtimes.registry import RuntimeRoute
 
 
-class FakeSidecarArtClient:
+class FakeSidecarTTSClient:
     """Runtime client double for daemon route tests."""
 
     def __init__(self) -> None:
         self.descriptor = RuntimeDescriptor(
-            runtime=RuntimeKind.ART,
+            runtime=RuntimeKind.TTS,
             provider="local",
             mode=RuntimeMode.SIDECAR,
             transport=TransportKind.HTTP,
-            endpoint="http://127.0.0.1:8190",
+            endpoint="http://127.0.0.1:8191",
         )
         self.invocations = []
         self.cancelled_ids = []
@@ -52,12 +52,12 @@ class FakeSidecarArtClient:
 
 
 class FakeRegistry:
-    """Registry double that only exposes the art sidecar route."""
+    """Registry double that only exposes the TTS sidecar route."""
 
     def __init__(self, client) -> None:
         self.route_map = {
             RuntimeRoute(
-                RuntimeKind.ART,
+                RuntimeKind.TTS,
                 provider="local",
                 deployment_mode="sidecar",
             ).normalized(): client,
@@ -91,32 +91,32 @@ def _request_for(registry):
     )
 
 
-def test_get_runtime_status_resolves_explicit_sidecar_art_route():
+def test_get_runtime_status_resolves_explicit_sidecar_tts_route():
     from airunner.api.routes.daemon import get_runtime_status
 
-    client = FakeSidecarArtClient()
+    client = FakeSidecarTTSClient()
     response = asyncio.run(
         get_runtime_status(
-            "art",
+            "tts",
             _request_for(FakeRegistry(client)),
             provider="local",
             deployment_mode="sidecar",
         )
     )
 
-    assert response.runtime == "art"
+    assert response.runtime == "tts"
     assert response.transport == "http"
 
 
-def test_load_runtime_uses_explicit_sidecar_art_route():
+def test_load_runtime_uses_explicit_sidecar_tts_route():
     from airunner.api.routes.daemon import RuntimeRouteRequest, load_runtime
 
-    client = FakeSidecarArtClient()
+    client = FakeSidecarTTSClient()
     response = asyncio.run(
         load_runtime(
-            "art",
+            "tts",
             RuntimeRouteRequest(
-                request_id="art-load-1",
+                request_id="tts-load-1",
                 deployment_mode="sidecar",
             ),
             _request_for(FakeRegistry(client)),
@@ -127,20 +127,20 @@ def test_load_runtime_uses_explicit_sidecar_art_route():
     assert response.status is EnvelopeStatus.SUCCEEDED
 
 
-def test_cancel_runtime_uses_explicit_sidecar_art_route():
+def test_cancel_runtime_uses_explicit_sidecar_tts_route():
     from airunner.api.routes.daemon import RuntimeRouteRequest, cancel_runtime
 
-    client = FakeSidecarArtClient()
+    client = FakeSidecarTTSClient()
     response = asyncio.run(
         cancel_runtime(
-            "art",
+            "tts",
             RuntimeRouteRequest(
-                request_id="art-cancel-1",
+                request_id="tts-cancel-1",
                 deployment_mode="sidecar",
             ),
             _request_for(FakeRegistry(client)),
         )
     )
 
-    assert client.cancelled_ids == ["art-cancel-1"]
+    assert client.cancelled_ids == ["tts-cancel-1"]
     assert response.status is EnvelopeStatus.CANCELLED

@@ -12,6 +12,7 @@ from airunner.runtimes.local_fallback import (
 from airunner.runtimes.sidecar_art_client import register_sidecar_art_client
 from airunner.runtimes.sidecar_llm_client import register_sidecar_llm_client
 from airunner.runtimes.sidecar_stt_client import register_sidecar_stt_client
+from airunner.runtimes.sidecar_tts_client import register_sidecar_tts_client
 from airunner.runtimes.registry import RuntimeRegistry
 
 
@@ -44,4 +45,6 @@ def build_runtime_registry(
     register_sidecar_stt_client(registry)
     if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") != "1":
         register_sidecar_art_client(registry)
+    if os.environ.get("AIRUNNER_TTS_SIDECAR_PROCESS") != "1":
+        register_sidecar_tts_client(registry)
     return registry

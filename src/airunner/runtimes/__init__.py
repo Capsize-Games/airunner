@@ -37,11 +37,15 @@ _EXPORTS = {
     "STTInvocationResponse": "airunner.runtimes.contracts",
     "TTSInvocationRequest": "airunner.runtimes.contracts",
     "TTSInvocationResponse": "airunner.runtimes.contracts",
+    "TTSDaemonRuntimeSettings": "airunner.runtimes.tts_daemon_runtime_settings",
     "TransportKind": "airunner.runtimes.contracts",
     "register_local_fallback_clients": "airunner.runtimes.local_fallback",
     "register_sidecar_art_client": "airunner.runtimes.sidecar_art_client",
     "register_sidecar_llm_client": "airunner.runtimes.sidecar_llm_client",
     "register_sidecar_stt_client": "airunner.runtimes.sidecar_stt_client",
+    "register_sidecar_tts_client": "airunner.runtimes.sidecar_tts_client",
+    "SidecarTTSClient": "airunner.runtimes.sidecar_tts_client",
+    "SidecarTTSLauncher": "airunner.runtimes.sidecar_tts_launcher",
 }
 
 __all__ = sorted(_EXPORTS)
