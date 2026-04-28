@@ -252,7 +252,7 @@ def create_app(
     # Legacy routes for backwards compatibility.
     app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
 
-    # Optional extensions can register additional routers/middleware.
+    # Explicitly enabled extensions can register additional routers/middleware.
     try:
         stats = load_extensions(force_reload=False)
         module_names = []

@@ -1,18 +1,8 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
-
-
-def _repo_root_from(start: Path) -> Path:
-    current = start
-    for _ in range(12):
-        if (current / "pyproject.toml").exists() or (current / "setup.py").exists():
-            return current
-        if current.parent == current:
-            break
-        current = current.parent
-    raise RuntimeError("Unable to locate repo root")
 
 
 def _clear_loaded_extensions() -> None:
@@ -26,18 +16,65 @@ def _clear_loaded_extensions() -> None:
             sys.modules.pop(name, None)
 
 
-def test_fastapi_registers_uwuchat_extension_routes(monkeypatch):
-    from airunner.components.llm.core import extensions_loader
+def _write_extension(root: Path, *, extension_id: str) -> Path:
+    """Create a minimal manifest-driven FastAPI extension package."""
+    package_dir = root / "demo_extension"
+    package_dir.mkdir(parents=True)
+    sentinel = package_dir / "imported.txt"
+    sentinel_literal = repr(str(sentinel))
+    manifest = {
+        "id": extension_id,
+        "name": "Demo Extension",
+        "version": "1.0.0",
+        "kind": "extension",
+    }
+    (package_dir / "airunner-extension.json").write_text(
+        json.dumps(manifest),
+        encoding="utf-8",
+    )
+    (package_dir / "__init__.py").write_text(
+        "from pathlib import Path\n"
+        "from fastapi import APIRouter\n"
+        f"Path({sentinel_literal}).write_text('loaded', encoding='utf-8')\n"
+        "router = APIRouter()\n"
+        "@router.get('/api/v1/demo/profile')\n"
+        "def profile():\n"
+        "    return {'status': 'ok'}\n"
+        "def register_fastapi(app):\n"
+        "    app.include_router(router)\n",
+        encoding="utf-8",
+    )
+    return sentinel
 
-    repo_root = _repo_root_from(Path(extensions_loader.__file__).resolve())
-    monkeypatch.setenv("AIRUNNER_EXTENSIONS_DIR", str(repo_root / "extensions"))
 
+def test_fastapi_skips_external_extensions_by_default(tmp_path, monkeypatch):
     _clear_loaded_extensions()
+    sentinel = _write_extension(tmp_path, extension_id="demo.extension")
+    monkeypatch.setenv("AIRUNNER_EXTENSIONS_DIR", str(tmp_path))
+    monkeypatch.delenv("AIRUNNER_ENABLED_EXTENSIONS", raising=False)
 
     from airunner.api.server import create_app
 
     app = create_app(enable_cors=False)
 
-    paths = {getattr(r, "path", None) for r in app.router.routes}
+    paths = {getattr(route, "path", None) for route in app.router.routes}
 
-    assert "/api/v1/uwuchat/profile" in paths
+    assert "/api/v1/demo/profile" not in paths
+    assert not sentinel.exists()
+
+
+def test_fastapi_registers_allowlisted_extension_routes(tmp_path, monkeypatch):
+    _clear_loaded_extensions()
+    sentinel = _write_extension(tmp_path, extension_id="demo.extension")
+
+    monkeypatch.setenv("AIRUNNER_EXTENSIONS_DIR", str(tmp_path))
+    monkeypatch.setenv("AIRUNNER_ENABLED_EXTENSIONS", "demo.extension")
+
+    from airunner.api.server import create_app
+
+    app = create_app(enable_cors=False)
+
+    paths = {getattr(route, "path", None) for route in app.router.routes}
+
+    assert "/api/v1/demo/profile" in paths
+    assert sentinel.exists()

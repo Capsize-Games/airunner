@@ -313,9 +313,6 @@ class MainWindow(
         self.single_click_timer = QTimer(self)
         self.single_click_timer.setSingleShot(True)
         self.single_click_timer.timeout.connect(self.handle_single_click)
-        plugins_path = os.path.join(self.path_settings.base_path, "plugins")
-        if plugins_path not in sys.path:
-            sys.path.append(plugins_path)
         self._updating_settings = True
         self._updating_settings = False
         self.worker_manager = create_worker(WorkerManager)

@@ -90,7 +90,7 @@ class App(
         self._register_signals()
         self._ensure_mathjax()
 
-        # Load optional runtime extensions early so they can:
+        # Load explicitly enabled runtime extensions early so they can:
         # - override built-in LLM tools by name (after built-ins are registered)
         # - apply any UI monkey-patches before widgets are constructed
         self._load_optional_extensions()
@@ -103,7 +103,7 @@ class App(
         self._initialize_knowledge_system()
 
     def _load_optional_extensions(self) -> None:
-        """Load optional extensions from a local `extensions/` folder.
+        """Load explicitly enabled extensions from local extension roots.
 
         Extensions are optional and must never prevent Airunner from starting.
         """

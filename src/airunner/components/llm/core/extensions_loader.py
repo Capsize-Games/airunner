@@ -1,31 +1,19 @@
-"""Runtime extension loader.
-
-Extensions are optional and may live outside the Airrunner repo.
-
-For local development convenience, the loader can load from an `extensions/`
-folder adjacent to your checkout (or paths specified via
-`AIRUNNER_EXTENSIONS_DIR` / `AIRUNNER_EXTENSIONS_PATH`). Extensions can register
-tools via `airunner.components.llm.core.tool_registry.tool`.
-
-Extensions are imported after built-in tools so they can override tools by
-registering the same `name`.
-
-Design goals:
-- Deterministic load order
-- Safe import failures (non-fatal)
-- Minimal coupling to the rest of the app
-"""
+"""Runtime extension loader for explicitly enabled external extensions."""
 
 from __future__ import annotations
 
 import os
 import sys
 import types
-import importlib
 import importlib.util
 from pathlib import Path
 from typing import Iterable, List, Optional
 
+from airunner.extension_manifest import (
+    EXTENSION_ALLOWLIST_ENV,
+    load_enabled_extension_ids,
+    resolve_enabled_manifest,
+)
 from airunner.utils.application import get_logger
 
 
@@ -108,14 +96,84 @@ def _ensure_parent_package() -> None:
     sys.modules["airunner_extensions"] = pkg
 
 
+def _clear_loaded_extension_modules() -> None:
+    """Drop previously imported extension modules before a forced reload."""
+    for name in list(sys.modules.keys()):
+        if name.startswith("airunner_extensions."):
+            sys.modules.pop(name, None)
+
+
+def _iter_enabled_manifests(
+    extension_root: Path,
+    enabled_ids: set[str],
+) -> Iterable:
+    """Yield validated manifests for explicitly enabled extensions."""
+    for pkg_dir in _iter_extension_packages(extension_root):
+        manifest = resolve_enabled_manifest(
+            pkg_dir,
+            default_entry_point="__init__.py",
+            enabled_ids=enabled_ids,
+            expected_kind="extension",
+        )
+        if manifest is not None:
+            yield manifest
+
+
+def _load_extension_module(manifest) -> Optional[str]:
+    """Import one external extension module."""
+    module_name = f"airunner_extensions.{manifest.module_name}"
+    spec = importlib.util.spec_from_file_location(
+        module_name,
+        manifest.entry_path,
+        submodule_search_locations=[str(manifest.entry_path.parent)],
+    )
+    if spec is None or spec.loader is None:
+        logger.warning("Unable to create spec for %s", manifest.entry_path)
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)  # type: ignore[assignment]
+    except Exception as exc:
+        sys.modules.pop(module_name, None)
+        logger.exception("Failed to load extension %s: %s", module_name, exc)
+        return None
+    logger.info("Loaded extension: %s", module_name)
+    return module_name
+
+
+def _load_root_extensions(
+    extension_root: Path,
+    enabled_ids: set[str],
+) -> dict:
+    """Load enabled extensions from a single root directory."""
+    loaded = 0
+    failed = 0
+    modules: List[str] = []
+    for manifest in _iter_enabled_manifests(extension_root, enabled_ids):
+        module_name = _load_extension_module(manifest)
+        if module_name is None:
+            failed += 1
+            continue
+        loaded += 1
+        modules.append(module_name)
+    return {"loaded": loaded, "failed": failed, "modules": modules}
+
+
 def load_extensions(force_reload: bool = False) -> dict:
     """Load extensions from `extensions/` folders.
 
     Returns a dict with load stats.
     """
-    # Global guard; extensions should be loaded once per process.
     if getattr(load_extensions, _LOADED_MARKER, False) and not force_reload:
         return {"loaded": 0, "failed": 0, "roots": 0}
+
+    if force_reload:
+        _clear_loaded_extension_modules()
+
+    enabled_ids = load_enabled_extension_ids(EXTENSION_ALLOWLIST_ENV)
+    if not enabled_ids:
+        return {"loaded": 0, "failed": 0, "roots": 0, "modules": []}
 
     _ensure_parent_package()
 
@@ -128,38 +186,10 @@ def load_extensions(force_reload: bool = False) -> dict:
         if not root.exists() or not root.is_dir():
             continue
         roots += 1
-        for pkg_dir in _iter_extension_packages(root):
-            module_name = f"airunner_extensions.{pkg_dir.name}"
-            init_py = pkg_dir / "__init__.py"
-
-            try:
-                if module_name in sys.modules and force_reload:
-                    # Some modules loaded from file specs can lack a usable __spec__
-                    # for importlib.reload(). In that case, do a clean re-import.
-                    try:
-                        importlib.reload(sys.modules[module_name])
-                        loaded += 1
-                        continue
-                    except Exception:
-                        sys.modules.pop(module_name, None)
-
-                if module_name in sys.modules:
-                    # Already imported.
-                    continue
-
-                spec = importlib.util.spec_from_file_location(module_name, init_py)
-                if spec is None or spec.loader is None:
-                    raise RuntimeError(f"Unable to load spec for {init_py}")
-
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)  # type: ignore[assignment]
-                loaded += 1
-                modules.append(module_name)
-                logger.info("Loaded extension: %s", module_name)
-            except Exception as exc:
-                failed += 1
-                logger.exception("Failed to load extension %s: %s", module_name, exc)
+        result = _load_root_extensions(root, enabled_ids)
+        loaded += result["loaded"]
+        failed += result["failed"]
+        modules.extend(result["modules"])
 
     setattr(load_extensions, _LOADED_MARKER, True)
     return {"loaded": loaded, "failed": failed, "roots": roots, "modules": modules}
