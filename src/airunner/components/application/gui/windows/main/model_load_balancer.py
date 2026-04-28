@@ -16,6 +16,13 @@ _DAEMON_MODEL_TYPES = {
     "SD": ModelType.SD,
 }
 
+_RUNTIME_MODEL_TYPES = {
+    "llm": ModelType.LLM,
+    "tts": ModelType.TTS,
+    "stt": ModelType.STT,
+    "art": ModelType.SD,
+}
+
 _RUNTIME_NAMES = {
     ModelType.LLM: "llm",
     ModelType.TTS: "tts",
@@ -164,6 +171,8 @@ class ModelLoadBalancer(MediatorMixin):
             status = client.daemon_runtime_status(auto_start=False)
         except RuntimeError:
             return None
+        if "runtimes" in status:
+            return self._runtime_summary_models(status.get("runtimes") or [])
         lifecycle = status.get("lifecycle") or {}
         loaded = []
         for name in lifecycle.get("loaded_models") or []:
@@ -187,6 +196,13 @@ class ModelLoadBalancer(MediatorMixin):
             except RuntimeError:
                 self._emit_model_status(model_type, ModelStatus.FAILED)
                 continue
+            if not client.wait_runtime_ready(
+                runtime_name,
+                loaded=True,
+                auto_start=False,
+            ):
+                self._emit_model_status(model_type, ModelStatus.FAILED)
+                continue
             self._emit_model_status(model_type, ModelStatus.LOADED)
 
     def _daemon_unload(self, model_types: List[ModelType]) -> None:
@@ -203,7 +219,30 @@ class ModelLoadBalancer(MediatorMixin):
             except RuntimeError:
                 self._emit_model_status(model_type, ModelStatus.FAILED)
                 continue
+            if not client.wait_runtime_ready(
+                runtime_name,
+                loaded=False,
+                auto_start=False,
+            ):
+                self._emit_model_status(model_type, ModelStatus.FAILED)
+                continue
             self._emit_model_status(model_type, ModelStatus.UNLOADED)
+
+    @staticmethod
+    def _runtime_summary_models(runtimes: List[dict]) -> List[ModelType]:
+        """Return loaded models derived from daemon runtime summaries."""
+        loaded = []
+        seen = set()
+        for runtime in runtimes:
+            if not runtime.get("loaded"):
+                continue
+            runtime_name = str(runtime.get("runtime", "")).lower()
+            model_type = _RUNTIME_MODEL_TYPES.get(runtime_name)
+            if model_type is None or model_type in seen:
+                continue
+            loaded.append(model_type)
+            seen.add(model_type)
+        return loaded
 
     @staticmethod
     def _non_art_models(model_types: List[ModelType]) -> List[ModelType]:

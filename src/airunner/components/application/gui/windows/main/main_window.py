@@ -1909,12 +1909,28 @@ class MainWindow(
             status = client.daemon_runtime_status(auto_start=False)
         except RuntimeError:
             return
-        lifecycle = status.get("lifecycle") or {}
-        loaded_models = set(lifecycle.get("loaded_models") or [])
+        loaded_models = self._loaded_model_names_from_runtime_status(status)
         self._sync_model_status(ModelType.LLM, "LLM", loaded_models)
         self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
         self._sync_model_status(ModelType.STT, "STT", loaded_models)
         self._sync_model_status(ModelType.SD, "SD", loaded_models)
+
+    @staticmethod
+    def _loaded_model_names_from_runtime_status(status: dict) -> set[str]:
+        """Return loaded model names using runtime summaries when present."""
+        runtimes = status.get("runtimes")
+        if isinstance(runtimes, list):
+            loaded_models = set()
+            for runtime in runtimes:
+                if not runtime.get("loaded"):
+                    continue
+                runtime_name = str(runtime.get("runtime", "")).upper()
+                if runtime_name == "ART":
+                    runtime_name = "SD"
+                loaded_models.add(runtime_name)
+            return loaded_models
+        lifecycle = status.get("lifecycle") or {}
+        return set(lifecycle.get("loaded_models") or [])
 
     def _sync_model_status(
         self,

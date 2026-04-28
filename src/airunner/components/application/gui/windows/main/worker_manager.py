@@ -657,9 +657,19 @@ class WorkerManager(Worker):
         try:
             if action == "load":
                 client.load_runtime(runtime_name)
+                ready = client.wait_runtime_ready(
+                    runtime_name,
+                    loaded=True,
+                    auto_start=False,
+                )
                 status = ModelStatus.LOADED
             else:
                 client.unload_runtime(runtime_name)
+                ready = client.wait_runtime_ready(
+                    runtime_name,
+                    loaded=False,
+                    auto_start=False,
+                )
                 status = ModelStatus.UNLOADED
         except RuntimeError as exc:
             if self.logger:
@@ -668,6 +678,18 @@ class WorkerManager(Worker):
                     action,
                     runtime_name,
                     exc,
+                )
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": model_type, "status": ModelStatus.FAILED},
+            )
+            return True
+        if not ready:
+            if self.logger:
+                self.logger.warning(
+                    "Daemon %s for %s timed out waiting for runtime state",
+                    action,
+                    runtime_name,
                 )
             self.emit_signal(
                 SignalCode.MODEL_STATUS_CHANGED_SIGNAL,

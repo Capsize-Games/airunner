@@ -27,6 +27,7 @@ class FakeRuntimeClient:
         *,
         status: RuntimeHealthStatus = RuntimeHealthStatus.UNKNOWN,
         allows_model_control: bool = True,
+        metadata=None,
     ) -> None:
         self.descriptor = RuntimeDescriptor(
             runtime=runtime,
@@ -36,6 +37,7 @@ class FakeRuntimeClient:
             allows_model_control=allows_model_control,
         )
         self._status = status
+        self._metadata = metadata or {}
         self.invocations = []
         self.cancelled_ids = []
         self.invoke_response = None
@@ -45,6 +47,7 @@ class FakeRuntimeClient:
         return RuntimeHealth(
             descriptor=self.descriptor,
             status=self._status,
+            metadata=self._metadata,
         )
 
     def invoke(self, request):
@@ -155,6 +158,38 @@ def test_daemon_runtime_status_includes_lifecycle_and_runtimes():
     assert response.lifecycle.lifecycle_initialized is True
     assert response.runtimes[0].runtime == "stt"
     assert response.runtimes[0].status == "ready"
+
+
+def test_list_runtimes_uses_runtime_health_for_loaded_state():
+    """Runtime summaries should derive loaded state from health first."""
+    from airunner.api.routes.daemon import list_runtimes
+
+    client = FakeRuntimeClient(RuntimeKind.LLM, status=RuntimeHealthStatus.READY)
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
+        }
+    )
+
+    response = asyncio.run(list_runtimes(_fake_request(registry, [])))
+
+    assert response[0].loaded is True
+
+
+def test_list_runtimes_stopped_health_overrides_stale_lifecycle_loaded():
+    """Stopped runtimes should not remain loaded because lifecycle is stale."""
+    from airunner.api.routes.daemon import list_runtimes
+
+    client = FakeRuntimeClient(RuntimeKind.LLM, status=RuntimeHealthStatus.STOPPED)
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
+        }
+    )
+
+    response = asyncio.run(list_runtimes(_fake_request(registry, ["LLM"])))
+
+    assert response[0].loaded is False
 
 
 def test_get_runtime_status_returns_requested_runtime():

@@ -72,7 +72,29 @@ class FakeSession:
         if url.endswith("/api/v1/daemon/status"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
-            return FakeResponse(payload={"lifecycle": {"loaded_models": ["LLM"]}})
+            return FakeResponse(
+                payload={
+                    "lifecycle": {"loaded_models": ["LLM"]},
+                    "runtimes": [
+                        {
+                            "runtime": "llm",
+                            "status": "ready",
+                            "loaded": True,
+                        }
+                    ],
+                }
+            )
+        if "/api/v1/daemon/runtimes/llm?" in url:
+            summaries = self.ready_state.get("llm_summaries") or []
+            if summaries:
+                return FakeResponse(payload=summaries.pop(0))
+            return FakeResponse(
+                payload={
+                    "runtime": "llm",
+                    "status": "ready",
+                    "loaded": True,
+                }
+            )
         if url.endswith("/api/v1/daemon/runtimes/llm/load"):
             return FakeResponse(payload={"status": "ok"})
         if url.endswith("/api/v1/daemon/runtimes/llm/unload"):
@@ -184,6 +206,45 @@ def test_daemon_runtime_status_uses_daemon_endpoint():
 
     assert status["lifecycle"]["loaded_models"] == ["LLM"]
     assert session.calls[-1][1].endswith("/api/v1/daemon/status")
+
+
+def test_runtime_status_uses_runtime_summary_endpoint():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    status = client.runtime_status("llm")
+
+    assert status["runtime"] == "llm"
+    assert status["loaded"] is True
+    assert "/api/v1/daemon/runtimes/llm?" in session.calls[-1][1]
+
+
+def test_wait_runtime_ready_polls_until_loaded():
+    ready_state = {
+        "ready": True,
+        "llm_summaries": [
+            {"runtime": "llm", "status": "starting", "loaded": False},
+            {"runtime": "llm", "status": "ready", "loaded": True},
+        ],
+    }
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+        sleep=lambda _seconds: None,
+    )
+
+    ready = client.wait_runtime_ready("llm", loaded=True)
+
+    assert ready is True
+    runtime_calls = [
+        call for call in session.calls if "/api/v1/daemon/runtimes/llm?" in call[1]
+    ]
+    assert len(runtime_calls) == 2
 
 
 def test_runtime_control_posts_expected_payload():

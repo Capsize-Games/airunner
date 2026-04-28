@@ -110,8 +110,9 @@ def build_runtime_summary(
     route_aliases: List[str],
 ) -> RuntimeSummaryResponse:
     """Build a daemon-facing runtime summary for a client."""
-    loaded = runtime_loaded(request, client.descriptor.runtime)
-    status, details, metadata = health_fields(client, loaded)
+    lifecycle_loaded = runtime_loaded(request, client.descriptor.runtime)
+    status, details, metadata = health_fields(client, lifecycle_loaded)
+    loaded = infer_loaded_state(status, metadata, lifecycle_loaded)
     descriptor = client.descriptor
     return RuntimeSummaryResponse(
         runtime=descriptor.runtime.value,
@@ -127,6 +128,30 @@ def build_runtime_summary(
         metadata=metadata,
         route_aliases=route_aliases,
     )
+
+
+def infer_loaded_state(
+    status: str,
+    metadata: dict[str, Any],
+    lifecycle_loaded: bool,
+) -> bool:
+    """Infer the loaded flag from runtime health before lifecycle state."""
+    model_status = str(metadata.get("model_status", "")).strip().lower()
+    if model_status in {"loaded", "ready", "loading"}:
+        return True
+    if model_status in {"unloaded", "failed"}:
+        return False
+    if status in {
+        RuntimeHealthStatus.READY.value,
+        RuntimeHealthStatus.STARTING.value,
+    }:
+        return True
+    if status in {
+        RuntimeHealthStatus.STOPPED.value,
+        RuntimeHealthStatus.FAILED.value,
+    }:
+        return False
+    return lifecycle_loaded
 
 
 def collect_runtime_summaries(request: Request) -> List[RuntimeSummaryResponse]:

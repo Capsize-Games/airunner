@@ -6,6 +6,7 @@ import json
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Optional
+from urllib.parse import urlencode
 
 import requests
 
@@ -131,6 +132,56 @@ class GuiDaemonClient:
             auto_start=auto_start,
         )
         return response.json()
+
+    def runtime_status(
+        self,
+        runtime_name: str,
+        *,
+        provider: str = "local",
+        deployment_mode: str = "default",
+        auto_start: bool = False,
+    ) -> Dict[str, Any]:
+        """Return the daemon summary for one runtime route."""
+        query = urlencode(
+            {
+                "provider": provider,
+                "deployment_mode": deployment_mode,
+            }
+        )
+        response = self._request(
+            "GET",
+            f"/api/v1/daemon/runtimes/{runtime_name}?{query}",
+            auto_start=auto_start,
+        )
+        return response.json()
+
+    def wait_runtime_ready(
+        self,
+        runtime_name: str,
+        *,
+        loaded: bool,
+        provider: str = "local",
+        deployment_mode: str = "default",
+        auto_start: bool = False,
+        timeout_seconds: float = 30.0,
+    ) -> bool:
+        """Poll one runtime summary until it reaches the requested state."""
+        deadline = self._time_fn() + timeout_seconds
+        while self._time_fn() < deadline:
+            try:
+                summary = self.runtime_status(
+                    runtime_name,
+                    provider=provider,
+                    deployment_mode=deployment_mode,
+                    auto_start=auto_start,
+                )
+            except RuntimeError:
+                self._sleep(self._poll_interval_seconds)
+                continue
+            if self._runtime_matches(summary, loaded):
+                return True
+            self._sleep(self._poll_interval_seconds)
+        return False
 
     def transcribe_audio(
         self,
@@ -323,6 +374,15 @@ class GuiDaemonClient:
             auto_start=auto_start,
         )
         return response.json()
+
+    @staticmethod
+    def _runtime_matches(summary: Dict[str, Any], loaded: bool) -> bool:
+        """Return True when one runtime summary matches the target state."""
+        summary_loaded = bool(summary.get("loaded"))
+        summary_status = str(summary.get("status", "")).lower()
+        if loaded:
+            return summary_loaded and summary_status == "ready"
+        return not summary_loaded
 
     def _set_state(self, state: DaemonConnectionState, details: str) -> None:
         """Update the tracked daemon connection state."""
