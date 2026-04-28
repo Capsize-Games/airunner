@@ -7,11 +7,9 @@
 #   OR
 #   ./install.sh
 #
-# This script:
-#   1. Checks system requirements (Python 3.13+, CUDA optional)
-#   2. Creates a virtual environment
-#   3. Installs AI Runner with the selected dependency profiles
-#   4. Creates convenient launcher scripts
+# This script supports two installation modes:
+#   1. Install a prebuilt Linux bundle archive with embedded Python
+#   2. Create a virtual environment and install AI Runner from Python packages
 
 set -e
 
@@ -28,6 +26,10 @@ MIN_PYTHON_VERSION="3.13"
 INSTALL_DIR="${AIRUNNER_INSTALL_DIR:-$HOME/.local/airunner}"
 VENV_DIR="${INSTALL_DIR}/venv"
 BIN_DIR="${HOME}/.local/bin"
+BUNDLE_ARCHIVE="${AIRUNNER_BUNDLE_ARCHIVE:-}"
+XDG_DATA_HOME_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
+DESKTOP_APPLICATIONS_DIR="${XDG_DATA_HOME_DIR}/applications"
+ICON_INSTALL_DIR="${XDG_DATA_HOME_DIR}/icons/hicolor/64x64/apps"
 DATA_DIR="${AIRUNNER_DATA_DIR:-${AIRUNNER_BASE_PATH:-$HOME/.local/share/airunner}}"
 RUNTIME_DIR="${AIRUNNER_RUNTIME_ROOT:-${DATA_DIR}/runtime}"
 RUNTIME_CONFIG_DIR="${AIRUNNER_RUNTIME_CONFIG_DIR:-${RUNTIME_DIR}/configs}"
@@ -40,6 +42,9 @@ AIRUNNER_INSTALL_PROFILES=$(
     printf '%s' "${AIRUNNER_INSTALL_PROFILES:-$DEFAULT_INSTALL_PROFILES}" |
         tr -d '[:space:]'
 )
+ADD_TO_PATH=false
+REQUESTED_HELP=0
+REQUESTED_UNINSTALL=0
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -108,6 +113,123 @@ runtime_needs_pytorch() {
         all_dev \
         all_native \
         all_dev_native
+}
+
+parse_cli_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --bundle-archive)
+                BUNDLE_ARCHIVE="$2"
+                shift 2
+                ;;
+            --uninstall|-u)
+                REQUESTED_UNINSTALL=1
+                shift
+                ;;
+            --help|-h)
+                REQUESTED_HELP=1
+                shift
+                ;;
+            *)
+                log_error "Unknown argument: $1"
+                exit 1
+                ;;
+        esac
+    done
+}
+
+print_help() {
+    echo "AI Runner Installation Script"
+    echo ""
+    echo "Usage:"
+    echo "  ./install.sh"
+    echo "  ./install.sh --bundle-archive dist/airunner-...tar.gz"
+    echo "  ./install.sh --uninstall"
+    echo ""
+    echo "Environment variables:"
+    echo "  AIRUNNER_INSTALL_DIR        Installation directory"
+    echo "  AIRUNNER_INSTALL_PROFILES   Comma-separated extras"
+    echo "  AIRUNNER_DATA_DIR           Runtime data directory"
+    echo "  AIRUNNER_BUNDLE_ARCHIVE     Prebuilt Linux bundle archive"
+}
+
+extract_bundle_root() {
+    local archive_path="$1"
+    local extract_root="$2"
+    local entries
+
+    mkdir -p "$extract_root"
+    tar -xzf "$archive_path" -C "$extract_root"
+    entries=("$extract_root"/*)
+
+    if [[ ${#entries[@]} -eq 1 && -d "${entries[0]}" ]]; then
+        echo "${entries[0]}"
+        return
+    fi
+
+    echo "$extract_root"
+}
+
+install_desktop_assets() {
+    local desktop_source="$INSTALL_DIR/share/applications/airunner.desktop"
+    local icon_source="$INSTALL_DIR/share/icons/hicolor/64x64/apps/airunner.png"
+
+    if [[ -f "$desktop_source" ]]; then
+        mkdir -p "$DESKTOP_APPLICATIONS_DIR"
+        cp "$desktop_source" "$DESKTOP_APPLICATIONS_DIR/airunner.desktop"
+    fi
+
+    if [[ -f "$icon_source" ]]; then
+        mkdir -p "$ICON_INSTALL_DIR"
+        cp "$icon_source" "$ICON_INSTALL_DIR/airunner.png"
+    fi
+}
+
+install_prebuilt_bundle() {
+    local temp_root
+    local extracted_root
+
+    if [[ -z "$BUNDLE_ARCHIVE" ]]; then
+        return 1
+    fi
+
+    if [[ ! -f "$BUNDLE_ARCHIVE" ]]; then
+        log_error "Bundle archive not found: $BUNDLE_ARCHIVE"
+        exit 1
+    fi
+
+    log_info "Installing prebuilt AIRunner bundle from ${BUNDLE_ARCHIVE}..."
+
+    temp_root="$(mktemp -d)"
+    extracted_root="$(extract_bundle_root "$BUNDLE_ARCHIVE" "$temp_root")"
+
+    rm -rf "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
+    cp -a "$extracted_root"/. "$INSTALL_DIR/"
+    rm -rf "$temp_root"
+
+    if [[ ! -x "$INSTALL_DIR/bin/airunner" ]]; then
+        log_error "Installed bundle is missing bin/airunner"
+        exit 1
+    fi
+
+    mkdir -p "$BIN_DIR"
+    ln -sfn "$INSTALL_DIR/bin/airunner" "$BIN_DIR/airunner"
+    install_desktop_assets
+
+    log_success "Prebuilt AIRunner bundle installed"
+    echo ""
+    echo "AIRunner bundle root: $INSTALL_DIR"
+    echo "Primary launcher: $BIN_DIR/airunner"
+    echo ""
+
+    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+        log_warning "$BIN_DIR is not in your PATH"
+        echo "Add this line to your shell profile:"
+        echo -e "  ${YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
+    fi
+
+    return 0
 }
 
 # Check if command exists
@@ -407,6 +529,9 @@ uninstall() {
             log_success "Removed $BIN_DIR/$script"
         fi
     done
+
+    rm -f "$DESKTOP_APPLICATIONS_DIR/airunner.desktop"
+    rm -f "$ICON_INSTALL_DIR/airunner.png"
     
     echo ""
     log_success "AI Runner has been uninstalled."
@@ -417,26 +542,19 @@ uninstall() {
 
 # Main installation
 main() {
-    # Check for uninstall flag
-    if [ "$1" = "--uninstall" ] || [ "$1" = "-u" ]; then
+    parse_cli_args "$@"
+
+    if [ "$REQUESTED_UNINSTALL" = "1" ]; then
         uninstall
         exit 0
     fi
-    
-    # Check for help flag
-    if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-        echo "AI Runner Installation Script"
-        echo ""
-        echo "Usage:"
-        echo "  ./install.sh           Install AI Runner"
-        echo "  ./install.sh --uninstall  Uninstall AI Runner"
-        echo ""
-        echo "Environment variables:"
-        echo "  AIRUNNER_INSTALL_DIR   Installation directory (default: ~/.local/airunner)"
-        echo "  AIRUNNER_INSTALL_PROFILES"
-        echo "                         Comma-separated extras"
-        echo "                         (default: ${DEFAULT_INSTALL_PROFILES})"
-        echo "  AIRUNNER_DATA_DIR      Runtime data directory"
+
+    if [ "$REQUESTED_HELP" = "1" ]; then
+        print_help
+        exit 0
+    fi
+
+    if install_prebuilt_bundle; then
         exit 0
     fi
     

@@ -42,7 +42,8 @@ Each output contains:
 - `share/airunner/runtime_pins.env`
 
 The generated manifest points AIRunner at the bundled sidecar binaries
-using paths relative to `share/airunner/runtime_manifest.env`.
+using paths relative to `share/airunner/runtime_manifest.env` and matches the
+packaged bundle layout that installs AIRunner into `app/site-packages/`.
 
 ## CI
 

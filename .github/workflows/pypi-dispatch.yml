@@ -1,4 +1,4 @@
-name: PyPI And Linux Bundles
+name: PyPI And Installable Bundles
 
 on:
   release:
@@ -45,54 +45,142 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
-  build-linux-bundle-layouts:
+  build-sidecars:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        bundle:
-          - name: headless
-            profiles: core,llm-native,stt-native,art-python,tts-python
-            launchers: airunner-headless
-          - name: desktop
-            profiles: core,llm-native,stt-native,art-python,tts-python,gui,computer-use
-            launchers: airunner,airunner-headless
+        target-platform:
+          - linux
+          - windows
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Linux bundle layout archive
+      - name: Install native build dependencies
         run: |
-          bundle_dir="bundle/${{ matrix.bundle.name }}"
-          mkdir -p "$bundle_dir/deployment"
-          cp -R deployment/systemd "$bundle_dir/deployment/"
-          cp install.sh README.md pyproject.toml setup.py "$bundle_dir/"
-          cat > "$bundle_dir/BUNDLE_LAYOUT.json" <<EOF
-          {
-            "bundle": "${{ matrix.bundle.name }}",
-            "profiles": "${{ matrix.bundle.profiles }}",
-            "launchers": "${{ matrix.bundle.launchers }}",
-            "runtime_root": "~/.local/share/airunner/runtime",
-            "model_root": "~/.local/share/airunner/models",
-            "service_template": "deployment/systemd/airunner-headless.service"
-          }
-          EOF
-          mkdir -p dist
-          tar -czf \
-            "dist/airunner-linux-${{ matrix.bundle.name }}-bundle-layout.tar.gz" \
-            -C "$bundle_dir" .
+          sudo apt-get update
+          sudo apt-get install -y cmake mingw-w64 ninja-build
 
-      - name: Upload Linux bundle layout artifact
+      - name: Build pinned sidecar bundle
+        run: |
+          ./scripts/build_runtime_sidecars.sh \
+            --clean \
+            --target-platform ${{ matrix.target-platform }}
+
+      - name: Upload sidecar bundle artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-bundle-${{ matrix.bundle.name }}
-          path: dist/airunner-linux-${{ matrix.bundle.name }}-bundle-layout.tar.gz
+          name: runtime-sidecars-${{ matrix.target-platform }}
+          path: build/runtime-sidecars/${{ matrix.target-platform }}
+
+  build-linux-installers:
+    needs: build-sidecars
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install native packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build curl
+
+      - name: Build Linux launcher
+        run: ./scripts/build_airunner_launcher.sh --clean --target-platform linux
+
+      - name: Download Linux sidecar bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-sidecars-linux
+          path: build/runtime-sidecars/linux
+
+      - name: Build Linux embedded bundle
+        env:
+          PYTHONPATH: src
+        run: |
+          python src/airunner/bin/build_end_user_bundle.py \
+            --target-platform linux \
+            --clean \
+            --launcher-binary build/airunner-launcher/airunner \
+            --sidecar-root build/runtime-sidecars/linux
+
+      - name: Package Linux AppImage
+        run: |
+          ./scripts/package_linux_appimage.sh \
+            --bundle-dir build/end-user-bundles/linux/desktop \
+            --output-dir dist
+
+      - name: Upload Linux installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            dist/*.tar.gz
+            dist/*.AppImage
+
+  build-windows-installers:
+    needs: build-sidecars
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Download Windows sidecar bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-sidecars-windows
+          path: build/runtime-sidecars/windows
+
+      - name: Build Windows launcher
+        shell: pwsh
+        run: |
+          cmake -S native/airunner_launcher -B build/airunner-launcher-windows -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/airunner-launcher-windows --config Release
+
+      - name: Build Windows embedded bundle
+        env:
+          PYTHONPATH: src
+        shell: pwsh
+        run: |
+          python src/airunner/bin/build_end_user_bundle.py `
+            --target-platform windows `
+            --clean `
+            --launcher-binary build/airunner-launcher-windows/airunner.exe `
+            --sidecar-root build/runtime-sidecars/windows
+
+      - name: Package Windows NSIS installer
+        shell: pwsh
+        run: |
+          ./scripts/package_windows_nsis.ps1 -BundleDir build/end-user-bundles/windows/desktop
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            dist/*.zip
+            dist/windows-installer/*.exe
 
   publish-release-assets:
     if: github.event_name == 'release'
     needs:
       - build-python-package
-      - build-linux-bundle-layouts
+      - build-linux-installers
+      - build-windows-installers
     runs-on: ubuntu-latest
 
     steps:
@@ -102,17 +190,23 @@ jobs:
           name: python-dist
           path: release-assets/python-dist
 
-      - name: Download Linux bundle layout artifacts
+      - name: Download Linux installers
         uses: actions/download-artifact@v4
         with:
-          pattern: linux-bundle-*
-          path: release-assets/linux-bundles
-          merge-multiple: true
+          name: linux-installers
+          path: release-assets/linux
+
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installers
+          path: release-assets/windows
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             release-assets/python-dist/*
-            release-assets/linux-bundles/*.tar.gz
+            release-assets/linux/*
+            release-assets/windows/*
           overwrite_files: true

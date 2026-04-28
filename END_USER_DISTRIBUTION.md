@@ -71,6 +71,25 @@ Recommended initial outputs:
 The installer should create a single desktop entry and a single primary
 `airunner` command.
 
+## Current Implementation
+
+The first end-user packaging pass now includes:
+- pinned embedded Python metadata in `native/embedded_python/`
+- staged bundle assembly in `src/airunner/bin/build_end_user_bundle.py`
+- a local Linux bundle wrapper in `scripts/build_airunner_bundle.sh`
+- AppImage packaging in `scripts/package_linux_appimage.sh`
+- Windows NSIS packaging in `scripts/package_windows_nsis.ps1`
+- Linux tarball installation support in `install.sh --bundle-archive`
+
+The bundle layout currently stages:
+- `python/` for the embedded runtime
+- `app/site-packages/` for AIRunner and Python dependencies
+- `bin/` for the native launcher plus sidecar binaries
+- `share/airunner/` for runtime manifest and bundle metadata
+
+Issue #87 remains responsible for fresh-machine smoke coverage and installer
+validation.
+
 ## Non-Goals
 
 These are not the target:

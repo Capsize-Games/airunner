@@ -25,9 +25,8 @@ The scaffold does three things:
 3. launches `python -m airunner.launcher`
 
 It does not yet:
-- bundle embedded Python
 - supervise sidecars directly from C++
-- produce Linux or Windows installer artifacts
+- move sidecar supervision into native code
 
 Those remain tracked in issue #82 and its follow-on child issues.
 
@@ -64,6 +63,17 @@ Issue #85 adds a pinned sidecar build flow in
 That script emits bundle-ready `llama-server` and `whisper-server`
 artifacts plus a platform-specific runtime manifest under
 `share/airunner/runtime_manifest.env`.
+
+Issue #86 adds pinned embedded Python metadata in
+`native/embedded_python/`, staged bundle assembly in
+`src/airunner/bin/build_end_user_bundle.py`, and installer packagers in
+`scripts/package_linux_appimage.sh` and
+`scripts/package_windows_nsis.ps1`.
+
+The shipped bundle layout installs AIRunner into `app/site-packages/`
+inside the bundle, so production manifests should point
+`AIRUNNER_PYTHONPATH` there instead of the repository `src/` tree used in
+dev mode.
 
 For the full launcher contract, including mode resolution, required and
 optional manifest keys, exported environment variables, and failure modes, see

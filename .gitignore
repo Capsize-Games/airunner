@@ -93,6 +93,9 @@ src/airunner/components/ui_build_marker
 reports/*
 scripts/*
 !scripts/build_airunner_launcher.sh
+!scripts/build_airunner_bundle.sh
 !scripts/build_runtime_sidecars.sh
+!scripts/package_linux_appimage.sh
+!scripts/package_windows_nsis.ps1
 !scripts/run_airunner_dev.sh
 !scripts/security_audit.sh

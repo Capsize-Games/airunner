@@ -55,9 +55,17 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 
 Current status:
 The hybrid-runtime branch completed the runtime refactor, but AIRunner does
-not yet ship as a self-contained end-user installer with embedded Python.
-The manual and Docker paths below are still developer/operator installation
-flows. The follow-on end-user packaging requirement is tracked in #82 and
+now have embedded-Python bundle builders and installer packagers.
+
+Available packaging paths:
+- Linux staged bundle archive: `./scripts/build_airunner_bundle.sh`
+- Linux AppImage wrapper: `./scripts/package_linux_appimage.sh`
+- Linux tarball installer: `./install.sh --bundle-archive <bundle.tar.gz>`
+- Windows bundle staging: `python src/airunner/bin/build_end_user_bundle.py`
+- Windows NSIS installer: `pwsh ./scripts/package_windows_nsis.ps1`
+
+The manual and Docker paths below are still useful developer/operator
+installation flows. The end-user packaging contract is tracked in #82 and
 summarized in [END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
 
 ### Docker (Recommended)
