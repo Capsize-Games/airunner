@@ -67,6 +67,15 @@ docker compose run --rm --service-ports airunner --headless
 
 > **Note:** `--service-ports` is required to expose port 8080 for the API.
 
+To trim container dependencies for a specific deployment, rebuild with a
+profile list such as:
+
+```bash
+docker build \
+  --build-arg AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native \
+  -t airunner:headless .
+```
+
 The headless server exposes an HTTP API on port 8080 with endpoints:
 - `GET /health` - Health check and service status
 - `POST /llm` - LLM inference
@@ -91,13 +100,30 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
    mkdir -p ~/.local/share/airunner
    ```
 
-3. **Install AI Runner:**
+3. **Choose the package profiles you need:**
+
+   - `core`: shared API, storage, config, and runtime plumbing
+   - `llm-native`: local llama.cpp runtime and LLM toolchain
+   - `stt-native`: local STT runtime helpers
+   - `art-python`: Python image-generation runtimes
+   - `tts-python`: Python TTS runtimes without MeCab-backed language packs
+   - `gui`: desktop UI dependencies
+   - `development`: test, lint, and packaging tooling
+
+4. **Install AI Runner:**
 
   From PyPI:
    ```bash
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install airunner[all_dev]
+   pip install \
+     "airunner[core,llm-native,stt-native,art-python,tts-python,gui]"
    ```
+
+  For a headless-only install, omit the GUI profile:
+  ```bash
+  pip install \
+    "airunner[core,llm-native,stt-native,art-python,tts-python]"
+  ```
 
   From a local clone in editable mode:
   ```bash
@@ -107,17 +133,20 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
   source venv/bin/activate
   pip install --upgrade pip setuptools wheel
   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-  pip install -e ".[all_dev]"
+  pip install -e \
+    ".[core,llm-native,stt-native,art-python,tts-python,gui,development]"
   ```
 
-  `all_dev` intentionally excludes the MeCab-backed Japanese/Korean voice extras so a fresh virtual environment can install without additional native build steps.
+  The base `tts-python` profile intentionally excludes the MeCab-backed
+  Japanese and Korean voice packs so a fresh virtual environment can install
+  without extra native build steps.
 
   To include those language packs after installing the system packages above, use:
   ```bash
-  pip install -e ".[all_dev_native]"
+  pip install -e ".[openvoice_jp,openvoice_kr]"
   ```
 
-4. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
+5. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
   ```bash
   CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
     pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
@@ -126,7 +155,7 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
   - `90` matches RTX 5080 class GPUs; drop `-DGGML_CUDA_ARCHITECTURES` if you are unsure and let it auto-detect.
   - On Python 3.12 you may instead use the prebuilt wheel: `--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"`.
 
-4. **Run:**
+6. **Run:**
    ```bash
    airunner
    ```

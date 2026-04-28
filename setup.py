@@ -1,217 +1,296 @@
-from setuptools import setup, find_packages
+from pathlib import Path
 
-extras_require = {
-    # These are optional dependencies that will change the
-    # behavior of the application or add new features if installed.
-    "nvidia": [  # NVIDIA dependencies:
-        "nvidia-cuda-runtime",  # CUDA runtime (replaces deprecated cu12/cu13 variants)
-    ],
-    "huggingface": [
-        "diffusers==0.35.1",
-        "controlnet_aux==0.0.10",
-        "safetensors==0.6.2",
-        "kornia",
-        "timm",
-        "compel==2.1.1",
-        "transformers==4.57.3",
-        "datasets==4.0.0",
-        "peft==0.17.1",
-    ],
-    "gui": [  # GUI dependencies
-        "PySide6==6.9.0",
-        "PySide6_Addons==6.9.0",
-        "PySide6_Essentials==6.9.0",
-    ],
-    "linux": [  # Linux-specific dependencies
-        # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
-        # "tensorrt==10.13.3.9",  # Temporarily disabled - depends on deprecated nvidia-cuda-runtime-cu13
-    ],
-    "dev": [  # Development dependencies
-        "pytest",
-        "pytest-timeout",
-        "responses>=0.25.0",
-        "python-dotenv==1.0.1",
-        "coverage==7.8.0",
-        "black==25.1.0",
-        "pyinstaller==6.12.0",
-        "flake8==7.2.0",
-        "mypy==1.16.0",
-        "autoflake==2.3.1",
-        "pandas>=2.0.0",  # For eval dataset loading (parquet)
-        "pyarrow>=14.0.0",  # For parquet file support
-        "tqdm>=4.0.0",  # For progress bars in headless downloads
-    ],
-    "art": [  # Art generation dependencies
-        "DeepCache==0.1.1",
-        "tomesd==0.1.3",
-        "gguf==0.17.1",
-    ],
-    "llm": [  # GGUF-first local LLM runtime plus fallback providers/tools
-        # Preferred local runtime path for GGUF models.
-        # For GPU on Python 3.13 (no prebuilt cu121 wheels):
-        #   CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"  # RTX 5080 (SM90). Drop the arch flag if unknown.
-        # On Python 3.12, you may use the cu121 wheel instead:
-        #   pip install --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"
-        "llama-cpp-python==0.3.16",
-        # Legacy local transformers path kept for fallback and conversion flows.
-        "bitsandbytes==0.45.5",
-        "sentence_transformers==3.4.1",
-        "sounddevice==0.5.1",
-        "pyttsx3==2.91",
-        "cryptography==44.0.3",
-        # Speech-to-text: faster-whisper (CTranslate2-based, ~4x faster than transformers)
-        "faster-whisper>=1.0.0",
-        # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
-        # Summarizations (basic)
-        "sumy==0.11.0",
-        "sentencepiece==0.2.1",
-        "lingua-language-detector==2.1.0",
-        "markdown==3.8",
-        "libzim==3.7.0",
-        # Mistral native function calling and Mistral3 tokenization
-        "mistral_common>=1.8.5",
-        # Tool search (BM25 ranking for on-demand tool discovery)
-        "rank-bm25>=0.2.2",
-        # llama-index (for RAG only) - keep on 0.12.x to satisfy plugin constraints
-        "llama-index==0.12.36",
-        "llama-index-readers-file==0.4.0",
-        "llama-index-embeddings-huggingface==0.4.0",
-        "llama-cloud==0.1.23",
-        # Pin dependent plugins to avoid resolver backtracking
-        "llama-index-core==0.12.36",
-        "llama-index-embeddings-openai==0.3.0",
-        "llama-index-question-gen-openai==0.3.0",
-        "llama-index-program-openai==0.3.0",
-        "llama-index-multi-modal-llms-openai==0.4.0",
-        "llama-index-cli==0.4.1",
-        "llama-index-agent-openai==0.4.8",
-        "llama-index-indices-managed-llama-cloud==0.7.1",
-        # LangChain/LangGraph (for agent system)
-        "langchain==1.0.0",
-        "langchain-core==1.0.0",
-        "langchain-community>=0.4.0",
-        "langchain-huggingface>=0.1.0",
-        "langgraph==1.0.0",
-        "langsmith>=0.1.0",
-        # Optional LangChain backends (commented out by default)
-        # "langchain-openai>=0.2.0",  # For OpenRouter/OpenAI
-        "langchain-ollama==1.0.0",  # For Ollama
-        # "langchain-anthropic>=0.3.0",  # For Anthropic Claude
-        # Document processing
-        "EbookLib==0.19",
-        "html2text==2025.4.15",
-        "rake_nltk==1.0.6",
-        "markdownify>=0.13.1",
-    ],
-    "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
-        "requests-cache==1.2.1",
-        "retry-requests==2.0.0",
-        "openmeteo_requests==1.4.0",
-        "uszipcode==1.0.1",
-    ],
-    "tts": [  # Text-to-speech dependencies (requires llm dependencies)
-        "inflect==7.5.0",
-        "pycountry==24.6.1",
-        "librosa==0.11.0",
-        "torchcodec>=0.8.0",  # Required by torchaudio for audio loading
-    ],
-    "rabbitmq": ["pika"],
-    "openvoice": [
-        "librosa==0.11.0",
-        "pydub==0.25.1",
-        "wavmark==0.0.3",
-        "eng_to_ipa==0.0.2",
-        "inflect==7.5.0",
-        "unidecode==1.4.0",
-        "langid==1.1.6",
-    ],
-    "melotts": [
-        "txtsplit==1.0.0",
-        "cached_path==1.7.3",
-        "num2words==0.5.14",
-        "g2p_en==2.1.0",
-        "anyascii==0.3.2",
-        "loguru==0.7.3",
-    ],
-    "openvoice_cn": [
-        "pypinyin==0.54.0",
-        "jieba==0.42.1",
-        "cn2an==0.5.23",
-    ],
-    "openvoice_jp": [
-        "unidic_lite==1.0.8",
-        "unidic==1.1.0",
-        "mecab-python3==1.0.10",
-        # Note: fugashi requires MeCab to be installed on the system
-        # Install with: apt-get install mecab libmecab-dev mecab-ipadic-utf8
-        "fugashi==1.4.0",
-        "pykakasi==2.3.0",
-    ],
-    "openvoice_kr": [
-        "jamo==0.4.1",
-        "python-mecab-ko==1.3.7",
-        "python-mecab-ko-dic==2.1.1.post2",
-    ],
-    "openvoice_tw": [
-        "g2pkk>=0.1.2",
-    ],
-    "gruut_support": [
-        "gruut[de,es,fr]==2.4.0",
-        "networkx==3.4.2",
-    ],
-    "search": [
-        "ddgs>=9.0.0",  # Renamed from duckduckgo-search
-        "aiohttp>=3.11.0",
-        "google-api-python-client>=2.170.0",
-        "wikipedia>=1.4.0",
-        "scrapy==2.13.1",
-        "trafilatura==2.0.0",
-    ],
-    "computer_use": [  # Computer use / desktop automation dependencies
-        "pyautogui>=0.9.54",
-        "pillow>=12.0.0",  # Already in install_requires, but listed for clarity
-        "pyscreeze>=1.0.1",  # Screenshot backend for pyautogui
-        "python-xlib>=0.33;platform_system=='Linux'",  # X11 support on Linux
-        "pygetwindow>=0.0.9",  # Window management
-    ],
-}
+from setuptools import find_packages, setup
 
-AGGREGATE_EXTRAS = {
-    "all",
-    "all_dev",
-    "all_native",
-    "all_dev_native",
-    "windows",
-}
+README = Path("README.md").read_text(encoding="utf-8")
+
+CORE_REQUIREMENTS = [
+    "numpy==2.2.5",
+    "packaging>=24.0",
+    "pillow==12.0.0",
+    "alembic==1.13.2",
+    "aiosqlite==0.21.0",
+    "sqlalchemy==2.0.38",
+    "psycopg[binary]>=3.2.0",
+    "etils[epath]==1.12.2",
+    "jinja2==3.1.6",
+    "pyyaml==6.0.2",
+    "fastapi==0.115.0",
+    "python-multipart>=0.0.9",
+    "uvicorn[standard]==0.34.0",
+]
+
+ML_RUNTIME_REQUIREMENTS = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "accelerate==1.7.0",
+    "huggingface-hub>=0.24.0,<1.0",
+    "tokenizers==0.22.0",
+    "optimum==1.25.1",
+]
+
+NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime"]
+
+HUGGINGFACE_REQUIREMENTS = [
+    "diffusers==0.35.1",
+    "controlnet_aux==0.0.10",
+    "safetensors==0.6.2",
+    "kornia",
+    "timm",
+    "compel==2.1.1",
+    "transformers==4.57.3",
+    "datasets==4.0.0",
+    "peft==0.17.1",
+]
+
+GUI_REQUIREMENTS = [
+    "PySide6==6.9.0",
+    "PySide6_Addons==6.9.0",
+    "PySide6_Essentials==6.9.0",
+]
+
+DEVELOPMENT_REQUIREMENTS = [
+    "pytest",
+    "pytest-timeout",
+    "responses>=0.25.0",
+    "python-dotenv==1.0.1",
+    "coverage==7.8.0",
+    "black==25.1.0",
+    "pyinstaller==6.12.0",
+    "flake8==7.2.0",
+    "mypy==1.16.0",
+    "autoflake==2.3.1",
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+    "tqdm>=4.0.0",
+]
+
+ART_REQUIREMENTS = [
+    "DeepCache==0.1.1",
+    "tomesd==0.1.3",
+    "gguf==0.17.1",
+]
+
+LLM_NATIVE_REQUIREMENTS = [
+    "llama-cpp-python==0.3.16",
+    "bitsandbytes==0.45.5",
+    "sentence_transformers==3.4.1",
+    "cryptography==44.0.3",
+    "sumy==0.11.0",
+    "sentencepiece==0.2.1",
+    "lingua-language-detector==2.1.0",
+    "markdown==3.8",
+    "libzim==3.7.0",
+    "mistral_common>=1.8.5",
+    "rank-bm25>=0.2.2",
+    "llama-index==0.12.36",
+    "llama-index-readers-file==0.4.0",
+    "llama-index-embeddings-huggingface==0.4.0",
+    "llama-cloud==0.1.23",
+    "llama-index-core==0.12.36",
+    "llama-index-embeddings-openai==0.3.0",
+    "llama-index-question-gen-openai==0.3.0",
+    "llama-index-program-openai==0.3.0",
+    "llama-index-multi-modal-llms-openai==0.4.0",
+    "llama-index-cli==0.4.1",
+    "llama-index-agent-openai==0.4.8",
+    "llama-index-indices-managed-llama-cloud==0.7.1",
+    "langchain==1.0.0",
+    "langchain-core==1.0.0",
+    "langchain-community>=0.4.0",
+    "langchain-huggingface>=0.1.0",
+    "langgraph==1.0.0",
+    "langsmith>=0.1.0",
+    "langchain-ollama==1.0.0",
+    "EbookLib==0.19",
+    "html2text==2025.4.15",
+    "rake_nltk==1.0.6",
+    "markdownify>=0.13.1",
+]
+
+STT_NATIVE_REQUIREMENTS = [
+    "faster-whisper>=1.0.0",
+    "sounddevice==0.5.1",
+]
+
+LLM_WEATHER_REQUIREMENTS = [
+    "requests-cache==1.2.1",
+    "retry-requests==2.0.0",
+    "openmeteo_requests==1.4.0",
+    "uszipcode==1.0.1",
+]
+
+TTS_REQUIREMENTS = [
+    "inflect==7.5.0",
+    "pycountry==24.6.1",
+    "librosa==0.11.0",
+    "torchcodec>=0.8.0",
+]
+
+OPENVOICE_REQUIREMENTS = [
+    "librosa==0.11.0",
+    "pydub==0.25.1",
+    "wavmark==0.0.3",
+    "eng_to_ipa==0.0.2",
+    "inflect==7.5.0",
+    "unidecode==1.4.0",
+    "langid==1.1.6",
+]
+
+MELOTTS_REQUIREMENTS = [
+    "txtsplit==1.0.0",
+    "cached_path==1.7.3",
+    "num2words==0.5.14",
+    "g2p_en==2.1.0",
+    "anyascii==0.3.2",
+    "loguru==0.7.3",
+]
+
+OPENVOICE_CN_REQUIREMENTS = [
+    "pypinyin==0.54.0",
+    "jieba==0.42.1",
+    "cn2an==0.5.23",
+]
+
+OPENVOICE_JP_REQUIREMENTS = [
+    "unidic_lite==1.0.8",
+    "unidic==1.1.0",
+    "mecab-python3==1.0.10",
+    "fugashi==1.4.0",
+    "pykakasi==2.3.0",
+]
+
+OPENVOICE_KR_REQUIREMENTS = [
+    "jamo==0.4.1",
+    "python-mecab-ko==1.3.7",
+    "python-mecab-ko-dic==2.1.1.post2",
+]
+
+OPENVOICE_TW_REQUIREMENTS = ["g2pkk>=0.1.2"]
+
+GRUUT_SUPPORT_REQUIREMENTS = [
+    "gruut[de,es,fr]==2.4.0",
+    "networkx==3.4.2",
+]
+
+SEARCH_REQUIREMENTS = [
+    "ddgs>=9.0.0",
+    "aiohttp>=3.11.0",
+    "google-api-python-client>=2.170.0",
+    "wikipedia>=1.4.0",
+    "scrapy==2.13.1",
+    "trafilatura==2.0.0",
+]
+
+COMPUTER_USE_REQUIREMENTS = [
+    "pyautogui>=0.9.54",
+    "pyscreeze>=1.0.1",
+    "python-xlib>=0.33;platform_system=='Linux'",
+    "pygetwindow>=0.0.9",
+]
+
 SYSTEM_DEP_EXTRAS = {"openvoice_jp", "openvoice_kr"}
 
 
-def build_aggregate_extra(include_dev=True, exclude=None):
-    excluded = set(exclude or ())
+def unique_requirements(*groups):
     dependencies = []
-    for extra_name, extra_dependencies in extras_require.items():
-        if extra_name in AGGREGATE_EXTRAS or extra_name in excluded:
-            continue
-        if not include_dev and extra_name == "dev":
-            continue
-        dependencies.extend(extra_dependencies)
+    for group in groups:
+        dependencies.extend(group)
     return list(dict.fromkeys(dependencies))
 
 
-# Keep the default aggregate installs pip-only so they work in a fresh venv.
+extras_require = {
+    "core": [],
+    "nvidia": NVIDIA_REQUIREMENTS,
+    "huggingface": HUGGINGFACE_REQUIREMENTS,
+    "gui": GUI_REQUIREMENTS,
+    "linux": [],
+    "development": DEVELOPMENT_REQUIREMENTS,
+    "dev": DEVELOPMENT_REQUIREMENTS,
+    "art": ART_REQUIREMENTS,
+    "llm-native": unique_requirements(
+        ML_RUNTIME_REQUIREMENTS,
+        LLM_NATIVE_REQUIREMENTS,
+    ),
+    "stt-native": STT_NATIVE_REQUIREMENTS,
+    "art-python": unique_requirements(
+        ML_RUNTIME_REQUIREMENTS,
+        HUGGINGFACE_REQUIREMENTS,
+        ART_REQUIREMENTS,
+    ),
+    "llm": unique_requirements(
+        ML_RUNTIME_REQUIREMENTS,
+        LLM_NATIVE_REQUIREMENTS,
+        STT_NATIVE_REQUIREMENTS,
+        ["pyttsx3==2.91"],
+    ),
+    "llm_weather": LLM_WEATHER_REQUIREMENTS,
+    "llm-weather": LLM_WEATHER_REQUIREMENTS,
+    "tts": TTS_REQUIREMENTS,
+    "tts-python": unique_requirements(
+        ML_RUNTIME_REQUIREMENTS,
+        TTS_REQUIREMENTS,
+        ["pyttsx3==2.91"],
+        OPENVOICE_REQUIREMENTS,
+        MELOTTS_REQUIREMENTS,
+        OPENVOICE_CN_REQUIREMENTS,
+        OPENVOICE_TW_REQUIREMENTS,
+        GRUUT_SUPPORT_REQUIREMENTS,
+    ),
+    "rabbitmq": ["pika"],
+    "openvoice": OPENVOICE_REQUIREMENTS,
+    "melotts": MELOTTS_REQUIREMENTS,
+    "openvoice_cn": OPENVOICE_CN_REQUIREMENTS,
+    "openvoice_jp": OPENVOICE_JP_REQUIREMENTS,
+    "openvoice_kr": OPENVOICE_KR_REQUIREMENTS,
+    "openvoice_tw": OPENVOICE_TW_REQUIREMENTS,
+    "gruut_support": GRUUT_SUPPORT_REQUIREMENTS,
+    "search": SEARCH_REQUIREMENTS,
+    "computer_use": COMPUTER_USE_REQUIREMENTS,
+    "computer-use": COMPUTER_USE_REQUIREMENTS,
+}
+
+
+def build_aggregate_extra(*extra_names):
+    dependencies = []
+    for extra_name in extra_names:
+        dependencies.extend(extras_require[extra_name])
+    return list(dict.fromkeys(dependencies))
+
+
+extras_require["headless"] = build_aggregate_extra(
+    "llm-native",
+    "stt-native",
+    "art-python",
+    "tts-python",
+)
+extras_require["desktop"] = build_aggregate_extra("headless", "gui")
 extras_require["all"] = build_aggregate_extra(
-    include_dev=False,
-    exclude=SYSTEM_DEP_EXTRAS,
+    "desktop",
+    "llm_weather",
+    "search",
+    "computer_use",
+    "nvidia",
+    "rabbitmq",
+    "linux",
 )
-extras_require["all_dev"] = build_aggregate_extra(
-    include_dev=True,
-    exclude=SYSTEM_DEP_EXTRAS,
+extras_require["all_dev"] = build_aggregate_extra("all", "development")
+extras_require["all_native"] = build_aggregate_extra(
+    "all",
+    *sorted(SYSTEM_DEP_EXTRAS),
 )
-extras_require["all_native"] = build_aggregate_extra(include_dev=False)
-extras_require["all_dev_native"] = build_aggregate_extra(include_dev=True)
+extras_require["all_dev_native"] = build_aggregate_extra(
+    "all_native",
+    "development",
+)
 extras_require["windows"] = build_aggregate_extra(
-    include_dev=False,
-    exclude={"linux"} | SYSTEM_DEP_EXTRAS,
+    "desktop",
+    "llm_weather",
+    "search",
+    "computer_use",
+    "nvidia",
+    "rabbitmq",
 )
 
 
@@ -220,7 +299,7 @@ setup(
     version="5.6.1",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
-    long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description=README,
     long_description_content_type="text/markdown",
     keywords="llm, pyside6, gui, local llm, stable diffusion, generative ai, local chatgpt, text-to-speech, speech-to-text, open source chatbot, python ai runner",
     license="Apache-2.0",
@@ -229,30 +308,7 @@ setup(
     package_dir={"": "src"},
     packages=find_packages("src"),
     python_requires=">=3.13.3",
-    install_requires=[
-        "pip==25.3",
-        "torch",
-        "torchvision",
-        "torchaudio",
-        "accelerate==1.7.0",
-        "huggingface-hub>=0.24.0,<1.0",
-        "tokenizers==0.22.0",
-        "optimum==1.25.1",
-        "numpy==2.2.5",
-        "pillow==12.0.0",
-        "alembic==1.13.2",
-        "aiosqlite==0.21.0",
-        "sqlalchemy==2.0.38",
-        # Postgres driver (Phase 4: AIRunner DB on Postgres)
-        "psycopg[binary]>=3.2.0",
-        "setuptools==80.9.0",
-        "etils[epath]==1.12.2",
-        "jinja2==3.1.6",
-        "pyyaml==6.0.2",
-        "fastapi==0.115.0",
-        "python-multipart>=0.0.9",
-        "uvicorn[standard]==0.34.0",
-    ],
+    install_requires=CORE_REQUIREMENTS,
     extras_require=extras_require,
     package_data={
         "airunner": [

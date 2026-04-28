@@ -10,7 +10,7 @@
 # This script:
 #   1. Checks system requirements (Python 3.13+, CUDA optional)
 #   2. Creates a virtual environment
-#   3. Installs AI Runner with all dependencies
+#   3. Installs AI Runner with the selected dependency profiles
 #   4. Creates convenient launcher scripts
 
 set -e
@@ -35,6 +35,11 @@ RUNTIME_LOG_DIR="${AIRUNNER_RUNTIME_LOG_DIR:-${RUNTIME_DIR}/logs}"
 RUNTIME_SOCKET_DIR="${AIRUNNER_RUNTIME_SOCKET_DIR:-${RUNTIME_DIR}/sockets}"
 CACHE_DIR="${AIRUNNER_CACHE_DIR:-${DATA_DIR}/cache}"
 MODEL_DIR="${AIRUNNER_MODEL_DIR:-${DATA_DIR}/models}"
+DEFAULT_INSTALL_PROFILES="core,llm-native,stt-native,art-python,tts-python,gui"
+AIRUNNER_INSTALL_PROFILES=$(
+    printf '%s' "${AIRUNNER_INSTALL_PROFILES:-$DEFAULT_INSTALL_PROFILES}" |
+        tr -d '[:space:]'
+)
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -67,6 +72,42 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+profile_enabled() {
+    case ",${AIRUNNER_INSTALL_PROFILES}," in
+        *",$1,"*) return 0 ;;
+    esac
+    return 1
+}
+
+any_profile_enabled() {
+    local profile
+
+    for profile in "$@"; do
+        if profile_enabled "$profile"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+gui_profile_enabled() {
+    any_profile_enabled gui desktop all all_dev all_native all_dev_native
+}
+
+runtime_needs_pytorch() {
+    any_profile_enabled \
+        llm-native \
+        art-python \
+        tts-python \
+        headless \
+        desktop \
+        all \
+        all_dev \
+        all_native \
+        all_dev_native
 }
 
 # Check if command exists
@@ -211,6 +252,11 @@ prepare_runtime_dirs() {
 
 # Install PyTorch
 install_pytorch() {
+    if ! runtime_needs_pytorch; then
+        log_info "Skipping PyTorch for profiles: ${AIRUNNER_INSTALL_PROFILES}"
+        return
+    fi
+
     log_info "Installing PyTorch..."
     
     if [ "$HAS_CUDA" = true ]; then
@@ -226,10 +272,9 @@ install_pytorch() {
 
 # Install AI Runner
 install_airunner() {
-    log_info "Installing AI Runner..."
-    
-    # Install with all extras
-    pip install "airunner[all]"
+    log_info "Installing AI Runner profiles: ${AIRUNNER_INSTALL_PROFILES}"
+
+    pip install "airunner[${AIRUNNER_INSTALL_PROFILES}]"
     
     log_success "AI Runner installed"
 }
@@ -240,8 +285,8 @@ create_launchers() {
     
     mkdir -p "$BIN_DIR"
     
-    # Main launcher
-    cat > "$BIN_DIR/airunner" << EOF
+    if gui_profile_enabled; then
+        cat > "$BIN_DIR/airunner" << EOF
 #!/bin/bash
 # AI Runner Launcher
 export AIRUNNER_BASE_PATH="${DATA_DIR}"
@@ -260,9 +305,11 @@ export TRANSFORMERS_CACHE="${CACHE_DIR}/huggingface/transformers"
 source "${VENV_DIR}/bin/activate"
 exec python -m airunner.launcher "\$@"
 EOF
-    chmod +x "$BIN_DIR/airunner"
+        chmod +x "$BIN_DIR/airunner"
+    else
+        rm -f "$BIN_DIR/airunner"
+    fi
     
-    # Headless launcher
     cat > "$BIN_DIR/airunner-headless" << EOF
 #!/bin/bash
 # AI Runner Headless Mode
@@ -310,19 +357,27 @@ print_success() {
     echo ""
     echo -e "${BLUE}Next steps:${NC}"
     echo ""
-    
+
     if [ "$ADD_TO_PATH" = true ]; then
         echo "1. Add ~/.local/bin to your PATH (see above)"
         echo ""
-        echo "2. Launch AI Runner:"
-        echo -e "   ${YELLOW}$BIN_DIR/airunner${NC}"
-        echo ""
-        echo "3. Download models from Tools → Download Models menu"
-    else
+        if gui_profile_enabled; then
+            echo "2. Launch AI Runner:"
+            echo -e "   ${YELLOW}$BIN_DIR/airunner${NC}"
+            echo ""
+            echo "3. Download models from Tools → Download Models menu"
+        else
+            echo "2. Launch the headless service:"
+            echo -e "   ${YELLOW}$BIN_DIR/airunner-headless${NC}"
+        fi
+    elif gui_profile_enabled; then
         echo "1. Launch AI Runner:"
         echo -e "   ${YELLOW}airunner${NC}"
         echo ""
         echo "2. Download models from Tools → Download Models menu"
+    else
+        echo "1. Launch the headless service:"
+        echo -e "   ${YELLOW}airunner-headless${NC}"
     fi
     
     echo ""
@@ -374,6 +429,10 @@ main() {
         echo ""
         echo "Environment variables:"
         echo "  AIRUNNER_INSTALL_DIR   Installation directory (default: ~/.local/airunner)"
+        echo "  AIRUNNER_INSTALL_PROFILES"
+        echo "                         Comma-separated extras"
+        echo "                         (default: ${DEFAULT_INSTALL_PROFILES})"
+        echo "  AIRUNNER_DATA_DIR      Runtime data directory"
         exit 0
     fi
     

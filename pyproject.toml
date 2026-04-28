@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=80.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.black]
 exclude = '.*_ui\.py$'
 line-length = 79
