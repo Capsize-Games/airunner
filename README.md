@@ -162,6 +162,13 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
 
 For detailed instructions, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
+## Hybrid Runtime Migration
+
+The hybrid-runtime rewrite is being delivered in explicit phases: runtime
+foundation, LLM cutover, STT isolation, art/TTS isolation, then packaging,
+bundles, CI, and rollout hardening. The phase order, rollout gates, and full
+issue-tree checklist live in [HYBRID_RUNTIME_MIGRATION.md](./HYBRID_RUNTIME_MIGRATION.md).
+
 ---
 
 ## 🤖 Models
