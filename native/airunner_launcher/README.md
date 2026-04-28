@@ -54,6 +54,10 @@ That flow uses the repository `venv` when present and sets `PYTHONPATH` to
 Production mode expects a manifest file with relative runtime paths.
 See `runtime_manifest.example.env` for the current contract.
 
+For the full launcher contract, including mode resolution, required and
+optional manifest keys, exported environment variables, and failure modes, see
+`CONTRACT.md`.
+
 The launcher reads:
 - `AIRUNNER_BUNDLE_ROOT`
 - `AIRUNNER_PYTHON`
@@ -61,6 +65,10 @@ The launcher reads:
 - `AIRUNNER_ENTRYPOINT`
 - `AIRUNNER_LLAMA_SERVER_BIN`
 - `AIRUNNER_WHISPER_SERVER_BIN`
+
+At the current boundary, Python still owns runtime-client and sidecar
+supervision. The native launcher is responsible for startup layout selection,
+environment export, and Python process launch.
 
 ## Reference Inputs
 
