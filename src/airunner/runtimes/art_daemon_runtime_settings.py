@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
+from airunner.runtime_layout import resolve_runtime_bind_host
+
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8190
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 10.0
@@ -66,7 +68,10 @@ class ArtDaemonRuntimeSettings:
 def resolve_art_daemon_runtime_settings() -> ArtDaemonRuntimeSettings:
     """Resolve art runtime settings from the current environment."""
     return ArtDaemonRuntimeSettings(
-        host=os.environ.get("AIRUNNER_ART_RUNTIME_HOST", DEFAULT_HOST),
+        host=resolve_runtime_bind_host(
+            "AIRUNNER_ART_RUNTIME_HOST",
+            "AIRUNNER_RUNTIME_BIND_HOST",
+        ),
         port=_env_int("AIRUNNER_ART_RUNTIME_PORT", DEFAULT_PORT),
         base_daemon_config_path=(
             _env_str("AIRUNNER_ART_RUNTIME_DAEMON_CONFIG")

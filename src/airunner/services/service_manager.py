@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 from enum import Enum
 
+from airunner.runtime_layout import build_runtime_directory_layout
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -84,10 +85,9 @@ class ServiceManager:
         """Get default configuration path."""
         if self.platform == ServicePlatform.WINDOWS:
             config_dir = Path(os.environ.get("APPDATA", "")) / "airunner"
-        else:
-            config_dir = Path.home() / ".config" / "airunner"
-
-        return config_dir / "daemon.yaml"
+            return config_dir / "daemon.yaml"
+        layout = build_runtime_directory_layout()
+        return layout.config_file("daemon")
 
     def install(self, **kwargs) -> bool:
         """
@@ -274,22 +274,12 @@ class LinuxSystemdHandler(ServiceHandlerBase):
         else:
             daemon_cmd = str(daemon_script)
 
-        # Create service file content
-        service_content = f"""[Unit]
-Description=AI Runner Background Service
-After=network.target
-
-[Service]
-Type=simple
-ExecStart={daemon_cmd} --config {config_path}
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=default.target
-"""
+        layout = build_runtime_directory_layout()
+        layout.ensure_exists()
+        service_content = self._generate_service_content(
+            daemon_cmd,
+            config_path,
+        )
 
         try:
             # Create systemd user directory if it doesn't exist
@@ -320,6 +310,80 @@ WantedBy=default.target
         except Exception as e:
             self.logger.error(f"Failed to install systemd service: {e}")
             return False
+
+    def _generate_service_content(
+        self,
+        daemon_cmd: str,
+        config_path: Path,
+    ) -> str:
+        """Return the full systemd unit content for the daemon service."""
+        environment = "\n".join(self._environment_lines(config_path))
+        prestart = "\n".join(self._prestart_lines())
+        security = "\n".join(self._security_lines())
+        return f"""[Unit]
+Description=AI Runner Background Service
+After=network.target
+
+[Service]
+Type=simple
+{environment}
+{prestart}
+ExecStart={daemon_cmd} --config {config_path}
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+{security}
+
+[Install]
+WantedBy=default.target
+"""
+
+    def _environment_lines(self, config_path: Path) -> list[str]:
+        """Return environment lines for the systemd unit."""
+        layout = build_runtime_directory_layout()
+        environment = layout.as_environment(config_path)
+        environment.update(
+            {
+                "AIRUNNER_HEADLESS": "1",
+                "AIRUNNER_HTTP_HOST": "127.0.0.1",
+                "AIRUNNER_RUNTIME_BIND_HOST": "127.0.0.1",
+                "AIRUNNER_LLM_ON": "1",
+                "AIRUNNER_LOG_LEVEL": "INFO",
+                "QT_QPA_PLATFORM": "offscreen",
+                "QT_LOGGING_RULES": "*.debug=false;qt.qpa.*=false",
+                "DEV_ENV": "0",
+            }
+        )
+        return [
+            f'Environment="{key}={value}"'
+            for key, value in environment.items()
+        ]
+
+    def _prestart_lines(self) -> list[str]:
+        """Return directory preparation commands for the service."""
+        layout = build_runtime_directory_layout()
+        managed = " ".join(str(path) for path in layout._managed_paths())
+        return [
+            f"ExecStartPre=/bin/mkdir -p {managed}",
+            f"ExecStartPre=/bin/chmod 700 {managed}",
+        ]
+
+    def _security_lines(self) -> list[str]:
+        """Return conservative least-privilege systemd directives."""
+        layout = build_runtime_directory_layout()
+        return [
+            "LimitNOFILE=65536",
+            "UMask=0077",
+            "NoNewPrivileges=yes",
+            "PrivateTmp=yes",
+            "ProtectSystem=full",
+            "ProtectHome=read-only",
+            f"ReadWritePaths={layout.base_path}",
+            "RestrictSUIDSGID=yes",
+            "LockPersonality=yes",
+            "RestrictRealtime=yes",
+        ]
 
     def uninstall(self) -> bool:
         """Uninstall systemd user service."""

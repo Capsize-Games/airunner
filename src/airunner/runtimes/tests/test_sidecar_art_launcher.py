@@ -2,11 +2,16 @@
 
 from pathlib import Path
 
+import yaml
+
 from airunner.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
 )
 from airunner.runtimes.contracts import RuntimeHealthStatus
-from airunner.runtimes.sidecar_art_launcher import SidecarArtLauncher
+from airunner.runtimes.sidecar_art_launcher import (
+    SidecarArtLauncher,
+    _build_temp_daemon_config,
+)
 
 
 class FakeResponse:
@@ -128,3 +133,24 @@ def test_health_status_reports_ready(tmp_path):
 
     assert status is RuntimeHealthStatus.READY
     assert details == "ready"
+
+
+def test_temp_daemon_config_uses_standard_runtime_directories(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
+
+    config_path = _build_temp_daemon_config(_settings())
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    finally:
+        config_path.unlink(missing_ok=True)
+
+    assert config_path.parent == tmp_path / "runtime" / "configs"
+    assert config["logging"]["file"] == str(
+        tmp_path / "runtime" / "logs" / "art-runtime.log"
+    )
+    assert config["health"]["heartbeat_file"] == str(
+        tmp_path / "runtime" / "art-runtime.heartbeat"
+    )

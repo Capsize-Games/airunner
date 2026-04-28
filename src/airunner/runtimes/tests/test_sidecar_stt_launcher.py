@@ -87,6 +87,34 @@ def test_start_spawns_process_and_waits_for_health(monkeypatch):
     assert launcher.health_status()[0] is RuntimeHealthStatus.READY
 
 
+def test_start_uses_runtime_layout_environment_and_log_file(
+    monkeypatch,
+    tmp_path,
+):
+    process = FakeProcess()
+    captured = {}
+
+    def process_factory(*args, **kwargs):
+        captured["kwargs"] = kwargs
+        return process
+
+    monkeypatch.setattr("os.path.exists", lambda _path: True)
+    monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
+    launcher = SidecarSTTLauncher(
+        _settings(),
+        process_factory=process_factory,
+        health_opener=lambda *args, **kwargs: FakeResponse(),
+    )
+
+    launcher.start()
+    launcher.stop()
+
+    environment = captured["kwargs"]["env"]
+    assert environment["AIRUNNER_RUNTIME_ROOT"] == str(tmp_path / "runtime")
+    assert environment["AIRUNNER_CACHE_DIR"] == str(tmp_path / "cache")
+    assert captured["kwargs"]["stdout"].name.endswith("stt-sidecar.log")
+
+
 def test_stop_terminates_running_process(monkeypatch):
     process = FakeProcess()
     monkeypatch.setattr("os.path.exists", lambda _path: True)

@@ -28,6 +28,13 @@ MIN_PYTHON_VERSION="3.13"
 INSTALL_DIR="${AIRUNNER_INSTALL_DIR:-$HOME/.local/airunner}"
 VENV_DIR="${INSTALL_DIR}/venv"
 BIN_DIR="${HOME}/.local/bin"
+DATA_DIR="${AIRUNNER_DATA_DIR:-${AIRUNNER_BASE_PATH:-$HOME/.local/share/airunner}}"
+RUNTIME_DIR="${AIRUNNER_RUNTIME_ROOT:-${DATA_DIR}/runtime}"
+RUNTIME_CONFIG_DIR="${AIRUNNER_RUNTIME_CONFIG_DIR:-${RUNTIME_DIR}/configs}"
+RUNTIME_LOG_DIR="${AIRUNNER_RUNTIME_LOG_DIR:-${RUNTIME_DIR}/logs}"
+RUNTIME_SOCKET_DIR="${AIRUNNER_RUNTIME_SOCKET_DIR:-${RUNTIME_DIR}/sockets}"
+CACHE_DIR="${AIRUNNER_CACHE_DIR:-${DATA_DIR}/cache}"
+MODEL_DIR="${AIRUNNER_MODEL_DIR:-${DATA_DIR}/models}"
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -189,6 +196,19 @@ create_venv() {
     log_success "pip upgraded"
 }
 
+# Create standardized runtime directories
+prepare_runtime_dirs() {
+    log_info "Creating runtime directories under ${DATA_DIR}..."
+
+    mkdir -p "$DATA_DIR" "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR"
+    mkdir -p "$RUNTIME_LOG_DIR" "$RUNTIME_SOCKET_DIR"
+    mkdir -p "$CACHE_DIR" "$MODEL_DIR"
+    chmod 700 "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR" "$RUNTIME_LOG_DIR"
+    chmod 700 "$RUNTIME_SOCKET_DIR" "$CACHE_DIR" "$MODEL_DIR"
+
+    log_success "Runtime directories ready"
+}
+
 # Install PyTorch
 install_pytorch() {
     log_info "Installing PyTorch..."
@@ -224,6 +244,19 @@ create_launchers() {
     cat > "$BIN_DIR/airunner" << EOF
 #!/bin/bash
 # AI Runner Launcher
+export AIRUNNER_BASE_PATH="${DATA_DIR}"
+export AIRUNNER_DATA_DIR="${DATA_DIR}"
+export AIRUNNER_RUNTIME_ROOT="${RUNTIME_DIR}"
+export AIRUNNER_RUNTIME_CONFIG_DIR="${RUNTIME_CONFIG_DIR}"
+export AIRUNNER_RUNTIME_LOG_DIR="${RUNTIME_LOG_DIR}"
+export AIRUNNER_RUNTIME_SOCKET_DIR="${RUNTIME_SOCKET_DIR}"
+export AIRUNNER_CACHE_DIR="${CACHE_DIR}"
+export AIRUNNER_MODEL_DIR="${MODEL_DIR}"
+export AIRUNNER_DAEMON_CONFIG="${RUNTIME_CONFIG_DIR}/daemon.yaml"
+export AIRUNNER_RUNTIME_BIND_HOST="127.0.0.1"
+export XDG_CACHE_HOME="${CACHE_DIR}"
+export HF_HOME="${CACHE_DIR}/huggingface"
+export TRANSFORMERS_CACHE="${CACHE_DIR}/huggingface/transformers"
 source "${VENV_DIR}/bin/activate"
 exec python -m airunner.launcher "\$@"
 EOF
@@ -233,6 +266,19 @@ EOF
     cat > "$BIN_DIR/airunner-headless" << EOF
 #!/bin/bash
 # AI Runner Headless Mode
+export AIRUNNER_BASE_PATH="${DATA_DIR}"
+export AIRUNNER_DATA_DIR="${DATA_DIR}"
+export AIRUNNER_RUNTIME_ROOT="${RUNTIME_DIR}"
+export AIRUNNER_RUNTIME_CONFIG_DIR="${RUNTIME_CONFIG_DIR}"
+export AIRUNNER_RUNTIME_LOG_DIR="${RUNTIME_LOG_DIR}"
+export AIRUNNER_RUNTIME_SOCKET_DIR="${RUNTIME_SOCKET_DIR}"
+export AIRUNNER_CACHE_DIR="${CACHE_DIR}"
+export AIRUNNER_MODEL_DIR="${MODEL_DIR}"
+export AIRUNNER_DAEMON_CONFIG="${RUNTIME_CONFIG_DIR}/daemon.yaml"
+export AIRUNNER_RUNTIME_BIND_HOST="127.0.0.1"
+export XDG_CACHE_HOME="${CACHE_DIR}"
+export HF_HOME="${CACHE_DIR}/huggingface"
+export TRANSFORMERS_CACHE="${CACHE_DIR}/huggingface/transformers"
 source "${VENV_DIR}/bin/activate"
 exec python -m airunner.bin.airunner_headless "\$@"
 EOF
@@ -333,6 +379,7 @@ main() {
     
     check_requirements
     create_venv
+    prepare_runtime_dirs
     install_pytorch
     install_airunner
     create_launchers

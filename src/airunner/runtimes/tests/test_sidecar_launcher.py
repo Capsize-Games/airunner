@@ -103,6 +103,35 @@ def test_start_spawns_and_waits_for_health(tmp_path):
     assert launcher.is_ready() is True
 
 
+def test_start_uses_runtime_layout_environment_and_log_file(
+    monkeypatch,
+    tmp_path,
+):
+    model_path = tmp_path / "model.gguf"
+    model_path.write_text("model")
+    captured = {}
+
+    def fake_process_factory(*args, **kwargs):
+        captured["kwargs"] = kwargs
+        return FakeProcess()
+
+    monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
+    launcher = SidecarLauncher(
+        _settings(str(model_path)),
+        process_factory=fake_process_factory,
+        health_opener=lambda *args, **kwargs: FakeResponse(),
+        sleep=lambda _seconds: None,
+    )
+
+    launcher.start()
+    launcher.stop()
+
+    environment = captured["kwargs"]["env"]
+    assert environment["AIRUNNER_RUNTIME_ROOT"] == str(tmp_path / "runtime")
+    assert environment["AIRUNNER_CACHE_DIR"] == str(tmp_path / "cache")
+    assert captured["kwargs"]["stdout"].name.endswith("llama-sidecar.log")
+
+
 def test_stop_terminates_running_process(tmp_path):
     model_path = tmp_path / "model.gguf"
     model_path.write_text("model")

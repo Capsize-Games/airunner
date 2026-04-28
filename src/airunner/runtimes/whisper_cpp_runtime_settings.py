@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+from airunner.runtime_layout import resolve_runtime_bind_host
 from airunner.settings import AIRUNNER_BASE_PATH
 
 DEFAULT_HOST = "127.0.0.1"
@@ -153,7 +154,10 @@ def resolve_whisper_cpp_runtime_settings() -> WhisperCppRuntimeSettings:
             "AIRUNNER_WHISPER_SERVER_BIN",
             "whisper-server",
         ),
-        host=os.environ.get("AIRUNNER_WHISPER_HOST", DEFAULT_HOST),
+        host=resolve_runtime_bind_host(
+            "AIRUNNER_WHISPER_HOST",
+            "AIRUNNER_RUNTIME_BIND_HOST",
+        ),
         port=_env_int("AIRUNNER_WHISPER_PORT", DEFAULT_PORT),
         model_path=model_path,
         model_id=model_id,

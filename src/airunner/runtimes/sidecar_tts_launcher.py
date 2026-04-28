@@ -17,6 +17,7 @@ from airunner.runtimes.contracts import RuntimeHealthStatus
 from airunner.runtimes.tts_daemon_runtime_settings import (
     TTSDaemonRuntimeSettings,
 )
+from airunner.runtime_layout import build_runtime_directory_layout
 from airunner.services.daemon_config import DaemonConfig
 
 HealthOpener = Callable[..., Any]
@@ -29,6 +30,8 @@ def _build_temp_daemon_config(
     settings: TTSDaemonRuntimeSettings,
 ) -> Path:
     """Clone one daemon config with a dedicated host and port."""
+    layout = build_runtime_directory_layout()
+    layout.ensure_exists()
     config_path = None
     if settings.base_daemon_config_path:
         config_path = Path(settings.base_daemon_config_path)
@@ -37,10 +40,18 @@ def _build_temp_daemon_config(
     config.setdefault("server", {})["host"] = settings.host
     config.setdefault("server", {})["port"] = settings.port
     config.setdefault("models", {})["preload"] = []
+    config.setdefault("health", {})["heartbeat_file"] = str(
+        layout.heartbeat_file("tts-runtime")
+    )
+    config.setdefault("logging", {})["file"] = str(
+        layout.log_file("tts-runtime")
+    )
+    config["runtime"] = layout.as_config()
 
     file_descriptor, temp_path = tempfile.mkstemp(
         prefix="airunner-tts-runtime-",
         suffix=".yaml",
+        dir=str(layout.config_dir),
     )
     os.close(file_descriptor)
     temp_config = DaemonConfig(Path(temp_path))
@@ -200,7 +211,10 @@ class SidecarTTSLauncher:
 
     def _environment(self) -> dict[str, str]:
         """Return the child-process environment for the TTS daemon."""
+        layout = build_runtime_directory_layout()
+        layout.ensure_exists()
         environment = os.environ.copy()
+        environment.update(layout.as_environment(self._config_path))
         environment.update(
             {
                 "AIRUNNER_HEADLESS": "1",

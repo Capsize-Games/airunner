@@ -1,5 +1,5 @@
 [Unit]
-Description=AI Runner Headless LLM Server
+Description=AI Runner Headless Daemon
 After=network.target
 
 [Service]
@@ -8,21 +8,29 @@ User=airunner
 Group=airunner
 WorkingDirectory=/opt/airunner
 Environment="AIRUNNER_HEADLESS=1"
+Environment="AIRUNNER_BASE_PATH=%h/.local/share/airunner"
+Environment="AIRUNNER_DATA_DIR=%h/.local/share/airunner"
+Environment="AIRUNNER_RUNTIME_ROOT=%h/.local/share/airunner/runtime"
+Environment="AIRUNNER_RUNTIME_CONFIG_DIR=%h/.local/share/airunner/runtime/configs"
+Environment="AIRUNNER_RUNTIME_LOG_DIR=%h/.local/share/airunner/runtime/logs"
+Environment="AIRUNNER_RUNTIME_SOCKET_DIR=%h/.local/share/airunner/runtime/sockets"
+Environment="AIRUNNER_CACHE_DIR=%h/.local/share/airunner/cache"
+Environment="AIRUNNER_MODEL_DIR=%h/.local/share/airunner/models"
+Environment="AIRUNNER_DAEMON_CONFIG=%h/.local/share/airunner/runtime/configs/daemon.yaml"
+Environment="AIRUNNER_RUNTIME_BIND_HOST=127.0.0.1"
+Environment="AIRUNNER_HTTP_HOST=127.0.0.1"
+Environment="AIRUNNER_HTTP_PORT=8080"
 Environment="AIRUNNER_LLM_ON=1"
 Environment="QT_QPA_PLATFORM=offscreen"
 Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=false"
-Environment="AIRUNNER_LOG_LEVEL=DEBUG"
-Environment="AIRUNNER_LOG_FILE=/var/log/airunner/headless.log"
-Environment="AIRUNNER_SAVE_LOG_TO_FILE=1"
+Environment="AIRUNNER_LOG_LEVEL=INFO"
 Environment="DEV_ENV=0"
 Environment="PATH=/opt/airunner/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Create log directory before starting
-ExecStartPre=/bin/mkdir -p /var/log/airunner
-ExecStartPre=/bin/chown airunner:airunner /var/log/airunner
-ExecStartPre=/bin/chmod 755 /var/log/airunner
+ExecStartPre=/bin/mkdir -p %h/.local/share/airunner/runtime %h/.local/share/airunner/runtime/configs %h/.local/share/airunner/runtime/logs %h/.local/share/airunner/runtime/sockets %h/.local/share/airunner/cache %h/.local/share/airunner/models
+ExecStartPre=/bin/chmod 700 %h/.local/share/airunner/runtime %h/.local/share/airunner/runtime/configs %h/.local/share/airunner/runtime/logs %h/.local/share/airunner/runtime/sockets %h/.local/share/airunner/cache %h/.local/share/airunner/models
 
-ExecStart=/opt/airunner/.venv/bin/python -m airunner.headless_server
+ExecStart=/opt/airunner/.venv/bin/python -m airunner.services.daemon --config %h/.local/share/airunner/runtime/configs/daemon.yaml
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=30
@@ -35,7 +43,15 @@ SyslogIdentifier=airunner-headless
 
 # Performance and security settings
 LimitNOFILE=65536
-Nice=-5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/airunner
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
 
 [Install]
 WantedBy=multi-user.target

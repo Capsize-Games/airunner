@@ -111,15 +111,26 @@ The service is configured with:
 - **Auto-restart:** Service will automatically restart if it crashes
 - **Restart delay:** 10 seconds between restart attempts
 - **File limits:** Increased to 65536 for handling many connections
-- **Process priority:** Set to -5 (slightly higher priority)
-- **Logging:** All output goes to systemd journal
+- **Local-only bind defaults:** The packaged unit binds the daemon to `127.0.0.1`
+- **Runtime directories:** Runtime config, logs, sockets, cache, and model roots live under `~/.local/share/airunner`
+- **Sandboxing:** The service uses `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=full`, `ProtectHome=read-only`, and a restricted writable path
+- **Logging:** The daemon writes runtime logs under `~/.local/share/airunner/runtime/logs` and systemd still captures journal output
 
 ### Environment Variables
 
 The service sets these environment variables:
 - `AIRUNNER_HEADLESS=1` - Run in headless mode (no GUI)
 - `AIRUNNER_LLM_ON=1` - Enable LLM service
+- `AIRUNNER_RUNTIME_BIND_HOST=127.0.0.1` - Keep managed runtimes on loopback by default
+- `AIRUNNER_DAEMON_CONFIG=~/.local/share/airunner/runtime/configs/daemon.yaml` - Standard daemon config path
 - `PATH` - Includes virtual environment Python
+
+The standardized runtime layout is:
+- `~/.local/share/airunner/runtime/configs` for daemon and sidecar config files
+- `~/.local/share/airunner/runtime/logs` for daemon and sidecar logs
+- `~/.local/share/airunner/runtime/sockets` for local socket-style discovery paths
+- `~/.local/share/airunner/cache` for runtime-owned caches
+- `~/.local/share/airunner/models` for default model storage
 
 To add more environment variables, edit the service file and add lines like:
 ```ini

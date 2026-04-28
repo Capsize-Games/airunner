@@ -13,6 +13,7 @@ from airunner.runtimes.contracts import RuntimeHealthStatus
 from airunner.runtimes.llama_cpp_runtime_settings import (
     LlamaCppRuntimeSettings,
 )
+from airunner.runtime_layout import build_runtime_directory_layout
 
 HealthOpener = Callable[..., Any]
 ProcessFactory = Callable[..., subprocess.Popen]
@@ -37,6 +38,7 @@ class SidecarLauncher:
         self._time_fn = time_fn
         self._process: Optional[subprocess.Popen] = None
         self._last_error = ""
+        self._log_handle = None
 
     @property
     def endpoint(self) -> str:
@@ -77,14 +79,17 @@ class SidecarLauncher:
         """Stop the managed process when one is running."""
         process = self._process
         self._process = None
-        if process is None or process.poll() is not None:
-            return
-        process.terminate()
         try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+            if process is None or process.poll() is not None:
+                return
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+        finally:
+            self._close_log_handle()
 
     def is_running(self) -> bool:
         """Return True when the subprocess is still alive."""
@@ -128,13 +133,17 @@ class SidecarLauncher:
         if self.is_running():
             return
         command = self.command()
+        environment = self._environment()
+        stdout_handle = self._open_log_handle()
         try:
             self._process = self._process_factory(
                 command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=stdout_handle,
+                stderr=subprocess.STDOUT,
+                env=environment,
             )
         except OSError as exc:
+            self._close_log_handle()
             self._last_error = str(exc)
             raise RuntimeError(str(exc)) from exc
 
@@ -157,3 +166,26 @@ class SidecarLauncher:
     def _health_url(self) -> str:
         """Return the sidecar health-check URL."""
         return f"{self.endpoint}/health"
+
+    def _environment(self) -> dict[str, str]:
+        """Return the child-process environment for the llama sidecar."""
+        layout = build_runtime_directory_layout()
+        layout.ensure_exists()
+        environment = os.environ.copy()
+        environment.update(layout.as_environment())
+        return environment
+
+    def _open_log_handle(self):
+        """Open the standardized log file for the llama sidecar."""
+        layout = build_runtime_directory_layout()
+        layout.ensure_exists()
+        self._close_log_handle()
+        self._log_handle = open(layout.log_file("llama-sidecar"), "ab")
+        return self._log_handle
+
+    def _close_log_handle(self) -> None:
+        """Close the launcher-owned log file handle when one exists."""
+        log_handle = self._log_handle
+        self._log_handle = None
+        if log_handle is not None:
+            log_handle.close()

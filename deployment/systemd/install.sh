@@ -46,19 +46,13 @@ if [ ! -f "$AIRUNNER_DIR/.venv/bin/python" ]; then
     exit 1
 fi
 
-SYSTEM_LOG=0
-# Parse CLI options
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --system-log)
-            SYSTEM_LOG=1
-            shift
-            ;;
-        *)
-            shift
-            ;;
-    esac
-done
+DATA_DIR="/home/$ACTUAL_USER/.local/share/airunner"
+RUNTIME_DIR="$DATA_DIR/runtime"
+RUNTIME_CONFIG_DIR="$RUNTIME_DIR/configs"
+RUNTIME_LOG_DIR="$RUNTIME_DIR/logs"
+RUNTIME_SOCKET_DIR="$RUNTIME_DIR/sockets"
+CACHE_DIR="$DATA_DIR/cache"
+MODEL_DIR="$DATA_DIR/models"
 
 # Copy service file
 echo -e "${YELLOW}Installing systemd service file...${NC}"
@@ -70,44 +64,14 @@ sed -i "s|User=airunner|User=$ACTUAL_USER|g" /etc/systemd/system/airunner-headle
 sed -i "s|Group=airunner|Group=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
 sed -i "s|WorkingDirectory=/opt/airunner|WorkingDirectory=$AIRUNNER_DIR|g" /etc/systemd/system/airunner-headless.service
 sed -i "s|ExecStart=/opt/airunner/.venv/bin/python|ExecStart=$AIRUNNER_DIR/.venv/bin/python|g" /etc/systemd/system/airunner-headless.service
-if [ "$SYSTEM_LOG" -eq 1 ]; then
-    LOG_DIR="/var/log/airunner"
-    LOG_FILE="$LOG_DIR/headless.log"
-else
-    LOG_DIR="/home/$ACTUAL_USER/.local/share/airunner"
-    LOG_FILE="$LOG_DIR/headless.log"
-fi
-# Update service to use user's log path
-sed -i "s|Environment=\"AIRUNNER_LOG_FILE=/var/log/airunner/headless.log\"|Environment=\"AIRUNNER_LOG_FILE=$LOG_FILE\"|g" /etc/systemd/system/airunner-headless.service
 
-# Ensure log directory exists and is owned by the service user
-mkdir -p "$LOG_DIR"
-if [ "$SYSTEM_LOG" -eq 1 ]; then
-    # /var/log typically owned by root; ensure proper permissions for service user
-    chown root:root "$LOG_DIR" || true
-    chmod 755 "$LOG_DIR" || true
-    # Create log file and set owner to service user so non-root service can write
-    touch "$LOG_FILE"
-    chown "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_FILE"
-    chmod 644 "$LOG_FILE"
-else
-    chown -R "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_DIR"
-    touch "$LOG_FILE"
-    chown "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_FILE"
-    chmod 644 "$LOG_FILE"
-fi
-touch "$LOG_FILE"
-chown "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_FILE"
-chmod 644 "$LOG_FILE"
-chmod 755 "$LOG_DIR"
-
-# Ensure AIRUNNER_SAVE_LOG_TO_FILE and DEV_ENV set in the service for production
-if ! grep -q "AIRUNNER_SAVE_LOG_TO_FILE" /etc/systemd/system/airunner-headless.service; then
-    sed -i "/Environment=\"AIRUNNER_LOG_LEVEL/ a Environment=\"AIRUNNER_SAVE_LOG_TO_FILE=1\"" /etc/systemd/system/airunner-headless.service
-fi
-if ! grep -q "DEV_ENV" /etc/systemd/system/airunner-headless.service; then
-    sed -i "/Environment=\"AIRUNNER_SAVE_LOG_TO_FILE/ a Environment=\"DEV_ENV=0\"" /etc/systemd/system/airunner-headless.service
-fi
+# Ensure runtime directories exist and are owned by the service user
+mkdir -p "$DATA_DIR" "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR"
+mkdir -p "$RUNTIME_LOG_DIR" "$RUNTIME_SOCKET_DIR"
+mkdir -p "$CACHE_DIR" "$MODEL_DIR"
+chown -R "$ACTUAL_USER":"$ACTUAL_USER" "$DATA_DIR"
+chmod 700 "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR" "$RUNTIME_LOG_DIR"
+chmod 700 "$RUNTIME_SOCKET_DIR" "$CACHE_DIR" "$MODEL_DIR"
 
 # Reload systemd
 echo -e "${YELLOW}Reloading systemd...${NC}"

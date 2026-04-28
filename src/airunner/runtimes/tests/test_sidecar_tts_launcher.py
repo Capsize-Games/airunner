@@ -2,8 +2,13 @@
 
 from pathlib import Path
 
+import yaml
+
 from airunner.runtimes.contracts import RuntimeHealthStatus
-from airunner.runtimes.sidecar_tts_launcher import SidecarTTSLauncher
+from airunner.runtimes.sidecar_tts_launcher import (
+    SidecarTTSLauncher,
+    _build_temp_daemon_config,
+)
 from airunner.runtimes.tts_daemon_runtime_settings import (
     TTSDaemonRuntimeSettings,
 )
@@ -125,3 +130,24 @@ def test_health_status_reports_ready(tmp_path):
 
     assert status is RuntimeHealthStatus.READY
     assert details == "ready"
+
+
+def test_temp_daemon_config_uses_standard_runtime_directories(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
+
+    config_path = _build_temp_daemon_config(_settings())
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    finally:
+        config_path.unlink(missing_ok=True)
+
+    assert config_path.parent == tmp_path / "runtime" / "configs"
+    assert config["logging"]["file"] == str(
+        tmp_path / "runtime" / "logs" / "tts-runtime.log"
+    )
+    assert config["health"]["heartbeat_file"] == str(
+        tmp_path / "runtime" / "tts-runtime.heartbeat"
+    )

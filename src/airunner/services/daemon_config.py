@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+from airunner.runtime_layout import build_runtime_directory_layout
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -25,11 +26,8 @@ class DaemonConfig:
 
     def _default_config_path(self) -> Path:
         """Get default configuration path."""
-        if sys.platform == "win32":
-            config_dir = Path(os.environ.get("APPDATA", "")) / "airunner"
-        else:
-            config_dir = Path.home() / ".config" / "airunner"
-        return config_dir / "daemon.yaml"
+        layout = build_runtime_directory_layout()
+        return layout.config_file("daemon")
 
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from file."""
@@ -50,6 +48,7 @@ class DaemonConfig:
 
     def _default_config(self) -> Dict[str, Any]:
         """Get default configuration."""
+        layout = build_runtime_directory_layout()
         return {
             "server": {
                 "host": "127.0.0.1",
@@ -67,14 +66,15 @@ class DaemonConfig:
             },
             "health": {
                 "heartbeat_interval": 30,
-                "heartbeat_file": "~/.airunner/daemon_heartbeat",
+                "heartbeat_file": str(layout.heartbeat_file("daemon")),
             },
             "logging": {
                 "level": "INFO",
-                "file": "~/.airunner/logs/daemon.log",
+                "file": str(layout.log_file("daemon")),
                 "max_bytes": 50 * 1024 * 1024,
                 "backup_count": 5,
             },
+            "runtime": layout.as_config(),
         }
 
     def save(self) -> None:

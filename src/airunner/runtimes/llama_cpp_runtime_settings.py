@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner.runtime_layout import resolve_runtime_bind_host
 from airunner.settings import AIRUNNER_BASE_PATH
 
 DEFAULT_HOST = "127.0.0.1"
@@ -195,7 +196,10 @@ def resolve_llama_cpp_runtime_settings() -> LlamaCppRuntimeSettings:
             "AIRUNNER_LLAMA_SERVER_BIN",
             "llama-server",
         ),
-        host=os.environ.get("AIRUNNER_LLAMA_HOST", DEFAULT_HOST),
+        host=resolve_runtime_bind_host(
+            "AIRUNNER_LLAMA_HOST",
+            "AIRUNNER_RUNTIME_BIND_HOST",
+        ),
         port=_env_int("AIRUNNER_LLAMA_PORT", DEFAULT_PORT),
         model_path=_resolve_model_path(
             llm_settings,

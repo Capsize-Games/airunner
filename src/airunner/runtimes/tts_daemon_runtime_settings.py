@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
+from airunner.runtime_layout import resolve_runtime_bind_host
+
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8191
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 120.0
@@ -61,7 +63,10 @@ class TTSDaemonRuntimeSettings:
 def resolve_tts_daemon_runtime_settings() -> TTSDaemonRuntimeSettings:
     """Resolve TTS runtime settings from the current environment."""
     return TTSDaemonRuntimeSettings(
-        host=os.environ.get("AIRUNNER_TTS_RUNTIME_HOST", DEFAULT_HOST),
+        host=resolve_runtime_bind_host(
+            "AIRUNNER_TTS_RUNTIME_HOST",
+            "AIRUNNER_RUNTIME_BIND_HOST",
+        ),
         port=_env_int("AIRUNNER_TTS_RUNTIME_PORT", DEFAULT_PORT),
         base_daemon_config_path=(
             _env_str("AIRUNNER_TTS_RUNTIME_DAEMON_CONFIG")
