@@ -43,6 +43,16 @@ Responsibilities:
 - supervise bundled `llama.cpp` and `whisper.cpp` binaries when needed
 - surface actionable startup errors when the install is damaged
 
+Current scaffold in this repo:
+- `native/airunner_launcher/` contains the first launcher project
+- `scripts/build_airunner_launcher.sh` builds it locally
+- `scripts/run_airunner_dev.sh` runs AIRunner through the native launcher in
+	dev mode using the repository `venv`
+
+The scaffold currently launches Python and sets runtime environment variables.
+It does not yet replace the Python-side sidecar supervision or installer
+assembly work.
+
 ### Bundled runtime tree
 
 The install artifact should contain:
