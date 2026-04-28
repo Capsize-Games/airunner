@@ -1,8 +1,10 @@
+import io
 import os
 import threading
 from typing import Dict, Optional
 
 import torch
+from PIL import Image
 from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
 )
@@ -17,6 +19,8 @@ from airunner.components.art.managers.zimage.zimage_model_manager import (
 )
 
 from airunner.enums import (
+    EngineResponseCode,
+    GeneratorSection,
     QueueType,
     SignalCode,
     ModelType,
@@ -25,6 +29,9 @@ from airunner.enums import (
 from airunner.components.application.workers.worker import Worker
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
+)
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
 )
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.generator_settings import GeneratorSettings
@@ -57,6 +64,7 @@ class SDWorker(Worker):
         self._requested_pipeline = None
         self._pending_scheduler: Optional[str] = None  # Deferred scheduler change
         self._is_generating: bool = False  # Track generation state
+        self._active_daemon_job_id: Optional[str] = None
         super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
@@ -423,6 +431,16 @@ class SDWorker(Worker):
         )
 
     def on_interrupt_image_generation_signal(self, _data=None):
+        client = self._daemon_client()
+        if client is not None and self._active_daemon_job_id is not None:
+            try:
+                client.cancel_art_job(
+                    self._active_daemon_job_id,
+                    auto_start=False,
+                )
+            except RuntimeError:
+                pass
+            return
         if self.model_manager:
             self.model_manager.interrupt_image_generation()
 
@@ -485,8 +503,122 @@ class SDWorker(Worker):
                         self._generate_image(data)
 
     def _generate_image(self, message: Dict):
+        if self._daemon_client() is not None:
+            self._generate_image_via_daemon(message)
+            return
         message["callback"] = self._finalize_do_generate_signal
         self.load_model_manager(message)
+
+    def _daemon_client(self):
+        api = getattr(self, "api", None)
+        if api is None or getattr(api, "headless", False):
+            return None
+        return getattr(api, "daemon_client", None)
+
+    def _generate_image_via_daemon(self, message: Dict) -> None:
+        client = self._daemon_client()
+        image_request = message.get("image_request")
+        if client is None or not isinstance(image_request, ImageRequest):
+            self.handle_error("No image request available for daemon art generation")
+            return
+        try:
+            job = client.start_art_generation(
+                prompt=image_request.prompt,
+                negative_prompt=image_request.negative_prompt or "",
+                width=image_request.width,
+                height=image_request.height,
+                steps=image_request.steps,
+                cfg_scale=image_request.scale,
+                seed=(
+                    None if image_request.random_seed else image_request.seed
+                ),
+                num_images=image_request.n_samples,
+                model=image_request.model_path or None,
+                version=image_request.version or None,
+                scheduler=image_request.scheduler or None,
+            )
+            job_id = str(job.get("job_id", "") or "")
+            if not job_id:
+                raise RuntimeError("Art generation did not return a job id")
+            self._active_daemon_job_id = job_id
+            image_bytes = client.wait_art_job(job_id, auto_start=False)
+        except RuntimeError as exc:
+            self._handle_daemon_art_error(str(exc))
+            return
+        finally:
+            self._active_daemon_job_id = None
+        self._publish_daemon_art_result(message, image_request, image_bytes)
+
+    def _handle_daemon_art_error(self, message: str) -> None:
+        self.handle_error(message)
+        if "cancelled" in message.lower():
+            self.api.worker_response(
+                code=EngineResponseCode.INTERRUPTED,
+                message="Image generation interrupted",
+            )
+            return
+        self.send_missing_model_alert(message)
+        self.api.worker_response(
+            code=EngineResponseCode.ERROR,
+            message=message,
+        )
+
+    def _publish_daemon_art_result(
+        self,
+        message: Dict,
+        image_request: ImageRequest,
+        image_bytes: bytes,
+    ) -> None:
+        image = Image.open(io.BytesIO(image_bytes)).copy()
+        data = self._daemon_result_data(image_request)
+        self.image_export_worker.add_to_queue({"images": [image], "data": data})
+        response = ImageResponse(
+            images=[image],
+            data=data,
+            active_rect=message.get("active_rect"),
+            is_outpaint=(
+                image_request.generator_section is GeneratorSection.OUTPAINT
+            ),
+            node_id=image_request.node_id,
+        )
+        if response.node_id is None and hasattr(self.api, "art"):
+            try:
+                self.api.art.canvas.send_image_to_canvas(response)
+            except Exception as exc:
+                self.logger.debug(f"Failed to send image to canvas: {exc}")
+        if image_request.callback:
+            image_request.callback(response)
+        self.api.worker_response(
+            code=EngineResponseCode.IMAGE_GENERATED,
+            message=response,
+        )
+
+    def _daemon_result_data(self, image_request: ImageRequest) -> Dict:
+        generator_section = image_request.generator_section
+        return {
+            "current_prompt": image_request.prompt,
+            "current_negative_prompt": image_request.negative_prompt,
+            "image_request": image_request,
+            "guidance_scale": image_request.scale,
+            "num_inference_steps": image_request.steps,
+            "model_path": image_request.model_path,
+            "version": image_request.version,
+            "scheduler_name": image_request.scheduler,
+            "strength": image_request.strength,
+            "loaded_lora": [],
+            "loaded_embeddings": [],
+            "controlnet_enabled": bool(image_request.controlnet_enabled),
+            "is_txt2img": generator_section is GeneratorSection.TXT2IMG,
+            "is_img2img": generator_section is GeneratorSection.IMG2IMG,
+            "is_inpaint": generator_section is GeneratorSection.INPAINT,
+            "is_outpaint": generator_section is GeneratorSection.OUTPAINT,
+            "mask_blur": image_request.outpaint_mask_blur,
+            "memory_settings_flags": {},
+            "application_settings": self.application_settings,
+            "path_settings": self.path_settings,
+            "metadata_settings": self.metadata_settings,
+            "controlnet_settings": self.controlnet_settings,
+        }
 
     def _finalize_do_generate_signal(self, message: Dict):
         mm = self.model_manager

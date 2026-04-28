@@ -18,9 +18,17 @@ from airunner.enums import LLMActionType
 class FakeResponse:
     """Minimal requests.Response-style double."""
 
-    def __init__(self, *, payload=None, lines=None, status_code: int = 200):
+    def __init__(
+        self,
+        *,
+        payload=None,
+        lines=None,
+        content: bytes = b"",
+        status_code: int = 200,
+    ):
         self._payload = payload or {}
         self._lines = lines or []
+        self.content = content
         self.status_code = status_code
 
     def __enter__(self):
@@ -99,6 +107,27 @@ class FakeSession:
             return FakeResponse(payload={"status": "ok"})
         if url.endswith("/api/v1/daemon/runtimes/llm/unload"):
             return FakeResponse(payload={"status": "ok"})
+        if url.endswith("/api/v1/daemon/runtimes/tts/cancel"):
+            return FakeResponse(payload={"status": "cancelled"})
+        if url.endswith("/api/v1/tts/synthesize"):
+            return FakeResponse(content=b"wav-bytes")
+        if url.endswith("/api/v1/art/generate"):
+            return FakeResponse(payload={"job_id": "art-job-1", "status": "running"})
+        if url.endswith("/api/v1/art/status/art-job-1"):
+            art_statuses = self.ready_state.get("art_statuses") or []
+            if art_statuses:
+                return FakeResponse(payload=art_statuses.pop(0))
+            return FakeResponse(
+                payload={
+                    "job_id": "art-job-1",
+                    "status": "completed",
+                    "progress": 100.0,
+                }
+            )
+        if url.endswith("/api/v1/art/result/art-job-1"):
+            return FakeResponse(content=b"png-bytes")
+        if url.endswith("/api/v1/art/cancel/art-job-1"):
+            return FakeResponse(payload={"status": "cancelled"})
         if url.endswith("/api/v1/stt/transcribe"):
             return FakeResponse(payload={"text": "hello", "language": "en"})
         if url.endswith("/llm/generate"):
@@ -245,6 +274,57 @@ def test_wait_runtime_ready_polls_until_loaded():
         call for call in session.calls if "/api/v1/daemon/runtimes/llm?" in call[1]
     ]
     assert len(runtime_calls) == 2
+
+
+def test_synthesize_tts_posts_daemon_tts_request():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    audio = client.synthesize_tts("Hello world", request_id="tts-1")
+
+    assert audio == b"wav-bytes"
+    method, url, kwargs = session.calls[-1]
+    assert method == "POST"
+    assert url.endswith("/api/v1/tts/synthesize")
+    assert kwargs["json"]["request_id"] == "tts-1"
+
+
+def test_wait_art_job_polls_until_completion():
+    ready_state = {
+        "ready": True,
+        "art_statuses": [
+            {"job_id": "art-job-1", "status": "running", "progress": 10.0},
+            {"job_id": "art-job-1", "status": "completed", "progress": 100.0},
+        ],
+    }
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+        sleep=lambda _seconds: None,
+    )
+
+    image_bytes = client.wait_art_job("art-job-1")
+
+    assert image_bytes == b"png-bytes"
+
+
+def test_cancel_art_job_uses_delete_endpoint():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    response = client.cancel_art_job("art-job-1")
+
+    assert response["status"] == "cancelled"
+    assert session.calls[-1][0] == "DELETE"
 
 
 def test_runtime_control_posts_expected_payload():

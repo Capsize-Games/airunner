@@ -1,6 +1,10 @@
+import io
 import queue
 import re
+from uuid import uuid4
 from typing import Optional, Type, Dict
+
+import soundfile as sf
 
 from airunner.components.tts.managers.espeak_model_manager import (
     EspeakModelManager,
@@ -46,6 +50,7 @@ class TTSGeneratorWorker(Worker):
         self.do_interrupt = False
         self._current_model: Optional[str] = None
         self._sentence_buffer = []  # Buffer to hold complete sentences
+        self._active_request_id: Optional[str] = None
         super().__init__()
 
     @property
@@ -53,6 +58,12 @@ class TTSGeneratorWorker(Worker):
         return (
             self.application_settings and self.application_settings.tts_enabled
         ) or AIRUNNER_TTS_ON
+
+    def _daemon_client(self):
+        api = getattr(self, "api", None)
+        if api is None or getattr(api, "headless", False):
+            return None
+        return getattr(api, "daemon_client", None)
 
     def on_llm_text_streamed_signal(self, data):
         if not self.tts_enabled:
@@ -69,11 +80,15 @@ class TTSGeneratorWorker(Worker):
         if getattr(response, 'is_system_message', False):
             return
 
-        # Initialize TTS if needed but avoid reloading if it's already loaded/loading
-        if not self.tts:
-            self._load_tts()
-        elif self.tts and self.tts.model_status not in [ModelStatus.LOADED, ModelStatus.LOADING]:
-            self._load_tts()
+        # Initialize local TTS only when daemon-backed execution is inactive.
+        if self._daemon_client() is None:
+            if not self.tts:
+                self._load_tts()
+            elif self.tts and self.tts.model_status not in [
+                ModelStatus.LOADED,
+                ModelStatus.LOADING,
+            ]:
+                self._load_tts()
         
         # Unblock TTS if it was interrupted - any new message should resume TTS
         if self.do_interrupt:
@@ -89,14 +104,27 @@ class TTSGeneratorWorker(Worker):
         )
 
     def on_interrupt_process_signal(self, data: dict = None):
+        client = self._daemon_client()
+        request_id = self._active_request_id
+        if client is not None and request_id is not None:
+            try:
+                client.cancel_runtime(
+                    "tts",
+                    deployment_mode="sidecar",
+                    request_id=request_id,
+                    auto_start=False,
+                )
+            except RuntimeError:
+                pass
+            self._active_request_id = None
+        self.play_queue = []
+        self.play_queue_started = False
+        self.tokens = []
+        self._sentence_buffer = []  # Clear buffered sentences on interrupt
+        self.queue = queue.Queue()
+        self.do_interrupt = True
+        self.paused = True
         if self.tts:
-            self.play_queue = []
-            self.play_queue_started = False
-            self.tokens = []
-            self._sentence_buffer = []  # Clear buffered sentences on interrupt
-            self.queue = queue.Queue()
-            self.do_interrupt = True
-            self.paused = True
             self.tts.interrupt_process_signal()
 
     def on_unblock_tts_generator_signal(self, data: Optional[Dict]):
@@ -267,6 +295,8 @@ class TTSGeneratorWorker(Worker):
             self.on_interrupt_process_signal()
 
     def _load_tts(self):
+        if self._daemon_client() is not None:
+            return
         if not self.tts_enabled:
             self.logger.info("TTS is disabled. Skipping load.")
             return
@@ -291,6 +321,9 @@ class TTSGeneratorWorker(Worker):
         self._unload_tts()
 
     def _unload_tts(self):
+        if self._daemon_client() is not None:
+            self._active_request_id = None
+            return
         if self.tts:
             self.tts.unload()
 
@@ -318,7 +351,9 @@ class TTSGeneratorWorker(Worker):
         self.logger.debug(f"self.tts: {self.tts} | model_type: {model_type}")
 
         response = None
-        if self.tts:
+        if self._daemon_client() is not None:
+            response = self._generate_via_daemon(message, model)
+        elif self.tts:
             tts_req: Optional[Type[TTSRequest]] = None
 
             if model_type is TTSModel.OPENVOICE:
@@ -347,3 +382,35 @@ class TTSGeneratorWorker(Worker):
                 SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
                 {"message": response},
             )
+
+    def _generate_via_daemon(
+        self,
+        message: str,
+        model_type: Optional[str],
+    ):
+        client = self._daemon_client()
+        if client is None:
+            return None
+        request_id = str(uuid4())
+        self._active_request_id = request_id
+        try:
+            audio_bytes = client.synthesize_tts(
+                message,
+                voice=getattr(self.chatbot_voice_settings, "voice", None),
+                model=getattr(self.path_settings, "tts_model_path", None),
+                model_type=model_type,
+                request_id=request_id,
+            )
+            return self._decode_daemon_audio(audio_bytes)
+        except RuntimeError as exc:
+            self.logger.error(f"Daemon TTS generation failed: {exc}")
+            return None
+        finally:
+            self._active_request_id = None
+
+    @staticmethod
+    def _decode_daemon_audio(audio_bytes: bytes):
+        audio, _sample_rate = sf.read(io.BytesIO(audio_bytes), dtype="float32")
+        if getattr(audio, "ndim", 1) > 1:
+            return audio[:, 0]
+        return audio

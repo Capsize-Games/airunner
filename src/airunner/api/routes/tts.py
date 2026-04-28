@@ -1,20 +1,29 @@
 """
 Text-to-Speech endpoints.
 
-Integrates with TTSAPIService for speech synthesis.
+Routes synthesis through the daemon runtime registry.
 """
 
 import asyncio
+import base64
 import io
-from typing import Optional, List
+from typing import List, Optional
+from uuid import uuid4
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
+from airunner.runtimes.base import RuntimeClient
+from airunner.runtimes.contracts import (
+    RuntimeAction,
+    RuntimeKind,
+    TTSInvocationRequest,
+)
+from airunner.runtimes.registry import RuntimeRegistry
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.enums import SignalCode
-from airunner.utils.application.signal_mediator import SignalMediator
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
@@ -31,6 +40,9 @@ class TTSRequest(BaseModel):
     text: str
     voice: Optional[str] = None
     speed: float = 1.0
+    model: Optional[str] = None
+    model_type: Optional[str] = None
+    request_id: Optional[str] = None
 
 
 class ModelInfo(BaseModel):
@@ -46,13 +58,29 @@ class ModelInfo(BaseModel):
 # ====================
 
 
-def get_tts_service(request: Request):
-    """Get TTSAPIService from FastAPI app state."""
-    if hasattr(request.app.state, "airunner_app"):
-        from airunner.components.tts.api.tts_services import TTSAPIService
+def get_runtime_registry(request: Request) -> Optional[RuntimeRegistry]:
+    """Return the runtime registry attached to the FastAPI app."""
+    return getattr(request.app.state, "runtime_registry", None)
 
-        return TTSAPIService()
-    return None
+
+def require_runtime_registry(request: Request) -> RuntimeRegistry:
+    """Return the runtime registry or raise when it is unavailable."""
+    runtime_registry = get_runtime_registry(request)
+    if runtime_registry is None:
+        raise HTTPException(status_code=503, detail="TTS runtime unavailable")
+    return runtime_registry
+
+
+def resolve_tts_client(registry: RuntimeRegistry) -> RuntimeClient:
+    """Resolve the explicit sidecar TTS runtime client."""
+    try:
+        return registry.resolve(
+            RuntimeKind.TTS,
+            provider="local",
+            deployment_mode="sidecar",
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=503, detail="TTS runtime unavailable") from exc
 
 
 # ====================
@@ -74,54 +102,29 @@ async def synthesize_speech(request: TTSRequest, req: Request):
     """
     logger.info(f"TTS request: {request.text[:50]}...")
 
-    tts_service = get_tts_service(req)
-    if not tts_service:
-        raise HTTPException(
-            status_code=503, detail="TTS service not available"
-        )
-
+    client = resolve_tts_client(require_runtime_registry(req))
     try:
-        # Create future for audio data
-        audio_future = asyncio.Future()
-
-        def on_tts_complete(data: dict):
-            """Callback for TTS completion."""
-            audio_data = data.get("audio")
-            if audio_data and not audio_future.done():
-                audio_future.set_result(audio_data)
-
-        # Register signal handler
-        mediator = SignalMediator()
-        mediator.register(SignalCode.TTS_COMPLETE_SIGNAL, on_tts_complete)
-
-        try:
-            # Emit TTS request
-            tts_service.emit_signal(
-                SignalCode.TTS_GENERATE_SIGNAL,
-                {
-                    "text": request.text,
-                    "voice": request.voice,
-                    "speed": request.speed,
-                },
-            )
-
-            # Wait for audio (with timeout)
-            try:
-                audio_data = await asyncio.wait_for(audio_future, timeout=60.0)
-            except asyncio.TimeoutError:
-                raise HTTPException(
-                    status_code=504, detail="TTS request timed out"
-                )
-
-            # Return audio as WAV
-            audio_io = io.BytesIO(audio_data)
-            return StreamingResponse(audio_io, media_type="audio/wav")
-
-        finally:
-            mediator.unregister(
-                SignalCode.TTS_COMPLETE_SIGNAL, on_tts_complete
-            )
-
+        invocation = TTSInvocationRequest(
+            text=request.text,
+            model=request.model,
+            voice=request.voice,
+            speed=request.speed,
+            metadata={
+                "model_type": request.model_type,
+            }
+            if request.model_type
+            else {},
+        )
+        response = await asyncio.to_thread(
+            client.invoke,
+            RequestEnvelope(
+                request_id=request.request_id or str(uuid4()),
+                runtime=RuntimeKind.TTS,
+                action=RuntimeAction.INVOKE,
+                provider="local",
+                payload=invocation.model_dump(),
+            ),
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -129,6 +132,21 @@ async def synthesize_speech(request: TTSRequest, req: Request):
         raise HTTPException(
             status_code=500, detail=f"Error synthesizing speech: {str(e)}"
         )
+
+    if response.status is EnvelopeStatus.FAILED:
+        detail = response.error.message if response.error else "TTS request failed"
+        status_code = 504 if response.error and response.error.code.endswith("_timeout") else 502
+        raise HTTPException(status_code=status_code, detail=detail)
+    if response.status is EnvelopeStatus.CANCELLED:
+        raise HTTPException(status_code=409, detail="TTS request cancelled")
+
+    audio_b64 = str((response.payload or {}).get("audio_b64") or "")
+    if not audio_b64:
+        raise HTTPException(status_code=502, detail="TTS runtime returned no audio")
+
+    audio_data = base64.b64decode(audio_b64)
+    audio_io = io.BytesIO(audio_data)
+    return StreamingResponse(audio_io, media_type="audio/wav")
 
 
 @router.get("/models", response_model=List[ModelInfo])

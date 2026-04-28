@@ -183,6 +183,161 @@ class GuiDaemonClient:
             self._sleep(self._poll_interval_seconds)
         return False
 
+    def cancel_runtime(
+        self,
+        runtime_name: str,
+        *,
+        provider: str = "local",
+        deployment_mode: str = "default",
+        request_id: Optional[str] = None,
+        auto_start: bool = False,
+    ) -> Dict[str, Any]:
+        """Cancel one runtime request through the daemon control API."""
+        return self._runtime_action(
+            runtime_name,
+            "cancel",
+            provider=provider,
+            deployment_mode=deployment_mode,
+            request_id=request_id,
+            auto_start=auto_start,
+        )
+
+    def synthesize_tts(
+        self,
+        text: str,
+        *,
+        voice: Optional[str] = None,
+        speed: float = 1.0,
+        model: Optional[str] = None,
+        model_type: Optional[str] = None,
+        request_id: Optional[str] = None,
+        auto_start: bool = True,
+    ) -> bytes:
+        """Synthesize one TTS utterance through the daemon TTS route."""
+        response = self._request(
+            "POST",
+            "/api/v1/tts/synthesize",
+            json_payload={
+                "text": text,
+                "voice": voice,
+                "speed": speed,
+                "model": model,
+                "model_type": model_type,
+                "request_id": request_id,
+            },
+            auto_start=auto_start,
+            timeout_seconds=120.0,
+        )
+        return response.content
+
+    def start_art_generation(
+        self,
+        *,
+        prompt: str,
+        negative_prompt: str = "",
+        width: int = 1024,
+        height: int = 1024,
+        steps: int = 20,
+        cfg_scale: float = 7.5,
+        seed: Optional[int] = None,
+        num_images: int = 1,
+        model: Optional[str] = None,
+        version: Optional[str] = None,
+        scheduler: Optional[str] = None,
+        auto_start: bool = True,
+    ) -> Dict[str, Any]:
+        """Submit one art generation request through the daemon art route."""
+        response = self._request(
+            "POST",
+            "/api/v1/art/generate",
+            json_payload={
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "width": width,
+                "height": height,
+                "steps": steps,
+                "cfg_scale": cfg_scale,
+                "seed": seed,
+                "num_images": num_images,
+                "model": model,
+                "version": version,
+                "scheduler": scheduler,
+            },
+            auto_start=auto_start,
+            timeout_seconds=30.0,
+        )
+        return response.json()
+
+    def art_job_status(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool = False,
+    ) -> Dict[str, Any]:
+        """Return the current daemon art-job status payload."""
+        response = self._request(
+            "GET",
+            f"/api/v1/art/status/{job_id}",
+            auto_start=auto_start,
+        )
+        return response.json()
+
+    def art_job_result(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool = False,
+    ) -> bytes:
+        """Return the PNG payload for one completed daemon art job."""
+        response = self._request(
+            "GET",
+            f"/api/v1/art/result/{job_id}",
+            auto_start=auto_start,
+            timeout_seconds=120.0,
+        )
+        return response.content
+
+    def wait_art_job(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool = False,
+        timeout_seconds: float = 1800.0,
+    ) -> bytes:
+        """Poll one art job until it completes and return the PNG bytes."""
+        deadline = self._time_fn() + timeout_seconds
+        while self._time_fn() < deadline:
+            status = self.art_job_status(job_id, auto_start=auto_start)
+            state = str(status.get("status", "")).lower()
+            if state == "completed":
+                return self.art_job_result(job_id, auto_start=auto_start)
+            if state == "failed":
+                raise RuntimeError(
+                    str(status.get("error") or "Art generation failed")
+                )
+            if state == "cancelled":
+                raise RuntimeError("Art generation cancelled")
+            self._sleep(self._poll_interval_seconds)
+        try:
+            self.cancel_art_job(job_id, auto_start=False)
+        except RuntimeError:
+            pass
+        raise RuntimeError("Timed out waiting for art generation")
+
+    def cancel_art_job(
+        self,
+        job_id: str,
+        *,
+        auto_start: bool = False,
+    ) -> Dict[str, Any]:
+        """Cancel one daemon-backed art job."""
+        response = self._request(
+            "DELETE",
+            f"/api/v1/art/cancel/{job_id}",
+            auto_start=auto_start,
+        )
+        return response.json()
+
     def transcribe_audio(
         self,
         audio_bytes: bytes,
