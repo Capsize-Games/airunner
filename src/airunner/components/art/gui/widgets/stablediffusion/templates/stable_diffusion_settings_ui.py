@@ -256,7 +256,7 @@ class Ui_stable_diffusion_settings_widget(object):
         sizePolicy.setHeightForWidth(self.use_compel.sizePolicy().hasHeightForWidth())
         self.use_compel.setSizePolicy(sizePolicy)
 
-        self.gridLayout.addWidget(self.use_compel, 7, 0, 1, 1)
+        self.gridLayout.addWidget(self.use_compel, 10, 0, 1, 2)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
