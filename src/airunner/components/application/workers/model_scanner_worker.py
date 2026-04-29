@@ -85,7 +85,11 @@ class ModelScannerWorker(Worker, PipelineMixin):
 
     def handle_message(self, _message) -> None:
         """Process a scan request message."""
+        if not self.running:
+            return
         self.scan_for_models()
+        if not self.running:
+            return
         self.remove_missing_models()
 
     @property
@@ -98,11 +102,16 @@ class ModelScannerWorker(Worker, PipelineMixin):
         self.logger.debug("Starting model scan")
         model_path = self.model_base_path
 
+        if not self.running:
+            return
+
         if not model_path.exists():
             self.logger.debug(f"Creating model path: {model_path}")
             model_path.mkdir(parents=True, exist_ok=True)
 
         models = self._scan_model_directory(model_path)
+        if not self.running:
+            return
         self.logger.debug(f"Total models found: {len(models)}")
 
         # Convert to AIModels and emit signal
@@ -127,11 +136,15 @@ class ModelScannerWorker(Worker, PipelineMixin):
 
         # Iterate through version folders (e.g., "Z-Image Turbo", "FLUX.1-dev")
         for version_dir in self._iter_directories(base_path):
+            if not self.running:
+                break
             version_name = version_dir.name
             self.logger.debug(f"Scanning version: {version_name}")
 
             # Iterate through pipeline action folders (e.g., "txt2img", "inpaint")
             for action_dir in self._iter_directories(version_dir):
+                if not self.running:
+                    break
                 action_name = action_dir.name
 
                 if action_name in SKIP_FOLDERS:
@@ -161,6 +174,8 @@ class ModelScannerWorker(Worker, PipelineMixin):
         models: List[ScannedModel] = []
 
         for item in action_dir.iterdir():
+            if not self.running:
+                break
             model = self._identify_model(item, version, action)
             if model:
                 self.logger.debug(f"Found model: {model.name} at {model.path}")
@@ -259,6 +274,8 @@ class ModelScannerWorker(Worker, PipelineMixin):
         """
         try:
             for item in path.iterdir():
+                if not self.running:
+                    break
                 if item.is_dir():
                     yield item
         except PermissionError:
@@ -292,6 +309,8 @@ class ModelScannerWorker(Worker, PipelineMixin):
         existing_models = AIModels.objects.all()
 
         for model in existing_models:
+            if not self.running:
+                break
             if not Path(model.path).exists():
                 self.logger.debug(f"Removing missing model: {model.name} (id={model.id})")
                 AIModels.objects.delete(model.id)

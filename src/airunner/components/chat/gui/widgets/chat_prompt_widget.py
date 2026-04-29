@@ -2,7 +2,7 @@ import os
 from typing import Dict, List, Optional, Tuple
 
 from PIL import Image
-from PySide6.QtCore import Slot, Qt, QPoint
+from PySide6.QtCore import QTimer, Slot, Qt, QPoint
 from PySide6.QtWidgets import (
     QApplication,
     QListWidget,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QSpacerItem,
     QSizePolicy,
+    QWidget,
 )
 from PySide6.QtGui import QTextCursor, QFont, QDragEnterEvent, QDropEvent
 
@@ -64,6 +65,33 @@ class ChatPromptWidget(BaseWidget):
     ]
     logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+    def _attach_lazy_tab_widget(
+        self,
+        parent_attr: str,
+        layout_attr: str,
+        widget_attr: str,
+        placeholder_attr: str,
+        object_name: str,
+        factory,
+    ):
+        widget = getattr(self.ui, widget_attr, None)
+        if widget is not None:
+            return widget
+
+        layout = getattr(self.ui, layout_attr)
+        widget = factory(getattr(self.ui, parent_attr))
+        widget.setObjectName(object_name)
+        layout.addWidget(widget, 0, 0, 1, 1)
+
+        placeholder = getattr(self.ui, placeholder_attr, None)
+        if placeholder is not None:
+            layout.removeWidget(placeholder)
+            placeholder.deleteLater()
+            setattr(self.ui, placeholder_attr, None)
+
+        setattr(self.ui, widget_attr, widget)
+        return widget
+
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL: self.on_hear_signal,
@@ -72,6 +100,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_text_generate_request_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
         }
         self._splitters = ["chat_prompt_splitter"]
@@ -106,16 +135,8 @@ class ChatPromptWidget(BaseWidget):
         self._attached_images: List[Tuple[Image.Image, Optional[str]]] = []
         self._attachment_widgets: List[ImageAttachmentWidget] = []
         self._attachments_spacer: Optional[QSpacerItem] = None
-        
-        # Initialize provider dropdown
-        self._populate_provider_dropdown()
-        
-        # Initialize model dropdown
-        self._populate_model_dropdown()
-        
-        # Connect model dropdown edit signal for custom model entry
-        if hasattr(self.ui, "model_dropdown"):
-            self.ui.model_dropdown.lineEdit().returnPressed.connect(self._on_custom_model_entered)
+        self._startup_controls_loaded = False
+        self._model_dropdown_line_edit = None
         
         # Hardcode action to AUTO - we don't use the dropdown anymore
         self.update_llm_generator_settings(action=LLMActionType.APPLICATION_COMMAND.name)
@@ -129,11 +150,6 @@ class ChatPromptWidget(BaseWidget):
                 enable_thinking = True
             self.ui.thinking_checkbox.setChecked(enable_thinking)
             self.ui.thinking_checkbox.blockSignals(False)
-            # Update visibility based on whether model supports thinking
-            self._update_thinking_checkbox_visibility()
-        
-        # Initialize precision dropdown
-        self._populate_precision_dropdown()
         
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
         self.ui.prompt.keyPressEvent = self.handle_key_press
@@ -158,7 +174,8 @@ class ChatPromptWidget(BaseWidget):
         self.conversation = None
         self._llm_history_tab_index = None
         self._llm_history_widget = None
-        self.ui.chat_history_widget.setVisible(False)
+        if hasattr(self.ui, "chat_history_placeholder"):
+            self.ui.chat_history_placeholder.setVisible(False)
         self.ui.tabWidget.tabBar().hide()
         self._model_context_tokens = self._resolve_model_context_length()
         if hasattr(self.ui, "token_count"):
@@ -223,6 +240,8 @@ class ChatPromptWidget(BaseWidget):
         self.ui.settings_button.blockSignals(True)
         self.ui.settings_button.setChecked(False)
         self.ui.settings_button.blockSignals(False)
+        if checked:
+            self._ensure_history_view_loaded()
         self.ui.tabWidget.setCurrentIndex(2 if checked else 0)
 
     @Slot(bool)
@@ -230,7 +249,39 @@ class ChatPromptWidget(BaseWidget):
         self.ui.history_button.blockSignals(True)
         self.ui.history_button.setChecked(False)
         self.ui.history_button.blockSignals(False)
+        if checked:
+            self._ensure_settings_view_loaded()
         self.ui.tabWidget.setCurrentIndex(1 if checked else 0)
+
+    def _ensure_settings_view_loaded(self):
+        """Create the settings page only when the user opens it."""
+        from airunner.components.llm.gui.widgets.llm_settings_widget import (
+            LLMSettingsWidget,
+        )
+
+        return self._attach_lazy_tab_widget(
+            "tab_2",
+            "gridLayout_3",
+            "llm_settings",
+            "llm_settings_placeholder",
+            "llm_settings",
+            LLMSettingsWidget,
+        )
+
+    def _ensure_history_view_loaded(self):
+        """Create the history page only when the user opens it."""
+        from airunner.components.llm.gui.widgets.llm_history_widget import (
+            LLMHistoryWidget,
+        )
+
+        return self._attach_lazy_tab_widget(
+            "tab_3",
+            "gridLayout_5",
+            "widget",
+            "history_placeholder",
+            "widget",
+            LLMHistoryWidget,
+        )
 
     @Slot()
     def on_send_button_clicked(self):
@@ -391,13 +442,28 @@ class ChatPromptWidget(BaseWidget):
         if not self.chat_loaded:
             self.disable_send_button()
 
-        # Load conversation on first show
+    def _finish_startup_controls_if_ready(self) -> None:
+        """Populate startup controls after the main window is ready."""
+        if self._startup_controls_loaded:
+            return
+        self._startup_controls_loaded = True
+        self._populate_provider_dropdown()
+        self._populate_model_dropdown()
+        self._populate_precision_dropdown()
+        if hasattr(self.ui, "thinking_checkbox"):
+            self._update_thinking_checkbox_visibility()
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Finish non-critical startup work after the main window loads."""
+        self._finish_startup_controls_if_ready()
         if self.loading and hasattr(self.ui, "conversation"):
-            self.logger.info(
-                "First showEvent - loading most recent conversation"
-            )
-            self.load_conversation()
+            QTimer.singleShot(0, self._load_initial_conversation)
             self.loading = False
+
+    def _load_initial_conversation(self) -> None:
+        """Load the initial conversation after the UI has settled."""
+        self.logger.debug("Loading most recent conversation")
+        self.load_conversation()
 
     def llm_action_changed(self, val: str):
         # Deprecated - action is now always AUTO
@@ -1080,12 +1146,12 @@ class ChatPromptWidget(BaseWidget):
                 conversation_id=conversation_id, max_messages=50
             )
         )
-        self.logger.info(
+        self.logger.debug(
             f"Loaded {len(messages)} messages from conversation {conversation_id}"
         )
         for idx, msg in enumerate(messages):
-            self.logger.info(
-                f"  Message {idx}: is_bot={msg.get('is_bot')}, content_preview={msg.get('content', '')[:50]}"
+            self.logger.debug(
+                f"Message {idx}: is_bot={msg.get('is_bot')}, content_preview={msg.get('content', '')[:50]}"
             )
 
         if hasattr(self.ui, "conversation"):
@@ -1214,8 +1280,18 @@ class ChatPromptWidget(BaseWidget):
         
         # Try to restore current selection
         self._restore_model_selection(provider)
+
+        self._connect_model_dropdown_line_edit()
         
         self.ui.model_dropdown.blockSignals(False)
+
+    def _connect_model_dropdown_line_edit(self) -> None:
+        """Connect custom model entry once the combo box has a line edit."""
+        line_edit = self.ui.model_dropdown.lineEdit()
+        if line_edit is None or line_edit is self._model_dropdown_line_edit:
+            return
+        self._model_dropdown_line_edit = line_edit
+        line_edit.returnPressed.connect(self._on_custom_model_entered)
     
     def _restore_model_selection(self, provider: str) -> None:
         """Restore model selection based on saved settings."""

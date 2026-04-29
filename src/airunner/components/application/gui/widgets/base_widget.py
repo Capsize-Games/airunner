@@ -407,7 +407,7 @@ class BaseWidget(AbstractBaseWidget):
                     )
             query_string = "&".join(query_params) if query_params else ""
             template_url = f"http://127.0.0.1:5005/static/html/{template_name}?{query_string}"
-            self.logger.info(
+            self.logger.debug(
                 f"[BaseWidget] Loading template from URL: {template_url}"
             )
             element.setUrl(QUrl(template_url))

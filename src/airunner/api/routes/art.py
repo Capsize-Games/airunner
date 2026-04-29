@@ -47,6 +47,10 @@ from airunner.enums import StableDiffusionVersion
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
+_LOG_ART_STATUS_POLLS = os.environ.get(
+    "AIRUNNER_LOG_ART_STATUS_POLLS",
+    "0",
+) == "1"
 
 
 # ====================
@@ -537,7 +541,8 @@ async def get_job_status(job_id: str):
     Returns:
         Job status and progress
     """
-    logger.debug(f"Status check: {job_id}")
+    if _LOG_ART_STATUS_POLLS:
+        logger.debug(f"Status check: {job_id}")
 
     tracker = JobTracker()
     job = await tracker.get_status(job_id)

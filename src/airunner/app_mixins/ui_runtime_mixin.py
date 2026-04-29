@@ -6,12 +6,14 @@ import os
 import signal
 import subprocess
 import sys
+import time
 import traceback
+import gc
 from pathlib import Path
 from typing import Optional
 
 from PySide6 import QtCore
-from PySide6.QtCore import QCoreApplication, QTimer, qVersion
+from PySide6.QtCore import QCoreApplication, QThread, QTimer, qVersion
 from PySide6.QtGui import QGuiApplication, Qt, QSurfaceFormat
 from PySide6.QtWidgets import QApplication
 
@@ -234,7 +236,18 @@ class UIRuntimeMixin:
             self.splash = self.display_splash_screen(self.app)
 
         QTimer.singleShot(50, self._post_splash_startup)
-        sys.exit(self.app.exec())
+        try:
+            ret = self.app.exec()
+            self.cleanup()
+            sys.exit(ret)
+        except KeyboardInterrupt:
+            self.logger.info("Interrupted by user")
+            self.cleanup()
+            sys.exit(0)
+        except Exception as exc:
+            self.logger.exception("GUI runtime crashed: %s", exc)
+            self.cleanup()
+            sys.exit(1)
 
     def run_headless(self):
         """Run in headless mode without GUI."""
@@ -358,6 +371,36 @@ class UIRuntimeMixin:
                 QtCore.Qt.GlobalColor.white,
             )
 
+    def _log_gui_startup_time(self) -> None:
+        """Log total GUI startup time once the main window is visible."""
+        if getattr(self, "_gui_startup_logged", False):
+            return
+        started_at = os.environ.get("AIRUNNER_PROCESS_START_TIME")
+        if not started_at:
+            return
+        self._gui_startup_logged = True
+        self.logger.info(
+            "GUI startup completed in %.2fs",
+            time.perf_counter() - float(started_at),
+        )
+
+    def _schedule_main_window_loaded(self, window: object) -> None:
+        """Emit the post-startup signal after the GUI is visibly ready."""
+        if getattr(window, "_main_window_loaded_signal_scheduled", False):
+            return
+        window._main_window_loaded_signal_scheduled = True
+        QTimer.singleShot(0, lambda: self._emit_main_window_loaded(window))
+
+    def _emit_main_window_loaded(self, window: object) -> None:
+        """Notify widgets that the main window finished startup."""
+        if getattr(window, "_main_window_loaded_signal_emitted", False):
+            return
+        api = getattr(window, "api", None)
+        if api is None:
+            return
+        window._main_window_loaded_signal_emitted = True
+        api.main_window_loaded(window)
+
     def show_main_application(self, app: QApplication) -> None:
         """Show the main application window."""
         if self.headless:
@@ -387,6 +430,8 @@ class UIRuntimeMixin:
                     0,
                     lambda: self._present_main_window(window, app),
                 )
+            self._log_gui_startup_time()
+            self._schedule_main_window_loaded(window)
 
             print(f"Qt Version: {qVersion()}")
             if hasattr(window, "ui") and not _AIRUNNER_IS_HEADLESS:
@@ -421,6 +466,10 @@ class UIRuntimeMixin:
         except Exception as exc:
             traceback.print_exc()
             print(exc)
+            try:
+                self.cleanup()
+            except Exception:
+                pass
             sys.exit(
                 "\n                An error occurred while initializing the "
                 "application.\n                Please report this issue on "
@@ -445,6 +494,114 @@ class UIRuntimeMixin:
         self.logger.info("Cleaning up App resources...")
         try:
             self.is_running = False
+
+            def _log_running_qthreads(stage: str) -> None:
+                """Log any Python-visible QThread wrappers still running."""
+                try:
+                    def _find_thread_owners(thread: QThread) -> list[dict[str, object]]:
+                        owners: list[dict[str, object]] = []
+                        seen: set[tuple[str, str]] = set()
+                        for referrer in gc.get_referrers(thread):
+                            if not isinstance(referrer, dict):
+                                continue
+
+                            try:
+                                attr_names = [
+                                    key
+                                    for key, value in referrer.items()
+                                    if value is thread and isinstance(key, str)
+                                ]
+                            except Exception:
+                                attr_names = []
+
+                            if not attr_names:
+                                continue
+
+                            try:
+                                container_refs = gc.get_referrers(referrer)
+                            except Exception:
+                                container_refs = []
+
+                            for container in container_refs:
+                                try:
+                                    if getattr(container, "__dict__", None) is not referrer:
+                                        continue
+                                    owner_type = type(container).__name__
+                                    for attr_name in attr_names:
+                                        marker = (owner_type, attr_name)
+                                        if marker in seen:
+                                            continue
+                                        seen.add(marker)
+                                        owners.append(
+                                            {
+                                                "owner_type": owner_type,
+                                                "attr": attr_name,
+                                            }
+                                        )
+                                except Exception:
+                                    continue
+                        return owners
+
+                    running_threads = []
+                    for obj in gc.get_objects():
+                        try:
+                            if not isinstance(obj, QThread):
+                                continue
+                            if not obj.isRunning():
+                                continue
+                            parent = obj.parent()
+                            running_threads.append(
+                                {
+                                    "type": type(obj).__name__,
+                                    "name": obj.objectName(),
+                                    "parent": (
+                                        type(parent).__name__
+                                        if parent is not None
+                                        else None
+                                    ),
+                                    "owners": _find_thread_owners(obj),
+                                }
+                            )
+                        except Exception:
+                            continue
+
+                    if not running_threads:
+                        self.logger.info(
+                            "No live QThread wrappers at %s",
+                            stage,
+                        )
+                        return
+
+                    self.logger.warning(
+                        "Live QThread wrappers at %s: %s",
+                        stage,
+                        running_threads,
+                    )
+                except Exception as exc:
+                    self.logger.warning(
+                        "Error inspecting live QThreads at %s: %s",
+                        stage,
+                        exc,
+                    )
+
+            _log_running_qthreads("cleanup:start")
+
+            if hasattr(self, "http_server_thread") and self.http_server_thread:
+                self.logger.info("Stopping local HTTP server...")
+                try:
+                    self.http_server_thread.stop()
+                    if not self.http_server_thread.wait(2000):
+                        self.logger.warning(
+                            "Local HTTP server thread did not stop within timeout"
+                        )
+                    else:
+                        self.logger.info("Local HTTP server stopped")
+                except Exception as exc:
+                    self.logger.warning(
+                        "Error stopping local HTTP server: %s",
+                        exc,
+                    )
+
             if hasattr(self, "api_server_thread") and self.api_server_thread:
                 self.logger.info("Stopping API server...")
                 try:
@@ -466,6 +623,18 @@ class UIRuntimeMixin:
                 )
 
             try:
+                QCoreApplication.sendPostedEvents(
+                    None,
+                    QtCore.QEvent.Type.DeferredDelete,
+                )
+                QCoreApplication.processEvents()
+            except Exception as exc:
+                self.logger.warning(
+                    "Error flushing deferred Qt events during cleanup: %s",
+                    exc,
+                )
+
+            try:
                 from airunner.utils.application.create_worker import (
                     THREADS,
                     WORKERS,
@@ -476,15 +645,31 @@ class UIRuntimeMixin:
                         worker.stop()
                     except Exception:
                         continue
-                for thread in THREADS:
+                for index, thread in enumerate(list(THREADS)):
                     try:
+                        worker_name = "unknown"
+                        if index < len(WORKERS):
+                            worker_name = type(WORKERS[index]).__name__
                         thread.quit()
                         thread.wait(2000)
                         if thread.isRunning():
+                            self.logger.warning(
+                                "Worker thread still running after quit: worker=%s thread_name=%s",
+                                worker_name,
+                                thread.objectName(),
+                            )
                             thread.terminate()
                             thread.wait(500)
+                        if thread.isRunning():
+                            self.logger.warning(
+                                "Worker thread still running after terminate: worker=%s thread_name=%s",
+                                worker_name,
+                                thread.objectName(),
+                            )
                     except Exception:
                         continue
+
+                _log_running_qthreads("cleanup:after_worker_shutdown")
 
                 try:
                     WORKERS.clear()
@@ -496,6 +681,8 @@ class UIRuntimeMixin:
                     "Error stopping workers/threads: %s",
                     exc,
                 )
+
+            _log_running_qthreads("cleanup:before_complete")
 
             self.logger.info("App cleanup complete")
         except Exception as exc:

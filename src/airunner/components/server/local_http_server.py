@@ -17,6 +17,9 @@ from airunner.settings import (
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+_LOG_LOCAL_HTTP_ACCESS = (
+    os.environ.get("AIRUNNER_LOCAL_HTTP_ACCESS_LOG", "0") == "1"
+)
 
 
 class ReusableTCPServer(ThreadingTCPServer):
@@ -71,6 +74,11 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         self.directories = directories or []
         self.lna_enabled = lna_enabled
         super().__init__(*args, **kwargs)
+
+    def log_message(self, format: str, *args) -> None:
+        """Suppress noisy local asset access logs unless explicitly enabled."""
+        if _LOG_LOCAL_HTTP_ACCESS:
+            super().log_message(format, *args)
 
     def _send_lna_cors_headers(self):
         """Send LNA and CORS headers if lna_enabled, else do nothing (strict mode)."""

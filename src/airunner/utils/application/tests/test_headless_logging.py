@@ -101,3 +101,20 @@ def test_headless_logging_reconfigures_preexisting_loggers(
     assert headless_file.exists(), "Headless log file was not created"
     contents = headless_file.read_text(encoding="utf8")
     assert "message_after_headless" in contents
+
+
+def test_get_logger_reuses_existing_logger_wrapper(monkeypatch):
+    """Repeated get_logger calls should reuse one configured wrapper."""
+    monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "0")
+
+    get_logger_mod = importlib.import_module(
+        "airunner.utils.application.get_logger"
+    )
+    importlib.reload(get_logger_mod)
+
+    first = get_logger_mod.get_logger("cached_logger", level=logging.INFO)
+    second = get_logger_mod.get_logger("cached_logger", level=logging.DEBUG)
+
+    assert first is second
+    assert first._logger.level == logging.DEBUG
+    assert len(first._logger.handlers) == 1

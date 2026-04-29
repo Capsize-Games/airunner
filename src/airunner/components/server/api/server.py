@@ -83,9 +83,6 @@ _ART_JOBS_TTL_SECONDS = 60 * 60  # 1 hour
 def get_api(create_if_missing: bool = True):
     """Return the API singleton, optionally creating it on demand."""
     global _api
-    logger.info(
-        f"DEBUG get_api: _api is {'None' if _api is None else type(_api).__name__}"
-    )
     if _api is None and create_if_missing:
         _api = API()
     return _api
@@ -101,13 +98,7 @@ def set_api(api_instance):
         api_instance: The API/App instance to register globally
     """
     global _api
-    logger.info(
-        f"DEBUG set_api: Setting global API to {type(api_instance).__name__}"
-    )
     _api = api_instance
-    logger.info(
-        f"DEBUG set_api: Global API is now {'None' if _api is None else type(_api).__name__}"
-    )
 
 
 class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):

@@ -96,7 +96,7 @@ class PanOffsetMixin:
         if abs(shift_x) < 0.5 and abs(shift_y) < 0.5:
             return
 
-        self.logger.info(
+        self.logger.debug(
             f"[VIEWPORT COMPENSATION] Applying shift: ({shift_x}, {shift_y}), "
             f"old_compensation=({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()}), "
             f"_is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
@@ -109,7 +109,7 @@ class PanOffsetMixin:
             self._grid_compensation_offset.y() + shift_y,
         )
 
-        self.logger.info(
+        self.logger.debug(
             f"[VIEWPORT COMPENSATION] New compensation: ({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()})"
         )
 

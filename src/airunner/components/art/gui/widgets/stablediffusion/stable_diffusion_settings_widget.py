@@ -102,9 +102,10 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.AI_MODELS_CREATE_SIGNAL: self.on_models_changed_signal,
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.update_form,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
         }
         super().__init__(*args, **kwargs)
+        self._deferred_startup_loaded = False
         self._version: str = ""
         self._versions: List[str] = []
         self._models: List[AIModels] = []
@@ -114,17 +115,32 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.custom_model.blockSignals(False)
         PipelineMixin.__init__(self)
 
+    def _finish_deferred_startup(self) -> None:
+        """Load expensive combobox state after the widget is first shown."""
+        if self._deferred_startup_loaded:
+            return
+
+        self._deferred_startup_loaded = True
         self._load_versions_combobox()
         self._load_pipelines_combobox()
         self._load_models_combobox()
         self._load_schedulers_combobox()
         self._load_precision_combobox()
+        self.update_form()
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.update_form()
+        if self._deferred_startup_loaded:
+            self.update_form()
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Finish heavy startup work after the main window is ready."""
+        self._finish_deferred_startup()
 
     def update_form(self):
+        if not self._deferred_startup_loaded:
+            return
+
         steps = self.generator_settings.steps
         scale = self.generator_settings.scale
 
@@ -544,6 +560,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.version.blockSignals(False)
 
     def on_models_changed_signal(self):
+        if not self._deferred_startup_loaded:
+            return
         try:
             self._load_pipelines_combobox()
             self._load_versions_combobox()
@@ -599,7 +617,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self._models = value
 
     def _load_models_combobox(self):
-        self.logger.info("Loading models")
+        self.logger.debug("Loading models")
         self.ui.model.blockSignals(True)
         self.clear_models()
 

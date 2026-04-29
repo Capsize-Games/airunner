@@ -585,6 +585,9 @@ class ZImageNativePipeline:
         Some tensors like padding tokens are created in __init__ but not in checkpoint.
         These remain on meta device and need to be materialized with actual data.
         """
+        materialized_params = 0
+        materialized_buffers = 0
+
         for name, param in self.transformer.named_parameters():
             if param.device.type == 'meta':
                 # Create actual tensor on target device with zeros
@@ -601,7 +604,7 @@ class ZImageNativePipeline:
                     else:
                         module = getattr(module, part)
                 setattr(module, parts[-1], new_param)
-                logger.debug(f"Materialized meta parameter: {name}")
+                materialized_params += 1
         
         for name, buffer in self.transformer.named_buffers():
             if buffer.device.type == 'meta':
@@ -616,7 +619,14 @@ class ZImageNativePipeline:
                     else:
                         module = getattr(module, part)
                 module.register_buffer(parts[-1], new_buffer)
-                logger.debug(f"Materialized meta buffer: {name}")
+                materialized_buffers += 1
+
+        if materialized_params or materialized_buffers:
+            logger.debug(
+                "Materialized %d meta parameters and %d meta buffers",
+                materialized_params,
+                materialized_buffers,
+            )
     
     def _convert_checkpoint_key(self, key: str) -> Optional[str]:
         """
@@ -776,6 +786,15 @@ class ZImageNativePipeline:
             logger.debug("Moving text encoder back to GPU for encoding")
             self.text_encoder.model.to(self.device)
 
+    def _ensure_vae_on_device(self) -> None:
+        """Move the VAE to the active device before encode/decode."""
+        if self.vae is None:
+            raise RuntimeError("VAE not loaded")
+        vae_device = next(self.vae.parameters()).device
+        if vae_device != self.device:
+            logger.debug(f"Moving VAE from {vae_device} to {self.device}")
+            self.vae.to(self.device)
+
     def _release_text_encoder_after_encoding(self) -> None:
         """Free text-encoder GPU memory once prompt embeddings are ready."""
         if self.text_encoder is None or self.text_encoder.model is None:
@@ -827,12 +846,18 @@ class ZImageNativePipeline:
             raise ValueError("No VAE path provided")
         
         logger.info(f"Loading VAE from {path}")
+        vae_device = self.device
+        if self.device.type == "cuda":
+            vae_device = torch.device("cpu")
+            logger.info(
+                "Loading VAE on CPU; it will move to GPU on first use"
+            )
         
         # Load VAE using diffusers' AutoencoderKL
         self.vae = AutoencoderKL.from_pretrained(
             path,
             torch_dtype=self.dtype,
-        ).to(self.device)
+        ).to(vae_device)
         self.vae.eval()
 
         # Reduce VRAM during decode by tiling/slicing
@@ -1047,6 +1072,7 @@ class ZImageNativePipeline:
             height = int(height)
             width = int(width)
 
+            self._ensure_vae_on_device()
             init_image = self.image_processor.preprocess(
                 image,
                 height=height,
@@ -1164,13 +1190,11 @@ class ZImageNativePipeline:
         
         # Decode latents on GPU
         if self.vae is not None:
+            self._ensure_vae_on_device()
             # Scale latents for VAE
             latents = latents / self.vae.config.scaling_factor
             latents = latents.to(dtype=self.vae.dtype, device=self.device)
-            
-            # Ensure VAE is on GPU
-            self.vae.to(self.device)
-            
+
             images = self.vae.decode(latents).sample
             images = (images / 2 + 0.5).clamp(0, 1)
         else:

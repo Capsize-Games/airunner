@@ -115,7 +115,7 @@ def test_prepare_qt_runtime_preserves_software_rendering(monkeypatch):
     ui_runtime_mixin.prepare_qt_runtime()
 
     assert os.environ["QT_XCB_GL_INTEGRATION"] == "none"
-    assert "QT_OPENGL" not in os.environ
+    assert os.environ["QT_OPENGL"] == "software"
     assert events == []
     assert (
         Qt.ApplicationAttribute.AA_UseDesktopOpenGL not in attrs
@@ -128,17 +128,23 @@ def test_configure_early_qt_environment_sets_linux_safe_defaults(
 ):
     """Launcher-safe Qt defaults should be present before Qt startup."""
     monkeypatch.delenv("QT_QUICK_BACKEND", raising=False)
+    monkeypatch.delenv("QT_OPENGL", raising=False)
     monkeypatch.delenv("QT_XCB_GL_INTEGRATION", raising=False)
     monkeypatch.delenv("TOKENIZERS_PARALLELISM", raising=False)
     monkeypatch.delenv("FONTCONFIG_PATH", raising=False)
+    monkeypatch.delenv("QSG_RHI_BACKEND", raising=False)
+    monkeypatch.delenv("QTWEBENGINE_CHROMIUM_FLAGS", raising=False)
+    monkeypatch.delenv("LIBGL_ALWAYS_SOFTWARE", raising=False)
 
     qt_runtime_env.configure_early_qt_environment()
 
     assert os.environ["QT_QUICK_BACKEND"] == "software"
+    assert os.environ["QT_OPENGL"] == "software"
     assert os.environ["TOKENIZERS_PARALLELISM"] == "true"
     assert os.environ["QT_XCB_GL_INTEGRATION"] == "none"
     assert os.environ["QT_WIDGETS_NO_CHILD_RHI"] == "1"
     assert os.environ["QT_WIDGETS_RHI_BACKEND"] == "software"
+    assert os.environ["LIBGL_ALWAYS_SOFTWARE"] == "1"
     assert os.environ["FONTCONFIG_PATH"]
 
 
@@ -200,6 +206,10 @@ def test_show_main_application_dismisses_splash_and_reactivates(monkeypatch):
         splash=FakeSplash(),
         _launcher_splash=FakeSplash(),
         update_splash_message=lambda *_args: events.append("splash_message"),
+        _log_gui_startup_time=lambda: events.append("startup_time"),
+        _schedule_main_window_loaded=lambda _window: events.append(
+            "main_window_loaded"
+        ),
     )
     runtime.splash = runtime._launcher_splash
     runtime._present_main_window = (

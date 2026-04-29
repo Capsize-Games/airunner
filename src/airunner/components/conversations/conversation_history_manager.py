@@ -55,7 +55,9 @@ class ConversationHistoryManager:
         try:
             conversation = conversations[0]
             if conversation:
-                self.logger.info(f"Current conversation ID: {conversation.id}")
+                self.logger.debug(
+                    f"Current conversation ID: {conversation.id}"
+                )
                 return conversation
             self.logger.info("No current conversation found.")
             return None
@@ -128,7 +130,9 @@ class ConversationHistoryManager:
                 )
                 return []
             if not raw_messages:
-                self.logger.info(f"Conversation {conversation_id} is empty.")
+                self.logger.debug(
+                    f"Conversation {conversation_id} is empty."
+                )
                 return []
 
             # Apply max_messages limit

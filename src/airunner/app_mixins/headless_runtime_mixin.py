@@ -7,14 +7,12 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 from PySide6.QtCore import QCoreApplication
 
-from airunner.components.art.api.art_services import ARTAPIService
 from airunner.components.data.session_manager import session_scope
 from airunner.components.knowledge import get_knowledge_base
-from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
 )
@@ -22,6 +20,35 @@ from airunner.services.lifecycle_service import CoreLifecycleService
 from airunner.settings import AIRUNNER_HEADLESS_SERVER_HOST
 from airunner.settings import AIRUNNER_HEADLESS_SERVER_PORT
 from airunner.settings import AIRUNNER_USER_DATA_PATH
+
+if TYPE_CHECKING:
+    from airunner.components.art.api.art_services import ARTAPIService
+    from airunner.components.llm.api.llm_services import LLMAPIService
+
+ARTAPIService = None
+LLMAPIService = None
+
+
+def _get_headless_api_service_classes():
+    """Return lazily imported API service classes for headless mode."""
+    global ARTAPIService
+    global LLMAPIService
+
+    if LLMAPIService is None:
+        from airunner.components.llm.api.llm_services import (
+            LLMAPIService as _LLMAPIService,
+        )
+
+        LLMAPIService = _LLMAPIService
+
+    if ARTAPIService is None:
+        from airunner.components.art.api.art_services import (
+            ARTAPIService as _ARTAPIService,
+        )
+
+        ARTAPIService = _ARTAPIService
+
+    return LLMAPIService, ARTAPIService
 
 
 class HeadlessRuntimeMixin:
@@ -170,10 +197,14 @@ class HeadlessRuntimeMixin:
 
     def _ensure_headless_api_services(self) -> None:
         """Attach compatibility API services used by legacy daemon routes."""
-        if not hasattr(self, "llm"):
-            self.llm = LLMAPIService()
-        if not hasattr(self, "art"):
-            self.art = ARTAPIService()
+        llm_service_class, art_service_class = (
+            _get_headless_api_service_classes()
+        )
+
+        if getattr(self, "llm", None) is None:
+            self.llm = llm_service_class()
+        if getattr(self, "art", None) is None:
+            self.art = art_service_class()
 
     def ensure_lifecycle_service(self) -> CoreLifecycleService:
         """Return the reusable lifecycle service for this App."""

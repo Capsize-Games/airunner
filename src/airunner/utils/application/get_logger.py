@@ -1,15 +1,27 @@
 import logging
 import inspect
 import os
+import threading
 from typing import Optional
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
+
+
+_LOGGER_CACHE: dict[str, "Logger"] = {}
+_LOGGER_CACHE_LOCK = threading.RLock()
 
 
 class Logger:
     def __init__(self, name: str, level: int = logging.DEBUG):
         # Configure the logger
         logger = logging.getLogger(name)
+        if getattr(logger, "_airunner_configured", False):
+            logger.setLevel(level)
+            for handler in logger.handlers:
+                handler.setLevel(level)
+            self._logger = logger
+            self.name = name
+            return
         logger.setLevel(level)
 
         # Remove all existing handlers
@@ -89,6 +101,7 @@ class Logger:
 
         # Disable propagation to the root logger
         logger.propagate = False
+        setattr(logger, "_airunner_configured", True)
         self._logger = logger
         self.name = name
 
@@ -225,4 +238,14 @@ class Logger:
 def get_logger(name: str, level: Optional[int] = None) -> Logger:
     if level is None:
         level = AIRUNNER_LOG_LEVEL
-    return Logger(name=name, level=level)
+    with _LOGGER_CACHE_LOCK:
+        logger = _LOGGER_CACHE.get(name)
+        if logger is not None:
+            logger._logger.setLevel(level)
+            for handler in logger._logger.handlers:
+                handler.setLevel(level)
+            return logger
+
+        logger = Logger(name=name, level=level)
+        _LOGGER_CACHE[name] = logger
+        return logger

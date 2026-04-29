@@ -53,6 +53,7 @@ class LoraContainerWidget(BaseWidget):
                 self._scan_path_for_lora,
             )
             self._scanner_thread = QThread()
+            self._scanner_thread.setObjectName("LoraContainerWidgetScanner")
             self._scanner_worker.moveToThread(self._scanner_thread)
 
             # Ensure scan_completed is handled in the UI thread
@@ -77,14 +78,14 @@ class LoraContainerWidget(BaseWidget):
             self._scanner_thread.deleteLater()
             self._scanner_thread = None
 
-    def closeEvent(self, event):
-        # Graceful shutdown of the watcher thread
+    def _shutdown_scanner(self) -> None:
+        """Stop the directory watcher thread before widget teardown."""
         try:
-            if hasattr(self, "_scanner_worker") and self._scanner_worker:
+            if self._scanner_worker:
                 self._scanner_worker.stop()
-            if hasattr(self, "_scanner_thread") and self._scanner_thread:
+            if self._scanner_thread:
                 self._scanner_thread.quit()
-                if not self._scanner_thread.wait(2000):  # Wait up to 2 seconds
+                if not self._scanner_thread.wait(2500):
                     self.logger.warning(
                         "Scanner thread did not quit gracefully, terminating"
                     )
@@ -94,7 +95,14 @@ class LoraContainerWidget(BaseWidget):
             self.logger.error(f"Error during scanner cleanup: {e}")
         finally:
             self._cleanup_scanner()
-            super().closeEvent(event)
+
+    def handle_close(self):
+        """Stop background scanner when the application is quitting."""
+        self._shutdown_scanner()
+
+    def closeEvent(self, event):
+        self._shutdown_scanner()
+        super().closeEvent(event)
 
     @property
     def lora(self) -> List[Type[Lora]]:

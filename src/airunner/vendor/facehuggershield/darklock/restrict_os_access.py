@@ -15,6 +15,15 @@ _TRUE_BUILTIN_IMPORT = builtins.__import__
 logger = logging.getLogger(__name__)
 
 
+def _default_log_level() -> int:
+    """Return the configured app log level for darklock logging."""
+    level_name = os.environ.get("AIRUNNER_LOG_LEVEL", "INFO")
+    try:
+        return int(level_name)
+    except ValueError:
+        return getattr(logging, level_name.upper(), logging.INFO)
+
+
 class RestrictOSAccess(metaclass=Singleton):
     """
     Restricts OS-level operations for security. WARNING: Do NOT call activate() from module-level code or __init__.
@@ -333,7 +342,7 @@ class RestrictOSAccess(metaclass=Singleton):
         # Check for thread-local user override first (allows explicit user actions)
         try:
             if getattr(self._user_override, "allow_any", False):
-                logger.info(
+                logger.debug(
                     f"Thread-local override 'allow_any' set. Allowing open for '{abs_file_path}'."
                 )
                 return self.original_open(
@@ -352,7 +361,7 @@ class RestrictOSAccess(metaclass=Singleton):
                     if abs_file_path == p or abs_file_path.startswith(
                         p + os.sep
                     ):
-                        logger.info(
+                        logger.debug(
                             f"Thread-local override allows open for '{abs_file_path}' via allowed_paths."
                         )
                         return self.original_open(
@@ -371,7 +380,7 @@ class RestrictOSAccess(metaclass=Singleton):
             )
 
         if self.is_path_whitelisted(abs_file_path):
-            logger.info(
+            logger.debug(
                 f"Path '{abs_file_path}' is whitelisted for open. Proceeding."
             )
             return self.original_open(
@@ -813,8 +822,7 @@ if not logger.hasHandlers():
     )  # Or your preferred stream/file
     # Be cautious with log level in production for security modules
     # For debugging, DEBUG is fine. For production, INFO or WARNING.
-    # level = logging.DEBUG if os.environ.get("AIRUNNER_DEBUG") else logging.INFO
-    level = logging.DEBUG  # Set to DEBUG for this troubleshooting phase
+    level = _default_log_level()
     handler.setLevel(level)
     formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(lineno)d - %(message)s"

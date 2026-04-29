@@ -1,5 +1,7 @@
 """Widget displaying real-time model loading status and VRAM usage."""
 
+from __future__ import annotations
+
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QWidget,
@@ -19,9 +21,15 @@ class ModelStatusWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.manager = ModelResourceManager()
+        self.manager: ModelResourceManager | None = None
         self._setup_ui()
         self._start_refresh_timer()
+
+    def _get_manager(self) -> ModelResourceManager:
+        """Create the shared resource manager on first refresh."""
+        if self.manager is None:
+            self.manager = ModelResourceManager()
+        return self.manager
 
     def _setup_ui(self):
         """Create the widget layout."""
@@ -86,7 +94,7 @@ class ModelStatusWidget(QWidget):
 
     def _update_memory_bars(self):
         """Update VRAM and RAM usage bars."""
-        profile = self.manager.hardware_profiler.get_profile()
+        profile = self._get_manager().hardware_profiler.get_profile()
 
         vram_used = profile.total_vram_gb - profile.available_vram_gb
         ram_used = profile.total_ram_gb - profile.available_ram_gb
@@ -124,7 +132,7 @@ class ModelStatusWidget(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-        active_models = self.manager.get_active_models()
+        active_models = self._get_manager().get_active_models()
 
         if not active_models:
             no_models_label = QLabel("<i>No models loaded</i>")

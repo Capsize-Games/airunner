@@ -27,6 +27,11 @@ from airunner.runtimes.bootstrap import build_runtime_registry
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
+def access_logs_enabled() -> bool:
+    """Return whether uvicorn access logs should be emitted."""
+    return os.environ.get("AIRUNNER_API_ACCESS_LOG", "0") == "1"
+
+
 def _resolve_runtime_registry(app_instance: Any) -> Optional[Any]:
     """Return or create the runtime registry for an app instance."""
     runtime_registry = getattr(app_instance, "runtime_registry", None)
@@ -336,7 +341,11 @@ class APIServer:
     def start(self):
         """Start the API server (blocking call)."""
         config = uvicorn.Config(
-            self.app, host=self.host, port=self.port, log_level="info"
+            self.app,
+            host=self.host,
+            port=self.port,
+            log_level="info",
+            access_log=access_logs_enabled(),
         )
 
         self.server = uvicorn.Server(config)

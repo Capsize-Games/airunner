@@ -2,6 +2,7 @@
 
 import gc
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 from safetensors.torch import load_file as load_safetensors
@@ -883,6 +884,7 @@ class ZImagePipelineLoadingMixin:
             data: Additional pipeline configuration data
         """
         self.logger.info(f"Loading native FP8 pipeline from {checkpoint_path}")
+        pipeline_started_at = time.perf_counter()
         
         if importlib.util.find_spec('airunner.components.art.managers.zimage.native') is None:
             self.logger.warning("Native FP8 implementation not available - falling back to pretrained loading with 4-bit quantization")
@@ -923,17 +925,37 @@ class ZImagePipelineLoadingMixin:
         
         # Load the transformer from FP8 checkpoint
         self.logger.info("Loading FP8 transformer weights (streaming)...")
+        transformer_started_at = time.perf_counter()
         native_pipeline.load_transformer(stream_load=True)
+        transformer_elapsed = time.perf_counter() - transformer_started_at
+        self.logger.info(
+            "Native FP8 transformer loaded in %.2fs",
+            transformer_elapsed,
+        )
         
         # Load the text encoder with an adaptive low-VRAM strategy.
         self.logger.info(
             "Loading text encoder with adaptive memory strategy..."
         )
+        text_encoder_started_at = time.perf_counter()
         native_pipeline.load_text_encoder()
+        text_encoder_elapsed = (
+            time.perf_counter() - text_encoder_started_at
+        )
+        self.logger.info(
+            "Native FP8 text encoder loaded in %.2fs",
+            text_encoder_elapsed,
+        )
         
         # Load VAE (small, no quantization needed)
         self.logger.info("Loading VAE...")
+        vae_started_at = time.perf_counter()
         native_pipeline.load_vae()
+        vae_elapsed = time.perf_counter() - vae_started_at
+        self.logger.info(
+            "Native FP8 VAE loaded in %.2fs",
+            vae_elapsed,
+        )
         
         # Store native pipeline - we'll use it directly instead of diffusers pipeline
         self._native_pipeline = native_pipeline
@@ -941,7 +963,10 @@ class ZImagePipelineLoadingMixin:
         # Create a lightweight wrapper that's compatible with the generation mixin
         self._pipe = self._create_native_pipeline_wrapper(native_pipeline, pipeline_class)
         
-        self.logger.info("Native FP8 pipeline loaded successfully")
+        self.logger.info(
+            "Native FP8 pipeline loaded successfully in %.2fs",
+            time.perf_counter() - pipeline_started_at,
+        )
         self.logger.info(f"Memory usage: {native_pipeline.memory_usage}")
 
     def _create_native_pipeline_wrapper(

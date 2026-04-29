@@ -157,16 +157,16 @@ class ViewportPositioningMixin:
         """
         # Skip update during drag to prevent snap-back
         if self.scene and getattr(self.scene, "is_dragging", False):
-            self.logger.info(
+            self.logger.debug(
                 "[ACTIVE GRID] Skipping position update - is_dragging is True"
             )
             return
 
         if self.active_grid_area:
-            self.logger.info(
+            self.logger.debug(
                 f"[ACTIVE GRID] update_active_grid_area_position called - current scenePos: {self.active_grid_area.scenePos().x()}, {self.active_grid_area.scenePos().y()}"
             )
-            self.logger.info(
+            self.logger.debug(
                 f"[ACTIVE GRID] Settings pos: {self.active_grid_settings.pos_x}, {self.active_grid_settings.pos_y}"
             )
 
@@ -182,13 +182,13 @@ class ViewportPositioningMixin:
             abs_pos = QPointF(*self.active_grid_settings.pos)
             display_pos = manager.absolute_to_display(abs_pos, view_state)
 
-            self.logger.info(
+            self.logger.debug(
                 f"[ACTIVE GRID] Setting position to display_pos: {display_pos.x()}, {display_pos.y()}"
             )
             self.active_grid_area.setPos(display_pos)
 
             actual_pos = self.active_grid_area.scenePos()
-            self.logger.info(
+            self.logger.debug(
                 f"[ACTIVE GRID] After setPos, actual scenePos: {actual_pos.x()}, {actual_pos.y()}"
             )
 

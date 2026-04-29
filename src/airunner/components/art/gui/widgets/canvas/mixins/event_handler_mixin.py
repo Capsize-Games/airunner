@@ -268,7 +268,7 @@ class EventHandlerMixin:
             self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
             
             if self._needs_recenter_on_show:
-                self.logger.info(
+                self.logger.debug(
                     "[SHOW] Canvas offset is (0,0) - will recenter after window settles"
                 )
                 # Clear cached positions so they get recalculated
@@ -287,7 +287,7 @@ class EventHandlerMixin:
             # Check if viewport size changed while we were hidden
             current_viewport_size = self.viewport().size()
             if current_viewport_size != self._last_viewport_size:
-                self.logger.info(
+                self.logger.debug(
                     f"[SHOW] Viewport size changed while hidden: {self._last_viewport_size} -> {current_viewport_size}"
                 )
 
@@ -325,7 +325,7 @@ class EventHandlerMixin:
         # Check if we need to recenter (user had clicked center before closing)
         if getattr(self, "_needs_recenter_on_show", False):
             self._needs_recenter_on_show = False
-            self.logger.info(
+            self.logger.debug(
                 "[FINISH] Recentering for current viewport (delayed)"
             )
             
@@ -338,7 +338,7 @@ class EventHandlerMixin:
                 self.application_settings.working_height,
             )
             self.center_pos = QPointF(pos_x, pos_y)
-            self.logger.info(
+            self.logger.debug(
                 f"[FINISH] Calculated center_pos: x={pos_x}, y={pos_y}"
             )
             
@@ -377,13 +377,13 @@ class EventHandlerMixin:
 
         # Skip compensation during initial state restoration
         if self._is_restoring_state or not self._initialized:
-            self.logger.info(
+            self.logger.debug(
                 f"[RESIZE] Skipping compensation - _is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
             )
             self._last_viewport_size = self.viewport().size()
             return
 
-        self.logger.info(
+        self.logger.debug(
             f"[RESIZE] Processing resize - old_size={self._last_viewport_size}, new_size={self.viewport().size()}"
         )
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.metadata as importlib_metadata
 import os
+import warnings
 
 from airunner_startup_env import (
 	configure_early_torch_allocator_environment,
@@ -12,6 +13,23 @@ from airunner_startup_env import (
 
 
 configure_early_torch_allocator_environment()
+
+
+def _configure_startup_warning_filters() -> None:
+	"""Suppress known third-party warnings that add no startup signal."""
+	warnings.filterwarnings(
+		"ignore",
+		message=r".*urllib3 .* doesn't match a supported version.*",
+		category=Warning,
+	)
+	warnings.filterwarnings(
+		"ignore",
+		message=r".*validate_default.*has no effect.*",
+		category=UserWarning,
+	)
+
+
+_configure_startup_warning_filters()
 
 from packaging.version import InvalidVersion, Version
 

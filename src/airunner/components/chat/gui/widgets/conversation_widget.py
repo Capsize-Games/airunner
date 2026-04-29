@@ -1,3 +1,4 @@
+import os
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
@@ -24,6 +25,12 @@ from airunner.components.llm.utils import strip_names_from_message
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
+_LOG_CONVERSATION_WEBVIEW_PROGRESS = (
+    os.environ.get("AIRUNNER_LOG_CONVERSATION_WEBVIEW_PROGRESS", "0")
+    == "1"
+)
+
+
 class ConversationWidget(BaseWidget):
     """Widget that displays a conversation using a single QWebEngineView and HTML template.
 
@@ -40,6 +47,7 @@ class ConversationWidget(BaseWidget):
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
             SignalCode.CONVERSATION_DELETED: self.on_delete_conversation,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.MOOD_SUMMARY_UPDATE_STARTED: self._handle_mood_summary_update_started,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated_signal,
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
@@ -59,32 +67,34 @@ class ConversationWidget(BaseWidget):
         self.loading_widget = LoadingWidget(self)
         self.loading_widget.hide()
         self._page_ready = False  # Flag to prevent early template rendering
+        self._template_rendered = False
+        self._template_render_scheduled = False
+        self._main_window_loaded = False
+        self._shutdown_started = False
         super().__init__()
 
         # Set the custom page immediately after super().__init__()
         if hasattr(self, "ui") and hasattr(self.ui, "stage"):
             custom_page = ConversationWebEnginePage(self.ui.stage, self)
             self.ui.stage.setPage(custom_page)
-            # Add load handlers for debugging
-            self.ui.stage.loadStarted.connect(
-                lambda: self.logger.debug("[ConversationWidget] Load started")
-            )
-            self.ui.stage.loadFinished.connect(
-                lambda ok: self.logger.debug(
-                    f"[ConversationWidget] Load finished: {ok}"
+            if _LOG_CONVERSATION_WEBVIEW_PROGRESS:
+                self.ui.stage.loadStarted.connect(
+                    lambda: self.logger.debug(
+                        "[ConversationWidget] Load started"
+                    )
                 )
-            )
-            self.ui.stage.loadProgress.connect(
-                lambda progress: self.logger.debug(
-                    f"[ConversationWidget] Load progress: {progress}%"
+                self.ui.stage.loadFinished.connect(
+                    lambda ok: self.logger.debug(
+                        f"[ConversationWidget] Load finished: {ok}"
+                    )
                 )
-            )
-            # Mark page as ready and NOW render the template
+                self.ui.stage.loadProgress.connect(
+                    lambda progress: self.logger.debug(
+                        f"[ConversationWidget] Load progress: {progress}%"
+                    )
+                )
+            # Mark page as ready and defer the initial template load until show.
             self._page_ready = True
-            self.logger.debug(
-                "[ConversationWidget] Rendering template after custom page setup"
-            )
-            self.render_template()
 
         self.token_buffer = []
         # Add a streaming buffer to ensure proper token ordering
@@ -159,13 +169,32 @@ class ConversationWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        if self._main_window_loaded:
+            self._schedule_initial_template_render()
         if not self.registered:
             self.registered = True
-            self.logger.debug(
-                f"showEvent: self._conversation_id before load: {self._conversation_id}"
-            )
-            if self._conversation_id is None:
-                self.load_conversation()
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Render the initial conversation template after app startup."""
+        self._main_window_loaded = True
+        self._schedule_initial_template_render()
+
+    def _schedule_initial_template_render(self) -> None:
+        """Schedule the initial HTML template render once."""
+        if self._template_rendered or self._template_render_scheduled:
+            return
+        self._template_render_scheduled = True
+        QTimer.singleShot(0, self._render_initial_template)
+
+    def _render_initial_template(self) -> None:
+        """Render the conversation template after the widget is shown."""
+        if self._template_rendered:
+            return
+        self._template_rendered = True
+        self.logger.debug(
+            "[ConversationWidget] Rendering template after first show"
+        )
+        self.render_template()
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
@@ -208,6 +237,68 @@ class ConversationWidget(BaseWidget):
         # Use explicit clear signal instead of set_conversation([])
         self._chat_bridge.clear_messages()
         self._clear_conversation_widgets()
+
+    def handle_close(self):
+        """Release webview resources before the application exits."""
+        self._stop_ui_update_timer()
+        self._shutdown_web_view()
+
+    def _stop_ui_update_timer(self) -> None:
+        """Stop recurring UI work during shutdown."""
+        if self.ui_update_timer.isActive():
+            self.ui_update_timer.stop()
+
+    def _shutdown_web_view(self) -> None:
+        """Tear down the conversation webview synchronously."""
+        if self._shutdown_started:
+            return
+        self._shutdown_started = True
+        view = self._get_view()
+        if view is None:
+            return
+
+        try:
+            page = view.page()
+        except RuntimeError:
+            page = None
+
+        if page is not None:
+            try:
+                page.setWebChannel(None)
+            except Exception:
+                pass
+
+        try:
+            view.stop()
+            view.close()
+        except Exception:
+            pass
+
+        self._delete_qt_object("_web_channel")
+        self._delete_qt_object("_chat_bridge")
+
+        if page is not None:
+            try:
+                page.deleteLater()
+            except Exception:
+                pass
+
+        try:
+            view.deleteLater()
+            QApplication.processEvents()
+        except Exception:
+            pass
+
+    def _delete_qt_object(self, attr_name: str) -> None:
+        """Delete a Qt object attribute if it exists."""
+        qt_object = getattr(self, attr_name, None)
+        if qt_object is None:
+            return
+        try:
+            qt_object.deleteLater()
+        except Exception:
+            pass
+        setattr(self, attr_name, None)
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         self.hide_status_indicator()
@@ -327,9 +418,7 @@ class ConversationWidget(BaseWidget):
         """
         # If empty list, use clear_messages signal instead
         if not messages:
-            self.logger.warning(
-                "[CONVERSATION] set_conversation called with empty list - this should use clear_messages instead"
-            )
+            self._clear_conversation_widgets()
             return
 
         simplified_messages = []

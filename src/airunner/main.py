@@ -12,6 +12,8 @@ Do not change the order of the imports.
 ################################################################
 import os
 import sys
+import time
+import warnings
 
 from airunner_startup_env import (
     configure_early_torch_allocator_environment,
@@ -19,6 +21,25 @@ from airunner_startup_env import (
 
 
 configure_early_torch_allocator_environment()
+
+
+def configure_startup_warning_filters() -> None:
+    """Suppress known third-party startup warnings that add no signal."""
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*urllib3 .* doesn't match a supported version.*",
+        category=Warning,
+        module=r"requests(\..*)?",
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*validate_default.*has no effect.*",
+        category=UserWarning,
+        module=r"pydantic(\..*)?",
+    )
+
+
+configure_startup_warning_filters()
 
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 
@@ -116,6 +137,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # Initialize the logger
 import logging
 
+from airunner.utils.application.logging_utils import (
+    configure_noisy_loggers,
+)
+
 
 # Optimize logger initialization by consolidating configurations
 def initialize_loggers():
@@ -135,6 +160,7 @@ def initialize_loggers():
     ]
     for logger_name in loggers_to_silence:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
+    configure_noisy_loggers()
 
 
 # Call the consolidated logger initialization
@@ -226,6 +252,12 @@ _launcher_app = None
 
 def main():
     global _launcher_splash, _launcher_app
+    startup_started_at = float(
+        os.environ.setdefault(
+            "AIRUNNER_PROCESS_START_TIME",
+            f"{time.perf_counter():.9f}",
+        )
+    )
     
     parser = argparse.ArgumentParser(description="AI Runner")
     parser.add_argument(
@@ -273,14 +305,24 @@ def main():
         # Handled in launcher.py, but keep for help output and future use
         pass
 
+    database_started_at = time.perf_counter()
     setup_database()
-
-    # Configure headless logging early, before API/App instantiation
-    # This ensures root logger is configured before service loggers are created
-    sys.stderr.write("DEBUG: main.py starting\n")
+    startup_logger.info(
+        "Startup phase database_setup completed in %.2fs",
+        time.perf_counter() - database_started_at,
+    )
 
     # Start the main application, passing launcher's splash if available
+    api_started_at = time.perf_counter()
     api = API(launcher_splash=_launcher_splash, launcher_app=_launcher_app)
+    startup_logger.info(
+        "Startup phase api_init completed in %.2fs",
+        time.perf_counter() - api_started_at,
+    )
+    startup_logger.info(
+        "Startup time to event-loop handoff: %.2fs",
+        time.perf_counter() - startup_started_at,
+    )
     api.run()
 
 

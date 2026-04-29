@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 import urllib
 import webbrowser
 import ipaddress
@@ -228,6 +229,8 @@ class MainWindow(
         self.quitting = False
         self._launcher_splash_dismissed = False
         self._state_restored = None
+        self._pending_startup_button_name = None
+        self._restore_knowledgebase_after_startup = False
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
@@ -281,6 +284,7 @@ class MainWindow(
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
             SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
         }
         super().__init__()
         self.logger.debug("Starting AI Runnner")
@@ -355,7 +359,23 @@ class MainWindow(
 
     @Slot(bool)
     def on_knowledgebase_button_toggled(self, val: bool):
+        if val:
+            self._ensure_knowledgebase_loaded()
         self._toggle_splitter_section(val, 2, self.ui.main_window_splitter, 50)
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Restore deferred startup UI once the main window is visible."""
+        if self._restore_knowledgebase_after_startup:
+            self._restore_knowledgebase_after_startup = False
+            self._ensure_knowledgebase_loaded()
+
+        if self._pending_startup_button_name:
+            button_name = self._pending_startup_button_name
+            self._pending_startup_button_name = None
+            QTimer.singleShot(
+                0,
+                lambda: self._set_current_button_and_tab(button_name),
+            )
 
     def on_splitter_changed_sizes(self):
         self.set_chat_button_checked()
@@ -744,6 +764,109 @@ class MainWindow(
         self.window_settings = updated_settings
         self.ui.center_tab_container.setCurrentIndex(index)
 
+    def _attach_lazy_widget(
+        self,
+        parent_attr,
+        layout_attr,
+        widget_attr,
+        placeholder_attr,
+        object_name,
+        factory,
+    ):
+        widget = getattr(self.ui, widget_attr, None)
+        if widget is not None:
+            return widget
+
+        layout = getattr(self.ui, layout_attr)
+        widget = factory(getattr(self.ui, parent_attr))
+        widget.setObjectName(object_name)
+        layout.addWidget(widget, 0, 0, 1, 1)
+
+        placeholder = getattr(self.ui, placeholder_attr, None)
+        if placeholder is not None:
+            layout.removeWidget(placeholder)
+            placeholder.deleteLater()
+            setattr(self.ui, placeholder_attr, None)
+
+        setattr(self.ui, widget_attr, widget)
+        return widget
+
+    def _ensure_lazy_tab_loaded(self, button_name: str) -> None:
+        """Create heavyweight tab content only when the tab is opened."""
+        if button_name == "art_editor_button":
+            from airunner.components.art.gui.widgets.canvas.canvas_widget import (
+                CanvasWidget,
+            )
+
+            self.canvas = self._attach_lazy_widget(
+                "art_tab",
+                "gridLayout_2",
+                "canvas",
+                "canvas_placeholder",
+                "canvas",
+                CanvasWidget,
+            )
+            return
+
+        if button_name == "document_editor_button":
+            from airunner.components.document_editor.gui.widgets.document_editor_container_widget import (
+                DocumentEditorContainerWidget,
+            )
+
+            self._attach_lazy_widget(
+                "document_editor_tab",
+                "gridLayout",
+                "widget",
+                "document_editor_placeholder",
+                "widget",
+                DocumentEditorContainerWidget,
+            )
+            return
+
+        if button_name == "calendar_button":
+            from airunner.components.calendar.gui.calendar_tab import (
+                CalendarTab,
+            )
+
+            self._attach_lazy_widget(
+                "calendar_tab",
+                "gridLayout_calendar",
+                "calendar_widget",
+                "calendar_placeholder",
+                "calendar_widget",
+                CalendarTab,
+            )
+            return
+
+        if button_name == "visualizer_button":
+            from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_widget import (
+                VoiceVisualizerWidget,
+            )
+
+            self._attach_lazy_widget(
+                "visualizer_tab",
+                "gridLayout_14",
+                "visualizer",
+                "visualizer_placeholder",
+                "visualizer",
+                VoiceVisualizerWidget,
+            )
+
+    def _ensure_knowledgebase_loaded(self) -> None:
+        """Create the documents pane only when it is actually shown."""
+        from airunner.components.documents.gui.widgets.documents import (
+            DocumentsWidget,
+        )
+
+        self._attach_lazy_widget(
+            "knowledgebase",
+            "gridLayout_7",
+            "documents",
+            "documents_placeholder",
+            "documents",
+            DocumentsWidget,
+        )
+
     @property
     def buttons(self) -> Dict:
         return {
@@ -777,9 +900,12 @@ class MainWindow(
         }
 
         if saved_index in buttons:
-            self.ui.center_tab_container.setCurrentIndex(saved_index)
             button_name = buttons[saved_index]
-            getattr(self.ui, button_name).setChecked(True)
+            if saved_index == 0:
+                self.ui.center_tab_container.setCurrentIndex(saved_index)
+                getattr(self.ui, button_name).setChecked(True)
+            else:
+                self._pending_startup_button_name = button_name
 
     def _set_current_button_and_tab(self, button_name: str):
         """
@@ -791,6 +917,7 @@ class MainWindow(
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(btn == button_name)
             getattr(self.ui, btn).blockSignals(False)
+        self._ensure_lazy_tab_loaded(button_name)
         tab_widget = self.buttons[button_name]
         self._set_tab_index(tab_widget)
         
@@ -1117,10 +1244,17 @@ class MainWindow(
         )
 
     def initialize_ui(self):
+        total_started_at = time.perf_counter()
         self.logger.debug("Loading UI")
 
+        phase_started_at = time.perf_counter()
         self.ui.setupUi(self)
+        self.logger.info(
+            "MainWindow startup phase setup_ui completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
 
+        phase_started_at = time.perf_counter()
         # Disable innactive features
         self.ui.calendar_button.hide()
         
@@ -1142,10 +1276,27 @@ class MainWindow(
         self.ui.center_tab_container.currentChanged.connect(
             self._store_active_tab_index
         )
+        self.logger.info(
+            "MainWindow startup phase startup_state_prep completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
 
+        phase_started_at = time.perf_counter()
         self.set_stylesheet()
         self.icon_manager.set_icons()
+        self.logger.info(
+            "MainWindow startup phase styles_and_icons completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
+
+        phase_started_at = time.perf_counter()
         self.restore_state()
+        self.logger.info(
+            "MainWindow startup phase restore_state completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
+
+        phase_started_at = time.perf_counter()
         # Configure default splitter sizes to maximize the canvas area (index 1)
         default_splitter_config = {
             "main_window_splitter": {
@@ -1160,6 +1311,10 @@ class MainWindow(
             namespace="MainWindow",
         )
 
+        splitter_sizes = self.ui.main_window_splitter.sizes()
+        if len(splitter_sizes) > 2 and splitter_sizes[2] > 0:
+            self._restore_knowledgebase_after_startup = True
+
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         if not self.api:
@@ -1168,12 +1323,28 @@ class MainWindow(
             )
             return
         self.api.clear_status_message()
+        self.logger.info(
+            "MainWindow startup phase splitter_and_status completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
+
+        phase_started_at = time.perf_counter()
         self.initialize_widget_elements()
+        self.logger.info(
+            "MainWindow startup phase initialize_widget_elements completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
         self.last_tray_click_time = 0
         self.settings_window = None
         self.hide_center_tab_header()
+
+        phase_started_at = time.perf_counter()
         self._load_plugins()
         self._refresh_model_status_from_daemon()
+        self.logger.info(
+            "MainWindow startup phase post_init_refresh completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
 
         self.ui.main_window_splitter.splitterMoved.connect(
             self.on_splitter_changed_sizes
@@ -1195,6 +1366,11 @@ class MainWindow(
                 self.logger.debug("Could not create Ctrl+N QAction shortcut")
             except Exception:
                 pass
+
+        self.logger.info(
+            "MainWindow initialize_ui completed in %.2fs",
+            time.perf_counter() - total_started_at,
+        )
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
@@ -1361,8 +1537,7 @@ class MainWindow(
 
     def handle_quit_application_signal(self):
         self.hide()
-        QApplication.quit()
-        self.close()
+        QTimer.singleShot(0, QApplication.quit)
 
     def show_settings_path(self, name, default_path=None):
         # Note: show_path functionality removed with old agent system

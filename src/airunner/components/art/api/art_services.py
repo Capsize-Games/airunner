@@ -1,17 +1,23 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Optional
+
 from airunner.components.application.api.api_service_base import APIServiceBase
-from airunner.components.art.api.canvas_services import CanvasAPIService
-from airunner.components.art.api.embedding_services import EmbeddingAPIServices
-from airunner.components.art.api.image_filter_services import (
-    ImageFilterAPIServices,
-)
-from airunner.components.art.api.lora_services import LoraAPIServices
-from airunner.enums import SignalCode
-from PIL.Image import Image
-from airunner.components.art.managers.stablediffusion.image_request import (
-    ImageRequest,
-)
-from airunner.enums import GeneratorSection
-from typing import Optional, Dict, List
+from airunner.enums import GeneratorSection, SignalCode
+
+if TYPE_CHECKING:
+    from PIL.Image import Image
+    from airunner.components.art.api.canvas_services import CanvasAPIService
+    from airunner.components.art.api.embedding_services import (
+        EmbeddingAPIServices,
+    )
+    from airunner.components.art.api.image_filter_services import (
+        ImageFilterAPIServices,
+    )
+    from airunner.components.art.api.lora_services import LoraAPIServices
+    from airunner.components.art.managers.stablediffusion.image_request import (
+        ImageRequest,
+    )
 
 
 class ARTAPIService(APIServiceBase):
@@ -19,10 +25,73 @@ class ARTAPIService(APIServiceBase):
 
     def __init__(self):
         super().__init__()
-        self.canvas = CanvasAPIService()
-        self.embeddings = EmbeddingAPIServices()
-        self.lora = LoraAPIServices()
-        self.image_filter = ImageFilterAPIServices()
+        self._canvas_service = None
+        self._embeddings_service = None
+        self._lora_service = None
+        self._image_filter_service = None
+
+    @property
+    def canvas(self) -> CanvasAPIService:
+        """Return the cached canvas API service."""
+        if self._canvas_service is None:
+            from airunner.components.art.api.canvas_services import (
+                CanvasAPIService,
+            )
+
+            self._canvas_service = CanvasAPIService()
+        return self._canvas_service
+
+    @canvas.setter
+    def canvas(self, value: CanvasAPIService) -> None:
+        self._canvas_service = value
+
+    @property
+    def embeddings(self) -> EmbeddingAPIServices:
+        """Return the cached embeddings API service."""
+        if self._embeddings_service is None:
+            from airunner.components.art.api.embedding_services import (
+                EmbeddingAPIServices,
+            )
+
+            self._embeddings_service = EmbeddingAPIServices()
+        return self._embeddings_service
+
+    @embeddings.setter
+    def embeddings(self, value: EmbeddingAPIServices) -> None:
+        self._embeddings_service = value
+
+    @property
+    def lora(self) -> LoraAPIServices:
+        """Return the cached LoRA API service."""
+        if self._lora_service is None:
+            from airunner.components.art.api.lora_services import (
+                LoraAPIServices,
+            )
+
+            self._lora_service = LoraAPIServices()
+        return self._lora_service
+
+    @lora.setter
+    def lora(self, value: LoraAPIServices) -> None:
+        self._lora_service = value
+
+    @property
+    def image_filter(self) -> ImageFilterAPIServices:
+        """Return the cached image-filter API service."""
+        if self._image_filter_service is None:
+            from airunner.components.art.api.image_filter_services import (
+                ImageFilterAPIServices,
+            )
+
+            self._image_filter_service = ImageFilterAPIServices()
+        return self._image_filter_service
+
+    @image_filter.setter
+    def image_filter(
+        self,
+        value: ImageFilterAPIServices,
+    ) -> None:
+        self._image_filter_service = value
 
     def update_batch_images(self, images: List[Image]):
         self.emit_signal(

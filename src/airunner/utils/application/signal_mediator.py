@@ -267,7 +267,7 @@ class SignalMediator(metaclass=SingletonMeta):
             # Default PySide6-based implementation
             if code not in self.signals:
                 self.signals[code] = []
-            logger.info(
+            logger.debug(
                 f"SignalMediator: Registering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
             )
             # Prevent duplicate registrations for the same callback
@@ -302,7 +302,7 @@ class SignalMediator(metaclass=SingletonMeta):
         for s in self.signals[code]:
             try:
                 if s.matches(slot_function):
-                    logger.info(
+                    logger.debug(
                         f"SignalMediator: Unregistering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
                     )
                     # drop this signal wrapper

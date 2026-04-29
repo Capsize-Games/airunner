@@ -516,20 +516,6 @@
             <height>0</height>
            </size>
           </property>
-          <layout class="QGridLayout" name="gridLayout_6">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-          </layout>
          </widget>
          <widget class="QWidget" name="center_widget" native="true">
           <property name="sizePolicy">
@@ -626,7 +612,7 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                <widget class="CanvasWidget" name="canvas" native="true">
+                  <widget class="QWidget" name="canvas_placeholder" native="true">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>0</horstretch>
@@ -673,7 +659,7 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                <widget class="DocumentEditorContainerWidget" name="widget" native="true"/>
+                <widget class="QWidget" name="document_editor_placeholder" native="true"/>
                </item>
               </layout>
              </widget>
@@ -695,7 +681,7 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                <widget class="CalendarTab" name="calendar_widget" native="true"/>
+                <widget class="QWidget" name="calendar_placeholder" native="true"/>
                </item>
               </layout>
              </widget>
@@ -717,7 +703,7 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                <widget class="VoiceVisualizerWidget" name="visualizer" native="true"/>
+                <widget class="QWidget" name="visualizer_placeholder" native="true"/>
                </item>
               </layout>
              </widget>
@@ -740,7 +726,7 @@
             <number>0</number>
            </property>
            <item row="0" column="0">
-            <widget class="DocumentsWidget" name="documents" native="true"/>
+            <widget class="QWidget" name="documents_placeholder" native="true"/>
            </item>
           </layout>
          </widget>

@@ -44,14 +44,19 @@ class SaveGeneratorSettingsWorker(
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+        self._running = True
         self.current_prompt_value = None
         self.current_negative_prompt_value = None
         self.current_secondary_prompt_value = None
         self.current_secondary_negative_prompt_value = None
 
+    def stop(self) -> None:
+        """Stop the settings worker loop."""
+        self._running = False
+
     def run(self):
         do_update_settings = False
-        while True:
+        while self._running:
             value = self.parent.ui.prompt.toPlainText()
             if value != self.current_prompt_value:
                 self.current_prompt_value = value
@@ -129,6 +134,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.worker = SaveGeneratorSettingsWorker(parent=self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._stop_worker_thread)
         self._sd_version: str = self.generator_settings.version
         self._toggle_sdxl_form_elements()
         self.ui.infinite_images_button.blockSignals(True)
@@ -247,7 +255,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self._toggle_sdxl_form_elements()
 
     def _toggle_compel_form_elements(self, value: bool):
-        self.logger.info("Toggle compel form elements")
+        self.logger.debug("Toggle compel form elements")
         # Iterate over all widgets in the layout and enable/disable them
         for i in range(self.ui.additional_prompts_container_layout.count()):
             widget = self.ui.additional_prompts_container_layout.itemAt(
@@ -614,6 +622,22 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
             # Restore prompt containers when widget is shown
             self.restore_prompt_containers_from_settings()
+
+    def closeEvent(self, event):
+        """Stop the background settings worker before teardown."""
+        self._stop_worker_thread()
+        super().closeEvent(event)
+
+    def _stop_worker_thread(self) -> None:
+        """Shut down the prompt settings worker thread safely."""
+        if not hasattr(self, "thread") or not self.thread.isRunning():
+            return
+        self.worker.stop()
+        self.thread.quit()
+        if self.thread.wait(1000):
+            return
+        self.thread.terminate()
+        self.thread.wait(1000)
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)

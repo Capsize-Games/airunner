@@ -22,13 +22,13 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._deferred_startup_loaded = False
         self.download_manager = None
         self.quantization_dialog = None
-        self.initialize_form()
-        
+
         # Hide model/provider controls - they're now in the chat prompt widget
         self._hide_model_provider_controls()
-        
+
         self.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self.on_download_complete,
@@ -49,6 +49,18 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             SignalCode.LLM_QUANTIZATION_FAILED,
             self.on_quantization_failed,
         )
+        self.register(
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
+            self.on_main_window_loaded_signal,
+        )
+
+    def _finish_deferred_startup(self) -> None:
+        """Initialize the expensive LLM settings controls on first show."""
+        if self._deferred_startup_loaded:
+            return
+
+        self._deferred_startup_loaded = True
+        self.initialize_form()
         self._setup_adapters_table()
         self._load_adapters()
         self._setup_quantization_dropdown()
@@ -452,6 +464,10 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Finish expensive settings setup after startup completes."""
+        self._finish_deferred_startup()
 
     def early_stopping_toggled(self, val):
         self.update_chatbot("early_stopping", val)

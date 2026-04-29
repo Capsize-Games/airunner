@@ -8,6 +8,8 @@ LAUNCHER_BIN="${BUILD_DIR}/airunner"
 REPO_PYTHON="${ROOT_DIR}/venv/bin/python"
 REPO_DAEMON_BIN="${ROOT_DIR}/venv/bin/airunner-daemon"
 
+export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
+
 runtime_port_listeners() {
   if ! command -v lsof >/dev/null 2>&1; then
     return

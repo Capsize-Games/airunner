@@ -21,8 +21,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
     QSpacerItem, QSplitter, QTabWidget, QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
-from airunner.components.llm.gui.widgets.llm_history_widget import LLMHistoryWidget
-from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):
@@ -93,10 +91,10 @@ class Ui_chat_prompt(object):
 
         self.gridLayout_2.addWidget(self.chat_prompt_action_bar, 0, 0, 1, 1)
 
-        self.chat_history_widget = LLMHistoryWidget(chat_prompt)
-        self.chat_history_widget.setObjectName(u"chat_history_widget")
+        self.chat_history_placeholder = QWidget(chat_prompt)
+        self.chat_history_placeholder.setObjectName(u"chat_history_placeholder")
 
-        self.gridLayout_2.addWidget(self.chat_history_widget, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.chat_history_placeholder, 1, 0, 1, 1)
 
         self.scrollArea = QScrollArea(chat_prompt)
         self.scrollArea.setObjectName(u"scrollArea")
@@ -242,10 +240,10 @@ class Ui_chat_prompt(object):
         self.gridLayout_3 = QGridLayout(self.tab_2)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.llm_settings = LLMSettingsWidget(self.tab_2)
-        self.llm_settings.setObjectName(u"llm_settings")
+        self.llm_settings_placeholder = QWidget(self.tab_2)
+        self.llm_settings_placeholder.setObjectName(u"llm_settings_placeholder")
 
-        self.gridLayout_3.addWidget(self.llm_settings, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.llm_settings_placeholder, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_2, "")
         self.tab_3 = QWidget()
@@ -253,10 +251,10 @@ class Ui_chat_prompt(object):
         self.gridLayout_5 = QGridLayout(self.tab_3)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.widget = LLMHistoryWidget(self.tab_3)
-        self.widget.setObjectName(u"widget")
+        self.history_placeholder = QWidget(self.tab_3)
+        self.history_placeholder.setObjectName(u"history_placeholder")
 
-        self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.history_placeholder, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_3, "")
 

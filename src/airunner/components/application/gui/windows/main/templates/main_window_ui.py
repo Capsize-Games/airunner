@@ -21,13 +21,8 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
     QSplitter, QStatusBar, QTabWidget, QToolBar,
     QVBoxLayout, QWidget)
 
-from airunner.components.art.gui.widgets.canvas.canvas_widget import CanvasWidget
-from airunner.components.calendar.gui.calendar_tab import CalendarTab
-from airunner.components.document_editor.gui.widgets.document_editor_container_widget import DocumentEditorContainerWidget
-from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeStageWidget
 from airunner.components.llm.gui.widgets.generator_form.generator_form_widget import GeneratorForm
-from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_widget import VoiceVisualizerWidget
 import airunner.feather_rc
 
 class Ui_MainWindow(object):
@@ -349,9 +344,6 @@ class Ui_MainWindow(object):
         self.generator_widget.setMinimumSize(QSize(250, 0))
         self.generator_widget.setMaximumSize(QSize(16777215, 16777215))
         self.generator_widget.setBaseSize(QSize(250, 0))
-        self.gridLayout_6 = QGridLayout(self.generator_widget)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.gridLayout_6.setContentsMargins(0, 0, 0, 0)
         self.main_window_splitter.addWidget(self.generator_widget)
         self.center_widget = QWidget(self.main_window_splitter)
         self.center_widget.setObjectName(u"center_widget")
@@ -389,16 +381,16 @@ class Ui_MainWindow(object):
         self.gridLayout_2 = QGridLayout(self.art_tab)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.canvas = CanvasWidget(self.art_tab)
-        self.canvas.setObjectName(u"canvas")
-        sizePolicy2.setHeightForWidth(self.canvas.sizePolicy().hasHeightForWidth())
-        self.canvas.setSizePolicy(sizePolicy2)
-        self.canvas.setMinimumSize(QSize(0, 0))
-        self.canvas.setMaximumSize(QSize(16777215, 16777215))
-        self.canvas.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-        self.canvas.setAcceptDrops(True)
+        self.canvas_placeholder = QWidget(self.art_tab)
+        self.canvas_placeholder.setObjectName(u"canvas_placeholder")
+        sizePolicy2.setHeightForWidth(self.canvas_placeholder.sizePolicy().hasHeightForWidth())
+        self.canvas_placeholder.setSizePolicy(sizePolicy2)
+        self.canvas_placeholder.setMinimumSize(QSize(0, 0))
+        self.canvas_placeholder.setMaximumSize(QSize(16777215, 16777215))
+        self.canvas_placeholder.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+        self.canvas_placeholder.setAcceptDrops(True)
 
-        self.gridLayout_2.addWidget(self.canvas, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.canvas_placeholder, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.art_tab, "")
         self.document_editor_tab = QWidget()
@@ -406,10 +398,10 @@ class Ui_MainWindow(object):
         self.gridLayout = QGridLayout(self.document_editor_tab)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.widget = DocumentEditorContainerWidget(self.document_editor_tab)
-        self.widget.setObjectName(u"widget")
+        self.document_editor_placeholder = QWidget(self.document_editor_tab)
+        self.document_editor_placeholder.setObjectName(u"document_editor_placeholder")
 
-        self.gridLayout.addWidget(self.widget, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.document_editor_placeholder, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.document_editor_tab, "")
         self.calendar_tab = QWidget()
@@ -417,10 +409,10 @@ class Ui_MainWindow(object):
         self.gridLayout_calendar = QGridLayout(self.calendar_tab)
         self.gridLayout_calendar.setObjectName(u"gridLayout_calendar")
         self.gridLayout_calendar.setContentsMargins(0, 0, 0, 0)
-        self.calendar_widget = CalendarTab(self.calendar_tab)
-        self.calendar_widget.setObjectName(u"calendar_widget")
+        self.calendar_placeholder = QWidget(self.calendar_tab)
+        self.calendar_placeholder.setObjectName(u"calendar_placeholder")
 
-        self.gridLayout_calendar.addWidget(self.calendar_widget, 0, 0, 1, 1)
+        self.gridLayout_calendar.addWidget(self.calendar_placeholder, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.calendar_tab, "")
         self.visualizer_tab = QWidget()
@@ -428,10 +420,10 @@ class Ui_MainWindow(object):
         self.gridLayout_14 = QGridLayout(self.visualizer_tab)
         self.gridLayout_14.setObjectName(u"gridLayout_14")
         self.gridLayout_14.setContentsMargins(0, 0, 0, 0)
-        self.visualizer = VoiceVisualizerWidget(self.visualizer_tab)
-        self.visualizer.setObjectName(u"visualizer")
+        self.visualizer_placeholder = QWidget(self.visualizer_tab)
+        self.visualizer_placeholder.setObjectName(u"visualizer_placeholder")
 
-        self.gridLayout_14.addWidget(self.visualizer, 0, 0, 1, 1)
+        self.gridLayout_14.addWidget(self.visualizer_placeholder, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.visualizer_tab, "")
 
@@ -443,10 +435,10 @@ class Ui_MainWindow(object):
         self.gridLayout_7 = QGridLayout(self.knowledgebase)
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.documents = DocumentsWidget(self.knowledgebase)
-        self.documents.setObjectName(u"documents")
+        self.documents_placeholder = QWidget(self.knowledgebase)
+        self.documents_placeholder.setObjectName(u"documents_placeholder")
 
-        self.gridLayout_7.addWidget(self.documents, 0, 0, 1, 1)
+        self.gridLayout_7.addWidget(self.documents_placeholder, 0, 0, 1, 1)
 
         self.main_window_splitter.addWidget(self.knowledgebase)
 
