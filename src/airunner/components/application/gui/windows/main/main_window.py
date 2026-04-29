@@ -226,6 +226,7 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.quitting = False
+        self._launcher_splash_dismissed = False
         self._state_restored = None
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
@@ -1625,9 +1626,31 @@ class MainWindow(
     def show_setup_wizard():
         AppInstaller(close_on_cancel=False)
 
+    def _handoff_launcher_splash(self) -> None:
+        """Dismiss the launcher splash as soon as the main window is shown."""
+        if self._launcher_splash_dismissed:
+            return
+        api = getattr(self, "api", None)
+        splash = getattr(api, "splash", None)
+        app = QApplication.instance()
+        if not api or not splash or app is None:
+            return
+
+        from airunner.app_mixins.ui_runtime_mixin import UIRuntimeMixin
+
+        self._launcher_splash_dismissed = True
+        UIRuntimeMixin._dismiss_splash_screen(api, self, app)
+        UIRuntimeMixin._present_main_window(self, app)
+        QTimer.singleShot(
+            0,
+            lambda: UIRuntimeMixin._present_main_window(self, app),
+        )
+        self.logger.debug("Dismissed launcher splash from showEvent")
+
     def showEvent(self, event):
         """Override to update the tray menu text when window is shown."""
         super().showEvent(event)
+        self._handoff_launcher_splash()
         # Make sure we update the menu text whenever the window is shown
         if hasattr(self, "toggle_visibility_action"):
             self.toggle_visibility_action.setText("Hide Window")

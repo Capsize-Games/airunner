@@ -360,8 +360,17 @@ class TestLocalFallbackArtClient:
 
     def test_invoke_returns_encoded_images(self):
         mediator = FakeMediator()
+        observed_request = {}
 
         def respond_to_generate(payload):
+            observed_request["model_path"] = payload["image_request"].model_path
+            observed_request["pipeline_action"] = (
+                payload["image_request"].pipeline_action
+            )
+            observed_request["version"] = payload["image_request"].version
+            observed_request["scheduler"] = (
+                payload["image_request"].scheduler
+            )
             payload["image_request"].callback(
                 ImageResponse(
                     images=[Image.new("RGB", (1, 1), "white")],
@@ -387,8 +396,11 @@ class TestLocalFallbackArtClient:
                 action=RuntimeAction.INVOKE,
                 payload={
                     "prompt": "mountains",
-                    "model": "/models/flux",
-                    "metadata": {"version": "Flux.1 S"},
+                    "model": "/models/zimage.safetensors",
+                    "metadata": {
+                        "version": "Z-Image Turbo",
+                        "scheduler": "Flow Match Euler",
+                    },
                 },
             )
         )
@@ -404,9 +416,67 @@ class TestLocalFallbackArtClient:
         assert response.status == EnvelopeStatus.SUCCEEDED
         assert response.payload["image_count"] == 1
         assert response.payload["images"][0]
+        assert observed_request == {
+            "model_path": "/models/zimage.safetensors",
+            "pipeline_action": "txt2img",
+            "version": "Z-Image Turbo",
+            "scheduler": "Flow Match Euler",
+        }
         assert signal_source.emitted[0][0] == SignalCode.SD_ART_MODEL_CHANGED
         assert cancel_response.status == EnvelopeStatus.CANCELLED
         assert unload_response.payload["accepted"] is True
+
+    def test_invoke_with_progress_reports_signal_updates(self):
+        mediator = FakeMediator()
+        progress_updates = []
+
+        def respond_to_generate(payload):
+            mediator.emit_signal(
+                SignalCode.SD_PROGRESS_SIGNAL,
+                {"step": 2, "total": 4},
+            )
+            payload["image_request"].callback(
+                ImageResponse(
+                    images=[Image.new("RGB", (1, 1), "white")],
+                    data={"seed": 1},
+                    active_rect=None,
+                    is_outpaint=False,
+                )
+            )
+
+        signal_source = FakeSignalSource(
+            mediator,
+            responders={SignalCode.DO_GENERATE_SIGNAL: respond_to_generate},
+        )
+        client = LocalFallbackArtClient(
+            mediator=mediator,
+            signal_source=signal_source,
+        )
+
+        response = client.invoke_with_progress(
+            RequestEnvelope(
+                request_id="req-art-progress",
+                runtime=RuntimeKind.ART,
+                action=RuntimeAction.INVOKE,
+                payload={"prompt": "mountains"},
+            ),
+            progress_updates.append,
+        )
+
+        assert response.status == EnvelopeStatus.SUCCEEDED
+        assert progress_updates == [
+            {
+                "status": "running",
+                "progress": 1.0,
+                "phase": "dispatch",
+            },
+            {
+                "status": "running",
+                "progress": 50.0,
+                "step": 2,
+                "total": 4,
+            }
+        ]
 
 
 class TestLocalFallbackRegistry:

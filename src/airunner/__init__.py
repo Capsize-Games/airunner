@@ -6,6 +6,13 @@ import importlib
 import importlib.metadata as importlib_metadata
 import os
 
+from airunner_startup_env import (
+	configure_early_torch_allocator_environment,
+)
+
+
+configure_early_torch_allocator_environment()
+
 from packaging.version import InvalidVersion, Version
 
 

@@ -1,12 +1,14 @@
-"""
-Health check and status endpoints.
-"""
+"""Health check and status endpoints."""
 
-from typing import List, Optional
+import os
+import time
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
-import time
+
+from airunner.dev_build_token import current_dev_build_token
+from airunner.settings import AIRUNNER_VERSION
 
 
 router = APIRouter()
@@ -18,6 +20,9 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     uptime: float
+    pid: int
+    started_at: float
+    dev_build_token: Optional[str] = None
 
 
 class DaemonStatusResponse(BaseModel):
@@ -34,6 +39,20 @@ class DaemonStatusResponse(BaseModel):
 
 # Track server start time
 _start_time = time.time()
+_start_pid = os.getpid()
+_start_dev_build_token = current_dev_build_token()
+
+
+def build_health_payload(status: str) -> Dict[str, Any]:
+    """Return shared health metadata for legacy and versioned routes."""
+    return {
+        "status": status,
+        "version": AIRUNNER_VERSION,
+        "uptime": time.time() - _start_time,
+        "pid": _start_pid,
+        "started_at": _start_time,
+        "dev_build_token": _start_dev_build_token,
+    }
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -43,9 +62,7 @@ async def health_check():
 
     Returns server status, version, and uptime.
     """
-    return HealthResponse(
-        status="healthy", version="1.0.0", uptime=time.time() - _start_time
-    )
+    return HealthResponse(**build_health_payload("healthy"))
 
 
 @router.get("/health/daemon", response_model=DaemonStatusResponse)
@@ -62,7 +79,7 @@ async def root():
     """Root endpoint with API information."""
     return {
         "message": "AI Runner API",
-        "version": "1.0.0",
+        "version": AIRUNNER_VERSION,
         "docs": "/docs",
         "redoc": "/redoc",
     }

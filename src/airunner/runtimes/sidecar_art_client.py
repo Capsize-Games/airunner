@@ -6,7 +6,7 @@ import base64
 import threading
 import time
 from dataclasses import replace
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import requests
 
@@ -34,6 +34,7 @@ from airunner.runtimes.registry import RuntimeRegistry, RuntimeRoute
 from airunner.runtimes.sidecar_art_launcher import SidecarArtLauncher
 
 DEFAULT_PROVIDER = "local"
+ProgressCallback = Callable[[dict[str, Any]], None]
 
 
 class SidecarArtClient(RuntimeClient):
@@ -67,6 +68,14 @@ class SidecarArtClient(RuntimeClient):
         )
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
+        """Invoke one sidecar action without progress callbacks."""
+        return self.invoke_with_progress(request)
+
+    def invoke_with_progress(
+        self,
+        request: RequestEnvelope,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ResponseEnvelope:
         """Invoke one sidecar control action or art request."""
         if request.runtime is not RuntimeKind.ART:
             raise ValueError("SidecarArtClient only supports art")
@@ -78,7 +87,7 @@ class SidecarArtClient(RuntimeClient):
             return self._unload_runtime(request.request_id)
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("SidecarArtClient only supports invoke")
-        return self._generate_image(request)
+        return self._generate_image(request, progress_callback)
 
     def healthcheck(self) -> RuntimeHealth:
         """Return the health of the managed art runtime."""
@@ -149,7 +158,11 @@ class SidecarArtClient(RuntimeClient):
             metadata=self._metadata(),
         )
 
-    def _generate_image(self, request: RequestEnvelope) -> ResponseEnvelope:
+    def _generate_image(
+        self,
+        request: RequestEnvelope,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ResponseEnvelope:
         """Execute an art request through the supervised sidecar daemon."""
         invocation = ArtInvocationRequest.model_validate(request.payload)
         with self._invoke_lock:
@@ -158,8 +171,20 @@ class SidecarArtClient(RuntimeClient):
                 self._ensure_launcher(settings)
                 self._launcher.start()
                 job_id = self._submit_job(invocation)
+                if progress_callback is not None:
+                    progress_callback(
+                        {
+                            "job_id": job_id,
+                            "status": "running",
+                            "progress": 2.0,
+                            "phase": "submitted",
+                        }
+                    )
                 self._track_job(request.request_id, job_id)
-                status, payload, error = self._wait_for_job(job_id)
+                status, payload, error = self._wait_for_job(
+                    job_id,
+                    progress_callback,
+                )
             except RuntimeError as exc:
                 return self._runtime_error_response(request.request_id, str(exc))
             finally:
@@ -218,12 +243,15 @@ class SidecarArtClient(RuntimeClient):
         payload = {
             "prompt": invocation.prompt,
             "negative_prompt": invocation.negative_prompt,
+            "model": self._settings.art_model_path or invocation.model,
             "width": invocation.width,
             "height": invocation.height,
             "steps": invocation.steps,
             "cfg_scale": invocation.cfg_scale,
             "seed": invocation.seed,
             "num_images": invocation.num_images,
+            "version": self._settings.art_model_version,
+            "scheduler": self._settings.art_scheduler,
         }
         response = self._request("POST", "/generate", json_payload=payload)
         job_id = str(response.get("job_id", "") or "")
@@ -234,12 +262,22 @@ class SidecarArtClient(RuntimeClient):
     def _wait_for_job(
         self,
         job_id: str,
+        progress_callback: Optional[ProgressCallback] = None,
     ) -> tuple[EnvelopeStatus, dict[str, Any], Optional[str]]:
         """Poll the remote art job until it completes or fails."""
         deadline = self._deadline()
+        last_status: Optional[str] = None
+        last_progress: Optional[float] = None
         while time.monotonic() < deadline:
             response = self._request("GET", f"/status/{job_id}")
             status = str(response.get("status", "")).lower()
+            progress = float(response.get("progress") or 0.0)
+            if progress_callback is not None and (
+                status != last_status or progress != last_progress
+            ):
+                progress_callback(response)
+                last_status = status
+                last_progress = progress
             if status == "completed":
                 return EnvelopeStatus.SUCCEEDED, self._result_payload(job_id), None
             if status == "failed":

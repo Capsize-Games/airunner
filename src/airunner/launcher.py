@@ -12,6 +12,13 @@ import traceback
 import shutil
 from pathlib import Path
 
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
+)
+
+
+configure_early_torch_allocator_environment()
+
 from airunner.components.settings.data.airunner_settings import (
     AIRunnerSettings,
 )
@@ -295,11 +302,16 @@ def _check_first_run_agreement():
     Returns:
         tuple: (QApplication, bool) - app instance and whether to proceed
     """
+    from airunner.qt_runtime_env import configure_early_qt_environment
+    from airunner.app_mixins.ui_runtime_mixin import prepare_qt_runtime
     from PySide6.QtWidgets import QApplication
     from airunner.utils.settings.get_qsettings import get_qsettings
     from airunner.components.application.gui.dialogs.first_run_agreement_dialog import (
         check_all_agreements,
     )
+
+    configure_early_qt_environment()
+    prepare_qt_runtime()
     
     # Create QApplication if not exists (needed for dialog)
     app = QApplication.instance()
@@ -319,9 +331,14 @@ def _check_first_run_agreement():
 def _show_early_splash(existing_app=None):
     """Show splash screen as early as possible, before heavy initialization."""
     _assert_test_gui_launch_allowed()
+    from airunner.qt_runtime_env import configure_early_qt_environment
+    from airunner.app_mixins.ui_runtime_mixin import prepare_qt_runtime
     from PySide6.QtWidgets import QApplication
     from PySide6.QtGui import QGuiApplication
     from airunner.components.splash_screen.splash_screen import SplashScreen
+
+    configure_early_qt_environment()
+    prepare_qt_runtime()
 
     # Use existing app or create new
     if existing_app is not None:
@@ -430,3 +447,7 @@ def main():
     # Run the main app (it will use our existing splash and app)
     from airunner.main import main as real_main
     sys.exit(real_main())
+
+
+if __name__ == "__main__":
+    main()

@@ -80,13 +80,13 @@ _ART_JOBS: dict[str, dict[str, Any]] = {}
 _ART_JOBS_TTL_SECONDS = 60 * 60  # 1 hour
 
 
-def get_api():
-    """Get or create the API singleton instance."""
+def get_api(create_if_missing: bool = True):
+    """Return the API singleton, optionally creating it on demand."""
     global _api
     logger.info(
         f"DEBUG get_api: _api is {'None' if _api is None else type(_api).__name__}"
     )
-    if _api is None:
+    if _api is None and create_if_missing:
         _api = API()
     return _api
 

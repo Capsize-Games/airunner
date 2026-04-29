@@ -1411,22 +1411,6 @@ class ChatPromptWidget(BaseWidget):
                 tooltip += f"\n{description}"
             
             self.ui.model_dropdown.setToolTip(tooltip)
-
-        def _get_local_model_storage_path(
-            self,
-            model_id: str,
-            repo_id: str = "",
-        ) -> str:
-            """Return the configured local storage path for one local model."""
-            base_path = os.path.expanduser(
-                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
-            )
-            return LLMProviderConfig.get_local_storage_path(
-                base_path,
-                "local",
-                model_id=model_id,
-                repo_id=repo_id,
-            )
             
         elif provider == ModelService.OLLAMA.value:
             # Ollama - simpler tooltip
@@ -1435,6 +1419,22 @@ class ChatPromptWidget(BaseWidget):
         elif provider == ModelService.OPENROUTER.value:
             # OpenRouter - show model ID
             self.ui.model_dropdown.setToolTip(f"OpenRouter model: {model_id}\nRequires OpenRouter API key")
+
+    def _get_local_model_storage_path(
+        self,
+        model_id: str,
+        repo_id: str = "",
+    ) -> str:
+        """Return the configured local storage path for one local model."""
+        base_path = os.path.expanduser(
+            getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+        )
+        return LLMProviderConfig.get_local_storage_path(
+            base_path,
+            "local",
+            model_id=model_id,
+            repo_id=repo_id,
+        )
 
     def _populate_provider_dropdown(self) -> None:
         """Populate the provider dropdown with available providers."""

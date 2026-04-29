@@ -17,15 +17,93 @@ from PySide6.QtWidgets import QApplication
 
 from airunner.components.splash_screen.splash_screen import SplashScreen
 from airunner.enums import SignalCode
+from airunner.qt_runtime_env import configure_early_qt_environment
 from airunner.settings import AIRUNNER_DISCORD_URL
 from airunner.settings import MATHJAX_VERSION
 from airunner.settings import QTWEBENGINE_REMOTE_DEBUGGING
 from airunner.utils.settings import get_qsettings
 
 _AIRUNNER_IS_HEADLESS = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
+_QT_RUNTIME_PREPARED = False
+
 if not _AIRUNNER_IS_HEADLESS:
     from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
     from PySide6.QtWebEngineWidgets import QWebEngineView
+
+
+def _prefer_software_rendering() -> bool:
+    """Return whether Qt is already configured for software rendering."""
+    return any(
+        (
+            os.environ.get("QT_QUICK_BACKEND") == "software",
+            os.environ.get("QT_OPENGL") == "software",
+            os.environ.get("QT_XCB_GL_INTEGRATION") == "none",
+            os.environ.get("LIBGL_ALWAYS_SOFTWARE") == "1",
+        )
+    )
+
+
+def _configure_qt_environment() -> None:
+    """Set Qt environment variables before QApplication exists."""
+    configure_early_qt_environment()
+    os.environ.setdefault(
+        "QTWEBENGINE_REMOTE_DEBUGGING",
+        QTWEBENGINE_REMOTE_DEBUGGING,
+    )
+    os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "0")
+    if _prefer_software_rendering():
+        return
+
+    os.environ.setdefault("QT_OPENGL", "desktop")
+    if os.environ.get("XDG_SESSION_TYPE") == "x11" or os.environ.get(
+        "DISPLAY"
+    ):
+        os.environ.setdefault("QT_XCB_GL_INTEGRATION", "xcb_glx")
+        if os.environ.get("QT_XCB_GL_INTEGRATION") == "xcb_glx":
+            print("X11 session detected - enabling GLX")
+    elif os.environ.get("WAYLAND_DISPLAY"):
+        print("Wayland session detected - using default EGL")
+
+
+def _configure_qt_surface_format() -> None:
+    """Set the default Qt surface format for desktop OpenGL."""
+    if _prefer_software_rendering():
+        return
+
+    fmt = QSurfaceFormat()
+    fmt.setVersion(3, 3)
+    fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+    fmt.setSwapBehavior(QSurfaceFormat.SwapBehavior.DoubleBuffer)
+    fmt.setDepthBufferSize(24)
+    fmt.setStencilBufferSize(8)
+    QSurfaceFormat.setDefaultFormat(fmt)
+
+
+def _configure_qt_attributes() -> None:
+    """Set QApplication attributes before any application exists."""
+    if QCoreApplication.instance() is not None:
+        return
+    if _prefer_software_rendering():
+        QApplication.setAttribute(
+            Qt.ApplicationAttribute.AA_UseSoftwareOpenGL
+        )
+    else:
+        QApplication.setAttribute(
+            Qt.ApplicationAttribute.AA_UseDesktopOpenGL
+        )
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
+
+
+def prepare_qt_runtime() -> None:
+    """Configure Qt runtime once before any QApplication is created."""
+    global _QT_RUNTIME_PREPARED
+    if _AIRUNNER_IS_HEADLESS or _QT_RUNTIME_PREPARED:
+        return
+    _configure_qt_environment()
+    _configure_qt_surface_format()
+    _configure_qt_attributes()
+    _QT_RUNTIME_PREPARED = True
 
 
 def set_global_tooltip_style() -> None:
@@ -75,6 +153,53 @@ if not _AIRUNNER_IS_HEADLESS:
 class UIRuntimeMixin:
     """Provide GUI startup, splash handling, and shutdown routines."""
 
+    @staticmethod
+    def _present_main_window(
+        window: object,
+        app: QApplication,
+    ) -> None:
+        """Show and activate the main window after splash handoff."""
+        window.show()
+        window.raise_()
+        window.activateWindow()
+        app.processEvents()
+
+    def _dismiss_splash_screen(
+        self,
+        window: object,
+        app: QApplication,
+    ) -> None:
+        """Close the splash screen aggressively on X11/Wayland."""
+        if not self.splash:
+            return
+
+        splash = self.splash
+        self.splash = None
+        if getattr(self, "_launcher_splash", None) is splash:
+            self._launcher_splash = None
+
+        try:
+            splash.hide()
+        except Exception:
+            pass
+
+        try:
+            splash.finish(window)
+        except Exception:
+            pass
+
+        try:
+            splash.close()
+        except Exception:
+            pass
+
+        try:
+            splash.deleteLater()
+        except Exception:
+            pass
+
+        app.processEvents()
+
     def on_log_logged_signal(self, data: dict) -> None:
         """Handle log message signals."""
         message = data["message"].split(" - ")
@@ -85,36 +210,7 @@ class UIRuntimeMixin:
         if self.headless:
             return
         signal.signal(signal.SIGINT, self.signal_handler)
-
-        os.environ["QT_OPENGL"] = "desktop"
-        if os.environ.get("XDG_SESSION_TYPE") == "x11" or os.environ.get(
-            "DISPLAY"
-        ):
-            os.environ["QT_XCB_GL_INTEGRATION"] = "xcb_glx"
-            print("X11 session detected - enabling GLX")
-        elif os.environ.get("WAYLAND_DISPLAY"):
-            print("Wayland session detected - using default EGL")
-
-        os.environ["LIBGL_ALWAYS_SOFTWARE"] = "0"
-        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = (
-            QTWEBENGINE_REMOTE_DEBUGGING
-        )
-
-        fmt = QSurfaceFormat()
-        fmt.setVersion(3, 3)
-        fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-        fmt.setSwapBehavior(QSurfaceFormat.SwapBehavior.DoubleBuffer)
-        fmt.setDepthBufferSize(24)
-        fmt.setStencilBufferSize(8)
-        QSurfaceFormat.setDefaultFormat(fmt)
-
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        QApplication.setAttribute(
-            Qt.ApplicationAttribute.AA_EnableHighDpiScaling
-        )
-        QApplication.setAttribute(
-            Qt.ApplicationAttribute.AA_UseHighDpiPixmaps
-        )
+        prepare_qt_runtime()
 
         if self._launcher_app is not None:
             self.app = self._launcher_app
@@ -282,16 +378,16 @@ class UIRuntimeMixin:
             )
             window = window_class(app=self, **self.window_class_params)
             app.main_window = window
-            window.show()
-            window.raise_()
-            window.activateWindow()
-            app.processEvents()
+            self._present_main_window(window, app)
 
             if self.splash:
-                self.splash.finish(window)
-                self.splash.close()
+                self._dismiss_splash_screen(window, app)
+                self._present_main_window(window, app)
+                QTimer.singleShot(
+                    0,
+                    lambda: self._present_main_window(window, app),
+                )
 
-            window.raise_()
             print(f"Qt Version: {qVersion()}")
             if hasattr(window, "ui") and not _AIRUNNER_IS_HEADLESS:
                 for attr in dir(window.ui):

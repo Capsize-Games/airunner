@@ -24,6 +24,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QSurfaceFormat
 
 # Import the VoiceVisualizer wrapper
+from airunner.qt_runtime_env import prefers_software_qt_rendering
 from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_python import (
     VoiceVisualizerWidget as VoiceVisualizerPython,
 )
@@ -85,6 +86,9 @@ class VoiceVisualizerComponent(QWidget):
 
     def _verify_opengl_support(self):
         """Verify OpenGL context is available"""
+        if prefers_software_qt_rendering():
+            return False
+
         try:
             from PySide6.QtOpenGLWidgets import QOpenGLWidget
 

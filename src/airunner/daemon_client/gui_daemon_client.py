@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
+import subprocess
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Optional
@@ -15,6 +18,7 @@ from airunner.daemon_client.daemon_connection_state import (
     DaemonConnectionState,
 )
 from airunner.daemon_client.daemon_launcher import DaemonLauncher
+from airunner.dev_build_token import current_dev_build_token
 from airunner.enums import LLMActionType
 from airunner.services.daemon_config import DaemonConfig
 from airunner.settings import AIRUNNER_LOG_LEVEL
@@ -36,6 +40,7 @@ class GuiDaemonClient:
         startup_timeout_seconds: float = 20.0,
         poll_interval_seconds: float = 0.25,
         request_timeout_seconds: float = 30.0,
+        detect_stale_dev_daemon: bool = False,
         state_callback: Optional[StateCallback] = None,
         time_fn: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
@@ -47,11 +52,15 @@ class GuiDaemonClient:
         self._startup_timeout_seconds = startup_timeout_seconds
         self._poll_interval_seconds = poll_interval_seconds
         self._request_timeout_seconds = request_timeout_seconds
+        self._detect_stale_dev_daemon = detect_stale_dev_daemon
         self._state_callback = state_callback
         self._time_fn = time_fn
         self._sleep = sleep
         self._state = DaemonConnectionState.NOT_STARTED
         self._last_error = ""
+        self._dev_build_token_checked_at = 0.0
+        self._cached_dev_build_token: Optional[str] = None
+        self._missing_dev_build_token_logged = False
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     @property
@@ -74,9 +83,21 @@ class GuiDaemonClient:
 
     def ensure_connected(self, *, auto_start: Optional[bool] = None) -> bool:
         """Return True when the daemon is reachable, starting it when allowed."""
-        if self._healthcheck_ready():
+        health = self._healthcheck_payload()
+        stale_reason = self._stale_dev_daemon_reason(health)
+        if health is not None and stale_reason is None:
             self._set_state(DaemonConnectionState.CONNECTED, "connected")
             return True
+
+        if stale_reason is not None:
+            if not self._resolved_auto_start(auto_start):
+                self._set_state(
+                    DaemonConnectionState.DISCONNECTED,
+                    stale_reason,
+                )
+                return False
+            if not self._recycle_stale_daemon(stale_reason):
+                return False
 
         if not self._resolved_auto_start(auto_start):
             self._set_state(
@@ -247,6 +268,15 @@ class GuiDaemonClient:
         auto_start: bool = True,
     ) -> Dict[str, Any]:
         """Submit one art generation request through the daemon art route."""
+        self.logger.info(
+            "GuiDaemonClient.start_art_generation model=%s version=%s scheduler=%s steps=%s size=%sx%s",
+            model,
+            version,
+            scheduler,
+            steps,
+            width,
+            height,
+        )
         response = self._request(
             "POST",
             "/api/v1/art/generate",
@@ -303,12 +333,29 @@ class GuiDaemonClient:
         *,
         auto_start: bool = False,
         timeout_seconds: float = 1800.0,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> bytes:
         """Poll one art job until it completes and return the PNG bytes."""
         deadline = self._time_fn() + timeout_seconds
+        last_status: Optional[str] = None
+        last_progress: Optional[float] = None
         while self._time_fn() < deadline:
             status = self.art_job_status(job_id, auto_start=auto_start)
             state = str(status.get("status", "")).lower()
+            progress = float(status.get("progress") or 0.0)
+            if progress_callback is not None and (
+                state != last_status or progress != last_progress
+            ):
+                progress_callback(status)
+            if state != last_status or progress != last_progress:
+                self.logger.info(
+                    "GuiDaemonClient.wait_art_job job_id=%s status=%s progress=%.1f",
+                    job_id,
+                    state,
+                    progress,
+                )
+                last_status = state
+                last_progress = progress
             if state == "completed":
                 return self.art_job_result(job_id, auto_start=auto_start)
             if state == "failed":
@@ -450,7 +497,16 @@ class GuiDaemonClient:
         """Wait for the daemon health endpoint to become ready."""
         deadline = self._time_fn() + self._startup_timeout_seconds
         while self._time_fn() < deadline:
-            if self._healthcheck_ready():
+            exit_code = self._launcher.last_exit_code()
+            if exit_code is not None:
+                self._last_error = (
+                    "Daemon process exited early with code "
+                    f"{exit_code}"
+                )
+                self._set_state(DaemonConnectionState.FAILED, self._last_error)
+                return False
+            health = self._healthcheck_payload()
+            if health is not None and self._stale_dev_daemon_reason(health) is None:
                 self._set_state(DaemonConnectionState.CONNECTED, "connected")
                 return True
             self._sleep(self._poll_interval_seconds)
@@ -459,8 +515,8 @@ class GuiDaemonClient:
         self._set_state(DaemonConnectionState.FAILED, self._last_error)
         return False
 
-    def _healthcheck_ready(self) -> bool:
-        """Return True when the daemon responds successfully to /health."""
+    def _healthcheck_payload(self) -> Optional[Dict[str, Any]]:
+        """Return the daemon /health payload when it is reachable."""
         try:
             response = self._session.request(
                 "GET",
@@ -468,10 +524,100 @@ class GuiDaemonClient:
                 timeout=5,
             )
             response.raise_for_status()
-            return True
+            return response.json()
         except requests.RequestException as exc:
             self._last_error = str(exc)
-            return False
+            return None
+
+    def _expected_dev_build_token(self) -> Optional[str]:
+        """Return the current expected dev build token for this client."""
+        if not self._detect_stale_dev_daemon:
+            return None
+        now = self._time_fn()
+        if now - self._dev_build_token_checked_at < 2.0:
+            return self._cached_dev_build_token
+        self._cached_dev_build_token = current_dev_build_token()
+        self._dev_build_token_checked_at = now
+        return self._cached_dev_build_token
+
+    def _stale_dev_daemon_reason(
+        self,
+        health: Optional[Dict[str, Any]],
+    ) -> Optional[str]:
+        """Return a mismatch reason when a dev daemon is stale."""
+        expected = self._expected_dev_build_token()
+        if health is None or not expected:
+            return None
+        observed = str(health.get("dev_build_token") or "").strip()
+        if not observed:
+            if not self._missing_dev_build_token_logged:
+                self.logger.debug(
+                    "Daemon health payload missing dev_build_token; "
+                    "skipping stale-daemon recycle"
+                )
+                self._missing_dev_build_token_logged = True
+            return None
+        self._missing_dev_build_token_logged = False
+        if observed != expected:
+            return "stale dev daemon build token mismatch"
+        return None
+
+    def _recycle_stale_daemon(self, reason: str) -> bool:
+        """Stop one stale local daemon so a fresh one can be launched."""
+        self.logger.info("Recycling daemon: %s", reason)
+        self._request_daemon_shutdown()
+        if not self._wait_until_unavailable(5.0):
+            self._terminate_port_owner()
+        if self._wait_until_unavailable(5.0):
+            self._set_state(DaemonConnectionState.RECONNECTING, reason)
+            return True
+        self._last_error = "Timed out stopping stale daemon"
+        self._set_state(DaemonConnectionState.FAILED, self._last_error)
+        return False
+
+    def _request_daemon_shutdown(self) -> None:
+        """Ask a reachable daemon on this port to shut itself down."""
+        try:
+            response = self._session.request(
+                "POST",
+                f"{self.base_url}/admin/shutdown",
+                timeout=5,
+            )
+            response.raise_for_status()
+        except requests.RequestException:
+            self.logger.debug("Daemon shutdown request failed", exc_info=True)
+
+    def _wait_until_unavailable(self, timeout_seconds: float) -> bool:
+        """Return True once the daemon no longer answers /health."""
+        deadline = self._time_fn() + timeout_seconds
+        while self._time_fn() < deadline:
+            if self._healthcheck_payload() is None:
+                return True
+            self._sleep(self._poll_interval_seconds)
+        return False
+
+    def _terminate_port_owner(self) -> None:
+        """Send SIGTERM to any process listening on the configured port."""
+        port = self.config.config.get("server", {}).get("port", 8188)
+        for pid in self._pids_on_port(port):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                self.logger.debug("Failed to terminate pid=%s", pid)
+
+    def _pids_on_port(self, port: int) -> list[int]:
+        """Return process ids currently listening on one TCP port."""
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return []
+        return [int(pid) for pid in result.stdout.split() if pid.isdigit()]
 
     def _request(
         self,

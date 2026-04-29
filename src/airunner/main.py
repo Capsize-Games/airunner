@@ -10,27 +10,21 @@ Do not change the order of the imports.
 # file system, network and log operations.
 # Keep this at the top of the main file.
 ################################################################
-from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
 import sys
 
-# Prevent Qt WebEngine from crashing
-os.environ["QT_QUICK_BACKEND"] = "software"
-os.environ["QT_XCB_GL_INTEGRATION"] = "none"
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
+)
 
-# Set fontconfig path to avoid "Cannot load default config file" errors
-# This helps Qt WebEngine find font configuration
-if not os.environ.get("FONTCONFIG_PATH"):
-    fontconfig_paths = [
-        "/etc/fonts",
-        "/usr/share/fontconfig",
-        os.path.join(os.path.expanduser("~"), ".config", "fontconfig"),
-    ]
-    for path in fontconfig_paths:
-        if os.path.isdir(path):
-            os.environ["FONTCONFIG_PATH"] = path
-            break
+
+configure_early_torch_allocator_environment()
+
+from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
+
+from airunner.qt_runtime_env import configure_early_qt_environment
+
+configure_early_qt_environment()
 
 """
 Temporary fix for windows - Facehuggershield is not working correctly
@@ -202,7 +196,7 @@ if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
         pass
 
 ################################################################
-# Set the environment variable for PyTorch to use expandable
+# Import torch only after the allocator environment is configured.
 ################################################################
 import torch
 

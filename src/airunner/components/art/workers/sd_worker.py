@@ -25,6 +25,7 @@ from airunner.enums import (
     SignalCode,
     ModelType,
     ModelAction,
+    ModelStatus,
 )
 from airunner.components.application.workers.worker import Worker
 from airunner.components.art.managers.stablediffusion.image_request import (
@@ -347,6 +348,32 @@ class SDWorker(Worker):
             if callback is not None:
                 self.logger.debug(f"[LOAD DEBUG] Calling callback with mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}")
                 callback(data)
+        elif data and mm and self._has_terminal_model_load_failure(mm):
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
+
+    @staticmethod
+    def _has_terminal_model_load_failure(model_manager) -> bool:
+        try:
+            return (
+                model_manager.model_status.get(model_manager.model_type)
+                is ModelStatus.FAILED
+            )
+        except Exception:
+            return False
+
+    def _notify_failed_model_load(
+        self,
+        image_request: Optional[ImageRequest],
+    ) -> None:
+        err = "Image model failed to load"
+        if image_request is not None:
+            if getattr(image_request, "model_path", None) == "":
+                err = "You must select a model before generating images."
+            if image_request.callback:
+                image_request.callback(err)
+        self.send_missing_model_alert(err)
 
     def unload(self, data: Dict):
         self.add_to_queue(
@@ -503,7 +530,15 @@ class SDWorker(Worker):
                         self._generate_image(data)
 
     def _generate_image(self, message: Dict):
-        if self._daemon_client() is not None:
+        image_request = message.get("image_request")
+        client = self._daemon_client()
+        self.logger.info(
+            "SDWorker::_generate_image using %s path for version=%s model=%s",
+            "daemon" if client is not None else "local",
+            getattr(image_request, "version", None),
+            getattr(image_request, "model_path", None),
+        )
+        if client is not None:
             self._generate_image_via_daemon(message)
             return
         message["callback"] = self._finalize_do_generate_signal
@@ -521,7 +556,31 @@ class SDWorker(Worker):
         if client is None or not isinstance(image_request, ImageRequest):
             self.handle_error("No image request available for daemon art generation")
             return
+
+        total_steps = max(int(image_request.steps or 1), 1)
+
+        def on_progress(status: Dict) -> None:
+            try:
+                progress = float(status.get("progress") or 0.0)
+            except (TypeError, ValueError):
+                return
+            self.logger.info(
+                "SDWorker daemon art progress: status=%s progress=%.1f",
+                status.get("status"),
+                progress,
+            )
+            step = int(round((progress / 100.0) * total_steps))
+            step = max(0, min(total_steps, step))
+            if hasattr(self.api, "art"):
+                self.api.art.progress_update(step=step, total=total_steps)
+
         try:
+            self.logger.info(
+                "Submitting daemon art job for version=%s scheduler=%s model=%s",
+                image_request.version,
+                image_request.scheduler,
+                image_request.model_path,
+            )
             job = client.start_art_generation(
                 prompt=image_request.prompt,
                 negative_prompt=image_request.negative_prompt or "",
@@ -541,7 +600,17 @@ class SDWorker(Worker):
             if not job_id:
                 raise RuntimeError("Art generation did not return a job id")
             self._active_daemon_job_id = job_id
-            image_bytes = client.wait_art_job(job_id, auto_start=False)
+            self.logger.info("Daemon art job accepted: job_id=%s", job_id)
+            image_bytes = client.wait_art_job(
+                job_id,
+                auto_start=False,
+                progress_callback=on_progress,
+            )
+            self.logger.info(
+                "Daemon art job completed: job_id=%s bytes=%s",
+                job_id,
+                len(image_bytes),
+            )
         except RuntimeError as exc:
             self._handle_daemon_art_error(str(exc))
             return
@@ -626,6 +695,11 @@ class SDWorker(Worker):
         if mm:
             # Don't try to generate if model isn't loaded yet (e.g., download in progress)
             if not mm.model_is_loaded:
+                if self._has_terminal_model_load_failure(mm):
+                    self._notify_failed_model_load(
+                        message.get("image_request", None)
+                    )
+                    return
                 self.logger.info(
                     "Model not loaded yet, skipping generation (download may be in progress)"
                 )
@@ -644,14 +718,23 @@ class SDWorker(Worker):
                     and getattr(image_request, "model_path", None) == ""
                 ):
                     err = "You must select a model before generating images."
+                if image_request is not None and image_request.callback:
+                    image_request.callback(err)
                 self.send_missing_model_alert(err)
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()
                 error_msg = str(e) if str(e) else f"{type(e).__name__}"
                 self.handle_error(f"Unexpected error: {error_msg}\n{tb}")
+                image_request = message.get("image_request", None)
+                failure_message = (
+                    "An unexpected error occurred during image generation. "
+                    "Please check logs."
+                )
+                if image_request is not None and image_request.callback:
+                    image_request.callback(failure_message)
                 self.send_missing_model_alert(
-                    "An unexpected error occurred during image generation. Please check logs."
+                    failure_message
                 )
             finally:
                 self._is_generating = False

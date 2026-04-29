@@ -18,6 +18,7 @@ import io
 import logging
 import os
 import queue
+import signal
 import time
 import threading
 import uuid
@@ -30,6 +31,7 @@ from pydantic import BaseModel, ConfigDict
 from airunner.components.model_management.model_registry import ModelRegistry
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.enums import LLMActionType, SignalCode
+from airunner.api.routes.health import build_health_payload
 from airunner.utils.application.signal_mediator import SignalMediator
 
 
@@ -49,15 +51,26 @@ def _get_airunner_api(req: Request):
 @router.get("/health")
 async def legacy_health() -> Dict[str, Any]:
     return {
-        "status": "ready",
+        **build_health_payload("ready"),
         "services": {
             "llm": os.environ.get("AIRUNNER_LLM_ON", "1") == "1",
             "art": os.environ.get("AIRUNNER_SD_ON", "0") == "1",
             "tts": os.environ.get("AIRUNNER_TTS_ON", "0") == "1",
             "stt": os.environ.get("AIRUNNER_STT_ON", "0") == "1",
         },
-        "version": "2.0.0",
     }
+
+
+def _schedule_process_shutdown(delay_seconds: float = 0.1) -> None:
+    """Terminate the current process after the response is returned."""
+    timer = threading.Timer(delay_seconds, _terminate_current_process)
+    timer.daemon = True
+    timer.start()
+
+
+def _terminate_current_process() -> None:
+    """Send SIGTERM to the current process for graceful daemon shutdown."""
+    os.kill(os.getpid(), signal.SIGTERM)
 
 
 @router.get("/llm/models")
@@ -531,4 +544,5 @@ def legacy_admin_reset_database() -> Dict[str, Any]:
 
 @router.post("/admin/shutdown")
 def legacy_admin_shutdown() -> Dict[str, Any]:
-    return {"status": "ok"}
+    _schedule_process_shutdown()
+    return {"status": "ok", "shutting_down": True}

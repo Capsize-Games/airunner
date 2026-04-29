@@ -242,7 +242,7 @@ AI Runner can run as a headless HTTP API server, enabling remote access to LLM, 
 airunner-headless
 
 # Start with a specific LLM model
-airunner-headless --model /path/to/Qwen2.5-7B-Instruct-4bit
+airunner-headless --model "/path/to/Qwen2.5-7B-Instruct-4bit"
 
 # Run as Ollama replacement for VS Code (port 11434)
 airunner-headless --ollama-mode
@@ -259,10 +259,10 @@ airunner-headless --no-preload
 | `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
 | `--ollama-mode` | Run as Ollama replacement on port 11434 |
 | `--insecure-no-auth` | Allow binding to non-loopback without `AIRUNNER_API_KEY` (not recommended) |
-| `--model, -m PATH` | Path to LLM model to load |
-| `--art-model PATH` | Path to Stable Diffusion model to load |
-| `--tts-model PATH` | Path to TTS model to load |
-| `--stt-model PATH` | Path to STT model to load |
+| `--model, -m PATH` | Path to LLM model to load. Also enables the LLM service. Quote paths that contain spaces. |
+| `--art-model PATH` | Path to Stable Diffusion model to load. Also enables the art service. Quote paths that contain spaces. |
+| `--tts-model PATH` | Path to TTS model to load. Also enables the TTS service. Quote paths that contain spaces. |
+| `--stt-model PATH` | Path to STT model to load. Also enables the STT service. Quote paths that contain spaces. |
 | `--enable-llm` | Enable LLM service |
 | `--enable-art` | Enable Stable Diffusion/art service |
 | `--enable-tts` | Enable TTS service |
@@ -374,8 +374,13 @@ curl -X POST http://localhost:8080/stt \
 
 1. Start the headless server in Ollama mode:
    ```bash
-   airunner-headless --ollama-mode --model /path/to/your/model
+  airunner-headless --ollama-mode --model "/path/to/your/model"
    ```
+
+If a model path contains spaces, quote it. For example:
+```bash
+airunner-headless --enable-art --art-model "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/moodyRealMix_zitV3FP8.safetensors"
+```
 
 2. Configure VS Code Continue extension to use `http://localhost:11434`
 

@@ -1,3 +1,4 @@
+import os
 import traceback
 from typing import Dict, Optional, Callable as CallableType
 import inspect
@@ -10,6 +11,15 @@ import queue
 from airunner.utils.application.get_logger import get_logger
 
 logger = get_logger(__name__)
+
+
+def _use_headless_direct_dispatch() -> bool:
+    """Return True when signals should bypass queued Qt delivery."""
+    return os.environ.get("AIRUNNER_HEADLESS", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 class SingletonMeta(type):
@@ -354,9 +364,17 @@ class SignalMediator(metaclass=SingletonMeta):
         elif code in self.signals:
             for signal in self.signals[code]:
                 try:
-                    signal.signal.emit(data)
+                    self._deliver_signal(signal, data)
                 except RuntimeError:
                     pass
+
+    @staticmethod
+    def _deliver_signal(signal: Signal, data: Dict) -> None:
+        """Deliver one signal with headless-safe dispatch semantics."""
+        if _use_headless_direct_dispatch():
+            signal.on_signal_received(data)
+            return
+        signal.signal.emit(data)
 
     def register_pending_request(
         self, request_id: str, callback: Optional[CallableType] = None

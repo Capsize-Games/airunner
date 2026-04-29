@@ -14,6 +14,33 @@ def _daemon_config():
     )
 
 
+def test_configure_daemon_environment_sets_headless_defaults(monkeypatch):
+    import airunner.services.daemon as daemon_module
+
+    monkeypatch.delenv("AIRUNNER_HEADLESS", raising=False)
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+    monkeypatch.delenv("QT_LOGGING_RULES", raising=False)
+    monkeypatch.delenv("PYTORCH_ALLOC_CONF", raising=False)
+    monkeypatch.delenv("PYTORCH_CUDA_ALLOC_CONF", raising=False)
+
+    daemon_module._configure_daemon_environment()
+
+    assert daemon_module.os.environ["AIRUNNER_HEADLESS"] == "1"
+    assert daemon_module.os.environ["QT_QPA_PLATFORM"] == "offscreen"
+    assert (
+        daemon_module.os.environ["QT_LOGGING_RULES"]
+        == "*.debug=false;qt.qpa.*=false"
+    )
+    assert (
+        daemon_module.os.environ["PYTORCH_ALLOC_CONF"]
+        == "backend:cudaMallocAsync"
+    )
+    assert (
+        daemon_module.os.environ["PYTORCH_CUDA_ALLOC_CONF"]
+        == daemon_module.os.environ["PYTORCH_ALLOC_CONF"]
+    )
+
+
 def test_daemon_owns_headless_lifecycle(monkeypatch):
     import airunner.services.daemon as daemon_module
 

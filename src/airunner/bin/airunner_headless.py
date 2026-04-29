@@ -19,10 +19,10 @@ Usage:
         airunner-headless \
             --daemon-config ~/.local/share/airunner/runtime/configs/daemon.yaml
     airunner-headless --ollama-mode  # Run as Ollama replacement on port 11434
-    airunner-headless --model /path/to/llm/model  # Load specific LLM model
-    airunner-headless --art-model /path/to/art/model  # Load specific art model
-    airunner-headless --tts-model /path/to/tts/model  # Load specific TTS model
-    airunner-headless --stt-model /path/to/stt/model  # Load specific STT model
+    airunner-headless --model "/path/to/llm/model"  # Load specific LLM model
+    airunner-headless --art-model "/path/to/art/model"  # Load specific art model
+    airunner-headless --tts-model "/path/to/tts/model"  # Load specific TTS model
+    airunner-headless --stt-model "/path/to/stt/model"  # Load specific STT model
     airunner-headless --no-preload  # Don't preload models, load on first request
     airunner-headless --help
 
@@ -61,17 +61,21 @@ Examples:
     airunner-headless --ollama-mode
 
     # Load a specific LLM model at startup
-    airunner-headless --model /path/to/Qwen2.5-7B-Instruct-4bit
+    airunner-headless --model "/path/to/Qwen2.5-7B-Instruct-4bit"
 
     # Run without preloading models (load on first request)
     airunner-headless --no-preload
 
     # Enable Stable Diffusion and load a specific art model
-    airunner-headless --enable-art --art-model /path/to/stable-diffusion-v1-5
+    airunner-headless --enable-art --art-model "/path/to/stable-diffusion-v1-5"
 
     # Enable all services with specific models
     airunner-headless --enable-llm --enable-art --enable-tts --enable-stt \\
-        --model /path/to/llm --art-model /path/to/art
+        --model "/path/to/llm" --art-model "/path/to/art"
+
+Important:
+    Quote any model path that contains spaces, such as
+    "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors".
 """
 
 import argparse
@@ -169,25 +173,35 @@ def _add_model_args(parser: argparse.ArgumentParser) -> None:
         "-m",
         type=str,
         default=os.environ.get("AIRUNNER_LLM_MODEL_PATH"),
-        help="Path to LLM model to load at startup (or first request)",
+        help=(
+            "Path to LLM model to load at startup (or first request). "
+            "Also enables the LLM service."
+        ),
     )
     parser.add_argument(
         "--art-model",
         type=str,
         default=os.environ.get("AIRUNNER_ART_MODEL_PATH"),
-        help="Path to art or Stable Diffusion model to load",
+        help=(
+            "Path to art or Stable Diffusion model to load. "
+            "Also enables the art service."
+        ),
     )
     parser.add_argument(
         "--tts-model",
         type=str,
         default=os.environ.get("AIRUNNER_TTS_MODEL_PATH"),
-        help="Path to TTS model to load",
+        help=(
+            "Path to TTS model to load. Also enables the TTS service."
+        ),
     )
     parser.add_argument(
         "--stt-model",
         type=str,
         default=os.environ.get("AIRUNNER_STT_MODEL_PATH"),
-        help="Path to STT model to load",
+        help=(
+            "Path to STT model to load. Also enables the STT service."
+        ),
     )
 
 
@@ -420,6 +434,7 @@ def _build_daemon_client(config_path: Path):
     from airunner.daemon_client.daemon_launcher import DaemonLauncher
     from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
     from airunner.linux_bundle_layout import build_linux_bundle_layout
+    from airunner.settings import DEV_ENV
 
     bundle_layout = build_linux_bundle_layout()
 
@@ -433,6 +448,7 @@ def _build_daemon_client(config_path: Path):
         config_path=config_path,
         launcher=launcher,
         auto_start=False,
+        detect_stale_dev_daemon=DEV_ENV,
     )
 
 

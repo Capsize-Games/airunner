@@ -91,12 +91,17 @@ def _request(action: RuntimeAction = RuntimeAction.INVOKE) -> RequestEnvelope:
         payload={
             "prompt": "Draw a lighthouse",
             "negative_prompt": "",
+            "model": "/tmp/request-model",
             "width": 512,
             "height": 512,
             "steps": 20,
             "cfg_scale": 7.5,
             "seed": 123,
             "num_images": 1,
+            "metadata": {
+                "version": "Z-Image Turbo",
+                "scheduler": "Flow Match Euler",
+            },
         },
     )
 
@@ -147,6 +152,57 @@ def test_invoke_round_trips_art_job_api(monkeypatch):
     ]
     assert session.calls[0][0] == "POST"
     assert session.calls[0][1].endswith("/api/v1/art/generate")
+    assert session.calls[0][2]["json"] == {
+        "prompt": "Draw a lighthouse",
+        "negative_prompt": "",
+        "model": "/tmp/request-model",
+        "width": 512,
+        "height": 512,
+        "steps": 20,
+        "cfg_scale": 7.5,
+        "seed": 123,
+        "num_images": 1,
+        "version": "Z-Image Turbo",
+        "scheduler": "Flow Match Euler",
+    }
+
+
+def test_invoke_with_progress_reports_polled_job_updates(monkeypatch):
+    monkeypatch.setattr(
+        "airunner.runtimes.sidecar_art_client.time.sleep",
+        lambda _seconds: None,
+    )
+    progress_updates = []
+    launcher = FakeLauncher(_settings())
+    session = FakeSession(
+        [
+            FakeResponse(payload={"job_id": "job-1", "status": "running"}),
+            FakeResponse(payload={"job_id": "job-1", "status": "running", "progress": 12.5}),
+            FakeResponse(payload={"job_id": "job-1", "status": "running", "progress": 75.0}),
+            FakeResponse(payload={"job_id": "job-1", "status": "completed", "progress": 100.0}),
+            FakeResponse(content=b"png-bytes"),
+        ]
+    )
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=session,
+    )
+
+    response = client.invoke_with_progress(_request(), progress_updates.append)
+
+    assert response.status is EnvelopeStatus.SUCCEEDED
+    assert progress_updates == [
+        {
+            "job_id": "job-1",
+            "status": "running",
+            "progress": 2.0,
+            "phase": "submitted",
+        },
+        {"job_id": "job-1", "status": "running", "progress": 12.5},
+        {"job_id": "job-1", "status": "running", "progress": 75.0},
+        {"job_id": "job-1", "status": "completed", "progress": 100.0},
+    ]
 
 
 def test_cancel_sends_remote_job_cancel():

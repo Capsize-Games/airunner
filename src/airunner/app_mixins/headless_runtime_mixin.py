@@ -11,6 +11,7 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import QCoreApplication
 
+from airunner.components.art.api.art_services import ARTAPIService
 from airunner.components.data.session_manager import session_scope
 from airunner.components.knowledge import get_knowledge_base
 from airunner.components.llm.api.llm_services import LLMAPIService
@@ -171,6 +172,8 @@ class HeadlessRuntimeMixin:
         """Attach compatibility API services used by legacy daemon routes."""
         if not hasattr(self, "llm"):
             self.llm = LLMAPIService()
+        if not hasattr(self, "art"):
+            self.art = ARTAPIService()
 
     def ensure_lifecycle_service(self) -> CoreLifecycleService:
         """Return the reusable lifecycle service for this App."""

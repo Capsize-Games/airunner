@@ -5,6 +5,7 @@ for settings management without a monolithic class.
 """
 
 from typing import List, Dict, Optional, Any
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode
 from airunner.utils.application.get_logger import get_logger
@@ -59,36 +60,47 @@ class SettingsMixin(
 
         super().__init__(*args, **kwargs)
 
-        # Initialize layer selection tracking
         self._selected_layer_ids = set()
+        self._register_layer_selection_handler()
+        self.api = self._resolve_api_reference()
 
-        # Add layer selection signal handler
-        if (
-            hasattr(self, "signal_handlers")
-            and self.signal_handlers is not None
-        ):
+    def _register_layer_selection_handler(self) -> None:
+        """Register layer selection handling on one settings-aware object."""
+        if hasattr(self, "signal_handlers") and self.signal_handlers is not None:
             self.signal_handlers[SignalCode.LAYER_SELECTION_CHANGED] = (
                 self._on_layer_selection_changed
             )
-        else:
-            self.signal_handlers = {
-                SignalCode.LAYER_SELECTION_CHANGED: (
-                    self._on_layer_selection_changed
-                )
-            }
+            return
+        self.signal_handlers = {
+            SignalCode.LAYER_SELECTION_CHANGED: (
+                self._on_layer_selection_changed
+            )
+        }
 
+    def _resolve_api_reference(self) -> Any:
+        """Return the active app API without auto-creating a GUI singleton."""
+        api = self._api_from_qt_application()
+        if api is not None:
+            return api
+        return self._peek_global_api()
 
-        # Get API reference from application
-        app = QApplication.instance()
-        if app:
-            self.api = getattr(app, "api", None)
-        else:
-            # In headless mode, there's no QApplication, so get API from global instance
-            try:
-                from airunner.components.server.api.server import get_api
-                self.api = get_api()
-            except Exception as e:
-                self.api = None
+    @staticmethod
+    def _api_from_qt_application() -> Any:
+        """Return the API attached to the running Qt application, if any."""
+        app = QApplication.instance() or QCoreApplication.instance()
+        if app is None:
+            return None
+        return getattr(app, "api", None)
+
+    @staticmethod
+    def _peek_global_api() -> Any:
+        """Return the registered API instance without creating a GUI app."""
+        try:
+            from airunner.components.server.api.server import get_api
+
+            return get_api(create_if_missing=False)
+        except Exception:
+            return None
 
     @property
     def settings_mixin_shared_instance(self) -> SettingsMixinSharedInstance:

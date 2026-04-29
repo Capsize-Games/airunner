@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 
 from airunner.utils.application.signal_mediator import SignalMediator
@@ -97,3 +99,33 @@ def test_register_dedupe_bound_method():
         )
         matches = [w for w in wrappers if w.matches(wm.on_llm_request_signal)]
         assert len(matches) == 1
+
+
+def test_emit_signal_dispatches_from_background_thread_in_headless_mode(
+    monkeypatch,
+):
+    mediator = SignalMediator()
+    mediator.signals = {}
+    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
+
+    called = []
+    delivered = threading.Event()
+
+    def cb(data):
+        called.append(data)
+        delivered.set()
+
+    mediator.register(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, cb)
+
+    worker = threading.Thread(
+        target=lambda: mediator.emit_signal(
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+            {"threaded": True},
+        )
+    )
+    worker.start()
+    worker.join(timeout=2)
+
+    assert not worker.is_alive()
+    assert delivered.wait(timeout=1)
+    assert called == [{"threaded": True}]

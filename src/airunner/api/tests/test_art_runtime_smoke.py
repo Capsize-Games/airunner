@@ -15,8 +15,8 @@ from airunner.runtimes.contracts import (
 )
 
 PNG_B64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
-    "/w8AAn8B9pN96QAAAABJRU5ErkJggg=="
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4"
+    "////fwAJ+wP9KobjigAAAABJRU5ErkJggg=="
 )
 
 

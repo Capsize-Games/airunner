@@ -301,6 +301,7 @@ setup(
     author_email="contact@capsizegames.com",
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
+    py_modules=["airunner_startup_env"],
     packages=find_packages("src"),
     python_requires=">=3.13.3",
     install_requires=CORE_REQUIREMENTS,

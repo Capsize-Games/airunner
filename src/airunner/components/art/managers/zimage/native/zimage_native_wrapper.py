@@ -297,8 +297,9 @@ class NativePipelineWrapper:
             self._native.unload()
 
 
-class PipelineOutput:
+class PipelineOutput(dict):
     """Simple output class mimicking diffusers pipeline output."""
-    
+
     def __init__(self, images: List[Image.Image]):
+        super().__init__(images=images)
         self.images = images

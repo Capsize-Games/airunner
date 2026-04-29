@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import sys
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
 
 
@@ -71,7 +71,7 @@ def _resolve_bundle_root(
         python_executable or os.environ.get("AIRUNNER_PYTHON")
     )
     if inferred is not None:
-        return inferred
+        return inferred.resolve()
 
     return Path.cwd().resolve()
 
@@ -92,10 +92,10 @@ def _resolve_python_executable(
     for candidate in candidates:
         if not candidate:
             continue
-        path = Path(candidate).expanduser().resolve()
+        path = _absolute_path(candidate)
         if path.exists():
             return path
-    return Path(sys.executable).resolve()
+    return _absolute_path(sys.executable)
 
 
 def _infer_bundle_root_from_python(
@@ -103,9 +103,9 @@ def _infer_bundle_root_from_python(
 ) -> Optional[Path]:
     """Infer the bundle root from common venv-style Python locations."""
     if not python_executable:
-        python_path = Path(sys.executable).resolve()
+        python_path = _absolute_path(sys.executable)
     else:
-        python_path = Path(python_executable).expanduser().resolve()
+        python_path = _absolute_path(python_executable)
 
     if python_path.parent.name != "bin":
         return None
@@ -118,6 +118,14 @@ def _infer_bundle_root_from_python(
     if _looks_like_bundle_root(candidate_root):
         return candidate_root
     return None
+
+
+def _absolute_path(candidate: Path | str) -> Path:
+    """Return an absolute path while preserving virtualenv symlink entries."""
+    path = Path(candidate).expanduser()
+    if path.is_absolute():
+        return path
+    return (Path.cwd() / path).absolute()
 
 
 def _looks_like_bundle_root(candidate_root: Path) -> bool:

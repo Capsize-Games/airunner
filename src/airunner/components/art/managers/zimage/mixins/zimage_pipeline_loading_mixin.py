@@ -925,8 +925,10 @@ class ZImagePipelineLoadingMixin:
         self.logger.info("Loading FP8 transformer weights (streaming)...")
         native_pipeline.load_transformer(stream_load=True)
         
-        # Load text encoder with 4-bit quantization
-        self.logger.info("Loading text encoder (4-bit quantized)...")
+        # Load the text encoder with an adaptive low-VRAM strategy.
+        self.logger.info(
+            "Loading text encoder with adaptive memory strategy..."
+        )
         native_pipeline.load_text_encoder()
         
         # Load VAE (small, no quantization needed)

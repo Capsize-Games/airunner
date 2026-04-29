@@ -24,8 +24,9 @@ from airunner.runtimes.contracts import (
     ArtInvocationRequest,
     RuntimeAction,
     RuntimeKind,
+    RuntimeMode,
 )
-from airunner.runtimes.registry import RuntimeRegistry
+from airunner.runtimes.registry import RuntimeRegistry, RuntimeRoute
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_ART_MODEL_PATH,
@@ -126,15 +127,56 @@ def require_runtime_registry(request: Request) -> RuntimeRegistry:
 
 
 def resolve_art_client(registry: RuntimeRegistry) -> RuntimeClient:
-    """Resolve the explicit sidecar art runtime client."""
-    try:
-        return registry.resolve(
+    """Resolve the art runtime client for the current daemon role."""
+    if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
+        route = RuntimeRoute(
             RuntimeKind.ART,
             provider="local",
-            deployment_mode="sidecar",
+            deployment_mode=RuntimeMode.LOCAL_FALLBACK.value,
         )
-    except KeyError as exc:
-        raise HTTPException(status_code=503, detail="Art runtime unavailable") from exc
+        detail = "Art runtime unavailable"
+    else:
+        route = RuntimeRoute(
+            RuntimeKind.ART,
+            provider="local",
+            deployment_mode=RuntimeMode.SIDECAR.value,
+        )
+        detail = "Art sidecar runtime unavailable"
+
+    if not _has_runtime_route(registry, route):
+        raise HTTPException(status_code=503, detail=detail)
+
+    client = registry.resolve(
+        route.runtime,
+        provider=route.provider,
+        deployment_mode=route.deployment_mode,
+    )
+    logger.debug(
+        "Resolved art runtime route=%s client=%s",
+        route.deployment_mode,
+        type(client).__name__,
+    )
+    return client
+
+
+def _has_runtime_route(registry: RuntimeRegistry, route: RuntimeRoute) -> bool:
+    """Return True when one exact runtime route is registered."""
+    has_route = getattr(registry, "has_route", None)
+    if callable(has_route):
+        return bool(has_route(route))
+    list_routes = getattr(registry, "list_routes", None)
+    if callable(list_routes):
+        normalized = route.normalized()
+        return any(candidate.normalized() == normalized for candidate in list_routes())
+    try:
+        registry.resolve(
+            route.runtime,
+            provider=route.provider,
+            deployment_mode=route.deployment_mode,
+        )
+    except KeyError:
+        return False
+    return True
 
 
 async def _job_cancelled(tracker: JobTracker, job_id: str) -> bool:
@@ -166,28 +208,45 @@ async def _run_art_job(
         metadata["version"] = request.version
     if request.scheduler:
         metadata["scheduler"] = request.scheduler
-    try:
-        response = await asyncio.to_thread(
-            client.invoke,
-            RequestEnvelope(
-                request_id=job_id,
-                runtime=RuntimeKind.ART,
-                action=RuntimeAction.INVOKE,
-                provider="local",
-                payload=ArtInvocationRequest(
-                    prompt=request.prompt,
-                    negative_prompt=request.negative_prompt or "",
-                    model=request.model,
-                    width=request.width,
-                    height=request.height,
-                    steps=request.steps,
-                    cfg_scale=request.cfg_scale,
-                    seed=request.seed,
-                    num_images=request.num_images,
-                    metadata=metadata,
-                ).model_dump(),
-            ),
+    loop = asyncio.get_running_loop()
+    envelope = RequestEnvelope(
+        request_id=job_id,
+        runtime=RuntimeKind.ART,
+        action=RuntimeAction.INVOKE,
+        provider="local",
+        payload=ArtInvocationRequest(
+            prompt=request.prompt,
+            negative_prompt=request.negative_prompt or "",
+            model=request.model,
+            width=request.width,
+            height=request.height,
+            steps=request.steps,
+            cfg_scale=request.cfg_scale,
+            seed=request.seed,
+            num_images=request.num_images,
+            metadata=metadata,
+        ).model_dump(),
+    )
+
+    def on_progress(progress_data: dict) -> None:
+        progress = _coerce_job_progress(progress_data)
+        if progress is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            tracker.update_progress(job_id, progress, JobState.RUNNING),
+            loop,
         )
+
+    try:
+        invoke_with_progress = getattr(client, "invoke_with_progress", None)
+        if callable(invoke_with_progress):
+            response = await asyncio.to_thread(
+                invoke_with_progress,
+                envelope,
+                on_progress,
+            )
+        else:
+            response = await asyncio.to_thread(client.invoke, envelope)
     except Exception as exc:
         await _fail_art_job(tracker, job_id, str(exc))
         return
@@ -215,6 +274,15 @@ async def _run_art_job(
     if await _job_cancelled(tracker, job_id):
         return
     await tracker.complete_job(job_id, {"image": image})
+
+
+def _coerce_job_progress(progress_data: dict) -> Optional[float]:
+    """Return one normalized job progress percentage."""
+    try:
+        progress = float(progress_data.get("progress"))
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, min(99.0, progress))
 
 
 def _resolve_art_model_path(model_version: Optional[str] = None) -> str:
@@ -431,7 +499,7 @@ async def generate_image(request: GenerationRequest, req: Request):
         )
 
         # Update job to running
-        await tracker.update_progress(job_id, 0.0, JobState.RUNNING)
+        await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
         asyncio.create_task(
             _run_art_job(
                 tracker,
@@ -443,6 +511,8 @@ async def generate_image(request: GenerationRequest, req: Request):
 
         return GenerationResponse(job_id=job_id, status="running")
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error starting generation: {e}")
         raise HTTPException(

@@ -2,6 +2,14 @@ from typing import Dict, List, Optional
 import glob
 import os
 import os.path
+
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
+)
+
+
+configure_early_torch_allocator_environment()
+
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
@@ -9,14 +17,10 @@ from PySide6.QtWidgets import QApplication
 from airunner.utils.application import get_logger
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
+    DEV_ENV,
     LOCAL_SERVER_PORT,
     MATHJAX_VERSION,
 )
-
-# CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch.
-# PYTORCH_CUDA_ALLOC_CONF was deprecated in favor of PYTORCH_ALLOC_CONF.
-os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", os.environ["PYTORCH_ALLOC_CONF"])
 
 from airunner.app_mixins import (
     HeadlessRuntimeMixin,
@@ -100,7 +104,9 @@ class App(
         self.runtime_registry = build_runtime_registry(app_instance=self)
         self.daemon_client = None
         if not self.headless:
-            self.daemon_client = GuiDaemonClient()
+            self.daemon_client = GuiDaemonClient(
+                detect_stale_dev_daemon=DEV_ENV,
+            )
         self._register_signals()
         self._ensure_mathjax()
 

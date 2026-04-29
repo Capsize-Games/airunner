@@ -7,7 +7,12 @@ from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
 from airunner.components.art.workers.sd_worker import SDWorker
-from airunner.enums import EngineResponseCode, GeneratorSection
+from airunner.enums import (
+    EngineResponseCode,
+    GeneratorSection,
+    ModelStatus,
+    ModelType,
+)
 
 PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4"
@@ -69,6 +74,7 @@ def _worker(client):
         controlnet_settings=SimpleNamespace(controlnet="canny"),
         logger=SimpleNamespace(
             debug=lambda *args, **kwargs: None,
+            info=lambda *args, **kwargs: None,
             error=lambda *args, **kwargs: None,
         ),
         handle_error=lambda message: errors.append(message),
@@ -117,3 +123,110 @@ def test_interrupt_image_generation_cancels_active_daemon_job():
     SDWorker.on_interrupt_image_generation_signal(worker)
 
     assert client.calls[0][0] == "cancel"
+
+
+def test_finalize_do_generate_signal_reports_failures_via_callback():
+    callback_results = []
+    handled_errors = []
+    alerts = []
+    request = ImageRequest(
+        prompt="A mountain",
+        model_path="/tmp/art-model",
+        callback=lambda result: callback_results.append(result),
+    )
+    worker = SimpleNamespace(
+        model_manager=SimpleNamespace(
+            model_is_loaded=True,
+            handle_generate_signal=lambda _message: (_ for _ in ()).throw(
+                TypeError("pipeline result is invalid")
+            ),
+        ),
+        logger=SimpleNamespace(
+            debug=lambda *args, **kwargs: None,
+            info=lambda *args, **kwargs: None,
+        ),
+        handle_error=lambda message: handled_errors.append(message),
+        send_missing_model_alert=lambda message: alerts.append(message),
+        _pending_scheduler=None,
+        _apply_scheduler_change=lambda _scheduler: None,
+        _is_generating=False,
+    )
+
+    SDWorker._finalize_do_generate_signal(worker, {"image_request": request})
+
+    assert callback_results == ["Image model failed to load"]
+    assert handled_errors == ["pipeline result is invalid"]
+    assert alerts == ["Image model failed to load"]
+
+
+def test_load_model_manager_calls_callback_for_terminal_load_failure():
+    callback_payloads = []
+    request = ImageRequest(prompt="A mountain", model_path="")
+    model_manager = SimpleNamespace(
+        model_is_loaded=False,
+        model_type=ModelType.SD,
+        model_status={ModelType.SD: ModelStatus.FAILED},
+        load=lambda: None,
+        image_request=None,
+    )
+    worker = SimpleNamespace(
+        generator_settings=SimpleNamespace(),
+        model_manager=model_manager,
+        logger=SimpleNamespace(debug=lambda *args, **kwargs: None),
+        _process_image_request=lambda data: data,
+    )
+    worker._has_terminal_model_load_failure = (
+        SDWorker._has_terminal_model_load_failure
+    )
+
+    SDWorker.load_model_manager(
+        worker,
+        {
+            "image_request": request,
+            "callback": lambda payload: callback_payloads.append(payload),
+        },
+    )
+
+    assert model_manager.image_request is request
+    assert len(callback_payloads) == 1
+    assert callback_payloads[0]["image_request"] is request
+
+
+def test_finalize_do_generate_signal_reports_failed_load_via_callback():
+    callback_results = []
+    alerts = []
+    request = ImageRequest(
+        prompt="A mountain",
+        model_path="",
+        callback=lambda result: callback_results.append(result),
+    )
+    model_manager = SimpleNamespace(
+        model_is_loaded=False,
+        model_type=ModelType.SD,
+        model_status={ModelType.SD: ModelStatus.FAILED},
+    )
+    worker = SimpleNamespace(
+        model_manager=model_manager,
+        logger=SimpleNamespace(
+            debug=lambda *args, **kwargs: None,
+            info=lambda *args, **kwargs: None,
+        ),
+        send_missing_model_alert=lambda message: alerts.append(message),
+        _pending_scheduler=None,
+        _apply_scheduler_change=lambda _scheduler: None,
+        _is_generating=False,
+    )
+    worker._has_terminal_model_load_failure = (
+        SDWorker._has_terminal_model_load_failure
+    )
+    worker._notify_failed_model_load = SDWorker._notify_failed_model_load.__get__(
+        worker,
+        SimpleNamespace,
+    )
+
+    SDWorker._finalize_do_generate_signal(worker, {"image_request": request})
+
+    assert callback_results == [
+        "You must select a model before generating images."
+    ]
+    assert alerts == ["You must select a model before generating images."]

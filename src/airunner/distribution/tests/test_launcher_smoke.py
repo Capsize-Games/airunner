@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,22 @@ def run_launcher(*args: str) -> subprocess.CompletedProcess[str]:
         [str(launcher_path()), *args],
         capture_output=True,
         check=False,
+        text=True,
+    )
+
+
+def run_python_launcher_module() -> subprocess.CompletedProcess[str]:
+    """Run the Python launcher module directly under the repo venv."""
+    env = dict(**__import__("os").environ)
+    env["PYTHONPATH"] = str(REPO_ROOT / "src")
+    env["AIRUNNER_TEST_NO_GUI_LAUNCH"] = "1"
+    env.pop("AIRUNNER_ALLOW_GUI_TEST_LAUNCH", None)
+    return subprocess.run(
+        [str(repo_python()), "-m", "airunner.launcher"],
+        capture_output=True,
+        check=False,
+        cwd=REPO_ROOT,
+        env=env,
         text=True,
     )
 
@@ -138,3 +155,14 @@ def test_launcher_diagnose_reports_missing_pythonpath(tmp_path: Path) -> None:
     assert result.returncode == 2
     assert "mode=prod" in result.stdout
     assert "configured AIRUNNER_PYTHONPATH does not exist" in result.stderr
+
+
+@pytest.mark.fast
+def test_python_launcher_module_executes_main_guard() -> None:
+    """python -m airunner.launcher should execute main(), not just import."""
+    result = run_python_launcher_module()
+
+    assert result.returncode != 0
+    assert "GUI AIRunner startup is disabled during automated tests." in (
+        result.stderr + result.stdout
+    )

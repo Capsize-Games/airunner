@@ -77,3 +77,14 @@ class TestPipelineOutput:
         
         assert output.images == images
         assert len(output.images) == 1
+
+    def test_behaves_like_diffusers_output_mapping(self) -> None:
+        """Test mapping-style access used by SD generation mixins."""
+        from PIL import Image
+
+        images = [Image.new("RGB", (64, 64))]
+        output = PipelineOutput(images)
+
+        assert "images" in output
+        assert output["images"] == images
+        assert output.get("images") == images

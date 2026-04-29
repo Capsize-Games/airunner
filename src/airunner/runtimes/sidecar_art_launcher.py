@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import os
 import subprocess
-import sys
 import tempfile
 import time
 from pathlib import Path
@@ -13,6 +12,7 @@ from typing import Any, Callable, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from airunner.linux_bundle_layout import build_linux_bundle_layout
 from airunner.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
 )
@@ -83,6 +83,10 @@ class SidecarArtLauncher:
         launch_preparer: LaunchPreparer = _prepare_managed_daemon_launch,
         sleep: Callable[[float], None] = time.sleep,
         time_fn: Callable[[], float] = time.monotonic,
+        stdout: Any = subprocess.DEVNULL,
+        stderr: Any = subprocess.DEVNULL,
+        working_directory: Optional[Path] = None,
+        environment: Optional[dict[str, str]] = None,
     ) -> None:
         self.settings = settings
         self._process_factory = process_factory
@@ -91,6 +95,10 @@ class SidecarArtLauncher:
         self._launch_preparer = launch_preparer
         self._sleep = sleep
         self._time_fn = time_fn
+        self._stdout = self._resolved_stdio(stdout)
+        self._stderr = self._resolved_stdio(stderr)
+        self._working_directory = working_directory
+        self._environment_override = environment
         self._process: Optional[subprocess.Popen] = None
         self._config_path: Optional[Path] = None
         self._last_error = ""
@@ -114,13 +122,18 @@ class SidecarArtLauncher:
         """Build the daemon launch command for the art sidecar."""
         if self._config_path is None:
             self._config_path = self._config_path_builder(self.settings)
-        return [
-            sys.executable,
-            "-m",
-            "airunner.services.daemon",
-            "--config",
-            str(self._config_path),
-        ]
+        bundle_layout = build_linux_bundle_layout()
+        daemon_executable = bundle_layout.daemon_executable()
+        if daemon_executable is not None:
+            command = [str(daemon_executable)]
+        else:
+            command = [
+                str(bundle_layout.python_executable),
+                "-m",
+                "airunner.services.daemon",
+            ]
+        command.extend(["--config", str(self._config_path)])
+        return command
 
     def start(self) -> None:
         """Start the art runtime and wait until its health endpoint responds."""
@@ -183,8 +196,9 @@ class SidecarArtLauncher:
             self._launch_preparer()
             self._process = self._process_factory(
                 command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=self._stdout,
+                stderr=self._stderr,
+                cwd=self._process_working_directory(),
                 env=environment,
             )
         except Exception as exc:
@@ -211,13 +225,20 @@ class SidecarArtLauncher:
 
     def _environment(self) -> dict[str, str]:
         """Return the child-process environment for the art daemon."""
+        if self._environment_override is not None:
+            return self._environment_override
+
+        bundle_layout = build_linux_bundle_layout()
         layout = build_runtime_directory_layout()
         layout.ensure_exists()
         environment = os.environ.copy()
         environment.update(layout.as_environment(self._config_path))
+        environment.pop("AIRUNNER_TTS_SIDECAR_PROCESS", None)
         environment.update(
             {
                 "AIRUNNER_HEADLESS": "1",
+                "AIRUNNER_BUNDLE_ROOT": str(bundle_layout.bundle_root),
+                "AIRUNNER_PYTHON": str(bundle_layout.python_executable),
                 "AIRUNNER_HTTP_HOST": self.settings.host,
                 "AIRUNNER_HTTP_PORT": str(self.settings.port),
                 "AIRUNNER_LLM_ON": "0",
@@ -227,7 +248,13 @@ class SidecarArtLauncher:
                 "AIRUNNER_CN_ON": "0",
                 "AIRUNNER_KNOWLEDGE_ON": "0",
                 "AIRUNNER_ART_SIDECAR_PROCESS": "1",
+                "AIRUNNER_NO_PRELOAD": "1",
+                "QT_QPA_PLATFORM": "offscreen",
+                "QT_LOGGING_RULES": "*.debug=false;qt.qpa.*=false",
             }
+        )
+        environment["PATH"] = bundle_layout.path_environment(
+            environment.get("PATH")
         )
         if self.settings.art_model_path:
             environment["AIRUNNER_ART_MODEL_PATH"] = (
@@ -242,6 +269,21 @@ class SidecarArtLauncher:
                 self.settings.art_scheduler
             )
         return environment
+
+    def _process_working_directory(self) -> Optional[str]:
+        """Return the sidecar daemon working directory for one launch."""
+        if self._working_directory is not None:
+            return str(self._working_directory)
+        return str(build_linux_bundle_layout().bundle_root)
+
+    @staticmethod
+    def _resolved_stdio(stream: Any) -> Any:
+        """Use inherited stdio in dev mode so sidecar failures are visible."""
+        if stream is not subprocess.DEVNULL:
+            return stream
+        if os.environ.get("DEV_ENV", "1") != "1":
+            return stream
+        return None
 
     def _cleanup_config(self) -> None:
         """Delete the temporary config file used for this launcher."""

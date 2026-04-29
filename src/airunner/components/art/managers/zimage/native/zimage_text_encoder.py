@@ -9,9 +9,9 @@ Based on ComfyUI's comfy/text_encoders/z_image.py implementation.
 
 from __future__ import annotations
 
+import gc
 import logging
 import os
-import gc
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
@@ -202,6 +202,7 @@ class ZImageTextEncoder(nn.Module):
         quantization: Optional[str] = None,
         device_map: Optional[str] = None,
         max_memory: Optional[Dict[str, str]] = None,
+        enable_cpu_offload: bool = False,
     ):
         super().__init__()
         
@@ -212,6 +213,10 @@ class ZImageTextEncoder(nn.Module):
         self._device = device
         self._device_map = device_map
         self._max_memory = max_memory
+        self._enable_cpu_offload = enable_cpu_offload
+        self._prefer_cpu_execution = (
+            device is not None and torch.device(device).type == "cpu"
+        )
         
         self.model: Optional[nn.Module] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
@@ -266,8 +271,13 @@ class ZImageTextEncoder(nn.Module):
                     bnb_4bit_quant_type="nf4",
                 )
             elif self.quantization == "8bit":
+                quantization_kwargs = {"load_in_8bit": True}
+                if self._enable_cpu_offload:
+                    quantization_kwargs[
+                        "llm_int8_enable_fp32_cpu_offload"
+                    ] = True
                 quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=True,
+                    **quantization_kwargs,
                 )
             
             # Load model
@@ -305,6 +315,31 @@ class ZImageTextEncoder(nn.Module):
         except Exception as e:
             logger.error(f"Failed to load text encoder: {e}")
             raise
+
+    @property
+    def uses_accelerate_offload(self) -> bool:
+        """Return True when the loaded model uses a mixed device map."""
+        if self.model is None:
+            return False
+        device_map = getattr(self.model, "hf_device_map", None)
+        if not isinstance(device_map, dict):
+            return False
+        return any(target in {"cpu", "disk"} for target in device_map.values())
+
+    @property
+    def prefer_cpu_execution(self) -> bool:
+        """Return True when prompt encoding should stay on CPU."""
+        return self._prefer_cpu_execution
+
+    def unload_model(self) -> None:
+        """Release model weights while keeping tokenizer and load settings."""
+        if self.model is None:
+            return
+        del self.model
+        self.model = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
     def encode(
         self,

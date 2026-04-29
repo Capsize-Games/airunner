@@ -57,10 +57,23 @@ class FakeLauncher:
 
     def start(self):
         self.started += 1
+        if "exit_code_on_start" in self.ready_state:
+            self.ready_state["ready"] = False
+            self.ready_state["exit_code"] = self.ready_state[
+                "exit_code_on_start"
+            ]
+            return
         self.ready_state["ready"] = True
+        if "health_payload_on_start" in self.ready_state:
+            self.ready_state["health_payload"] = self.ready_state[
+                "health_payload_on_start"
+            ]
 
     def stop(self):
         self.ready_state["ready"] = False
+
+    def last_exit_code(self):
+        return self.ready_state.get("exit_code")
 
 
 class FakeSession:
@@ -76,7 +89,14 @@ class FakeSession:
         if url.endswith("/health"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
-            return FakeResponse(payload={"status": "ready"})
+            return FakeResponse(
+                payload=self.ready_state.get("health_payload")
+                or {"status": "ready"}
+            )
+        if url.endswith("/admin/shutdown"):
+            if self.ready_state.get("shutdown_effective", True):
+                self.ready_state["ready"] = False
+            return FakeResponse(payload={"status": "ok"})
         if url.endswith("/api/v1/daemon/status"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
@@ -155,6 +175,86 @@ def test_ensure_connected_auto_starts_daemon():
     assert client.state is DaemonConnectionState.CONNECTED
     assert states[0][0] is DaemonConnectionState.CONNECTING
     assert states[-1][0] is DaemonConnectionState.CONNECTED
+
+
+def test_ensure_connected_restarts_stale_dev_daemon():
+    ready_state = {
+        "ready": True,
+        "health_payload": {
+            "status": "ready",
+            "dev_build_token": "old-token",
+        },
+        "health_payload_on_start": {
+            "status": "ready",
+            "dev_build_token": "new-token",
+        },
+    }
+    launcher = FakeLauncher(ready_state)
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=launcher,
+        session=session,
+        detect_stale_dev_daemon=True,
+        sleep=lambda _seconds: None,
+    )
+    client._expected_dev_build_token = lambda: "new-token"
+
+    connected = client.ensure_connected()
+
+    assert connected is True
+    assert launcher.started == 1
+    assert any(call[1].endswith("/admin/shutdown") for call in session.calls)
+
+
+def test_ensure_connected_keeps_running_when_dev_token_missing():
+    ready_state = {
+        "ready": True,
+        "health_payload": {
+            "status": "ready",
+        },
+    }
+    launcher = FakeLauncher(ready_state)
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=launcher,
+        session=session,
+        detect_stale_dev_daemon=True,
+        sleep=lambda _seconds: None,
+    )
+    client._expected_dev_build_token = lambda: "new-token"
+    debug_messages = []
+    client.logger.debug = lambda message, *args: debug_messages.append(
+        message % args if args else message
+    )
+
+    connected = client.ensure_connected()
+    connected_again = client.ensure_connected()
+
+    assert connected is True
+    assert connected_again is True
+    assert launcher.started == 0
+    assert not any(call[1].endswith("/admin/shutdown") for call in session.calls)
+    assert debug_messages == [
+        "Daemon health payload missing dev_build_token; skipping stale-daemon recycle"
+    ]
+
+
+def test_ensure_connected_reports_exited_daemon_process():
+    ready_state = {
+        "ready": False,
+        "exit_code_on_start": 134,
+    }
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=FakeSession(ready_state),
+        sleep=lambda _seconds: None,
+    )
+
+    connected = client.ensure_connected()
+
+    assert connected is False
+    assert client.last_error == "Daemon process exited early with code 134"
+    assert client.state is DaemonConnectionState.FAILED
 
 
 def test_stream_llm_request_posts_expected_payload_and_headers():
@@ -311,6 +411,36 @@ def test_wait_art_job_polls_until_completion():
     image_bytes = client.wait_art_job("art-job-1")
 
     assert image_bytes == b"png-bytes"
+
+
+def test_wait_art_job_reports_progress_updates():
+    ready_state = {
+        "ready": True,
+        "art_statuses": [
+            {"job_id": "art-job-1", "status": "running", "progress": 10.0},
+            {"job_id": "art-job-1", "status": "running", "progress": 55.0},
+            {"job_id": "art-job-1", "status": "completed", "progress": 100.0},
+        ],
+    }
+    updates = []
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+        sleep=lambda _seconds: None,
+    )
+
+    image_bytes = client.wait_art_job(
+        "art-job-1",
+        progress_callback=updates.append,
+    )
+
+    assert image_bytes == b"png-bytes"
+    assert updates == [
+        {"job_id": "art-job-1", "status": "running", "progress": 10.0},
+        {"job_id": "art-job-1", "status": "running", "progress": 55.0},
+        {"job_id": "art-job-1", "status": "completed", "progress": 100.0},
+    ]
 
 
 def test_cancel_art_job_uses_delete_endpoint():

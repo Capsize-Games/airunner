@@ -8,15 +8,34 @@ Runs AI Runner as a background service without GUI, providing:
 - Health monitoring
 """
 
-import os
-import sys
-import signal
 import argparse
 import logging
-from pathlib import Path
-from typing import Optional, Dict, Any
-import time
+import os
+import signal
+import sys
 import threading
+import time
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
+)
+
+
+def _configure_daemon_environment() -> None:
+    """Set headless-safe environment defaults before imports."""
+    os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    os.environ.setdefault(
+        "QT_LOGGING_RULES",
+        "*.debug=false;qt.qpa.*=false",
+    )
+    configure_early_torch_allocator_environment()
+
+
+_configure_daemon_environment()
+
 from airunner.api.server import APIServer
 from logging.handlers import RotatingFileHandler
 from airunner.components.model_management.model_resource_manager import (
@@ -28,9 +47,6 @@ from airunner.utils.application import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-
-# Set PyTorch CUDA config before any torch imports
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 
 class AIRunnerDaemon:

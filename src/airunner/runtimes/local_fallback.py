@@ -29,9 +29,13 @@ from airunner.runtimes.contracts import (
     TransportKind,
 )
 from airunner.runtimes.registry import RuntimeRegistry, RuntimeRoute
+from airunner.runtimes.art_daemon_runtime_settings import (
+    resolve_art_daemon_runtime_settings,
+)
 
 DEFAULT_PROVIDER = "local"
 DEFAULT_TIMEOUT_SECONDS = 120.0
+ProgressCallback = Callable[[dict[str, Any]], None]
 
 LLMRequestFactory = Callable[[LLMInvocationRequest], Any]
 HealthProvider = Callable[[], RuntimeHealthStatus]
@@ -70,6 +74,33 @@ def _build_art_service() -> Any:
     from airunner.components.art.api.art_services import ARTAPIService
 
     return ARTAPIService()
+
+
+def _resolve_art_request_version(metadata: dict[str, Any]) -> str:
+    """Return the model version carried by one art invocation."""
+    version = str(metadata.get("version") or "").strip()
+    if version:
+        return version
+    return "Flux.1 S"
+
+
+def _resolve_art_request_scheduler(metadata: dict[str, Any]) -> str:
+    """Return the scheduler carried by one art invocation."""
+    scheduler = str(metadata.get("scheduler") or "").strip()
+    if scheduler:
+        return scheduler
+
+    from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
+
+    return AIRUNNER_DEFAULT_SCHEDULER
+
+
+def _resolve_art_pipeline_action(metadata: dict[str, Any]) -> str:
+    """Return the requested art pipeline action."""
+    pipeline_action = str(metadata.get("pipeline") or "").strip()
+    if pipeline_action:
+        return pipeline_action
+    return "txt2img"
 
 
 def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
@@ -766,22 +797,35 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
     def __init__(
         self,
         provider: str = DEFAULT_PROVIDER,
-        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        timeout_seconds: Optional[float] = None,
         signal_source: Any = None,
         mediator: Any = None,
         health_provider: Optional[HealthProvider] = None,
     ) -> None:
+        resolved_timeout = timeout_seconds
+        if resolved_timeout is None:
+            resolved_timeout = (
+                resolve_art_daemon_runtime_settings().invocation_timeout_seconds
+            )
         super().__init__(
             RuntimeKind.ART,
             provider,
             signal_source=signal_source or _build_art_service(),
             mediator=mediator,
-            timeout_seconds=timeout_seconds,
+            timeout_seconds=resolved_timeout,
             health_provider=health_provider,
             allows_model_control=False,
         )
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
+        """Execute one art request without progress callbacks."""
+        return self.invoke_with_progress(request)
+
+    def invoke_with_progress(
+        self,
+        request: RequestEnvelope,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ResponseEnvelope:
         """Execute art generation or lightweight control requests."""
         if request.runtime is not RuntimeKind.ART:
             raise ValueError("LocalFallbackArtClient only supports art")
@@ -797,7 +841,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             )
         if request.action is not RuntimeAction.INVOKE:
             raise ValueError("LocalFallbackArtClient only supports invoke")
-        return self._generate_image(request)
+        return self._generate_image(request, progress_callback)
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Interrupt active art generation on a best-effort basis."""
@@ -821,7 +865,11 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             payload={"accepted": True},
         )
 
-    def _generate_image(self, request: RequestEnvelope) -> ResponseEnvelope:
+    def _generate_image(
+        self,
+        request: RequestEnvelope,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ResponseEnvelope:
         """Generate art through the current callback-based worker flow."""
         from airunner.components.art.managers.stablediffusion.image_request import (
             ImageRequest,
@@ -829,15 +877,28 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         from airunner.enums import GeneratorSection, SignalCode
 
         invocation = ArtInvocationRequest.model_validate(request.payload)
+        metadata = invocation.metadata
         image_queue: Queue[Any] = Queue()
 
         def on_complete(result: Any) -> None:
             image_queue.put(result)
 
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "status": "running",
+                    "progress": 1.0,
+                    "phase": "dispatch",
+                }
+            )
+
         image_request = ImageRequest(
+            pipeline_action=_resolve_art_pipeline_action(metadata),
             prompt=invocation.prompt,
             negative_prompt=invocation.negative_prompt,
             model_path=invocation.model or "",
+            scheduler=_resolve_art_request_scheduler(metadata),
+            version=_resolve_art_request_version(metadata),
             steps=invocation.steps,
             scale=invocation.cfg_scale,
             seed=invocation.seed or 42,
@@ -852,19 +913,33 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         if invocation.model:
             self._emit_art_model_selection(invocation)
 
-        self._emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL,
-            {"image_request": image_request},
-        )
-        try:
-            result = image_queue.get(timeout=self._timeout_seconds)
-        except Empty:
-            return self._failure_response(
-                request.request_id,
-                "art_timeout",
-                "Timed out waiting for art response",
-                retryable=True,
+        progress_handler = None
+        if progress_callback is not None:
+            progress_handler = self._build_art_progress_handler(progress_callback)
+            self._mediator.register(
+                SignalCode.SD_PROGRESS_SIGNAL,
+                progress_handler,
             )
+        try:
+            self._emit_signal(
+                SignalCode.DO_GENERATE_SIGNAL,
+                {"image_request": image_request},
+            )
+            try:
+                result = image_queue.get(timeout=self._timeout_seconds)
+            except Empty:
+                return self._failure_response(
+                    request.request_id,
+                    "art_timeout",
+                    "Timed out waiting for art response",
+                    retryable=True,
+                )
+        finally:
+            if progress_handler is not None:
+                self._mediator.unregister(
+                    SignalCode.SD_PROGRESS_SIGNAL,
+                    progress_handler,
+                )
         if isinstance(result, str):
             return self._failure_response(
                 request.request_id,
@@ -876,6 +951,29 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             status=EnvelopeStatus.SUCCEEDED,
             payload=self._art_payload(result),
         )
+
+    @staticmethod
+    def _build_art_progress_handler(
+        progress_callback: ProgressCallback,
+    ) -> Callable[[dict[str, Any]], None]:
+        """Return a progress handler that normalizes SD progress events."""
+
+        def on_progress(data: dict[str, Any]) -> None:
+            step = int(data.get("step") or 0)
+            total = int(data.get("total") or 0)
+            progress = 0.0
+            if total > 0:
+                progress = min(100.0, max(0.0, (step / total) * 100.0))
+            progress_callback(
+                {
+                    "status": "running",
+                    "progress": progress,
+                    "step": step,
+                    "total": total,
+                }
+            )
+
+        return on_progress
 
     def _emit_art_model_selection(
         self, invocation: ArtInvocationRequest

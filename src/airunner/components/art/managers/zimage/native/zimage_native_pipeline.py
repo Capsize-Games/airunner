@@ -679,30 +679,138 @@ class ZImageNativePipeline:
         
         # Override quantization if use_4bit is specified
         quantization = "4bit" if use_4bit else self.text_encoder_quantization
-
-        # Constrain text encoder GPU budget to avoid 16GB spikes
-        max_memory = None
-        device_map = "auto"
-        if torch.cuda.is_available():
-            total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            # Leave ~8GB for transformer/activations, cap text encoder at remainder
-            usable_gpu = max(total_vram_gb - 8.0, 2.0)
-            max_memory = {0: f"{usable_gpu:.0f}GiB", "cpu": "32GiB"}
+        plan = self._build_text_encoder_load_plan(quantization)
 
         self.text_encoder = ZImageTextEncoder(
             model_path=path,
             tokenizer_path=tok_path,
-            device=self.device,
+            device=plan["device"],
             dtype=self.dtype,
-            quantization=quantization,
-            device_map=device_map,
-            max_memory=max_memory,
+            quantization=plan["quantization"],
+            device_map=plan["device_map"],
+            max_memory=plan["max_memory"],
+            enable_cpu_offload=plan["enable_cpu_offload"],
         )
         
         self.tokenizer = self.text_encoder.tokenizer
         
         self._loaded_components.append("text_encoder")
         logger.info("Text encoder loaded successfully")
+
+    def _build_text_encoder_load_plan(
+        self,
+        quantization: Optional[str],
+    ) -> Dict[str, Any]:
+        """Choose a text-encoder loading strategy for current free VRAM."""
+        plan = {
+            "quantization": quantization,
+            "device": self.device,
+            "device_map": None,
+            "max_memory": None,
+            "enable_cpu_offload": False,
+        }
+        if not torch.cuda.is_available():
+            return plan
+
+        free_vram_gb = torch.cuda.mem_get_info()[0] / (1024**3)
+        total_vram_gb = (
+            torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        )
+        cpu_budget = "32GiB"
+        if quantization in {"4bit", "8bit"} and free_vram_gb < 4.0:
+            logger.info(
+                "Low free VRAM after transformer load (%.2f GiB). "
+                "Loading text encoder on CPU to avoid prompt-encoding OOMs.",
+                free_vram_gb,
+            )
+            plan.update(
+                {
+                    "quantization": None,
+                    "device": torch.device("cpu"),
+                    "device_map": None,
+                    "max_memory": None,
+                    "enable_cpu_offload": False,
+                }
+            )
+            return plan
+
+        gpu_budget = max(
+            int(max(min(total_vram_gb - 8.0, free_vram_gb - 1.0), 2.0)),
+            2,
+        )
+        logger.info(
+            "Text encoder load budget: free_vram=%.2f GiB, total_vram=%.2f GiB, gpu_budget=%sGiB.",
+            free_vram_gb,
+            total_vram_gb,
+            gpu_budget,
+        )
+        plan.update(
+            {
+                "device_map": "auto",
+                "max_memory": {0: f"{gpu_budget}GiB", "cpu": cpu_budget},
+            }
+        )
+        return plan
+
+    def _ensure_text_encoder_ready(self) -> None:
+        """Load text encoder weights on demand before prompt encoding."""
+        if self.text_encoder is None:
+            raise RuntimeError("Text encoder not loaded")
+        if self.text_encoder.model is None and self.text_encoder.model_path:
+            logger.info("Reloading text encoder for prompt encoding")
+            self.text_encoder.load_model(self.text_encoder.model_path)
+
+    def _prepare_text_encoder_for_encoding(self) -> None:
+        """Move fully GPU-resident encoders back to the active device."""
+        self._ensure_text_encoder_ready()
+        if self.text_encoder is None or self.text_encoder.model is None:
+            return
+        if self.text_encoder.prefer_cpu_execution:
+            logger.debug("Keeping text encoder on CPU for prompt encoding")
+            return
+        if self.text_encoder.uses_accelerate_offload:
+            logger.debug("Using accelerate-managed text encoder placement")
+            return
+        current_device = next(self.text_encoder.model.parameters()).device
+        if current_device.type == "cpu":
+            logger.debug("Moving text encoder back to GPU for encoding")
+            self.text_encoder.model.to(self.device)
+
+    def _release_text_encoder_after_encoding(self) -> None:
+        """Free text-encoder GPU memory once prompt embeddings are ready."""
+        if self.text_encoder is None or self.text_encoder.model is None:
+            return
+        if self.text_encoder.prefer_cpu_execution:
+            logger.debug("Keeping CPU-resident text encoder loaded")
+            return
+        if self.text_encoder.uses_accelerate_offload:
+            self.text_encoder.unload_model()
+            logger.debug("Released accelerate-managed text encoder after encoding")
+            return
+        self.text_encoder.model.to("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
+        logger.debug("Offloaded text encoder to CPU")
+
+    def _move_prompt_conditioning_to_device(
+        self,
+        prompt_embeds: torch.Tensor,
+        negative_embeds: Optional[torch.Tensor],
+        attention_mask: Optional[torch.Tensor],
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """Move prompt-conditioning tensors to the transformer device."""
+        prompt_embeds = prompt_embeds.to(
+            device=self.device,
+            dtype=self.dtype,
+        )
+        if negative_embeds is not None:
+            negative_embeds = negative_embeds.to(
+                device=self.device,
+                dtype=self.dtype,
+            )
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(self.device)
+        return prompt_embeds, negative_embeds, attention_mask
     
     def load_vae(
         self,
@@ -851,13 +959,7 @@ class ZImageNativePipeline:
         
         # Encode prompts
         if self.text_encoder is not None:
-            # Ensure text encoder is on GPU before encoding
-            if hasattr(self.text_encoder, 'model') and self.text_encoder.model is not None:
-                current_device = next(self.text_encoder.model.parameters()).device
-                if current_device.type == 'cpu':
-                    logger.debug("Moving text encoder back to GPU for encoding")
-                    self.text_encoder.model.to(self.device)
-            
+            self._prepare_text_encoder_for_encoding()
             prompt_embeds, negative_embeds, attention_mask = self.encode_prompt(
                 prompt, negative_prompt
             )
@@ -868,13 +970,16 @@ class ZImageNativePipeline:
                     negative_embeds = negative_embeds.repeat(num_images_per_prompt, 1, 1)
                 if attention_mask is not None:
                     attention_mask = attention_mask.repeat(num_images_per_prompt, 1)
-            
-            # Offload text encoder to CPU to free GPU memory for generation
-            if hasattr(self.text_encoder, 'model') and self.text_encoder.model is not None:
-                self.text_encoder.model.to('cpu')
-                gc.collect()
-                torch.cuda.empty_cache()
-                logger.debug("Offloaded text encoder to CPU")
+
+            prompt_embeds, negative_embeds, attention_mask = (
+                self._move_prompt_conditioning_to_device(
+                    prompt_embeds,
+                    negative_embeds,
+                    attention_mask,
+                )
+            )
+
+            self._release_text_encoder_after_encoding()
         else:
             # Dummy embeddings for testing
             prompt_embeds = torch.randn(
