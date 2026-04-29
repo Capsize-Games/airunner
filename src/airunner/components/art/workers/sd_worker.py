@@ -222,6 +222,45 @@ class SDWorker(Worker):
         self._invalidate_setting_cache(GeneratorSettings)
         self.unload_model_manager()
 
+    def _requested_model_signature(
+        self,
+        image_request: Optional[ImageRequest],
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Return the requested model signature for one generation."""
+        model_path = self._get_model_path_from_image_request(image_request)
+        if image_request is not None:
+            version = getattr(image_request, "version", None)
+            pipeline_action = getattr(
+                image_request,
+                "pipeline_action",
+                None,
+            )
+        else:
+            version = getattr(self.generator_settings, "version", None)
+            pipeline_action = getattr(
+                self.generator_settings,
+                "pipeline_action",
+                None,
+            )
+        return model_path, version, pipeline_action
+
+    def _record_loaded_model_signature(
+        self,
+        image_request: Optional[ImageRequest],
+    ) -> None:
+        """Record the active model signature after a successful load."""
+        (
+            self._current_model,
+            self._current_version,
+            self._current_pipeline,
+        ) = self._requested_model_signature(image_request)
+
+    def _clear_loaded_model_signature(self) -> None:
+        """Forget the active model signature after unload."""
+        self._current_model = None
+        self._current_version = None
+        self._current_pipeline = None
+
     def _get_model_path_from_image_request(
         self, image_request: Optional[ImageRequest]
     ) -> Optional[str]:
@@ -231,15 +270,16 @@ class SDWorker(Worker):
             model_path = image_request.model_path
 
         if model_path is None:
-            custom_path = self.generator_settings.custom_path
+            custom_path = getattr(self.generator_settings, "custom_path", None)
             if custom_path is not None and custom_path != "":
                 if os.path.exists(custom_path):
                     model_path = custom_path
 
+        generator_model = getattr(self.generator_settings, "model", None)
         if (
             model_path is None or model_path == ""
-        ) and self.generator_settings.model is not None:
-            aimodel = AIModels.objects.get(self.generator_settings.model)
+        ) and generator_model is not None:
+            aimodel = AIModels.objects.get(generator_model)
             if aimodel is not None:
                 model_path = aimodel.path
 
@@ -320,6 +360,13 @@ class SDWorker(Worker):
         mm = self.model_manager
         self.logger.debug(f"[LOAD DEBUG] load_model_manager: mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}, model_is_loaded={mm.model_is_loaded if mm else 'N/A'}")
         image_request = data.get("image_request")
+        requested_signature = self._requested_model_signature(image_request)
+        if mm and mm.model_is_loaded and requested_signature != (
+            self._current_model,
+            self._current_version,
+            self._current_pipeline,
+        ):
+            do_reload = True
         # Attach the image_request to the model manager BEFORE loading so model_path property
         # resolves to the ImageRequest.model_path instead of falling back to stale generator_settings.model
         if mm and image_request is not None:
@@ -341,6 +388,8 @@ class SDWorker(Worker):
                 )
             except Exception:
                 pass
+            if mm.model_is_loaded:
+                self._record_loaded_model_signature(image_request)
         # Only call the callback if the model is actually loaded
         # If a download was triggered, the callback will be called after download completes
         if data and mm and mm.model_is_loaded:
@@ -412,6 +461,13 @@ class SDWorker(Worker):
                 self._sdxl.image_export_worker = None
                 del self._sdxl
                 self._sdxl = None
+            elif manager_ref is self._zimage:
+                self.logger.info(">>> Unloading Z-Image model manager")
+                self._zimage.image_export_worker.stop()
+                del self._zimage.image_export_worker
+                self._zimage.image_export_worker = None
+                del self._zimage
+                self._zimage = None
             elif manager_ref is self._x4_upscaler:
                 self.logger.info(">>> Unloading X4 Upscaler model manager")
                 self._x4_upscaler.image_export_worker.stop()
@@ -419,6 +475,8 @@ class SDWorker(Worker):
                 self._x4_upscaler.image_export_worker = None
                 del self._x4_upscaler
                 self._x4_upscaler = None
+
+            self._clear_loaded_model_signature()
 
         if data:
             callback = data.get("callback", None)

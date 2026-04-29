@@ -27,7 +27,12 @@ from airunner.app_mixins import (
     LocalizationMixin,
     UIRuntimeMixin,
 )
-from airunner.enums import SignalCode
+from airunner.enums import (
+    EngineResponseCode,
+    ModelStatus,
+    ModelType,
+    SignalCode,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
@@ -121,6 +126,76 @@ class App(
             self._init_gui_mode()
 
         self._initialize_knowledge_system()
+
+    def change_model_status(
+        self,
+        model: ModelType,
+        status: ModelStatus,
+    ) -> None:
+        """Emit one model status change for shared worker code."""
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model, "status": status},
+        )
+
+    def worker_response(
+        self,
+        code: EngineResponseCode,
+        message: object,
+    ) -> None:
+        """Emit one worker response for headless-compatible flows."""
+        self.emit_signal(
+            SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+            {"code": code, "message": message},
+        )
+
+    def application_error(
+        self,
+        exception: Optional[Exception] = None,
+        message: Optional[str] = None,
+    ) -> None:
+        """Emit one application error without requiring the API wrapper."""
+        if exception is not None:
+            try:
+                from airunner.components.application.exceptions import (
+                    InterruptedException,
+                )
+
+                if isinstance(exception, InterruptedException):
+                    self.logger.debug(
+                        "Ignored InterruptedException in application_error"
+                    )
+                    return
+            except Exception:
+                pass
+            message = str(exception)
+
+        if (
+            isinstance(message, str)
+            and message.strip().lower() == "interrupted"
+        ):
+            self.logger.debug(
+                "Ignored Interrupted message in application_error: %s",
+                message,
+            )
+            return
+
+        self.logger.error({"message": message})
+        self.emit_signal(
+            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            {"message": message},
+        )
+
+    def application_status(self, message: str) -> None:
+        """Emit one application status update from shared workers."""
+        self.emit_signal(
+            SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+            {"message": message},
+        )
+
+    def quit_application(self) -> None:
+        """Emit the shared quit signal used by the API wrapper."""
+        self.emit_signal(SignalCode.QUIT_APPLICATION, {})
 
     def _load_optional_extensions(self) -> None:
         """Load explicitly enabled extensions from local extension roots.

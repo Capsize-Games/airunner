@@ -422,7 +422,10 @@ class TestLocalFallbackArtClient:
             "version": "Z-Image Turbo",
             "scheduler": "Flow Match Euler",
         }
-        assert signal_source.emitted[0][0] == SignalCode.SD_ART_MODEL_CHANGED
+        assert all(
+            code != SignalCode.SD_ART_MODEL_CHANGED
+            for code, _payload in signal_source.emitted
+        )
         assert cancel_response.status == EnvelopeStatus.CANCELLED
         assert unload_response.payload["accepted"] is True
 

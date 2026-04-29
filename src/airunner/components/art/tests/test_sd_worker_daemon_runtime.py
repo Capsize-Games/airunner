@@ -174,9 +174,30 @@ def test_load_model_manager_calls_callback_for_terminal_load_failure():
         model_manager=model_manager,
         logger=SimpleNamespace(debug=lambda *args, **kwargs: None),
         _process_image_request=lambda data: data,
+        _current_model=None,
+        _current_version=None,
+        _current_pipeline=None,
     )
     worker._has_terminal_model_load_failure = (
         SDWorker._has_terminal_model_load_failure
+    )
+    worker._get_model_path_from_image_request = (
+        SDWorker._get_model_path_from_image_request.__get__(
+            worker,
+            SimpleNamespace,
+        )
+    )
+    worker._requested_model_signature = (
+        SDWorker._requested_model_signature.__get__(
+            worker,
+            SimpleNamespace,
+        )
+    )
+    worker._record_loaded_model_signature = (
+        SDWorker._record_loaded_model_signature.__get__(
+            worker,
+            SimpleNamespace,
+        )
     )
 
     SDWorker.load_model_manager(
@@ -230,3 +251,105 @@ def test_finalize_do_generate_signal_reports_failed_load_via_callback():
         "You must select a model before generating images."
     ]
     assert alerts == ["You must select a model before generating images."]
+
+
+def test_load_model_manager_reloads_when_requested_model_changes():
+    reload_calls = []
+    load_calls = []
+    request = ImageRequest(
+        prompt="A mountain",
+        model_path="/tmp/new-model",
+        version="Z-Image Turbo",
+        pipeline_action="txt2img",
+    )
+    model_manager = SimpleNamespace(
+        model_is_loaded=True,
+        reload=lambda: reload_calls.append(True),
+        load=lambda: load_calls.append(True),
+        image_request=None,
+    )
+    worker = SimpleNamespace(
+        generator_settings=SimpleNamespace(
+            version="Z-Image Turbo",
+            pipeline_action="txt2img",
+            custom_path="",
+            model=None,
+        ),
+        model_manager=model_manager,
+        logger=SimpleNamespace(debug=lambda *args, **kwargs: None),
+        _process_image_request=lambda data: data,
+        _current_model="/tmp/old-model",
+        _current_version="Z-Image Turbo",
+        _current_pipeline="txt2img",
+    )
+    worker._get_model_path_from_image_request = (
+        SDWorker._get_model_path_from_image_request.__get__(
+            worker,
+            SimpleNamespace,
+        )
+    )
+    worker._requested_model_signature = (
+        SDWorker._requested_model_signature.__get__(
+            worker,
+            SimpleNamespace,
+        )
+    )
+    worker._record_loaded_model_signature = (
+        SDWorker._record_loaded_model_signature.__get__(
+            worker,
+            SimpleNamespace,
+        )
+    )
+
+    SDWorker.load_model_manager(worker, {"image_request": request})
+
+    assert reload_calls == [True]
+    assert load_calls == []
+    assert worker._current_model == "/tmp/new-model"
+
+
+def test_unload_model_manager_clears_zimage_instance_and_signature():
+    unloaded = []
+    stopped = []
+
+    class FakeWorker(SimpleNamespace):
+        @property
+        def model_manager(self):
+            return self._model_manager
+
+        @model_manager.setter
+        def model_manager(self, value):
+            self._model_manager = value
+
+    manager = SimpleNamespace(
+        unload=lambda: unloaded.append(True),
+        image_export_worker=SimpleNamespace(stop=lambda: stopped.append(True)),
+    )
+    worker = FakeWorker(
+        _model_manager=manager,
+        _flux=None,
+        _sd=None,
+        _sdxl=None,
+        _zimage=manager,
+        _x4_upscaler=None,
+        _current_model="/tmp/model",
+        _current_version="Z-Image Turbo",
+        _current_pipeline="txt2img",
+        logger=SimpleNamespace(info=lambda *args, **kwargs: None),
+    )
+    worker._clear_loaded_model_signature = (
+        SDWorker._clear_loaded_model_signature.__get__(
+            worker,
+            FakeWorker,
+        )
+    )
+
+    SDWorker.unload_model_manager(worker)
+
+    assert unloaded == [True]
+    assert stopped == [True]
+    assert worker._model_manager is None
+    assert worker._zimage is None
+    assert worker._current_model is None
+    assert worker._current_version is None
+    assert worker._current_pipeline is None

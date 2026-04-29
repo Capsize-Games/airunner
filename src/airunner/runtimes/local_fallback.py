@@ -910,8 +910,6 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             callback=on_complete,
             generator_section=GeneratorSection.TXT2IMG,
         )
-        if invocation.model:
-            self._emit_art_model_selection(invocation)
 
         progress_handler = None
         if progress_callback is not None:
@@ -974,22 +972,6 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             )
 
         return on_progress
-
-    def _emit_art_model_selection(
-        self, invocation: ArtInvocationRequest
-    ) -> None:
-        """Emit optional art model metadata before generation."""
-        from airunner.enums import SignalCode
-
-        metadata = invocation.metadata
-        self._emit_signal(
-            SignalCode.SD_ART_MODEL_CHANGED,
-            {
-                "model": invocation.model,
-                "version": metadata.get("version"),
-                "pipeline": metadata.get("pipeline"),
-            },
-        )
 
     @staticmethod
     def _art_payload(result: Any) -> dict[str, Any]:

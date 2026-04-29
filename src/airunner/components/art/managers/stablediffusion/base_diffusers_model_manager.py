@@ -293,6 +293,7 @@ class BaseDiffusersModelManager(
             f"model_is_loaded={self.model_is_loaded}, "
             f"model_status={self.model_status}, model_type={self.model_type}"
         )
+        self.do_interrupt_image_generation = False
         if self.sd_is_loading or self.model_is_loaded:
             self.logger.debug("[LOAD ENTRY] Returning early - already loading or loaded")
             return

@@ -3,6 +3,9 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+from airunner.app import App
+from airunner.enums import EngineResponseCode, SignalCode
+
 
 class FakeLogger:
     def info(self, *args, **kwargs):
@@ -96,3 +99,47 @@ def test_headless_api_services_include_art_and_llm(monkeypatch):
 
     assert host.llm is llm_service
     assert host.art is art_service
+
+
+def test_headless_app_worker_response_emits_shared_signal():
+    """Headless App should provide the worker-response API surface."""
+    emitted = []
+    host = SimpleNamespace(
+        emit_signal=lambda code, data=None: emitted.append((code, data))
+    )
+
+    App.worker_response(
+        host,
+        EngineResponseCode.IMAGE_GENERATED,
+        "ok",
+    )
+
+    assert emitted == [
+        (
+            SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+            {
+                "code": EngineResponseCode.IMAGE_GENERATED,
+                "message": "ok",
+            },
+        )
+    ]
+
+
+def test_headless_app_application_error_emits_status_signal():
+    """Headless App should provide the shared application-error hook."""
+    emitted = []
+    logged = []
+    host = SimpleNamespace(
+        emit_signal=lambda code, data=None: emitted.append((code, data)),
+        logger=SimpleNamespace(error=lambda message: logged.append(message)),
+    )
+
+    App.application_error(host, message="boom")
+
+    assert logged == [{"message": "boom"}]
+    assert emitted == [
+        (
+            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            {"message": "boom"},
+        )
+    ]
