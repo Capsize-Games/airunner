@@ -36,6 +36,7 @@ def _worker_manager(client):
     manager._stt_audio_processor_worker = None
     manager._sd_worker = None
     manager._tts_generator_worker = None
+    manager._art_runtime_prewarm_started = False
     emitted = []
     manager.emit_signal = lambda code, data=None: emitted.append((code, data))
     return manager, emitted
@@ -127,3 +128,25 @@ def test_llm_load_signal_marks_failed_when_runtime_never_ready():
             {"model": ModelType.LLM, "status": ModelStatus.FAILED},
         ),
     ]
+
+
+def test_prewarm_art_runtime_uses_daemon_runtime():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+    manager.logger = SimpleNamespace(debug=lambda *args, **kwargs: None)
+
+    WorkerManager._prewarm_art_runtime(manager)
+
+    assert client.calls == [("load", "art"), ("wait", "art", True)]
+    assert emitted == []
+
+
+def test_main_window_loaded_starts_art_prewarm():
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(client)
+    calls = []
+    manager._start_art_runtime_prewarm = lambda: calls.append(True)
+
+    WorkerManager.on_application_main_window_loaded_signal(manager, {})
+
+    assert calls == [True]

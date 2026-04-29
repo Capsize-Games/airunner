@@ -118,7 +118,8 @@ class App(
         # Load explicitly enabled runtime extensions early so they can:
         # - override built-in LLM tools by name (after built-ins are registered)
         # - apply any UI monkey-patches before widgets are constructed
-        self._load_optional_extensions()
+        if self._should_load_optional_extensions():
+            self._load_optional_extensions()
 
         if self.headless:
             self._init_headless_mode()
@@ -148,6 +149,11 @@ class App(
             SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
             {"code": code, "message": message},
         )
+
+    @staticmethod
+    def _should_load_optional_extensions() -> bool:
+        """Return whether this process should scan optional extensions."""
+        return os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") != "1"
 
     def application_error(
         self,

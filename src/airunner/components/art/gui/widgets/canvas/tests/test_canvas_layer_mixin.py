@@ -26,6 +26,7 @@ class TestCanvasLayerMixin:
         # Create mock class with necessary attributes
         mixin = CanvasLayerMixin()
         mixin._layer_items = {}
+        mixin._pending_layer_images = {}
         mixin.addItem = MagicMock()
         return mixin
 
@@ -60,6 +61,7 @@ class TestCanvasLayerMixin:
 
         # Create mock Qt objects before the test
         mock_qimage = MagicMock()
+        mock_qimage.isNull.return_value = False
         mock_item = MagicMock()
 
         with patch.object(CanvasLayer.objects, "get", return_value=mock_layer):
@@ -274,3 +276,69 @@ class TestCanvasLayerMixin:
 
                     # Verify it was initialized with correct parameters
                     layer_mixin.addItem.assert_called_once()
+
+    def test_create_new_layer_item_uses_pending_generated_image(
+        self, layer_mixin, sample_layer_data
+    ):
+        """Test new layer creation prefers the in-memory generated image."""
+        layer_id = 1
+        pending_image = Image.new("RGB", (100, 100), color="blue")
+        mock_layer = MagicMock()
+        mock_layer.id = layer_id
+        mock_qimage = MagicMock()
+        mock_qimage.isNull.return_value = False
+        mock_item = MagicMock()
+
+        layer_mixin._pending_layer_images[layer_id] = pending_image
+        layer_mixin._convert_and_cache_qimage = MagicMock(
+            return_value=mock_qimage
+        )
+
+        with patch.object(CanvasLayer.objects, "get", return_value=mock_layer):
+            with patch.object(
+                DrawingPadSettings.objects,
+                "filter_by_first",
+            ) as mock_filter:
+                with patch(
+                    "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.LayerImageItem",
+                    return_value=mock_item,
+                ):
+                    layer_mixin._create_new_layer_item(
+                        layer_id, sample_layer_data
+                    )
+
+        mock_filter.assert_not_called()
+        layer_mixin._convert_and_cache_qimage.assert_called_once_with(
+            pending_image
+        )
+        assert layer_id in layer_mixin._layer_items
+        assert layer_id not in layer_mixin._pending_layer_images
+
+    def test_update_existing_layer_item_uses_pending_generated_image(
+        self, layer_mixin, sample_layer_data
+    ):
+        """Test existing layer updates prefer the in-memory generated image."""
+        layer_id = 1
+        pending_image = Image.new("RGB", (100, 100), color="green")
+        mock_qimage = MagicMock()
+        mock_qimage.isNull.return_value = False
+        mock_item = MagicMock()
+
+        layer_mixin._layer_items[layer_id] = mock_item
+        layer_mixin._pending_layer_images[layer_id] = pending_image
+        layer_mixin._convert_and_cache_qimage = MagicMock(
+            return_value=mock_qimage
+        )
+
+        with patch.object(
+            DrawingPadSettings.objects,
+            "filter_by_first",
+        ) as mock_filter:
+            layer_mixin._update_existing_layer_item(
+                layer_id,
+                {"visible": True, "opacity": 0.8, "order": 1},
+            )
+
+        mock_filter.assert_not_called()
+        mock_item.updateImage.assert_called_once_with(mock_qimage)
+        assert layer_id not in layer_mixin._pending_layer_images

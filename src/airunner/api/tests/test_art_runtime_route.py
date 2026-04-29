@@ -2,11 +2,9 @@
 
 import asyncio
 import base64
-import io
 from types import SimpleNamespace
 
 import pytest
-from PIL import Image
 
 from airunner.ipc.messages import EnvelopeStatus, ResponseEnvelope
 from airunner.runtimes.contracts import (
@@ -120,8 +118,7 @@ def test_generate_image_runs_art_runtime_job(monkeypatch):
         await scheduled[0]
         status = await get_job_status(response.job_id)
         result = await get_result(response.job_id)
-        chunk = await result.body_iterator.__anext__()
-        return response, status, chunk
+        return response, status, result.body
 
     response, status, chunk = asyncio.run(run_test())
 
@@ -237,16 +234,10 @@ def test_get_result_prefers_cached_png_bytes():
         job_id = await tracker.create_job()
         await tracker.complete_job(
             job_id,
-            {
-                "image": Image.open(io.BytesIO(base64.b64decode(PNG_B64))).copy(),
-                "image_bytes": base64.b64decode(PNG_B64),
-            },
+            {"image_bytes": base64.b64decode(PNG_B64)},
         )
         result = await get_result(job_id)
-        chunks = []
-        async for chunk in result.body_iterator:
-            chunks.append(chunk)
-        return b"".join(chunks)
+        return result.body
 
     chunk = asyncio.run(run_test())
 

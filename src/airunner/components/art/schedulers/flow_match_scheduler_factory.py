@@ -94,7 +94,7 @@ def create_flow_match_scheduler(
     scheduler_class = config_entry["class"]
     config_overrides = config_entry["config"]
     
-    logger.info(
+    logger.debug(
         f"[SCHEDULER FACTORY] Creating '{scheduler_name}' with class={scheduler_class.__name__}, "
         f"overrides={config_overrides}"
     )
@@ -130,7 +130,7 @@ def create_flow_match_scheduler(
         logger.debug("Could not force-apply scheduler overrides", exc_info=True)
     
     # Log the final config that was applied
-    logger.info(
+    logger.debug(
         f"[SCHEDULER FACTORY] Created {scheduler.__class__.__name__} with "
         f"karras={scheduler.config.get('use_karras_sigmas', False)}, "
         f"stochastic={scheduler.config.get('stochastic_sampling', False)}"

@@ -118,3 +118,27 @@ def test_get_logger_reuses_existing_logger_wrapper(monkeypatch):
     assert first is second
     assert first._logger.level == logging.DEBUG
     assert len(first._logger.handlers) == 1
+
+
+def test_configure_noisy_loggers_suppresses_sqlalchemy_children():
+    logging_utils = importlib.import_module(
+        "airunner.utils.application.logging_utils"
+    )
+    importlib.reload(logging_utils)
+
+    logging_utils.configure_noisy_loggers()
+
+    assert (
+        logging.getLogger("sqlalchemy.orm.mapper.Mapper").level
+        == logging.WARNING
+    )
+    assert (
+        logging.getLogger(
+            "sqlalchemy.orm.relationships.RelationshipProperty"
+        ).level
+        == logging.WARNING
+    )
+    assert (
+        logging.getLogger("sqlalchemy.orm.strategies.LazyLoader").level
+        == logging.WARNING
+    )

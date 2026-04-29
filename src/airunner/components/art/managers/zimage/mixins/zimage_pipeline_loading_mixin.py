@@ -117,7 +117,11 @@ class ZImagePipelineLoadingMixin:
             self._load_from_pretrained(self.model_path, pipeline_class, data)
         
         # Debug: verify _pipe was set
-        self.logger.info(f"[ZIMAGE DEBUG] After _set_pipe: self._pipe={self._pipe}, self={id(self)}")
+        self.logger.debug(
+            "[ZIMAGE DEBUG] After _set_pipe: self._pipe=%s, self=%s",
+            self._pipe,
+            id(self),
+        )
 
         # Note: LoRA loading is handled by BaseDiffusersModelManager.load()
         # after _load_pipe() completes. Do NOT call _load_lora() here to
@@ -826,7 +830,7 @@ class ZImagePipelineLoadingMixin:
                 if hasattr(scheduler, "config"):
                     karras = scheduler.config.get("use_karras_sigmas", False)
                     stochastic = scheduler.config.get("stochastic_sampling", False)
-                    self.logger.info(
+                    self.logger.debug(
                         "[ZIMAGE SCHEDULER DEBUG] %s config -> karras=%s, stochastic=%s",
                         scheduler_name,
                         karras,

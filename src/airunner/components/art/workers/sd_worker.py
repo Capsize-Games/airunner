@@ -1,6 +1,7 @@
 import io
 import os
 import threading
+from functools import partial
 from typing import Dict, Optional
 
 import torch
@@ -622,7 +623,7 @@ class SDWorker(Worker):
                 progress = float(status.get("progress") or 0.0)
             except (TypeError, ValueError):
                 return
-            self.logger.info(
+            self.logger.debug(
                 "SDWorker daemon art progress: status=%s progress=%.1f",
                 status.get("status"),
                 progress,
@@ -699,7 +700,12 @@ class SDWorker(Worker):
     ) -> None:
         image = Image.open(io.BytesIO(image_bytes)).copy()
         data = self._daemon_result_data(image_request)
-        self.image_export_worker.add_to_queue({"images": [image], "data": data})
+        export_callback = partial(
+            SDWorker._queue_post_display_export,
+            self,
+            image,
+            data,
+        )
         response = ImageResponse(
             images=[image],
             data=data,
@@ -708,17 +714,32 @@ class SDWorker(Worker):
                 image_request.generator_section is GeneratorSection.OUTPAINT
             ),
             node_id=image_request.node_id,
+            post_display_callback=export_callback,
         )
+        sent_to_canvas = False
         if response.node_id is None and hasattr(self.api, "art"):
             try:
                 self.api.art.canvas.send_image_to_canvas(response)
+                sent_to_canvas = True
             except Exception as exc:
                 self.logger.debug(f"Failed to send image to canvas: {exc}")
+        if not sent_to_canvas:
+            export_callback()
         if image_request.callback:
             image_request.callback(response)
         self.api.worker_response(
             code=EngineResponseCode.IMAGE_GENERATED,
             message=response,
+        )
+
+    def _queue_post_display_export(
+        self,
+        image: Image.Image,
+        data: Dict,
+    ) -> None:
+        """Queue auto export after the canvas handoff has been posted."""
+        self.image_export_worker.add_to_queue(
+            {"images": [image.copy()], "data": data}
         )
 
     def _daemon_result_data(self, image_request: ImageRequest) -> Dict:

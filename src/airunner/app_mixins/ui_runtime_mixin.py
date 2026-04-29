@@ -401,6 +401,14 @@ class UIRuntimeMixin:
         window._main_window_loaded_signal_emitted = True
         api.main_window_loaded(window)
 
+    @staticmethod
+    def _prewarm_daemon_art_runtime(window: object) -> None:
+        """Kick off art daemon prewarm as soon as the window exists."""
+        worker_manager = getattr(window, "worker_manager", None)
+        starter = getattr(worker_manager, "_start_art_runtime_prewarm", None)
+        if callable(starter):
+            starter()
+
     def show_main_application(self, app: QApplication) -> None:
         """Show the main application window."""
         if self.headless:
@@ -421,6 +429,7 @@ class UIRuntimeMixin:
             )
             window = window_class(app=self, **self.window_class_params)
             app.main_window = window
+            self._prewarm_daemon_art_runtime(window)
             self._present_main_window(window, app)
 
             if self.splash:

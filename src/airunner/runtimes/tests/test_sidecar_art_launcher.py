@@ -1,5 +1,6 @@
 """Tests for the isolated art sidecar launcher."""
 
+import builtins
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -223,3 +224,53 @@ def test_temp_daemon_config_uses_standard_runtime_directories(
     assert config["health"]["heartbeat_file"] == str(
         tmp_path / "runtime" / "art-runtime.heartbeat"
     )
+
+
+def test_prepare_managed_daemon_launch_skips_launcher_import_outside_tests(
+    monkeypatch,
+):
+    calls = []
+    real_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "airunner.setup_database":
+            return SimpleNamespace(
+                setup_database=lambda: calls.append("setup_database")
+            )
+        if name == "airunner.launcher":
+            raise AssertionError("launcher import should be skipped")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.delenv("AIRUNNER_ENVIRONMENT", raising=False)
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    sidecar_art_launcher_module._prepare_managed_daemon_launch()
+
+    assert calls == ["setup_database"]
+
+
+def test_prepare_managed_daemon_launch_imports_launcher_in_tests(
+    monkeypatch,
+):
+    calls = []
+    real_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "airunner.setup_database":
+            return SimpleNamespace(
+                setup_database=lambda: calls.append("setup_database")
+            )
+        if name == "airunner.launcher":
+            return SimpleNamespace(
+                _configure_test_mode=lambda: calls.append(
+                    "configure_test_mode"
+                )
+            )
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setenv("AIRUNNER_ENVIRONMENT", "test")
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    sidecar_art_launcher_module._prepare_managed_daemon_launch()
+
+    assert calls == ["setup_database", "configure_test_mode"]

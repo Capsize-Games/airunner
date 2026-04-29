@@ -13,9 +13,8 @@ import secrets
 from pathlib import Path
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
-from PIL import Image
 from PIL.Image import Image as PILImage
 
 from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
@@ -273,7 +272,6 @@ async def _run_art_job(
 
     try:
         image_bytes = base64.b64decode(images[0])
-        image = Image.open(io.BytesIO(image_bytes)).copy()
     except Exception as exc:
         await _fail_art_job(tracker, job_id, f"Invalid image payload: {exc}")
         return
@@ -282,7 +280,7 @@ async def _run_art_job(
         return
     await tracker.complete_job(
         job_id,
-        {"image": image, "image_bytes": image_bytes},
+        {"image_bytes": image_bytes},
     )
 
 
@@ -588,16 +586,16 @@ async def get_result(job_id: str):
             detail=f"Job not completed (status: {job.status.value})",
         )
 
-    if not job.result or "image" not in job.result:
+    if not job.result or not {
+        "image",
+        "image_bytes",
+    }.intersection(job.result):
         raise HTTPException(status_code=404, detail="Image not found")
 
     try:
         image_bytes = job.result.get("image_bytes")
         if image_bytes:
-            return StreamingResponse(
-                io.BytesIO(image_bytes),
-                media_type="image/png",
-            )
+            return Response(content=image_bytes, media_type="image/png")
 
         # Convert PIL Image to PNG bytes
         image = job.result["image"]
@@ -606,9 +604,7 @@ async def get_result(job_id: str):
 
         img_io = io.BytesIO()
         image.save(img_io, "PNG")
-        img_io.seek(0)
-
-        return StreamingResponse(img_io, media_type="image/png")
+        return Response(content=img_io.getvalue(), media_type="image/png")
 
     except Exception as e:
         logger.error(f"Error returning image: {e}")

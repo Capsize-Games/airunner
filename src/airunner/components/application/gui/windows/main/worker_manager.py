@@ -5,6 +5,7 @@ This class uses inline imports to avoid slow startup times. Do not move
 imports to the top of the file.
 """
 
+import threading
 from typing import Dict
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode
@@ -80,6 +81,7 @@ class WorkerManager(Worker):
             SignalCode.FARA_MODEL_DOWNLOAD_REQUIRED: self.on_fara_model_download_required_signal,
             SignalCode.START_HUGGINGFACE_DOWNLOAD: self.on_start_huggingface_download_signal,
             SignalCode.START_OPENVOICE_BATCH_DOWNLOAD: self.on_start_openvoice_batch_download_signal,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_application_main_window_loaded_signal,
         }
         super().__init__()
         self._mask_generator_worker = None
@@ -101,6 +103,7 @@ class WorkerManager(Worker):
         self._image_export_worker = None
         self._model_scanner_worker = None
         self._background_removal_worker = None
+        self._art_runtime_prewarm_started = False
         if self.logger:
             self.logger.debug(
                 f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
@@ -185,7 +188,7 @@ class WorkerManager(Worker):
 
     def handle_message(self, message: Dict):
         if self.logger:
-            self.logger.info(
+            self.logger.debug(
                 f"WorkerManager::handle_message CALLED with request_type={message.get('request_type')}"
             )
         data = message.get("data", {})
@@ -633,6 +636,41 @@ class WorkerManager(Worker):
             return None
         return getattr(api, "daemon_client", None)
 
+    def _start_art_runtime_prewarm(self) -> None:
+        """Start the art sidecar in the background after the GUI loads."""
+        if self._art_runtime_prewarm_started:
+            return
+        if self._daemon_client() is None:
+            return
+        self._art_runtime_prewarm_started = True
+        thread = threading.Thread(
+            target=self._prewarm_art_runtime,
+            name="airunner-art-prewarm",
+            daemon=True,
+        )
+        thread.start()
+
+    def _prewarm_art_runtime(self) -> None:
+        """Ensure the art runtime is already running before first generate."""
+        client = self._daemon_client()
+        if client is None:
+            self._art_runtime_prewarm_started = False
+            return
+        try:
+            client.load_runtime("art")
+            ready = client.wait_runtime_ready(
+                "art",
+                loaded=True,
+                auto_start=False,
+                timeout_seconds=60.0,
+            )
+            if ready:
+                return
+        except RuntimeError as exc:
+            if self.logger:
+                self.logger.debug("Art runtime prewarm skipped: %s", exc)
+        self._art_runtime_prewarm_started = False
+
     def _control_daemon_runtime(
         self,
         runtime_name: str,
@@ -873,7 +911,12 @@ class WorkerManager(Worker):
         if self.sd_worker is not None:
             self.sd_worker.on_load_art_signal(data)
 
+    def on_application_main_window_loaded_signal(self, _data=None):
+        """Warm the daemon-backed art runtime once the GUI is ready."""
+        self._start_art_runtime_prewarm()
+
     def on_art_model_changed(self, data):
+        self._start_art_runtime_prewarm()
         if self._sd_worker is not None:
             self.sd_worker.on_art_model_changed(data)
 
@@ -977,9 +1020,12 @@ class WorkerManager(Worker):
         Args:
             data: Image generation request data
         """
-        self.logger.info(f"_proceed_with_generation called with data keys: {data.keys() if data else 'None'}")
+        self.logger.debug(
+            "_proceed_with_generation called with data keys: %s",
+            data.keys() if data else "None",
+        )
         if self.sd_worker is not None:
-            self.logger.info("Calling sd_worker.on_do_generate_signal")
+            self.logger.debug("Calling sd_worker.on_do_generate_signal")
             self.sd_worker.on_do_generate_signal(data)
         else:
             self.logger.error("sd_worker is None, cannot proceed with generation")

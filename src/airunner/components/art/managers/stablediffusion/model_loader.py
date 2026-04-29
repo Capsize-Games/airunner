@@ -5,13 +5,19 @@ from typing import Any, Dict, Optional
 
 from diffusers import SchedulerMixin
 
-from controlnet_aux.processor import MODELS as controlnet_aux_models
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def _get_controlnet_aux_models() -> Dict[str, Any]:
+    """Import ControlNet processor metadata only when it is needed."""
+    from controlnet_aux.processor import MODELS as controlnet_aux_models
+
+    return controlnet_aux_models
 
 
 class SomeModelClass:  # legacy test helper
@@ -230,10 +236,12 @@ def load_controlnet_processor(
     if not controlnet_enabled or not controlnet_model:
         return None
 
-    controlnet_data = controlnet_aux_models[controlnet_model.name]
-    controlnet_class_ = controlnet_data["class"]
-    checkpoint = controlnet_data["checkpoint"]
     try:
+        controlnet_data = _get_controlnet_aux_models()[
+            controlnet_model.name
+        ]
+        controlnet_class_ = controlnet_data["class"]
+        checkpoint = controlnet_data["checkpoint"]
         if checkpoint:
             processor = controlnet_class_.from_pretrained(
                 controlnet_processor_path,

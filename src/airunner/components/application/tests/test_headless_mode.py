@@ -143,3 +143,17 @@ def test_headless_app_application_error_emits_status_signal():
             {"message": "boom"},
         )
     ]
+
+
+def test_optional_extensions_disabled_in_art_sidecar(monkeypatch):
+    """Art sidecar processes should skip optional extension scanning."""
+    monkeypatch.setenv("AIRUNNER_ART_SIDECAR_PROCESS", "1")
+
+    assert App._should_load_optional_extensions() is False
+
+
+def test_optional_extensions_enabled_in_regular_app(monkeypatch):
+    """Regular GUI and daemon processes should still load extensions."""
+    monkeypatch.delenv("AIRUNNER_ART_SIDECAR_PROCESS", raising=False)
+
+    assert App._should_load_optional_extensions() is True

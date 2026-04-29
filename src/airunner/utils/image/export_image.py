@@ -3,6 +3,11 @@ from PIL import Image, PngImagePlugin
 import os
 import datetime
 import glob
+import threading
+
+
+_SEQUENCE_LOCK = threading.Lock()
+_NEXT_IMAGE_SEQUENCE: Dict[tuple[str, str], int] = {}
 
 
 def get_today_folder(base_path: str) -> str:
@@ -32,15 +37,21 @@ def get_next_sequence_folder(parent_folder: str, prefix: str) -> str:
 
 def get_next_image_sequence(folder: str, ext: str) -> int:
     """Return the next available image sequence number in the folder."""
-    files = glob.glob(os.path.join(folder, f"*{ext}"))
-    nums = []
-    for f in files:
-        base = os.path.splitext(os.path.basename(f))[0]
-        try:
-            nums.append(int(base))
-        except ValueError:
-            pass
-    return max(nums, default=0) + 1
+    cache_key = (folder, ext.lower())
+    with _SEQUENCE_LOCK:
+        next_sequence = _NEXT_IMAGE_SEQUENCE.get(cache_key)
+        if next_sequence is None:
+            files = glob.glob(os.path.join(folder, f"*{ext}"))
+            nums = []
+            for file_path in files:
+                base = os.path.splitext(os.path.basename(file_path))[0]
+                try:
+                    nums.append(int(base))
+                except ValueError:
+                    pass
+            next_sequence = max(nums, default=0) + 1
+        _NEXT_IMAGE_SEQUENCE[cache_key] = next_sequence + 1
+        return next_sequence
 
 
 def export_image(image: Image, file_path: AnyStr, metadata: Dict = None):

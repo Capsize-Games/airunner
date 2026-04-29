@@ -2,6 +2,8 @@
 
 import base64
 
+import airunner.runtimes.sidecar_art_client as sidecar_art_client_module
+
 from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
@@ -253,3 +255,124 @@ def test_register_sidecar_art_client_uses_explicit_sidecar_route():
             deployment_mode="sidecar",
         )
     )
+
+
+def test_invoke_forwards_skip_auto_export_to_sidecar(monkeypatch):
+    monkeypatch.setattr(
+        "airunner.runtimes.sidecar_art_client.time.sleep",
+        lambda _seconds: None,
+    )
+    launcher = FakeLauncher(_settings())
+    session = FakeSession(
+        [
+            FakeResponse(payload={"job_id": "job-1", "status": "running"}),
+            FakeResponse(
+                payload={"job_id": "job-1", "status": "completed"}
+            ),
+            FakeResponse(content=b"png-bytes"),
+        ]
+    )
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=session,
+    )
+    request = RequestEnvelope(
+        request_id="art-req-skip",
+        runtime=RuntimeKind.ART,
+        action=RuntimeAction.INVOKE,
+        payload={
+            "prompt": "Draw a lighthouse",
+            "negative_prompt": "",
+            "model": "/tmp/request-model",
+            "width": 512,
+            "height": 512,
+            "steps": 20,
+            "cfg_scale": 7.5,
+            "seed": 123,
+            "num_images": 1,
+            "metadata": {
+                "version": "Z-Image Turbo",
+                "scheduler": "Flow Match Euler",
+                "skip_auto_export": True,
+            },
+        },
+    )
+
+    response = client.invoke(request)
+
+    assert response.status is EnvelopeStatus.SUCCEEDED
+    assert session.calls[0][2]["json"]["skip_auto_export"] is True
+
+
+def test_managed_launcher_is_reused_when_request_settings_change(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "airunner.runtimes.sidecar_art_client.time.sleep",
+        lambda _seconds: None,
+    )
+    created = []
+
+    class RecordingLauncher(FakeLauncher):
+        def __init__(self, settings):
+            super().__init__(settings)
+            created.append(self)
+
+    monkeypatch.setattr(
+        sidecar_art_client_module,
+        "SidecarArtLauncher",
+        RecordingLauncher,
+    )
+
+    session = FakeSession(
+        [
+            FakeResponse(payload={"job_id": "job-1", "status": "running"}),
+            FakeResponse(
+                payload={"job_id": "job-1", "status": "completed"}
+            ),
+            FakeResponse(content=b"png-bytes-1"),
+            FakeResponse(payload={"job_id": "job-2", "status": "running"}),
+            FakeResponse(
+                payload={"job_id": "job-2", "status": "completed"}
+            ),
+            FakeResponse(content=b"png-bytes-2"),
+        ]
+    )
+    client = sidecar_art_client_module.SidecarArtClient(
+        settings=_settings(),
+        session=session,
+    )
+    first = _request()
+    second = RequestEnvelope(
+        request_id="art-req-2",
+        runtime=RuntimeKind.ART,
+        action=RuntimeAction.INVOKE,
+        payload={
+            "prompt": "Draw a forest",
+            "negative_prompt": "",
+            "model": "/tmp/second-model",
+            "width": 512,
+            "height": 512,
+            "steps": 30,
+            "cfg_scale": 6.0,
+            "seed": 456,
+            "num_images": 1,
+            "metadata": {
+                "version": "SDXL 1.0",
+                "scheduler": "DDIM",
+            },
+        },
+    )
+
+    first_response = client.invoke(first)
+    second_response = client.invoke(second)
+
+    assert first_response.status is EnvelopeStatus.SUCCEEDED
+    assert second_response.status is EnvelopeStatus.SUCCEEDED
+    assert len(created) == 1
+    assert created[0].stopped == 0
+    assert session.calls[0][2]["json"]["model"] == "/tmp/request-model"
+    assert session.calls[0][2]["json"]["version"] == "Z-Image Turbo"
+    assert session.calls[3][2]["json"]["model"] == "/tmp/second-model"
+    assert session.calls[3][2]["json"]["version"] == "SDXL 1.0"

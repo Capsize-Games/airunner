@@ -1101,10 +1101,25 @@ class ZImageNativePipeline:
                 # Mirror diffusers img2img init: blend by normalized timestep fraction
                 timestep_value = float(timesteps[0].item()) if timesteps.numel() > 0 else 0.0
                 timestep_ratio = timestep_value / max(self.scheduler.config.num_train_timesteps, 1)
-                logger.info(f"[IMG2IMG] strength={strength}, t_start={t_start}, first_timestep={timestep_value}, timestep_ratio={timestep_ratio:.4f}")
-                logger.info(f"[IMG2IMG] image_latents std={image_latents.std().item():.4f}, noise std={noise.std().item():.4f}")
+                logger.debug(
+                    "[IMG2IMG] strength=%s, t_start=%s, first_timestep=%s, timestep_ratio=%.4f",
+                    strength,
+                    t_start,
+                    timestep_value,
+                    timestep_ratio,
+                )
+                logger.debug(
+                    "[IMG2IMG] image_latents std=%.4f, noise std=%.4f",
+                    image_latents.std().item(),
+                    noise.std().item(),
+                )
                 latents = (1.0 - timestep_ratio) * image_latents + timestep_ratio * noise
-                logger.info(f"[IMG2IMG] blended latents std={latents.std().item():.4f} (image_weight={1.0-timestep_ratio:.4f}, noise_weight={timestep_ratio:.4f})")
+                logger.debug(
+                    "[IMG2IMG] blended latents std=%.4f (image_weight=%.4f, noise_weight=%.4f)",
+                    latents.std().item(),
+                    1.0 - timestep_ratio,
+                    timestep_ratio,
+                )
             else:
                 latents = latents.to(device=self.device, dtype=torch.float32)
         else:
@@ -1158,7 +1173,13 @@ class ZImageNativePipeline:
             noise_pred = -noise_pred
             
             # Debug logging for all steps
-            logger.info(f"[DEBUG] Step {i}: t={t.item():.2f}, latents std={latents.std().item():.4f}, noise_pred std={noise_pred.std().item():.4f}")
+            logger.debug(
+                "[DEBUG] Step %s: t=%.2f, latents std=%.4f, noise_pred std=%.4f",
+                i,
+                t.item(),
+                latents.std().item(),
+                noise_pred.std().item(),
+            )
             
             # Apply CFG
             if use_cfg:
@@ -1174,7 +1195,11 @@ class ZImageNativePipeline:
             latents = scheduler_output.prev_sample if hasattr(scheduler_output, "prev_sample") else scheduler_output
             
             # Debug: check latents after scheduler step
-            logger.info(f"[DEBUG] Step {i} after: latents std={latents.std().item():.4f}")
+            logger.debug(
+                "[DEBUG] Step %s after: latents std=%.4f",
+                i,
+                latents.std().item(),
+            )
             
             # Callback
             if callback is not None and (i + 1) % callback_steps == 0:
@@ -1203,10 +1228,16 @@ class ZImageNativePipeline:
         
         # Convert to PIL if requested
         if output_type == "pil":
-            
-            # Convert to numpy: (B, C, H, W) -> (B, H, W, C)
-            images_np = images.permute(0, 2, 3, 1).cpu().float().numpy()
-            images_np = (images_np * 255).clip(0, 255).astype(np.uint8)
+            # Convert to uint8 before the device hop to avoid an extra CPU float copy.
+            images_np = (
+                images.mul(255)
+                .clamp(0, 255)
+                .to(torch.uint8)
+                .permute(0, 2, 3, 1)
+                .contiguous()
+                .cpu()
+                .numpy()
+            )
             
             pil_images = [Image.fromarray(img) for img in images_np]
             return pil_images

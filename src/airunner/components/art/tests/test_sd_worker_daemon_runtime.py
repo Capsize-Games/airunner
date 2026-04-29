@@ -104,8 +104,11 @@ def test_generate_image_via_daemon_publishes_canvas_and_worker_response():
 
     assert not alerts
     assert not errors
-    assert export_worker.queued
     assert canvas_calls
+    assert export_worker.queued == []
+    assert callable(canvas_calls[0].post_display_callback)
+    canvas_calls[0].post_display_callback()
+    assert export_worker.queued
     assert worker_responses[0][0] is EngineResponseCode.IMAGE_GENERATED
     assert client.calls[0][0] == "start"
     assert client.calls[0][1]["skip_auto_export"] is True

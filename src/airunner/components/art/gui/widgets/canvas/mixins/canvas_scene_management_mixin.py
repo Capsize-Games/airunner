@@ -38,18 +38,26 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             outpaint_box_rect: Optional bounding box for outpaint.
             generated: Whether this image was generated (vs user-imported).
         """
-        self.logger.info(f"[SCENE DEBUG] _add_image_to_scene called: image={image}, generated={generated}")
+        self.logger.debug(
+            "[SCENE DEBUG] _add_image_to_scene generated=%s",
+            generated,
+        )
         if image is None or not self._should_update_scene(generated):
-            self.logger.warning(f"[SCENE DEBUG] Early return: image is None={image is None}, _should_update_scene={self._should_update_scene(generated)}")
+            self.logger.debug(
+                "[SCENE DEBUG] Early return: image_none=%s should_update=%s",
+                image is None,
+                self._should_update_scene(generated),
+            )
             return
 
         canvas_offset = self.get_canvas_offset()
         root_point = self._calculate_root_point(
             outpaint_box_rect, is_outpaint, image, generated
         )
-        self.logger.info(f"[SCENE DEBUG] canvas_offset={canvas_offset}, root_point={root_point}")
         self._update_or_create_item(image, root_point, canvas_offset)
-        self.logger.info(f"[SCENE DEBUG] _update_or_create_item completed")
+        self.logger.debug(
+            "[SCENE DEBUG] _update_or_create_item completed"
+        )
 
     def _should_update_scene(self, generated: bool) -> bool:
         """Check if scene should be updated based on lock state."""
@@ -119,14 +127,23 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         """
         # Try layer system first (new approach)
         active_layer_item = self._get_active_layer_item()
-        self.logger.info(f"[ITEM DEBUG] active_layer_item={active_layer_item}, self.item={getattr(self, 'item', 'NO ATTR')}")
+        self.logger.debug(
+            "[ITEM DEBUG] active_layer_item=%s self.item=%s",
+            active_layer_item,
+            getattr(self, "item", "NO ATTR"),
+        )
         if active_layer_item is not None:
             q_image = self._convert_and_cache_qimage(image)
-            self.logger.info(f"[ITEM DEBUG] Using active layer item, q_image valid={q_image is not None and not q_image.isNull() if q_image else False}")
+            self.logger.debug(
+                "[ITEM DEBUG] Using active layer item, q_image_valid=%s",
+                q_image is not None and not q_image.isNull()
+                if q_image
+                else False,
+            )
             if q_image is not None and not q_image.isNull():
                 try:
                     active_layer_item.updateImage(q_image)
-                    self.logger.info(
+                    self.logger.debug(
                         "Updated active layer item with filtered image"
                     )
                     # Also update current_active_image for consistency
@@ -141,7 +158,7 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
 
         # Fall back to legacy single-item system
         if self.item:
-            self.logger.info(f"[ITEM DEBUG] Using legacy self.item system")
+            self.logger.debug("[ITEM DEBUG] Using legacy self.item system")
             q_image = self._convert_and_cache_qimage(image)
             if q_image is not None and not q_image.isNull():
                 self._update_existing_item_image(q_image)
@@ -150,12 +167,18 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             self._update_item_position(root_point, canvas_offset)
         else:
             # No item exists - CREATE a new one
-            self.logger.info(f"[ITEM DEBUG] No item exists, creating new LayerImageItem")
+            self.logger.debug(
+                "[ITEM DEBUG] No item exists, creating new LayerImageItem"
+            )
             q_image = self._convert_and_cache_qimage(image)
             if q_image is not None and not q_image.isNull():
                 self._create_new_item(q_image, root_point.x(), root_point.y())
                 self.current_active_image = image
-                self.logger.info(f"[ITEM DEBUG] Created new item at ({root_point.x()}, {root_point.y()})")
+                self.logger.debug(
+                    "[ITEM DEBUG] Created new item at (%s, %s)",
+                    root_point.x(),
+                    root_point.y(),
+                )
             else:
                 self.logger.warning(f"[ITEM DEBUG] Cannot create item - QImage conversion failed")
                 self.current_active_image = image
@@ -218,7 +241,7 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
 
         elapsed = (time.time() - start) * 1000
         if elapsed > 10:
-            self.logger.warning(
+            self.logger.debug(
                 f"[PERF] PIL→QImage conversion took {elapsed:.1f}ms"
             )
 

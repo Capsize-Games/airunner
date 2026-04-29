@@ -25,6 +25,7 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 StateCallback = Callable[[DaemonConnectionState, str], None]
+_ART_JOB_POLL_INTERVAL_SECONDS = 0.10
 
 
 class GuiDaemonClient:
@@ -339,6 +340,10 @@ class GuiDaemonClient:
     ) -> bytes:
         """Poll one art job until it completes and return the PNG bytes."""
         deadline = self._time_fn() + timeout_seconds
+        poll_interval = min(
+            self._poll_interval_seconds,
+            _ART_JOB_POLL_INTERVAL_SECONDS,
+        )
         last_status: Optional[str] = None
         last_progress: Optional[float] = None
         while self._time_fn() < deadline:
@@ -350,7 +355,7 @@ class GuiDaemonClient:
             ):
                 progress_callback(status)
             if state != last_status or progress != last_progress:
-                self.logger.info(
+                self.logger.debug(
                     "GuiDaemonClient.wait_art_job job_id=%s status=%s progress=%.1f",
                     job_id,
                     state,
@@ -366,7 +371,7 @@ class GuiDaemonClient:
                 )
             if state == "cancelled":
                 raise RuntimeError("Art generation cancelled")
-            self._sleep(self._poll_interval_seconds)
+            self._sleep(poll_interval)
         try:
             self.cancel_art_job(job_id, auto_start=False)
         except RuntimeError:

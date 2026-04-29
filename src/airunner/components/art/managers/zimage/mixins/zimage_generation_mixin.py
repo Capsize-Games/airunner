@@ -360,7 +360,7 @@ class ZImageGenerationMixin:
             if self._pipe and hasattr(self._pipe, "scheduler") and hasattr(self._pipe.scheduler, "config"):
                 karras = self._pipe.scheduler.config.get("use_karras_sigmas", False)
                 stochastic = self._pipe.scheduler.config.get("stochastic_sampling", False)
-                self.logger.info(
+                self.logger.debug(
                     "[ZIMAGE SCHEDULER DEBUG] generate() using %s (karras=%s, stochastic=%s)",
                     self._pipe.scheduler.__class__.__name__,
                     karras,

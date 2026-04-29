@@ -51,7 +51,9 @@ class SidecarArtClient(RuntimeClient):
         resolved_settings = settings or resolve_art_daemon_runtime_settings()
         self._base_settings = resolved_settings
         self._settings = resolved_settings
-        self._launcher = launcher or SidecarArtLauncher(resolved_settings)
+        self._launcher = launcher or SidecarArtLauncher(
+            self._launcher_settings(resolved_settings)
+        )
         self._managed_launcher = launcher is None
         self._session = session or requests.Session()
         self._active_jobs: dict[str, str] = {}
@@ -133,8 +135,9 @@ class SidecarArtClient(RuntimeClient):
     def _load_runtime(self, request_id: str) -> ResponseEnvelope:
         """Start the managed art daemon."""
         try:
-            self._ensure_launcher(self._settings)
-            self._launcher.start()
+            with self._invoke_lock:
+                self._ensure_launcher(self._settings)
+                self._launcher.start()
         except RuntimeError as exc:
             return self._failure_response(
                 request_id,
@@ -150,7 +153,8 @@ class SidecarArtClient(RuntimeClient):
 
     def _unload_runtime(self, request_id: str) -> ResponseEnvelope:
         """Stop the managed art daemon."""
-        self._launcher.stop()
+        with self._invoke_lock:
+            self._launcher.stop()
         return ResponseEnvelope(
             request_id=request_id,
             status=EnvelopeStatus.SUCCEEDED,
@@ -227,19 +231,35 @@ class SidecarArtClient(RuntimeClient):
             ),
         )
 
+    def _launcher_settings(
+        self,
+        settings: ArtDaemonRuntimeSettings,
+    ) -> ArtDaemonRuntimeSettings:
+        """Return launcher settings that should require a process restart."""
+        return replace(
+            settings,
+            art_model_path=self._base_settings.art_model_path,
+            art_model_version=self._base_settings.art_model_version,
+            art_scheduler=self._base_settings.art_scheduler,
+        )
+
     def _ensure_launcher(self, settings: ArtDaemonRuntimeSettings) -> None:
         """Refresh the managed launcher when request settings change."""
         if not self._managed_launcher:
             self._settings = settings
             return
-        if settings == self._settings:
+        launcher_settings = self._launcher_settings(settings)
+        current_launcher_settings = self._launcher_settings(self._settings)
+        if launcher_settings == current_launcher_settings:
+            self._settings = settings
             return
         self._launcher.stop()
         self._settings = settings
-        self._launcher = SidecarArtLauncher(settings)
+        self._launcher = SidecarArtLauncher(launcher_settings)
 
     def _submit_job(self, invocation: ArtInvocationRequest) -> str:
         """Start one remote art job and return its job identifier."""
+        metadata = invocation.metadata or {}
         payload = {
             "prompt": invocation.prompt,
             "negative_prompt": invocation.negative_prompt,
@@ -253,6 +273,8 @@ class SidecarArtClient(RuntimeClient):
             "version": self._settings.art_model_version,
             "scheduler": self._settings.art_scheduler,
         }
+        if metadata.get("skip_auto_export", False):
+            payload["skip_auto_export"] = True
         response = self._request("POST", "/generate", json_payload=payload)
         job_id = str(response.get("job_id", "") or "")
         if not job_id:
