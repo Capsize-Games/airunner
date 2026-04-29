@@ -371,6 +371,9 @@ class TestLocalFallbackArtClient:
             observed_request["scheduler"] = (
                 payload["image_request"].scheduler
             )
+            observed_request["skip_auto_export"] = (
+                payload["image_request"].skip_auto_export
+            )
             payload["image_request"].callback(
                 ImageResponse(
                     images=[Image.new("RGB", (1, 1), "white")],
@@ -400,6 +403,7 @@ class TestLocalFallbackArtClient:
                     "metadata": {
                         "version": "Z-Image Turbo",
                         "scheduler": "Flow Match Euler",
+                        "skip_auto_export": True,
                     },
                 },
             )
@@ -421,6 +425,7 @@ class TestLocalFallbackArtClient:
             "pipeline_action": "txt2img",
             "version": "Z-Image Turbo",
             "scheduler": "Flow Match Euler",
+            "skip_auto_export": True,
         }
         assert all(
             code != SignalCode.SD_ART_MODEL_CHANGED

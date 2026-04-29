@@ -2,9 +2,11 @@
 
 import asyncio
 import base64
+import io
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 
 from airunner.ipc.messages import EnvelopeStatus, ResponseEnvelope
 from airunner.runtimes.contracts import (
@@ -193,6 +195,62 @@ def test_generate_image_updates_job_progress_when_runtime_reports_it(
 
     assert response.status == "running"
     assert any(job_id == response.job_id and progress == 40.0 for job_id, progress, _status in recorded_progress)
+
+
+def test_generate_image_can_mark_job_to_skip_auto_export(monkeypatch):
+    from airunner.api.routes.art import GenerationRequest, generate_image
+
+    client = FakeArtRuntimeClient()
+    scheduled = []
+
+    def fake_create_task(coroutine):
+        scheduled.append(coroutine)
+        return SimpleNamespace(done=lambda: False)
+
+    async def run_test():
+        monkeypatch.setattr(
+            "airunner.api.routes.art.asyncio.create_task",
+            fake_create_task,
+        )
+        response = await generate_image(
+            GenerationRequest(
+                prompt="A lighthouse",
+                skip_auto_export=True,
+            ),
+            _request_for(client),
+        )
+        await scheduled[0]
+        return response
+
+    response = asyncio.run(run_test())
+
+    assert response.status == "running"
+    assert client.invocations[0].payload["metadata"]["skip_auto_export"] is True
+
+
+def test_get_result_prefers_cached_png_bytes():
+    from airunner.api.routes.art import get_result
+    from airunner.utils.job_tracker import JobTracker
+
+    async def run_test():
+        tracker = JobTracker()
+        job_id = await tracker.create_job()
+        await tracker.complete_job(
+            job_id,
+            {
+                "image": Image.open(io.BytesIO(base64.b64decode(PNG_B64))).copy(),
+                "image_bytes": base64.b64decode(PNG_B64),
+            },
+        )
+        result = await get_result(job_id)
+        chunks = []
+        async for chunk in result.body_iterator:
+            chunks.append(chunk)
+        return b"".join(chunks)
+
+    chunk = asyncio.run(run_test())
+
+    assert chunk == base64.b64decode(PNG_B64)
 
 
 def test_resolve_art_client_requires_explicit_sidecar_route():

@@ -393,6 +393,26 @@ def test_synthesize_tts_posts_daemon_tts_request():
     assert kwargs["json"]["request_id"] == "tts-1"
 
 
+def test_start_art_generation_can_skip_daemon_auto_export():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    response = client.start_art_generation(
+        prompt="A bridge",
+        skip_auto_export=True,
+    )
+
+    assert response["job_id"] == "art-job-1"
+    method, url, kwargs = session.calls[-1]
+    assert method == "POST"
+    assert url.endswith("/api/v1/art/generate")
+    assert kwargs["json"]["skip_auto_export"] is True
+
+
 def test_wait_art_job_polls_until_completion():
     ready_state = {
         "ready": True,

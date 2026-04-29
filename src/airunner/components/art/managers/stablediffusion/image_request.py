@@ -41,6 +41,7 @@ class ImageRequest:
     height: int = 1024
     callback: Optional[callable] = None
     node_id: Optional[str] = None
+    skip_auto_export: bool = False
     image: Optional[Image.Image] = None
     mask: Optional[Image.Image] = None
     controlnet_image: Optional[Image.Image] = None

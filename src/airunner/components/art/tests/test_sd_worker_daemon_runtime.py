@@ -108,6 +108,7 @@ def test_generate_image_via_daemon_publishes_canvas_and_worker_response():
     assert canvas_calls
     assert worker_responses[0][0] is EngineResponseCode.IMAGE_GENERATED
     assert client.calls[0][0] == "start"
+    assert client.calls[0][1]["skip_auto_export"] is True
     assert client.calls[1][0] == "wait"
     assert worker._active_daemon_job_id is None
 

@@ -897,6 +897,9 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             prompt=invocation.prompt,
             negative_prompt=invocation.negative_prompt,
             model_path=invocation.model or "",
+            skip_auto_export=bool(
+                metadata.get("skip_auto_export", False)
+            ),
             scheduler=_resolve_art_request_scheduler(metadata),
             version=_resolve_art_request_version(metadata),
             steps=invocation.steps,

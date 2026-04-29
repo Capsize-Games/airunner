@@ -653,6 +653,7 @@ class SDWorker(Worker):
                 model=image_request.model_path or None,
                 version=image_request.version or None,
                 scheduler=image_request.scheduler or None,
+                skip_auto_export=True,
             )
             job_id = str(job.get("job_id", "") or "")
             if not job_id:

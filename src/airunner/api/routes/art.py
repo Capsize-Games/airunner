@@ -68,6 +68,7 @@ class GenerationRequest(BaseModel):
     model: Optional[str] = None
     version: Optional[str] = None
     scheduler: Optional[str] = None
+    skip_auto_export: bool = False
 
 
 class GenerationResponse(BaseModel):
@@ -208,6 +209,8 @@ async def _run_art_job(
         metadata["version"] = request.version
     if request.scheduler:
         metadata["scheduler"] = request.scheduler
+    if request.skip_auto_export:
+        metadata["skip_auto_export"] = True
     loop = asyncio.get_running_loop()
     envelope = RequestEnvelope(
         request_id=job_id,
@@ -273,7 +276,10 @@ async def _run_art_job(
 
     if await _job_cancelled(tracker, job_id):
         return
-    await tracker.complete_job(job_id, {"image": image})
+    await tracker.complete_job(
+        job_id,
+        {"image": image, "image_bytes": image_bytes},
+    )
 
 
 def _coerce_job_progress(progress_data: dict) -> Optional[float]:
@@ -581,6 +587,13 @@ async def get_result(job_id: str):
         raise HTTPException(status_code=404, detail="Image not found")
 
     try:
+        image_bytes = job.result.get("image_bytes")
+        if image_bytes:
+            return StreamingResponse(
+                io.BytesIO(image_bytes),
+                media_type="image/png",
+            )
+
         # Convert PIL Image to PNG bytes
         image = job.result["image"]
         if not isinstance(image, PILImage):

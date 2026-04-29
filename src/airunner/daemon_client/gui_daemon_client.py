@@ -265,6 +265,7 @@ class GuiDaemonClient:
         model: Optional[str] = None,
         version: Optional[str] = None,
         scheduler: Optional[str] = None,
+        skip_auto_export: bool = False,
         auto_start: bool = True,
     ) -> Dict[str, Any]:
         """Submit one art generation request through the daemon art route."""
@@ -292,6 +293,7 @@ class GuiDaemonClient:
                 "model": model,
                 "version": version,
                 "scheduler": scheduler,
+                "skip_auto_export": skip_auto_export,
             },
             auto_start=auto_start,
             timeout_seconds=30.0,
