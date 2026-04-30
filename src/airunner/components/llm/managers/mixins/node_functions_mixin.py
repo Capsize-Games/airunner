@@ -24,6 +24,7 @@ from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_open_tag,
     detect_thinking_close_tag,
 )
+from airunner.components.llm.utils.stream_text import combine_stream_chunks
 from airunner.enums import SignalCode
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
@@ -2117,11 +2118,13 @@ Based on the search results above, provide a clear, conversational answer to the
                     getattr(last_chunk_message, "tool_calls", None) or []
                 )
 
-        complete_content = "".join(streamed_content)
-        
-        # Strip <think>...</think> blocks from Qwen3 responses
-        # The thinking is useful for reasoning but shouldn't be in final output
-        complete_content = strip_thinking_tags(complete_content)
+        visible_chunks = []
+        for chunk in streamed_content:
+            cleaned_chunk = strip_thinking_tags(chunk)
+            if cleaned_chunk:
+                visible_chunks.append(cleaned_chunk)
+
+        complete_content = combine_stream_chunks(visible_chunks)
         
         # Store thinking content in additional_kwargs so it can be saved to DB
         if thinking_content:

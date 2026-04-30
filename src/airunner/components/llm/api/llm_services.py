@@ -6,6 +6,10 @@ from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_open_tag,
     strip_thinking_tags,
 )
+from airunner.components.llm.utils.stream_text import (
+    append_stream_text,
+    prepare_stream_chunk,
+)
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
 from dataclasses import dataclass, field
@@ -22,6 +26,7 @@ class _DaemonStreamState:
     thinking_tag_format: str = ""
     thinking_content: list[str] = field(default_factory=list)
     visible_sequence_number: int = 0
+    visible_text: str = ""
 
 
 class LLMAPIService(APIServiceBase):
@@ -364,11 +369,21 @@ class LLMAPIService(APIServiceBase):
             cleaned_part = strip_thinking_tags(part)
             if not cleaned_part:
                 continue
+            normalized_part = prepare_stream_chunk(
+                state.visible_text,
+                cleaned_part,
+            )
+            if not normalized_part:
+                continue
+            state.visible_text = append_stream_text(
+                state.visible_text,
+                cleaned_part,
+            )
             self.send_llm_text_streamed_signal(
                 self._build_visible_daemon_response(
                     chunk,
                     state=state,
-                    message=cleaned_part,
+                    message=normalized_part,
                     is_end_of_message=chunk_done and index == last_index,
                     request_id=request_id,
                     action=action,

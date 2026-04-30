@@ -288,7 +288,6 @@ class ToolRegistry:
                 "airunner.components.llm.tools.math_tools",
                 "airunner.components.llm.tools.reasoning_tools",
                 "airunner.components.llm.tools.web_tools",
-                "airunner.components.llm.tools.calendar_tools",
                 "airunner.components.llm.tools.rag_tools",
                 "airunner.components.llm.tools.knowledge_tools",
                 "airunner.components.llm.tools.user_data_tools",

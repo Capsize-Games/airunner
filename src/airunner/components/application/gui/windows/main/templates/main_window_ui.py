@@ -259,35 +259,6 @@ class Ui_MainWindow(object):
 
         self.action_sidebar.addWidget(self.document_editor_button)
 
-        self.calendar_button = QPushButton(self.actionsidebar)
-        self.calendar_button.setObjectName(u"calendar_button")
-        self.calendar_button.setMinimumSize(QSize(35, 35))
-        self.calendar_button.setMaximumSize(QSize(35, 35))
-        self.calendar_button.setBaseSize(QSize(0, 0))
-        self.calendar_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon28 = QIcon()
-        icon28.addFile(u":/light/icons/feather/light/calendar.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.calendar_button.setIcon(icon28)
-        self.calendar_button.setIconSize(QSize(20, 20))
-        self.calendar_button.setCheckable(True)
-        self.calendar_button.setFlat(True)
-
-        self.action_sidebar.addWidget(self.calendar_button)
-
-        self.visualizer_button = QPushButton(self.actionsidebar)
-        self.visualizer_button.setObjectName(u"visualizer_button")
-        self.visualizer_button.setMinimumSize(QSize(35, 35))
-        self.visualizer_button.setMaximumSize(QSize(35, 35))
-        self.visualizer_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon29 = QIcon()
-        icon29.addFile(u":/dark/icons/feather/dark/radio.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.visualizer_button.setIcon(icon29)
-        self.visualizer_button.setIconSize(QSize(20, 20))
-        self.visualizer_button.setCheckable(True)
-        self.visualizer_button.setFlat(True)
-
-        self.action_sidebar.addWidget(self.visualizer_button)
-
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.action_sidebar.addItem(self.verticalSpacer)
@@ -404,28 +375,6 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.document_editor_placeholder, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.document_editor_tab, "")
-        self.calendar_tab = QWidget()
-        self.calendar_tab.setObjectName(u"calendar_tab")
-        self.gridLayout_calendar = QGridLayout(self.calendar_tab)
-        self.gridLayout_calendar.setObjectName(u"gridLayout_calendar")
-        self.gridLayout_calendar.setContentsMargins(0, 0, 0, 0)
-        self.calendar_placeholder = QWidget(self.calendar_tab)
-        self.calendar_placeholder.setObjectName(u"calendar_placeholder")
-
-        self.gridLayout_calendar.addWidget(self.calendar_placeholder, 0, 0, 1, 1)
-
-        self.center_tab_container.addTab(self.calendar_tab, "")
-        self.visualizer_tab = QWidget()
-        self.visualizer_tab.setObjectName(u"visualizer_tab")
-        self.gridLayout_14 = QGridLayout(self.visualizer_tab)
-        self.gridLayout_14.setObjectName(u"gridLayout_14")
-        self.gridLayout_14.setContentsMargins(0, 0, 0, 0)
-        self.visualizer_placeholder = QWidget(self.visualizer_tab)
-        self.visualizer_placeholder.setObjectName(u"visualizer_placeholder")
-
-        self.gridLayout_14.addWidget(self.visualizer_placeholder, 0, 0, 1, 1)
-
-        self.center_tab_container.addTab(self.visualizer_tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -625,14 +574,6 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.document_editor_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.calendar_button.setToolTip(QCoreApplication.translate("MainWindow", u"Calendar", None))
-#endif // QT_CONFIG(tooltip)
-        self.calendar_button.setText("")
-#if QT_CONFIG(tooltip)
-        self.visualizer_button.setToolTip(QCoreApplication.translate("MainWindow", u"Visualizer", None))
-#endif // QT_CONFIG(tooltip)
-        self.visualizer_button.setText("")
-#if QT_CONFIG(tooltip)
         self.chat_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Chat", None))
 #endif // QT_CONFIG(tooltip)
         self.chat_button.setText("")
@@ -647,8 +588,6 @@ class Ui_MainWindow(object):
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.home_tab), QCoreApplication.translate("MainWindow", u"Home", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.document_editor_tab), QCoreApplication.translate("MainWindow", u"Document Editor", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.calendar_tab), QCoreApplication.translate("MainWindow", u"Calendar", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.visualizer_tab), QCoreApplication.translate("MainWindow", u"Visualizer", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))

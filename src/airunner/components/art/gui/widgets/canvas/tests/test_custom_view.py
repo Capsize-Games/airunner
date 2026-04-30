@@ -382,6 +382,23 @@ class TestSignalHandlers:
                 custom_view.on_zoom_level_changed_signal()
                 mock_set.assert_called_once_with(mock_transform)
 
+    def test_wheel_event_updates_grid_info(self, custom_view):
+        """Wheel zoom should refresh the displayed zoom/offset text."""
+        custom_view.api = Mock()
+        custom_view.api.art.canvas.update_grid_info = Mock()
+        custom_view.zoom_handler.wheelEvent = Mock(return_value=Mock())
+
+        with patch.object(custom_view, "setTransform"):
+            with patch.object(custom_view, "do_draw"):
+                custom_view.wheelEvent(Mock())
+
+        custom_view.api.art.canvas.update_grid_info.assert_called_once_with(
+            {
+                "offset_x": custom_view.canvas_offset_x,
+                "offset_y": custom_view.canvas_offset_y,
+            }
+        )
+
 
 class TestCanvasColorManagement:
     """Test canvas color setting."""

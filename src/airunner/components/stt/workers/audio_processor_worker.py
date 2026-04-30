@@ -31,12 +31,31 @@ class AudioProcessorWorker(Worker):
         """Create the local STT executor used by the processor worker."""
         return WhisperLocalExecutor()
 
+    def _current_api(self):
+        """Return the freshest API reference available to this worker."""
+        refresher = getattr(self, "refresh_api_reference", None)
+        if callable(refresher):
+            return refresher()
+        return getattr(self, "api", None)
+
     def _daemon_client(self):
         """Return the GUI daemon client when STT is running remotely."""
-        api = getattr(self, "api", None)
+        api = self._current_api()
         if api is None or getattr(api, "headless", False):
             return None
         return getattr(api, "daemon_client", None)
+
+    def _emit_transcription(self, transcription: str) -> None:
+        """Forward one transcription to the shared UI boundary."""
+        api = AudioProcessorWorker._current_api(self)
+        stt_service = getattr(api, "stt", None) if api is not None else None
+        if stt_service is not None:
+            stt_service.audio_processor_response(transcription)
+            return
+        self.emit_signal(
+            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+            {"transcription": transcription},
+        )
 
     def on_stt_load_signal(self, data: dict = None):
         if self._executor is None:
@@ -94,7 +113,10 @@ class AudioProcessorWorker(Worker):
                 audio_data,
             )
             if transcription:
-                self.api.stt.audio_processor_response(transcription)
+                AudioProcessorWorker._emit_transcription(
+                    self,
+                    transcription,
+                )
             return
         if self._executor is None:
             self.logger.warning("STT handler not initialized, skipping audio")
@@ -105,7 +127,7 @@ class AudioProcessorWorker(Worker):
         self.logger.debug("Processing audio through STT executor")
         transcription = self._executor.transcribe(audio_data)
         if transcription:
-            self.api.stt.audio_processor_response(transcription)
+            AudioProcessorWorker._emit_transcription(self, transcription)
 
     def _transcribe_via_daemon(self, daemon_client, audio_data) -> str:
         """Send one live-capture payload through the daemon STT route."""

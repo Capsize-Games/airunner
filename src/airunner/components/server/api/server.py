@@ -53,7 +53,6 @@ from airunner.enums import LLMActionType, SignalCode, EngineResponseCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
 from airunner.components.application.api.api import API
-from airunner.components.calendar.data.event import Event
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.data.conversation import Conversation
 from airunner.utils.application.get_logger import get_logger
@@ -3037,9 +3036,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 return
             deleted_counts = {}
             with session_scope() as session:
-                # Clear calendar events
-                event_count = session.query(Event).delete()
-                deleted_counts["events"] = event_count
+                conversation_count = session.query(Conversation).delete()
+                deleted_counts["conversations"] = conversation_count
                 session.commit()
 
             self.logger.info(f"Test database cleared: {deleted_counts}")

@@ -60,6 +60,8 @@ class StatusWidget(BaseWidget):
             (ModelType.SD, "sd_enabled"),
             (ModelType.CONTROLNET, "controlnet_enabled"),
         ]:
+            if item[0] in (ModelType.TTS, ModelType.STT):
+                continue
             if getattr(self.application_settings, item[1]):
                 self._model_status[item[0]] = ModelStatus.LOADING
                 self.update_model_status(

@@ -458,10 +458,6 @@ SLASH_COMMANDS = {
         "tool": "clear_conversation",
         "description": "Clear the current conversation history",
     },
-    "calendar": {
-        "tool": "get_calendar_events",
-        "description": "View your calendar events",
-    },
 }
 
 AIRUNNER_SCRAPER_BLACKLIST = [

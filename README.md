@@ -175,6 +175,19 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
    airunner
    ```
 
+### Alembic Upgrades
+
+When you need to run database migrations manually from a local clone, use the
+repo Alembic config and upgrade all heads:
+
+```bash
+source venv/bin/activate
+alembic -c src/airunner/alembic.ini upgrade heads
+```
+
+If you are targeting a non-default database, set `AIRUNNER_DATABASE_URL`
+before running the command.
+
 For detailed instructions, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ## Hybrid Runtime Migration

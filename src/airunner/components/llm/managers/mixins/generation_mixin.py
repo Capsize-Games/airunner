@@ -19,6 +19,7 @@ from langchain_core.messages import AIMessage
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.components.llm.utils.stream_text import prepare_stream_chunk
 from airunner.enums import LLMActionType, SignalCode
 
 
@@ -171,6 +172,9 @@ class GenerationMixin:
 
         def handle_streaming_token(token_text: str) -> None:
             """Forward streaming tokens to the GUI and accumulate response."""
+            if not token_text:
+                return
+            token_text = prepare_stream_chunk(complete_response[0], token_text)
             if not token_text:
                 return
             complete_response[0] += token_text

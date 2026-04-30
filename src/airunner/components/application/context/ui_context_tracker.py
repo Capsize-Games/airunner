@@ -16,7 +16,7 @@ class UIContextTracker(MediatorMixin):
     """Singleton service for tracking active UI section.
     
     This class tracks which section of the application is currently active
-    (e.g., art editor, document editor, calendar) and provides methods to
+    (e.g., art editor or document editor) and provides methods to
     query this context for the LLM system prompts.
     
     Uses signal-based communication to receive section change notifications

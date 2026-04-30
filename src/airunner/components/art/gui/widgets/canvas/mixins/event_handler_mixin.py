@@ -129,10 +129,28 @@ class EventHandlerMixin:
         - Ctrl+C for copying image to clipboard
         - Ctrl+V for pasting image from clipboard
         - Ctrl+X for cutting image
+        - Ctrl+0 for resetting zoom
 
         Args:
             event: Qt keyboard event.
         """
+        if (
+            event.key() == Qt.Key.Key_0
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            and hasattr(self, "zoom_handler")
+        ):
+            self.zoom_handler.zoom_level = 1.0
+            self.setTransform(self.zoom_handler.on_zoom_level_changed())
+            self.do_draw()
+            self.api.art.canvas.update_grid_info(
+                {
+                    "offset_x": self.canvas_offset_x,
+                    "offset_y": self.canvas_offset_y,
+                }
+            )
+            event.accept()
+            return
+
         # Handle Ctrl+C (copy)
         if event.key() == Qt.Key.Key_C and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             self.api.art.canvas.copy_image()

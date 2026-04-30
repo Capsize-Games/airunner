@@ -246,7 +246,7 @@ def setup_database(db_url: str | None = None):
                     tenant_token = None
 
         try:
-            command.upgrade(alembic_cfg, "head")
+            command.upgrade(alembic_cfg, "heads")
         finally:
             if tenant_token is not None:
                 try:

@@ -25,10 +25,61 @@ def test_settings_mixin_uses_qt_application_api(monkeypatch):
         "PySide6.QtCore.QCoreApplication.instance",
         lambda: None,
     )
+    monkeypatch.setattr(
+        "airunner.components.server.api.server.get_api",
+        lambda **_kwargs: None,
+    )
 
     settings = DummySettingsObject()
 
     assert settings.api is expected_api
+
+
+def test_settings_mixin_prefers_richer_global_api(monkeypatch):
+    """A richer global API should win over one incomplete Qt app proxy."""
+    qt_app = SimpleNamespace(api=SimpleNamespace())
+    global_api = SimpleNamespace(daemon_client=object(), headless=False)
+
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QApplication.instance",
+        lambda: qt_app,
+    )
+    monkeypatch.setattr(
+        "PySide6.QtCore.QCoreApplication.instance",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "airunner.components.server.api.server.get_api",
+        lambda **_kwargs: global_api,
+    )
+
+    settings = DummySettingsObject()
+
+    assert settings.api is global_api
+
+
+def test_settings_mixin_refreshes_stale_api(monkeypatch):
+    """Refreshing should replace one stale cached API with a richer one."""
+    global_api = SimpleNamespace(daemon_client=object(), headless=False)
+
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QApplication.instance",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "PySide6.QtCore.QCoreApplication.instance",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "airunner.components.server.api.server.get_api",
+        lambda **_kwargs: global_api,
+    )
+
+    settings = DummySettingsObject()
+    settings.api = SimpleNamespace()
+
+    assert settings.refresh_api_reference() is global_api
+    assert settings.api is global_api
 
 
 def test_settings_mixin_peeks_global_api_without_creation(monkeypatch):

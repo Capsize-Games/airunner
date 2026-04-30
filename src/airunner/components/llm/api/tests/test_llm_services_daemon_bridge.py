@@ -161,6 +161,13 @@ def test_stream_daemon_request_converts_thinking_to_ui_signal():
         send_llm_thinking_signal=lambda status, content: emitted_signals.append(
             (status, content)
         ),
+        _forward_daemon_chunk=(
+            lambda chunk, **kwargs: LLMAPIService._forward_daemon_chunk(
+                service,
+                chunk,
+                **kwargs,
+            )
+        ),
         _extract_visible_daemon_text=(
             lambda message, state: LLMAPIService._extract_visible_daemon_text(
                 service,
@@ -283,3 +290,93 @@ def test_stream_daemon_request_preserves_error_chunks():
     assert isinstance(emitted_responses[0], LLMResponse)
     assert emitted_responses[0].message == "Error invoking LLM"
     assert emitted_responses[0].is_system_message is True
+
+
+def test_stream_daemon_request_inserts_spaces_between_word_chunks():
+    chunks = [
+        {
+            "message": "Hello",
+            "is_first_message": True,
+            "is_end_of_message": False,
+            "sequence_number": 1,
+        },
+        {
+            "message": "world",
+            "is_first_message": False,
+            "is_end_of_message": True,
+            "sequence_number": 2,
+        },
+    ]
+    emitted_responses = []
+    service = SimpleNamespace(
+        send_llm_text_streamed_signal=lambda response: emitted_responses.append(
+            response
+        ),
+        send_llm_thinking_signal=lambda status, content: None,
+        _forward_daemon_chunk=(
+            lambda chunk, **kwargs: LLMAPIService._forward_daemon_chunk(
+                service,
+                chunk,
+                **kwargs,
+            )
+        ),
+        _extract_visible_daemon_text=(
+            lambda message, state: LLMAPIService._extract_visible_daemon_text(
+                service,
+                message,
+                state,
+            )
+        ),
+        _finish_daemon_thinking=lambda state: (
+            LLMAPIService._finish_daemon_thinking(service, state)
+        ),
+        _emit_visible_daemon_parts=(
+            lambda visible_parts, **kwargs: (
+                LLMAPIService._emit_visible_daemon_parts(
+                    service,
+                    visible_parts,
+                    **kwargs,
+                )
+            )
+        ),
+        _build_visible_daemon_response=(
+            lambda chunk, **kwargs: LLMAPIService._build_visible_daemon_response(
+                service,
+                chunk,
+                **kwargs,
+            )
+        ),
+        _response_from_daemon_chunk=(
+            lambda chunk, **kwargs: LLMAPIService._response_from_daemon_chunk(
+                chunk,
+                **kwargs,
+            )
+        ),
+        _start_daemon_thinking=lambda state, tag_format: (
+            LLMAPIService._start_daemon_thinking(service, state, tag_format)
+        ),
+        _append_daemon_thinking=lambda state, content: (
+            LLMAPIService._append_daemon_thinking(service, state, content)
+        ),
+    )
+    client = SimpleNamespace(
+        stream_llm_request=lambda *args, **kwargs: iter(chunks)
+    )
+
+    LLMAPIService._stream_daemon_request(
+        service,
+        client,
+        "hello",
+        LLMRequest(),
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        7,
+        None,
+        None,
+    )
+
+    assert [response.message for response in emitted_responses] == [
+        "Hello",
+        " world",
+    ]

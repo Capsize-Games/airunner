@@ -12,19 +12,20 @@ from airunner.components.application.gui.windows.main.settings_model_factory imp
 from airunner.utils.settings import get_qsettings
 
 
-_MAIN_TAB_INDEX_VERSION = 2
+_MAIN_TAB_INDEX_VERSION = 3
 
 
 def _normalize_active_main_tab_index(settings: Any) -> int:
-    """Normalize persisted main-tab indexes after workflow/video removal."""
+    """Normalize persisted main-tab indexes after tab removals."""
     active_index = settings.value("active_main_tab_index", 0, type=int)
     version = settings.value("main_tab_index_version", 1, type=int)
-    if version >= _MAIN_TAB_INDEX_VERSION:
-        return active_index
-    if active_index == 2 or active_index >= 6:
+    if version < 2:
+        if active_index == 2 or active_index >= 6:
+            active_index = 0
+        elif active_index > 2:
+            active_index -= 1
+    if version < _MAIN_TAB_INDEX_VERSION and active_index > 2:
         active_index = 0
-    elif active_index > 2:
-        active_index -= 1
     settings.setValue("active_main_tab_index", active_index)
     settings.setValue("main_tab_index_version", _MAIN_TAB_INDEX_VERSION)
     settings.sync()

@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import threading
 import time
 import urllib
 import webbrowser
@@ -177,8 +178,11 @@ class MainWindow(
     load_image_object = Signal(object)
     loaded = Signal()
     window_opened = Signal()
+    daemon_runtime_status_ready = Signal(object)
     ui_class_ = Ui_MainWindow
     _window_title = f"AI Runner"
+    _daemon_status_request_timeout_seconds = 0.75
+    _runtime_preference_retry_seconds = 5.0
     icons = [
         ("settings", "actionSettings"),
         ("cpu", "actionToggle_LLM"),
@@ -213,11 +217,9 @@ class MainWindow(
         ("save", "actionSave_As"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
-        ("calendar", "calendar_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
-        ("radio", "visualizer_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
         ("file-text", "menuDocuments"),
@@ -228,9 +230,12 @@ class MainWindow(
     def __init__(self, *args, **kwargs):
         self.quitting = False
         self._launcher_splash_dismissed = False
+        self._post_startup_status_refresh_requested = False
         self._state_restored = None
         self._pending_startup_button_name = None
         self._restore_knowledgebase_after_startup = False
+        self._daemon_status_refresh_inflight = False
+        self._runtime_preference_retry_after = {}
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
@@ -287,6 +292,9 @@ class MainWindow(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
         }
         super().__init__()
+        self.daemon_runtime_status_ready.connect(
+            self._on_daemon_runtime_status_ready
+        )
         self.logger.debug("Starting AI Runnner")
         enable_wayland_window_decorations(self)
         
@@ -298,8 +306,6 @@ class MainWindow(
         self.update_application_settings(
             sd_enabled=False,
             llm_enabled=False,
-            tts_enabled=False,
-            stt_enabled=False,
             controlnet_enabled=False,
         )
         self.single_click_timer = QTimer(self)
@@ -376,6 +382,31 @@ class MainWindow(
                 0,
                 lambda: self._set_current_button_and_tab(button_name),
             )
+
+        if self._post_startup_status_refresh_requested:
+            return
+        self._post_startup_status_refresh_requested = True
+        self._refresh_model_status_from_daemon()
+
+    def _schedule_main_window_loaded_signal(self) -> None:
+        """Schedule the post-startup signal once after the window is shown."""
+        if getattr(self, "_main_window_loaded_signal_scheduled", False):
+            return
+        self._main_window_loaded_signal_scheduled = True
+        QTimer.singleShot(0, self._emit_main_window_loaded_signal_if_ready)
+
+    def _emit_main_window_loaded_signal_if_ready(self) -> None:
+        """Emit the post-startup signal when a live API is available."""
+        if getattr(self, "_main_window_loaded_signal_emitted", False):
+            return
+        api = getattr(self, "api", None)
+        if api is None:
+            api = self.refresh_api_reference()
+        if api is None:
+            self._main_window_loaded_signal_scheduled = False
+            return
+        self._main_window_loaded_signal_emitted = True
+        api.main_window_loaded(self)
 
     def on_splitter_changed_sizes(self):
         self.set_chat_button_checked()
@@ -821,35 +852,6 @@ class MainWindow(
             )
             return
 
-        if button_name == "calendar_button":
-            from airunner.components.calendar.gui.calendar_tab import (
-                CalendarTab,
-            )
-
-            self._attach_lazy_widget(
-                "calendar_tab",
-                "gridLayout_calendar",
-                "calendar_widget",
-                "calendar_placeholder",
-                "calendar_widget",
-                CalendarTab,
-            )
-            return
-
-        if button_name == "visualizer_button":
-            from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_widget import (
-                VoiceVisualizerWidget,
-            )
-
-            self._attach_lazy_widget(
-                "visualizer_tab",
-                "gridLayout_14",
-                "visualizer",
-                "visualizer_placeholder",
-                "visualizer",
-                VoiceVisualizerWidget,
-            )
-
     def _ensure_knowledgebase_loaded(self) -> None:
         """Create the documents pane only when it is actually shown."""
         from airunner.components.documents.gui.widgets.documents import (
@@ -871,8 +873,6 @@ class MainWindow(
             "home_button": self.ui.home_tab,
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
-            "calendar_button": self.ui.calendar_tab,
-            "visualizer_button": self.ui.visualizer_tab,
         }
 
     def _restore_tab(self):
@@ -893,8 +893,6 @@ class MainWindow(
             0: "home_button",
             1: "art_editor_button",
             2: "document_editor_button",
-            3: "calendar_button",
-            4: "visualizer_button",
         }
 
         if saved_index in buttons:
@@ -904,6 +902,9 @@ class MainWindow(
                 getattr(self.ui, button_name).setChecked(True)
             else:
                 self._pending_startup_button_name = button_name
+        else:
+            self.ui.center_tab_container.setCurrentIndex(0)
+            self.ui.home_button.setChecked(True)
 
     def _set_current_button_and_tab(self, button_name: str):
         """
@@ -927,20 +928,12 @@ class MainWindow(
         self._set_current_button_and_tab("home_button")
 
     @Slot(bool)
-    def on_visualizer_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("visualizer_button")
-
-    @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("art_editor_button")
 
     @Slot(bool)
     def on_document_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("document_editor_button")
-
-    @Slot(bool)
-    def on_calendar_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("calendar_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
@@ -1253,12 +1246,9 @@ class MainWindow(
         )
 
         phase_started_at = time.perf_counter()
-        # Disable innactive features
-        self.ui.calendar_button.hide()
-        
         # Add legal document menu items to Help menu
         self._add_legal_menu_items()
-        
+
         # Add Download Models menu item to Tools menu
         self._add_download_models_menu_item()
 
@@ -1338,9 +1328,8 @@ class MainWindow(
 
         phase_started_at = time.perf_counter()
         self._load_plugins()
-        self._refresh_model_status_from_daemon()
         self.logger.info(
-            "MainWindow startup phase post_init_refresh completed in %.2fs",
+            "MainWindow startup phase post_init_plugins completed in %.2fs",
             time.perf_counter() - phase_started_at,
         )
 
@@ -1432,8 +1421,19 @@ class MainWindow(
             )
             self.ui.actionSafety_Checker.blockSignals(False)
             self.set_nsfw_filter_tooltip()
-
         self.initialized = True
+
+    @staticmethod
+    def _set_action_checked_state(action, checked: bool) -> None:
+        """Update one toggle without re-triggering its signal."""
+        action.blockSignals(True)
+        action.setChecked(checked)
+        action.blockSignals(False)
+
+    @staticmethod
+    def _allows_loading_toggle(model_type: ModelType) -> bool:
+        """Return True when a loading toggle may still change preference."""
+        return model_type in (ModelType.TTS, ModelType.STT)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -1523,6 +1523,8 @@ class MainWindow(
         if self.quitting:
             return
         self.logger.debug("Quitting")
+        if self._daemon_status_timer.isActive():
+            self._daemon_status_timer.stop()
         self.save_state()
         self.quitting = True
         if not self.api:
@@ -1589,20 +1591,21 @@ class MainWindow(
         application_setting: str = None,
         data: Dict = None,
     ):
-        if self._model_status[model_type] is ModelStatus.LOADING:
-            val = not val
-        element.blockSignals(True)
-        element.setChecked(val)
-        element.blockSignals(False)
+        is_loading = self._model_status[model_type] is ModelStatus.LOADING
+        if is_loading and not self._allows_loading_toggle(model_type):
+            self._set_action_checked_state(element, not val)
+            return
+        self._set_action_checked_state(element, val)
         if application_setting:
             settings_data = {}
             settings_data[application_setting] = val
             self.update_application_settings(**settings_data)
-        if self._model_status[model_type] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(load_signal, data)
-            else:
-                self.emit_signal(unload_signal, data)
+        if is_loading:
+            return
+        if val:
+            self.emit_signal(load_signal, data)
+        else:
+            self.emit_signal(unload_signal, data)
 
     def save_state(self):
         self.logger.debug("Saving window state")
@@ -1798,26 +1801,32 @@ class MainWindow(
     def show_setup_wizard():
         AppInstaller(close_on_cancel=False)
 
-    def _handoff_launcher_splash(self) -> None:
-        """Dismiss the launcher splash as soon as the main window is shown."""
-        if self._launcher_splash_dismissed:
-            return
-        api = getattr(self, "api", None)
-        splash = getattr(api, "splash", None)
+    def _complete_launcher_splash_handoff(self) -> None:
+        """Dismiss the launcher splash after the first show event."""
+        api = self.refresh_api_reference() or getattr(self, "api", None)
         app = QApplication.instance()
+        splash = getattr(api, "splash", None)
         if not api or not splash or app is None:
             return
 
         from airunner.app_mixins.ui_runtime_mixin import UIRuntimeMixin
 
-        self._launcher_splash_dismissed = True
         UIRuntimeMixin._dismiss_splash_screen(api, self, app)
-        UIRuntimeMixin._present_main_window(self, app)
-        QTimer.singleShot(
-            0,
-            lambda: UIRuntimeMixin._present_main_window(self, app),
-        )
-        self.logger.debug("Dismissed launcher splash from showEvent")
+        self.raise_()
+        self.activateWindow()
+        self.logger.debug("Dismissed launcher splash after showEvent")
+
+    def _handoff_launcher_splash(self) -> None:
+        """Queue splash dismissal after the first show event returns."""
+        if self._launcher_splash_dismissed:
+            return
+        api = getattr(self, "api", None)
+        if not api or not getattr(api, "splash", None):
+            return
+
+        self._launcher_splash_dismissed = True
+        QTimer.singleShot(0, self._complete_launcher_splash_handoff)
+        self.logger.debug("Queued launcher splash dismissal from showEvent")
 
     def showEvent(self, event):
         """Override to update the tray menu text when window is shown."""
@@ -1836,6 +1845,7 @@ class MainWindow(
         self.initialized = True
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
+        self._schedule_main_window_loaded_signal()
 
         # Show donation dialog after window is fully displayed (only on first show)
         if not hasattr(self, "_donation_dialog_shown"):
@@ -1991,20 +2001,155 @@ class MainWindow(
 
     def _refresh_model_status_from_daemon(self) -> None:
         """Refresh GUI model status from daemon lifecycle state."""
-        if self.api is None:
+        if self.api is None or self._daemon_status_refresh_inflight:
             return
         client = getattr(self.api, "daemon_client", None)
         if client is None:
             return
+        self._daemon_status_refresh_inflight = True
+        threading.Thread(
+            target=self._fetch_daemon_runtime_status,
+            args=(client,),
+            daemon=True,
+        ).start()
+
+    def _fetch_daemon_runtime_status(self, client) -> None:
+        """Fetch one daemon runtime snapshot without blocking the UI."""
+        status = None
         try:
-            status = client.daemon_runtime_status(auto_start=False)
+            status = client.daemon_runtime_status(
+                auto_start=False,
+                timeout_seconds=self._daemon_status_request_timeout_seconds,
+            )
         except RuntimeError:
+            pass
+        self.daemon_runtime_status_ready.emit(status)
+
+    def _on_daemon_runtime_status_ready(self, status: object) -> None:
+        """Apply one daemon runtime snapshot on the GUI thread."""
+        self._daemon_status_refresh_inflight = False
+        if not isinstance(status, dict):
             return
+        runtime_statuses = self._runtime_statuses_from_daemon_status(status)
+        if runtime_statuses:
+            for model_type in (
+                ModelType.LLM,
+                ModelType.TTS,
+                ModelType.STT,
+                ModelType.SD,
+            ):
+                self._sync_model_status_value(
+                    model_type,
+                    runtime_statuses.get(model_type, ModelStatus.UNLOADED),
+                )
+        else:
+            loaded_models = self._loaded_model_names_from_runtime_status(status)
+            self._sync_model_status(ModelType.LLM, "LLM", loaded_models)
+            self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
+            self._sync_model_status(ModelType.STT, "STT", loaded_models)
+            self._sync_model_status(ModelType.SD, "SD", loaded_models)
         loaded_models = self._loaded_model_names_from_runtime_status(status)
-        self._sync_model_status(ModelType.LLM, "LLM", loaded_models)
-        self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
-        self._sync_model_status(ModelType.STT, "STT", loaded_models)
-        self._sync_model_status(ModelType.SD, "SD", loaded_models)
+        self._reconcile_optional_runtime_preferences(loaded_models)
+
+    @staticmethod
+    def _model_status_from_runtime_summary(summary: dict) -> ModelStatus:
+        """Translate one daemon runtime summary into GUI model status."""
+        runtime_status = str(summary.get("status", "")).strip().lower()
+        if runtime_status == "starting":
+            return ModelStatus.LOADING
+        if runtime_status == "failed":
+            return ModelStatus.FAILED
+        if runtime_status == "ready":
+            return ModelStatus.LOADED
+        if bool(summary.get("loaded")):
+            return ModelStatus.LOADED
+        return ModelStatus.UNLOADED
+
+    @staticmethod
+    def _runtime_statuses_from_daemon_status(
+        status: dict,
+    ) -> dict[ModelType, ModelStatus]:
+        """Return GUI model statuses derived from daemon runtime summaries."""
+        runtime_map = {
+            "llm": ModelType.LLM,
+            "tts": ModelType.TTS,
+            "stt": ModelType.STT,
+            "art": ModelType.SD,
+        }
+        runtimes = status.get("runtimes")
+        if not isinstance(runtimes, list):
+            return {}
+        statuses: dict[ModelType, ModelStatus] = {}
+        for runtime in runtimes:
+            model_type = runtime_map.get(str(runtime.get("runtime", "")).lower())
+            if model_type is None:
+                continue
+            statuses[model_type] = MainWindow._model_status_from_runtime_summary(
+                runtime
+            )
+        return statuses
+
+    @staticmethod
+    def _optional_runtime_preference_specs():
+        """Return daemon-backed runtime preference sync definitions."""
+        return (
+            (
+                ModelType.TTS,
+                "TTS",
+                "tts_enabled",
+                SignalCode.TTS_ENABLE_SIGNAL,
+                SignalCode.TTS_DISABLE_SIGNAL,
+            ),
+            (
+                ModelType.STT,
+                "STT",
+                "stt_enabled",
+                SignalCode.STT_LOAD_SIGNAL,
+                SignalCode.STT_UNLOAD_SIGNAL,
+            ),
+        )
+
+    def _reconcile_optional_runtime_preferences(
+        self,
+        loaded_models: set[str],
+    ) -> None:
+        """Align daemon-backed TTS/STT state with persisted preferences."""
+        now = time.monotonic()
+        for spec in self._optional_runtime_preference_specs():
+            MainWindow._reconcile_optional_runtime_preference(
+                self,
+                spec,
+                loaded_models,
+                now,
+            )
+
+    def _reconcile_optional_runtime_preference(
+        self,
+        spec,
+        loaded_models: set[str],
+        now: float,
+    ) -> None:
+        """Emit one load or unload signal when a preference is out of sync."""
+        model_type, loaded_name, setting_name, load_signal, unload_signal = spec
+        desired_enabled = bool(
+            getattr(self.application_settings, setting_name, False)
+        )
+        is_loaded = loaded_name in loaded_models
+        if desired_enabled == is_loaded:
+            self._runtime_preference_retry_after.pop(model_type, None)
+            return
+        if (
+            desired_enabled
+            and self._model_status[model_type] is ModelStatus.LOADING
+        ):
+            return
+        if now < self._runtime_preference_retry_after.get(model_type, 0.0):
+            return
+        self._runtime_preference_retry_after[model_type] = (
+            now + self._runtime_preference_retry_seconds
+        )
+        signal = load_signal if desired_enabled else unload_signal
+        self.emit_signal(signal, {"source": "runtime_preference_sync"})
 
     @staticmethod
     def _loaded_model_names_from_runtime_status(status: dict) -> set[str]:
@@ -2033,6 +2178,14 @@ class MainWindow(
         status = ModelStatus.LOADED
         if loaded_name not in loaded_models:
             status = ModelStatus.UNLOADED
+        self._sync_model_status_value(model_type, status)
+
+    def _sync_model_status_value(
+        self,
+        model_type: ModelType,
+        status: ModelStatus,
+    ) -> None:
+        """Emit one model-status update when the status changed."""
         if self._model_status[model_type] is status:
             return
         self.emit_signal(
@@ -2046,6 +2199,7 @@ class MainWindow(
         if self._model_status[model] is status:
             return
         self._model_status[model] = status
+        failed_action = None
         if model is ModelType.SD:
             self.ui.actionToggle_Stable_Diffusion.setDisabled(
                 status is ModelStatus.LOADING
@@ -2066,26 +2220,15 @@ class MainWindow(
             elif status is ModelStatus.UNLOADED:
                 self.update_application_settings(llm_enabled=False)
         elif model is ModelType.TTS:
-            self.ui.actionToggle_Text_to_Speech.setDisabled(
-                status is ModelStatus.LOADING
-            )
-            if status is ModelStatus.LOADED:
-                self.update_application_settings(tts_enabled=True)
-            elif status is ModelStatus.FAILED:
-                self.ui.actionToggle_Text_to_Speech.setChecked(False)
-            elif status is ModelStatus.UNLOADED:
-                self.update_application_settings(tts_enabled=False)
+            self.ui.actionToggle_Text_to_Speech.setDisabled(False)
+            if status is ModelStatus.FAILED:
+                failed_action = self.ui.actionToggle_Text_to_Speech
         elif model is ModelType.STT:
-            self.ui.actionToggle_Speech_to_Text.setDisabled(
-                status is ModelStatus.LOADING
-            )
-            if status is ModelStatus.LOADED:
-                self.update_application_settings(stt_enabled=True)
-            elif status is ModelStatus.FAILED:
-                self.ui.actionToggle_Speech_to_Text.setChecked(False)
-            elif status is ModelStatus.UNLOADED:
-                self.update_application_settings(stt_enabled=False)
-        self.initialize_widget_elements()
+            self.ui.actionToggle_Speech_to_Text.setDisabled(False)
+            if status is ModelStatus.FAILED:
+                failed_action = self.ui.actionToggle_Speech_to_Text
+        if failed_action is not None:
+            self._set_action_checked_state(failed_action, False)
         QApplication.processEvents()
 
     def _generate_drawingpad_mask(self):

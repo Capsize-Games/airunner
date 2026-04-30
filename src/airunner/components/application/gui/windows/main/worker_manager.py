@@ -12,6 +12,11 @@ from airunner.enums import SignalCode
 from airunner.utils.application.create_worker import create_worker
 
 
+_OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS = 5.0
+_OPTIONAL_UNLOAD_REQUEST_TIMEOUT_SECONDS = 2.0
+_OPTIONAL_UNLOAD_WAIT_TIMEOUT_SECONDS = 5.0
+
+
 class WorkerManager(Worker):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
@@ -676,6 +681,197 @@ class WorkerManager(Worker):
                 self.logger.debug("Art runtime prewarm skipped: %s", exc)
         self._art_runtime_prewarm_started = False
 
+    @staticmethod
+    def _is_optional_runtime_unload(action: str, model_type) -> bool:
+        """Return True for best-effort TTS/STT unload requests."""
+        from airunner.enums import ModelType
+
+        return action == "unload" and model_type in (
+            ModelType.TTS,
+            ModelType.STT,
+        )
+
+    @staticmethod
+    def _is_optional_runtime_load(action: str, model_type) -> bool:
+        """Return True for TTS/STT load requests."""
+        from airunner.enums import ModelType
+
+        return action == "load" and model_type in (
+            ModelType.TTS,
+            ModelType.STT,
+        )
+
+    @staticmethod
+    def _optional_runtime_setting_name(model_type) -> str | None:
+        """Return the preference column for one optional runtime."""
+        from airunner.enums import ModelType
+
+        if model_type is ModelType.TTS:
+            return "tts_enabled"
+        if model_type is ModelType.STT:
+            return "stt_enabled"
+        return None
+
+    def _optional_runtime_enabled(self, model_type) -> bool:
+        """Return the saved preference for one optional runtime."""
+        setting_name = self._optional_runtime_setting_name(model_type)
+        if setting_name is None:
+            return True
+        return bool(getattr(self.application_settings, setting_name, False))
+
+    @staticmethod
+    def _is_timeout_error(error: RuntimeError) -> bool:
+        """Return True when one daemon request failed due to timeout."""
+        return "timeout" in str(error).lower()
+
+    def _should_wait_after_runtime_timeout(
+        self,
+        action: str,
+        model_type,
+        error: RuntimeError,
+    ) -> bool:
+        """Return True when a timed-out request may still converge."""
+        if not self._is_timeout_error(error):
+            return False
+        return self._is_optional_runtime_unload(
+            action,
+            model_type,
+        ) or self._is_optional_runtime_load(action, model_type)
+
+    def _runtime_action_timeout_seconds(
+        self,
+        action: str,
+        model_type,
+    ) -> float | None:
+        """Return the request timeout for one daemon lifecycle action."""
+        if self._is_optional_runtime_unload(action, model_type):
+            return _OPTIONAL_UNLOAD_REQUEST_TIMEOUT_SECONDS
+        if self._is_optional_runtime_load(action, model_type):
+            return _OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS
+        return None
+
+    def _runtime_wait_timeout_seconds(
+        self,
+        action: str,
+        model_type,
+    ) -> float:
+        """Return the daemon wait timeout for one lifecycle action."""
+        from airunner.enums import ModelType
+
+        if self._is_optional_runtime_unload(action, model_type):
+            return _OPTIONAL_UNLOAD_WAIT_TIMEOUT_SECONDS
+        if action == "load" and model_type is ModelType.STT:
+            return 60.0
+        if action == "load" and model_type is ModelType.TTS:
+            return 90.0
+        return 30.0
+
+    def _emit_daemon_runtime_failure(
+        self,
+        action: str,
+        runtime_name: str,
+        model_type,
+        message: str,
+    ) -> bool:
+        """Emit the right terminal status after one daemon action fails."""
+        from airunner.enums import ModelStatus, SignalCode
+
+        if self.logger:
+            if self._is_optional_runtime_unload(action, model_type):
+                self.logger.debug(message)
+            else:
+                self.logger.warning(message)
+        status = ModelStatus.FAILED
+        if self._is_optional_runtime_unload(action, model_type):
+            status = ModelStatus.UNLOADED
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model_type, "status": status},
+        )
+        return True
+
+    def _revert_optional_runtime_load(
+        self,
+        client,
+        runtime_name: str,
+        model_type,
+    ) -> bool:
+        """Unload one optional runtime when its saved preference was cleared."""
+        from airunner.enums import ModelStatus, SignalCode
+
+        try:
+            ready = self._run_daemon_runtime_action(
+                client,
+                runtime_name,
+                "unload",
+                model_type,
+            )
+        except RuntimeError as exc:
+            return self._emit_daemon_runtime_failure(
+                "unload",
+                runtime_name,
+                model_type,
+                "Daemon unload for %s failed after preference change: %s"
+                % (runtime_name, exc),
+            )
+        if not ready:
+            return self._emit_daemon_runtime_failure(
+                "unload",
+                runtime_name,
+                model_type,
+                "Daemon unload for %s timed out waiting for runtime "
+                "state after preference change" % runtime_name,
+            )
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model_type, "status": ModelStatus.UNLOADED},
+        )
+        return True
+
+    def _run_daemon_runtime_action(
+        self,
+        client,
+        runtime_name: str,
+        action: str,
+        model_type,
+    ) -> bool:
+        """Run one daemon load or unload request and wait for its state."""
+        loaded = action == "load"
+        action_timeout = self._runtime_action_timeout_seconds(
+            action,
+            model_type,
+        )
+        wait_timeout = self._runtime_wait_timeout_seconds(
+            action,
+            model_type,
+        )
+        runtime_method = client.load_runtime if loaded else client.unload_runtime
+        try:
+            runtime_method(
+                runtime_name,
+                auto_start=False,
+                timeout_seconds=action_timeout,
+            )
+        except RuntimeError as exc:
+            if not self._should_wait_after_runtime_timeout(
+                action,
+                model_type,
+                exc,
+            ):
+                raise
+            if self.logger:
+                self.logger.debug(
+                    "Daemon %s request for %s timed out; waiting for state",
+                    action,
+                    runtime_name,
+                )
+        return client.wait_runtime_ready(
+            runtime_name,
+            loaded=loaded,
+            auto_start=False,
+            timeout_seconds=wait_timeout,
+        )
+
     def _control_daemon_runtime(
         self,
         runtime_name: str,
@@ -698,47 +894,53 @@ class WorkerManager(Worker):
                 {"model": model_type, "status": ModelStatus.LOADING},
             )
         try:
-            if action == "load":
-                client.load_runtime(runtime_name)
-                ready = client.wait_runtime_ready(
-                    runtime_name,
-                    loaded=True,
-                    auto_start=False,
-                )
-                status = ModelStatus.LOADED
-            else:
-                client.unload_runtime(runtime_name)
-                ready = client.wait_runtime_ready(
-                    runtime_name,
-                    loaded=False,
-                    auto_start=False,
-                )
+            ready = self._run_daemon_runtime_action(
+                client,
+                runtime_name,
+                action,
+                model_type,
+            )
+            status = ModelStatus.LOADED
+            if action == "unload":
                 status = ModelStatus.UNLOADED
         except RuntimeError as exc:
-            if self.logger:
-                self.logger.warning(
-                    "Daemon %s for %s failed: %s",
+            if (
+                self._is_optional_runtime_load(action, model_type)
+                and not self._optional_runtime_enabled(model_type)
+            ):
+                return self._revert_optional_runtime_load(
+                    client,
+                    runtime_name,
+                    model_type,
+                )
+            return self._emit_daemon_runtime_failure(
+                action,
+                runtime_name,
+                model_type,
+                "Daemon %s for %s failed: %s" % (
                     action,
                     runtime_name,
                     exc,
-                )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                {"model": model_type, "status": ModelStatus.FAILED},
+                ),
             )
-            return True
+        if (
+            action == "load"
+            and self._is_optional_runtime_load(action, model_type)
+            and not self._optional_runtime_enabled(model_type)
+        ):
+            return self._revert_optional_runtime_load(
+                client,
+                runtime_name,
+                model_type,
+            )
         if not ready:
-            if self.logger:
-                self.logger.warning(
-                    "Daemon %s for %s timed out waiting for runtime state",
-                    action,
-                    runtime_name,
-                )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                {"model": model_type, "status": ModelStatus.FAILED},
+            return self._emit_daemon_runtime_failure(
+                action,
+                runtime_name,
+                model_type,
+                "Daemon %s for %s timed out waiting for runtime state"
+                % (action, runtime_name),
             )
-            return True
         self.emit_signal(
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             {"model": model_type, "status": status},
@@ -1515,14 +1717,15 @@ class WorkerManager(Worker):
     def on_stt_unload_signal(self, data):
         from airunner.enums import ModelType
 
+        self.emit_signal(
+            SignalCode.STT_STOP_CAPTURE_SIGNAL,
+            data,
+        )
+
         if self._control_daemon_runtime_async(
             "stt",
             "unload",
             ModelType.STT,
-            before_request=lambda: self.emit_signal(
-                SignalCode.STT_STOP_CAPTURE_SIGNAL,
-                data,
-            ),
         ):
             return
         if self._stt_audio_processor_worker is not None:
@@ -1579,6 +1782,8 @@ class WorkerManager(Worker):
     def on_disable_tts_signal(self, data):
         from airunner.enums import ModelType
 
+        self._stop_tts_activity_immediately()
+
         if self._control_daemon_runtime_async(
             "tts",
             "unload",
@@ -1591,6 +1796,37 @@ class WorkerManager(Worker):
                     "_message_type": "tts_disable",
                     "data": data,
                 }
+            )
+
+    @staticmethod
+    def _queue_tts_worker_message(worker, message: dict) -> None:
+        """Send one TTS control message through the worker queue."""
+        add_to_queue = getattr(worker, "add_to_queue", None)
+        if callable(add_to_queue):
+            add_to_queue(message)
+
+    def _stop_tts_activity_immediately(self) -> None:
+        """Stop queued TTS playback before daemon unload completes."""
+        generator = getattr(self, "_tts_generator_worker", None)
+        if generator is not None:
+            self._queue_tts_worker_message(
+                generator,
+                {
+                    "_message_type": "interrupt",
+                    "data": {},
+                    "options": {"empty_queue": True},
+                },
+            )
+
+        vocalizer = getattr(self, "_tts_vocalizer_worker", None)
+        if vocalizer is not None:
+            self._queue_tts_worker_message(
+                vocalizer,
+                {
+                    "_message_type": "interrupt",
+                    "data": {},
+                    "options": {"empty_queue": True},
+                },
             )
 
     def on_llm_text_streamed_signal(self, data):

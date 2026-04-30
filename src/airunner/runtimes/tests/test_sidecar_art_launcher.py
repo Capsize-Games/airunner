@@ -205,6 +205,29 @@ def test_health_status_reports_ready(tmp_path):
     assert details == "ready"
 
 
+def test_is_ready_handles_timeout_error(tmp_path):
+    process = FakeProcess()
+    config_path = tmp_path / "art-runtime.yaml"
+    config_path.write_text("server: {}\n", encoding="utf-8")
+    launcher = SidecarArtLauncher(
+        _settings(),
+        process_factory=lambda *args, **kwargs: process,
+        health_opener=lambda *args, **kwargs: (_ for _ in ()).throw(
+            TimeoutError("timed out")
+        ),
+        config_path_builder=lambda _settings: Path(config_path),
+        launch_preparer=lambda: None,
+    )
+
+    launcher.start = lambda: None
+    launcher._process = process
+
+    assert launcher.is_ready() is False
+    status, details = launcher.health_status()
+    assert status is RuntimeHealthStatus.STARTING
+    assert details == "starting"
+
+
 def test_temp_daemon_config_uses_standard_runtime_directories(
     monkeypatch,
     tmp_path,

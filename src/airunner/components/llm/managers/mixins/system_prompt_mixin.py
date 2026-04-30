@@ -784,10 +784,6 @@ class SystemPromptMixin:
             "clear_conversation": (
                 "Clear the current conversation history and start fresh."
             ),
-            "get_calendar_events": (
-                "Retrieve calendar events for the user. "
-                "Show upcoming events in a clear, organized format."
-            ),
         }
         
         specific_instruction = tool_instructions.get(

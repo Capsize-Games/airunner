@@ -7,7 +7,6 @@ from airunner.components.agents.expert_agent import (
 from airunner.components.agents.agent_registry import AgentRegistry
 from airunner.components.agents.agent_router import AgentRouter
 from airunner.components.agents.expert_agents import (
-    CalendarExpertAgent,
     CodeExpertAgent,
     ResearchExpertAgent,
     CreativeExpertAgent,
@@ -18,7 +17,6 @@ __all__ = [
     "AgentCapability",
     "AgentRegistry",
     "AgentRouter",
-    "CalendarExpertAgent",
     "CodeExpertAgent",
     "ResearchExpertAgent",
     "CreativeExpertAgent",

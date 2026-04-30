@@ -11,6 +11,7 @@ import traceback
 import gc
 from pathlib import Path
 from typing import Optional
+from typing import TYPE_CHECKING
 
 from PySide6 import QtCore
 from PySide6.QtCore import QCoreApplication, QThread, QTimer, qVersion
@@ -27,8 +28,9 @@ from airunner.utils.settings import get_qsettings
 
 _AIRUNNER_IS_HEADLESS = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
 _QT_RUNTIME_PREPARED = False
+_CAPTURING_WEBENGINE_PAGE_CLASS = None
 
-if not _AIRUNNER_IS_HEADLESS:
+if TYPE_CHECKING:
     from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
     from PySide6.QtWebEngineWidgets import QWebEngineView
 
@@ -108,27 +110,27 @@ def prepare_qt_runtime() -> None:
     _QT_RUNTIME_PREPARED = True
 
 
-def set_global_tooltip_style() -> None:
-    """Set global tooltip style for the application."""
-    app = QApplication.instance()
-    if app is not None:
-        app.setStyleSheet(
-            app.styleSheet()
-            + """
-            QToolTip {
-                color: #fff;
-                background-color: #222;
-                border: 1px solid #555;
-                padding: 4px 8px;
-                font-size: 13px;
-                border-radius: 4px;
-            }
-            """
-        )
+def _get_webengine_classes():
+    """Import WebEngine classes only after Qt runtime setup."""
+    if _AIRUNNER_IS_HEADLESS:
+        raise RuntimeError("Qt WebEngine is unavailable in headless mode.")
+
+    from PySide6.QtWebEngineCore import QWebEnginePage
+    from PySide6.QtWebEngineCore import QWebEngineSettings
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+
+    return QWebEnginePage, QWebEngineSettings, QWebEngineView
 
 
-if not _AIRUNNER_IS_HEADLESS:
-    class CapturingWebEnginePage(QWebEnginePage):
+def _get_capturing_webengine_page_class():
+    """Return the lazy WebEngine page subclass used for JS console logs."""
+    global _CAPTURING_WEBENGINE_PAGE_CLASS
+    if _CAPTURING_WEBENGINE_PAGE_CLASS is not None:
+        return _CAPTURING_WEBENGINE_PAGE_CLASS
+
+    qwebengine_page, _settings, _view = _get_webengine_classes()
+
+    class CapturingWebEnginePage(qwebengine_page):
         """Capture JS console messages for diagnostics."""
 
         def javaScriptConsoleMessage(
@@ -151,6 +153,28 @@ if not _AIRUNNER_IS_HEADLESS:
                 sourceID,
             )
 
+    _CAPTURING_WEBENGINE_PAGE_CLASS = CapturingWebEnginePage
+    return _CAPTURING_WEBENGINE_PAGE_CLASS
+
+
+def set_global_tooltip_style() -> None:
+    """Set global tooltip style for the application."""
+    app = QApplication.instance()
+    if app is not None:
+        app.setStyleSheet(
+            app.styleSheet()
+            + """
+            QToolTip {
+                color: #fff;
+                background-color: #222;
+                border: 1px solid #555;
+                padding: 4px 8px;
+                font-size: 13px;
+                border-radius: 4px;
+            }
+            """
+        )
+
 
 class UIRuntimeMixin:
     """Provide GUI startup, splash handling, and shutdown routines."""
@@ -161,7 +185,9 @@ class UIRuntimeMixin:
         app: QApplication,
     ) -> None:
         """Show and activate the main window after splash handoff."""
-        window.show()
+        is_visible = getattr(window, "isVisible", None)
+        if not callable(is_visible) or not is_visible():
+            window.show()
         window.raise_()
         window.activateWindow()
         app.processEvents()
@@ -221,6 +247,12 @@ class UIRuntimeMixin:
             if self.app is None:
                 self.app = QApplication([])
         self.app.api = self
+        try:
+            from airunner.components.server.api.server import set_api
+
+            set_api(self)
+        except Exception:
+            pass
         set_global_tooltip_style()
 
     def run(self) -> None:
@@ -386,6 +418,10 @@ class UIRuntimeMixin:
 
     def _schedule_main_window_loaded(self, window: object) -> None:
         """Emit the post-startup signal after the GUI is visibly ready."""
+        scheduler = getattr(window, "_schedule_main_window_loaded_signal", None)
+        if callable(scheduler):
+            scheduler()
+            return
         if getattr(window, "_main_window_loaded_signal_scheduled", False):
             return
         window._main_window_loaded_signal_scheduled = True
@@ -393,6 +429,10 @@ class UIRuntimeMixin:
 
     def _emit_main_window_loaded(self, window: object) -> None:
         """Notify widgets that the main window finished startup."""
+        emitter = getattr(window, "_emit_main_window_loaded_signal_if_ready", None)
+        if callable(emitter):
+            emitter()
+            return
         if getattr(window, "_main_window_loaded_signal_emitted", False):
             return
         api = getattr(window, "api", None)
@@ -434,7 +474,6 @@ class UIRuntimeMixin:
 
             if self.splash:
                 self._dismiss_splash_screen(window, app)
-                self._present_main_window(window, app)
                 QTimer.singleShot(
                     0,
                     lambda: self._present_main_window(window, app),
@@ -444,9 +483,15 @@ class UIRuntimeMixin:
 
             print(f"Qt Version: {qVersion()}")
             if hasattr(window, "ui") and not _AIRUNNER_IS_HEADLESS:
+                (
+                    _qwebengine_page,
+                    qwebengine_settings,
+                    qwebengine_view,
+                ) = _get_webengine_classes()
+                capturing_page = _get_capturing_webengine_page_class()
                 for attr in dir(window.ui):
                     widget = getattr(window.ui, attr)
-                    if not isinstance(widget, QWebEngineView):
+                    if not isinstance(widget, qwebengine_view):
                         continue
                     current_page = widget.page()
                     if current_page and type(current_page).__name__ != (
@@ -461,17 +506,17 @@ class UIRuntimeMixin:
 
                     settings = widget.settings()
                     settings.setAttribute(
-                        QWebEngineSettings.WebAttribute.
+                        qwebengine_settings.WebAttribute.
                         JavascriptCanOpenWindows,
                         True,
                     )
                     settings.setAttribute(
-                        QWebEngineSettings.WebAttribute.
+                        qwebengine_settings.WebAttribute.
                         LocalContentCanAccessRemoteUrls,
                         True,
                     )
                     print(f"[App] Setting CapturingWebEnginePage for {attr}")
-                    widget.setPage(CapturingWebEnginePage(widget))
+                    widget.setPage(capturing_page(widget))
         except Exception as exc:
             traceback.print_exc()
             print(exc)

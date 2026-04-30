@@ -171,7 +171,7 @@ class ToolManagementMixin:
             "IMPORTANT: Decide whether to use a tool based on what the user asks for.",
             "",
             "Use tools when the user wants you to PERFORM AN ACTION:",
-            "  - Create, update, delete data (calendar events, files, etc.)",
+            "  - Create, update, delete data (records, files, etc.)",
             "  - Generate content (images, code, etc.)",
             "  - Search or retrieve information from external sources",
             "  - Execute commands or operations",

@@ -3548,19 +3548,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </message>
 </context>
 <context>
-    <name>scheduler_node</name>
-    <message>
-        <location filename="../gui/widgets/nodegraph/nodes/art/templates/scheduler.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/nodes/art/templates/scheduler.ui" line="20"/>
-        <source>Scheduler</source>
-        <translation>スケジューラ</translation>
-    </message>
-</context>
-<context>
     <name>seed_widget</name>
     <message>
         <location filename="../gui/widgets/seed/templates/seed.ui" line="14"/>
@@ -4711,19 +4698,6 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
         <location filename="../gui/widgets/user/templates/user_settings.ui" line="55"/>
         <source>Username</source>
         <translation>ユーザー名</translation>
-    </message>
-</context>
-<context>
-    <name>variables_panel</name>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/variables_panel.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/variables_panel.ui" line="39"/>
-        <source>Add Variable</source>
-        <translation>変数を追加</translation>
     </message>
 </context>
 <context>

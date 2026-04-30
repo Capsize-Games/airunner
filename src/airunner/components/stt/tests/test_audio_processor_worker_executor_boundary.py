@@ -108,3 +108,54 @@ def test_stt_load_skips_local_executor_when_daemon_backed():
 
     executor.load.assert_not_called()
     worker.emit_signal.assert_not_called()
+
+
+def test_stt_load_uses_refreshed_api_for_daemon_detection():
+    executor = SimpleNamespace(load=MagicMock())
+    worker = AudioProcessorWorker.__new__(AudioProcessorWorker)
+    worker._executor = executor
+    worker.logger = MagicMock()
+    worker.emit_signal = MagicMock()
+    worker.api = SimpleNamespace(headless=False)
+    worker.refresh_api_reference = MagicMock(
+        return_value=SimpleNamespace(
+            daemon_client=SimpleNamespace(),
+            headless=False,
+        )
+    )
+
+    AudioProcessorWorker._stt_load(worker)
+
+    executor.load.assert_not_called()
+    worker.emit_signal.assert_not_called()
+
+
+def test_handle_message_uses_refreshed_api_when_cached_api_is_stale():
+    daemon_client = SimpleNamespace(
+        transcribe_audio=MagicMock(return_value={"text": "daemon result"})
+    )
+    live_api = SimpleNamespace(
+        daemon_client=daemon_client,
+        headless=False,
+        stt=SimpleNamespace(audio_processor_response=MagicMock()),
+    )
+    worker = AudioProcessorWorker.__new__(AudioProcessorWorker)
+    worker._executor = SimpleNamespace(
+        stt_is_loaded=True,
+        transcribe=MagicMock(return_value="local result"),
+    )
+    worker.logger = MagicMock()
+    worker.api = SimpleNamespace(headless=False)
+    worker.emit_signal = MagicMock()
+    worker.refresh_api_reference = MagicMock(return_value=live_api)
+
+    AudioProcessorWorker.handle_message(worker, {"item": b"\x01\x00"})
+
+    daemon_client.transcribe_audio.assert_called_once_with(
+        b"\x01\x00",
+        mime_type="application/octet-stream",
+    )
+    live_api.stt.audio_processor_response.assert_called_once_with(
+        "daemon result"
+    )
+    worker._executor.transcribe.assert_not_called()

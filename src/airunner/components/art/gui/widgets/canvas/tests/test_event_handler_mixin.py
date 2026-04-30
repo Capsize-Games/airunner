@@ -1,5 +1,6 @@
 """Tests for EventHandlerMixin."""
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 from PySide6.QtCore import QEvent, QPointF, QSize, Qt, QTimer
 from PySide6.QtGui import QMouseEvent, QResizeEvent, QKeyEvent
@@ -93,6 +94,7 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
 
         # Methods to mock
         self.draw_grid = Mock()
+        self.setTransform = Mock()
         self.save_canvas_offset = Mock()
         self.load_canvas_offset = Mock()
         self.do_draw = Mock()
@@ -107,6 +109,10 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
         self.update_active_grid_settings = Mock()
         self.recenter_layer_positions = Mock(return_value={})
         self._remove_text_item = Mock()
+        self.zoom_handler = SimpleNamespace(
+            zoom_level=2.5,
+            on_zoom_level_changed=Mock(return_value=Mock()),
+        )
 
         # Mock super() methods that EventHandlerMixin calls
         self._super_wheelEvent = Mock()
@@ -349,6 +355,27 @@ class TestEventHandlerMixin:
             mixin.keyPressEvent(event)
 
         mixin._remove_text_item.assert_not_called()
+
+    def test_keyPressEvent_ctrl_zero_resets_zoom(self, qapp):
+        """Ctrl+0 should reset zoom and refresh the HUD."""
+        mixin = TestableEventHandlerMixin()
+        event = Mock(spec=QKeyEvent)
+        event.key.return_value = Qt.Key.Key_0
+        event.modifiers.return_value = Qt.KeyboardModifier.ControlModifier
+        event.accept = Mock()
+
+        mixin.keyPressEvent(event)
+
+        assert mixin.zoom_handler.zoom_level == 1.0
+        mixin.setTransform.assert_called_once()
+        mixin.do_draw.assert_called_once()
+        mixin.api.art.canvas.update_grid_info.assert_called_once_with(
+            {
+                "offset_x": mixin.canvas_offset_x,
+                "offset_y": mixin.canvas_offset_y,
+            }
+        )
+        event.accept.assert_called_once()
 
     def test_do_pan_update(self, qapp):
         """Test _do_pan_update refreshes positions and grid."""

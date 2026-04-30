@@ -1,9 +1,11 @@
 """Tests for CanvasSceneManagementMixin layer item updates."""
 
+import types
+
 import pytest
 from unittest.mock import Mock
 from PIL import Image
-from PySide6.QtCore import QPoint
+from PySide6.QtCore import QPoint, QPointF
 from PySide6.QtGui import QImage
 
 
@@ -22,6 +24,10 @@ class TestCanvasSceneManagementMixin:
         scene._convert_and_cache_qimage = Mock()
         scene._update_existing_item_image = Mock()
         scene._update_item_position = Mock()
+        scene.original_item_positions = {}
+        scene.update_image_position = Mock()
+        scene.update_drawing_pad_settings = Mock()
+        scene._get_current_selected_layer_id = Mock(return_value=3)
         return scene
 
     @pytest.fixture
@@ -145,3 +151,45 @@ class TestCanvasSceneManagementMixin:
 
         # Verify error was logged
         mock_scene.logger.error.assert_called_once()
+
+    def test_generated_layer_item_moves_to_active_grid_position(
+        self,
+        mock_scene,
+        sample_image,
+        sample_qimage,
+    ):
+        """Generated images should move the active layer to the grid."""
+        mock_layer_item = Mock()
+        mock_scene._get_active_layer_item.return_value = mock_layer_item
+        mock_scene._convert_and_cache_qimage.return_value = sample_qimage
+
+        from airunner.components.art.gui.widgets.canvas.mixins.canvas_scene_management_mixin import (
+            CanvasSceneManagementMixin,
+        )
+
+        mock_scene._update_active_layer_item_position = types.MethodType(
+            CanvasSceneManagementMixin._update_active_layer_item_position,
+            mock_scene,
+        )
+
+        CanvasSceneManagementMixin._update_or_create_item(
+            mock_scene,
+            sample_image,
+            QPoint(128, 256),
+            QPointF(0, 0),
+            generated=True,
+        )
+
+        assert mock_scene.original_item_positions[mock_layer_item] == QPointF(
+            128,
+            256,
+        )
+        mock_scene.update_drawing_pad_settings.assert_called_once_with(
+            layer_id=3,
+            x_pos=128,
+            y_pos=256,
+        )
+        mock_scene.update_image_position.assert_called_once_with(
+            QPointF(0, 0),
+            {mock_layer_item: QPointF(128, 256)},
+        )

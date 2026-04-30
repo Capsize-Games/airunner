@@ -4,6 +4,7 @@ This module composes multiple focused mixins to provide a clean interface
 for settings management without a monolithic class.
 """
 
+import inspect
 from typing import List, Dict, Optional, Any
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
@@ -79,10 +80,39 @@ class SettingsMixin(
 
     def _resolve_api_reference(self) -> Any:
         """Return the active app API without auto-creating a GUI singleton."""
-        api = self._api_from_qt_application()
-        if api is not None:
-            return api
-        return self._peek_global_api()
+        qt_api = self._api_from_qt_application()
+        global_api = self._peek_global_api()
+        if self._api_capability_score(global_api) > (
+            self._api_capability_score(qt_api)
+        ):
+            return global_api
+        if qt_api is not None:
+            return qt_api
+        return global_api
+
+    @staticmethod
+    def _api_capability_score(api: Any) -> int:
+        """Score how complete one API reference is for worker usage."""
+        if api is None:
+            return -1
+        attrs = ("daemon_client", "sounddevice_manager", "stt", "tts")
+        return sum(
+            1
+            for attr in attrs
+            if inspect.getattr_static(api, attr, None) is not None
+        )
+
+    def refresh_api_reference(self) -> Any:
+        """Refresh one stale cached API reference when a better one exists."""
+        live_api = self._resolve_api_reference()
+        current_api = getattr(self, "api", None)
+        if self._api_capability_score(live_api) > (
+            self._api_capability_score(current_api)
+        ):
+            self.api = live_api
+        elif current_api is None:
+            self.api = live_api
+        return getattr(self, "api", None)
 
     @staticmethod
     def _api_from_qt_application() -> Any:

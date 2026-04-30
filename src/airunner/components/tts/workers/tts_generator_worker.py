@@ -22,6 +22,7 @@ from airunner.components.tts.managers.tts_request import (
     TTSRequest,
     EspeakTTSRequest,
 )
+from airunner.components.llm.utils.thinking_parser import strip_thinking_tags
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
@@ -74,6 +75,12 @@ class TTSGeneratorWorker(Worker):
         if getattr(response, 'is_system_message', False):
             return
 
+        cleaned_message = strip_thinking_tags(response.message).replace(
+            "</s>", ""
+        )
+        if not cleaned_message.strip():
+            return
+
         # Initialize local TTS only when daemon-backed execution is inactive.
         if self._daemon_client() is None:
             if not self.tts:
@@ -91,7 +98,7 @@ class TTSGeneratorWorker(Worker):
 
         self.add_to_queue(
             {
-                "message": response.message.replace("</s>", "")
+                "message": cleaned_message
                 + ("." if response.is_end_of_message else ""),
                 "is_end_of_message": response.is_end_of_message,
             }
@@ -212,6 +219,9 @@ class TTSGeneratorWorker(Worker):
 
     def handle_message(self, data):
         message_type = data.get("_message_type") if data else None
+        if message_type == "interrupt":
+            self.on_interrupt_process_signal(data.get("data"))
+            return
         if message_type == "tts_enable":
             self.on_enable_tts_signal(data.get("data"))
             return

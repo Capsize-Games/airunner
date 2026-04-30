@@ -146,12 +146,14 @@ class GuiDaemonClient:
         self,
         *,
         auto_start: bool = False,
+        timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Return combined daemon lifecycle and runtime status."""
         response = self._request(
             "GET",
             "/api/v1/daemon/status",
             auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
         )
         return response.json()
 
@@ -423,6 +425,7 @@ class GuiDaemonClient:
         deployment_mode: str = "default",
         request_id: Optional[str] = None,
         auto_start: bool = True,
+        timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Load one runtime through the daemon control API."""
         return self._runtime_action(
@@ -432,6 +435,7 @@ class GuiDaemonClient:
             deployment_mode=deployment_mode,
             request_id=request_id,
             auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
         )
 
     def unload_runtime(
@@ -442,6 +446,7 @@ class GuiDaemonClient:
         deployment_mode: str = "default",
         request_id: Optional[str] = None,
         auto_start: bool = True,
+        timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Unload one runtime through the daemon control API."""
         return self._runtime_action(
@@ -451,6 +456,7 @@ class GuiDaemonClient:
             deployment_mode=deployment_mode,
             request_id=request_id,
             auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
         )
 
     def stream_llm_request(
@@ -669,6 +675,7 @@ class GuiDaemonClient:
         deployment_mode: str,
         request_id: Optional[str],
         auto_start: bool,
+        timeout_seconds: Optional[float],
     ) -> Dict[str, Any]:
         """Call one daemon runtime control endpoint and return its payload."""
         response = self._request(
@@ -680,6 +687,7 @@ class GuiDaemonClient:
                 "request_id": request_id,
             },
             auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
         )
         return response.json()
 

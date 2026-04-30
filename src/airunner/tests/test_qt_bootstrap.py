@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import importlib
 import os
 from types import MethodType
@@ -165,6 +166,20 @@ def test_prefers_software_qt_rendering_detects_widget_rhi_fallback(
     assert qt_runtime_env.prefers_software_qt_rendering() is True
 
 
+def test_ui_runtime_mixin_import_does_not_touch_webengine(monkeypatch):
+    """Importing the runtime mixin must not load WebEngine early."""
+    original_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name.startswith("PySide6.QtWebEngine"):
+            raise AssertionError(f"unexpected early import: {name}")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    importlib.reload(ui_runtime_mixin)
+
+
 def test_show_main_application_dismisses_splash_and_reactivates(monkeypatch):
     """Main window handoff should close the splash and re-raise the app."""
     events: list[str] = []
@@ -205,6 +220,7 @@ def test_show_main_application_dismisses_splash_and_reactivates(monkeypatch):
         window_class_params={},
         splash=FakeSplash(),
         _launcher_splash=FakeSplash(),
+        _prewarm_daemon_art_runtime=lambda _window: events.append("prewarm"),
         update_splash_message=lambda *_args: events.append("splash_message"),
         _log_gui_startup_time=lambda: events.append("startup_time"),
         _schedule_main_window_loaded=lambda _window: events.append(
@@ -237,3 +253,32 @@ def test_show_main_application_dismisses_splash_and_reactivates(monkeypatch):
     assert "splash_close" in events
     assert "splash_delete" in events
     assert events.count("activate") >= 2
+
+
+def test_present_main_window_skips_show_when_visible():
+    """Repeated presentation should not re-show an already visible window."""
+    events: list[str] = []
+
+    class FakeWindow:
+        def isVisible(self):
+            return True
+
+        def show(self):
+            events.append("show")
+
+        def raise_(self):
+            events.append("raise")
+
+        def activateWindow(self):
+            events.append("activate")
+
+    class FakeApp:
+        def processEvents(self):
+            events.append("process")
+
+    ui_runtime_mixin.UIRuntimeMixin._present_main_window(
+        FakeWindow(),
+        FakeApp(),
+    )
+
+    assert events == ["raise", "activate", "process"]

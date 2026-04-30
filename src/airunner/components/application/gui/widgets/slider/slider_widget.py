@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QDoubleSpinBox
@@ -218,6 +219,15 @@ class SliderWidget(BaseWidget):
         self.init()
         super().showEvent(event)
 
+    @staticmethod
+    def _spinbox_decimal_places(step_value: Any) -> int:
+        """Return the configured fractional digits for one step value."""
+        try:
+            exponent = Decimal(str(step_value)).normalize().as_tuple().exponent
+        except InvalidOperation:
+            return 0
+        return abs(exponent) if exponent < 0 else 0
+
     def init(self, **kwargs):
         self.is_loading = True
         self._callback = kwargs.get("slider_callback", None)
@@ -312,7 +322,7 @@ class SliderWidget(BaseWidget):
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)
         else:
-            decimals = len(str(spinbox_single_step).split(".")[1])
+            decimals = self._spinbox_decimal_places(spinbox_single_step)
             self.ui.slider_spinbox.setDecimals(2 if decimals < 2 else decimals)
 
         self.is_loading = False

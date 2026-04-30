@@ -423,8 +423,6 @@ class UISection(Enum):
     HOME = "home"
     ART = "art"  # Image generation and canvas manipulation
     DOCUMENT_EDITOR = "document_editor"  # Code/document editing
-    CALENDAR = "calendar"
-    VISUALIZER = "visualizer"  # Audio/media visualization
     UNKNOWN = "unknown"
 
     @classmethod
@@ -441,8 +439,6 @@ class UISection(Enum):
             "home_button": cls.HOME,
             "art_editor_button": cls.ART,
             "document_editor_button": cls.DOCUMENT_EDITOR,
-            "calendar_button": cls.CALENDAR,
-            "visualizer_button": cls.VISUALIZER,
         }
         return mapping.get(button_name, cls.UNKNOWN)
 
@@ -465,13 +461,6 @@ class UISection(Enum):
                 "They can create, edit, and run Python scripts or other text documents. "
                 "The editor supports syntax highlighting, line numbers, and script execution. "
                 "Relevant tools include code generation, file operations, and code validation."
-            ),
-            UISection.CALENDAR: (
-                "The user is in the CALENDAR section for scheduling and time management. "
-                "Relevant tools include calendar operations for creating, viewing, and managing events."
-            ),
-            UISection.VISUALIZER: (
-                "The user is in the VISUALIZER section for audio/media visualization."
             ),
             UISection.UNKNOWN: "",
         }

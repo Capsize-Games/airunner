@@ -54,7 +54,12 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         root_point = self._calculate_root_point(
             outpaint_box_rect, is_outpaint, image, generated
         )
-        self._update_or_create_item(image, root_point, canvas_offset)
+        self._update_or_create_item(
+            image,
+            root_point,
+            canvas_offset,
+            generated=generated,
+        )
         self.logger.debug(
             "[SCENE DEBUG] _update_or_create_item completed"
         )
@@ -118,7 +123,11 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         return QPoint(0, 0)
 
     def _update_or_create_item(
-        self, image: Image.Image, root_point: QPoint, canvas_offset: QPoint
+        self,
+        image: Image.Image,
+        root_point: QPoint,
+        canvas_offset: QPointF,
+        generated: bool = False,
     ) -> None:
         """Update existing item or create new one.
 
@@ -146,6 +155,12 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
                     self.logger.debug(
                         "Updated active layer item with filtered image"
                     )
+                    if generated:
+                        self._update_active_layer_item_position(
+                            active_layer_item,
+                            root_point,
+                            canvas_offset,
+                        )
                     # Also update current_active_image for consistency
                     self.current_active_image = image
                 except Exception as e:
@@ -182,6 +197,31 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             else:
                 self.logger.warning(f"[ITEM DEBUG] Cannot create item - QImage conversion failed")
                 self.current_active_image = image
+
+    def _update_active_layer_item_position(
+        self,
+        layer_item,
+        root_point: QPoint,
+        canvas_offset: QPointF,
+    ) -> None:
+        """Move one generated layer item to the active-grid position."""
+        absolute_pos = QPointF(root_point.x(), root_point.y())
+        self.original_item_positions[layer_item] = absolute_pos
+
+        layer_id = None
+        if hasattr(self, "_get_current_selected_layer_id"):
+            layer_id = self._get_current_selected_layer_id()
+        if layer_id is not None:
+            self.update_drawing_pad_settings(
+                layer_id=layer_id,
+                x_pos=int(absolute_pos.x()),
+                y_pos=int(absolute_pos.y()),
+            )
+
+        self.update_image_position(
+            canvas_offset,
+            {layer_item: absolute_pos},
+        )
 
     def _convert_and_cache_qimage(
         self, image: Image.Image

@@ -187,7 +187,6 @@ class ChatPromptWidget(BaseWidget):
 
     def _apply_default_splitter_settings(self):
         if hasattr(self, "ui") and self.ui is not None:
-            QApplication.processEvents()
             default_chat_splitter_config = {
                 "chat_prompt_splitter": {
                     "index_to_maximize": 0,
@@ -200,8 +199,18 @@ class ChatPromptWidget(BaseWidget):
             )
         else:
             self.logger.warning(
-                "ChatPromptWidget: UI not available when attempting to apply default splitter settings."
+                "ChatPromptWidget: UI not available when applying "
+                "default splitter settings."
             )
+
+    def _schedule_default_splitter_settings(self) -> None:
+        """Apply splitter settings after the show event unwinds."""
+        if self._default_splitter_settings_applied:
+            return
+        if not self.isVisible():
+            return
+        self._default_splitter_settings_applied = True
+        QTimer.singleShot(0, self._apply_default_splitter_settings)
 
     @Slot()
     def on_clear_conversation_button_clicked(self):
@@ -445,9 +454,7 @@ class ChatPromptWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if not self._default_splitter_settings_applied and self.isVisible():
-            self._apply_default_splitter_settings()
-            self._default_splitter_settings_applied = True
+        self._schedule_default_splitter_settings()
 
         self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
 
@@ -1886,10 +1893,8 @@ class ChatPromptWidget(BaseWidget):
             0: "home_button",
             1: "art_editor_button",
             2: "document_editor_button",
-            3: "calendar_button",
-            4: "visualizer_button",
         }
-        return index_to_section.get(index)
+        return index_to_section.get(index, "home_button")
 
     # =========================================================================
     # Image Attachment Methods

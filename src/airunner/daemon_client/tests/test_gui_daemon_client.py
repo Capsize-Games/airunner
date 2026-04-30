@@ -337,6 +337,19 @@ def test_daemon_runtime_status_uses_daemon_endpoint():
     assert session.calls[-1][1].endswith("/api/v1/daemon/status")
 
 
+def test_daemon_runtime_status_forwards_timeout_override():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    client.daemon_runtime_status(timeout_seconds=0.5)
+
+    assert session.calls[-1][2]["timeout"] == 0.5
+
+
 def test_runtime_status_uses_runtime_summary_endpoint():
     ready_state = {"ready": True}
     session = FakeSession(ready_state)

@@ -1,7 +1,7 @@
 """
 Verification tests for tool registration and availability.
 
-Ensures that all tools (calendar, web, search, etc.) are properly
+Ensures that all tools (web, search, etc.) are properly
 registered in the ToolRegistry and available to the LLM agent.
 """
 
@@ -34,23 +34,6 @@ class TestToolRegistryVerification:
         scrape_tool = all_tools["scrape_website"]
         assert scrape_tool.category == ToolCategory.SEARCH
         assert "scrape" in scrape_tool.description.lower()
-
-    def test_calendar_tools_registered(self):
-        """Verify calendar management tools are registered."""
-        all_tools = ToolRegistry._tools
-
-        # Check for calendar event tools
-        expected_calendar_tools = [
-            "create_calendar_event",
-            "list_calendar_events",
-            "update_calendar_event",
-            "delete_calendar_event",
-        ]
-
-        for tool_name in expected_calendar_tools:
-            assert tool_name in all_tools, f"{tool_name} not registered"
-            tool = all_tools[tool_name]
-            assert tool.category == ToolCategory.SYSTEM
 
     def test_math_tools_registered(self):
         """Verify math computation tools are registered."""
@@ -177,11 +160,6 @@ class TestToolRegistryVerification:
         assert scrape_tool is not None
         assert scrape_tool.name == "scrape_website"
 
-        # Test calendar tools
-        create_event_tool = ToolRegistry.get("create_calendar_event")
-        assert create_event_tool is not None
-        assert create_event_tool.name == "create_calendar_event"
-
     def test_tool_functions_are_callable(self):
         """Verify registered tool functions are callable."""
         all_tools = ToolRegistry._tools
@@ -195,8 +173,7 @@ class TestToolRegistryVerification:
         """Verify minimum expected number of tools are registered."""
         all_tools = ToolRegistry._tools
 
-        # Should have at least 20 tools registered
-        # (web, calendar, math, image, system, conversation, reasoning)
+        # Should have at least 20 tools registered.
         assert (
             len(all_tools) >= 20
         ), f"Expected at least 20 tools, found {len(all_tools)}"
@@ -247,20 +224,6 @@ class TestToolAvailability:
 
         # Should be callable
         assert callable(scrape_website)
-
-    def test_calendar_tools_callable(self):
-        """Verify calendar tools can be imported and called."""
-        from airunner.components.llm.tools.calendar_tools import (
-            create_calendar_event,
-            list_calendar_events,
-            update_calendar_event,
-            delete_calendar_event,
-        )
-
-        assert callable(create_calendar_event)
-        assert callable(list_calendar_events)
-        assert callable(update_calendar_event)
-        assert callable(delete_calendar_event)
 
     def test_math_tools_callable(self):
         """Verify math tools can be imported and called."""

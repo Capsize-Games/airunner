@@ -4,7 +4,7 @@ import time
 import numpy as np
 from PySide6.QtCore import QThread
 
-from airunner.enums import SignalCode, ModelStatus
+from airunner.enums import SignalCode, ModelStatus, ModelType
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.components.application.workers.worker import Worker
 
@@ -35,6 +35,18 @@ class AudioCaptureWorker(Worker):
         recording_device = self.sound_settings.recording_device
         return recording_device if recording_device != "" else "pulse"
 
+    def _current_api(self):
+        """Return the freshest API reference available to this worker."""
+        refresher = getattr(self, "refresh_api_reference", None)
+        if callable(refresher):
+            return refresher()
+        return getattr(self, "api", None)
+
+    def _sounddevice_manager(self):
+        """Return the sounddevice manager used for live capture."""
+        api = AudioCaptureWorker._current_api(self)
+        return getattr(api, "sounddevice_manager", None)
+
     def on_audio_capture_worker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
         self.logger.debug("Heard signal")
@@ -51,9 +63,14 @@ class AudioCaptureWorker(Worker):
     def on_model_status_changed_signal(self, message: dict):
         model = message["model"]
         status = message["status"]
-        if model == "stt" and status is ModelStatus.LOADED:
+        if model not in (ModelType.STT, "stt"):
+            return
+        if (
+            status is ModelStatus.LOADED
+            and self.application_settings.stt_enabled
+        ):
             self._start_listening()
-        elif model == "stt" and status in (
+        elif status in (
             ModelStatus.UNLOADED,
             ModelStatus.FAILED,
         ):
@@ -68,26 +85,23 @@ class AudioCaptureWorker(Worker):
         voice_input_start_time = None
         recording = []
         is_receiving_input = False
+        manager = AudioCaptureWorker._sounddevice_manager(self)
 
         while (
             self.listening
             and self.running
-            and self.api.sounddevice_manager.in_stream
+            and manager is not None
+            and manager.in_stream
         ):
             try:
                 # Use the actual sample rate from the stream if available
                 actual_fs = (
-                    self.api.sounddevice_manager.in_stream.samplerate
-                    if hasattr(
-                        self.api.sounddevice_manager.in_stream,
-                        "samplerate",
-                    )
+                    manager.in_stream.samplerate
+                    if hasattr(manager.in_stream, "samplerate")
                     else self.stt_settings.fs
                 )
                 frames = int(chunk_duration * actual_fs)
-                chunk_data = self.api.sounddevice_manager.read_from_input(
-                    frames
-                )
+                chunk_data = manager.read_from_input(frames)
 
                 if chunk_data is None or chunk_data[0] is None:
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
@@ -103,10 +117,10 @@ class AudioCaptureWorker(Worker):
 
             if (
                 self._use_playback_stream
-                and self.api.sounddevice_manager.out_stream
+                and manager.out_stream
             ):
                 try:
-                    self.api.sounddevice_manager.write_to_output(chunk)
+                    manager.write_to_output(chunk)
                 except Exception as e:
                     self.logger.error(f"Playback error: {e}")
 
@@ -148,8 +162,7 @@ class AudioCaptureWorker(Worker):
 
     def _start_listening(self):
         self.logger.debug("Start listening")
-        self._initialize_stream()
-        self.listening = True
+        self.listening = bool(self._initialize_stream())
 
     def _stop_listening(self):
         self.logger.debug("Stop listening")
@@ -165,13 +178,20 @@ class AudioCaptureWorker(Worker):
         self.logger.debug("Initializing audio capture stream")
         samplerate = 16000  # self.stt_settings.fs
         channels = self.stt_settings.channels
+        manager = AudioCaptureWorker._sounddevice_manager(self)
+
+        if manager is None:
+            self.logger.error(
+                "Audio capture API is missing sounddevice_manager"
+            )
+            return False
 
         # Close any existing streams first to avoid conflicts
-        if self.api.sounddevice_manager.in_stream:
+        if manager.in_stream:
             self.logger.debug(
                 "Closing existing input stream before initializing a new one"
             )
-            self.api.sounddevice_manager._stop_input_stream()
+            manager._stop_input_stream()
 
         # Log available input devices to help with debugging
         try:
@@ -191,7 +211,7 @@ class AudioCaptureWorker(Worker):
             self.logger.error(f"Error querying audio devices: {e}")
 
         # Initialize input stream with better error handling
-        success = self.api.sounddevice_manager.initialize_input_stream(
+        success = manager.initialize_input_stream(
             samplerate=samplerate,
             channels=channels,
             device_name=self.recording_device,
@@ -207,7 +227,7 @@ class AudioCaptureWorker(Worker):
             )
             # Try with default device as fallback
             self.logger.warning("Attempting to initialize with default device")
-            success = self.api.sounddevice_manager.initialize_input_stream(
+            success = manager.initialize_input_stream(
                 samplerate=samplerate,
                 channels=channels,
                 device_name="",  # Empty string should use system default
@@ -227,12 +247,10 @@ class AudioCaptureWorker(Worker):
             self.logger.debug(
                 f"Initializing monitoring playback stream with device: {device_name}"
             )
-            playback_success = (
-                self.api.sounddevice_manager.initialize_output_stream(
-                    samplerate=samplerate,
-                    channels=channels,
-                    device_name=device_name,
-                )
+            playback_success = manager.initialize_output_stream(
+                samplerate=samplerate,
+                channels=channels,
+                device_name=device_name,
             )
             if not playback_success:
                 self.logger.error(
@@ -240,9 +258,9 @@ class AudioCaptureWorker(Worker):
                 )
 
         # Verify stream status
-        if self.api.sounddevice_manager.in_stream:
+        if manager.in_stream:
             self.logger.debug("Input stream is now active and ready")
         else:
             self.logger.error("Input stream failed to initialize properly")
 
-        return self.api.sounddevice_manager.in_stream is not None
+        return manager.in_stream is not None

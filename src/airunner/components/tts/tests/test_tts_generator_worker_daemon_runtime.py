@@ -2,9 +2,13 @@
 
 import queue
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 from airunner.components.tts.workers.tts_generator_worker import (
     TTSGeneratorWorker,
+)
+from airunner.components.tts.workers.tts_vocalizer_worker import (
+    TTSVocalizerWorker,
 )
 
 
@@ -66,3 +70,29 @@ def test_interrupt_process_cancels_active_daemon_request():
     assert client.calls[0][0] == "cancel"
     assert client.calls[0][1] == "tts"
     assert worker.do_interrupt is True
+
+
+def test_handle_message_dispatches_interrupt_requests():
+    worker = SimpleNamespace(on_interrupt_process_signal=Mock())
+
+    TTSGeneratorWorker.handle_message(
+        worker,
+        {"_message_type": "interrupt", "data": {"source": "test"}},
+    )
+
+    worker.on_interrupt_process_signal.assert_called_once_with(
+        {"source": "test"}
+    )
+
+
+def test_vocalizer_handle_message_dispatches_interrupt_requests():
+    worker = SimpleNamespace(on_interrupt_process_signal=Mock())
+
+    TTSVocalizerWorker.handle_message(
+        worker,
+        {"_message_type": "interrupt", "data": {"source": "test"}},
+    )
+
+    worker.on_interrupt_process_signal.assert_called_once_with(
+        {"source": "test"}
+    )
