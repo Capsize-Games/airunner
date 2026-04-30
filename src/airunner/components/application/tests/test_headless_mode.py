@@ -145,6 +145,32 @@ def test_headless_app_application_error_emits_status_signal():
     ]
 
 
+def test_headless_app_application_settings_changed_emits_signal():
+    """Headless App should provide the shared settings-changed hook."""
+    emitted = []
+    host = SimpleNamespace(
+        emit_signal=lambda code, data=None: emitted.append((code, data))
+    )
+
+    App.application_settings_changed(
+        host,
+        setting_name="llm_generator_settings",
+        column_name="current_conversation_id",
+        val=77,
+    )
+
+    assert emitted == [
+        (
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            {
+                "setting_name": "llm_generator_settings",
+                "column_name": "current_conversation_id",
+                "val": 77,
+            },
+        )
+    ]
+
+
 def test_optional_extensions_disabled_in_art_sidecar(monkeypatch):
     """Art sidecar processes should skip optional extension scanning."""
     monkeypatch.setenv("AIRUNNER_ART_SIDECAR_PROCESS", "1")

@@ -108,6 +108,7 @@ class ConversationWidget(BaseWidget):
         self._expected_sequence = 1  # Next expected sequence number
         # Track which message index is currently being streamed to avoid overwriting
         self._active_stream_message_index = None
+        self._rendered_request_ids = set()
         # prevent right click on self.ui.stage
         self.ui.stage.setContextMenuPolicy(
             Qt.ContextMenuPolicy.PreventContextMenu
@@ -219,6 +220,7 @@ class ConversationWidget(BaseWidget):
             return
         self._conversation = conversation
         self._conversation_id = conversation.id
+        self._rendered_request_ids.clear()
         messages = (
             self._conversation_history_manager.load_conversation_history(
                 conversation=conversation, max_messages=50
@@ -234,6 +236,7 @@ class ConversationWidget(BaseWidget):
         self._conversation_id = None
         self.conversation_history = []
         self._streamed_messages = []
+        self._rendered_request_ids.clear()
         # Use explicit clear signal instead of set_conversation([])
         self._chat_bridge.clear_messages()
         self._clear_conversation_widgets()
@@ -639,10 +642,38 @@ class ConversationWidget(BaseWidget):
         self.conversation = None
         self.conversation_history = []
         self._streamed_messages = []
+        self._rendered_request_ids.clear()
         # Use explicit clear signal instead of set_conversation([])
         if not skip_update:
             self._chat_bridge.clear_messages()
         self._clear_conversation_widgets(skip_update=skip_update)
+
+    def append_user_message_for_request(
+        self,
+        prompt: str,
+        request_id: Optional[str] = None,
+    ) -> None:
+        """Append one user message unless it was already rendered."""
+        if not prompt:
+            return
+        if request_id and request_id in self._rendered_request_ids:
+            return
+        if request_id:
+            self._rendered_request_ids.add(request_id)
+
+        username = getattr(getattr(self, "user", None), "username", "User")
+        self._streamed_messages.append(
+            {
+                "name": username,
+                "content": prompt,
+                "role": "user",
+                "is_bot": False,
+            }
+        )
+        self._streamed_messages = self._assign_message_ids(
+            self._streamed_messages
+        )
+        self.set_conversation(self._streamed_messages)
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         """Clear the HTML conversation view."""
@@ -757,18 +788,13 @@ class ConversationWidget(BaseWidget):
         """
         request_data = data.get("request_data", {})
         prompt = request_data.get("prompt", "")
-        self._streamed_messages.append(
-            {
-                "name": self.user.username,
-                "content": prompt,
-                "role": "user",
-                "is_bot": False,
-            }
+        request_id = data.get("request_id") or request_data.get(
+            "request_id"
         )
-        self._streamed_messages = self._assign_message_ids(
-            self._streamed_messages
+        self.append_user_message_for_request(
+            prompt,
+            request_id=request_id,
         )
-        self.set_conversation(self._streamed_messages)
 
     def on_tool_status_update(self, data: Dict[str, Any]):
         """Handle tool status updates and display them in the UI.

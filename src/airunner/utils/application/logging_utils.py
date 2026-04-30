@@ -139,7 +139,7 @@ def _setup_file_logging(
     root_logger: logging.Logger, log_level: int, formatter: logging.Formatter
 ) -> None:
     """Setup file logging if enabled."""
-    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") != "1":
+    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") != "1":
         return
 
     log_file = _get_log_file_path(root_logger)

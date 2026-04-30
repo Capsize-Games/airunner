@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
+from airunner.enums import SignalCode
 
 
 class DummySettingsObject(SettingsMixin):
@@ -56,3 +57,31 @@ def test_settings_mixin_peeks_global_api_without_creation(monkeypatch):
 
     assert settings.api is None
     assert calls == [False]
+
+
+def test_settings_mixin_falls_back_to_emit_signal():
+    """Settings updates should still emit when api lacks helper methods."""
+    emitted = []
+    host = SimpleNamespace(
+        api=SimpleNamespace(
+            emit_signal=lambda code, data=None: emitted.append((code, data))
+        )
+    )
+
+    SettingsMixin._notify_api_or_app(
+        host,
+        setting_name="llm_generator_settings",
+        column_name="current_conversation_id",
+        val=123,
+    )
+
+    assert emitted == [
+        (
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            {
+                "setting_name": "llm_generator_settings",
+                "column_name": "current_conversation_id",
+                "val": 123,
+            },
+        )
+    ]

@@ -74,33 +74,38 @@ class AIRunnerDaemon:
             log_config.get("file", "~/.airunner/logs/daemon.log")
         ).expanduser()
         log_level = getattr(logging, log_config.get("level", "INFO"))
-
-        # Create log directory
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-
-        # Configure rotating file handler
-        handler = RotatingFileHandler(
-            log_file,
-            maxBytes=log_config.get("max_bytes", 50 * 1024 * 1024),
-            backupCount=log_config.get("backup_count", 5),
+        log_to_file = (
+            os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1"
+            or bool(log_config.get("to_file", False))
         )
+
+        root_logger = logging.getLogger()
+        root_logger.handlers.clear()
+        root_logger.setLevel(log_level)
 
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        handler.setFormatter(formatter)
 
-        # Configure root logger
-        root_logger = logging.getLogger()
-        root_logger.setLevel(log_level)
-        root_logger.addHandler(handler)
+        if log_to_file:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            handler = RotatingFileHandler(
+                log_file,
+                maxBytes=log_config.get("max_bytes", 50 * 1024 * 1024),
+                backupCount=log_config.get("backup_count", 5),
+            )
+            handler.setFormatter(formatter)
+            root_logger.addHandler(handler)
 
         # Also log to console
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
 
-        logger.info("Daemon logging initialized")
+        if log_to_file:
+            logger.info("Daemon logging initialized with file output")
+        else:
+            logger.info("Daemon logging initialized without file output")
 
     def _setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown."""

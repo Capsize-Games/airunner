@@ -1,5 +1,7 @@
 """Tests for the llama.cpp sidecar launcher."""
 
+import subprocess
+
 from airunner.runtimes.llama_cpp_runtime_settings import (
     LlamaCppRuntimeSettings,
 )
@@ -103,7 +105,7 @@ def test_start_spawns_and_waits_for_health(tmp_path):
     assert launcher.is_ready() is True
 
 
-def test_start_uses_runtime_layout_environment_and_log_file(
+def test_start_uses_runtime_layout_environment_without_file_logging(
     monkeypatch,
     tmp_path,
 ):
@@ -129,7 +131,7 @@ def test_start_uses_runtime_layout_environment_and_log_file(
     environment = captured["kwargs"]["env"]
     assert environment["AIRUNNER_RUNTIME_ROOT"] == str(tmp_path / "runtime")
     assert environment["AIRUNNER_CACHE_DIR"] == str(tmp_path / "cache")
-    assert captured["kwargs"]["stdout"].name.endswith("llama-sidecar.log")
+    assert captured["kwargs"]["stdout"] is subprocess.DEVNULL
 
 
 def test_stop_terminates_running_process(tmp_path):

@@ -55,7 +55,6 @@ class Signal(QObject):
         # QObject instances and to prevent invoking callbacks on destroyed
         # objects which can lead to segmentation faults.
         self._emitter = _SignalEmitter()
-        self._emitter.signal.connect(self.on_signal_received)
 
         # Determine if the callback is a bound method
         if inspect.ismethod(callback):
@@ -108,10 +107,10 @@ class Signal(QObject):
             self.param_count = len(inspect.signature(cb_for_sig).parameters)
         except (ValueError, TypeError, RecursionError):
             self.param_count = 1
+        self._emitter.signal.connect(self.on_signal_received)
 
     @Slot(object)
     def on_signal_received(self, data: Dict):
-        logger.debug(f"Signal.on_signal_received CALLED")
         try:
             # Resolve the weak reference to get the live callable
             # If this Signal is tied to a QObject, ensure the underlying C++
@@ -121,28 +120,21 @@ class Signal(QObject):
             # If we've been notified that the QObject has been destroyed,
             # skip calling the callback.
             if getattr(self, "_dead", False):
-                logger.debug(f"Object is dead, skipping")
                 return
             cb = None
             try:
                 cb = self._callback_ref()
-            except Exception as e2:
-                logger.debug(f"Exception resolving callback: {e2}")
+            except Exception:
                 cb = None
 
             if cb is None:
                 # The Python callable has been garbage collected; skip
-                logger.debug(f"Callback is None (garbage collected?)")
                 return
 
-            logger.debug(
-                f"About to call callback: {cb} with param_count={self.param_count}"
-            )
             if self.param_count == 0:
                 cb()
             else:
                 cb(data)
-            logger.debug(f"allback completed")
         except Exception as e:
             # Print full traceback and context to aid debugging of signal handlers
             # Use a guarded traceback print: some traceback/inspect utilities

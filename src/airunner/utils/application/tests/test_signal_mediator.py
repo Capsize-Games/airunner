@@ -1,5 +1,6 @@
 import threading
 
+from PySide6.QtCore import QObject, Slot
 import pytest
 
 from airunner.utils.application.signal_mediator import SignalMediator
@@ -129,3 +130,28 @@ def test_emit_signal_dispatches_from_background_thread_in_headless_mode(
     assert not worker.is_alive()
     assert delivered.wait(timeout=1)
     assert called == [{"threaded": True}]
+
+
+class NoArgReceiver(QObject):
+    def __init__(self):
+        super().__init__()
+        self.called = False
+
+    @Slot()
+    def cb(self):
+        self.called = True
+
+
+def test_emit_signal_supports_qobject_zero_arg_slots():
+    mediator = SignalMediator()
+    mediator.signals = {}
+
+    receiver = NoArgReceiver()
+    mediator.register(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, receiver.cb)
+
+    mediator.emit_signal(
+        SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+        {"ignored": True},
+    )
+
+    assert receiver.called is True

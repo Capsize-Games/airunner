@@ -1,5 +1,6 @@
 """Tests for daemon lifecycle ownership."""
 
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -160,3 +161,36 @@ def test_daemon_shutdown_closes_runtime_clients(monkeypatch):
     daemon.shutdown()
 
     assert calls == ["close", "cleanup", 0]
+
+
+def test_daemon_logging_skips_file_output_by_default(monkeypatch):
+    import airunner.services.daemon as daemon_module
+
+    root_logger = logging.getLogger()
+    original_handlers = list(root_logger.handlers)
+    root_logger.handlers.clear()
+    monkeypatch.delenv("AIRUNNER_SAVE_LOG_TO_FILE", raising=False)
+    monkeypatch.setattr(
+        daemon_module.AIRunnerDaemon,
+        "_setup_signal_handlers",
+        lambda self: None,
+    )
+
+    called = {"value": False}
+
+    class FakeRotatingFileHandler:
+        def __init__(self, *args, **kwargs):
+            called["value"] = True
+
+    monkeypatch.setattr(
+        daemon_module,
+        "RotatingFileHandler",
+        FakeRotatingFileHandler,
+    )
+
+    try:
+        daemon_module.AIRunnerDaemon(_daemon_config())
+        assert called["value"] is False
+    finally:
+        root_logger.handlers.clear()
+        root_logger.handlers.extend(original_handlers)

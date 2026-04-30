@@ -1,5 +1,7 @@
 """Tests for the whisper.cpp sidecar launcher."""
 
+import subprocess
+
 from airunner.runtimes.contracts import RuntimeHealthStatus
 from airunner.runtimes.sidecar_stt_launcher import SidecarSTTLauncher
 from airunner.runtimes.whisper_cpp_runtime_settings import (
@@ -87,7 +89,7 @@ def test_start_spawns_process_and_waits_for_health(monkeypatch):
     assert launcher.health_status()[0] is RuntimeHealthStatus.READY
 
 
-def test_start_uses_runtime_layout_environment_and_log_file(
+def test_start_uses_runtime_layout_environment_without_file_logging(
     monkeypatch,
     tmp_path,
 ):
@@ -112,7 +114,7 @@ def test_start_uses_runtime_layout_environment_and_log_file(
     environment = captured["kwargs"]["env"]
     assert environment["AIRUNNER_RUNTIME_ROOT"] == str(tmp_path / "runtime")
     assert environment["AIRUNNER_CACHE_DIR"] == str(tmp_path / "cache")
-    assert captured["kwargs"]["stdout"].name.endswith("stt-sidecar.log")
+    assert captured["kwargs"]["stdout"] is subprocess.DEVNULL
 
 
 def test_stop_terminates_running_process(monkeypatch):

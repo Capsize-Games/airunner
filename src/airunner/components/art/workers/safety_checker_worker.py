@@ -37,12 +37,20 @@ class SafetyCheckerWorker(Worker):
 
         # Register signal handlers for unload and filter (load is handled via queue)
         self.register(
-            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL, self.handle_unload
+            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL,
+            self.on_safety_checker_unload_signal,
         )
         self.register(
             SignalCode.SAFETY_CHECKER_FILTER_REQUEST,
             self.handle_filter_request,
         )
+
+    def on_safety_checker_unload_signal(
+        self,
+        data: Optional[Dict] = None,
+    ) -> None:
+        """Queue unload so the GUI thread never blocks on teardown."""
+        self.add_to_queue({"action": "unload", "data": data})
 
     def handle_message(self, message: Any):
         """Process messages from the worker queue.

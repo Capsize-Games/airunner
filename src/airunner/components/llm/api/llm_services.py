@@ -1,11 +1,27 @@
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.components.llm.utils.thinking_parser import (
+    detect_thinking_close_tag,
+    detect_thinking_open_tag,
+    strip_thinking_tags,
+)
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
+from dataclasses import dataclass, field
 import threading
 import uuid
 from typing import Optional, List
+
+
+@dataclass
+class _DaemonStreamState:
+    """Track one daemon-backed GUI stream."""
+
+    in_thinking_block: bool = False
+    thinking_tag_format: str = ""
+    thinking_content: list[str] = field(default_factory=list)
+    visible_sequence_number: int = 0
 
 
 class LLMAPIService(APIServiceBase):
@@ -180,6 +196,13 @@ class LLMAPIService(APIServiceBase):
                 pass
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
 
+    def send_llm_thinking_signal(self, status: str, content: str) -> None:
+        """Emit one thinking-status update for the chat UI."""
+        self.emit_signal(
+            SignalCode.LLM_THINKING_SIGNAL,
+            {"status": status, "content": content},
+        )
+
     def _send_request_via_daemon(
         self,
         prompt: str,
@@ -231,6 +254,7 @@ class LLMAPIService(APIServiceBase):
         enable_consciousness: Optional[bool],
     ) -> None:
         """Emit streamed LLM responses received from the daemon client."""
+        state = _DaemonStreamState()
         try:
             for chunk in client.stream_llm_request(
                 prompt,
@@ -244,13 +268,12 @@ class LLMAPIService(APIServiceBase):
             ):
                 if chunk.get("keepalive"):
                     continue
-                self.send_llm_text_streamed_signal(
-                    self._response_from_daemon_chunk(
-                        chunk,
-                        request_id=request_id,
-                        action=action,
-                        node_id=node_id,
-                    )
+                self._forward_daemon_chunk(
+                    chunk,
+                    state=state,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
                 )
         except RuntimeError as exc:
             self.send_llm_text_streamed_signal(
@@ -264,6 +287,189 @@ class LLMAPIService(APIServiceBase):
                     is_system_message=True,
                 )
             )
+
+    def _forward_daemon_chunk(
+        self,
+        chunk: dict,
+        *,
+        state: _DaemonStreamState,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> None:
+        """Translate one daemon NDJSON chunk into GUI-visible signals."""
+        if bool(chunk.get("error", False)):
+            self.send_llm_text_streamed_signal(
+                self._build_visible_daemon_response(
+                    chunk,
+                    state=state,
+                    message=chunk.get("message", "") or "",
+                    is_end_of_message=bool(
+                        chunk.get("is_end_of_message", False)
+                    ),
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
+            )
+            return
+
+        visible_parts = self._extract_visible_daemon_text(
+            chunk.get("message", "") or "",
+            state,
+        )
+        if bool(chunk.get("is_end_of_message", False)):
+            self._finish_daemon_thinking(state)
+
+        if visible_parts:
+            self._emit_visible_daemon_parts(
+                visible_parts,
+                chunk=chunk,
+                state=state,
+                request_id=request_id,
+                action=action,
+                node_id=node_id,
+            )
+            return
+
+        if state.visible_sequence_number > 0 and bool(
+            chunk.get("is_end_of_message", False)
+        ):
+            self.send_llm_text_streamed_signal(
+                self._build_visible_daemon_response(
+                    chunk,
+                    state=state,
+                    message="",
+                    is_end_of_message=True,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
+            )
+
+    def _emit_visible_daemon_parts(
+        self,
+        visible_parts: List[str],
+        *,
+        chunk: dict,
+        state: _DaemonStreamState,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> None:
+        """Emit one or more visible response chunks for the GUI."""
+        last_index = len(visible_parts) - 1
+        chunk_done = bool(chunk.get("is_end_of_message", False))
+        for index, part in enumerate(visible_parts):
+            cleaned_part = strip_thinking_tags(part)
+            if not cleaned_part:
+                continue
+            self.send_llm_text_streamed_signal(
+                self._build_visible_daemon_response(
+                    chunk,
+                    state=state,
+                    message=cleaned_part,
+                    is_end_of_message=chunk_done and index == last_index,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
+            )
+
+    def _extract_visible_daemon_text(
+        self,
+        message: str,
+        state: _DaemonStreamState,
+    ) -> List[str]:
+        """Split one daemon chunk into visible text and thinking updates."""
+        visible_parts: List[str] = []
+        remaining = message
+        while remaining:
+            if state.in_thinking_block:
+                found_close, before_close, after_close = (
+                    detect_thinking_close_tag(
+                        remaining,
+                        state.thinking_tag_format,
+                    )
+                )
+                if found_close:
+                    self._append_daemon_thinking(state, before_close)
+                    self._finish_daemon_thinking(state)
+                    remaining = after_close
+                    continue
+                self._append_daemon_thinking(state, remaining)
+                break
+
+            found_open, tag_format, before_open, after_open = (
+                detect_thinking_open_tag(remaining)
+            )
+            if not found_open:
+                visible_parts.append(remaining)
+                break
+            if before_open:
+                visible_parts.append(before_open)
+            self._start_daemon_thinking(state, tag_format)
+            remaining = after_open
+        return visible_parts
+
+    def _start_daemon_thinking(
+        self,
+        state: _DaemonStreamState,
+        tag_format: str,
+    ) -> None:
+        """Mark one daemon stream as being inside a thinking block."""
+        state.in_thinking_block = True
+        state.thinking_tag_format = tag_format
+        state.thinking_content = []
+        self.send_llm_thinking_signal("started", "")
+
+    def _append_daemon_thinking(
+        self,
+        state: _DaemonStreamState,
+        content: str,
+    ) -> None:
+        """Accumulate one thinking fragment and mirror it to the UI."""
+        if not content:
+            return
+        state.thinking_content.append(content)
+        self.send_llm_thinking_signal("streaming", content)
+
+    def _finish_daemon_thinking(self, state: _DaemonStreamState) -> None:
+        """Complete one thinking block if the daemon stream is inside one."""
+        if not state.in_thinking_block:
+            return
+        self.send_llm_thinking_signal(
+            "completed",
+            "".join(state.thinking_content),
+        )
+        state.in_thinking_block = False
+        state.thinking_tag_format = ""
+        state.thinking_content = []
+
+    def _build_visible_daemon_response(
+        self,
+        chunk: dict,
+        *,
+        state: _DaemonStreamState,
+        message: str,
+        is_end_of_message: bool,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> LLMResponse:
+        """Build one GUI-visible response from a daemon NDJSON chunk."""
+        state.visible_sequence_number += 1
+        response = self._response_from_daemon_chunk(
+            chunk,
+            request_id=request_id,
+            action=action,
+            node_id=node_id,
+        )
+        response.message = message
+        response.is_first_message = state.visible_sequence_number == 1
+        response.is_end_of_message = is_end_of_message
+        response.sequence_number = state.visible_sequence_number
+        return response
 
     def _daemon_client(self):
         """Return the GUI daemon client when one is available."""

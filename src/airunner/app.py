@@ -199,6 +199,22 @@ class App(
             {"message": message},
         )
 
+    def application_settings_changed(
+        self,
+        setting_name: Optional[str],
+        column_name: Optional[str],
+        val: object,
+    ) -> None:
+        """Emit one settings-change notification from shared workers."""
+        self.emit_signal(
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            {
+                "setting_name": setting_name,
+                "column_name": column_name,
+                "val": val,
+            },
+        )
+
     def quit_application(self) -> None:
         """Emit the shared quit signal used by the API wrapper."""
         self.emit_signal(SignalCode.QUIT_APPLICATION, {})

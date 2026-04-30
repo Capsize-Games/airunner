@@ -211,6 +211,14 @@ class TTSGeneratorWorker(Worker):
         return super().get_item_from_queue()
 
     def handle_message(self, data):
+        message_type = data.get("_message_type") if data else None
+        if message_type == "tts_enable":
+            self.on_enable_tts_signal(data.get("data"))
+            return
+        if message_type == "tts_disable":
+            self.on_disable_tts_signal(data.get("data"))
+            return
+
         if self.do_interrupt:
             return
 

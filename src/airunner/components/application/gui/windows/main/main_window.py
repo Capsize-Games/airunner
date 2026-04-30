@@ -573,8 +573,6 @@ class MainWindow(
             SignalCode.STT_UNLOAD_SIGNAL,
             "stt_enabled",
         )
-        QApplication.processEvents()
-        self.update_application_settings(stt_enabled=val)
 
     @Slot(bool)
     def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
@@ -1596,7 +1594,6 @@ class MainWindow(
         element.blockSignals(True)
         element.setChecked(val)
         element.blockSignals(False)
-        QApplication.processEvents()
         if application_setting:
             settings_data = {}
             settings_data[application_setting] = val

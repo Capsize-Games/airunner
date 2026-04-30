@@ -279,6 +279,27 @@ class TestGridDrawing:
 class TestViewportEvents:
     """Test viewport resize and show events."""
 
+    def test_finish_state_restoration_recenters_zero_offset(
+        self, custom_view
+    ):
+        """Zero-offset startup should recenter after the viewport settles."""
+        _ = custom_view.scene
+        custom_view._is_restoring_state = True
+        custom_view._needs_recenter_on_show = True
+        custom_view.settings.value = Mock(return_value=0.0)
+        custom_view.scene.show_event = Mock()
+
+        with patch.object(
+            custom_view,
+            "on_recenter_grid_signal",
+        ) as mock_recenter:
+            custom_view._finish_state_restoration()
+
+        assert custom_view._is_restoring_state is False
+        assert custom_view.canvas_offset == QPointF(0.0, 0.0)
+        mock_recenter.assert_called_once_with()
+        custom_view.scene.show_event.assert_called_once_with()
+
     def test_resize_event_during_restoration(self, custom_view):
         """Test resizeEvent skips compensation during restoration."""
         custom_view._is_restoring_state = True
@@ -383,6 +404,24 @@ class TestCanvasColorManagement:
 
 class TestPanUpdateTimer:
     """Test pan update timer functionality."""
+
+    def test_update_image_positions_primes_scene_cache(self, custom_view):
+        """Explicitly loaded positions should be cached for later updates."""
+        _ = custom_view.scene
+        marker = object()
+        positions = {marker: QPointF(12.0, 34.0)}
+
+        with patch.object(
+            custom_view.scene,
+            "update_image_position",
+        ) as mock_update:
+            custom_view.updateImagePositions(positions)
+
+        mock_update.assert_called_once_with(custom_view.canvas_offset, positions)
+        assert custom_view.scene.original_item_positions[marker] == QPointF(
+            12.0,
+            34.0,
+        )
 
     def test_do_pan_update(self, custom_view):
         """Test _do_pan_update calls position update methods."""

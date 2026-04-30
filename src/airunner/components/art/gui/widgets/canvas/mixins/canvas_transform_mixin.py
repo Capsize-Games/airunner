@@ -4,14 +4,13 @@ This mixin provides image transformation functionality including rotation,
 resizing, copy, and cut operations for the canvas scene.
 """
 
-import io
+from math import ceil, floor
 from typing import Optional
 
-from PIL import Image
+from PIL import Image, ImageQt
 import PIL.Image
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QImage, QClipboard
-from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+from PySide6.QtGui import QImage, QClipboard, QPainter
 
 
 class CanvasTransformMixin:
@@ -26,7 +25,170 @@ class CanvasTransformMixin:
 
         Copies the current active image to the system clipboard.
         """
-        self._copy_image(self.current_active_image)
+        image = self._get_clipboard_source_image()
+        if image is None:
+            return
+        self._copy_image(image)
+
+    def _get_clipboard_source_image(self) -> Optional[Image.Image]:
+        """Return the image that should be copied for the desktop canvas."""
+        if not self._is_primary_canvas_scene():
+            return None
+
+        live_scene_image = self._get_live_scene_image()
+        if live_scene_image is not None:
+            return live_scene_image
+
+        composed_image = self._get_composed_canvas_image()
+        if composed_image is not None:
+            return composed_image
+
+        return self.current_active_image
+
+    def _is_primary_canvas_scene(self) -> bool:
+        """Return True when this scene represents the main desktop canvas."""
+        return (
+            getattr(self, "settings_key", None) == "drawing_pad_settings"
+            and getattr(self, "canvas_type", None) in {"brush", "image"}
+        )
+
+    def _get_composed_canvas_image(self) -> Optional[Image.Image]:
+        """Return the visible drawing-pad composition when available."""
+        layer_compositor = getattr(self, "layer_compositor", None)
+        compose_visible_layers = getattr(
+            layer_compositor,
+            "compose_visible_layers",
+            None,
+        )
+        if not callable(compose_visible_layers):
+            return None
+
+        try:
+            image = compose_visible_layers()
+        except Exception as exc:
+            self.logger.debug(
+                "Failed to compose visible layers for clipboard copy: %s",
+                exc,
+            )
+            return None
+
+        if isinstance(image, Image.Image):
+            return image
+        return None
+
+    def _get_live_scene_image(self) -> Optional[Image.Image]:
+        """Return a composition of the currently visible in-memory scene."""
+        composed_qimage = self._compose_live_scene_qimage()
+        if composed_qimage is None or composed_qimage.isNull():
+            pending_image = getattr(self, "_pending_image_ref", None)
+            if isinstance(pending_image, Image.Image):
+                return pending_image
+            return None
+
+        try:
+            return ImageQt.fromqimage(composed_qimage)
+        except Exception as exc:
+            self.logger.debug(
+                "Failed to convert live scene image for clipboard copy: %s",
+                exc,
+            )
+            return None
+
+    def _compose_live_scene_qimage(self) -> Optional[QImage]:
+        """Compose the visible in-memory scene image items into one QImage."""
+        visible_sources = self._get_visible_scene_image_sources()
+        if not visible_sources:
+            return None
+
+        min_x = floor(min(source[0] for source in visible_sources))
+        min_y = floor(min(source[1] for source in visible_sources))
+        max_x = ceil(max(source[0] + source[2].width() for source in visible_sources))
+        max_y = ceil(max(source[1] + source[2].height() for source in visible_sources))
+
+        width = max_x - min_x
+        height = max_y - min_y
+        if width <= 0 or height <= 0:
+            return None
+
+        canvas = QImage(width, height, QImage.Format.Format_ARGB32)
+        canvas.fill(0)
+
+        painter = QPainter(canvas)
+        try:
+            for x_pos, y_pos, qimage, opacity, _z_value in visible_sources:
+                painter.setOpacity(opacity)
+                painter.drawImage(x_pos - min_x, y_pos - min_y, qimage)
+        finally:
+            painter.end()
+
+        return canvas
+
+    def _get_visible_scene_image_sources(self):
+        """Collect visible scene image sources in z-order for composition."""
+        sources = []
+        layer_items = getattr(self, "_layer_items", {}) or {}
+        pending_layer_images = getattr(self, "_pending_layer_images", {}) or {}
+
+        for layer_id, item in layer_items.items():
+            qimage = self._get_item_qimage(item)
+            pending_image = pending_layer_images.get(layer_id)
+            if isinstance(pending_image, Image.Image):
+                qimage = self._convert_scene_source_to_qimage(pending_image)
+            if qimage is None or qimage.isNull():
+                continue
+            if hasattr(item, "isVisible") and not item.isVisible():
+                continue
+            position = item.scenePos() if hasattr(item, "scenePos") else item.pos()
+            opacity = item.opacity() if hasattr(item, "opacity") else 1.0
+            z_value = item.zValue() if hasattr(item, "zValue") else 0
+            sources.append((position.x(), position.y(), qimage, opacity, z_value))
+
+        if not sources:
+            legacy_item = getattr(self, "item", None)
+            qimage = self._get_item_qimage(legacy_item)
+            if qimage is not None and not qimage.isNull():
+                if not hasattr(legacy_item, "isVisible") or legacy_item.isVisible():
+                    position = (
+                        legacy_item.scenePos()
+                        if hasattr(legacy_item, "scenePos")
+                        else legacy_item.pos()
+                    )
+                    opacity = (
+                        legacy_item.opacity()
+                        if hasattr(legacy_item, "opacity")
+                        else 1.0
+                    )
+                    z_value = (
+                        legacy_item.zValue()
+                        if hasattr(legacy_item, "zValue")
+                        else 0
+                    )
+                    sources.append(
+                        (position.x(), position.y(), qimage, opacity, z_value)
+                    )
+
+        return sorted(sources, key=lambda source: source[4])
+
+    @staticmethod
+    def _get_item_qimage(item) -> Optional[QImage]:
+        """Return the underlying QImage from a scene item when available."""
+        if item is None:
+            return None
+        qimage = getattr(item, "qimage", None)
+        if callable(qimage):
+            qimage = qimage()
+        return qimage
+
+    def _convert_scene_source_to_qimage(
+        self, image: Image.Image
+    ) -> Optional[QImage]:
+        """Convert a PIL image source into a QImage for live composition."""
+        converter = getattr(self, "_convert_and_cache_qimage", None)
+        if callable(converter):
+            qimage = converter(image)
+            if qimage is not None and not qimage.isNull():
+                return qimage
+        return self._pil_to_qimage(image)
 
     def on_canvas_cut_image_signal(self) -> None:
         """Handle canvas cut image signal.

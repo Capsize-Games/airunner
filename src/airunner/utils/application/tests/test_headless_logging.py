@@ -120,6 +120,24 @@ def test_get_logger_reuses_existing_logger_wrapper(monkeypatch):
     assert len(first._logger.handlers) == 1
 
 
+def test_get_logger_skips_file_handler_by_default(monkeypatch):
+    """File logging should remain disabled unless explicitly enabled."""
+    monkeypatch.delenv("AIRUNNER_SAVE_LOG_TO_FILE", raising=False)
+
+    get_logger_mod = importlib.import_module(
+        "airunner.utils.application.get_logger"
+    )
+    importlib.reload(get_logger_mod)
+
+    logger = get_logger_mod.get_logger("default_console_only")
+
+    assert len(logger._logger.handlers) == 1
+    assert not any(
+        isinstance(handler, logging.FileHandler)
+        for handler in logger._logger.handlers
+    )
+
+
 def test_configure_noisy_loggers_suppresses_sqlalchemy_children():
     logging_utils = importlib.import_module(
         "airunner.utils.application.logging_utils"

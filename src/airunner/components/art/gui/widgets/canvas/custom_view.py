@@ -381,9 +381,13 @@ class CustomGraphicsView(
             self.logger.error("No scene in updateImagePositions")
             return
 
-        self.scene.update_image_position(
-            self.canvas_offset, original_item_positions
-        )
+        positions = original_item_positions
+        if positions is None and not self.scene.original_item_positions:
+            positions = self.original_item_positions()
+
+        self.scene.update_image_position(self.canvas_offset, positions)
+        if positions is not None:
+            self.scene.original_item_positions.update(positions)
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()

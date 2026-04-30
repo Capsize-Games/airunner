@@ -70,6 +70,7 @@ class DaemonConfig:
             },
             "logging": {
                 "level": "INFO",
+                "to_file": False,
                 "file": str(layout.log_file("daemon")),
                 "max_bytes": 50 * 1024 * 1024,
                 "backup_count": 5,

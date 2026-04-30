@@ -1,5 +1,6 @@
 import os
 from typing import Dict, List, Optional, Tuple
+from uuid import uuid4
 
 from PIL import Image
 from PySide6.QtCore import QTimer, Slot, Qt, QPoint
@@ -361,15 +362,21 @@ class ChatPromptWidget(BaseWidget):
             return
         self.generating = True
 
+        request_id = str(uuid4())
+
+        self.clear_prompt()
+        QApplication.processEvents()
+
         conversation_id = self._ensure_conversation_context()
         if conversation_id is None:
             self.logger.error(
                 "Aborting chat request - unable to determine conversation ID"
             )
+            self.ui.prompt.setPlainText(prompt)
+            self.prompt = prompt
             self.generating = False
             return
 
-        self.clear_prompt()
         self.start_progress_bar()
         
         # Parse slash command if present
@@ -380,6 +387,12 @@ class ChatPromptWidget(BaseWidget):
         # Determine action type - use override from slash command if present
         action = action_override if action_override else self.action
         self.logger.info(f"Final action: {action}")
+
+        if hasattr(self.ui, "conversation"):
+            self.ui.conversation.append_user_message_for_request(
+                actual_prompt,
+                request_id=request_id,
+            )
         
         # Get configuration from slash command
         force_tool = None
@@ -427,6 +440,7 @@ class ChatPromptWidget(BaseWidget):
             action=action,
             do_tts_reply=False,
             conversation_id=conversation_id,
+            request_id=request_id,
         )
 
     def showEvent(self, event):

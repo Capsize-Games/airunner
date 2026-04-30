@@ -334,7 +334,7 @@ AIRUNNER_MEM_STT_DEVICE = os.environ.get("AIRUNNER_MEM_STT_DEVICE", None)
 
 
 def get_log_level_from_env():
-    log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL", "DEBUG").upper()
+    log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL", "INFO").upper()
     log_levels = {
         "CRITICAL": logging.CRITICAL,
         "ERROR": logging.ERROR,
@@ -343,7 +343,7 @@ def get_log_level_from_env():
         "DEBUG": logging.DEBUG,
         "NOTSET": logging.NOTSET,
     }
-    return log_levels.get(log_level_str, logging.DEBUG)
+    return log_levels.get(log_level_str, logging.INFO)
 
 
 AIRUNNER_LOG_LEVEL = get_log_level_from_env()
@@ -358,7 +358,7 @@ AIRUNNER_LOG_FILE = os.environ.get(
     "AIRUNNER_LOG_FILE", os.path.join(AIRUNNER_BASE_PATH, "airunner.log")
 )
 AIRUNNER_SAVE_LOG_TO_FILE = (
-    os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1"
+    os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1"
 )
 AIRUNNER_DISABLE_FACEHUGGERSHIELD = (
     os.environ.get("AIRUNNER_DISABLE_FACEHUGGERSHIELD", "0") == "1"

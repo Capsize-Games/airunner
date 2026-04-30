@@ -136,7 +136,7 @@ The service is configured with:
 - **Local-only bind defaults:** The packaged unit binds the daemon to `127.0.0.1`
 - **Runtime directories:** Runtime config, logs, sockets, cache, and model roots live under `~/.local/share/airunner`
 - **Sandboxing:** The service uses `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=full`, `ProtectHome=read-only`, and a restricted writable path
-- **Logging:** The daemon writes runtime logs under `~/.local/share/airunner/runtime/logs` and systemd still captures journal output
+- **Logging:** By default the daemon logs to stdout/stderr only, so systemd captures everything in `journalctl`; runtime log files under `~/.local/share/airunner/runtime/logs` are only written when `AIRUNNER_SAVE_LOG_TO_FILE=1`
 
 ### Environment Variables
 

@@ -454,6 +454,14 @@ class LLMGenerateWorker(
         Args:
             message: Message dictionary to process
         """
+        message_type = message.get("_message_type")
+        if message_type == "llm_load":
+            self.on_llm_load_model_signal(message.get("data", {}))
+            return
+        if message_type == "llm_unload":
+            self.on_llm_on_unload_signal(message.get("data", {}))
+            return
+
         # Handle download complete messages from the queue
         # This ensures download completion is processed in the worker thread,
         # not the main thread, preventing UI lockups during model loading

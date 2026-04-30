@@ -183,14 +183,36 @@ class SettingsMixin(
             column_name: Column name.
             val: New value.
         """
-        if hasattr(self, "api") and self.api:
-            self.api.application_settings_changed(
-                setting_name=setting_name,
-                column_name=column_name,
-                val=val,
+        api_ref = getattr(self, "api", None)
+        if api_ref is not None:
+            notify = getattr(
+                api_ref,
+                "application_settings_changed",
+                None,
             )
-        elif hasattr(self, "application_settings_changed"):
-            self.application_settings_changed(
+            if callable(notify):
+                notify(
+                    setting_name=setting_name,
+                    column_name=column_name,
+                    val=val,
+                )
+                return
+
+            emit_signal = getattr(api_ref, "emit_signal", None)
+            if callable(emit_signal):
+                emit_signal(
+                    SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+                    {
+                        "setting_name": setting_name,
+                        "column_name": column_name,
+                        "val": val,
+                    },
+                )
+                return
+
+        notify = getattr(self, "application_settings_changed", None)
+        if callable(notify):
+            notify(
                 setting_name=setting_name,
                 column_name=column_name,
                 val=val,

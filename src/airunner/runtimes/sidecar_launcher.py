@@ -134,7 +134,7 @@ class SidecarLauncher:
             return
         command = self.command()
         environment = self._environment()
-        stdout_handle = self._open_log_handle()
+        stdout_handle = self._stdout_target()
         try:
             self._process = self._process_factory(
                 command,
@@ -182,6 +182,12 @@ class SidecarLauncher:
         self._close_log_handle()
         self._log_handle = open(layout.log_file("llama-sidecar"), "ab")
         return self._log_handle
+
+    def _stdout_target(self):
+        """Return the stdout target based on explicit file-logging opt-in."""
+        if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1":
+            return self._open_log_handle()
+        return subprocess.DEVNULL
 
     def _close_log_handle(self) -> None:
         """Close the launcher-owned log file handle when one exists."""

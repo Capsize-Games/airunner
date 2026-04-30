@@ -75,6 +75,14 @@ class AudioProcessorWorker(Worker):
         self.add_to_queue(message)
 
     def handle_message(self, audio_data):
+        message_type = audio_data.get("_message_type") if audio_data else None
+        if message_type == "stt_load":
+            self.on_stt_load_signal(audio_data.get("data"))
+            return
+        if message_type == "stt_unload":
+            self.on_stt_unload_signal(audio_data.get("data"))
+            return
+
         self.logger.debug(
             f"handle_message called, _executor={self._executor}, "
             f"audio_data keys: {audio_data.keys() if audio_data else 'None'}"

@@ -66,9 +66,14 @@ class PanOffsetMixin:
         final_offset = QPointF(x, y)
         self.canvas_offset = final_offset
 
-        # Update positions one final time
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
+        # CustomGraphicsView resolves this method from PanOffsetMixin before
+        # EventHandlerMixin, so deferred recenter logic has to live here.
+        if getattr(self, "_needs_recenter_on_show", False):
+            self._needs_recenter_on_show = False
+            self.on_recenter_grid_signal()
+        else:
+            self.update_active_grid_area_position()
+            self.updateImagePositions()
 
         self.logger.debug(
             f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"
