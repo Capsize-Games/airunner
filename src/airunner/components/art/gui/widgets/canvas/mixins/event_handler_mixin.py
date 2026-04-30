@@ -227,6 +227,7 @@ class EventHandlerMixin:
             loaded_offset = QPointF(
                 self.canvas_offset.x(), self.canvas_offset.y()
             )
+            self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
 
             # Clear any cached positions since we're starting fresh
             if self.scene and hasattr(self.scene, "original_item_positions"):
@@ -262,18 +263,11 @@ class EventHandlerMixin:
 
             self._initialized = True
 
-            # If canvas_offset is (0,0), the user had clicked "center" before closing.
-            # We need to recenter for the current viewport, but viewport size may not be 
-            # correct yet during showEvent. Store a flag and do it in the delayed callback.
-            self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
-            
             if self._needs_recenter_on_show:
                 self.logger.debug(
                     "[SHOW] Canvas offset is (0,0) - will recenter after window settles"
                 )
-                # Clear cached positions so they get recalculated
-                if self.scene and hasattr(self.scene, "original_item_positions"):
-                    self.scene.original_item_positions = {}
+                self._preview_centered_layout()
             else:
                 # Non-zero offset means user panned - restore exact positions
                 self.align_canvas_items_to_viewport()
@@ -381,6 +375,12 @@ class EventHandlerMixin:
                 f"[RESIZE] Skipping compensation - _is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
             )
             self._last_viewport_size = self.viewport().size()
+            if (
+                self._is_restoring_state
+                and self._initialized
+                and getattr(self, "_needs_recenter_on_show", False)
+            ):
+                self._preview_centered_layout()
             return
 
         self.logger.debug(

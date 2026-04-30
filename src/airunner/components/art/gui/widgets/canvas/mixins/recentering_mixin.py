@@ -118,3 +118,62 @@ class RecenteringMixin:
             self.scene.original_item_positions.update(new_positions)
 
         self.logger.info("[RECENTER] Recenter grid signal processing complete")
+
+    def _preview_centered_layout(self) -> None:
+        """Apply centered positions in memory before startup restoration ends.
+
+        This avoids painting stale persisted positions for zero-offset canvases
+        while the main window is still settling. Persistence is deferred until
+        the final restoration step.
+        """
+        if not self.scene:
+            return
+
+        self.canvas_offset = QPointF(0, 0)
+        self._grid_compensation_offset = QPointF(0, 0)
+
+        pos_x, pos_y = self.get_recentered_position(
+            self.application_settings.working_width,
+            self.application_settings.working_height,
+        )
+        self.center_pos = QPointF(pos_x, pos_y)
+
+        try:
+            active_grid = self.active_grid_settings
+            active_grid.pos_x = int(pos_x)
+            active_grid.pos_y = int(pos_y)
+        except Exception:
+            pass
+
+        new_positions = self._build_centered_preview_positions()
+        if hasattr(self.scene, "original_item_positions"):
+            self.scene.original_item_positions = {}
+
+        self.update_active_grid_area_position()
+        self.updateImagePositions(new_positions)
+
+    def _build_centered_preview_positions(self) -> dict:
+        """Return centered absolute positions for currently materialized items."""
+        if not self.scene:
+            return {}
+
+        new_positions = {}
+        centered_x, centered_y = self.get_recentered_position(
+            self.application_settings.working_width,
+            self.application_settings.working_height,
+        )
+
+        if self.scene.item:
+            item_rect = self.scene.item.boundingRect()
+            item_pos_x, item_pos_y = self.get_recentered_position(
+                int(item_rect.width()),
+                int(item_rect.height()),
+            )
+            new_positions[self.scene.item] = QPointF(item_pos_x, item_pos_y)
+
+        for layer_item in getattr(self.scene, "_layer_items", {}).values():
+            if layer_item is None:
+                continue
+            new_positions[layer_item] = QPointF(centered_x, centered_y)
+
+        return new_positions
