@@ -1799,6 +1799,7 @@ Based on the search results above, provide a clear, conversational answer to the
         in_thinking_block = False
         thinking_started = False  # Track if we've already seen an opening tag
         thinking_tag_format = ""  # "angle" or "brackets" - set when opening tag detected
+        using_reasoning_deltas = False
         thinking_content = []
         final_thinking_content = None  # Store completed thinking content for DB persistence
         
@@ -1837,6 +1838,13 @@ Based on the search results above, provide a clear, conversational answer to the
 
                 chunk_message = getattr(chunk, "message", chunk)
                 text = getattr(chunk_message, "content", "") or ""
+                additional_kwargs = (
+                    getattr(chunk_message, "additional_kwargs", {}) or {}
+                )
+                reasoning_delta = (
+                    additional_kwargs.get("thinking_content")
+                    or additional_kwargs.get("reasoning_content")
+                )
 
                 # Always capture last chunk (might have tool_calls with no content)
                 last_chunk_message = chunk_message
@@ -1846,14 +1854,54 @@ Based on the search results above, provide a clear, conversational answer to the
                 if chunk_tool_calls:
                     collected_tool_calls.extend(chunk_tool_calls)
 
-                # Only skip if content is empty AND no tool_calls
-                if not text and not chunk_tool_calls:
+                # Only skip if content, tool calls, and reasoning are all empty.
+                if not text and not chunk_tool_calls and not reasoning_delta:
                     continue
 
                 streamed_content.append(text)
                 
                 # Debug: Log every chunk
                 # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
+
+                if suppress_thinking_blocks and reasoning_delta:
+                    if not thinking_started:
+                        thinking_started = True
+                        using_reasoning_deltas = True
+                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                            self._signal_emitter.emit_signal(
+                                SignalCode.LLM_THINKING_SIGNAL,
+                                {"status": "started", "content": ""}
+                            )
+
+                    thinking_content.append(reasoning_delta)
+                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                        self._signal_emitter.emit_signal(
+                            SignalCode.LLM_THINKING_SIGNAL,
+                            {
+                                "status": "streaming",
+                                "content": reasoning_delta,
+                            }
+                        )
+
+                    if not text:
+                        continue
+
+                if (
+                    suppress_thinking_blocks
+                    and using_reasoning_deltas
+                    and text
+                ):
+                    using_reasoning_deltas = False
+                    final_thinking_content = "".join(thinking_content)
+                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                        self._signal_emitter.emit_signal(
+                            SignalCode.LLM_THINKING_SIGNAL,
+                            {
+                                "status": "completed",
+                                "content": final_thinking_content,
+                            }
+                        )
+                    thinking_content = []
                 
                 if suppress_thinking_blocks:
                     # Detect thinking block boundaries using format-agnostic helpers
@@ -2053,6 +2101,17 @@ Based on the search results above, provide a clear, conversational answer to the
                             callback_error,
                             exc_info=True,
                         )
+
+            if using_reasoning_deltas and thinking_content:
+                final_thinking_content = "".join(thinking_content)
+                if hasattr(self, "_signal_emitter") and self._signal_emitter:
+                    self._signal_emitter.emit_signal(
+                        SignalCode.LLM_THINKING_SIGNAL,
+                        {
+                            "status": "completed",
+                            "content": final_thinking_content,
+                        }
+                    )
 
             # Return message if we have content or tool_calls
             if streamed_content or last_chunk_message:

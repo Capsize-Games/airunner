@@ -247,6 +247,44 @@ def test_on_main_window_loaded_signal_refreshes_daemon_status_once():
     window._refresh_model_status_from_daemon.assert_called_once_with()
 
 
+def test_daemon_status_prefers_loaded_local_llm_worker():
+    window = _make_window_stub()
+    window._daemon_status_refresh_inflight = True
+    window.worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.LOADED
+        )
+    )
+    window._sync_model_status_value = (
+        lambda model_type, status:
+        MainWindow._sync_model_status_value(window, model_type, status)
+    )
+    window._runtime_statuses_from_daemon_status = (
+        MainWindow._runtime_statuses_from_daemon_status
+    )
+    window._loaded_model_names_from_runtime_status = (
+        MainWindow._loaded_model_names_from_runtime_status
+    )
+    window._effective_llm_status = (
+        lambda status: MainWindow._effective_llm_status(window, status)
+    )
+    window._reconcile_optional_runtime_preferences = Mock()
+
+    MainWindow._on_daemon_runtime_status_ready(
+        window,
+        {
+            "runtimes": [
+                {"runtime": "llm", "status": "stopped", "loaded": False}
+            ]
+        },
+    )
+
+    window.emit_signal.assert_called_once_with(
+        main_window_module.SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+        {"model": ModelType.LLM, "status": ModelStatus.LOADED},
+    )
+
+
 def test_handoff_launcher_splash_defers_dismissal(monkeypatch):
     window = _make_window_stub()
     window.api = SimpleNamespace(splash=object())

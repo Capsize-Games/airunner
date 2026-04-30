@@ -109,6 +109,9 @@ class ConversationWidget(BaseWidget):
         # Track which message index is currently being streamed to avoid overwriting
         self._active_stream_message_index = None
         self._rendered_request_ids = set()
+        self._js_ready = False
+        self._chat_bridge_flush_pending = False
+        self._pending_chat_bridge_calls = []
         # prevent right click on self.ui.stage
         self.ui.stage.setContextMenuPolicy(
             Qt.ContextMenuPolicy.PreventContextMenu
@@ -196,6 +199,7 @@ class ConversationWidget(BaseWidget):
             "[ConversationWidget] Rendering template after first show"
         )
         self.render_template()
+        self._schedule_chat_bridge_flush()
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
@@ -237,6 +241,7 @@ class ConversationWidget(BaseWidget):
         self.conversation_history = []
         self._streamed_messages = []
         self._rendered_request_ids.clear()
+        self._pending_chat_bridge_calls = []
         # Use explicit clear signal instead of set_conversation([])
         self._chat_bridge.clear_messages()
         self._clear_conversation_widgets()
@@ -361,6 +366,7 @@ class ConversationWidget(BaseWidget):
 
         def handle_result(ready):
             if ready:
+                self._js_ready = True
                 callback()
             elif attempt_count < max_attempts:
                 QTimer.singleShot(50, check_ready)
@@ -368,6 +374,58 @@ class ConversationWidget(BaseWidget):
                 callback()
 
         check_ready()
+
+    def _dispatch_chat_bridge_call(
+        self,
+        method_name: str,
+        *args,
+    ) -> None:
+        """Send one bridge event now or queue it until JS is ready."""
+        if self._js_ready:
+            getattr(self._chat_bridge, method_name)(*args)
+            return
+        self._pending_chat_bridge_calls.append((method_name, args))
+        self._schedule_chat_bridge_flush()
+
+    def _schedule_chat_bridge_flush(self) -> None:
+        """Wait for JS once before flushing queued bridge events."""
+        if self._js_ready:
+            self._flush_pending_chat_bridge_calls()
+            return
+        if self._chat_bridge_flush_pending:
+            return
+        self._chat_bridge_flush_pending = True
+        self.wait_for_js_ready(self._flush_pending_chat_bridge_calls)
+
+    def _flush_pending_chat_bridge_calls(self) -> None:
+        """Flush queued bridge events after the web view comes online."""
+        self._chat_bridge_flush_pending = False
+        if not self._js_ready:
+            return
+        pending_calls = self._pending_chat_bridge_calls
+        self._pending_chat_bridge_calls = []
+        for method_name, args in pending_calls:
+            getattr(self._chat_bridge, method_name)(*args)
+
+    def _format_message_for_webview(
+        self,
+        *,
+        content: str,
+        message_id: int,
+        name: str,
+        is_bot: bool,
+        timestamp: str = "",
+    ) -> Dict[str, Any]:
+        """Return one formatted message payload for the conversation view."""
+        fmt = FormatterExtended.format_content(content)
+        return {
+            "content": fmt["content"],
+            "content_type": fmt["type"],
+            "id": message_id,
+            "timestamp": timestamp,
+            "name": name,
+            "is_bot": is_bot,
+        }
 
     def wait_for_dom_ready(self, callback, max_attempts=50):
         """Wait for the DOM to be ready before executing callback.
@@ -466,6 +524,7 @@ class ConversationWidget(BaseWidget):
             self._conversation_id = getattr(self._conversation, "id", None)
 
         def send():
+            self._pending_chat_bridge_calls = []
             self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)
@@ -673,7 +732,17 @@ class ConversationWidget(BaseWidget):
         self._streamed_messages = self._assign_message_ids(
             self._streamed_messages
         )
-        self.set_conversation(self._streamed_messages)
+        if self._conversation is not None:
+            self._conversation.value = self._streamed_messages
+        self._dispatch_chat_bridge_call(
+            "append_message",
+            self._format_message_for_webview(
+                content=prompt,
+                message_id=self._streamed_messages[-1]["id"],
+                name=username,
+                is_bot=False,
+            ),
+        )
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         """Clear the HTML conversation view."""
@@ -905,7 +974,11 @@ class ConversationWidget(BaseWidget):
         content = data.get("content", "")
 
         # Send to JavaScript for rendering
-        self._chat_bridge.updateThinkingStatus(status, content)
+        self._dispatch_chat_bridge_call(
+            "updateThinkingStatus",
+            status,
+            content,
+        )
 
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
@@ -1020,17 +1093,15 @@ class ConversationWidget(BaseWidget):
                     len(self._streamed_messages) - 1
                 )
                 # Use appendMessage instead of set_conversation to avoid clearing
-                # Format the message like set_conversation does
-                fmt = FormatterExtended.format_content(combined_content)
-                formatted_message = {
-                    "content": fmt["content"],
-                    "content_type": fmt["type"],
-                    "id": new_message_id,
-                    "timestamp": "",
-                    "name": self.chatbot.botname,
-                    "is_bot": True,
-                }
-                self._chat_bridge.append_message(formatted_message)
+                self._dispatch_chat_bridge_call(
+                    "append_message",
+                    self._format_message_for_webview(
+                        content=combined_content,
+                        message_id=new_message_id,
+                        name=self.chatbot.botname,
+                        is_bot=True,
+                    ),
+                )
             else:
                 # Just update the existing message content during streaming
                 self._streamed_messages[self._active_stream_message_index][
@@ -1039,16 +1110,19 @@ class ConversationWidget(BaseWidget):
                 # Use incremental update instead of rebuilding entire conversation
                 # Format the content before sending
                 fmt = FormatterExtended.format_content(combined_content)
-                self._chat_bridge.update_last_message_content(fmt["content"])
+                self._dispatch_chat_bridge_call(
+                    "update_last_message_content",
+                    fmt["content"],
+                )
 
         if last_token_was_end:
             self._finalize_stream_state()
-            # Do final full conversation update to ensure IDs are assigned
             if self._streamed_messages:
                 self._streamed_messages = self._assign_message_ids(
                     self._streamed_messages
                 )
-                self.set_conversation(self._streamed_messages)
+                if self._conversation is not None:
+                    self._conversation.value = self._streamed_messages
 
     def _finalize_stream_state(self, partial: bool = False):
         """Reset streaming state after a message completes.

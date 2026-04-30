@@ -7,7 +7,13 @@ import os
 import uuid
 from PySide6.QtCore import QThread, QTimer
 
-from airunner.enums import ModelService, SignalCode, LLMActionType
+from airunner.enums import (
+    ModelService,
+    SignalCode,
+    LLMActionType,
+    ModelStatus,
+    ModelType,
+)
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
@@ -109,6 +115,12 @@ class LLMGenerateWorker(
             True if model manager is initialized
         """
         return self._model_manager is not None
+
+    def current_model_status(self) -> Optional[ModelStatus]:
+        """Return the current local LLM status without creating a manager."""
+        if self._model_manager is None:
+            return None
+        return self._model_manager.model_status.get(ModelType.LLM)
 
     @property
     def model_manager(self) -> LLMModelManager:

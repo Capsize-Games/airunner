@@ -19,15 +19,59 @@ class FakeLlama:
         return self.response
 
 
-def _build_chat_gguf(fake_llama):
+def _build_chat_gguf(fake_llama, model_path="/tmp/fake.gguf"):
     def fake_load_model(self):
         self._llama = fake_llama
 
     with patch.object(ChatGGUF, "_load_model", fake_load_model):
-        return ChatGGUF(model_path="/tmp/fake.gguf")
+        return ChatGGUF(model_path=model_path)
 
 
 class TestChatGGUFNativeTools:
+    def test_generate_does_not_pass_enable_thinking_kwarg(self):
+        fake_llama = FakeLlama(
+            response={
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Hello",
+                        }
+                    }
+                ]
+            }
+        )
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model.enable_thinking = False
+
+        chat_model._generate([HumanMessage(content="hello")])
+
+        assert "enable_thinking" not in fake_llama.calls[0]
+
+    def test_generate_prefixes_qwen3_no_think_directive(self):
+        fake_llama = FakeLlama(
+            response={
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Hello",
+                        }
+                    }
+                ]
+            }
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/Qwen3-8B-Q4_K_M.gguf",
+        )
+        chat_model.enable_thinking = False
+
+        chat_model._generate([HumanMessage(content="hello")])
+
+        assert (
+            fake_llama.calls[0]["messages"][-1]["content"]
+            == "/no_think\nhello"
+        )
+
     def test_generate_passes_native_tools_and_tool_choice(self):
         fake_llama = FakeLlama(
             response={
@@ -130,3 +174,37 @@ class TestChatGGUFNativeTools:
         assert call_kwargs["tools"]
         assert chunks[-1].message.tool_calls[0]["name"] == "get_current_datetime"
         assert chunks[-1].message.tool_calls[0]["args"] == {}
+
+    def test_stream_yields_reasoning_deltas(self):
+        fake_llama = FakeLlama(
+            stream_chunks=[
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "reasoning_content": "Thinking...",
+                            }
+                        }
+                    ]
+                },
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "content": "Hello",
+                            }
+                        }
+                    ]
+                },
+            ]
+        )
+        chat_model = _build_chat_gguf(fake_llama)
+
+        chunks = list(chat_model._stream([HumanMessage(content="hello")]))
+
+        assert "enable_thinking" not in fake_llama.calls[0]
+        assert (
+            chunks[0].message.additional_kwargs["reasoning_content"]
+            == "Thinking..."
+        )
+        assert chunks[1].message.content == "Hello"

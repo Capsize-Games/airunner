@@ -825,6 +825,10 @@ function handleThinkingStatusUpdate(status, content) {
             status: 'active',
             content: ''
         });
+        const widget = getOrCreateStatusWidget();
+        if (widget) {
+            widget.classList.add('expanded');
+        }
         startThinkingAnimation();
 
     } else if (status === 'streaming') {
@@ -833,8 +837,11 @@ function handleThinkingStatusUpdate(status, content) {
 
     } else if (status === 'completed') {
         stopThinkingAnimation();
+        if (content) {
+            currentThinkingContent = content;
+        }
         updateStatusItem('thinking-current', {
-            text: 'Thought',
+            text: 'Completed',
             status: 'completed',
             content: currentThinkingContent
         });

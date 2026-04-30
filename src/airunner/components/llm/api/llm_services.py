@@ -125,12 +125,12 @@ class LLMAPIService(APIServiceBase):
             conversation_id,
             node_id,
             enable_consciousness,
+            signal_data=data,
         ):
-            self.logger.info("LLM API: Daemon request started")
+            self.logger.info("LLM API: Daemon request queued")
             return
 
-        self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
-        self.logger.info("LLM API: Signal emitted")
+        LLMAPIService._emit_local_generation_request(self, data)
 
     def clear_history(self, **kwargs):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, kwargs)
@@ -218,6 +218,7 @@ class LLMAPIService(APIServiceBase):
         conversation_id: Optional[int],
         node_id: Optional[str],
         enable_consciousness: Optional[bool],
+        signal_data: Optional[dict] = None,
     ) -> bool:
         """Route a GUI request through the daemon when that client is ready."""
         client = self._daemon_client()
@@ -225,12 +226,11 @@ class LLMAPIService(APIServiceBase):
             return False
         if getattr(llm_request, "images", None):
             return False
-        if not client.ensure_connected():
-            return False
 
         thread = threading.Thread(
-            target=self._stream_daemon_request,
+            target=LLMAPIService._run_daemon_request_or_fallback,
             args=(
+                self,
                 client,
                 prompt,
                 llm_request,
@@ -240,11 +240,61 @@ class LLMAPIService(APIServiceBase):
                 conversation_id,
                 node_id,
                 enable_consciousness,
+                signal_data,
             ),
             daemon=True,
         )
         thread.start()
         return True
+
+    def _emit_local_generation_request(self, data: dict) -> None:
+        """Emit one local-worker request when daemon routing is skipped."""
+        self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
+        self.logger.info("LLM API: Signal emitted")
+
+    def _daemon_is_immediately_available(self, client) -> bool:
+        """Return True when one daemon can accept a request right now."""
+        availability_check = getattr(client, "is_available", None)
+        if callable(availability_check):
+            try:
+                return bool(availability_check(timeout_seconds=0.2))
+            except TypeError:
+                return bool(availability_check())
+        return bool(client.ensure_connected(auto_start=False))
+
+    def _run_daemon_request_or_fallback(
+        self,
+        client,
+        prompt: str,
+        llm_request: LLMRequest,
+        action: LLMActionType,
+        request_id: str,
+        search_hints: Optional[dict],
+        conversation_id: Optional[int],
+        node_id: Optional[str],
+        enable_consciousness: Optional[bool],
+        signal_data: Optional[dict],
+    ) -> None:
+        """Use the daemon when it is already reachable, else fall back."""
+        if not self._daemon_is_immediately_available(client):
+            if signal_data is not None:
+                LLMAPIService._emit_local_generation_request(
+                    self,
+                    signal_data,
+                )
+            return
+
+        self._stream_daemon_request(
+            client,
+            prompt,
+            llm_request,
+            action,
+            request_id,
+            search_hints,
+            conversation_id,
+            node_id,
+            enable_consciousness,
+        )
 
     def _stream_daemon_request(
         self,
@@ -488,9 +538,14 @@ class LLMAPIService(APIServiceBase):
 
     def _daemon_client(self):
         """Return the GUI daemon client when one is available."""
+        refresher = getattr(self, "refresh_api_reference", None)
+        if callable(refresher):
+            refreshed_api = refresher()
+            if refreshed_api is not None:
+                self.api = refreshed_api
         api = getattr(self, "api", None)
         if api is None:
-            api = self._resolve_api_instance()
+            api = LLMAPIService._resolve_api_instance()
             if api is not None:
                 self.api = api
         if api is None or getattr(api, "headless", False):

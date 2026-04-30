@@ -2032,6 +2032,9 @@ class MainWindow(
             return
         runtime_statuses = self._runtime_statuses_from_daemon_status(status)
         if runtime_statuses:
+            runtime_statuses[ModelType.LLM] = self._effective_llm_status(
+                runtime_statuses.get(ModelType.LLM, ModelStatus.UNLOADED)
+            )
             for model_type in (
                 ModelType.LLM,
                 ModelType.TTS,
@@ -2044,12 +2047,36 @@ class MainWindow(
                 )
         else:
             loaded_models = self._loaded_model_names_from_runtime_status(status)
-            self._sync_model_status(ModelType.LLM, "LLM", loaded_models)
+            llm_status = self._effective_llm_status(
+                ModelStatus.LOADED
+                if "LLM" in loaded_models
+                else ModelStatus.UNLOADED
+            )
+            self._sync_model_status_value(ModelType.LLM, llm_status)
             self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
             self._sync_model_status(ModelType.STT, "STT", loaded_models)
             self._sync_model_status(ModelType.SD, "SD", loaded_models)
         loaded_models = self._loaded_model_names_from_runtime_status(status)
         self._reconcile_optional_runtime_preferences(loaded_models)
+
+    def _effective_llm_status(
+        self,
+        daemon_status: ModelStatus,
+    ) -> ModelStatus:
+        """Prefer a live local worker over an unloaded daemon summary."""
+        if daemon_status in (ModelStatus.LOADED, ModelStatus.LOADING):
+            return daemon_status
+        worker_manager = getattr(self, "worker_manager", None)
+        worker = getattr(worker_manager, "_llm_generate_worker", None)
+        if worker is None:
+            return daemon_status
+        status_getter = getattr(worker, "current_model_status", None)
+        if not callable(status_getter):
+            return daemon_status
+        local_status = status_getter()
+        if local_status in (ModelStatus.LOADED, ModelStatus.LOADING):
+            return local_status
+        return daemon_status
 
     @staticmethod
     def _model_status_from_runtime_summary(summary: dict) -> ModelStatus:

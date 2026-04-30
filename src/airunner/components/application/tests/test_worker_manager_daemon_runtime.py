@@ -176,6 +176,17 @@ def test_llm_load_signal_marks_failed_when_runtime_never_ready():
     ]
 
 
+def test_daemon_client_uses_refreshed_api_reference():
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(None)
+    manager.api = SimpleNamespace(headless=False)
+    manager.refresh_api_reference = Mock(
+        return_value=SimpleNamespace(daemon_client=client, headless=False)
+    )
+
+    assert WorkerManager._daemon_client(manager) is client
+
+
 def test_prewarm_art_runtime_uses_daemon_runtime():
     client = FakeDaemonClient()
     manager, emitted = _worker_manager(client)
@@ -456,3 +467,59 @@ def test_tts_disable_signal_queues_local_worker_request():
         },
         {"_message_type": "tts_disable", "data": {"source": "ui"}},
     ]
+
+
+def test_llm_load_failure_keeps_loaded_local_status():
+    client = FakeDaemonClient(
+        request_errors={
+            ("load", "llm"): (
+                "HTTPConnectionPool(host='127.0.0.1', port=8188): "
+                "Read timed out. (read timeout=5.0)"
+            )
+        }
+    )
+    manager, emitted = _worker_manager(client)
+    manager.logger = SimpleNamespace(debug=Mock(), warning=Mock())
+    manager._llm_generate_worker = SimpleNamespace(
+        current_model_status=lambda: ModelStatus.LOADED,
+    )
+
+    WorkerManager.on_llm_load_model_signal(manager, {})
+
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.LOADING},
+        ),
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.LOADED},
+        ),
+    ]
+    manager.logger.warning.assert_not_called()
+
+
+def test_llm_unload_failure_keeps_loaded_local_status():
+    client = FakeDaemonClient(
+        request_errors={
+            ("unload", "llm"): (
+                "HTTPConnectionPool(host='127.0.0.1', port=8188): "
+                "Read timed out. (read timeout=2.0)"
+            )
+        }
+    )
+    manager, emitted = _worker_manager(client)
+    manager.logger = SimpleNamespace(debug=Mock(), warning=Mock())
+    manager._llm_generate_worker = SimpleNamespace(
+        current_model_status=lambda: ModelStatus.LOADED,
+    )
+
+    WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
+
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.LOADED},
+        ),
+    ]
+    manager.logger.warning.assert_not_called()

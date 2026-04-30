@@ -351,18 +351,6 @@ class ChatPromptWidget(BaseWidget):
             self.logger.warning("Prompt is empty")
             return
 
-        model_load_balancer = getattr(self.api, "model_load_balancer", None)
-        art_model_loaded = (
-            model_load_balancer
-            and ModelType.SD in model_load_balancer.get_loaded_models()
-        )
-        llm_loaded = (
-            model_load_balancer
-            and ModelType.LLM in model_load_balancer.get_loaded_models()
-        )
-        if art_model_loaded and not llm_loaded:
-            model_load_balancer.switch_to_non_art_mode()
-
         if self.generating:
             if self.held_message is None:
                 self.held_message = prompt
@@ -376,6 +364,22 @@ class ChatPromptWidget(BaseWidget):
         self.clear_prompt()
         QApplication.processEvents()
 
+        self.logger.info(
+            f"do_generate called with prompt: "
+            f"{prompt[:100] if prompt else 'None'}..."
+        )
+        slash_command, actual_prompt, action_override = (
+            self._parse_slash_command(prompt)
+        )
+        self.logger.info(
+            "Slash command parse result: command=%s, "
+            "action_override=%s",
+            slash_command,
+            action_override,
+        )
+        action = action_override if action_override else self.action
+        self.logger.info(f"Final action: {action}")
+
         conversation_id = self._ensure_conversation_context()
         if conversation_id is None:
             self.logger.error(
@@ -386,22 +390,47 @@ class ChatPromptWidget(BaseWidget):
             self.generating = False
             return
 
-        self.start_progress_bar()
-        
-        # Parse slash command if present
-        self.logger.info(f"do_generate called with prompt: {prompt[:100] if prompt else 'None'}...")
-        slash_command, actual_prompt, action_override = self._parse_slash_command(prompt)
-        self.logger.info(f"Slash command parse result: command={slash_command}, action_override={action_override}")
-        
-        # Determine action type - use override from slash command if present
-        action = action_override if action_override else self.action
-        self.logger.info(f"Final action: {action}")
-
         if hasattr(self.ui, "conversation"):
             self.ui.conversation.append_user_message_for_request(
                 actual_prompt,
                 request_id=request_id,
             )
+            QApplication.processEvents()
+
+        QTimer.singleShot(
+            0,
+            lambda: self._submit_generation_request(
+                actual_prompt=actual_prompt,
+                action=action,
+                conversation_id=conversation_id,
+                request_id=request_id,
+                slash_command=slash_command,
+            ),
+        )
+
+    def _submit_generation_request(
+        self,
+        *,
+        actual_prompt: str,
+        action: LLMActionType,
+        conversation_id: int,
+        request_id: str,
+        slash_command: Optional[str],
+    ) -> None:
+        """Run the heavier generation setup after the UI has a paint turn."""
+
+        model_load_balancer = getattr(self.api, "model_load_balancer", None)
+        loaded_models = set(
+            model_load_balancer.get_loaded_models()
+            if model_load_balancer is not None
+            else []
+        )
+        art_model_loaded = ModelType.SD in loaded_models
+        llm_loaded = ModelType.LLM in loaded_models
+        if art_model_loaded and not llm_loaded:
+            model_load_balancer.switch_to_non_art_mode()
+
+        self.start_progress_bar()
         
         # Get configuration from slash command
         force_tool = None
@@ -420,6 +449,7 @@ class ChatPromptWidget(BaseWidget):
         
         # Create LLMRequest optimized for the action type
         llm_request = LLMRequest.for_action(action)
+        llm_request.enable_thinking = self._is_thinking_enabled_for_request()
         
         # Set force_tool if slash command specifies one
         if force_tool:
@@ -451,6 +481,21 @@ class ChatPromptWidget(BaseWidget):
             conversation_id=conversation_id,
             request_id=request_id,
         )
+
+    def _is_thinking_enabled_for_request(self) -> bool:
+        """Return the user-selected thinking preference for this request."""
+        if hasattr(self.ui, "thinking_checkbox"):
+            try:
+                return bool(self.ui.thinking_checkbox.isChecked())
+            except Exception:
+                pass
+
+        enable_thinking = getattr(
+            self.llm_generator_settings,
+            "enable_thinking",
+            True,
+        )
+        return True if enable_thinking is None else bool(enable_thinking)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -1056,7 +1101,10 @@ class ChatPromptWidget(BaseWidget):
         self._update_token_count_label(prompt_text)
 
     def clear_prompt(self):
+        self.prompt = ""
         self.ui.prompt.setPlainText("")
+        if hasattr(self, "_slash_popup") and self._slash_popup.isVisible():
+            self._slash_popup.hide()
 
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)

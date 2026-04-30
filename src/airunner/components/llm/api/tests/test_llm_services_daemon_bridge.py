@@ -10,7 +10,7 @@ from airunner.enums import LLMActionType, SignalCode
 
 
 def test_send_request_via_daemon_starts_background_stream(monkeypatch):
-    client = SimpleNamespace(ensure_connected=lambda: True)
+    client = SimpleNamespace(ensure_connected=lambda **_kwargs: True)
     started = {}
 
     class FakeThread:
@@ -47,8 +47,69 @@ def test_send_request_via_daemon_starts_background_stream(monkeypatch):
     assert result is True
     assert started["started"] is True
     assert started["daemon"] is True
-    assert started["args"][0] is client
-    assert started["args"][4] == "req-123"
+    assert started["args"][0] is fake_self
+    assert started["args"][1] is client
+    assert started["args"][5] == "req-123"
+
+
+def test_send_request_via_daemon_falls_back_to_local_signal(monkeypatch):
+    emitted = []
+    client = SimpleNamespace(is_available=MagicMock(return_value=False))
+
+    class FakeThread:
+        def __init__(self, target, args, daemon):
+            self._target = target
+            self._args = args
+
+        def start(self):
+            self._target(*self._args)
+
+    service = SimpleNamespace(
+        logger=MagicMock(),
+        emit_signal=lambda code, data: emitted.append((code, data)),
+        _daemon_client=lambda: client,
+        _stream_daemon_request=MagicMock(),
+    )
+    signal_data = {"request_id": "req-123", "request_data": {}}
+
+    monkeypatch.setattr(
+        "airunner.components.llm.api.llm_services.threading.Thread",
+        FakeThread,
+    )
+
+    result = LLMAPIService._send_request_via_daemon(
+        service,
+        "hello",
+        LLMRequest(),
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+        signal_data=signal_data,
+    )
+
+    assert result is True
+    client.is_available.assert_called_once_with(timeout_seconds=0.2)
+    assert emitted == [
+        (SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, signal_data)
+    ]
+    service._stream_daemon_request.assert_not_called()
+
+
+def test_daemon_client_uses_refreshed_api_reference():
+    live_client = object()
+    live_api = SimpleNamespace(daemon_client=live_client, headless=False)
+    service = SimpleNamespace(
+        api=SimpleNamespace(headless=False),
+        refresh_api_reference=MagicMock(return_value=live_api),
+    )
+
+    client = LLMAPIService._daemon_client(service)
+
+    assert client is live_client
+    assert service.api is live_api
 
 
 def test_send_request_generates_request_id_for_daemon(monkeypatch):

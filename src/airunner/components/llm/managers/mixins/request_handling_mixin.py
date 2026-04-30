@@ -334,19 +334,6 @@ class RequestHandlingMixin:
 
         llm_request.tool_categories = selected_categories
         llm_request.force_tool = force_tool
-        if (
-            getattr(llm_request, "enable_thinking", None) is None
-            and self._should_disable_thinking_for_prompt(
-                prompt,
-                selected_categories,
-                force_tool,
-            )
-        ):
-            llm_request.enable_thinking = False
-            self.logger.info(
-                "Auto mode: disabled thinking for simple prompt %r",
-                prompt[:100],
-            )
 
         details = (
             "Selected: "

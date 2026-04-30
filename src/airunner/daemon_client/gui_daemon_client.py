@@ -132,6 +132,22 @@ class GuiDaemonClient:
         response = self._request("GET", "/health", auto_start=False)
         return response.json()
 
+    def is_available(self, *, timeout_seconds: float = 0.2) -> bool:
+        """Return True when the daemon is already reachable."""
+        health = self._healthcheck_payload(timeout_seconds=timeout_seconds)
+        stale_reason = self._stale_dev_daemon_reason(health)
+        if health is not None and stale_reason is None:
+            self._set_state(DaemonConnectionState.CONNECTED, "connected")
+            return True
+
+        if stale_reason is not None:
+            self._last_error = stale_reason
+        self._set_state(
+            DaemonConnectionState.DISCONNECTED,
+            self._last_error or "daemon unavailable",
+        )
+        return False
+
     def interrupt_llm(self) -> Dict[str, Any]:
         """Interrupt the active daemon-side LLM request."""
         response = self._request(
@@ -528,13 +544,15 @@ class GuiDaemonClient:
         self._set_state(DaemonConnectionState.FAILED, self._last_error)
         return False
 
-    def _healthcheck_payload(self) -> Optional[Dict[str, Any]]:
+    def _healthcheck_payload(
+        self, *, timeout_seconds: float = 5.0
+    ) -> Optional[Dict[str, Any]]:
         """Return the daemon /health payload when it is reachable."""
         try:
             response = self._session.request(
                 "GET",
                 f"{self.base_url}/health",
-                timeout=5,
+                timeout=timeout_seconds,
             )
             response.raise_for_status()
             return response.json()

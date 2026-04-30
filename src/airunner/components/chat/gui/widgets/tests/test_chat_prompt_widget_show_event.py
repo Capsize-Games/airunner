@@ -9,6 +9,7 @@ from airunner.components.chat.gui.widgets import chat_prompt_widget as module
 from airunner.components.chat.gui.widgets.chat_prompt_widget import (
     ChatPromptWidget,
 )
+from airunner.enums import LLMActionType
 
 
 def test_chat_prompt_splitter_restore_is_deferred(monkeypatch):
@@ -58,3 +59,130 @@ def test_chat_prompt_splitter_restore_does_not_process_events(monkeypatch):
         },
     )
     process_events.assert_not_called()
+
+
+def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
+    """The prompt clears and the user bubble appears before load probes."""
+    call_order = []
+    scheduled = []
+
+    def clear_prompt():
+        call_order.append("clear")
+
+    def append_user_message_for_request(prompt, request_id=None):
+        call_order.append(("append", prompt, bool(request_id)))
+
+    def get_loaded_models():
+        call_order.append("probe")
+        return []
+
+    widget = SimpleNamespace(
+        prompt="Hello",
+        generating=False,
+        held_message=None,
+        action=LLMActionType.APPLICATION_COMMAND,
+        ui=SimpleNamespace(
+            prompt=SimpleNamespace(setPlainText=Mock()),
+            conversation=SimpleNamespace(
+                append_user_message_for_request=
+                append_user_message_for_request,
+            ),
+        ),
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=get_loaded_models,
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(send_request=Mock()),
+        ),
+        clear_prompt=clear_prompt,
+        _ensure_conversation_context=lambda: 1,
+        start_progress_bar=Mock(),
+        _parse_slash_command=lambda prompt: (None, prompt, None),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        logger=Mock(),
+        enable_send_button=Mock(),
+        disable_send_button=Mock(),
+        on_stop_button_clicked=Mock(),
+        _submit_generation_request=lambda **kwargs: call_order.append(
+            ("submit", kwargs["actual_prompt"], kwargs["request_id"])
+        ),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    monkeypatch.setattr(module.QApplication, "processEvents", Mock())
+    monkeypatch.setattr(
+        module.QTimer,
+        "singleShot",
+        lambda delay, callback: scheduled.append((delay, callback)),
+    )
+
+    ChatPromptWidget.do_generate(widget)
+
+    assert call_order == [
+        "clear",
+        ("append", "Hello", True),
+    ]
+    assert scheduled and scheduled[0][0] == 0
+
+    scheduled[0][1]()
+
+    assert call_order[-1][0] == "submit"
+
+
+def test_submit_generation_request_runs_probe_after_ui_append():
+    """Heavy submit setup still runs, but outside the initial UI turn."""
+    call_order = []
+
+    def get_loaded_models():
+        call_order.append("probe")
+        return []
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=get_loaded_models,
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(send_request=Mock()),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: True),
+        ),
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        start_progress_bar=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _is_thinking_enabled_for_request=(
+            lambda: ChatPromptWidget._is_thinking_enabled_for_request(widget)
+        ),
+        logger=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Hello",
+        action=LLMActionType.APPLICATION_COMMAND,
+        conversation_id=1,
+        request_id="req-1",
+        slash_command=None,
+    )
+
+    assert call_order == ["probe"]
+    widget.api.llm.send_request.assert_called_once()
+    assert (
+        widget.api.llm.send_request.call_args.kwargs["llm_request"].enable_thinking
+        is True
+    )

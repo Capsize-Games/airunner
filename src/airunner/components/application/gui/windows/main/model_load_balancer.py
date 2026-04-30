@@ -140,7 +140,8 @@ class ModelLoadBalancer(MediatorMixin):
 
     def get_loaded_models(self) -> List[ModelType]:
         if self._daemon_client() is not None:
-            return self._daemon_loaded_models() or []
+            loaded_models = self._daemon_loaded_models() or []
+            return self._merge_local_llm_loaded_model(loaded_models)
 
         loaded = []
         for model_type, worker in [
@@ -153,11 +154,33 @@ class ModelLoadBalancer(MediatorMixin):
                 loaded.append(model_type)
         return loaded
 
+    def _merge_local_llm_loaded_model(
+        self,
+        loaded_models: List[ModelType],
+    ) -> List[ModelType]:
+        """Keep local LLM state visible when daemon status is stale."""
+        worker = getattr(self.worker_manager, "_llm_generate_worker", None)
+        if worker is None:
+            return loaded_models
+        status_getter = getattr(worker, "current_model_status", None)
+        if not callable(status_getter):
+            return loaded_models
+        if status_getter() is not ModelStatus.LOADED:
+            return loaded_models
+        if ModelType.LLM in loaded_models:
+            return loaded_models
+        return [*loaded_models, ModelType.LLM]
+
     def vram_stats(self, device):
         return gpu_memory_stats(device)
 
     def _daemon_client(self):
         """Return the GUI daemon client when daemon-backed control is active."""
+        refresher = getattr(self, "refresh_api_reference", None)
+        if callable(refresher):
+            refreshed_api = refresher()
+            if refreshed_api is not None:
+                self.api = refreshed_api
         if self.api is None or getattr(self.api, "headless", False):
             return None
         return getattr(self.api, "daemon_client", None)
@@ -167,6 +190,14 @@ class ModelLoadBalancer(MediatorMixin):
         client = self._daemon_client()
         if client is None:
             return None
+        availability_check = getattr(client, "is_available", None)
+        if callable(availability_check):
+            try:
+                if not availability_check(timeout_seconds=0.2):
+                    return None
+            except TypeError:
+                if not availability_check():
+                    return None
         try:
             status = client.daemon_runtime_status(auto_start=False)
         except RuntimeError:

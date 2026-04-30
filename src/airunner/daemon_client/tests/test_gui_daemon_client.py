@@ -239,6 +239,20 @@ def test_ensure_connected_keeps_running_when_dev_token_missing():
     ]
 
 
+def test_is_available_uses_requested_health_timeout():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    connected = client.is_available(timeout_seconds=0.1)
+
+    assert connected is True
+    assert session.calls[0][2]["timeout"] == 0.1
+
+
 def test_ensure_connected_reports_exited_daemon_process():
     ready_state = {
         "ready": False,

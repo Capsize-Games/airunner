@@ -641,6 +641,11 @@ class WorkerManager(Worker):
 
     def _daemon_client(self):
         """Return the GUI daemon client when daemon-backed mode is active."""
+        refresher = getattr(self, "refresh_api_reference", None)
+        if callable(refresher):
+            refreshed_api = refresher()
+            if refreshed_api is not None:
+                self.api = refreshed_api
         api = getattr(self, "api", None)
         if api is None or getattr(api, "headless", False):
             return None
@@ -776,6 +781,24 @@ class WorkerManager(Worker):
         """Emit the right terminal status after one daemon action fails."""
         from airunner.enums import ModelStatus, SignalCode
 
+        local_status = self._preferred_local_llm_status_for_failure(
+            action,
+            runtime_name,
+            model_type,
+        )
+        if local_status is not None:
+            if self.logger:
+                self.logger.debug(
+                    "%s; keeping local LLM status=%s",
+                    message,
+                    local_status.value,
+                )
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": model_type, "status": local_status},
+            )
+            return True
+
         if self.logger:
             if self._is_optional_runtime_unload(action, model_type):
                 self.logger.debug(message)
@@ -789,6 +812,45 @@ class WorkerManager(Worker):
             {"model": model_type, "status": status},
         )
         return True
+
+    def _preferred_local_llm_status_for_failure(
+        self,
+        action: str,
+        runtime_name: str,
+        model_type,
+    ):
+        """Return one local LLM status that should override daemon failure."""
+        from airunner.enums import ModelStatus, ModelType
+
+        if runtime_name != "llm" or model_type is not ModelType.LLM:
+            return None
+
+        worker = getattr(self, "_llm_generate_worker", None)
+        if worker is None:
+            return None
+
+        current_model_status = getattr(worker, "current_model_status", None)
+        if not callable(current_model_status):
+            return None
+
+        try:
+            status = current_model_status()
+        except Exception:
+            return None
+
+        if action == "load" and status in (
+            ModelStatus.LOADING,
+            ModelStatus.LOADED,
+        ):
+            return status
+
+        if action == "unload" and status in (
+            ModelStatus.LOADED,
+            ModelStatus.UNLOADED,
+        ):
+            return status
+
+        return None
 
     def _revert_optional_runtime_load(
         self,

@@ -6,26 +6,6 @@ class TestToolRouting:
         assert LLMModelManager._is_simple_greeting_prompt("hello") is True
         assert LLMModelManager._is_simple_greeting_prompt("good morning!") is True
 
-    def test_disables_thinking_for_simple_greeting(self):
-        assert (
-            LLMModelManager._should_disable_thinking_for_prompt(
-                "hello",
-                selected_categories=[],
-                force_tool=None,
-            )
-            is True
-        )
-
-    def test_disables_thinking_for_direct_tool_prompt(self):
-        assert (
-            LLMModelManager._should_disable_thinking_for_prompt(
-                "what time is it?",
-                selected_categories=["system"],
-                force_tool="get_current_datetime",
-            )
-            is True
-        )
-
     def test_detects_time_prompt_for_direct_tool_routing(self):
         categories, force_tool = LLMModelManager._detect_simple_tool_route(
             "what time is it?"

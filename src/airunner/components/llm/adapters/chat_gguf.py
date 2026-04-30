@@ -435,6 +435,8 @@ class ChatGGUF(BaseChatModel):
         if self.tools and not use_native_tool_calling and not tool_instructions_added:
             tool_system = self._inject_tool_instructions("")
             converted.insert(0, {"role": "system", "content": tool_system})
+
+        self._apply_thinking_directive(converted)
         
         return converted
 
@@ -478,6 +480,30 @@ For each function call, return a json object with function name and arguments wi
 </tool_call>"""
 
         return system_content + tool_instructions
+
+    def _apply_thinking_directive(
+        self, converted: List[Dict[str, Any]]
+    ) -> None:
+        """Prefix the final Qwen3 user turn with a no-think directive."""
+        model_path = str(self.model_path).lower()
+        if self.enable_thinking or "qwen3" not in model_path:
+            return
+
+        for message in reversed(converted):
+            if message.get("role") != "user":
+                continue
+            content = message.get("content")
+            if not isinstance(content, str):
+                return
+
+            stripped = content.lstrip()
+            if stripped.startswith("/no_think") or stripped.startswith(
+                "/think"
+            ):
+                return
+
+            message["content"] = f"/no_think\n{content}"
+            return
 
     def _parse_tool_calls(self, content: str) -> List[Dict[str, Any]]:
         """Parse <tool_call> tags from model response.
@@ -743,6 +769,11 @@ For each function call, return a json object with function name and arguments wi
                     native_tool_call_buffers,
                     delta["tool_calls"],
                 )
+
+            reasoning_text = delta.get("reasoning_content")
+            additional_kwargs: Dict[str, Any] = {}
+            if reasoning_text:
+                additional_kwargs["reasoning_content"] = reasoning_text
             
             # Handle content
             if "content" in delta and delta["content"]:
@@ -750,13 +781,23 @@ For each function call, return a json object with function name and arguments wi
                 full_content.append(text)
                 
                 chunk_msg = ChatGenerationChunk(
-                    message=AIMessageChunk(content=text)
+                    message=AIMessageChunk(
+                        content=text,
+                        additional_kwargs=additional_kwargs,
+                    )
                 )
                 
                 if run_manager:
                     run_manager.on_llm_new_token(text, chunk=chunk_msg)
                     
                 yield chunk_msg
+            elif additional_kwargs:
+                yield ChatGenerationChunk(
+                    message=AIMessageChunk(
+                        content="",
+                        additional_kwargs=additional_kwargs,
+                    )
+                )
 
         # After streaming completes, parse <tool_call> tags from full content
         self.logger.info(

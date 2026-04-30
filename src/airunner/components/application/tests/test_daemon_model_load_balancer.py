@@ -11,11 +11,22 @@ from airunner.enums import ModelStatus, ModelType
 class FakeDaemonClient:
     """Minimal daemon client double for balancer tests."""
 
-    def __init__(self, loaded_models=None, runtimes=None, wait_results=None):
+    def __init__(
+        self,
+        loaded_models=None,
+        runtimes=None,
+        wait_results=None,
+        is_available=True,
+    ):
         self.loaded_models = loaded_models or []
         self.runtimes = runtimes or []
         self.wait_results = wait_results or {}
+        self.is_available_result = is_available
         self.calls = []
+
+    def is_available(self, *, timeout_seconds=0.2):
+        self.calls.append(("available", timeout_seconds))
+        return self.is_available_result
 
     def daemon_runtime_status(self, *, auto_start=False):
         self.calls.append(("status", auto_start))
@@ -101,3 +112,38 @@ def test_switch_to_non_art_mode_marks_failed_when_runtime_stays_unready():
     balancer.switch_to_non_art_mode()
 
     assert status_updates[-1] == (ModelType.LLM, ModelStatus.FAILED)
+
+
+def test_daemon_client_uses_refreshed_api_reference():
+    client = FakeDaemonClient()
+    balancer, _status_updates = _balancer(None)
+    balancer.api = SimpleNamespace(headless=False)
+    balancer.refresh_api_reference = lambda: SimpleNamespace(
+        daemon_client=client,
+        headless=False,
+    )
+
+    assert balancer._daemon_client() is client
+
+
+def test_get_loaded_models_keeps_local_llm_when_daemon_does_not():
+    balancer, _status_updates = _balancer(FakeDaemonClient())
+    balancer.worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.LOADED
+        )
+    )
+
+    loaded_models = balancer.get_loaded_models()
+
+    assert loaded_models == [ModelType.LLM]
+
+
+def test_get_loaded_models_skips_daemon_status_when_unavailable():
+    client = FakeDaemonClient(is_available=False)
+    balancer, _status_updates = _balancer(client)
+
+    loaded_models = balancer.get_loaded_models()
+
+    assert loaded_models == []
+    assert client.calls == [("available", 0.2)]
