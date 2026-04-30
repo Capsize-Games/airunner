@@ -6,6 +6,9 @@ from unittest.mock import MagicMock
 from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.daemon_client.daemon_connection_state import (
+    DaemonConnectionState,
+)
 from airunner.enums import LLMActionType, SignalCode
 
 
@@ -110,6 +113,16 @@ def test_daemon_client_uses_refreshed_api_reference():
 
     assert client is live_client
     assert service.api is live_api
+
+
+def test_immediate_daemon_availability_prefers_connected_state():
+    client = SimpleNamespace(
+        state=DaemonConnectionState.CONNECTED,
+        is_available=MagicMock(return_value=False),
+    )
+
+    assert LLMAPIService._daemon_is_immediately_available(object(), client)
+    client.is_available.assert_not_called()
 
 
 def test_send_request_generates_request_id_for_daemon(monkeypatch):

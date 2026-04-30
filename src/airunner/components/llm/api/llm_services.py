@@ -10,6 +10,9 @@ from airunner.components.llm.utils.stream_text import (
     append_stream_text,
     prepare_stream_chunk,
 )
+from airunner.daemon_client.daemon_connection_state import (
+    DaemonConnectionState,
+)
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
 from dataclasses import dataclass, field
@@ -254,6 +257,8 @@ class LLMAPIService(APIServiceBase):
 
     def _daemon_is_immediately_available(self, client) -> bool:
         """Return True when one daemon can accept a request right now."""
+        if getattr(client, "state", None) is DaemonConnectionState.CONNECTED:
+            return True
         availability_check = getattr(client, "is_available", None)
         if callable(availability_check):
             try:
@@ -276,7 +281,7 @@ class LLMAPIService(APIServiceBase):
         signal_data: Optional[dict],
     ) -> None:
         """Use the daemon when it is already reachable, else fall back."""
-        if not self._daemon_is_immediately_available(client):
+        if not LLMAPIService._daemon_is_immediately_available(self, client):
             if signal_data is not None:
                 LLMAPIService._emit_local_generation_request(
                     self,

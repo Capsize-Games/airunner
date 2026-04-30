@@ -281,6 +281,57 @@ def extract_thinking_and_response(response: str, tag_format: str = "auto") -> Tu
     return None, response.strip()
 
 
+def _compact_text(text: str) -> str:
+    """Return text without whitespace for fuzzy prefix matching."""
+    return "".join((text or "").split())
+
+
+def _content_after_compact_prefix(
+    content: str,
+    compact_prefix: str,
+) -> str:
+    """Return content after consuming one compact prefix."""
+    seen = 0
+    prefix_length = len(compact_prefix)
+    for index, char in enumerate(content):
+        if char.isspace():
+            continue
+        seen += 1
+        if seen >= prefix_length:
+            return content[index + 1 :]
+    return ""
+
+
+def normalize_thinking_content(
+    thinking_content: Optional[str],
+) -> Optional[str]:
+    """Return one trimmed thinking string or None when it is blank."""
+    if thinking_content is None:
+        return None
+    cleaned = thinking_content.strip()
+    return cleaned or None
+
+
+def strip_stored_thinking_prefix(
+    content: str,
+    thinking_content: Optional[str],
+) -> str:
+    """Remove duplicated leading thinking text from saved responses."""
+    raw_content = content or ""
+    tagged_thinking, tagged_content = extract_thinking_and_response(raw_content)
+    if tagged_thinking:
+        return tagged_content
+    cleaned = strip_thinking_tags(raw_content)
+    compact_thinking = _compact_text(
+        normalize_thinking_content(thinking_content) or ""
+    )
+    if not cleaned or not compact_thinking:
+        return cleaned
+    if not _compact_text(cleaned).startswith(compact_thinking):
+        return cleaned.strip()
+    return _content_after_compact_prefix(cleaned, compact_thinking).lstrip()
+
+
 # Streaming detection helpers for chunked response processing
 # These are used by node_functions_mixin.py during LLM streaming
 

@@ -408,6 +408,10 @@ class ChatPromptWidget(BaseWidget):
             ),
         )
 
+        prompt_focus = getattr(getattr(self.ui, "prompt", None), "setFocus", None)
+        if callable(prompt_focus):
+            QTimer.singleShot(0, prompt_focus)
+
     def _submit_generation_request(
         self,
         *,

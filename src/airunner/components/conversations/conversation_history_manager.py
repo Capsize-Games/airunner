@@ -3,6 +3,10 @@
 from typing import Any, Dict, List, Optional
 
 from airunner.components.llm.data.conversation import Conversation
+from airunner.components.llm.utils.thinking_parser import (
+    normalize_thinking_content,
+    strip_stored_thinking_prefix,
+)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -168,8 +172,10 @@ class ConversationHistoryManager:
                             "details": None,  # Will be filled from tool_result
                         })
                     # Also capture pre-tool thinking content
-                    if msg_obj.get("thinking_content"):
-                        pending_pre_tool_thinking = msg_obj["thinking_content"]
+                    pending_pre_tool_thinking = normalize_thinking_content(
+                        msg_obj.get("thinking_content")
+                    )
+                    if pending_pre_tool_thinking:
                         self.logger.debug(
                             f"Captured pre-tool thinking: {len(pending_pre_tool_thinking)} chars"
                         )
@@ -220,6 +226,9 @@ class ConversationHistoryManager:
                     continue
 
                 is_bot = role == "assistant"
+                post_tool_thinking = normalize_thinking_content(
+                    msg_obj.get("thinking_content")
+                )
 
                 # Name extraction logic: prefer message-level, then conversation-level, then default
                 if is_bot:
@@ -263,6 +272,12 @@ class ConversationHistoryManager:
                         f"Content found directly in message {msg_idx}: {content[:50]}..."
                     )
 
+                if is_bot:
+                    content = strip_stored_thinking_prefix(
+                        content,
+                        post_tool_thinking,
+                    )
+
                 formatted_msg = {
                     "name": name,
                     "content": content,
@@ -273,7 +288,6 @@ class ConversationHistoryManager:
                 # Include thinking content for assistant messages
                 # Pre-tool thinking goes in pre_tool_thinking, post-tool in thinking_content
                 if is_bot:
-                    post_tool_thinking = msg_obj.get("thinking_content")
                     if pending_pre_tool_thinking:
                         # Pre-tool thinking always goes in pre_tool_thinking field
                         formatted_msg["pre_tool_thinking"] = pending_pre_tool_thinking

@@ -338,40 +338,10 @@ async function appendMessage(msg, scroll = true) {
         `tool_usage=${msg.tool_usage ? msg.tool_usage.length : 0}, ` +
         `thinking_content=${!!msg.thinking_content}`);
 
-    // For assistant messages, render widgets in the correct order:
-    // 1. Pre-tool thinking (if present)
-    // 2. Tool status widgets (if present)
-    // 3. Post-tool thinking (if present, or regular thinking)
-    // 4. Message content
-
     if (msg.is_bot) {
-        // 1. Render pre-tool thinking block first (thinking before tool use)
-        if (msg.pre_tool_thinking) {
-            console.log(`[appendMessage] Rendering pre_tool_thinking for msg ${msg.id}`);
-            const preThinkingElement = createThinkingElement(msg.pre_tool_thinking, `${msg.id}-pre`);
-            container.appendChild(preThinkingElement);
-        }
-
-        // 2. Render tool status widgets
-        if (msg.tool_usage && Array.isArray(msg.tool_usage)) {
-            console.log(`[appendMessage] Rendering ${msg.tool_usage.length} tool widgets for msg ${msg.id}`);
-            for (const tool of msg.tool_usage) {
-                const toolElement = createToolStatusElement(
-                    tool.tool_id || `saved-tool-${msg.id}-${tool.tool_name}`,
-                    tool.tool_name,
-                    tool.query,
-                    'completed',  // Saved tool usages are always completed
-                    tool.details || null  // Include details (domains) if present
-                );
-                container.appendChild(toolElement);
-            }
-        }
-
-        // 3. Render post-tool thinking block (thinking after tool results)
-        if (msg.thinking_content) {
-            console.log(`[appendMessage] Rendering thinking_content for msg ${msg.id}`);
-            const thinkingElement = createThinkingElement(msg.thinking_content, msg.id);
-            container.appendChild(thinkingElement);
+        const savedStatusWidget = createSavedStatusWidget(msg);
+        if (savedStatusWidget) {
+            container.appendChild(savedStatusWidget);
         }
     }
 
@@ -381,6 +351,108 @@ async function appendMessage(msg, scroll = true) {
         try { await window.MathJax.typesetPromise([messageElement]); } catch { }
     }
     if (scroll && window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+}
+
+function createSavedStatusWidget(msg) {
+    const items = [];
+
+    if (msg.pre_tool_thinking) {
+        items.push({
+            id: `saved-thinking-pre-${msg.id}`,
+            type: 'thinking',
+            text: 'Completed',
+            status: 'completed',
+            content: msg.pre_tool_thinking,
+        });
+    }
+
+    if (msg.tool_usage && Array.isArray(msg.tool_usage)) {
+        for (const tool of msg.tool_usage) {
+            const displayName = getToolDisplayName(tool.tool_name);
+            const queryPreview = tool.query && tool.query.length > 50
+                ? `${tool.query.substring(0, 50)}...`
+                : (tool.query || '');
+            const details = tool.details ? ` - ${tool.details}` : '';
+            items.push({
+                id: `saved-tool-${tool.tool_id || `${msg.id}-${tool.tool_name}`}`,
+                type: 'tool',
+                text: `${displayName}${queryPreview ? ` for "${queryPreview}"` : ''}${details}`,
+                status: 'completed',
+            });
+        }
+    }
+
+    if (msg.thinking_content) {
+        items.push({
+            id: `saved-thinking-${msg.id}`,
+            type: 'thinking',
+            text: 'Completed',
+            status: 'completed',
+            content: msg.thinking_content,
+        });
+    }
+
+    if (!items.length) {
+        return null;
+    }
+
+    const widget = document.createElement('div');
+    widget.className = 'unified-status-widget restored-status-widget expanded';
+    if (items.some(item => item.type === 'thinking')) {
+        widget.classList.add('has-thinking');
+    }
+
+    const header = document.createElement('div');
+    header.className = 'unified-status-header';
+    header.addEventListener('click', () => {
+        widget.classList.toggle('expanded');
+    });
+
+    const icon = document.createElement('span');
+    icon.className = 'unified-status-icon';
+    icon.textContent = '✅';
+
+    const title = document.createElement('span');
+    title.className = 'unified-status-title';
+    title.textContent = 'Completed';
+
+    const count = document.createElement('span');
+    count.className = 'unified-status-count';
+    count.textContent = items.length > statusWidget.maxVisible
+        ? `${items.length} items`
+        : '';
+
+    const expand = document.createElement('span');
+    expand.className = 'unified-status-expand';
+    expand.textContent = '▶';
+
+    header.appendChild(icon);
+    header.appendChild(title);
+    header.appendChild(count);
+    header.appendChild(expand);
+
+    const visible = document.createElement('div');
+    visible.className = 'unified-status-visible';
+    for (const item of items.slice(0, statusWidget.maxVisible)) {
+        visible.appendChild(createStatusItemElement(item));
+    }
+
+    const history = document.createElement('div');
+    history.className = 'unified-status-history';
+    for (const item of items.slice(statusWidget.maxVisible)) {
+        history.appendChild(createStatusItemElement(item));
+    }
+
+    widget.appendChild(header);
+    widget.appendChild(visible);
+    widget.appendChild(history);
+    return widget;
+}
+
+function createStatusItemElement(item) {
+    const temp = document.createElement('div');
+    temp.innerHTML = renderStatusItem(item, false);
+    return temp.firstElementChild;
 }
 
 /**
