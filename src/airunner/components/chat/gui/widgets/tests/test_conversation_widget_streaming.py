@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from airunner.components.chat.gui.widgets import conversation_widget as module
 from airunner.components.chat.gui.widgets.conversation_widget import (
     ConversationWidget,
 )
@@ -36,7 +37,66 @@ def test_append_user_message_for_request_uses_incremental_bridge_update():
             "message_id": 0,
             "name": "User",
             "is_bot": False,
+            "request_id": "req-1",
         },
+    )
+
+
+def test_tool_status_updates_include_request_id(monkeypatch):
+    """Tool status bridge updates stay scoped to the active request."""
+    update = Mock()
+    conversation = SimpleNamespace(id=7, user_data={})
+    widget = SimpleNamespace(
+        logger=Mock(),
+        conversation=conversation,
+        _chat_bridge=SimpleNamespace(updateToolStatus=update),
+    )
+
+    monkeypatch.setattr(module.Conversation.objects, "update", Mock())
+
+    ConversationWidget.on_tool_status_update(
+        widget,
+        {
+            "tool_id": "tool_classification_req-1",
+            "tool_name": "tool_analyzer",
+            "query": "hello",
+            "status": "completed",
+            "details": "Selected: none",
+            "conversation_id": 7,
+            "request_id": "req-1",
+            "timestamp": "2026-04-30T00:00:00",
+        },
+    )
+
+    update.assert_called_once_with(
+        "req-1",
+        "tool_classification_req-1",
+        "tool_analyzer",
+        "hello",
+        "completed",
+        "Selected: none",
+    )
+    assert conversation.user_data["tool_statuses"][0]["request_id"] == "req-1"
+
+
+def test_thinking_updates_include_request_id():
+    """Thinking bridge updates stay scoped to the active request."""
+    widget = SimpleNamespace(_dispatch_chat_bridge_call=Mock())
+
+    ConversationWidget.on_thinking_update(
+        widget,
+        {
+            "request_id": "req-2",
+            "status": "streaming",
+            "content": "plan",
+        },
+    )
+
+    widget._dispatch_chat_bridge_call.assert_called_once_with(
+        "updateThinkingStatus",
+        "req-2",
+        "streaming",
+        "plan",
     )
 
 

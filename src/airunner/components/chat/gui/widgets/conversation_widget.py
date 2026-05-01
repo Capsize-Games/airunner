@@ -415,6 +415,7 @@ class ConversationWidget(BaseWidget):
         name: str,
         is_bot: bool,
         timestamp: str = "",
+        request_id: str = "",
     ) -> Dict[str, Any]:
         """Return one formatted message payload for the conversation view."""
         fmt = FormatterExtended.format_content(content)
@@ -425,6 +426,7 @@ class ConversationWidget(BaseWidget):
             "timestamp": timestamp,
             "name": name,
             "is_bot": is_bot,
+            "request_id": request_id,
         }
 
     def wait_for_dom_ready(self, callback, max_attempts=50):
@@ -498,6 +500,7 @@ class ConversationWidget(BaseWidget):
                 or msg.get("sender")
                 or ("Assistant" if msg.get("is_bot") else "User"),
                 "is_bot": msg.get("is_bot", False),
+                "request_id": msg.get("request_id", ""),
             }
             
             # Preserve thinking and tool usage fields for assistant messages
@@ -550,6 +553,7 @@ class ConversationWidget(BaseWidget):
                     f"[TOOL STATUS] Restoring completed status: {tool_status.get('tool_id')}"
                 )
                 self._chat_bridge.updateToolStatus(
+                    tool_status.get("request_id", ""),
                     tool_status.get("tool_id", ""),
                     tool_status.get("tool_name", ""),
                     tool_status.get("query", ""),
@@ -727,6 +731,7 @@ class ConversationWidget(BaseWidget):
                 "content": prompt,
                 "role": "user",
                 "is_bot": False,
+                "request_id": request_id,
             }
         )
         self._streamed_messages = self._assign_message_ids(
@@ -741,6 +746,7 @@ class ConversationWidget(BaseWidget):
                 message_id=self._streamed_messages[-1]["id"],
                 name=username,
                 is_bot=False,
+                request_id=request_id or "",
             ),
         )
 
@@ -886,6 +892,7 @@ class ConversationWidget(BaseWidget):
         status = data.get("status")
         details = data.get("details", "")
         conversation_id = data.get("conversation_id")
+        request_id = data.get("request_id", "")
         timestamp = data.get("timestamp")
 
         if not all([tool_id, tool_name, query, status]):
@@ -927,6 +934,7 @@ class ConversationWidget(BaseWidget):
                 "query": query,
                 "status": status,
                 "details": details,
+                "request_id": request_id,
                 "timestamp": timestamp,
             }
 
@@ -955,6 +963,7 @@ class ConversationWidget(BaseWidget):
             f"[TOOL STATUS] Calling _chat_bridge.updateToolStatus"
         )
         self._chat_bridge.updateToolStatus(
+            request_id or "",
             tool_id,
             tool_name,
             query,
@@ -970,12 +979,14 @@ class ConversationWidget(BaseWidget):
                 - status: "started", "streaming", or "completed"
                 - content: The thinking text content
         """
+        request_id = data.get("request_id", "")
         status = data.get("status", "")
         content = data.get("content", "")
 
         # Send to JavaScript for rendering
         self._dispatch_chat_bridge_call(
             "updateThinkingStatus",
+            request_id,
             status,
             content,
         )
@@ -1087,6 +1098,11 @@ class ConversationWidget(BaseWidget):
                     "content": combined_content,
                     "role": MessageRole.ASSISTANT.value,
                     "is_bot": True,
+                    "request_id": getattr(
+                        token_response,
+                        "request_id",
+                        "",
+                    ),
                 }
                 self._streamed_messages.append(new_message)
                 self._active_stream_message_index = (
@@ -1100,6 +1116,11 @@ class ConversationWidget(BaseWidget):
                         message_id=new_message_id,
                         name=self.chatbot.botname,
                         is_bot=True,
+                            request_id=getattr(
+                                token_response,
+                                "request_id",
+                                "",
+                            ),
                     ),
                 )
             else:

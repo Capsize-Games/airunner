@@ -324,7 +324,7 @@ class LLMRequest:
                 max_new_tokens=8192,  # Qwen2.5 generation limit
                 top_k=20,  # Qwen3 recommended
                 top_p=0.8,  # Qwen3 non-thinking mode recommended
-                tool_categories=[],  # No tools by default for chat - enable explicitly when needed
+                tool_categories=None,  # Allow auto tool routing for chat when needed
             )
 
         elif action == LLMActionType.CODE:

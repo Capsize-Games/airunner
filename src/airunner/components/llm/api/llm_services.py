@@ -204,11 +204,20 @@ class LLMAPIService(APIServiceBase):
                 pass
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
 
-    def send_llm_thinking_signal(self, status: str, content: str) -> None:
+    def send_llm_thinking_signal(
+        self,
+        status: str,
+        content: str,
+        request_id: Optional[str] = None,
+    ) -> None:
         """Emit one thinking-status update for the chat UI."""
         self.emit_signal(
             SignalCode.LLM_THINKING_SIGNAL,
-            {"status": status, "content": content},
+            {
+                "status": status,
+                "content": content,
+                "request_id": request_id,
+            },
         )
 
     def _send_request_via_daemon(
@@ -377,9 +386,10 @@ class LLMAPIService(APIServiceBase):
         visible_parts = self._extract_visible_daemon_text(
             chunk.get("message", "") or "",
             state,
+            request_id=request_id,
         )
         if bool(chunk.get("is_end_of_message", False)):
-            self._finish_daemon_thinking(state)
+            self._finish_daemon_thinking(state, request_id=request_id)
 
         if visible_parts:
             self._emit_visible_daemon_parts(
@@ -450,6 +460,8 @@ class LLMAPIService(APIServiceBase):
         self,
         message: str,
         state: _DaemonStreamState,
+        *,
+        request_id: str,
     ) -> List[str]:
         """Split one daemon chunk into visible text and thinking updates."""
         visible_parts: List[str] = []
@@ -463,11 +475,22 @@ class LLMAPIService(APIServiceBase):
                     )
                 )
                 if found_close:
-                    self._append_daemon_thinking(state, before_close)
-                    self._finish_daemon_thinking(state)
+                    self._append_daemon_thinking(
+                        state,
+                        before_close,
+                        request_id=request_id,
+                    )
+                    self._finish_daemon_thinking(
+                        state,
+                        request_id=request_id,
+                    )
                     remaining = after_close
                     continue
-                self._append_daemon_thinking(state, remaining)
+                self._append_daemon_thinking(
+                    state,
+                    remaining,
+                    request_id=request_id,
+                )
                 break
 
             found_open, tag_format, before_open, after_open = (
@@ -478,7 +501,11 @@ class LLMAPIService(APIServiceBase):
                 break
             if before_open:
                 visible_parts.append(before_open)
-            self._start_daemon_thinking(state, tag_format)
+            self._start_daemon_thinking(
+                state,
+                tag_format,
+                request_id=request_id,
+            )
             remaining = after_open
         return visible_parts
 
@@ -486,31 +513,41 @@ class LLMAPIService(APIServiceBase):
         self,
         state: _DaemonStreamState,
         tag_format: str,
+        *,
+        request_id: str,
     ) -> None:
         """Mark one daemon stream as being inside a thinking block."""
         state.in_thinking_block = True
         state.thinking_tag_format = tag_format
         state.thinking_content = []
-        self.send_llm_thinking_signal("started", "")
+        self.send_llm_thinking_signal("started", "", request_id)
 
     def _append_daemon_thinking(
         self,
         state: _DaemonStreamState,
         content: str,
+        *,
+        request_id: str,
     ) -> None:
         """Accumulate one thinking fragment and mirror it to the UI."""
         if not content:
             return
         state.thinking_content.append(content)
-        self.send_llm_thinking_signal("streaming", content)
+        self.send_llm_thinking_signal("streaming", content, request_id)
 
-    def _finish_daemon_thinking(self, state: _DaemonStreamState) -> None:
+    def _finish_daemon_thinking(
+        self,
+        state: _DaemonStreamState,
+        *,
+        request_id: str,
+    ) -> None:
         """Complete one thinking block if the daemon stream is inside one."""
         if not state.in_thinking_block:
             return
         self.send_llm_thinking_signal(
             "completed",
             "".join(state.thinking_content),
+            request_id,
         )
         state.in_thinking_block = False
         state.thinking_tag_format = ""

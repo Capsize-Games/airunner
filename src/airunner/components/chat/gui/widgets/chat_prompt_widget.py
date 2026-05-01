@@ -14,7 +14,14 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QWidget,
 )
-from PySide6.QtGui import QTextCursor, QFont, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import (
+    QTextCursor,
+    QFont,
+    QDragEnterEvent,
+    QDropEvent,
+    QKeySequence,
+    QShortcut,
+)
 
 from langchain_core.messages.utils import count_tokens_approximately
 
@@ -116,8 +123,6 @@ class ChatPromptWidget(BaseWidget):
         self.prompt = ""
         self.suffix = ""
         self.spacer = None
-        self.promptKeyPressEvent = None
-        self.originalKeyPressEvent = None
         self.action_menu_displayed = None
         self.action_menu_displayed = None
         self.messages_spacer = None
@@ -139,8 +144,9 @@ class ChatPromptWidget(BaseWidget):
         self._startup_controls_loaded = False
         self._model_dropdown_line_edit = None
         
-        # Hardcode action to AUTO - we don't use the dropdown anymore
-        self.update_llm_generator_settings(action=LLMActionType.APPLICATION_COMMAND.name)
+        # Default plain chat input to CHAT mode. Tool routing still happens
+        # per-request via auto selection when the prompt needs it.
+        self.update_llm_generator_settings(action=LLMActionType.CHAT.name)
         
         # Initialize thinking checkbox from settings
         if hasattr(self.ui, "thinking_checkbox"):
@@ -152,8 +158,9 @@ class ChatPromptWidget(BaseWidget):
             self.ui.thinking_checkbox.setChecked(enable_thinking)
             self.ui.thinking_checkbox.blockSignals(False)
         
-        self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
-        self.ui.prompt.keyPressEvent = self.handle_key_press
+        self._prompt_shortcuts_configured = False
+        self._prompt_submit_shortcuts: List[QShortcut] = []
+        self._slash_popup_shortcuts: List[QShortcut] = []
         
         self.held_message = None
         self._disabled = False
@@ -161,6 +168,7 @@ class ChatPromptWidget(BaseWidget):
         
         # Setup slash command autocomplete
         self._setup_slash_command_completer()
+        self._configure_prompt_shortcuts()
         
         # Setup image attachment handling
         self._setup_image_attachments()
@@ -310,8 +318,9 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def action(self) -> LLMActionType:
-        # Action is always AUTO (APPLICATION_COMMAND) - handles everything automatically
-        return LLMActionType.APPLICATION_COMMAND
+        # The chat prompt should use conversational mode by default.
+        # Explicit slash commands can still override this per request.
+        return LLMActionType.CHAT
 
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:
@@ -410,7 +419,8 @@ class ChatPromptWidget(BaseWidget):
 
         prompt_focus = getattr(getattr(self.ui, "prompt", None), "setFocus", None)
         if callable(prompt_focus):
-            QTimer.singleShot(0, prompt_focus)
+            for delay in (0, 50, 150):
+                QTimer.singleShot(delay, prompt_focus)
 
     def _submit_generation_request(
         self,
@@ -504,13 +514,83 @@ class ChatPromptWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._schedule_default_splitter_settings()
-
-        self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
-
-        self.ui.prompt.keyPressEvent = self.handle_key_press
+        self._configure_prompt_shortcuts()
 
         if not self.chat_loaded:
             self.disable_send_button()
+
+    def _create_prompt_shortcut(
+        self,
+        key: int,
+        handler,
+    ) -> QShortcut:
+        """Create one prompt-scoped shortcut without overriding key events."""
+        shortcut = QShortcut(QKeySequence(key), self.ui.prompt)
+        shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        shortcut.activated.connect(handler)
+        return shortcut
+
+    def _configure_prompt_shortcuts(self) -> None:
+        """Install prompt shortcuts while keeping native text input in Qt."""
+        if self._prompt_shortcuts_configured:
+            return
+        if not hasattr(self.ui, "prompt") or self.ui.prompt is None:
+            return
+
+        self._prompt_submit_shortcuts = [
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Return,
+                self._on_submit_shortcut,
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Enter,
+                self._on_submit_shortcut,
+            ),
+        ]
+        self._slash_popup_shortcuts = [
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Up,
+                lambda: self._handle_slash_popup_navigation(Qt.Key.Key_Up),
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Down,
+                lambda: self._handle_slash_popup_navigation(
+                    Qt.Key.Key_Down
+                ),
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Tab,
+                lambda: self._handle_slash_popup_navigation(Qt.Key.Key_Tab),
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Escape,
+                lambda: self._handle_slash_popup_navigation(
+                    Qt.Key.Key_Escape
+                ),
+            ),
+        ]
+        self._set_slash_navigation_shortcuts_enabled(False)
+        self._prompt_shortcuts_configured = True
+
+    def _set_slash_navigation_shortcuts_enabled(
+        self,
+        enabled: bool,
+    ) -> None:
+        """Enable popup navigation shortcuts only while the popup is shown."""
+        for shortcut in self._slash_popup_shortcuts:
+            shortcut.setEnabled(enabled)
+
+    def _hide_slash_popup(self) -> None:
+        """Hide the slash popup and restore normal prompt navigation."""
+        if hasattr(self, "_slash_popup") and self._slash_popup is not None:
+            self._slash_popup.hide()
+        self._set_slash_navigation_shortcuts_enabled(False)
+
+    def _on_submit_shortcut(self) -> None:
+        """Submit the current prompt from a keyboard shortcut."""
+        if self._disabled:
+            return
+        self.do_generate()
 
     def _finish_startup_controls_if_ready(self) -> None:
         """Populate startup controls after the main window is ready."""
@@ -680,7 +760,7 @@ class ChatPromptWidget(BaseWidget):
     def _show_slash_popup(self) -> None:
         """Show the slash command popup below the cursor."""
         if self._slash_popup.count() == 0:
-            self._slash_popup.hide()
+            self._hide_slash_popup()
             return
         
         # Calculate position - above the prompt widget
@@ -700,6 +780,7 @@ class ChatPromptWidget(BaseWidget):
         self._slash_popup.setGeometry(popup_x, popup_y, popup_width, popup_height)
         self._slash_popup.show()
         self._slash_popup.raise_()
+        self._set_slash_navigation_shortcuts_enabled(True)
 
     def _check_slash_command_trigger(self) -> None:
         """Check if we should show the slash command popup."""
@@ -718,9 +799,9 @@ class ChatPromptWidget(BaseWidget):
                 self._populate_slash_popup(partial_cmd)
                 self._show_slash_popup()
             else:
-                self._slash_popup.hide()
+                self._hide_slash_popup()
         else:
-            self._slash_popup.hide()
+            self._hide_slash_popup()
 
     def _on_slash_item_clicked(self, item: QListWidgetItem) -> None:
         """Handle when a slash command is selected from the popup."""
@@ -745,7 +826,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.prompt.blockSignals(False)
         
         # Hide popup and update highlighting
-        self._slash_popup.hide()
+        self._hide_slash_popup()
         self.highlight_slash_command(cmd + rest)
         
         # Focus back to prompt
@@ -777,7 +858,7 @@ class ChatPromptWidget(BaseWidget):
                 self._on_slash_item_clicked(item)
             return True
         elif key == Qt.Key.Key_Escape:
-            self._slash_popup.hide()
+            self._hide_slash_popup()
             return True
         
         # Let all other keys pass through (including Enter - user might want to submit)
@@ -1108,7 +1189,7 @@ class ChatPromptWidget(BaseWidget):
         self.prompt = ""
         self.ui.prompt.setPlainText("")
         if hasattr(self, "_slash_popup") and self._slash_popup.isVisible():
-            self._slash_popup.hide()
+            self._hide_slash_popup()
 
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)
@@ -1125,26 +1206,6 @@ class ChatPromptWidget(BaseWidget):
     def enable_send_button(self):
         self.ui.send_button.setEnabled(True)
         self._disabled = False
-
-    def handle_key_press(self, event):
-        # Handle slash popup navigation first
-        if self._handle_slash_popup_navigation(event.key()):
-            event.accept()
-            return
-            
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            if (
-                not self._disabled
-                and event.modifiers() != Qt.KeyboardModifier.ShiftModifier
-            ):
-                self.do_generate()
-                event.accept()
-                return
-        if (
-            self.originalKeyPressEvent is not None
-            and self.originalKeyPressEvent != self.handle_key_press
-        ):
-            self.originalKeyPressEvent(event)
 
     def hide_action_menu(self):
         self.action_menu_displayed = False

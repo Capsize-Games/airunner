@@ -299,6 +299,12 @@ class RequestHandlingMixin:
         prompt: str,
     ) -> List[str]:
         """Classify tool categories and emit UI status updates."""
+        request_id = getattr(self, "_current_request_id", None)
+        tool_status_id = (
+            f"tool_classification_{request_id}"
+            if request_id
+            else "tool_classification"
+        )
         self.logger.info(
             "Auto mode: Analyzing prompt to select relevant tool categories"
         )
@@ -312,12 +318,13 @@ class RequestHandlingMixin:
         self.emit_signal(
             SignalCode.LLM_TOOL_STATUS_SIGNAL,
             {
-                "tool_id": "tool_classification",
+                "tool_id": tool_status_id,
                 "tool_name": "tool_analyzer",
                 "query": prompt[:100],
                 "status": "starting",
                 "details": "Analyzing prompt to select tools...",
                 "conversation_id": getattr(self, "_conversation_id", None),
+                "request_id": request_id,
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )
@@ -344,12 +351,13 @@ class RequestHandlingMixin:
         self.emit_signal(
             SignalCode.LLM_TOOL_STATUS_SIGNAL,
             {
-                "tool_id": "tool_classification",
+                "tool_id": tool_status_id,
                 "tool_name": "tool_analyzer",
                 "query": prompt[:100],
                 "status": "completed",
                 "details": details,
                 "conversation_id": getattr(self, "_conversation_id", None),
+                "request_id": request_id,
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )

@@ -413,6 +413,15 @@ class WorkerManager(Worker):
                 }
             )
         else:
+            worker = self.llm_generate_worker
+            if worker is not None:
+                if self.logger:
+                    self.logger.info(
+                        "WorkerManager::on_llm_request_signal forwarding directly to llm_generate_worker"
+                    )
+                worker.on_llm_request_signal(data)
+                return
+
             self.add_to_queue(
                 {
                     "data": data,

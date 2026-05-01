@@ -245,6 +245,9 @@ function createMessageElement(msg) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
     messageDiv.setAttribute('data-message-id', msg.id || Date.now());
+    if (msg.request_id) {
+        messageDiv.setAttribute('data-request-id', msg.request_id);
+    }
     const senderDiv = document.createElement('div');
     senderDiv.className = 'sender';
     senderDiv.textContent = msg.name || msg.sender || (msg.is_bot ? 'Assistant' : 'User');
@@ -353,6 +356,8 @@ async function appendMessage(msg, scroll = true) {
     if (scroll && window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
 }
 
+const STATUS_WIDGET_MAX_VISIBLE = 2;
+
 function createSavedStatusWidget(msg) {
     const items = [];
 
@@ -418,7 +423,7 @@ function createSavedStatusWidget(msg) {
 
     const count = document.createElement('span');
     count.className = 'unified-status-count';
-    count.textContent = items.length > statusWidget.maxVisible
+    count.textContent = items.length > STATUS_WIDGET_MAX_VISIBLE
         ? `${items.length} items`
         : '';
 
@@ -433,13 +438,13 @@ function createSavedStatusWidget(msg) {
 
     const visible = document.createElement('div');
     visible.className = 'unified-status-visible';
-    for (const item of items.slice(0, statusWidget.maxVisible)) {
+    for (const item of items.slice(0, STATUS_WIDGET_MAX_VISIBLE)) {
         visible.appendChild(createStatusItemElement(item));
     }
 
     const history = document.createElement('div');
     history.className = 'unified-status-history';
-    for (const item of items.slice(statusWidget.maxVisible)) {
+    for (const item of items.slice(STATUS_WIDGET_MAX_VISIBLE)) {
         history.appendChild(createStatusItemElement(item));
     }
 
@@ -562,23 +567,80 @@ function getToolDisplayName(toolName) {
 }
 
 // Unified Status Widget State
-const statusWidget = {
-    items: [],           // All status items {id, type, text, status, content?, timestamp}
-    maxVisible: 2,       // Max items shown without expanding
-    animationTimeout: null
-};
+const statusWidgets = new Map();
 
-function getOrCreateStatusWidget() {
+function getStatusRequestId(requestId) {
+    return requestId || 'legacy';
+}
+
+function getThinkingItemId(requestId) {
+    return `thinking-current-${getStatusRequestId(requestId)}`;
+}
+
+function getStatusState(requestId) {
+    const key = getStatusRequestId(requestId);
+    if (!statusWidgets.has(key)) {
+        statusWidgets.set(key, {
+            requestId: key,
+            items: [],
+            maxVisible: STATUS_WIDGET_MAX_VISIBLE,
+            thinkingAnimationInterval: null,
+            thinkingDotCount: 0,
+            currentThinkingContent: ''
+        });
+    }
+    return statusWidgets.get(key);
+}
+
+function getStatusWidgetDomId(requestId) {
+    return `unified-status-widget-${getStatusRequestId(requestId)}`;
+}
+
+function getRequestSelectorValue(requestId) {
+    const key = getStatusRequestId(requestId);
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(key);
+    }
+    return key.replace(/"/g, '\\"');
+}
+
+function findStatusWidgetAnchor(container, requestId) {
+    const key = getStatusRequestId(requestId);
+    if (key === 'legacy') {
+        return null;
+    }
+
+    const selectorValue = getRequestSelectorValue(requestId);
+    const messages = container.querySelectorAll(`.message[data-request-id="${selectorValue}"]`);
+    if (!messages.length) {
+        return null;
+    }
+
+    const assistantMessage = Array.from(messages).find((message) => (
+        message.classList.contains('assistant')
+    ));
+    if (assistantMessage) {
+        return { element: assistantMessage, before: true };
+    }
+
+    return { element: messages[messages.length - 1], before: false };
+}
+
+function getOrCreateStatusWidget(requestId) {
     const container = document.getElementById('conversation-container');
     if (!container) return null;
 
-    let widget = document.getElementById('unified-status-widget');
+    const state = getStatusState(requestId);
+    const domId = getStatusWidgetDomId(requestId);
+    let widget = document.getElementById(domId);
+
     if (!widget) {
         widget = document.createElement('div');
-        widget.id = 'unified-status-widget';
+        widget.id = domId;
+        widget.dataset.requestId = state.requestId;
         widget.className = 'unified-status-widget';
         widget.innerHTML = `
-            <div class="unified-status-header" onclick="toggleStatusWidget()">
+            <div class="unified-status-header">
                 <span class="unified-status-icon">⚙️</span>
                 <span class="unified-status-title">Status</span>
                 <span class="unified-status-count"></span>
@@ -587,53 +649,80 @@ function getOrCreateStatusWidget() {
             <div class="unified-status-visible"></div>
             <div class="unified-status-history"></div>
         `;
-
-        // Insert before last assistant message or append
-        const messages = container.querySelectorAll('.message:not(.tool-status):not(.thinking-block):not(.unified-status-widget)');
-        const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-
-        if (lastMessage && lastMessage.classList.contains('assistant')) {
-            container.insertBefore(widget, lastMessage);
-        } else {
-            container.appendChild(widget);
+        const header = widget.querySelector('.unified-status-header');
+        if (header) {
+            header.addEventListener('click', () => {
+                widget.classList.toggle('expanded');
+            });
         }
     }
+
+    const anchor = findStatusWidgetAnchor(container, requestId);
+    if (anchor) {
+        if (anchor.before) {
+            container.insertBefore(widget, anchor.element);
+        } else {
+            anchor.element.insertAdjacentElement('afterend', widget);
+        }
+    } else if (widget.parentElement !== container) {
+        container.appendChild(widget);
+    } else if (!widget.parentElement) {
+        container.appendChild(widget);
+    }
+
     return widget;
 }
 
 function toggleStatusWidget() {
-    const widget = document.getElementById('unified-status-widget');
-    if (!widget) return;
-    widget.classList.toggle('expanded');
+    const widget = document.querySelector('.unified-status-widget');
+    if (widget) {
+        widget.classList.toggle('expanded');
+    }
 }
 
-function addStatusItem(item) {
-    // item: {id, type: 'thinking'|'tool', text, status: 'active'|'completed', content?: string}
+function addStatusItem(requestId, item) {
+    const state = getStatusState(requestId);
     item.timestamp = Date.now();
 
-    // Check if this item already exists
-    const existingIndex = statusWidget.items.findIndex(i => i.id === item.id);
+    const existingIndex = state.items.findIndex((existingItem) => (
+        existingItem.id === item.id
+    ));
     if (existingIndex >= 0) {
-        // Update existing item
-        statusWidget.items[existingIndex] = { ...statusWidget.items[existingIndex], ...item };
+        state.items[existingIndex] = { ...state.items[existingIndex], ...item };
     } else {
-        // Add new item at the beginning
-        statusWidget.items.unshift(item);
+        state.items.unshift(item);
     }
 
-    renderStatusWidget();
+    renderStatusWidget(requestId);
 }
 
-function updateStatusItem(id, updates) {
-    const item = statusWidget.items.find(i => i.id === id);
-    if (item) {
-        Object.assign(item, updates);
-        renderStatusWidget();
+function updateStatusItem(requestId, id, updates) {
+    const state = getStatusState(requestId);
+    const item = state.items.find((existingItem) => existingItem.id === id);
+    if (!item) {
+        return;
+    }
+
+    Object.assign(item, updates);
+    renderStatusWidget(requestId);
+}
+
+function removeStatusWidget(requestId) {
+    const domId = getStatusWidgetDomId(requestId);
+    const widget = document.getElementById(domId);
+    if (widget) {
+        widget.remove();
     }
 }
 
-function renderStatusWidget() {
-    const widget = getOrCreateStatusWidget();
+function renderStatusWidget(requestId) {
+    const state = getStatusState(requestId);
+    if (!state.items.length) {
+        removeStatusWidget(requestId);
+        return;
+    }
+
+    const widget = getOrCreateStatusWidget(requestId);
     if (!widget) return;
 
     const visibleContainer = widget.querySelector('.unified-status-visible');
@@ -644,20 +733,16 @@ function renderStatusWidget() {
 
     if (!visibleContainer || !historyContainer) return;
 
-    // Check if we have any thinking items
-    const hasThinking = statusWidget.items.some(i => i.type === 'thinking');
+    const hasThinking = state.items.some((item) => item.type === 'thinking');
     widget.classList.toggle('has-thinking', hasThinking);
 
-    // Update header based on active items
-    const activeItems = statusWidget.items.filter(i => i.status === 'active');
+    const activeItems = state.items.filter((item) => item.status === 'active');
     if (activeItems.length > 0) {
         const activeItem = activeItems[0];
         const newIcon = activeItem.type === 'thinking' ? '🧠' : '⚙️';
-        // Title will be animated via CSS for thinking, static for tools
         const baseTitle = activeItem.type === 'thinking' ? 'Thinking' : 'Working...';
         if (iconSpan.textContent !== newIcon) iconSpan.textContent = newIcon;
 
-        // Set base title and add animated-dots class for thinking
         if (activeItem.type === 'thinking') {
             titleSpan.textContent = baseTitle;
             titleSpan.classList.add('animated-dots');
@@ -667,8 +752,9 @@ function renderStatusWidget() {
         }
         iconSpan.classList.add('pulsing');
 
-        // Show streaming thinking content in preview line
-        const thinkingItem = statusWidget.items.find(i => i.type === 'thinking' && i.content);
+        const thinkingItem = state.items.find((item) => (
+            item.type === 'thinking' && item.content
+        ));
         let previewLine = widget.querySelector('.thinking-preview-line');
         if (thinkingItem && thinkingItem.content) {
             if (!previewLine) {
@@ -677,7 +763,6 @@ function renderStatusWidget() {
                 const header = widget.querySelector('.unified-status-header');
                 if (header) header.after(previewLine);
             }
-            // Get last line of thinking content
             const lines = thinkingItem.content.trim().split('\n');
             const lastLine = lines[lines.length - 1] || '';
             previewLine.textContent = lastLine.substring(0, 150);
@@ -685,30 +770,29 @@ function renderStatusWidget() {
         } else if (previewLine) {
             previewLine.style.display = 'none';
         }
-    } else if (statusWidget.items.length > 0) {
+    } else {
         if (iconSpan.textContent !== '✅') iconSpan.textContent = '✅';
         if (titleSpan.textContent !== 'Completed') titleSpan.textContent = 'Completed';
         titleSpan.classList.remove('animated-dots');
         iconSpan.classList.remove('pulsing');
 
-        // Hide preview line when completed
         const previewLine = widget.querySelector('.thinking-preview-line');
         if (previewLine) previewLine.style.display = 'none';
     }
 
-    // Update count
-    const newCount = statusWidget.items.length > statusWidget.maxVisible
-        ? `${statusWidget.items.length} items`
+    const newCount = state.items.length > state.maxVisible
+        ? `${state.items.length} items`
         : '';
     if (countSpan.textContent !== newCount) countSpan.textContent = newCount;
 
-    // Update visible items using smart DOM diffing
-    const visibleItems = statusWidget.items.slice(0, statusWidget.maxVisible);
-    updateStatusContainer(visibleContainer, visibleItems);
-
-    // Update history items
-    const historyItems = statusWidget.items.slice(statusWidget.maxVisible);
-    updateStatusContainer(historyContainer, historyItems);
+    updateStatusContainer(
+        visibleContainer,
+        state.items.slice(0, state.maxVisible),
+    );
+    updateStatusContainer(
+        historyContainer,
+        state.items.slice(state.maxVisible),
+    );
 
     if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
 }
@@ -854,94 +938,109 @@ function escapeAttr(value) {
         .replace(/>/g, '&gt;');
 }
 
-function clearStatusWidget() {
-    statusWidget.items = [];
-    const widget = document.getElementById('unified-status-widget');
-    if (widget) {
+function clearStatusWidgets() {
+    statusWidgets.forEach((state) => {
+        if (state.thinkingAnimationInterval) {
+            clearInterval(state.thinkingAnimationInterval);
+        }
+    });
+    statusWidgets.clear();
+    document.querySelectorAll('.unified-status-widget').forEach((widget) => {
         widget.remove();
-    }
+    });
 }
 
-// Track thinking animation state
-let thinkingAnimationInterval = null;
-let thinkingDotCount = 0;
-let currentThinkingContent = '';
-
-function startThinkingAnimation() {
-    if (thinkingAnimationInterval) {
-        clearInterval(thinkingAnimationInterval);
+function startThinkingAnimation(requestId) {
+    const state = getStatusState(requestId);
+    if (state.thinkingAnimationInterval) {
+        clearInterval(state.thinkingAnimationInterval);
     }
-    thinkingDotCount = 0;
-
-    thinkingAnimationInterval = setInterval(() => {
-        thinkingDotCount = (thinkingDotCount + 1) % 4;
-        const dots = '.'.repeat(thinkingDotCount);
-        updateStatusItem('thinking-current', { text: `Thinking${dots}` });
+    state.thinkingDotCount = 0;
+    state.thinkingAnimationInterval = setInterval(() => {
+        state.thinkingDotCount = (state.thinkingDotCount + 1) % 4;
+        const dots = '.'.repeat(state.thinkingDotCount);
+        updateStatusItem(
+            requestId,
+            getThinkingItemId(requestId),
+            { text: `Thinking${dots}` },
+        );
     }, 400);
 }
 
-function stopThinkingAnimation() {
-    if (thinkingAnimationInterval) {
-        clearInterval(thinkingAnimationInterval);
-        thinkingAnimationInterval = null;
+function stopThinkingAnimation(requestId) {
+    const state = getStatusState(requestId);
+    if (!state.thinkingAnimationInterval) {
+        return;
     }
+    clearInterval(state.thinkingAnimationInterval);
+    state.thinkingAnimationInterval = null;
 }
 
-function handleThinkingStatusUpdate(status, content) {
+function handleThinkingStatusUpdate(requestId, status, content) {
+    const state = getStatusState(requestId);
+    const thinkingItemId = getThinkingItemId(requestId);
+
     if (status === 'started') {
-        currentThinkingContent = '';
-        addStatusItem({
-            id: 'thinking-current',
+        state.currentThinkingContent = '';
+        addStatusItem(requestId, {
+            id: thinkingItemId,
             type: 'thinking',
             text: 'Thinking',
             status: 'active',
             content: ''
         });
-        const widget = getOrCreateStatusWidget();
+        const widget = getOrCreateStatusWidget(requestId);
         if (widget) {
             widget.classList.add('expanded');
         }
-        startThinkingAnimation();
+        startThinkingAnimation(requestId);
+        return;
+    }
 
-    } else if (status === 'streaming') {
-        currentThinkingContent += content;
-        updateStatusItem('thinking-current', { content: currentThinkingContent });
+    if (status === 'streaming') {
+        state.currentThinkingContent += content;
+        updateStatusItem(requestId, thinkingItemId, {
+            content: state.currentThinkingContent
+        });
+        return;
+    }
 
-    } else if (status === 'completed') {
-        stopThinkingAnimation();
+    if (status === 'completed') {
+        stopThinkingAnimation(requestId);
         if (content) {
-            currentThinkingContent = content;
+            state.currentThinkingContent = content;
         }
-        updateStatusItem('thinking-current', {
+        updateStatusItem(requestId, thinkingItemId, {
             text: 'Completed',
             status: 'completed',
-            content: currentThinkingContent
+            content: state.currentThinkingContent
         });
     }
 }
 
 // Keep for backwards compatibility
 function toggleThinkingBlock() {
-    const widget = document.getElementById('unified-status-widget');
+    const widget = document.querySelector('.unified-status-widget');
     if (widget) {
         widget.classList.toggle('expanded');
     }
 }
 
-function handleToolStatusUpdate(toolId, toolName, query, status, details) {
+function handleToolStatusUpdate(requestId, toolId, toolName, query, status, details) {
     const displayName = getToolDisplayName(toolName);
     const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
     const text = `${displayName} for "${queryPreview}"`;
+    const itemId = `tool-${getStatusRequestId(requestId)}-${toolId}`;
 
     if (status === 'starting') {
-        addStatusItem({
-            id: `tool-${toolId}`,
+        addStatusItem(requestId, {
+            id: itemId,
             type: 'tool',
             text: text,
             status: 'active'
         });
     } else if (status === 'completed') {
-        updateStatusItem(`tool-${toolId}`, {
+        updateStatusItem(requestId, itemId, {
             text: text + (details ? ` - ${details}` : ''),
             status: 'completed'
         });
@@ -950,15 +1049,15 @@ function handleToolStatusUpdate(toolId, toolName, query, status, details) {
 
 function removeToolStatusesForTool(toolName, activeElementId) {
     // Legacy function - now handled by unified widget
-    // Remove items from statusWidget.items that match toolName but not activeElementId
     if (!toolName) return;
-    statusWidget.items = statusWidget.items.filter(item => {
-        if (item.type !== 'tool') return true;
-        if (item.id === activeElementId) return true;
-        // Keep if it doesn't match the tool name (approximate check)
-        return !item.text.toLowerCase().includes(toolName.toLowerCase());
+    statusWidgets.forEach((state, requestId) => {
+        state.items = state.items.filter((item) => {
+            if (item.type !== 'tool') return true;
+            if (item.id === activeElementId) return true;
+            return !item.text.toLowerCase().includes(toolName.toLowerCase());
+        });
+        renderStatusWidget(requestId);
     });
-    renderStatusWidget();
 }
 
 function clearMessagesKeepToolStatus() {
@@ -968,24 +1067,23 @@ function clearMessagesKeepToolStatus() {
         return;
     }
 
-    // Stop any running thinking animation since we're clearing
-    stopThinkingAnimation();
-
-    // Clear all content but preserve the unified status widget
-    const widget = document.getElementById('unified-status-widget');
+    const widgets = Array.from(
+        container.querySelectorAll('.unified-status-widget')
+    );
     container.innerHTML = '';
 
-    if (widget && statusWidget.items.length > 0) {
-        container.appendChild(widget);
-    }
+    widgets.forEach((widget) => {
+        const requestId = widget.dataset.requestId || 'legacy';
+        const state = statusWidgets.get(requestId);
+        if (state && state.items.length > 0) {
+            container.appendChild(widget);
+        }
+    });
 }
 
 function clearMessages() {
     console.log('[TOOL STATUS DEBUG] clearMessages called - clearing everything');
-    // Also stop thinking animation if running
-    stopThinkingAnimation();
-    // Clear status widget state
-    clearStatusWidget();
+    clearStatusWidgets();
     const container = document.getElementById('conversation-container');
     if (container) container.innerHTML = '';
 }

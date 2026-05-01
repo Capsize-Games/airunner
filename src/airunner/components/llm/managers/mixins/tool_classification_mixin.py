@@ -45,6 +45,21 @@ class ToolClassificationMixin:
         r"^\s*thanks[!.?,\s]*$",
         r"^\s*thank\s+you[!.?,\s]*$",
     )
+    SIMPLE_NO_TOOL_PATTERNS: Tuple[str, ...] = (
+        r"^\s*how\s+are\s+you[!.?,\s]*$",
+        r"^\s*who\s+are\s+you[!.?,\s]*$",
+        r"^\s*what(?:'s|\s+is)\s+your\s+name[!.?,\s]*$",
+        r"^\s*what\s+can\s+you\s+do[!.?,\s]*$",
+        r"^\s*(?:tell\s+me\s+another|another\s+one)\b.*$",
+        r"^\s*(?:like\s+what|for\s+example)[!.?,\s]*$",
+        r"^\s*(?:can\s+you\s+)?tell\s+me\s+"
+        r"(?:a|another)?\s*joke\b.*$",
+        r"^\s*(?:please\s+)?(?:tell\s+me|write\s+me|make\s+up)\s+"
+        r"(?:a|another)?\s*(?:story|poem|haiku|riddle)\b.*$",
+        r"^\s*(?:give\s+me|share)\s+(?:a\s+)?"
+        r"(?:fun\s+fact|quote)\b.*$",
+        r"^\s*(?:make\s+me\s+laugh|be\s+funny)[!.?,\s]*$",
+    )
 
     @classmethod
     def _detect_simple_tool_route(
@@ -75,6 +90,18 @@ class ToolClassificationMixin:
         )
 
     @classmethod
+    def _is_simple_no_tool_prompt(cls, prompt: str) -> bool:
+        """Return True for casual prompts that should avoid tools."""
+        prompt_lc = (prompt or "").strip().lower()
+        if not prompt_lc or len(prompt_lc) > 120:
+            return False
+
+        return any(
+            re.match(pattern, prompt_lc)
+            for pattern in cls.SIMPLE_NO_TOOL_PATTERNS
+        )
+
+    @classmethod
     def _should_disable_thinking_for_prompt(
         cls,
         prompt: str,
@@ -101,25 +128,18 @@ class ToolClassificationMixin:
             return direct_categories
 
         prompt_lc = (prompt or "").strip().lower()
-        if len(prompt_lc) <= 40:
-            greeting_tokens = [
-                "hello",
-                "hi",
-                "hey",
-                "hola",
-                "yo",
-                "sup",
-                "morning",
-                "afternoon",
-                "evening",
-                "thanks",
-                "thank you",
-            ]
-            if any(token in prompt_lc for token in greeting_tokens):
-                self.logger.info(
-                    "Auto mode: greeting detected, disabling tools"
-                )
-                return []
+        if self._is_simple_greeting_prompt(prompt):
+            self.logger.info(
+                "Auto mode: greeting detected, disabling tools"
+            )
+            return []
+
+        if self._is_simple_no_tool_prompt(prompt):
+            self.logger.info(
+                "Auto mode: simple conversational prompt detected, "
+                "disabling tools"
+            )
+            return []
 
         search_triggers = [
             "search",

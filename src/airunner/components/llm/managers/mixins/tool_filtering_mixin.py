@@ -52,10 +52,12 @@ class ToolFilteringMixin:
 
             current_request = getattr(self, "llm_request", None)
             current_prompt = getattr(current_request, "prompt", "") or ""
-            if self._is_simple_greeting_prompt(current_prompt):
+            if self._is_simple_greeting_prompt(
+                current_prompt
+            ) or self._is_simple_no_tool_prompt(current_prompt):
                 self.logger.info(
-                    "tool_categories=[] for simple greeting - disabling all "
-                    "tools"
+                    "tool_categories=[] for simple conversational prompt - "
+                    "disabling all tools"
                 )
                 self._workflow_manager.update_tools([])
                 self._workflow_manager._build_and_compile_workflow()

@@ -14,11 +14,11 @@ class ChatBridge(QObject):
     copyMessageRequested = Signal(object)
     newChatRequested = Signal()
     toolStatusUpdate = Signal(
-        str, str, str, str, str
-    )  # tool_id, tool_name, query, status, details
+        str, str, str, str, str, str
+    )  # request_id, tool_id, tool_name, query, status, details
     thinkingStatusUpdate = Signal(
-        str, str
-    )  # status, content - for Qwen3 <think> blocks
+        str, str, str
+    )  # request_id, status, content - for Qwen3 <think> blocks
 
     @Slot(list)
     def set_messages(self, messages):
@@ -63,25 +63,42 @@ class ChatBridge(QObject):
     def newChat(self):
         self.newChatRequested.emit()
 
-    @Slot(str, str, str, str, str)
-    def updateToolStatus(self, tool_id, tool_name, query, status, details):
+    @Slot(str, str, str, str, str, str)
+    def updateToolStatus(
+        self,
+        request_id,
+        tool_id,
+        tool_name,
+        query,
+        status,
+        details,
+    ):
         """Emit tool status update to JavaScript.
 
         Args:
+            request_id: Request identifier for one assistant response
             tool_id: Unique ID for this tool execution
             tool_name: Name of the tool
             query: The query/prompt sent to the tool
             status: "starting" or "completed"
             details: Optional details (e.g., URLs)
         """
-        self.toolStatusUpdate.emit(tool_id, tool_name, query, status, details)
+        self.toolStatusUpdate.emit(
+            request_id,
+            tool_id,
+            tool_name,
+            query,
+            status,
+            details,
+        )
 
-    @Slot(str, str)
-    def updateThinkingStatus(self, status, content):
+    @Slot(str, str, str)
+    def updateThinkingStatus(self, request_id, status, content):
         """Emit thinking status update to JavaScript.
 
         Args:
+            request_id: Request identifier for one assistant response
             status: "started", "streaming", or "completed"
             content: The thinking text content
         """
-        self.thinkingStatusUpdate.emit(status, content)
+        self.thinkingStatusUpdate.emit(request_id, status, content)

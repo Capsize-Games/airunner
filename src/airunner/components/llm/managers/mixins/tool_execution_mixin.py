@@ -220,6 +220,7 @@ class ToolExecutionMixin:
                     "status": "starting",
                     "details": None,
                     "conversation_id": self._conversation_id,
+                    "request_id": getattr(self, "_current_request_id", None),
                     "timestamp": str(datetime.now()),
                 },
             )
@@ -269,6 +270,11 @@ class ToolExecutionMixin:
                             "status": "completed",
                             "details": details,
                             "conversation_id": self._conversation_id,
+                            "request_id": getattr(
+                                self,
+                                "_current_request_id",
+                                None,
+                            ),
                             "timestamp": str(datetime.now()),
                         },
                     )

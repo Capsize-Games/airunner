@@ -1816,6 +1816,20 @@ Based on the search results above, provide a clear, conversational answer to the
         has_streamed_content = False
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
+        request_id = getattr(self, "_current_request_id", None)
+
+        def emit_thinking_signal(status: str, content: str) -> None:
+            """Emit one request-scoped thinking update to the GUI."""
+            if not has_emitter:
+                return
+            self._signal_emitter.emit_signal(
+                SignalCode.LLM_THINKING_SIGNAL,
+                {
+                    "status": status,
+                    "content": content,
+                    "request_id": request_id,
+                },
+            )
         # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
         # suppress/buffer tokens. Some models can emit the *entire* answer inside <think> blocks;
         # suppressing thinking would then swallow all output for NDJSON clients.
@@ -1867,21 +1881,10 @@ Based on the search results above, provide a clear, conversational answer to the
                     if not thinking_started:
                         thinking_started = True
                         using_reasoning_deltas = True
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "started", "content": ""}
-                            )
+                        emit_thinking_signal("started", "")
 
                     thinking_content.append(reasoning_delta)
-                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                        self._signal_emitter.emit_signal(
-                            SignalCode.LLM_THINKING_SIGNAL,
-                            {
-                                "status": "streaming",
-                                "content": reasoning_delta,
-                            }
-                        )
+                    emit_thinking_signal("streaming", reasoning_delta)
 
                     if not text:
                         continue
@@ -1893,14 +1896,10 @@ Based on the search results above, provide a clear, conversational answer to the
                 ):
                     using_reasoning_deltas = False
                     final_thinking_content = "".join(thinking_content)
-                    if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                        self._signal_emitter.emit_signal(
-                            SignalCode.LLM_THINKING_SIGNAL,
-                            {
-                                "status": "completed",
-                                "content": final_thinking_content,
-                            }
-                        )
+                    emit_thinking_signal(
+                        "completed",
+                        final_thinking_content,
+                    )
                     thinking_content = []
                 
                 if suppress_thinking_blocks:
@@ -1912,11 +1911,7 @@ Based on the search results above, provide a clear, conversational answer to the
                         thinking_started = True
                         thinking_tag_format = tag_format
                         # Emit thinking started signal
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "started", "content": ""}
-                            )
+                        emit_thinking_signal("started", "")
 
                         # Check if closing tag is also in this chunk (entire thinking block in one chunk)
                         found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
@@ -1924,21 +1919,19 @@ Based on the search results above, provide a clear, conversational answer to the
                             # Both tags in same chunk - extract thinking and remaining content
                             if before_close:
                                 thinking_content.append(before_close)
-                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                    self._signal_emitter.emit_signal(
-                                        SignalCode.LLM_THINKING_SIGNAL,
-                                        {"status": "streaming", "content": before_close}
-                                    )
+                                emit_thinking_signal(
+                                    "streaming",
+                                    before_close,
+                                )
 
                             # Mark thinking as complete
                             in_thinking_block = False
                             final_thinking_content = "".join(thinking_content)
 
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "completed", "content": final_thinking_content}
-                                )
+                            emit_thinking_signal(
+                                "completed",
+                                final_thinking_content,
+                            )
                             thinking_content = []
 
                             # Stream any content after closing tag to the main callback
@@ -1954,11 +1947,10 @@ Based on the search results above, provide a clear, conversational answer to the
                         elif after_think:
                             # Only opening tag in this chunk, stream content to thinking
                             thinking_content.append(after_think)
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": after_think}
-                                )
+                            emit_thinking_signal(
+                                "streaming",
+                                after_think,
+                            )
                         continue  # Skip normal processing for this chunk
 
                     # If we're in a thinking block, emit thinking content
@@ -1968,11 +1960,10 @@ Based on the search results above, provide a clear, conversational answer to the
                         if found_close:
                             if before_close:
                                 thinking_content.append(before_close)
-                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                    self._signal_emitter.emit_signal(
-                                        SignalCode.LLM_THINKING_SIGNAL,
-                                        {"status": "streaming", "content": before_close}
-                                    )
+                                emit_thinking_signal(
+                                    "streaming",
+                                    before_close,
+                                )
 
                             # Mark thinking as complete
                             in_thinking_block = False
@@ -1980,11 +1971,10 @@ Based on the search results above, provide a clear, conversational answer to the
                             # Save thinking content for DB persistence BEFORE clearing the list
                             final_thinking_content = "".join(thinking_content)
 
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "completed", "content": final_thinking_content}
-                                )
+                            emit_thinking_signal(
+                                "completed",
+                                final_thinking_content,
+                            )
                             thinking_content = []
 
                             # Stream any content after closing tag to the main callback
@@ -1999,11 +1989,7 @@ Based on the search results above, provide a clear, conversational answer to the
                                     )
                         else:
                             # Stream thinking content to GUI
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": text}
-                                )
+                            emit_thinking_signal("streaming", text)
                             thinking_content.append(text)
                         continue  # Don't stream thinking to main callback
                 
@@ -2104,14 +2090,10 @@ Based on the search results above, provide a clear, conversational answer to the
 
             if using_reasoning_deltas and thinking_content:
                 final_thinking_content = "".join(thinking_content)
-                if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                    self._signal_emitter.emit_signal(
-                        SignalCode.LLM_THINKING_SIGNAL,
-                        {
-                            "status": "completed",
-                            "content": final_thinking_content,
-                        }
-                    )
+                emit_thinking_signal(
+                    "completed",
+                    final_thinking_content,
+                )
 
             # Return message if we have content or tool_calls
             if streamed_content or last_chunk_message:

@@ -232,8 +232,8 @@ def test_stream_daemon_request_converts_thinking_to_ui_signal():
         send_llm_text_streamed_signal=lambda response: emitted_responses.append(
             response
         ),
-        send_llm_thinking_signal=lambda status, content: emitted_signals.append(
-            (status, content)
+        send_llm_thinking_signal=lambda status, content, request_id=None: emitted_signals.append(
+            (request_id, status, content)
         ),
         _forward_daemon_chunk=(
             lambda chunk, **kwargs: LLMAPIService._forward_daemon_chunk(
@@ -243,14 +243,19 @@ def test_stream_daemon_request_converts_thinking_to_ui_signal():
             )
         ),
         _extract_visible_daemon_text=(
-            lambda message, state: LLMAPIService._extract_visible_daemon_text(
+            lambda message, state, request_id: LLMAPIService._extract_visible_daemon_text(
                 service,
                 message,
                 state,
+                request_id=request_id,
             )
         ),
-        _finish_daemon_thinking=lambda state: (
-            LLMAPIService._finish_daemon_thinking(service, state)
+        _finish_daemon_thinking=lambda state, request_id: (
+            LLMAPIService._finish_daemon_thinking(
+                service,
+                state,
+                request_id=request_id,
+            )
         ),
         _emit_visible_daemon_parts=(
             lambda visible_parts, **kwargs: (
@@ -274,18 +279,20 @@ def test_stream_daemon_request_converts_thinking_to_ui_signal():
                 **kwargs,
             )
         ),
-        _start_daemon_thinking=lambda state, tag_format: (
+        _start_daemon_thinking=lambda state, tag_format, request_id: (
             LLMAPIService._start_daemon_thinking(
                 service,
                 state,
                 tag_format,
+                request_id=request_id,
             )
         ),
-        _append_daemon_thinking=lambda state, content: (
+        _append_daemon_thinking=lambda state, content, request_id: (
             LLMAPIService._append_daemon_thinking(
                 service,
                 state,
                 content,
+                request_id=request_id,
             )
         ),
     )
@@ -307,9 +314,9 @@ def test_stream_daemon_request_converts_thinking_to_ui_signal():
     )
 
     assert emitted_signals == [
-        ("started", ""),
-        ("streaming", "plan"),
-        ("completed", "plan"),
+        ("req-123", "started", ""),
+        ("req-123", "streaming", "plan"),
+        ("req-123", "completed", "plan"),
     ]
     assert [response.message for response in emitted_responses] == [
         "Hello",
@@ -386,7 +393,7 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
         send_llm_text_streamed_signal=lambda response: emitted_responses.append(
             response
         ),
-        send_llm_thinking_signal=lambda status, content: None,
+        send_llm_thinking_signal=lambda status, content, request_id=None: None,
         _forward_daemon_chunk=(
             lambda chunk, **kwargs: LLMAPIService._forward_daemon_chunk(
                 service,
@@ -395,14 +402,19 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
             )
         ),
         _extract_visible_daemon_text=(
-            lambda message, state: LLMAPIService._extract_visible_daemon_text(
+            lambda message, state, request_id: LLMAPIService._extract_visible_daemon_text(
                 service,
                 message,
                 state,
+                request_id=request_id,
             )
         ),
-        _finish_daemon_thinking=lambda state: (
-            LLMAPIService._finish_daemon_thinking(service, state)
+        _finish_daemon_thinking=lambda state, request_id: (
+            LLMAPIService._finish_daemon_thinking(
+                service,
+                state,
+                request_id=request_id,
+            )
         ),
         _emit_visible_daemon_parts=(
             lambda visible_parts, **kwargs: (
@@ -426,11 +438,21 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
                 **kwargs,
             )
         ),
-        _start_daemon_thinking=lambda state, tag_format: (
-            LLMAPIService._start_daemon_thinking(service, state, tag_format)
+        _start_daemon_thinking=lambda state, tag_format, request_id: (
+            LLMAPIService._start_daemon_thinking(
+                service,
+                state,
+                tag_format,
+                request_id=request_id,
+            )
         ),
-        _append_daemon_thinking=lambda state, content: (
-            LLMAPIService._append_daemon_thinking(service, state, content)
+        _append_daemon_thinking=lambda state, content, request_id: (
+            LLMAPIService._append_daemon_thinking(
+                service,
+                state,
+                content,
+                request_id=request_id,
+            )
         ),
     )
     client = SimpleNamespace(

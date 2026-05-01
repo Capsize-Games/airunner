@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -5,6 +6,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from airunner.components.llm.managers.mixins.node_functions_mixin import (
     NodeFunctionsMixin,
 )
+from airunner.enums import SignalCode
 
 
 class DummyNodeFunctionsMixin(NodeFunctionsMixin):
@@ -12,6 +14,7 @@ class DummyNodeFunctionsMixin(NodeFunctionsMixin):
         self.logger = Mock()
         self._tools = []
         self._token_callback = None
+        self._interrupted = False
 
 
 def _make_tool(name: str, return_direct: bool):
@@ -81,3 +84,58 @@ class TestReturnDirectToolRouting:
         assert isinstance(message, AIMessage)
         assert message.content == "Current local date and time: 2026-03-21 22:14:54."
         assert message.tool_calls == []
+
+    def test_streaming_reasoning_completion_keeps_request_id(
+        self,
+        monkeypatch,
+    ):
+        monkeypatch.delenv("AIRUNNER_HEADLESS", raising=False)
+        emitted = []
+        mixin = DummyNodeFunctionsMixin()
+        mixin._current_request_id = "req-2"
+        mixin._signal_emitter = SimpleNamespace(
+            emit_signal=lambda code, data: emitted.append((code, data))
+        )
+        mixin._create_streamed_message = Mock(
+            return_value=AIMessage(content="")
+        )
+        mixin._chat_model = SimpleNamespace(
+            stream=lambda *_args, **_kwargs: iter(
+                [
+                    SimpleNamespace(
+                        message=SimpleNamespace(
+                            content="",
+                            additional_kwargs={
+                                "reasoning_content": "plan"
+                            },
+                            tool_calls=[],
+                        )
+                    )
+                ]
+            )
+        )
+
+        mixin._generate_streaming_response("prompt", {})
+
+        thinking_updates = [
+            data
+            for code, data in emitted
+            if code == SignalCode.LLM_THINKING_SIGNAL
+        ]
+        assert thinking_updates == [
+            {
+                "status": "started",
+                "content": "",
+                "request_id": "req-2",
+            },
+            {
+                "status": "streaming",
+                "content": "plan",
+                "request_id": "req-2",
+            },
+            {
+                "status": "completed",
+                "content": "plan",
+                "request_id": "req-2",
+            },
+        ]

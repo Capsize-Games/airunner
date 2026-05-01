@@ -186,3 +186,74 @@ def test_submit_generation_request_runs_probe_after_ui_append():
         widget.api.llm.send_request.call_args.kwargs["llm_request"].enable_thinking
         is True
     )
+
+
+def test_configure_prompt_shortcuts_preserves_native_keypress_event(
+    monkeypatch,
+):
+    """Prompt typing stays on Qt's native path while shortcuts are added."""
+
+    class FakeShortcut:
+        def __init__(self, sequence, parent):
+            self.sequence = sequence
+            self.parent = parent
+            self.enabled = True
+            self.context = None
+            self._handler = None
+            self.activated = SimpleNamespace(connect=self._connect)
+
+        def _connect(self, handler):
+            self._handler = handler
+
+        def setContext(self, context):
+            self.context = context
+
+        def setEnabled(self, enabled):
+            self.enabled = enabled
+
+    native_keypress = object()
+
+    class DummyWidget:
+        _create_prompt_shortcut = ChatPromptWidget._create_prompt_shortcut
+        _configure_prompt_shortcuts = ChatPromptWidget._configure_prompt_shortcuts
+        _set_slash_navigation_shortcuts_enabled = (
+            ChatPromptWidget._set_slash_navigation_shortcuts_enabled
+        )
+
+        def __init__(self):
+            self._prompt_shortcuts_configured = False
+            self._prompt_submit_shortcuts = []
+            self._slash_popup_shortcuts = []
+            self.ui = SimpleNamespace(
+                prompt=SimpleNamespace(keyPressEvent=native_keypress)
+            )
+
+        def _on_submit_shortcut(self):
+            return None
+
+        def _handle_slash_popup_navigation(self, _key):
+            return None
+
+    monkeypatch.setattr(module, "QShortcut", FakeShortcut)
+    monkeypatch.setattr(module, "QKeySequence", lambda key: key)
+
+    widget = DummyWidget()
+
+    widget._configure_prompt_shortcuts()
+
+    assert widget.ui.prompt.keyPressEvent is native_keypress
+    assert len(widget._prompt_submit_shortcuts) == 2
+    assert len(widget._slash_popup_shortcuts) == 4
+    assert all(
+        shortcut.context == Qt.ShortcutContext.WidgetShortcut
+        for shortcut in widget._prompt_submit_shortcuts
+        + widget._slash_popup_shortcuts
+    )
+    assert all(not shortcut.enabled for shortcut in widget._slash_popup_shortcuts)
+
+
+def test_chat_prompt_uses_chat_action_by_default():
+    """Plain chat input should not default to legacy command-classifier mode."""
+    widget = SimpleNamespace()
+
+    assert ChatPromptWidget.action.fget(widget) is LLMActionType.CHAT

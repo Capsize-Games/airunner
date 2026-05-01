@@ -327,6 +327,30 @@ def test_optional_runtime_unload_timeout_keeps_tts_disabled():
     ]
 
 
+def test_llm_request_signal_forwards_directly_to_llm_worker():
+    manager, _emitted = _worker_manager(FakeDaemonClient())
+    direct_worker = SimpleNamespace(on_llm_request_signal=Mock())
+    manager._llm_generate_worker = direct_worker
+    manager.add_to_queue = Mock()
+    manager.logger = SimpleNamespace(info=lambda *args, **kwargs: None)
+
+    WorkerManager.on_llm_request_signal(
+        manager,
+        {
+            "request_data": {"action": None},
+            "request_id": "req-123",
+        },
+    )
+
+    direct_worker.on_llm_request_signal.assert_called_once_with(
+        {
+            "request_data": {"action": None},
+            "request_id": "req-123",
+        }
+    )
+    manager.add_to_queue.assert_not_called()
+
+
 def test_optional_runtime_load_timeout_recovers_via_status_polling():
     client = FakeDaemonClient(
         request_errors={
