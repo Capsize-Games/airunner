@@ -1,7 +1,5 @@
 import os
-
 import logging
-import os
 
 from logging.config import fileConfig
 
@@ -15,11 +13,13 @@ logger = logging.getLogger("alembic.env")
 config = context.config
 
 def _default_db_url() -> str:
-    # Prefer AIRunner's env var, but allow generic DATABASE_URL as a fallback.
+    """Return the default database URL for Alembic commands."""
+    from airunner.settings import AIRUNNER_DB_URL as default_airunner_db_url
+
     return (
         os.environ.get("AIRUNNER_DATABASE_URL")
         or os.environ.get("DATABASE_URL")
-        or "sqlite:///airunner.db"
+        or default_airunner_db_url
     )
 
 

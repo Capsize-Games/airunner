@@ -1,37 +1,345 @@
-name: PyPi
+name: PyPI And Installable Bundles
 
 on:
   release:
-    types: [ published ]
+    types: [published]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
-  DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
-  CR_PAT: ${{ secrets.CR_PAT }}
-  CR_REPO: ${{ secrets.CR_REPO }}
-  CR_USERNAME: ${{ secrets.CR_USERNAME }}
+  PYTHON_VERSION: "3.13"
 
 jobs:
-  buildAndDeployPyPi:
+  build-python-package:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install build
+
       - name: Build package
         run: python -m build
+
+      - name: Upload Python distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+
       - name: Publish package
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  build-sidecars:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        target-platform:
+          - linux
+          - windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake mingw-w64 ninja-build
+
+      - name: Build pinned sidecar bundle
+        run: |
+          ./scripts/build_runtime_sidecars.sh \
+            --clean \
+            --target-platform ${{ matrix.target-platform }}
+
+      - name: Upload sidecar bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-sidecars-${{ matrix.target-platform }}
+          path: build/runtime-sidecars/${{ matrix.target-platform }}
+
+  build-linux-installers:
+    needs: build-sidecars
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install native packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build curl
+
+      - name: Build Linux launcher
+        run: ./scripts/build_airunner_launcher.sh --clean --target-platform linux
+
+      - name: Download Linux sidecar bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-sidecars-linux
+          path: build/runtime-sidecars/linux
+
+      - name: Build Linux embedded bundle
+        env:
+          PYTHONPATH: src
+        run: |
+          python src/airunner/bin/build_end_user_bundle.py \
+            --target-platform linux \
+            --clean \
+            --launcher-binary build/airunner-launcher/airunner \
+            --sidecar-root build/runtime-sidecars/linux
+
+      - name: Package Linux AppImage
+        run: |
+          ./scripts/package_linux_appimage.sh \
+            --bundle-dir build/end-user-bundles/linux/desktop \
+            --output-dir dist
+
+      - name: Upload Linux installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            dist/*.tar.gz
+            dist/*.AppImage
+
+  build-windows-installers:
+    needs: build-sidecars
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Download Windows sidecar bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-sidecars-windows
+          path: build/runtime-sidecars/windows
+
+      - name: Build Windows launcher
+        shell: pwsh
+        run: |
+          cmake -S native/airunner_launcher -B build/airunner-launcher-windows -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/airunner-launcher-windows --config Release
+
+      - name: Build Windows embedded bundle
+        env:
+          PYTHONPATH: src
+        shell: pwsh
+        run: |
+          python src/airunner/bin/build_end_user_bundle.py `
+            --target-platform windows `
+            --clean `
+            --launcher-binary build/airunner-launcher-windows/airunner.exe `
+            --sidecar-root build/runtime-sidecars/windows
+
+      - name: Package Windows NSIS installer
+        shell: pwsh
+        run: |
+          ./scripts/package_windows_nsis.ps1 -BundleDir build/end-user-bundles/windows/desktop
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            dist/*.zip
+            dist/windows-installer/*.exe
+
+  validate-linux-installers:
+    needs: build-linux-installers
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux installers
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-installers
+          path: validation/linux
+
+      - name: Validate Linux tarball install and AppImage
+        run: |
+          set -euo pipefail
+          mkdir -p validation/linux/logs
+          bundle_archive="$(find validation/linux -name '*.tar.gz' -print -quit)"
+          appimage_path="$(find validation/linux -name '*.AppImage' -print -quit)"
+          if [[ -z "$bundle_archive" || -z "$appimage_path" ]]; then
+            echo "Missing Linux installer artifacts" >&2
+            exit 1
+          fi
+          chmod +x "$appimage_path"
+          temp_root="$(mktemp -d)"
+          install_home="$temp_root/home"
+          HOME="$install_home" \
+          XDG_DATA_HOME="$install_home/.local/share" \
+            bash ./install.sh --bundle-archive "$bundle_archive" \
+            2>&1 | tee validation/linux/logs/install-log.txt
+          "$install_home/.local/bin/airunner" \
+            --mode prod \
+            --manifest "$install_home/.local/airunner/share/airunner/runtime_manifest.env" \
+            --dry-run \
+            2>&1 | tee validation/linux/logs/tarball-dry-run.txt
+          APPIMAGE_EXTRACT_AND_RUN=1 \
+            "$appimage_path" \
+            --mode prod \
+            --dry-run \
+            2>&1 | tee validation/linux/logs/appimage-dry-run.txt
+
+      - name: Upload Linux validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-validation-logs
+          path: validation/linux/logs/*
+
+  validate-windows-installers:
+    needs: build-windows-installers
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installers
+          path: validation/windows
+
+      - name: Validate Windows bundle and installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $logDir = Join-Path $PWD "validation/windows/logs"
+          New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+
+          $bundleZip = Get-ChildItem `
+            -Path "validation/windows" `
+            -Filter "*.zip" `
+            -Recurse | Select-Object -First 1
+          if (-not $bundleZip) {
+            throw "Missing Windows bundle zip"
+          }
+
+          $extractDir = Join-Path $PWD "validation/windows/extracted"
+          if (Test-Path $extractDir) {
+            Remove-Item -Recurse -Force $extractDir
+          }
+          Expand-Archive -Path $bundleZip.FullName -DestinationPath $extractDir
+
+          $bundleRoot = Get-ChildItem -Path $extractDir |
+            Where-Object { $_.PSIsContainer } |
+            Select-Object -First 1
+          if (-not $bundleRoot) {
+            $bundleRoot = Get-Item $extractDir
+          }
+
+          $bundleLog = Join-Path $logDir "bundle-dry-run.txt"
+          & (Join-Path $bundleRoot.FullName "bin/airunner.exe") `
+            --mode prod `
+            --manifest (Join-Path $bundleRoot.FullName "share/airunner/runtime_manifest.env") `
+            --dry-run 2>&1 | Tee-Object $bundleLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "Bundle dry-run failed with exit code $LASTEXITCODE"
+          }
+
+          $installer = Get-ChildItem `
+            -Path "validation/windows" `
+            -Filter "*.exe" `
+            -Recurse | Select-Object -First 1
+          if (-not $installer) {
+            throw "Missing Windows installer exe"
+          }
+
+          $installDir = Join-Path $env:RUNNER_TEMP "airunner-test-install"
+          if (Test-Path $installDir) {
+            Remove-Item -Recurse -Force $installDir
+          }
+          $process = Start-Process -FilePath $installer.FullName `
+            -ArgumentList @('/S', "/D=$installDir") `
+            -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 0) {
+            throw "Installer exited with code $($process.ExitCode)"
+          }
+
+          $installerLog = Join-Path $logDir "installer-dry-run.txt"
+          & (Join-Path $installDir "bin/airunner.exe") `
+            --mode prod `
+            --manifest (Join-Path $installDir "share/airunner/runtime_manifest.env") `
+            --dry-run 2>&1 | Tee-Object $installerLog
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed bundle dry-run failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Upload Windows validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-validation-logs
+          path: validation/windows/logs/*
+
+  publish-release-assets:
+    if: github.event_name == 'release'
+    needs:
+      - build-python-package
+      - validate-linux-installers
+      - validate-windows-installers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Python distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: release-assets/python-dist
+
+      - name: Download Linux installers
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-installers
+          path: release-assets/linux
+
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installers
+          path: release-assets/windows
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/python-dist/*
+            release-assets/linux/*
+            release-assets/windows/*
+          overwrite_files: true

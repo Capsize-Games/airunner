@@ -104,6 +104,7 @@ class CanvasInitializationMixin(MediatorMixin, SettingsMixin):
         self.is_dragging = False
         self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
         self._layer_items = {}
+        self._pending_layer_images: Dict[int, Any] = {}
         self._layers_initialized = False
         self._surface_growth_step = 128
         self._minimum_surface_size = 128

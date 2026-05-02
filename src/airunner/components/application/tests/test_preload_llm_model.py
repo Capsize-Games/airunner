@@ -1,38 +1,47 @@
-import os
-from pathlib import Path
+class FakeLogger:
+    def info(self, *args, **kwargs):
+        return None
 
-import pytest
+
+class FakeSignalSource:
+    def __init__(self):
+        self.logger = FakeLogger()
+        self.emitted = []
+
+    def emit_signal(self, code, data=None):
+        self.emitted.append((code, data or {}))
+
+
+def _configure_test_database(monkeypatch, db_url: str) -> None:
+    import airunner.components.data.session_manager as session_manager
+
+    monkeypatch.setenv("AIRUNNER_DATABASE_URL", db_url)
+    session_manager.reset_engine()
 
 
 def test_preload_creates_llm_row(tmp_path, monkeypatch):
-    """If no LLMGeneratorSettings present, and AIRUNNER_DEFAULT_LLM_HF_PATH
-    is set, App._preload_llm_model should create one and store the model_path.
-    """
-    # Setup a temporary DB URL
+    """Preload should create default LLM settings without launching App."""
+    default_model_path = "/tmp/test-model-path"
     db_file = tmp_path / "test_airunner.db"
     db_url = f"sqlite:///{db_file}"
-    monkeypatch.setenv("AIRUNNER_DATABASE_URL", db_url)
     monkeypatch.setenv("DEV_ENV", "1")
-
-    # Ensure we run in headless mode and don't start the server thread
-    monkeypatch.setenv("AIRUNNER_SERVER_RUNNING", "1")
     monkeypatch.setenv("AIRUNNER_LLM_ON", "0")
-
-    # Provide a default model path to be injected into DB when missing
-    default_model_path = "/tmp/test-model-path"
     monkeypatch.setenv("AIRUNNER_DEFAULT_LLM_HF_PATH", default_model_path)
+    _configure_test_database(monkeypatch, db_url)
 
-    # Create DB schema using alembic migrations
     from airunner.setup_database import setup_database
 
     setup_database()
 
-    # Instantiate the App (headless)
-    from airunner.app import App
+    import airunner.services.lifecycle_service as lifecycle_service_module
 
-    app = App(headless=True)
+    signal_source = FakeSignalSource()
+    service = lifecycle_service_module.CoreLifecycleService(
+        signal_source=signal_source,
+        logger=signal_source.logger,
+    )
+    service.preload_llm_model()
 
-    # Now check that llm_generator_settings row exists with model_path set
     from airunner.components.data.session_manager import session_scope
     from airunner.components.llm.data.llm_generator_settings import (
         LLMGeneratorSettings,
@@ -43,64 +52,34 @@ def test_preload_creates_llm_row(tmp_path, monkeypatch):
         assert settings is not None
         assert settings.model_path == default_model_path
 
-    # Ensure threads are cleaned up to avoid Qt thread warnings and process exit failures
-    try:
-        app.cleanup()
-    except Exception:
-        pass
-
 
 def test_preload_emits_llm_load_signal(tmp_path, monkeypatch):
-    """If LLM is enabled and a default model path is provided, App should emit
-    a SignalCode.LLM_LOAD_SIGNAL to start loading the model in the background.
-    """
+    """Preload should emit LLM_LOAD_SIGNAL without launching App."""
     from airunner.enums import SignalCode
 
-    # Setup a temporary DB URL
+    default_model_path = "/tmp/test-model-path"
     db_file = tmp_path / "test_airunner.db"
     db_url = f"sqlite:///{db_file}"
-    monkeypatch.setenv("AIRUNNER_DATABASE_URL", db_url)
     monkeypatch.setenv("DEV_ENV", "1")
-
-    # Ensure we run in headless mode and don't start the server thread
-    monkeypatch.setenv("AIRUNNER_SERVER_RUNNING", "1")
     monkeypatch.setenv("AIRUNNER_LLM_ON", "1")
-
-    # Provide a default model path to be injected into DB when missing
-    default_model_path = "/tmp/test-model-path"
     monkeypatch.setenv("AIRUNNER_DEFAULT_LLM_HF_PATH", default_model_path)
+    _configure_test_database(monkeypatch, db_url)
 
-    # Capture emitted signals
-    emitted = []
-    from airunner.utils.application.mediator_mixin import (
-        MediatorMixin,
-    )
-
-    def fake_emit(self, code, data=None):
-        emitted.append((code, data))
-
-    monkeypatch.setattr(MediatorMixin, "emit_signal", fake_emit)
-
-    # Create DB schema
     from airunner.setup_database import setup_database
 
     setup_database()
 
-    # Instantiate the App (headless) - triggers preload
-    from airunner.app import App
+    import airunner.services.lifecycle_service as lifecycle_service_module
 
-    app = App(headless=True)
+    signal_source = FakeSignalSource()
+    service = lifecycle_service_module.CoreLifecycleService(
+        signal_source=signal_source,
+        logger=signal_source.logger,
+    )
+    service.preload_llm_model()
 
-    # Ensure LLM_LOAD_SIGNAL was emitted with expected model_path
     assert any(
         code == SignalCode.LLM_LOAD_SIGNAL
-        and data
-        and data.get("model_path") == default_model_path
-        for code, data in emitted
+        and payload.get("model_path") == default_model_path
+        for code, payload in signal_source.emitted
     )
-
-    # Ensure cleanup stops threads
-    try:
-        app.cleanup()
-    except Exception:
-        pass

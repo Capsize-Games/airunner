@@ -1,15 +1,11 @@
+from __future__ import annotations
+
 import os
-from typing import Optional, Dict, Any
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject
 from airunner.app import App
-from airunner.components.art.managers.stablediffusion.image_request import (
-    ImageRequest,
-)
-from airunner.components.document_editor.api.document_editor_service import (
-    DocumentEditorService,
-)
 from airunner.enums import (
     EngineResponseCode,
     ModelStatus,
@@ -22,17 +18,22 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
-from airunner.utils.audio.sound_device_manager import SoundDeviceManager
-
-from airunner.components.nodegraph.api.nodegraph_services import (
-    NodegraphAPIService,
-)
-from airunner.components.art.api.video_services import VideoAPIService
-from airunner.components.stt.api.stt_services import STTAPIService
-from airunner.components.tts.api.tts_services import TTSAPIService
-from airunner.components.art.api.art_services import ARTAPIService
-from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.setup_database import setup_database
+
+if TYPE_CHECKING:
+    from airunner.components.art.api.art_services import ARTAPIService
+    from airunner.components.art.managers.stablediffusion.image_request import (
+        ImageRequest,
+    )
+    from airunner.components.document_editor.api.document_editor_service import (
+        DocumentEditorService,
+    )
+    from airunner.components.llm.api.llm_services import LLMAPIService
+    from airunner.components.stt.api.stt_services import STTAPIService
+    from airunner.components.tts.api.tts_services import TTSAPIService
+    from airunner.utils.audio.sound_device_manager import (
+        SoundDeviceManager,
+    )
 
 
 class API(App):
@@ -44,11 +45,6 @@ class API(App):
         return cls._instance
 
     def __init__(self, *args, launcher_splash=None, launcher_app=None, **kwargs):
-        import sys
-
-        sys.stderr.write(
-            f"DEBUG: API.__init__ called. Initialized={getattr(self, '_initialized', False)}\n"
-        )
         if hasattr(self, "_initialized") and self._initialized:
             return
         
@@ -157,14 +153,12 @@ class API(App):
             ),
         }
         self._initialized = True
-        self.llm = LLMAPIService()
-        self.art = ARTAPIService()
-        self.document = DocumentEditorService()
-        self.tts = TTSAPIService()
-        self.stt = STTAPIService()
-        self.video = VideoAPIService()
-        self.nodegraph = NodegraphAPIService()
-        self.sounddevice_manager = SoundDeviceManager()
+        self._llm_service = None
+        self._art_service = None
+        self._document_service = None
+        self._tts_service = None
+        self._stt_service = None
+        self._sounddevice_manager = None
 
         # Extract the initialize_app flag and pass the rest to the parent App class
         self._initialize_app = kwargs.pop("initialize_app", True)
@@ -186,6 +180,88 @@ class API(App):
     def emit_signal(self):
         # Always return the instance method, so LLMAPIService uses the patched version in tests
         return super().emit_signal
+
+    @property
+    def llm(self) -> LLMAPIService:
+        """Return the cached LLM service, creating it on first use."""
+        if self._llm_service is None:
+            from airunner.components.llm.api.llm_services import LLMAPIService
+
+            self._llm_service = LLMAPIService()
+        return self._llm_service
+
+    @llm.setter
+    def llm(self, value: LLMAPIService) -> None:
+        self._llm_service = value
+
+    @property
+    def art(self) -> ARTAPIService:
+        """Return the cached art service, creating it on first use."""
+        if self._art_service is None:
+            from airunner.components.art.api.art_services import ARTAPIService
+
+            self._art_service = ARTAPIService()
+        return self._art_service
+
+    @art.setter
+    def art(self, value: ARTAPIService) -> None:
+        self._art_service = value
+
+    @property
+    def document(self) -> DocumentEditorService:
+        """Return the cached document service."""
+        if self._document_service is None:
+            from airunner.components.document_editor.api.document_editor_service import (
+                DocumentEditorService,
+            )
+
+            self._document_service = DocumentEditorService()
+        return self._document_service
+
+    @document.setter
+    def document(self, value: DocumentEditorService) -> None:
+        self._document_service = value
+
+    @property
+    def tts(self) -> TTSAPIService:
+        """Return the cached TTS service."""
+        if self._tts_service is None:
+            from airunner.components.tts.api.tts_services import TTSAPIService
+
+            self._tts_service = TTSAPIService()
+        return self._tts_service
+
+    @tts.setter
+    def tts(self, value: TTSAPIService) -> None:
+        self._tts_service = value
+
+    @property
+    def stt(self) -> STTAPIService:
+        """Return the cached STT service."""
+        if self._stt_service is None:
+            from airunner.components.stt.api.stt_services import STTAPIService
+
+            self._stt_service = STTAPIService()
+        return self._stt_service
+
+    @stt.setter
+    def stt(self, value: STTAPIService) -> None:
+        self._stt_service = value
+
+    @property
+    def sounddevice_manager(self) -> SoundDeviceManager:
+        """Return the cached sound-device manager."""
+        if self._sounddevice_manager is None:
+            from airunner.utils.audio.sound_device_manager import (
+                SoundDeviceManager,
+            )
+
+            self._sounddevice_manager = SoundDeviceManager()
+        return self._sounddevice_manager
+
+    @sounddevice_manager.setter
+    def sounddevice_manager(self, value: SoundDeviceManager) -> None:
+        self._sounddevice_manager = value
 
     def show_hello_world_window(self):
         """

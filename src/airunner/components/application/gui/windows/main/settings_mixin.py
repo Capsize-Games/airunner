@@ -4,7 +4,9 @@ This module composes multiple focused mixins to provide a clean interface
 for settings management without a monolithic class.
 """
 
+import inspect
 from typing import List, Dict, Optional, Any
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode
 from airunner.utils.application.get_logger import get_logger
@@ -59,36 +61,76 @@ class SettingsMixin(
 
         super().__init__(*args, **kwargs)
 
-        # Initialize layer selection tracking
         self._selected_layer_ids = set()
+        self._register_layer_selection_handler()
+        self.api = self._resolve_api_reference()
 
-        # Add layer selection signal handler
-        if (
-            hasattr(self, "signal_handlers")
-            and self.signal_handlers is not None
-        ):
+    def _register_layer_selection_handler(self) -> None:
+        """Register layer selection handling on one settings-aware object."""
+        if hasattr(self, "signal_handlers") and self.signal_handlers is not None:
             self.signal_handlers[SignalCode.LAYER_SELECTION_CHANGED] = (
                 self._on_layer_selection_changed
             )
-        else:
-            self.signal_handlers = {
-                SignalCode.LAYER_SELECTION_CHANGED: (
-                    self._on_layer_selection_changed
-                )
-            }
+            return
+        self.signal_handlers = {
+            SignalCode.LAYER_SELECTION_CHANGED: (
+                self._on_layer_selection_changed
+            )
+        }
 
+    def _resolve_api_reference(self) -> Any:
+        """Return the active app API without auto-creating a GUI singleton."""
+        qt_api = self._api_from_qt_application()
+        global_api = self._peek_global_api()
+        if self._api_capability_score(global_api) > (
+            self._api_capability_score(qt_api)
+        ):
+            return global_api
+        if qt_api is not None:
+            return qt_api
+        return global_api
 
-        # Get API reference from application
-        app = QApplication.instance()
-        if app:
-            self.api = getattr(app, "api", None)
-        else:
-            # In headless mode, there's no QApplication, so get API from global instance
-            try:
-                from airunner.components.server.api.server import get_api
-                self.api = get_api()
-            except Exception as e:
-                self.api = None
+    @staticmethod
+    def _api_capability_score(api: Any) -> int:
+        """Score how complete one API reference is for worker usage."""
+        if api is None:
+            return -1
+        attrs = ("daemon_client", "sounddevice_manager", "stt", "tts")
+        return sum(
+            1
+            for attr in attrs
+            if inspect.getattr_static(api, attr, None) is not None
+        )
+
+    def refresh_api_reference(self) -> Any:
+        """Refresh one stale cached API reference when a better one exists."""
+        live_api = self._resolve_api_reference()
+        current_api = getattr(self, "api", None)
+        if self._api_capability_score(live_api) > (
+            self._api_capability_score(current_api)
+        ):
+            self.api = live_api
+        elif current_api is None:
+            self.api = live_api
+        return getattr(self, "api", None)
+
+    @staticmethod
+    def _api_from_qt_application() -> Any:
+        """Return the API attached to the running Qt application, if any."""
+        app = QApplication.instance() or QCoreApplication.instance()
+        if app is None:
+            return None
+        return getattr(app, "api", None)
+
+    @staticmethod
+    def _peek_global_api() -> Any:
+        """Return the registered API instance without creating a GUI app."""
+        try:
+            from airunner.components.server.api.server import get_api
+
+            return get_api(create_if_missing=False)
+        except Exception:
+            return None
 
     @property
     def settings_mixin_shared_instance(self) -> SettingsMixinSharedInstance:
@@ -171,14 +213,36 @@ class SettingsMixin(
             column_name: Column name.
             val: New value.
         """
-        if hasattr(self, "api") and self.api:
-            self.api.application_settings_changed(
-                setting_name=setting_name,
-                column_name=column_name,
-                val=val,
+        api_ref = getattr(self, "api", None)
+        if api_ref is not None:
+            notify = getattr(
+                api_ref,
+                "application_settings_changed",
+                None,
             )
-        elif hasattr(self, "application_settings_changed"):
-            self.application_settings_changed(
+            if callable(notify):
+                notify(
+                    setting_name=setting_name,
+                    column_name=column_name,
+                    val=val,
+                )
+                return
+
+            emit_signal = getattr(api_ref, "emit_signal", None)
+            if callable(emit_signal):
+                emit_signal(
+                    SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+                    {
+                        "setting_name": setting_name,
+                        "column_name": column_name,
+                        "val": val,
+                    },
+                )
+                return
+
+        notify = getattr(self, "application_settings_changed", None)
+        if callable(notify):
+            notify(
                 setting_name=setting_name,
                 column_name=column_name,
                 val=val,

@@ -8,9 +8,9 @@ conversation.jinja2.html: Jinja2 template for ConversationWidget
     <title>Conversation</title>
     <meta name="airunner-theme" content="{{ theme }}">
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-    <link id="theme-vars" rel="stylesheet" href="../css/variables-{{ theme }}.css">
-    <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css">
-    <link rel="stylesheet" href="../css/conversation.css">
+    <link id="theme-vars" rel="stylesheet" href="../css/variables-{{ theme }}.css?v={{ asset_version }}">
+    <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="../css/conversation.css?v={{ asset_version }}">
     <!-- MathJax Configuration -->
     <script>
         window.MathJax = {
@@ -39,7 +39,7 @@ conversation.jinja2.html: Jinja2 template for ConversationWidget
     <div id="conversation-container">
         <!-- Messages will be rendered here by conversation.js -->
     </div>
-    <script src="../js/conversation.js"></script>
+    <script src="../js/conversation.js?v={{ asset_version }}"></script>
     <script>
     // Theme switching logic for webEngineView
     function setTheme(theme) {

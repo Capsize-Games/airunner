@@ -1,43 +1,47 @@
 import logging
-import inspect
 import os
+import threading
 from typing import Optional
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
 
+_LOGGER_CACHE: dict[str, "Logger"] = {}
+_LOGGER_CACHE_LOCK = threading.RLock()
+
+
 class Logger:
-    def __init__(self, name: str, level: int = logging.DEBUG):
+    def __init__(self, name: str, level: int = logging.INFO):
         # Configure the logger
         logger = logging.getLogger(name)
+        if getattr(logger, "_airunner_configured", False):
+            logger.setLevel(level)
+            for handler in logger.handlers:
+                handler.setLevel(level)
+            self._logger = logger
+            self.name = name
+            return
         logger.setLevel(level)
 
         # Remove all existing handlers
         if logger.hasHandlers():
             logger.handlers.clear()
+        logger.propagate = False
 
         # Formatter: timestamp - logger name - level - Caller - message
         fmt = (
-            "%(asctime)s - %(name)s - %(levelname)s - %(caller)s - %(message)s"
+            "%(asctime)s - %(name)s - %(levelname)s - "
+            "%(module)s::%(funcName)s - %(lineno)d - %(message)s"
         )
-
-        class SafeFormatter(logging.Formatter):
-            def format(self, record):
-                # Ensure 'caller' is present so formatting never fails
-                if not hasattr(record, "caller"):
-                    try:
-                        record.caller = f"{record.module}::{record.funcName} - {record.lineno}"
-                    except Exception:
-                        record.caller = "<unknown>::<unknown> - 0"
-                return super().format(record)
+        formatter = logging.Formatter(fmt)
 
         # Add console handler -> send to stdout so systemd captures it when configured
         console_handler = logging.StreamHandler()
-        console_handler.setFormatter(SafeFormatter(fmt))
+        console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
         # Add file handler if enabled
-        if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1":
+        if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1":
             try:
                 # Import locally to avoid circular dependency
                 from airunner.components.settings.data.path_settings import (
@@ -80,149 +84,67 @@ class Logger:
                     os.makedirs(log_dir, exist_ok=True)
 
                 file_handler = logging.FileHandler(log_file, mode="a")
-                file_handler.setFormatter(SafeFormatter(fmt))
+                file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
             except Exception as e:
                 # If file logging fails, just log to console
-                console_handler.setFormatter(SafeFormatter(fmt))
                 logger.error(f"Failed to setup file logging: {e}")
 
         # Disable propagation to the root logger
         logger.propagate = False
+        setattr(logger, "_airunner_configured", True)
         self._logger = logger
         self.name = name
 
-    def _get_caller_info(self):
-        """Get the caller module name, function name and line number."""
-        # This helper is no longer required — rely on LogRecord's built-in
-        # attributes (module, funcName, lineno) provided by the logging
-        # framework. Keep the method for backward compatibility if other
-        # modules call it, but return an empty dict.
-        return {}
+    def _log(self, level: int, method: str, message: str, *args, **kwargs):
+        """Log one message without expensive stack inspection."""
+        if not self._logger.isEnabledFor(level):
+            return
 
-    def _infer_caller_class_name(self) -> str:
-        """Inspect the stack to find the caller's class name (if any).
-
-        Returns the class name if the caller is a method, otherwise returns
-        the module name as a fallback.
-        """
+        kwargs.setdefault("stacklevel", 3)
+        log_method = getattr(self._logger, method)
         try:
-            frame = inspect.currentframe()
-            # climb out of this helper and the wrapper method to reach the caller
-            if frame is None:
-                return ""
-            caller = frame.f_back.f_back
-            if caller is None:
-                return ""
-            locals_ = caller.f_locals
-            if "self" in locals_:
-                try:
-                    return locals_["self"].__class__.__name__
-                except Exception:
-                    pass
-            if "cls" in locals_:
-                try:
-                    return locals_["cls"].__name__
-                except Exception:
-                    pass
-            # Fallback to module name
-            return caller.f_globals.get("__name__", "")
-        except Exception:
-            return ""
+            log_method(message, *args, **kwargs)
+        except (TypeError, ValueError) as e:
+            log_method(
+                f"[LOGGING ERROR: {e}] {message} {args}",
+                stacklevel=3,
+            )
 
-    def _find_caller(self) -> str:
-        """Return formatted caller info 'Class::func - lineno' or 'module::func - lineno'."""
-        try:
-            for frame_info in inspect.stack()[2:]:
-                frame = frame_info.frame
-                module = frame.f_globals.get("__name__", "")
-                if module == __name__:
-                    continue
-                func_name = frame_info.function
-                lineno = frame_info.lineno
-                locals_ = frame.f_locals
-                class_name = None
-                if "self" in locals_:
-                    try:
-                        class_name = locals_["self"].__class__.__name__
-                    except Exception:
-                        class_name = None
-                elif "cls" in locals_:
-                    try:
-                        class_name = locals_["cls"].__name__
-                    except Exception:
-                        class_name = None
-
-                if class_name:
-                    return f"{class_name}::{func_name} - {lineno}"
-                return f"{module}::{func_name} - {lineno}"
-        except Exception:
-            return "<unknown>::<unknown> - 0"
+    def isEnabledFor(self, level: int) -> bool:
+        """Return whether the wrapped logger is enabled for one level."""
+        return self._logger.isEnabledFor(level)
 
     def debug(self, message: str, *args, **kwargs):
-        extra = kwargs.pop("extra", {}) or {}
-        extra.setdefault("caller", self._find_caller())
-        try:
-            self._logger.debug(message, *args, extra=extra, **kwargs)
-        except (TypeError, ValueError) as e:
-            # Fallback: log the message without formatting
-            self._logger.debug(
-                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
-            )
+        self._log(logging.DEBUG, "debug", message, *args, **kwargs)
 
     def error(self, message: str, *args, **kwargs):
-        extra = kwargs.pop("extra", {}) or {}
-        extra.setdefault("caller", self._find_caller())
-        try:
-            self._logger.error(message, *args, extra=extra, **kwargs)
-        except (TypeError, ValueError) as e:
-            self._logger.error(
-                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
-            )
+        self._log(logging.ERROR, "error", message, *args, **kwargs)
 
     def exception(self, message: str, *args, **kwargs):
-        # Use the logger's exception method so exc_info=True is set
-        extra = kwargs.pop("extra", {}) or {}
-        extra.setdefault("caller", self._find_caller())
-        try:
-            self._logger.exception(message, *args, extra=extra, **kwargs)
-        except (TypeError, ValueError) as e:
-            self._logger.exception(
-                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
-            )
+        self._log(logging.ERROR, "exception", message, *args, **kwargs)
 
     def info(self, message: str, *args, **kwargs):
-        extra = kwargs.pop("extra", {}) or {}
-        extra.setdefault("caller", self._find_caller())
-        try:
-            self._logger.info(message, *args, extra=extra, **kwargs)
-        except (TypeError, ValueError) as e:
-            self._logger.info(
-                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
-            )
+        self._log(logging.INFO, "info", message, *args, **kwargs)
 
     def warning(self, message: str, *args, **kwargs):
-        extra = kwargs.pop("extra", {}) or {}
-        extra.setdefault("caller", self._find_caller())
-        try:
-            self._logger.warning(message, *args, extra=extra, **kwargs)
-        except (TypeError, ValueError) as e:
-            self._logger.warning(
-                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
-            )
+        self._log(logging.WARNING, "warning", message, *args, **kwargs)
 
     def critical(self, message: str, *args, **kwargs):
-        extra = kwargs.pop("extra", {}) or {}
-        extra.setdefault("caller", self._find_caller())
-        try:
-            self._logger.critical(message, *args, extra=extra, **kwargs)
-        except (TypeError, ValueError) as e:
-            self._logger.critical(
-                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
-            )
+        self._log(logging.CRITICAL, "critical", message, *args, **kwargs)
 
 
 def get_logger(name: str, level: Optional[int] = None) -> Logger:
     if level is None:
         level = AIRUNNER_LOG_LEVEL
-    return Logger(name=name, level=level)
+    with _LOGGER_CACHE_LOCK:
+        logger = _LOGGER_CACHE.get(name)
+        if logger is not None:
+            logger._logger.setLevel(level)
+            for handler in logger._logger.handlers:
+                handler.setLevel(level)
+            return logger
+
+        logger = Logger(name=name, level=level)
+        _LOGGER_CACHE[name] = logger
+        return logger

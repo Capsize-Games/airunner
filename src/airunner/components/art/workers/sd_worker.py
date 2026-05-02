@@ -1,8 +1,11 @@
+import io
 import os
 import threading
+from functools import partial
 from typing import Dict, Optional
 
 import torch
+from PIL import Image
 from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
 )
@@ -17,14 +20,20 @@ from airunner.components.art.managers.zimage.zimage_model_manager import (
 )
 
 from airunner.enums import (
+    EngineResponseCode,
+    GeneratorSection,
     QueueType,
     SignalCode,
     ModelType,
     ModelAction,
+    ModelStatus,
 )
 from airunner.components.application.workers.worker import Worker
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
+)
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
 )
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.generator_settings import GeneratorSettings
@@ -57,6 +66,7 @@ class SDWorker(Worker):
         self._requested_pipeline = None
         self._pending_scheduler: Optional[str] = None  # Deferred scheduler change
         self._is_generating: bool = False  # Track generation state
+        self._active_daemon_job_id: Optional[str] = None
         super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
@@ -213,6 +223,45 @@ class SDWorker(Worker):
         self._invalidate_setting_cache(GeneratorSettings)
         self.unload_model_manager()
 
+    def _requested_model_signature(
+        self,
+        image_request: Optional[ImageRequest],
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        """Return the requested model signature for one generation."""
+        model_path = self._get_model_path_from_image_request(image_request)
+        if image_request is not None:
+            version = getattr(image_request, "version", None)
+            pipeline_action = getattr(
+                image_request,
+                "pipeline_action",
+                None,
+            )
+        else:
+            version = getattr(self.generator_settings, "version", None)
+            pipeline_action = getattr(
+                self.generator_settings,
+                "pipeline_action",
+                None,
+            )
+        return model_path, version, pipeline_action
+
+    def _record_loaded_model_signature(
+        self,
+        image_request: Optional[ImageRequest],
+    ) -> None:
+        """Record the active model signature after a successful load."""
+        (
+            self._current_model,
+            self._current_version,
+            self._current_pipeline,
+        ) = self._requested_model_signature(image_request)
+
+    def _clear_loaded_model_signature(self) -> None:
+        """Forget the active model signature after unload."""
+        self._current_model = None
+        self._current_version = None
+        self._current_pipeline = None
+
     def _get_model_path_from_image_request(
         self, image_request: Optional[ImageRequest]
     ) -> Optional[str]:
@@ -222,15 +271,16 @@ class SDWorker(Worker):
             model_path = image_request.model_path
 
         if model_path is None:
-            custom_path = self.generator_settings.custom_path
+            custom_path = getattr(self.generator_settings, "custom_path", None)
             if custom_path is not None and custom_path != "":
                 if os.path.exists(custom_path):
                     model_path = custom_path
 
+        generator_model = getattr(self.generator_settings, "model", None)
         if (
             model_path is None or model_path == ""
-        ) and self.generator_settings.model is not None:
-            aimodel = AIModels.objects.get(self.generator_settings.model)
+        ) and generator_model is not None:
+            aimodel = AIModels.objects.get(generator_model)
             if aimodel is not None:
                 model_path = aimodel.path
 
@@ -311,6 +361,13 @@ class SDWorker(Worker):
         mm = self.model_manager
         self.logger.debug(f"[LOAD DEBUG] load_model_manager: mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}, model_is_loaded={mm.model_is_loaded if mm else 'N/A'}")
         image_request = data.get("image_request")
+        requested_signature = self._requested_model_signature(image_request)
+        if mm and mm.model_is_loaded and requested_signature != (
+            self._current_model,
+            self._current_version,
+            self._current_pipeline,
+        ):
+            do_reload = True
         # Attach the image_request to the model manager BEFORE loading so model_path property
         # resolves to the ImageRequest.model_path instead of falling back to stale generator_settings.model
         if mm and image_request is not None:
@@ -332,6 +389,8 @@ class SDWorker(Worker):
                 )
             except Exception:
                 pass
+            if mm.model_is_loaded:
+                self._record_loaded_model_signature(image_request)
         # Only call the callback if the model is actually loaded
         # If a download was triggered, the callback will be called after download completes
         if data and mm and mm.model_is_loaded:
@@ -339,6 +398,32 @@ class SDWorker(Worker):
             if callback is not None:
                 self.logger.debug(f"[LOAD DEBUG] Calling callback with mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}")
                 callback(data)
+        elif data and mm and self._has_terminal_model_load_failure(mm):
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
+
+    @staticmethod
+    def _has_terminal_model_load_failure(model_manager) -> bool:
+        try:
+            return (
+                model_manager.model_status.get(model_manager.model_type)
+                is ModelStatus.FAILED
+            )
+        except Exception:
+            return False
+
+    def _notify_failed_model_load(
+        self,
+        image_request: Optional[ImageRequest],
+    ) -> None:
+        err = "Image model failed to load"
+        if image_request is not None:
+            if getattr(image_request, "model_path", None) == "":
+                err = "You must select a model before generating images."
+            if image_request.callback:
+                image_request.callback(err)
+        self.send_missing_model_alert(err)
 
     def unload(self, data: Dict):
         self.add_to_queue(
@@ -377,6 +462,13 @@ class SDWorker(Worker):
                 self._sdxl.image_export_worker = None
                 del self._sdxl
                 self._sdxl = None
+            elif manager_ref is self._zimage:
+                self.logger.info(">>> Unloading Z-Image model manager")
+                self._zimage.image_export_worker.stop()
+                del self._zimage.image_export_worker
+                self._zimage.image_export_worker = None
+                del self._zimage
+                self._zimage = None
             elif manager_ref is self._x4_upscaler:
                 self.logger.info(">>> Unloading X4 Upscaler model manager")
                 self._x4_upscaler.image_export_worker.stop()
@@ -384,6 +476,8 @@ class SDWorker(Worker):
                 self._x4_upscaler.image_export_worker = None
                 del self._x4_upscaler
                 self._x4_upscaler = None
+
+            self._clear_loaded_model_signature()
 
         if data:
             callback = data.get("callback", None)
@@ -423,6 +517,16 @@ class SDWorker(Worker):
         )
 
     def on_interrupt_image_generation_signal(self, _data=None):
+        client = self._daemon_client()
+        if client is not None and self._active_daemon_job_id is not None:
+            try:
+                client.cancel_art_job(
+                    self._active_daemon_job_id,
+                    auto_start=False,
+                )
+            except RuntimeError:
+                pass
+            return
         if self.model_manager:
             self.model_manager.interrupt_image_generation()
 
@@ -485,8 +589,185 @@ class SDWorker(Worker):
                         self._generate_image(data)
 
     def _generate_image(self, message: Dict):
+        image_request = message.get("image_request")
+        client = self._daemon_client()
+        self.logger.info(
+            "SDWorker::_generate_image using %s path for version=%s model=%s",
+            "daemon" if client is not None else "local",
+            getattr(image_request, "version", None),
+            getattr(image_request, "model_path", None),
+        )
+        if client is not None:
+            self._generate_image_via_daemon(message)
+            return
         message["callback"] = self._finalize_do_generate_signal
         self.load_model_manager(message)
+
+    def _daemon_client(self):
+        api = getattr(self, "api", None)
+        if api is None or getattr(api, "headless", False):
+            return None
+        return getattr(api, "daemon_client", None)
+
+    def _generate_image_via_daemon(self, message: Dict) -> None:
+        client = self._daemon_client()
+        image_request = message.get("image_request")
+        if client is None or not isinstance(image_request, ImageRequest):
+            self.handle_error("No image request available for daemon art generation")
+            return
+
+        total_steps = max(int(image_request.steps or 1), 1)
+
+        def on_progress(status: Dict) -> None:
+            try:
+                progress = float(status.get("progress") or 0.0)
+            except (TypeError, ValueError):
+                return
+            self.logger.debug(
+                "SDWorker daemon art progress: status=%s progress=%.1f",
+                status.get("status"),
+                progress,
+            )
+            step = int(round((progress / 100.0) * total_steps))
+            step = max(0, min(total_steps, step))
+            if hasattr(self.api, "art"):
+                self.api.art.progress_update(step=step, total=total_steps)
+
+        try:
+            self.logger.info(
+                "Submitting daemon art job for version=%s scheduler=%s model=%s",
+                image_request.version,
+                image_request.scheduler,
+                image_request.model_path,
+            )
+            job = client.start_art_generation(
+                prompt=image_request.prompt,
+                negative_prompt=image_request.negative_prompt or "",
+                width=image_request.width,
+                height=image_request.height,
+                steps=image_request.steps,
+                cfg_scale=image_request.scale,
+                seed=(
+                    None if image_request.random_seed else image_request.seed
+                ),
+                num_images=image_request.n_samples,
+                model=image_request.model_path or None,
+                version=image_request.version or None,
+                scheduler=image_request.scheduler or None,
+                skip_auto_export=True,
+            )
+            job_id = str(job.get("job_id", "") or "")
+            if not job_id:
+                raise RuntimeError("Art generation did not return a job id")
+            self._active_daemon_job_id = job_id
+            self.logger.info("Daemon art job accepted: job_id=%s", job_id)
+            image_bytes = client.wait_art_job(
+                job_id,
+                auto_start=False,
+                progress_callback=on_progress,
+            )
+            self.logger.info(
+                "Daemon art job completed: job_id=%s bytes=%s",
+                job_id,
+                len(image_bytes),
+            )
+        except RuntimeError as exc:
+            self._handle_daemon_art_error(str(exc))
+            return
+        finally:
+            self._active_daemon_job_id = None
+        self._publish_daemon_art_result(message, image_request, image_bytes)
+
+    def _handle_daemon_art_error(self, message: str) -> None:
+        self.handle_error(message)
+        if "cancelled" in message.lower():
+            self.api.worker_response(
+                code=EngineResponseCode.INTERRUPTED,
+                message="Image generation interrupted",
+            )
+            return
+        self.send_missing_model_alert(message)
+        self.api.worker_response(
+            code=EngineResponseCode.ERROR,
+            message=message,
+        )
+
+    def _publish_daemon_art_result(
+        self,
+        message: Dict,
+        image_request: ImageRequest,
+        image_bytes: bytes,
+    ) -> None:
+        image = Image.open(io.BytesIO(image_bytes)).copy()
+        data = self._daemon_result_data(image_request)
+        export_callback = partial(
+            SDWorker._queue_post_display_export,
+            self,
+            image,
+            data,
+        )
+        response = ImageResponse(
+            images=[image],
+            data=data,
+            active_rect=message.get("active_rect"),
+            is_outpaint=(
+                image_request.generator_section is GeneratorSection.OUTPAINT
+            ),
+            node_id=image_request.node_id,
+            post_display_callback=export_callback,
+        )
+        sent_to_canvas = False
+        if response.node_id is None and hasattr(self.api, "art"):
+            try:
+                self.api.art.canvas.send_image_to_canvas(response)
+                sent_to_canvas = True
+            except Exception as exc:
+                self.logger.debug(f"Failed to send image to canvas: {exc}")
+        if not sent_to_canvas:
+            export_callback()
+        if image_request.callback:
+            image_request.callback(response)
+        self.api.worker_response(
+            code=EngineResponseCode.IMAGE_GENERATED,
+            message=response,
+        )
+
+    def _queue_post_display_export(
+        self,
+        image: Image.Image,
+        data: Dict,
+    ) -> None:
+        """Queue auto export after the canvas handoff has been posted."""
+        self.image_export_worker.add_to_queue(
+            {"images": [image.copy()], "data": data}
+        )
+
+    def _daemon_result_data(self, image_request: ImageRequest) -> Dict:
+        generator_section = image_request.generator_section
+        return {
+            "current_prompt": image_request.prompt,
+            "current_negative_prompt": image_request.negative_prompt,
+            "image_request": image_request,
+            "guidance_scale": image_request.scale,
+            "num_inference_steps": image_request.steps,
+            "model_path": image_request.model_path,
+            "version": image_request.version,
+            "scheduler_name": image_request.scheduler,
+            "strength": image_request.strength,
+            "loaded_lora": [],
+            "loaded_embeddings": [],
+            "controlnet_enabled": bool(image_request.controlnet_enabled),
+            "is_txt2img": generator_section is GeneratorSection.TXT2IMG,
+            "is_img2img": generator_section is GeneratorSection.IMG2IMG,
+            "is_inpaint": generator_section is GeneratorSection.INPAINT,
+            "is_outpaint": generator_section is GeneratorSection.OUTPAINT,
+            "mask_blur": image_request.outpaint_mask_blur,
+            "memory_settings_flags": {},
+            "application_settings": self.application_settings,
+            "path_settings": self.path_settings,
+            "metadata_settings": self.metadata_settings,
+            "controlnet_settings": self.controlnet_settings,
+        }
 
     def _finalize_do_generate_signal(self, message: Dict):
         mm = self.model_manager
@@ -494,6 +775,11 @@ class SDWorker(Worker):
         if mm:
             # Don't try to generate if model isn't loaded yet (e.g., download in progress)
             if not mm.model_is_loaded:
+                if self._has_terminal_model_load_failure(mm):
+                    self._notify_failed_model_load(
+                        message.get("image_request", None)
+                    )
+                    return
                 self.logger.info(
                     "Model not loaded yet, skipping generation (download may be in progress)"
                 )
@@ -512,14 +798,23 @@ class SDWorker(Worker):
                     and getattr(image_request, "model_path", None) == ""
                 ):
                     err = "You must select a model before generating images."
+                if image_request is not None and image_request.callback:
+                    image_request.callback(err)
                 self.send_missing_model_alert(err)
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()
                 error_msg = str(e) if str(e) else f"{type(e).__name__}"
                 self.handle_error(f"Unexpected error: {error_msg}\n{tb}")
+                image_request = message.get("image_request", None)
+                failure_message = (
+                    "An unexpected error occurred during image generation. "
+                    "Please check logs."
+                )
+                if image_request is not None and image_request.callback:
+                    image_request.callback(failure_message)
                 self.send_missing_model_alert(
-                    "An unexpected error occurred during image generation. Please check logs."
+                    failure_message
                 )
             finally:
                 self._is_generating = False

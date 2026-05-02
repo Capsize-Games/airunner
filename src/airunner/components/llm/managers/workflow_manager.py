@@ -116,6 +116,7 @@ class WorkflowManager(
         self._memory = DatabaseCheckpointSaver(conversation_id)
         self._response_format = None  # Optional response format override (e.g., "json", "conversational")
         self._force_tool = None  # Store forced tool for agentic research mode
+        self._current_request_id: Optional[str] = None
 
         # Store settings for automatic mood tracking
         self.llm_settings = llm_settings
@@ -227,3 +228,7 @@ class WorkflowManager(
             callback: Callback function that receives token strings
         """
         self._token_callback = callback
+
+    def set_request_id(self, request_id: Optional[str]) -> None:
+        """Set the active request ID for request-scoped UI signals."""
+        self._current_request_id = request_id

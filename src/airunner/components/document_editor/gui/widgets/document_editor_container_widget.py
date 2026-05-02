@@ -634,6 +634,10 @@ class DocumentEditorContainerWidget(BaseWidget):
             if main_window is None:
                 return
 
+            api = getattr(main_window, "api", None)
+            if getattr(api, "daemon_client", None) is not None:
+                return
+
             if not hasattr(main_window, "worker_manager"):
                 return
 

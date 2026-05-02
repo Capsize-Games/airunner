@@ -288,7 +288,6 @@ class ToolRegistry:
                 "airunner.components.llm.tools.math_tools",
                 "airunner.components.llm.tools.reasoning_tools",
                 "airunner.components.llm.tools.web_tools",
-                "airunner.components.llm.tools.calendar_tools",
                 "airunner.components.llm.tools.rag_tools",
                 "airunner.components.llm.tools.knowledge_tools",
                 "airunner.components.llm.tools.user_data_tools",
@@ -333,7 +332,8 @@ class ToolRegistry:
                     )
                     continue
 
-            # Load optional runtime extensions after built-ins so overrides win.
+            # Load explicitly enabled runtime extensions after built-ins so
+            # overrides win.
             # Use force_reload=True because the default-tool reload above may have
             # overwritten extension-provided tools with the same name.
             try:

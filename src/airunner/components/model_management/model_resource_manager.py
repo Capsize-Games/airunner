@@ -83,15 +83,15 @@ class ModelResourceManager(
 
     def _log_hardware_profile(self, hardware: HardwareProfile) -> None:
         """Log hardware profile information."""
-        self.logger.info(f"Hardware Profile:")
-        self.logger.info(
+        self.logger.debug("Hardware Profile:")
+        self.logger.debug(
             f"  VRAM: {hardware.available_vram_gb:.1f}GB / {hardware.total_vram_gb:.1f}GB"
         )
-        self.logger.info(
+        self.logger.debug(
             f"  RAM: {hardware.available_ram_gb:.1f}GB / {hardware.total_ram_gb:.1f}GB"
         )
-        self.logger.info(f"  GPU: {hardware.device_name or 'None'}")
-        self.logger.info(f"  CUDA: {hardware.cuda_available}")
+        self.logger.debug(f"  GPU: {hardware.device_name or 'None'}")
+        self.logger.debug(f"  CUDA: {hardware.cuda_available}")
 
     def check_memory_pressure(self) -> bool:
         """Check if system is under memory pressure."""

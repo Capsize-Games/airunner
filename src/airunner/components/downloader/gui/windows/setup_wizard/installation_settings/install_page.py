@@ -34,6 +34,7 @@ from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
 from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
@@ -428,23 +429,40 @@ class InstallWorker(
                         continue
                 models.append(model)
         for model in models:
-            files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
+            download_info = LLMProviderConfig.resolve_download_target(
+                "local",
+                repo_id=model["path"],
+                prefer_pre_quantized=True,
+            )
+            download_repo_id = (
+                download_info["repo_id"] if download_info else model["path"]
+            )
+            files = LLM_FILE_BOOTSTRAP_DATA[download_repo_id]["files"]
             # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
-            for filename in files:
+            requested_file_path = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text",
+                    "models",
+                    model["category"],
+                    model["pipeline_action"],
+                    model["path"],
+                )
+            )
+            if download_info:
                 requested_file_path = os.path.expanduser(
-                    os.path.join(
+                    LLMProviderConfig.get_local_storage_path(
                         self.path_settings.base_path,
-                        "text",
-                        "models",
-                        model["category"],
-                        model["pipeline_action"],
-                        model["path"],
+                        "local",
+                        model_id=download_info.get("model_id"),
+                        repo_id=model["path"],
                     )
                 )
+            for filename in files:
                 try:
                     self.hf_downloader.download_model(
-                        requested_path=model["path"],
+                        requested_path=download_repo_id,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self._safe_progress_emit,
@@ -1412,7 +1430,15 @@ class InstallPage(BaseWizard):
                         if not self.models_enabled["mistral"]:
                             continue
                     models.append(model)
-                    files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
+                    download_info = LLMProviderConfig.resolve_download_target(
+                        "local",
+                        repo_id=model["path"],
+                        prefer_pre_quantized=True,
+                    )
+                    download_repo_id = (
+                        download_info["repo_id"] if download_info else model["path"]
+                    )
+                    files = LLM_FILE_BOOTSTRAP_DATA[download_repo_id]["files"]
                     self.total_files += len(files)
         if self.models_enabled["whisper"]:
             for k, v in WHISPER_FILES.items():

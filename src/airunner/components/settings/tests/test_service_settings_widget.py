@@ -3,20 +3,18 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-# Qt imports
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.usefixtures("qapp"),
+]
+
 try:
-    from PySide6.QtWidgets import QApplication
-    import sys
+    from airunner.components.settings.gui.widgets.service_settings_widget import (
+        ServiceSettingsWidget,
+    )
+except ImportError as exc:
+    pytest.skip(str(exc), allow_module_level=True)
 
-    # Create QApplication if it doesn't exist
-    if not QApplication.instance():
-        app = QApplication(sys.argv)
-except ImportError:
-    pytest.skip("PySide6 not available", allow_module_level=True)
-
-from airunner.components.settings.gui.widgets.service_settings_widget import (
-    ServiceSettingsWidget,
-)
 from airunner.settings import (
     AIRUNNER_HEADLESS_SERVER_HOST,
     AIRUNNER_HEADLESS_SERVER_PORT,

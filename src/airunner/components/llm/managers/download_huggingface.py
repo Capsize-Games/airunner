@@ -3,10 +3,12 @@
 from typing import Optional, Any
 
 from airunner.components.application.workers.worker import Worker
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.enums import SignalCode, QueueType
 from airunner.components.application.workers.huggingface_download_worker import (
     HuggingFaceDownloadWorker,
 )
+from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.utils.application import create_worker
 
 
@@ -54,6 +56,41 @@ class DownloadHuggingFaceModel(Worker):
             missing_files: Optional list of specific files to download
             gguf_filename: For GGUF downloads, the specific .gguf file to download
         """
+        resolved_download = LLMProviderConfig.resolve_download_target(
+            "local",
+            repo_id=repo_id,
+            prefer_pre_quantized=True,
+        )
+        if resolved_download and resolved_download.get("model_type") == "gguf":
+            resolved_repo_id = resolved_download["repo_id"]
+            resolved_gguf_filename = resolved_download["gguf_filename"]
+            if (
+                repo_id != resolved_repo_id
+                or model_type != "gguf"
+                or gguf_filename != resolved_gguf_filename
+            ):
+                self.logger.info(
+                    "Preferring pre-quantized GGUF download for %s via %s/%s",
+                    repo_id,
+                    resolved_repo_id,
+                    resolved_gguf_filename,
+                )
+            repo_id = resolved_repo_id
+            model_type = "gguf"
+            gguf_filename = resolved_gguf_filename
+            setup_quantization = False
+            quantization_bits = 0
+            missing_files = None
+
+        if output_dir is None and model_type in {"llm", "gguf", "ministral3"}:
+            output_dir = LLMProviderConfig.get_local_storage_path(
+                AIRUNNER_BASE_PATH,
+                "local",
+                model_id=(resolved_download or {}).get("model_id"),
+                repo_id=repo_id,
+                prefer_pre_quantized=model_type == "gguf",
+            )
+
         # Cancel any existing download
         if self.download_worker and self.download_worker.running:
             self.download_worker.cancel()

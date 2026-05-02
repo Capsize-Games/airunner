@@ -29,6 +29,12 @@ class PropertyMixin:
             True if model supports function calling
         """
         try:
+            saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
+            if saved_model_id:
+                model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+                if model_info:
+                    return model_info.get("function_calling", False)
+
             model_path = self.model_path
             if not model_path:
                 return False
@@ -129,6 +135,23 @@ class PropertyMixin:
         Raises:
             ValueError: If no model path configured
         """
+        requested_model = getattr(getattr(self, "llm_request", None), "model", None)
+        if requested_model:
+            resolved_model_id = LLMProviderConfig.resolve_model_id(
+                "local",
+                str(requested_model),
+            )
+            if resolved_model_id:
+                model_info = LLMProviderConfig.get_model_info("local", resolved_model_id)
+                if model_info:
+                    return model_info.get("name", resolved_model_id)
+
+        saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
+        if saved_model_id and saved_model_id != "custom":
+            model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
+            if model_info:
+                return model_info.get("name", saved_model_id)
+
         # Use the resolved model_path so runtime overrides (LLMRequest.model)
         # and container path normalization are handled consistently.
         model_path = self.model_path
@@ -175,7 +198,17 @@ class PropertyMixin:
             #   and let the container path normalization below rewrite host paths
             #   like /home/<user>/.local/share/airunner/... to the container base.
             requested = str(self.llm_request.model)
-            if (
+            resolved_model_id = LLMProviderConfig.resolve_model_id(
+                "local",
+                requested,
+            )
+            if resolved_model_id:
+                model_path = LLMProviderConfig.get_local_storage_path(
+                    self.path_settings.base_path,
+                    "local",
+                    model_id=resolved_model_id,
+                )
+            elif (
                 "/" in requested
                 or "\\" in requested
                 or requested.lower().endswith(".gguf")
@@ -215,15 +248,59 @@ class PropertyMixin:
                     model_path = os.path.join(self.path_settings.base_path, suffix)
         except Exception:
             pass
+
+        resolved_model_id = LLMProviderConfig.resolve_model_id(
+            "local",
+            model_path,
+        )
+        if resolved_model_id and not os.path.isabs(model_path):
+            model_path = LLMProviderConfig.get_local_storage_path(
+                self.path_settings.base_path,
+                "local",
+                model_id=resolved_model_id,
+            )
         
         # If model_path doesn't contain a path separator, it's just a model name
         # Construct the full path
         if "/" not in model_path and "\\" not in model_path:
-            model_path = os.path.join(
+            if resolved_model_id:
+                model_path = LLMProviderConfig.get_local_storage_path(
+                    self.path_settings.base_path,
+                    "local",
+                    model_id=resolved_model_id,
+                )
+            else:
+                model_path = os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/llm/causallm",
+                    model_path,
+                )
+
+        saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
+        if saved_model_id and saved_model_id != "custom":
+            recovered_path = LLMProviderConfig.get_local_storage_path(
                 self.path_settings.base_path,
-                "text/models/llm/causallm",
-                model_path,
+                "local",
+                model_id=saved_model_id,
             )
+            expected_artifact_path = LLMProviderConfig.get_expected_local_artifact_path(
+                self.path_settings.base_path,
+                "local",
+                model_id=saved_model_id,
+            )
+            if (
+                expected_artifact_path.lower().endswith(".gguf")
+                and os.path.exists(expected_artifact_path)
+                and not (model_path.lower().endswith(".gguf") and os.path.exists(model_path))
+                and os.path.normpath(model_path) != os.path.normpath(recovered_path)
+            ):
+                self.logger.info(
+                    "Recovered stale local model path '%s' to shared GGUF storage '%s'",
+                    model_path,
+                    recovered_path,
+                )
+                self.llm_generator_settings.model_path = recovered_path
+                model_path = recovered_path
 
         # Validate that the embedding model path is not used as main LLM
         if "intfloat/e5-large" in model_path or "/embedding/" in model_path:
@@ -242,14 +319,12 @@ class PropertyMixin:
             # Try to recover using saved model_id
             saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
             if saved_model_id and saved_model_id != "custom":
-                from airunner.components.llm.data.llm_provider_config import LLMProviderConfig
                 model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                 if model_info:
-                    model_name = model_info.get("name", saved_model_id)
-                    recovered_path = os.path.join(
+                    recovered_path = LLMProviderConfig.get_local_storage_path(
                         self.path_settings.base_path,
-                        "text/models/llm/causallm",
-                        model_name,
+                        "local",
+                        model_id=saved_model_id,
                     )
                     self.logger.info(f"Recovered model path from model_id '{saved_model_id}': {recovered_path}")
                     # Save the corrected path
@@ -275,11 +350,10 @@ class PropertyMixin:
             if saved_model_id and saved_model_id != "custom":
                 model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                 if model_info:
-                    model_name = model_info.get("name", saved_model_id)
-                    recovered_path = os.path.join(
+                    recovered_path = LLMProviderConfig.get_local_storage_path(
                         self.path_settings.base_path,
-                        "text/models/llm/causallm",
-                        model_name,
+                        "local",
+                        model_id=saved_model_id,
                     )
                     self.logger.info(f"Recovered model path from model_id '{saved_model_id}': {recovered_path}")
                     # Save the corrected path

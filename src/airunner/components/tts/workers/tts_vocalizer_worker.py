@@ -178,6 +178,9 @@ class TTSVocalizerWorker(Worker):
             self.add_to_queue(response["message"])
 
     def handle_message(self, item):
+        if isinstance(item, dict) and item.get("_message_type") == "interrupt":
+            self.on_interrupt_process_signal(item.get("data"))
+            return
         if not self.accept_message or item is None:
             return
         # Ensure stream is initialized

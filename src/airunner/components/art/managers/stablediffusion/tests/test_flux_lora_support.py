@@ -25,8 +25,8 @@ class TestFluxLoRAInheritance:
 
         assert issubclass(FluxModelManager, BaseDiffusersModelManager)
 
-    def test_flux_does_not_override_lora_methods(self):
-        """Verify FluxModelManager doesn't override LoRA methods."""
+    def test_flux_only_overrides_flux_specific_unload(self):
+        """Verify FLUX reuses base LoRA loading methods and custom unload."""
         from airunner.components.art.managers.flux.flux_model_manager import (
             FluxModelManager,
         )
@@ -43,12 +43,12 @@ class TestFluxLoRAInheritance:
             FluxModelManager._load_lora is BaseDiffusersModelManager._load_lora
         )
         assert (
-            FluxModelManager._unload_loras
-            is BaseDiffusersModelManager._unload_loras
-        )
-        assert (
             FluxModelManager._set_lora_adapters
             is BaseDiffusersModelManager._set_lora_adapters
+        )
+        assert (
+            FluxModelManager._unload_loras
+            is not BaseDiffusersModelManager._unload_loras
         )
 
 

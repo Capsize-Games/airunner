@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch
 from PIL import Image
+from PySide6.QtCore import QPointF
 
 from airunner.components.art.gui.widgets.canvas.mixins.canvas_transform_mixin import (
     CanvasTransformMixin,
@@ -19,7 +20,13 @@ class TestCanvasTransformMixin(unittest.TestCase):
         class TestCanvas(CanvasTransformMixin):
             def __init__(self):
                 self.current_active_image = None
+                self.settings_key = "drawing_pad_settings"
+                self.canvas_type = "brush"
                 self.logger = Mock()
+                self.layer_compositor = Mock()
+                self._layer_items = {}
+                self._pending_layer_images = {}
+                self.item = None
                 self._add_image_to_undo = Mock(return_value=1)
                 self._commit_layer_history_transaction = Mock()
                 self.initialize_image = Mock()
@@ -31,15 +38,91 @@ class TestCanvasTransformMixin(unittest.TestCase):
         self.canvas = TestCanvas()
         self.test_image = Image.new("RGB", (200, 200), color="red")
 
+        class FakeItem:
+            def __init__(
+                self,
+                qimage,
+                *,
+                x=0,
+                y=0,
+                opacity=1.0,
+                visible=True,
+                z_value=0,
+            ):
+                self.qimage = qimage
+                self._position = QPointF(x, y)
+                self._opacity = opacity
+                self._visible = visible
+                self._z_value = z_value
+
+            def scenePos(self):
+                return self._position
+
+            def opacity(self):
+                return self._opacity
+
+            def isVisible(self):
+                return self._visible
+
+            def zValue(self):
+                return self._z_value
+
+        self.FakeItem = FakeItem
+
     def test_on_canvas_copy_image_signal(self):
         """Test copy image signal handler."""
         self.canvas.current_active_image = self.test_image
+        self.canvas.layer_compositor.compose_visible_layers.return_value = None
 
         with patch.object(
             self.canvas, "_copy_image", return_value=self.test_image
         ) as mock_copy:
             self.canvas.on_canvas_copy_image_signal()
             mock_copy.assert_called_once_with(self.test_image)
+
+    def test_on_canvas_copy_image_signal_uses_composite_image(self):
+        """Test copy prefers the composed visible desktop image."""
+        composed_image = Image.new("RGB", (300, 300), color="blue")
+        self.canvas.current_active_image = self.test_image
+        self.canvas.layer_compositor.compose_visible_layers.return_value = (
+            composed_image
+        )
+
+        with patch.object(
+            self.canvas, "_copy_image", return_value=composed_image
+        ) as mock_copy:
+            self.canvas.on_canvas_copy_image_signal()
+
+        mock_copy.assert_called_once_with(composed_image)
+
+    def test_on_canvas_copy_image_signal_prefers_live_scene_image(self):
+        """Test copy prefers live in-memory scene state over persisted state."""
+        stale_image = Image.new("RGBA", (20, 20), color="red")
+        fresh_image = Image.new("RGBA", (20, 20), color="blue")
+        self.canvas.current_active_image = stale_image
+        self.canvas.layer_compositor.compose_visible_layers.return_value = (
+            stale_image
+        )
+        stale_qimage = self.canvas._pil_to_qimage(stale_image)
+        self.canvas._layer_items = {
+            1: self.FakeItem(stale_qimage, x=0, y=0, z_value=1)
+        }
+        self.canvas._pending_layer_images = {1: fresh_image}
+
+        with patch.object(self.canvas, "_copy_image") as mock_copy:
+            self.canvas.on_canvas_copy_image_signal()
+
+        copied_image = mock_copy.call_args[0][0]
+        self.assertEqual(copied_image.getpixel((0, 0)), (0, 0, 255, 255))
+
+    def test_on_canvas_copy_image_signal_ignores_non_primary_scene(self):
+        """Test copy ignores non-desktop scenes that share the signal."""
+        self.canvas.canvas_type = "input_image"
+
+        with patch.object(self.canvas, "_copy_image") as mock_copy:
+            self.canvas.on_canvas_copy_image_signal()
+
+        mock_copy.assert_not_called()
 
     def test_on_canvas_cut_image_signal(self):
         """Test cut image signal handler."""
@@ -115,8 +198,15 @@ class TestCanvasTransformMixin(unittest.TestCase):
             mock_clipboard.assert_called_once_with(self.test_image)
             self.assertEqual(result, self.test_image)
 
+    @patch(
+        "airunner.components.art.gui.widgets.canvas.mixins."
+        "canvas_transform_mixin.QApplication.clipboard",
+        side_effect=RuntimeError("no clipboard"),
+    )
     @patch("subprocess.Popen")
-    def test_move_pixmap_to_clipboard_success(self, mock_popen):
+    def test_move_pixmap_to_clipboard_success(
+        self, mock_popen, _mock_clipboard
+    ):
         """Test moving image to clipboard successfully."""
         mock_process = Mock()
         mock_process.communicate = Mock(return_value=(b"", b""))
@@ -145,15 +235,22 @@ class TestCanvasTransformMixin(unittest.TestCase):
         self.assertIsNone(result)
         self.canvas.logger.warning.assert_called_once()
 
+    @patch(
+        "airunner.components.art.gui.widgets.canvas.mixins."
+        "canvas_transform_mixin.QApplication.clipboard",
+        side_effect=RuntimeError("no clipboard"),
+    )
     @patch("subprocess.Popen")
-    def test_move_pixmap_to_clipboard_xclip_missing(self, mock_popen):
+    def test_move_pixmap_to_clipboard_xclip_missing(
+        self, mock_popen, _mock_clipboard
+    ):
         """Test clipboard move when xclip is not installed."""
         mock_popen.side_effect = FileNotFoundError()
 
         result = self.canvas._move_pixmap_to_clipboard(self.test_image)
 
-        self.assertEqual(result, self.test_image)
-        self.canvas.logger.error.assert_called_once()
+        self.assertIsNone(result)
+        self.assertEqual(self.canvas.logger.error.call_count, 2)
 
     def test_cut_image_success(self):
         """Test successful image cut operation."""

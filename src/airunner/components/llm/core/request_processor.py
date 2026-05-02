@@ -81,6 +81,8 @@ class RequestProcessor:
             "top_k": "top_k",
             "top_p": "top_p",
             "use_cache": "use_cache",
+            "enable_thinking": "enable_thinking",
+            "reasoning_effort": "reasoning_effort",
         }
 
         # Apply database defaults

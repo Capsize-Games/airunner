@@ -2,7 +2,7 @@
 
 This module provides tools for creating, configuring, and managing custom AI
 agents. Agents can be created with different templates (coding, research,
-creative, calendar) and configured with specific system prompts and tools.
+creative) and configured with specific system prompts and tools.
 
 Tools:
     - create_agent: Create a new custom AI agent
@@ -45,7 +45,7 @@ from airunner.components.data.session_manager import session_scope
     description=(
         "Create a new custom AI agent with specified name, system prompt, "
         "and available tools. Optionally use a template (coding, research, "
-        "creative, calendar) to pre-configure the agent."
+        "creative) to pre-configure the agent."
     ),
     requires_api=False,
 )
@@ -60,14 +60,14 @@ def create_agent(
 
     This tool allows creating specialized AI agents with custom system prompts,
     descriptions, and tool access. Agents can be created from templates
-    (coding, research, creative, calendar) or fully customized.
+    (coding, research, creative) or fully customized.
 
     Args:
         name: Unique agent name identifier (required)
         system_prompt: Custom system prompt for the agent (required)
         description: Description of agent purpose (optional)
         tools: List of tool names available to agent (optional)
-        template: Template category - coding, research, creative, calendar,
+        template: Template category - coding, research, creative,
             or custom. Defaults to "custom"
 
 
@@ -448,7 +448,7 @@ def list_agent_templates() -> str:
         "Available agent templates:\\n\\ncoding:\\n  Description: Programming and code assistance\\n  Tools: execute_python, search_web, rag_search\\n  System Prompt: You are an expert programmer who helps write clean, efficient code...\\n\\nresearch:\\n  Description: Research and information gathering\\n  Tools: search_web, scrape_website, rag_search, save_to_knowledge_base\\n  System Prompt: You are a research assistant who helps find and organize information..."
 
     Note:
-        - Templates include: coding, research, creative, calendar
+        - Templates include: coding, research, creative
         - Each template has pre-configured tools and prompts
         - Templates can be customized when creating agents
         - System prompts are truncated to 100 characters

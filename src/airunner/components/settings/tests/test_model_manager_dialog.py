@@ -3,21 +3,18 @@
 import pytest
 from unittest.mock import patch
 
-# Qt imports
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.usefixtures("qapp"),
+]
+
 try:
-    from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import Qt
-    import sys
-
-    # Create QApplication if it doesn't exist
-    if not QApplication.instance():
-        app = QApplication(sys.argv)
-except ImportError:
-    pytest.skip("PySide6 not available", allow_module_level=True)
-
-from airunner.components.settings.gui.widgets.model_manager_dialog import (
-    ManageModelsDialog,
-)
+    from airunner.components.settings.gui.widgets.model_manager_dialog import (
+        ManageModelsDialog,
+    )
+except ImportError as exc:
+    pytest.skip(str(exc), allow_module_level=True)
 
 
 class TestManageModelsDialog:
@@ -90,8 +87,8 @@ class TestManageModelsDialog:
         # Connect signal
         signal_received = []
 
-        def on_download_requested(model_id, repo_id, quant_bits):
-            signal_received.append((model_id, repo_id, quant_bits))
+        def on_download_requested(payload):
+            signal_received.append(payload)
 
         dialog.download_requested.connect(on_download_requested)
 

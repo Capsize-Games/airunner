@@ -1,18 +1,28 @@
 import os
 from typing import Dict, List, Optional, Tuple
+from uuid import uuid4
 
 from PIL import Image
-from PySide6.QtCore import Slot, Qt, QPoint
+from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QPoint
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QListWidget,
     QListWidgetItem,
     QFrame,
     QFileDialog,
     QSpacerItem,
     QSizePolicy,
+    QWidget,
 )
-from PySide6.QtGui import QTextCursor, QFont, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import (
+    QTextCursor,
+    QFont,
+    QDragEnterEvent,
+    QDropEvent,
+    QKeySequence,
+    QShortcut,
+)
 
 from langchain_core.messages.utils import count_tokens_approximately
 
@@ -64,6 +74,33 @@ class ChatPromptWidget(BaseWidget):
     ]
     logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+    def _attach_lazy_tab_widget(
+        self,
+        parent_attr: str,
+        layout_attr: str,
+        widget_attr: str,
+        placeholder_attr: str,
+        object_name: str,
+        factory,
+    ):
+        widget = getattr(self.ui, widget_attr, None)
+        if widget is not None:
+            return widget
+
+        layout = getattr(self.ui, layout_attr)
+        widget = factory(getattr(self.ui, parent_attr))
+        widget.setObjectName(object_name)
+        layout.addWidget(widget, 0, 0, 1, 1)
+
+        placeholder = getattr(self.ui, placeholder_attr, None)
+        if placeholder is not None:
+            layout.removeWidget(placeholder)
+            placeholder.deleteLater()
+            setattr(self.ui, placeholder_attr, None)
+
+        setattr(self.ui, widget_attr, widget)
+        return widget
+
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL: self.on_hear_signal,
@@ -72,6 +109,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_text_generate_request_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
         }
         self._splitters = ["chat_prompt_splitter"]
@@ -86,8 +124,6 @@ class ChatPromptWidget(BaseWidget):
         self.prompt = ""
         self.suffix = ""
         self.spacer = None
-        self.promptKeyPressEvent = None
-        self.originalKeyPressEvent = None
         self.action_menu_displayed = None
         self.action_menu_displayed = None
         self.messages_spacer = None
@@ -106,19 +142,12 @@ class ChatPromptWidget(BaseWidget):
         self._attached_images: List[Tuple[Image.Image, Optional[str]]] = []
         self._attachment_widgets: List[ImageAttachmentWidget] = []
         self._attachments_spacer: Optional[QSpacerItem] = None
+        self._startup_controls_loaded = False
+        self._model_dropdown_line_edit = None
         
-        # Initialize provider dropdown
-        self._populate_provider_dropdown()
-        
-        # Initialize model dropdown
-        self._populate_model_dropdown()
-        
-        # Connect model dropdown edit signal for custom model entry
-        if hasattr(self.ui, "model_dropdown"):
-            self.ui.model_dropdown.lineEdit().returnPressed.connect(self._on_custom_model_entered)
-        
-        # Hardcode action to AUTO - we don't use the dropdown anymore
-        self.update_llm_generator_settings(action=LLMActionType.APPLICATION_COMMAND.name)
+        # Default plain chat input to CHAT mode. Tool routing still happens
+        # per-request via auto selection when the prompt needs it.
+        self.update_llm_generator_settings(action=LLMActionType.CHAT.name)
         
         # Initialize thinking checkbox from settings
         if hasattr(self.ui, "thinking_checkbox"):
@@ -129,14 +158,12 @@ class ChatPromptWidget(BaseWidget):
                 enable_thinking = True
             self.ui.thinking_checkbox.setChecked(enable_thinking)
             self.ui.thinking_checkbox.blockSignals(False)
-            # Update visibility based on whether model supports thinking
-            self._update_thinking_checkbox_visibility()
+
+        self._create_reasoning_effort_dropdown()
         
-        # Initialize precision dropdown
-        self._populate_precision_dropdown()
-        
-        self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
-        self.ui.prompt.keyPressEvent = self.handle_key_press
+        self._prompt_shortcuts_configured = False
+        self._prompt_submit_shortcuts: List[QShortcut] = []
+        self._slash_popup_shortcuts: List[QShortcut] = []
         
         self.held_message = None
         self._disabled = False
@@ -144,6 +171,7 @@ class ChatPromptWidget(BaseWidget):
         
         # Setup slash command autocomplete
         self._setup_slash_command_completer()
+        self._configure_prompt_shortcuts()
         
         # Setup image attachment handling
         self._setup_image_attachments()
@@ -158,7 +186,8 @@ class ChatPromptWidget(BaseWidget):
         self.conversation = None
         self._llm_history_tab_index = None
         self._llm_history_widget = None
-        self.ui.chat_history_widget.setVisible(False)
+        if hasattr(self.ui, "chat_history_placeholder"):
+            self.ui.chat_history_placeholder.setVisible(False)
         self.ui.tabWidget.tabBar().hide()
         self._model_context_tokens = self._resolve_model_context_length()
         if hasattr(self.ui, "token_count"):
@@ -169,7 +198,6 @@ class ChatPromptWidget(BaseWidget):
 
     def _apply_default_splitter_settings(self):
         if hasattr(self, "ui") and self.ui is not None:
-            QApplication.processEvents()
             default_chat_splitter_config = {
                 "chat_prompt_splitter": {
                     "index_to_maximize": 0,
@@ -182,8 +210,18 @@ class ChatPromptWidget(BaseWidget):
             )
         else:
             self.logger.warning(
-                "ChatPromptWidget: UI not available when attempting to apply default splitter settings."
+                "ChatPromptWidget: UI not available when applying "
+                "default splitter settings."
             )
+
+    def _schedule_default_splitter_settings(self) -> None:
+        """Apply splitter settings after the show event unwinds."""
+        if self._default_splitter_settings_applied:
+            return
+        if not self.isVisible():
+            return
+        self._default_splitter_settings_applied = True
+        QTimer.singleShot(0, self._apply_default_splitter_settings)
 
     @Slot()
     def on_clear_conversation_button_clicked(self):
@@ -223,6 +261,8 @@ class ChatPromptWidget(BaseWidget):
         self.ui.settings_button.blockSignals(True)
         self.ui.settings_button.setChecked(False)
         self.ui.settings_button.blockSignals(False)
+        if checked:
+            self._ensure_history_view_loaded()
         self.ui.tabWidget.setCurrentIndex(2 if checked else 0)
 
     @Slot(bool)
@@ -230,7 +270,39 @@ class ChatPromptWidget(BaseWidget):
         self.ui.history_button.blockSignals(True)
         self.ui.history_button.setChecked(False)
         self.ui.history_button.blockSignals(False)
+        if checked:
+            self._ensure_settings_view_loaded()
         self.ui.tabWidget.setCurrentIndex(1 if checked else 0)
+
+    def _ensure_settings_view_loaded(self):
+        """Create the settings page only when the user opens it."""
+        from airunner.components.llm.gui.widgets.llm_settings_widget import (
+            LLMSettingsWidget,
+        )
+
+        return self._attach_lazy_tab_widget(
+            "tab_2",
+            "gridLayout_3",
+            "llm_settings",
+            "llm_settings_placeholder",
+            "llm_settings",
+            LLMSettingsWidget,
+        )
+
+    def _ensure_history_view_loaded(self):
+        """Create the history page only when the user opens it."""
+        from airunner.components.llm.gui.widgets.llm_history_widget import (
+            LLMHistoryWidget,
+        )
+
+        return self._attach_lazy_tab_widget(
+            "tab_3",
+            "gridLayout_5",
+            "widget",
+            "history_placeholder",
+            "widget",
+            LLMHistoryWidget,
+        )
 
     @Slot()
     def on_send_button_clicked(self):
@@ -249,8 +321,9 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def action(self) -> LLMActionType:
-        # Action is always AUTO (APPLICATION_COMMAND) - handles everything automatically
-        return LLMActionType.APPLICATION_COMMAND
+        # The chat prompt should use conversational mode by default.
+        # Explicit slash commands can still override this per request.
+        return LLMActionType.CHAT
 
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:
@@ -290,18 +363,6 @@ class ChatPromptWidget(BaseWidget):
             self.logger.warning("Prompt is empty")
             return
 
-        model_load_balancer = getattr(self.api, "model_load_balancer", None)
-        art_model_loaded = (
-            model_load_balancer
-            and ModelType.SD in model_load_balancer.get_loaded_models()
-        )
-        llm_loaded = (
-            model_load_balancer
-            and ModelType.LLM in model_load_balancer.get_loaded_models()
-        )
-        if art_model_loaded and not llm_loaded:
-            model_load_balancer.switch_to_non_art_mode()
-
         if self.generating:
             if self.held_message is None:
                 self.held_message = prompt
@@ -310,25 +371,83 @@ class ChatPromptWidget(BaseWidget):
             return
         self.generating = True
 
+        request_id = str(uuid4())
+
+        self.clear_prompt()
+        QApplication.processEvents()
+
+        self.logger.info(
+            f"do_generate called with prompt: "
+            f"{prompt[:100] if prompt else 'None'}..."
+        )
+        slash_command, actual_prompt, action_override = (
+            self._parse_slash_command(prompt)
+        )
+        self.logger.info(
+            "Slash command parse result: command=%s, "
+            "action_override=%s",
+            slash_command,
+            action_override,
+        )
+        action = action_override if action_override else self.action
+        self.logger.info(f"Final action: {action}")
+
         conversation_id = self._ensure_conversation_context()
         if conversation_id is None:
             self.logger.error(
                 "Aborting chat request - unable to determine conversation ID"
             )
+            self.ui.prompt.setPlainText(prompt)
+            self.prompt = prompt
             self.generating = False
             return
 
-        self.clear_prompt()
+        if hasattr(self.ui, "conversation"):
+            self.ui.conversation.append_user_message_for_request(
+                actual_prompt,
+                request_id=request_id,
+            )
+            QApplication.processEvents()
+
+        QTimer.singleShot(
+            0,
+            lambda: self._submit_generation_request(
+                actual_prompt=actual_prompt,
+                action=action,
+                conversation_id=conversation_id,
+                request_id=request_id,
+                slash_command=slash_command,
+            ),
+        )
+
+        prompt_focus = getattr(getattr(self.ui, "prompt", None), "setFocus", None)
+        if callable(prompt_focus):
+            for delay in (0, 50, 150):
+                QTimer.singleShot(delay, prompt_focus)
+
+    def _submit_generation_request(
+        self,
+        *,
+        actual_prompt: str,
+        action: LLMActionType,
+        conversation_id: int,
+        request_id: str,
+        slash_command: Optional[str],
+    ) -> None:
+        """Run the heavier generation setup after the UI has a paint turn."""
+
+        model_load_balancer = getattr(self.api, "model_load_balancer", None)
+        loaded_models = set(
+            model_load_balancer.get_loaded_models()
+            if model_load_balancer is not None
+            else []
+        )
+        art_model_loaded = ModelType.SD in loaded_models
+        llm_loaded = ModelType.LLM in loaded_models
+        if art_model_loaded and not llm_loaded:
+            model_load_balancer.switch_to_non_art_mode()
+
         self.start_progress_bar()
-        
-        # Parse slash command if present
-        self.logger.info(f"do_generate called with prompt: {prompt[:100] if prompt else 'None'}...")
-        slash_command, actual_prompt, action_override = self._parse_slash_command(prompt)
-        self.logger.info(f"Slash command parse result: command={slash_command}, action_override={action_override}")
-        
-        # Determine action type - use override from slash command if present
-        action = action_override if action_override else self.action
-        self.logger.info(f"Final action: {action}")
         
         # Get configuration from slash command
         force_tool = None
@@ -347,6 +466,8 @@ class ChatPromptWidget(BaseWidget):
         
         # Create LLMRequest optimized for the action type
         llm_request = LLMRequest.for_action(action)
+        llm_request.enable_thinking = self._is_thinking_enabled_for_request()
+        llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
         
         # Set force_tool if slash command specifies one
         if force_tool:
@@ -376,28 +497,185 @@ class ChatPromptWidget(BaseWidget):
             action=action,
             do_tts_reply=False,
             conversation_id=conversation_id,
+            request_id=request_id,
         )
+
+    def _is_thinking_enabled_for_request(self) -> bool:
+        """Return the user-selected thinking preference for this request."""
+        if self._model_supports_reasoning_effort():
+            return False
+
+        if hasattr(self.ui, "thinking_checkbox"):
+            try:
+                return bool(self.ui.thinking_checkbox.isChecked())
+            except Exception:
+                pass
+
+        enable_thinking = getattr(
+            self.llm_generator_settings,
+            "enable_thinking",
+            True,
+        )
+        return True if enable_thinking is None else bool(enable_thinking)
+
+    def _get_reasoning_effort_for_request(self) -> Optional[str]:
+        """Return the request-scoped GPT-OSS reasoning effort."""
+        if not self._model_supports_reasoning_effort():
+            return None
+
+        if hasattr(self.ui, "reasoning_effort_dropdown"):
+            effort = self.ui.reasoning_effort_dropdown.currentData()
+            if effort in {"low", "medium", "high"}:
+                return effort
+
+        effort = getattr(
+            self.llm_generator_settings,
+            "reasoning_effort",
+            "medium",
+        )
+        effort = str(effort or "medium").strip().lower()
+        if effort in {"low", "medium", "high"}:
+            return effort
+        return "medium"
 
     def showEvent(self, event):
         super().showEvent(event)
-        if not self._default_splitter_settings_applied and self.isVisible():
-            self._apply_default_splitter_settings()
-            self._default_splitter_settings_applied = True
-
-        self.promptKeyPressEvent = self.ui.prompt.keyPressEvent
-
-        self.ui.prompt.keyPressEvent = self.handle_key_press
+        self._schedule_default_splitter_settings()
+        self._configure_prompt_shortcuts()
 
         if not self.chat_loaded:
             self.disable_send_button()
 
-        # Load conversation on first show
+    def _create_prompt_shortcut(
+        self,
+        key: int,
+        handler,
+    ) -> QShortcut:
+        """Create one prompt-scoped shortcut without overriding key events."""
+        shortcut = QShortcut(QKeySequence(key), self.ui.prompt)
+        shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        shortcut.activated.connect(handler)
+        return shortcut
+
+    def _configure_prompt_shortcuts(self) -> None:
+        """Install prompt shortcuts while keeping native text input in Qt."""
+        if self._prompt_shortcuts_configured:
+            return
+        if not hasattr(self.ui, "prompt") or self.ui.prompt is None:
+            return
+
+        self.ui.prompt.installEventFilter(self)
+        self._prompt_submit_shortcuts = []
+        self._slash_popup_shortcuts = [
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Up,
+                lambda: self._handle_slash_popup_navigation(Qt.Key.Key_Up),
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Down,
+                lambda: self._handle_slash_popup_navigation(
+                    Qt.Key.Key_Down
+                ),
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Tab,
+                lambda: self._handle_slash_popup_navigation(Qt.Key.Key_Tab),
+            ),
+            self._create_prompt_shortcut(
+                Qt.Key.Key_Escape,
+                lambda: self._handle_slash_popup_navigation(
+                    Qt.Key.Key_Escape
+                ),
+            ),
+        ]
+        self._set_slash_navigation_shortcuts_enabled(False)
+        self._prompt_shortcuts_configured = True
+
+    def _set_slash_navigation_shortcuts_enabled(
+        self,
+        enabled: bool,
+    ) -> None:
+        """Enable popup navigation shortcuts only while the popup is shown."""
+        for shortcut in self._slash_popup_shortcuts:
+            shortcut.setEnabled(enabled)
+
+    def _hide_slash_popup(self) -> None:
+        """Hide the slash popup and restore normal prompt navigation."""
+        if hasattr(self, "_slash_popup") and self._slash_popup is not None:
+            self._slash_popup.hide()
+        self._set_slash_navigation_shortcuts_enabled(False)
+
+    def _on_submit_shortcut(self) -> None:
+        """Submit the current prompt from a keyboard shortcut."""
+        if self._disabled:
+            return
+        self.do_generate()
+
+    def _is_prompt_submit_keypress(self, event: QEvent) -> bool:
+        """Return True when a keypress should submit the current prompt."""
+        if event.type() != QEvent.Type.KeyPress:
+            return False
+        if event.key() not in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            return False
+
+        modifiers = event.modifiers()
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            return False
+
+        effective_modifiers = (
+            modifiers & ~Qt.KeyboardModifier.KeypadModifier
+        )
+        return effective_modifiers == Qt.KeyboardModifier.NoModifier
+
+    def _finish_startup_controls_if_ready(self) -> None:
+        """Populate startup controls after the main window is ready."""
+        if self._startup_controls_loaded:
+            return
+        self._startup_controls_loaded = True
+        self._hide_footer_controls_moved_to_settings()
+        self._populate_model_dropdown()
+        self._populate_reasoning_effort_dropdown()
+        if hasattr(self.ui, "thinking_checkbox"):
+            self._update_thinking_checkbox_visibility()
+
+    def _create_reasoning_effort_dropdown(self) -> None:
+        """Add a compact GPT-OSS reasoning selector to the footer."""
+        if hasattr(self.ui, "reasoning_effort_dropdown"):
+            return
+
+        dropdown = QComboBox(self.ui.footer_container)
+        dropdown.setObjectName("reasoning_effort_dropdown")
+        dropdown.setMinimumHeight(30)
+        dropdown.setMinimumWidth(96)
+        dropdown.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        dropdown.setToolTip("GPT-OSS reasoning effort")
+
+        spacer_index = self.ui.horizontalLayout_2.indexOf(self.ui.footer_spacer)
+        self.ui.horizontalLayout_2.insertWidget(spacer_index, dropdown)
+        dropdown.currentIndexChanged.connect(self.on_reasoning_effort_changed)
+        dropdown.hide()
+        self.ui.reasoning_effort_dropdown = dropdown
+
+    def _hide_footer_controls_moved_to_settings(self) -> None:
+        """Hide footer controls that now live in the settings panel."""
+        if hasattr(self.ui, "provider_dropdown"):
+            self.ui.provider_dropdown.setVisible(False)
+        if hasattr(self.ui, "precision_dropdown"):
+            self.ui.precision_dropdown.setVisible(False)
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Finish non-critical startup work after the main window loads."""
+        self._finish_startup_controls_if_ready()
         if self.loading and hasattr(self.ui, "conversation"):
-            self.logger.info(
-                "First showEvent - loading most recent conversation"
-            )
-            self.load_conversation()
+            QTimer.singleShot(0, self._load_initial_conversation)
             self.loading = False
+
+    def _load_initial_conversation(self) -> None:
+        """Load the initial conversation after the UI has settled."""
+        self.logger.debug("Loading most recent conversation")
+        self.load_conversation()
 
     def llm_action_changed(self, val: str):
         # Deprecated - action is now always AUTO
@@ -544,7 +822,7 @@ class ChatPromptWidget(BaseWidget):
     def _show_slash_popup(self) -> None:
         """Show the slash command popup below the cursor."""
         if self._slash_popup.count() == 0:
-            self._slash_popup.hide()
+            self._hide_slash_popup()
             return
         
         # Calculate position - above the prompt widget
@@ -564,6 +842,7 @@ class ChatPromptWidget(BaseWidget):
         self._slash_popup.setGeometry(popup_x, popup_y, popup_width, popup_height)
         self._slash_popup.show()
         self._slash_popup.raise_()
+        self._set_slash_navigation_shortcuts_enabled(True)
 
     def _check_slash_command_trigger(self) -> None:
         """Check if we should show the slash command popup."""
@@ -582,9 +861,9 @@ class ChatPromptWidget(BaseWidget):
                 self._populate_slash_popup(partial_cmd)
                 self._show_slash_popup()
             else:
-                self._slash_popup.hide()
+                self._hide_slash_popup()
         else:
-            self._slash_popup.hide()
+            self._hide_slash_popup()
 
     def _on_slash_item_clicked(self, item: QListWidgetItem) -> None:
         """Handle when a slash command is selected from the popup."""
@@ -609,7 +888,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.prompt.blockSignals(False)
         
         # Hide popup and update highlighting
-        self._slash_popup.hide()
+        self._hide_slash_popup()
         self.highlight_slash_command(cmd + rest)
         
         # Focus back to prompt
@@ -641,7 +920,7 @@ class ChatPromptWidget(BaseWidget):
                 self._on_slash_item_clicked(item)
             return True
         elif key == Qt.Key.Key_Escape:
-            self._slash_popup.hide()
+            self._hide_slash_popup()
             return True
         
         # Let all other keys pass through (including Enter - user might want to submit)
@@ -835,6 +1114,49 @@ class ChatPromptWidget(BaseWidget):
 
         return False
 
+    def _model_supports_reasoning_effort(self) -> bool:
+        """Return True when the current model exposes GPT-OSS effort modes."""
+        settings = getattr(self, "llm_generator_settings", None)
+        if not settings:
+            return False
+
+        model_version = getattr(settings, "model_version", "") or ""
+        model_path = getattr(settings, "model_path", "") or ""
+        model_id = getattr(settings, "model_id", "") or ""
+
+        return any(
+            self._lookup_model_supports_reasoning_effort(source)
+            for source in (model_id, model_version, model_path)
+            if source
+        )
+
+    def _lookup_model_supports_reasoning_effort(self, source: str) -> bool:
+        """Look up whether one model source supports GPT-OSS effort modes."""
+        normalized_source = str(source or "").strip().lower()
+        if not normalized_source:
+            return False
+
+        for model_info in LLMProviderConfig.LOCAL_MODELS.values():
+            aliases = [
+                model_info.get("name", ""),
+                model_info.get("repo_id", ""),
+                model_info.get("gguf_filename", ""),
+            ]
+            if any(
+                alias
+                and (
+                    normalized_source == str(alias).strip().lower()
+                    or str(alias).strip().lower() in normalized_source
+                    or normalized_source in str(alias).strip().lower()
+                )
+                for alias in aliases
+            ):
+                return bool(
+                    model_info.get("supports_reasoning_effort", False)
+                )
+
+        return "gpt-oss" in normalized_source
+
     def _get_model_capabilities(self) -> Dict[str, bool]:
         """Get the capabilities of the current model.
         
@@ -924,12 +1246,23 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def _update_thinking_checkbox_visibility(self) -> None:
-        """Update the visibility of the thinking checkbox based on model capability."""
+        """Update footer reasoning controls for the current model."""
         if not hasattr(self.ui, "thinking_checkbox"):
             return
-        
+
         supports_thinking = self._model_supports_thinking()
-        self.ui.thinking_checkbox.setVisible(supports_thinking)
+        supports_reasoning_effort = self._model_supports_reasoning_effort()
+
+        self.ui.thinking_checkbox.setVisible(
+            supports_thinking and not supports_reasoning_effort
+        )
+
+        if hasattr(self.ui, "reasoning_effort_dropdown"):
+            if supports_reasoning_effort:
+                self._populate_reasoning_effort_dropdown()
+            self.ui.reasoning_effort_dropdown.setVisible(
+                supports_reasoning_effort
+            )
 
     def _refresh_model_context_tokens(self) -> None:
         self._model_context_tokens = self._resolve_model_context_length()
@@ -954,22 +1287,43 @@ class ChatPromptWidget(BaseWidget):
             return
 
         column = data.get("column_name")
-        if column not in {"model_version", "model_service", "model_path"}:
+        if column in {"model_version", "model_service", "model_path"}:
+            self._populate_model_dropdown()
+            self._refresh_model_context_tokens()
+            self._update_thinking_checkbox_visibility()
+            self._update_action_dropdown()
+            self._update_attach_button_visibility()
+            prompt_text = (
+                self.ui.prompt.toPlainText().strip()
+                if hasattr(self.ui, "prompt")
+                else self.prompt
+            )
+            self._update_token_count_label(prompt_text)
             return
 
-        self._refresh_model_context_tokens()
-        self._update_thinking_checkbox_visibility()
-        self._update_action_dropdown()
-        self._update_attach_button_visibility()
-        prompt_text = (
-            self.ui.prompt.toPlainText().strip()
-            if hasattr(self.ui, "prompt")
-            else self.prompt
-        )
-        self._update_token_count_label(prompt_text)
+        if column == "reasoning_effort":
+            self._populate_reasoning_effort_dropdown()
+            return
+
+        if column == "enable_thinking" and hasattr(
+            self.ui, "thinking_checkbox"
+        ):
+            enable_thinking = getattr(
+                self.llm_generator_settings,
+                "enable_thinking",
+                True,
+            )
+            self.ui.thinking_checkbox.blockSignals(True)
+            self.ui.thinking_checkbox.setChecked(
+                True if enable_thinking is None else bool(enable_thinking)
+            )
+            self.ui.thinking_checkbox.blockSignals(False)
 
     def clear_prompt(self):
+        self.prompt = ""
         self.ui.prompt.setPlainText("")
+        if hasattr(self, "_slash_popup") and self._slash_popup.isVisible():
+            self._hide_slash_popup()
 
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)
@@ -986,26 +1340,6 @@ class ChatPromptWidget(BaseWidget):
     def enable_send_button(self):
         self.ui.send_button.setEnabled(True)
         self._disabled = False
-
-    def handle_key_press(self, event):
-        # Handle slash popup navigation first
-        if self._handle_slash_popup_navigation(event.key()):
-            event.accept()
-            return
-            
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            if (
-                not self._disabled
-                and event.modifiers() != Qt.KeyboardModifier.ShiftModifier
-            ):
-                self.do_generate()
-                event.accept()
-                return
-        if (
-            self.originalKeyPressEvent is not None
-            and self.originalKeyPressEvent != self.handle_key_press
-        ):
-            self.originalKeyPressEvent(event)
 
     def hide_action_menu(self):
         self.action_menu_displayed = False
@@ -1080,12 +1414,12 @@ class ChatPromptWidget(BaseWidget):
                 conversation_id=conversation_id, max_messages=50
             )
         )
-        self.logger.info(
+        self.logger.debug(
             f"Loaded {len(messages)} messages from conversation {conversation_id}"
         )
         for idx, msg in enumerate(messages):
-            self.logger.info(
-                f"  Message {idx}: is_bot={msg.get('is_bot')}, content_preview={msg.get('content', '')[:50]}"
+            self.logger.debug(
+                f"Message {idx}: is_bot={msg.get('is_bot')}, content_preview={msg.get('content', '')[:50]}"
             )
 
         if hasattr(self.ui, "conversation"):
@@ -1167,9 +1501,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.model_dropdown.clear()
         
         # Get current provider from dropdown or settings
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        provider = self._current_model_service()
         
         # Make dropdown editable for custom model entry
         self.ui.model_dropdown.setEditable(True)
@@ -1214,8 +1546,18 @@ class ChatPromptWidget(BaseWidget):
         
         # Try to restore current selection
         self._restore_model_selection(provider)
+
+        self._connect_model_dropdown_line_edit()
         
         self.ui.model_dropdown.blockSignals(False)
+
+    def _connect_model_dropdown_line_edit(self) -> None:
+        """Connect custom model entry once the combo box has a line edit."""
+        line_edit = self.ui.model_dropdown.lineEdit()
+        if line_edit is None or line_edit is self._model_dropdown_line_edit:
+            return
+        self._model_dropdown_line_edit = line_edit
+        line_edit.returnPressed.connect(self._on_custom_model_entered)
     
     def _restore_model_selection(self, provider: str) -> None:
         """Restore model selection based on saved settings."""
@@ -1239,10 +1581,10 @@ class ChatPromptWidget(BaseWidget):
                             model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                             if model_info:
                                 model_name = model_info.get("name", saved_model_id)
-                                base_path = os.path.expanduser(
-                                    getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                                correct_path = self._get_local_model_storage_path(
+                                    saved_model_id,
+                                    str(model_info.get("repo_id", "")),
                                 )
-                                correct_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
                                 self.logger.info(
                                     f"Rebuilding corrupted model_path from model_id '{saved_model_id}': {correct_path}"
                                 )
@@ -1270,10 +1612,10 @@ class ChatPromptWidget(BaseWidget):
                         model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                         if model_info:
                             model_name = model_info.get("name", saved_model_id)
-                            base_path = os.path.expanduser(
-                                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                            correct_path = self._get_local_model_storage_path(
+                                saved_model_id,
+                                str(model_info.get("repo_id", "")),
                             )
-                            correct_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
                             self.logger.info(f"Recovered corrupted model_path to: {correct_path}")
                             self.update_llm_generator_settings(
                                 model_path=correct_path,
@@ -1291,10 +1633,23 @@ class ChatPromptWidget(BaseWidget):
                     model_info = LLMProviderConfig.get_model_info("local", model_id)
                     if model_info:
                         model_name = model_info.get("name", "")
-                        if model_name and model_name in current_path:
+                        expected_path = self._get_local_model_storage_path(
+                            model_id,
+                            str(model_info.get("repo_id", "")),
+                        )
+                        normalized_current = os.path.normpath(current_path)
+                        normalized_expected = os.path.normpath(expected_path)
+                        if model_name and (
+                            model_name in current_path
+                            or normalized_current == normalized_expected
+                            or normalized_current.startswith(
+                                normalized_expected + os.sep
+                            )
+                        ):
                             self.ui.model_dropdown.setCurrentIndex(i)
                             self._update_model_tooltip(model_id)
                             return
+            self._select_and_save_default_model(provider)
         else:
             # For Ollama/OpenRouter, match by model_version
             current_model = getattr(self.llm_generator_settings, "model_version", "") or ""
@@ -1306,6 +1661,9 @@ class ChatPromptWidget(BaseWidget):
                         return
                 # If not found in list, it might be custom - set as text
                 self.ui.model_dropdown.setEditText(current_model)
+                return
+
+            self._select_and_save_default_model(provider)
 
     def _select_and_save_default_model(self, provider: str) -> None:
         """Select and save the first available model as default.
@@ -1328,10 +1686,10 @@ class ChatPromptWidget(BaseWidget):
                     model_info = LLMProviderConfig.get_model_info("local", model_id)
                     if model_info:
                         model_name = model_info.get("name", model_id)
-                        base_path = os.path.expanduser(
-                            getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+                        model_path = self._get_local_model_storage_path(
+                            model_id,
+                            str(model_info.get("repo_id", "")),
                         )
-                        model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
                         
                         # Save to database
                         self.update_llm_generator_settings(
@@ -1359,11 +1717,8 @@ class ChatPromptWidget(BaseWidget):
         """Update the model dropdown tooltip with model metadata."""
         if not hasattr(self.ui, "model_dropdown"):
             return
-        
-        # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+
+        provider = self._current_model_service()
         
         if model_id == "custom":
             if provider == ModelService.LOCAL.value:
@@ -1407,6 +1762,22 @@ class ChatPromptWidget(BaseWidget):
         elif provider == ModelService.OPENROUTER.value:
             # OpenRouter - show model ID
             self.ui.model_dropdown.setToolTip(f"OpenRouter model: {model_id}\nRequires OpenRouter API key")
+
+    def _get_local_model_storage_path(
+        self,
+        model_id: str,
+        repo_id: str = "",
+    ) -> str:
+        """Return the configured local storage path for one local model."""
+        base_path = os.path.expanduser(
+            getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+        )
+        return LLMProviderConfig.get_local_storage_path(
+            base_path,
+            "local",
+            model_id=model_id,
+            repo_id=repo_id,
+        )
 
     def _populate_provider_dropdown(self) -> None:
         """Populate the provider dropdown with available providers."""
@@ -1454,6 +1825,21 @@ class ChatPromptWidget(BaseWidget):
         # Update precision dropdown for new provider
         self._populate_precision_dropdown()
 
+    def _emit_llm_model_changed_signal(
+        self,
+        model_path: str,
+        model_name: str,
+    ) -> None:
+        """Emit a UI-only LLM model change notification."""
+        self.emit_signal(
+            SignalCode.LLM_MODEL_CHANGED,
+            {
+                "model_path": model_path,
+                "model_name": model_name,
+                "reload_runtime": False,
+            },
+        )
+
     @Slot(int)
     def on_model_changed(self, index: int) -> None:
         """Handle model selection change from dropdown."""
@@ -1464,9 +1850,7 @@ class ChatPromptWidget(BaseWidget):
         model_text = self.ui.model_dropdown.currentText()
         
         # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        provider = self._current_model_service()
         
         # Handle custom model entry
         if model_id == "custom" or not model_id:
@@ -1486,22 +1870,18 @@ class ChatPromptWidget(BaseWidget):
                 return
             
             model_name = model_info.get("name", model_id)
-            base_path = os.path.expanduser(
-                getattr(self.path_settings, "base_path", "~/.local/share/airunner")
+            model_path = self._get_local_model_storage_path(
+                model_id,
+                str(model_info.get("repo_id", "")),
             )
-            model_path = os.path.join(base_path, f"text/models/llm/causallm/{model_name}")
             
             self.update_llm_generator_settings(
                 model_path=model_path,
                 model_version=model_name,
                 model_id=model_id,  # Save the provider config model ID
             )
-            
-            # Emit signal that model changed (will trigger reload/download)
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": model_path, "model_name": model_name},
-            )
+
+            self._emit_llm_model_changed_signal(model_path, model_name)
         else:
             # Ollama or OpenRouter - just update model_version
             self.update_llm_generator_settings(
@@ -1509,12 +1889,8 @@ class ChatPromptWidget(BaseWidget):
                 model_path="",  # Not used for remote providers
                 model_id=model_id,  # Save the model ID
             )
-            
-            # Emit signal
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": "", "model_name": model_id},
-            )
+
+            self._emit_llm_model_changed_signal("", model_id)
         
         # Update thinking checkbox visibility based on new model
         self._update_thinking_checkbox_visibility()
@@ -1522,9 +1898,6 @@ class ChatPromptWidget(BaseWidget):
         # Update context tokens
         self._refresh_model_context_tokens()
         
-        # Update precision dropdown for new model
-        self._populate_precision_dropdown()
-
     @Slot(int)
     def on_precision_changed(self, index: int) -> None:
         """Handle precision selection change from dropdown.
@@ -1544,14 +1917,10 @@ class ChatPromptWidget(BaseWidget):
         
         self.logger.info(f"Precision changed to: {precision}")
         self.update_llm_generator_settings(dtype=precision)
-        
-        # Emit signal to reload model with new precision
-        self.emit_signal(
-            SignalCode.LLM_MODEL_CHANGED,
-            {
-                "model_path": getattr(self.llm_generator_settings, "model_path", ""),
-                "model_name": getattr(self.llm_generator_settings, "model_version", ""),
-            },
+
+        self._emit_llm_model_changed_signal(
+            getattr(self.llm_generator_settings, "model_path", ""),
+            getattr(self.llm_generator_settings, "model_version", ""),
         )
 
     def _populate_precision_dropdown(self) -> None:
@@ -1682,7 +2051,21 @@ class ChatPromptWidget(BaseWidget):
         """Handle custom model entry for any provider."""
         if provider == ModelService.LOCAL.value:
             # Could be a path or HuggingFace repo ID
-            if "/" in custom_model and not os.path.exists(custom_model):
+            resolved_model_id = LLMProviderConfig.resolve_model_id(
+                "local",
+                custom_model,
+            )
+            if resolved_model_id:
+                model_info = LLMProviderConfig.get_model_info(
+                    "local",
+                    resolved_model_id,
+                )
+                model_name = model_info.get("name", resolved_model_id)
+                model_path = self._get_local_model_storage_path(
+                    resolved_model_id,
+                    str(model_info.get("repo_id", custom_model)),
+                )
+            elif "/" in custom_model and not os.path.exists(custom_model):
                 # Likely a HuggingFace repo ID
                 base_path = os.path.expanduser(
                     getattr(self.path_settings, "base_path", "~/.local/share/airunner")
@@ -1699,20 +2082,14 @@ class ChatPromptWidget(BaseWidget):
                 model_path=model_path,
                 model_version=model_name,
             )
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": model_path, "model_name": model_name},
-            )
+            self._emit_llm_model_changed_signal(model_path, model_name)
         else:
             # Ollama or OpenRouter - just set the model name
             self.update_llm_generator_settings(
                 model_version=custom_model,
                 model_path="",
             )
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": "", "model_name": custom_model},
-            )
+            self._emit_llm_model_changed_signal("", custom_model)
 
     def _on_custom_model_entered(self) -> None:
         """Handle when user presses Enter after typing a custom model."""
@@ -1730,12 +2107,64 @@ class ChatPromptWidget(BaseWidget):
                 return
         
         # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        provider = self._current_model_service()
         
         # Handle as custom model
         self._handle_custom_model(provider, custom_text)
+
+    def _populate_reasoning_effort_dropdown(self) -> None:
+        """Populate the GPT-OSS reasoning-effort selector."""
+        if not hasattr(self.ui, "reasoning_effort_dropdown"):
+            return
+
+        dropdown = self.ui.reasoning_effort_dropdown
+        dropdown.blockSignals(True)
+        dropdown.clear()
+        dropdown.addItem("Low", "low")
+        dropdown.addItem("Med", "medium")
+        dropdown.addItem("High", "high")
+
+        current_effort = str(
+            getattr(self.llm_generator_settings, "reasoning_effort", "medium")
+            or "medium"
+        ).strip().lower()
+        if current_effort not in {"low", "medium", "high"}:
+            current_effort = "medium"
+
+        for index in range(dropdown.count()):
+            if dropdown.itemData(index) == current_effort:
+                dropdown.setCurrentIndex(index)
+                break
+
+        dropdown.blockSignals(False)
+
+    @Slot(int)
+    def on_reasoning_effort_changed(self, index: int) -> None:
+        """Persist one GPT-OSS reasoning-effort selection."""
+        if index < 0 or not hasattr(self.ui, "reasoning_effort_dropdown"):
+            return
+
+        effort = self.ui.reasoning_effort_dropdown.itemData(index)
+        if effort not in {"low", "medium", "high"}:
+            return
+
+        self.update_llm_generator_settings(reasoning_effort=effort)
+
+    def _current_model_service(self) -> str:
+        """Return the current model-service setting used by the footer."""
+        provider = getattr(
+            self.llm_generator_settings,
+            "model_service",
+            ModelService.LOCAL.value,
+        )
+        provider = str(provider or ModelService.LOCAL.value).strip().lower()
+        if provider in {
+            ModelService.LOCAL.value,
+            ModelService.OLLAMA.value,
+            ModelService.OPENROUTER.value,
+        }:
+            return provider
+        return ModelService.LOCAL.value
 
     def on_section_changed_signal(self, data: Dict) -> None:
         """Track the currently active main window section."""
@@ -1753,11 +2182,9 @@ class ChatPromptWidget(BaseWidget):
         index_to_section = {
             0: "home_button",
             1: "art_editor_button",
-            2: "workflow_editor_button",
-            3: "document_editor_button",
-            4: "calendar_button",
+            2: "document_editor_button",
         }
-        return index_to_section.get(index)
+        return index_to_section.get(index, "home_button")
 
     # =========================================================================
     # Image Attachment Methods
@@ -1997,7 +2424,7 @@ class ChatPromptWidget(BaseWidget):
         return self._active_section == "art_editor_button"
 
     def eventFilter(self, obj, event) -> bool:
-        """Handle events for installed event filters (prompt drag-drop).
+        """Handle prompt submission and prompt drag-drop events.
         
         Args:
             obj: The object receiving the event.
@@ -2006,6 +2433,12 @@ class ChatPromptWidget(BaseWidget):
         Returns:
             True if event was handled, False otherwise.
         """
+        if hasattr(self.ui, "prompt") and obj is self.ui.prompt:
+            if self._is_prompt_submit_keypress(event):
+                if not self._disabled:
+                    self.do_generate()
+                return True
+
         # Handle drag events on prompt viewport
         if hasattr(self.ui, "prompt") and obj is self.ui.prompt.viewport():
             if event.type() == event.Type.DragEnter:

@@ -22,7 +22,31 @@ fi
 
 # Get the actual user (not root when using sudo)
 ACTUAL_USER=${SUDO_USER:-$USER}
+ACTUAL_GROUP=$(id -gn "$ACTUAL_USER")
 AIRUNNER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
+find_bundle_python() {
+    local candidates=(
+        "${AIRUNNER_PYTHON:-}"
+        "$AIRUNNER_DIR/venv/bin/python"
+        "$AIRUNNER_DIR/.venv/bin/python"
+        "$AIRUNNER_DIR/bin/python"
+    )
+    local candidate
+
+    for candidate in "${candidates[@]}"; do
+        if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+escape_sed_replacement() {
+    printf '%s' "$1" | sed 's/[&]/\\&/g'
+}
 
 echo -e "${YELLOW}Configuration:${NC}"
 echo "  User: $ACTUAL_USER"
@@ -35,79 +59,57 @@ if [ ! -d "$AIRUNNER_DIR" ]; then
     exit 1
 fi
 
-# Check if virtual environment exists
-if [ ! -f "$AIRUNNER_DIR/.venv/bin/python" ]; then
-    echo -e "${RED}Error: Virtual environment not found at $AIRUNNER_DIR/.venv${NC}"
-    echo "Please create a virtual environment first:"
-    echo "  cd $AIRUNNER_DIR"
-    echo "  python -m venv .venv"
-    echo "  source .venv/bin/activate"
-    echo "  pip install -e ."
+# Check if bundle Python exists
+if ! BUNDLE_PYTHON=$(find_bundle_python); then
+    echo -e "${RED}Error: No bundle Python found under $AIRUNNER_DIR${NC}"
+    echo "Expected one of:"
+    echo "  $AIRUNNER_DIR/venv/bin/python"
+    echo "  $AIRUNNER_DIR/.venv/bin/python"
+    echo "  $AIRUNNER_DIR/bin/python"
     exit 1
 fi
 
-SYSTEM_LOG=0
-# Parse CLI options
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --system-log)
-            SYSTEM_LOG=1
-            shift
-            ;;
-        *)
-            shift
-            ;;
-    esac
-done
+BUNDLE_ROOT="${AIRUNNER_BUNDLE_ROOT:-$AIRUNNER_DIR}"
+BUNDLE_BIN_DIR="$(dirname "$BUNDLE_PYTHON")"
+
+DATA_DIR="${AIRUNNER_DATA_DIR:-/home/$ACTUAL_USER/.local/share/airunner}"
+RUNTIME_DIR="$DATA_DIR/runtime"
+RUNTIME_CONFIG_DIR="$RUNTIME_DIR/configs"
+RUNTIME_LOG_DIR="$RUNTIME_DIR/logs"
+RUNTIME_SOCKET_DIR="$RUNTIME_DIR/sockets"
+CACHE_DIR="$DATA_DIR/cache"
+MODEL_DIR="$DATA_DIR/models"
+DAEMON_CONFIG="$RUNTIME_CONFIG_DIR/daemon.yaml"
 
 # Copy service file
 echo -e "${YELLOW}Installing systemd service file...${NC}"
 cp "$AIRUNNER_DIR/deployment/systemd/airunner-headless.service" /etc/systemd/system/
 
-# Update user in service file
-echo -e "${YELLOW}Updating service file with correct user and paths...${NC}"
-sed -i "s|User=airunner|User=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|Group=airunner|Group=$ACTUAL_USER|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|WorkingDirectory=/opt/airunner|WorkingDirectory=$AIRUNNER_DIR|g" /etc/systemd/system/airunner-headless.service
-sed -i "s|ExecStart=/opt/airunner/.venv/bin/python|ExecStart=$AIRUNNER_DIR/.venv/bin/python|g" /etc/systemd/system/airunner-headless.service
-if [ "$SYSTEM_LOG" -eq 1 ]; then
-    LOG_DIR="/var/log/airunner"
-    LOG_FILE="$LOG_DIR/headless.log"
-else
-    LOG_DIR="/home/$ACTUAL_USER/.local/share/airunner"
-    LOG_FILE="$LOG_DIR/headless.log"
-fi
-# Update service to use user's log path
-sed -i "s|Environment=\"AIRUNNER_LOG_FILE=/var/log/airunner/headless.log\"|Environment=\"AIRUNNER_LOG_FILE=$LOG_FILE\"|g" /etc/systemd/system/airunner-headless.service
+# Render the relocatable service template
+echo -e "${YELLOW}Rendering service file with bundle paths...${NC}"
+sed -i \
+    -e "s|__AIRUNNER_USER__|$(escape_sed_replacement "$ACTUAL_USER")|g" \
+    -e "s|__AIRUNNER_GROUP__|$(escape_sed_replacement "$ACTUAL_GROUP")|g" \
+    -e "s|__AIRUNNER_BUNDLE_ROOT__|$(escape_sed_replacement "$BUNDLE_ROOT")|g" \
+    -e "s|__AIRUNNER_BIN_DIR__|$(escape_sed_replacement "$BUNDLE_BIN_DIR")|g" \
+    -e "s|__AIRUNNER_PYTHON__|$(escape_sed_replacement "$BUNDLE_PYTHON")|g" \
+    -e "s|__AIRUNNER_DATA_DIR__|$(escape_sed_replacement "$DATA_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_ROOT__|$(escape_sed_replacement "$RUNTIME_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_CONFIG_DIR__|$(escape_sed_replacement "$RUNTIME_CONFIG_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_LOG_DIR__|$(escape_sed_replacement "$RUNTIME_LOG_DIR")|g" \
+    -e "s|__AIRUNNER_RUNTIME_SOCKET_DIR__|$(escape_sed_replacement "$RUNTIME_SOCKET_DIR")|g" \
+    -e "s|__AIRUNNER_CACHE_DIR__|$(escape_sed_replacement "$CACHE_DIR")|g" \
+    -e "s|__AIRUNNER_MODEL_DIR__|$(escape_sed_replacement "$MODEL_DIR")|g" \
+    -e "s|__AIRUNNER_DAEMON_CONFIG__|$(escape_sed_replacement "$DAEMON_CONFIG")|g" \
+    /etc/systemd/system/airunner-headless.service
 
-# Ensure log directory exists and is owned by the service user
-mkdir -p "$LOG_DIR"
-if [ "$SYSTEM_LOG" -eq 1 ]; then
-    # /var/log typically owned by root; ensure proper permissions for service user
-    chown root:root "$LOG_DIR" || true
-    chmod 755 "$LOG_DIR" || true
-    # Create log file and set owner to service user so non-root service can write
-    touch "$LOG_FILE"
-    chown "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_FILE"
-    chmod 644 "$LOG_FILE"
-else
-    chown -R "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_DIR"
-    touch "$LOG_FILE"
-    chown "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_FILE"
-    chmod 644 "$LOG_FILE"
-fi
-touch "$LOG_FILE"
-chown "$ACTUAL_USER":"$ACTUAL_USER" "$LOG_FILE"
-chmod 644 "$LOG_FILE"
-chmod 755 "$LOG_DIR"
-
-# Ensure AIRUNNER_SAVE_LOG_TO_FILE and DEV_ENV set in the service for production
-if ! grep -q "AIRUNNER_SAVE_LOG_TO_FILE" /etc/systemd/system/airunner-headless.service; then
-    sed -i "/Environment=\"AIRUNNER_LOG_LEVEL/ a Environment=\"AIRUNNER_SAVE_LOG_TO_FILE=1\"" /etc/systemd/system/airunner-headless.service
-fi
-if ! grep -q "DEV_ENV" /etc/systemd/system/airunner-headless.service; then
-    sed -i "/Environment=\"AIRUNNER_SAVE_LOG_TO_FILE/ a Environment=\"DEV_ENV=0\"" /etc/systemd/system/airunner-headless.service
-fi
+# Ensure runtime directories exist and are owned by the service user
+mkdir -p "$DATA_DIR" "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR"
+mkdir -p "$RUNTIME_LOG_DIR" "$RUNTIME_SOCKET_DIR"
+mkdir -p "$CACHE_DIR" "$MODEL_DIR"
+chown -R "$ACTUAL_USER":"$ACTUAL_USER" "$DATA_DIR"
+chmod 700 "$RUNTIME_DIR" "$RUNTIME_CONFIG_DIR" "$RUNTIME_LOG_DIR"
+chmod 700 "$RUNTIME_SOCKET_DIR" "$CACHE_DIR" "$MODEL_DIR"
 
 # Reload systemd
 echo -e "${YELLOW}Reloading systemd...${NC}"

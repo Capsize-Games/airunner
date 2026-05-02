@@ -79,6 +79,8 @@ class LLMRequest:
     # Request-level thinking toggle (Qwen3-style <think> blocks).
     # None means "use the global DB/default setting".
     enable_thinking: Optional[bool] = None
+    # GPT-OSS reasoning effort override for runtimes without a native API knob.
+    reasoning_effort: Optional[str] = None
     model: str = ""
     # Request-level backend selection (used by headless API)
     model_service: Optional[str] = None  # local | openrouter | ollama
@@ -143,6 +145,7 @@ class LLMRequest:
         data.pop("model_service", None)
         data.pop("api_model", None)
         data.pop("dtype", None)
+        data.pop("reasoning_effort", None)
         # Prompt augmentation toggles are consumed by workflow setup, not passed to the model
         data.pop("include_mood", None)
         data.pop("include_datetime", None)
@@ -265,7 +268,7 @@ class LLMRequest:
             llm_settings = LLMGeneratorSettings.objects.first()
 
         if llm_settings.override_parameters:
-            return cls.from_values(
+            request = cls.from_values(
                 do_sample=llm_settings.do_sample,
                 early_stopping=llm_settings.early_stopping,
                 eta_cutoff=llm_settings.eta_cutoff,
@@ -282,7 +285,19 @@ class LLMRequest:
                 use_cache=llm_settings.use_cache,
             )
         else:
-            return cls.from_chatbot(get_chatbot().id)
+            request = cls.from_chatbot(get_chatbot().id)
+
+        request.enable_thinking = getattr(
+            llm_settings,
+            "enable_thinking",
+            True,
+        )
+        request.reasoning_effort = getattr(
+            llm_settings,
+            "reasoning_effort",
+            "medium",
+        )
+        return request
 
     @classmethod
     def from_default(cls) -> "LLMRequest":
@@ -324,7 +339,7 @@ class LLMRequest:
                 max_new_tokens=8192,  # Qwen2.5 generation limit
                 top_k=20,  # Qwen3 recommended
                 top_p=0.8,  # Qwen3 non-thinking mode recommended
-                tool_categories=[],  # No tools by default for chat - enable explicitly when needed
+                tool_categories=None,  # Allow auto tool routing for chat when needed
             )
 
         elif action == LLMActionType.CODE:

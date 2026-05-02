@@ -2,20 +2,17 @@
 
 import pytest
 
-# Qt imports
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.usefixtures("qapp"),
+]
+
 try:
-    from PySide6.QtWidgets import QApplication
-    import sys
-
-    # Create QApplication if it doesn't exist
-    if not QApplication.instance():
-        app = QApplication(sys.argv)
-except ImportError:
-    pytest.skip("PySide6 not available", allow_module_level=True)
-
-from airunner.components.application.gui.widgets.searchable_combo_box import (
-    SearchableComboBox,
-)
+    from airunner.components.application.gui.widgets.searchable_combo_box import (
+        SearchableComboBox,
+    )
+except ImportError as exc:
+    pytest.skip(str(exc), allow_module_level=True)
 
 
 class TestSearchableComboBox:

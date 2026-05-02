@@ -21,7 +21,7 @@ def _aggressive_memory_cleanup():
     gc.collect()
     gc.collect()
     gc.collect()
-    
+
     if torch.cuda.is_available():
         # Synchronize to ensure all GPU ops are done
         torch.cuda.synchronize()
@@ -33,6 +33,14 @@ def _aggressive_memory_cleanup():
     
     # Final gc passes
     gc.collect()
+    gc.collect()
+
+
+def _incremental_memory_cleanup():
+    """Run lightweight cleanup between repeated generations."""
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     gc.collect()
 
 
@@ -341,8 +349,9 @@ class ZImageGenerationMixin:
                 if hasattr(module, "_cached_key_values"):
                     module._cached_key_values = None
         
-        # Run memory cleanup
-        _aggressive_memory_cleanup()
+        # Keep per-request cleanup lightweight so repeated generations
+        # do not pay unload-grade synchronization costs every time.
+        _incremental_memory_cleanup()
 
     def _generate(self):
         """Override to add cleanup after Z-Image generation."""
@@ -351,7 +360,7 @@ class ZImageGenerationMixin:
             if self._pipe and hasattr(self._pipe, "scheduler") and hasattr(self._pipe.scheduler, "config"):
                 karras = self._pipe.scheduler.config.get("use_karras_sigmas", False)
                 stochastic = self._pipe.scheduler.config.get("stochastic_sampling", False)
-                self.logger.info(
+                self.logger.debug(
                     "[ZIMAGE SCHEDULER DEBUG] generate() using %s (karras=%s, stochastic=%s)",
                     self._pipe.scheduler.__class__.__name__,
                     karras,
@@ -363,7 +372,6 @@ class ZImageGenerationMixin:
             super()._generate()
         finally:
             self._clear_pipeline_caches()
-            clear_memory()
             self.logger.debug("[Z-IMAGE CLEANUP] Memory freed")
 
     def _get_results(self, data):

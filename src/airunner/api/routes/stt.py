@@ -1,25 +1,25 @@
-"""
-Speech-to-Text endpoints.
+"""Speech-to-text routes backed by the runtime registry."""
 
-Integrates with STTAPIService for audio transcription.
-"""
-import asyncio
-from typing import Optional, List
+import base64
+from typing import List, Optional
+
 from fastapi import (
     APIRouter,
     File,
+    HTTPException,
+    Request,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
-    HTTPException,
-    Request,
 )
 from pydantic import BaseModel
 
+from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
+from airunner.runtimes.base import RuntimeClient
+from airunner.runtimes.contracts import RuntimeAction, RuntimeKind
+from airunner.runtimes.registry import RuntimeRegistry
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.enums import SignalCode
-from airunner.utils.application.signal_mediator import SignalMediator
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
@@ -50,12 +50,33 @@ class ModelInfo(BaseModel):
 # ====================
 
 
-def get_stt_service(request: Request):
-    """Get STTAPIService from FastAPI app state."""
-    if hasattr(request.app.state, "airunner_app"):
-        from airunner.components.stt.api.stt_services import STTAPIService
-        return STTAPIService()
-    return None
+def get_runtime_registry(request: Request) -> Optional[RuntimeRegistry]:
+    """Return the runtime registry stored on app state when available."""
+    return getattr(request.app.state, "runtime_registry", None)
+
+
+def require_runtime_registry(request: Request) -> RuntimeRegistry:
+    """Return the runtime registry or raise when STT is unavailable."""
+    runtime_registry = get_runtime_registry(request)
+    if runtime_registry is None:
+        raise HTTPException(status_code=503, detail="STT runtime unavailable")
+    return runtime_registry
+
+
+def resolve_stt_client(registry: RuntimeRegistry) -> RuntimeClient:
+    """Resolve the configured local STT runtime client."""
+    try:
+        return registry.resolve(RuntimeKind.STT, provider="local")
+    except KeyError as exc:
+        raise HTTPException(status_code=503, detail="STT runtime unavailable") from exc
+
+
+def _runtime_error_status(response) -> int:
+    """Map runtime envelope failures to HTTP status codes."""
+    error = response.error
+    if error and error.code.endswith("_timeout"):
+        return 504
+    return 500
 
 
 # ====================
@@ -77,59 +98,31 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
     """
     logger.info(f"STT request: {audio.filename}")
 
-    stt_service = get_stt_service(req)
-    if not stt_service:
-        raise HTTPException(
-            status_code=503, detail="STT service not available"
-        )
-
     try:
-        # Read audio file
         audio_data = await audio.read()
-
-        # Create future for transcription
-        transcription_future = asyncio.Future()
-
-        def on_transcription_complete(data: dict):
-            """Callback for transcription completion."""
-            text = data.get("text")
-            language = data.get("language")
-            if text and not transcription_future.done():
-                transcription_future.set_result(
-                    {"text": text, "language": language}
-                )
-
-        # Register signal handler
-        mediator = SignalMediator()
-        mediator.register(
-            SignalCode.STT_COMPLETE_SIGNAL, on_transcription_complete
+        client = resolve_stt_client(require_runtime_registry(req))
+        response = client.invoke(
+            RequestEnvelope(
+                runtime=RuntimeKind.STT,
+                action=RuntimeAction.INVOKE,
+                provider="local",
+                payload={
+                    "audio_b64": base64.b64encode(audio_data).decode("ascii"),
+                    "mime_type": audio.content_type or "application/octet-stream",
+                },
+            )
         )
-
-        try:
-            # Emit STT request
-            stt_service.emit_signal(
-                SignalCode.STT_TRANSCRIBE_SIGNAL,
-                {"audio_data": audio_data, "filename": audio.filename},
+        if response.status is not EnvelopeStatus.SUCCEEDED:
+            raise HTTPException(
+                status_code=_runtime_error_status(response),
+                detail=response.error.message
+                if response.error
+                else "STT request failed",
             )
-
-            # Wait for transcription (with timeout)
-            try:
-                result = await asyncio.wait_for(
-                    transcription_future, timeout=120.0
-                )
-            except asyncio.TimeoutError:
-                raise HTTPException(
-                    status_code=504, detail="STT request timed out"
-                )
-
-            return TranscriptionResponse(
-                text=result["text"], language=result.get("language")
-            )
-
-        finally:
-            mediator.unregister(
-                SignalCode.STT_COMPLETE_SIGNAL, on_transcription_complete
-            )
+        return TranscriptionResponse(
+            text=response.payload.get("text", ""),
+            language=response.payload.get("language"),
+        )
 
     except HTTPException:
         raise
@@ -192,6 +185,10 @@ async def websocket_transcription(websocket: WebSocket):
     logger.info("STT WebSocket connection established")
 
     try:
+        from airunner.components.stt.api.stt_services import STTAPIService
+        from airunner.enums import SignalCode
+        from airunner.utils.application.signal_mediator import SignalMediator
+
         stt_service = STTAPIService()
         mediator = SignalMediator()
 

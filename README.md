@@ -53,6 +53,21 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 
 ## 💾 Installation
 
+Current status:
+The hybrid-runtime branch completed the runtime refactor, and AIRunner now
+has embedded-Python bundle builders and installer packagers.
+
+Available packaging paths:
+- Linux staged bundle archive: `./scripts/build_airunner_bundle.sh`
+- Linux AppImage wrapper: `./scripts/package_linux_appimage.sh`
+- Linux tarball installer: `./install.sh --bundle-archive <bundle.tar.gz>`
+- Windows bundle staging: `python src/airunner/bin/build_end_user_bundle.py`
+- Windows NSIS installer: `pwsh ./scripts/package_windows_nsis.ps1`
+
+The manual and Docker paths below are still useful developer/operator
+installation flows. The bundled end-user packaging contract is summarized in
+[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
+
 ### Docker (Recommended)
 
 **GUI Mode:**
@@ -67,6 +82,15 @@ docker compose run --rm --service-ports airunner --headless
 
 > **Note:** `--service-ports` is required to expose port 8080 for the API.
 
+To trim container dependencies for a specific deployment, rebuild with a
+profile list such as:
+
+```bash
+docker build \
+  --build-arg AIRUNNER_INSTALL_PROFILES=core,llm-native,stt-native \
+  -t airunner:headless .
+```
+
 The headless server exposes an HTTP API on port 8080 with endpoints:
 - `GET /health` - Health check and service status
 - `POST /llm` - LLM inference
@@ -79,9 +103,10 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
 1. **Install system dependencies:**
    ```bash
    sudo apt update && sudo apt install -y \
-     build-essential cmake git curl wget \
+     build-essential cmake git curl wget pkg-config \
      nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 \
      espeak espeak-ng-espeak qt6-qpa-plugins qt6-wayland \
+     libsentencepiece-dev \
      mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
    ```
 
@@ -90,27 +115,93 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
    mkdir -p ~/.local/share/airunner
    ```
 
-3. **Install AI Runner:**
+3. **Choose the package profiles you need:**
+
+   - `core`: shared API, storage, config, and runtime plumbing
+   - `llm-native`: local llama.cpp runtime and LLM toolchain
+   - `stt-native`: local STT runtime helpers
+   - `art-python`: Python image-generation runtimes
+   - `tts-python`: Python TTS runtimes without MeCab-backed language packs
+   - `gui`: desktop UI dependencies
+   - `development`: test, lint, and packaging tooling
+
+4. **Install AI Runner:**
+
+  From PyPI:
    ```bash
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install airunner[all_dev]
+   pip install \
+     "airunner[core,llm-native,stt-native,art-python,tts-python,gui]"
    ```
 
-4. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
+  For a headless-only install, omit the GUI profile:
   ```bash
-  CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
-    pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
+  pip install \
+    "airunner[core,llm-native,stt-native,art-python,tts-python]"
   ```
-  - Uses GGML_CUDA (CUBLAS flag is deprecated).
-  - `90` matches RTX 5080 class GPUs; drop `-DGGML_CUDA_ARCHITECTURES` if you are unsure and let it auto-detect.
-  - On Python 3.12 you may instead use the prebuilt wheel: `--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"`.
 
-4. **Run:**
+  From a local clone in editable mode:
+  ```bash
+  git clone https://github.com/Capsize-Games/airunner.git
+  cd airunner
+  python -m venv venv
+  source venv/bin/activate
+  pip install --upgrade pip setuptools wheel
+  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+  pip install -e \
+    ".[core,llm-native,stt-native,art-python,tts-python,gui,development]"
+  ```
+
+  The base `tts-python` profile intentionally excludes the MeCab-backed
+  Japanese and Korean voice packs so a fresh virtual environment can install
+  without extra native build steps.
+
+  To include those language packs after installing the system packages above, use:
+  ```bash
+  pip install -e ".[openvoice_jp,openvoice_kr]"
+  ```
+
+5. **Install llama-cpp-python with CUDA (Python 3.13, Linux):**
+  ```bash
+  pip install --no-cache-dir \
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
+    "llama-cpp-python==0.3.21"
+  ```
+  - This is the verified runtime for `Qwen3.5-9B-Q8_0.gguf` in this repo.
+  - The `cu124` wheel enables GPU offload on Linux without rebuilding from source.
+  - If you must build from source for an RTX 5080 / compute capability 12.0, use CUDA toolkit 12.8+ and `GGML_CUDA_ARCHITECTURES=120`.
+
+6. **Run:**
    ```bash
    airunner
    ```
 
+### Alembic Upgrades
+
+When you need to run database migrations manually from a local clone, use the
+repo Alembic config and upgrade all heads:
+
+```bash
+source venv/bin/activate
+alembic -c src/airunner/alembic.ini upgrade heads
+```
+
+If you are targeting a non-default database, set `AIRUNNER_DATABASE_URL`
+before running the command.
+
 For detailed instructions, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+## Hybrid Runtime Migration
+
+The hybrid-runtime rewrite is being delivered in explicit phases: runtime
+foundation, LLM cutover, STT isolation, art/TTS isolation, then packaging,
+bundles, CI, and rollout hardening. The phase order, rollout gates, and full
+issue-tree checklist live in [HYBRID_RUNTIME_MIGRATION.md](./HYBRID_RUNTIME_MIGRATION.md).
+
+That migration is the runtime architecture foundation. AIRunner now also
+includes the no-system-Python distribution layer with one primary
+`airunner` entry point, described in
+[END_USER_DISTRIBUTION.md](./END_USER_DISTRIBUTION.md).
 
 ---
 
@@ -165,7 +256,7 @@ AI Runner can run as a headless HTTP API server, enabling remote access to LLM, 
 airunner-headless
 
 # Start with a specific LLM model
-airunner-headless --model /path/to/Qwen2.5-7B-Instruct-4bit
+airunner-headless --model "/path/to/Qwen2.5-7B-Instruct-4bit"
 
 # Run as Ollama replacement for VS Code (port 11434)
 airunner-headless --ollama-mode
@@ -182,10 +273,10 @@ airunner-headless --no-preload
 | `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
 | `--ollama-mode` | Run as Ollama replacement on port 11434 |
 | `--insecure-no-auth` | Allow binding to non-loopback without `AIRUNNER_API_KEY` (not recommended) |
-| `--model, -m PATH` | Path to LLM model to load |
-| `--art-model PATH` | Path to Stable Diffusion model to load |
-| `--tts-model PATH` | Path to TTS model to load |
-| `--stt-model PATH` | Path to STT model to load |
+| `--model, -m PATH` | Path to LLM model to load. Also enables the LLM service. Quote paths that contain spaces. |
+| `--art-model PATH` | Path to Stable Diffusion model to load. Also enables the art service. Quote paths that contain spaces. |
+| `--tts-model PATH` | Path to TTS model to load. Also enables the TTS service. Quote paths that contain spaces. |
+| `--stt-model PATH` | Path to STT model to load. Also enables the STT service. Quote paths that contain spaces. |
 | `--enable-llm` | Enable LLM service |
 | `--enable-art` | Enable Stable Diffusion/art service |
 | `--enable-tts` | Enable TTS service |
@@ -297,8 +388,13 @@ curl -X POST http://localhost:8080/stt \
 
 1. Start the headless server in Ollama mode:
    ```bash
-   airunner-headless --ollama-mode --model /path/to/your/model
+  airunner-headless --ollama-mode --model "/path/to/your/model"
    ```
+
+If a model path contains spaces, quote it. For example:
+```bash
+airunner-headless --enable-art --art-model "/home/joe/.local/share/airunner/art/models/Z-Image Turbo/txt2img/moodyRealMix_zitV3FP8.safetensors"
+```
 
 2. Configure VS Code Continue extension to use `http://localhost:11434`
 

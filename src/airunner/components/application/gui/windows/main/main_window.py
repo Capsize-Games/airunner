@@ -1,11 +1,8 @@
 import os
-import re
 import sys
-import urllib
+import threading
+import time
 import webbrowser
-import ipaddress
-import socket
-import uuid
 from functools import partial
 from typing import Dict, Optional
 
@@ -37,7 +34,6 @@ from airunner.components.application.gui.windows.main.worker_manager import (
 from airunner.components.application.gui.windows.wayland_helper import (
     enable_wayland_window_decorations,
 )
-import requests
 from PIL import Image
 from PySide6.QtCore import (
     Slot,
@@ -51,12 +47,9 @@ from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QInputDialog,
     QMenu,
 )
 from PySide6.QtGui import QIcon
-
-from bs4 import BeautifulSoup
 
 from airunner.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
@@ -69,7 +62,6 @@ from airunner.settings import (
 )
 from airunner.utils.application import create_worker
 from airunner.utils.settings import get_qsettings
-from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.app_installer import AppInstaller
@@ -176,8 +168,11 @@ class MainWindow(
     load_image_object = Signal(object)
     loaded = Signal()
     window_opened = Signal()
+    daemon_runtime_status_ready = Signal(object)
     ui_class_ = Ui_MainWindow
     _window_title = f"AI Runner"
+    _daemon_status_request_timeout_seconds = 0.75
+    _runtime_preference_retry_seconds = 5.0
     icons = [
         ("settings", "actionSettings"),
         ("cpu", "actionToggle_LLM"),
@@ -209,24 +204,12 @@ class MainWindow(
         ("message-square", "actionDiscord"),
         ("download", "actionImport_image"),
         ("upload", "actionExport_image_button"),
-        ("codesandbox", "menuWorkflow"),
-        ("trash-2", "workflow_actionClear"),
-        ("edit", "workflow_actionEdit"),
-        ("folder", "workflow_actionOpen"),
-        ("pause-circle", "workflow_actionPause"),
-        ("play", "workflow_actionRun"),
-        ("save", "workflow_actionSave"),
-        ("stop-circle", "workflow_actionStop"),
         ("save", "actionSave_As"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
-        ("calendar", "calendar_button"),
-        ("codesandbox", "workflow_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
-        ("radio", "visualizer_button"),
-        ("video", "video_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
         ("file-text", "menuDocuments"),
@@ -236,12 +219,16 @@ class MainWindow(
 
     def __init__(self, *args, **kwargs):
         self.quitting = False
+        self._launcher_splash_dismissed = False
+        self._post_startup_status_refresh_requested = False
         self._state_restored = None
+        self._pending_startup_button_name = None
+        self._restore_knowledgebase_after_startup = False
+        self._daemon_status_refresh_inflight = False
+        self._runtime_preference_retry_after = {}
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
-        self.tab_backup = {}
-        self.workflow_tab = None
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -288,13 +275,15 @@ class MainWindow(
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
             SignalCode.REFRESH_STYLESHEET_SIGNAL: self.on_theme_changed_signal,
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL: self.on_ai_models_save_or_update_signal,
-            SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
-            SignalCode.ENABLE_WORKFLOWS_TOGGLED: self.on_enable_workflows_toggled,
             SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
         }
         super().__init__()
+        self.daemon_runtime_status_ready.connect(
+            self._on_daemon_runtime_status_ready
+        )
         self.logger.debug("Starting AI Runnner")
         enable_wayland_window_decorations(self)
         
@@ -306,16 +295,11 @@ class MainWindow(
         self.update_application_settings(
             sd_enabled=False,
             llm_enabled=False,
-            tts_enabled=False,
-            stt_enabled=False,
             controlnet_enabled=False,
         )
         self.single_click_timer = QTimer(self)
         self.single_click_timer.setSingleShot(True)
         self.single_click_timer.timeout.connect(self.handle_single_click)
-        plugins_path = os.path.join(self.path_settings.base_path, "plugins")
-        if plugins_path not in sys.path:
-            sys.path.append(plugins_path)
         self._updating_settings = True
         self._updating_settings = False
         self.worker_manager = create_worker(WorkerManager)
@@ -324,7 +308,14 @@ class MainWindow(
             logger=getattr(self, "logger", None),
             api=self.api,
         )
+        if self.api is not None:
+            self.api.model_load_balancer = self.model_load_balancer
+        self._daemon_status_timer = QTimer(self)
+        self._daemon_status_timer.timeout.connect(
+            self._refresh_model_status_from_daemon
+        )
         self.initialize_ui()
+        self._daemon_status_timer.start(1000)
         self.last_tray_click_time = 0
         self.settings_window = None
 
@@ -350,10 +341,6 @@ class MainWindow(
     def document_name(self):
         return "Untitled"
 
-    @property
-    def enable_workflows(self) -> bool:
-        return self.qsettings.value("enable_workflows") == "true"
-
     """
     Slot functions
     
@@ -367,7 +354,48 @@ class MainWindow(
 
     @Slot(bool)
     def on_knowledgebase_button_toggled(self, val: bool):
+        if val:
+            self._ensure_knowledgebase_loaded()
         self._toggle_splitter_section(val, 2, self.ui.main_window_splitter, 50)
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Restore deferred startup UI once the main window is visible."""
+        if self._restore_knowledgebase_after_startup:
+            self._restore_knowledgebase_after_startup = False
+            self._ensure_knowledgebase_loaded()
+
+        if self._pending_startup_button_name:
+            button_name = self._pending_startup_button_name
+            self._pending_startup_button_name = None
+            QTimer.singleShot(
+                0,
+                lambda: self._set_current_button_and_tab(button_name),
+            )
+
+        if self._post_startup_status_refresh_requested:
+            return
+        self._post_startup_status_refresh_requested = True
+        self._refresh_model_status_from_daemon()
+
+    def _schedule_main_window_loaded_signal(self) -> None:
+        """Schedule the post-startup signal once after the window is shown."""
+        if getattr(self, "_main_window_loaded_signal_scheduled", False):
+            return
+        self._main_window_loaded_signal_scheduled = True
+        QTimer.singleShot(0, self._emit_main_window_loaded_signal_if_ready)
+
+    def _emit_main_window_loaded_signal_if_ready(self) -> None:
+        """Emit the post-startup signal when a live API is available."""
+        if getattr(self, "_main_window_loaded_signal_emitted", False):
+            return
+        api = getattr(self, "api", None)
+        if api is None:
+            api = self.refresh_api_reference()
+        if api is None:
+            self._main_window_loaded_signal_scheduled = False
+            return
+        self._main_window_loaded_signal_emitted = True
+        api.main_window_loaded(self)
 
     def on_splitter_changed_sizes(self):
         self.set_chat_button_checked()
@@ -565,36 +593,6 @@ class MainWindow(
             SignalCode.STT_UNLOAD_SIGNAL,
             "stt_enabled",
         )
-        QApplication.processEvents()
-        self.update_application_settings(stt_enabled=val)
-
-    @Slot()
-    def on_workflow_actionClear_triggered(self):
-        self.ui.graph.clear_graph()
-
-    @Slot()
-    def on_workflow_actionRun_triggered(self):
-        self.ui.graph.run_workflow()
-
-    @Slot()
-    def on_workflow_actionEdit_triggered(self):
-        self.ui.graph.edit_workflow()
-
-    @Slot()
-    def on_workflow_actionPause_triggered(self):
-        self.ui.graph.pause_workflow()
-
-    @Slot()
-    def on_workflow_actionSave_triggered(self):
-        self.ui.graph.save_workflow()
-
-    @Slot()
-    def on_workflow_actionStop_triggered(self):
-        self.ui.graph.stop_workflow()
-
-    @Slot()
-    def on_workflow_actionOpen_triggered(self):
-        self.ui.graph.load_workflow()
 
     @Slot(bool)
     def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
@@ -784,16 +782,86 @@ class MainWindow(
         self.window_settings = updated_settings
         self.ui.center_tab_container.setCurrentIndex(index)
 
+    def _attach_lazy_widget(
+        self,
+        parent_attr,
+        layout_attr,
+        widget_attr,
+        placeholder_attr,
+        object_name,
+        factory,
+    ):
+        widget = getattr(self.ui, widget_attr, None)
+        if widget is not None:
+            return widget
+
+        layout = getattr(self.ui, layout_attr)
+        widget = factory(getattr(self.ui, parent_attr))
+        widget.setObjectName(object_name)
+        layout.addWidget(widget, 0, 0, 1, 1)
+
+        placeholder = getattr(self.ui, placeholder_attr, None)
+        if placeholder is not None:
+            layout.removeWidget(placeholder)
+            placeholder.deleteLater()
+            setattr(self.ui, placeholder_attr, None)
+
+        setattr(self.ui, widget_attr, widget)
+        return widget
+
+    def _ensure_lazy_tab_loaded(self, button_name: str) -> None:
+        """Create heavyweight tab content only when the tab is opened."""
+        if button_name == "art_editor_button":
+            from airunner.components.art.gui.widgets.canvas.canvas_widget import (
+                CanvasWidget,
+            )
+
+            self.canvas = self._attach_lazy_widget(
+                "art_tab",
+                "gridLayout_2",
+                "canvas",
+                "canvas_placeholder",
+                "canvas",
+                CanvasWidget,
+            )
+            return
+
+        if button_name == "document_editor_button":
+            from airunner.components.document_editor.gui.widgets.document_editor_container_widget import (
+                DocumentEditorContainerWidget,
+            )
+
+            self._attach_lazy_widget(
+                "document_editor_tab",
+                "gridLayout",
+                "widget",
+                "document_editor_placeholder",
+                "widget",
+                DocumentEditorContainerWidget,
+            )
+            return
+
+    def _ensure_knowledgebase_loaded(self) -> None:
+        """Create the documents pane only when it is actually shown."""
+        from airunner.components.documents.gui.widgets.documents import (
+            DocumentsWidget,
+        )
+
+        self._attach_lazy_widget(
+            "knowledgebase",
+            "gridLayout_7",
+            "documents",
+            "documents_placeholder",
+            "documents",
+            DocumentsWidget,
+        )
+
     @property
     def buttons(self) -> Dict:
         return {
             "home_button": self.ui.home_tab,
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
-            "calendar_button": self.ui.calendar_tab,
-            "workflow_editor_button": self.ui.agent_workflow_tab,
-            "visualizer_button": self.ui.visualizer_tab,
-            "video_button": self.ui.video_tab,
         }
 
     def _restore_tab(self):
@@ -813,15 +881,19 @@ class MainWindow(
         buttons = {
             0: "home_button",
             1: "art_editor_button",
-            2: "workflow_editor_button",
-            3: "document_editor_button",
-            4: "calendar_button",
+            2: "document_editor_button",
         }
 
         if saved_index in buttons:
-            self.ui.center_tab_container.setCurrentIndex(saved_index)
             button_name = buttons[saved_index]
-            getattr(self.ui, button_name).setChecked(True)
+            if saved_index == 0:
+                self.ui.center_tab_container.setCurrentIndex(saved_index)
+                getattr(self.ui, button_name).setChecked(True)
+            else:
+                self._pending_startup_button_name = button_name
+        else:
+            self.ui.center_tab_container.setCurrentIndex(0)
+            self.ui.home_button.setChecked(True)
 
     def _set_current_button_and_tab(self, button_name: str):
         """
@@ -833,6 +905,7 @@ class MainWindow(
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(btn == button_name)
             getattr(self.ui, btn).blockSignals(False)
+        self._ensure_lazy_tab_loaded(button_name)
         tab_widget = self.buttons[button_name]
         self._set_tab_index(tab_widget)
         
@@ -844,28 +917,12 @@ class MainWindow(
         self._set_current_button_and_tab("home_button")
 
     @Slot(bool)
-    def on_visualizer_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("visualizer_button")
-
-    @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("art_editor_button")
 
     @Slot(bool)
     def on_document_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("document_editor_button")
-
-    @Slot(bool)
-    def on_calendar_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("calendar_button")
-
-    @Slot(bool)
-    def on_workflow_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("workflow_editor_button")
-
-    @Slot(bool)
-    def on_video_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("video_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
@@ -897,202 +954,6 @@ class MainWindow(
     """
     End slot functions
     """
-
-    @staticmethod
-    def _is_private_or_loopback_host(hostname: Optional[str]) -> bool:
-        if not hostname:
-            return False
-
-        hn = hostname.strip().strip("[]")
-        if not hn:
-            return False
-
-        try:
-            ip = ipaddress.ip_address(hn)
-            ips = [ip]
-        except ValueError:
-            try:
-                infos = socket.getaddrinfo(hn, None)
-                ips = [ipaddress.ip_address(info[4][0]) for info in infos]
-            except Exception:
-                return False
-
-        for addr in ips:
-            if (
-                addr.is_private
-                or addr.is_loopback
-                or addr.is_link_local
-                or addr.is_multicast
-                or addr.is_reserved
-            ):
-                return True
-        return False
-
-    @staticmethod
-    def _validate_http_url(url: str) -> urllib.parse.ParseResult:
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in {"http", "https"}:
-            raise ValueError("Only http/https URLs are allowed")
-        if not parsed.netloc:
-            raise ValueError("URL must include a host")
-        return parsed
-
-    @staticmethod
-    def download_url(url, save_path):
-        parsed = MainWindow._validate_http_url(url)
-        if (
-            MainWindow._is_private_or_loopback_host(parsed.hostname)
-            and os.environ.get("AIRUNNER_ALLOW_PRIVATE_URLS") != "1"
-        ):
-            raise ValueError(
-                "Refusing to download from private/loopback hosts. "
-                "Set AIRUNNER_ALLOW_PRIVATE_URLS=1 to override."
-            )
-
-        timeout = (5, 30)
-        max_bytes = int(os.environ.get("AIRUNNER_MAX_DOWNLOAD_BYTES", str(20 * 1024 * 1024)))
-        sniff_bytes = 1024 * 1024
-
-        tmp_name = f".download-{uuid.uuid4().hex}.tmp"
-        tmp_path = os.path.join(save_path, tmp_name)
-        downloaded = 0
-        sniff = bytearray()
-
-        try:
-            with requests.get(url, timeout=timeout, stream=True) as response:
-                response.raise_for_status()
-
-                with open(tmp_path, "wb") as file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if not chunk:
-                            continue
-                        downloaded += len(chunk)
-                        if downloaded > max_bytes:
-                            raise ValueError(
-                                f"Download exceeded limit ({max_bytes} bytes)"
-                            )
-                        file.write(chunk)
-                        if len(sniff) < sniff_bytes:
-                            take = min(len(chunk), sniff_bytes - len(sniff))
-                            sniff.extend(chunk[:take])
-
-            try:
-                soup = BeautifulSoup(bytes(sniff), "html.parser")
-                title = soup.title.string if soup.title else url
-            except Exception:
-                title = url
-
-            title_words = str(title).split()[:10]
-            filename = "_".join(title_words) + ".html"
-            filename = re.sub(r"[^\w\-_]", "_", filename)
-            final_path = os.path.join(save_path, filename)
-            os.replace(tmp_path, final_path)
-            return filename
-        finally:
-            try:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-            except Exception:
-                pass
-
-    @staticmethod
-    def download_pdf(url, save_path):
-        parsed = MainWindow._validate_http_url(url)
-        if (
-            MainWindow._is_private_or_loopback_host(parsed.hostname)
-            and os.environ.get("AIRUNNER_ALLOW_PRIVATE_URLS") != "1"
-        ):
-            raise ValueError(
-                "Refusing to download from private/loopback hosts. "
-                "Set AIRUNNER_ALLOW_PRIVATE_URLS=1 to override."
-            )
-
-        timeout = (5, 60)
-        max_bytes = int(os.environ.get("AIRUNNER_MAX_DOWNLOAD_BYTES", str(50 * 1024 * 1024)))
-
-        filename = os.path.basename(parsed.path or "") or "download.pdf"
-        filename = re.sub(r"[^\w\-.]", "_", filename)
-        if not filename.lower().endswith(".pdf"):
-            filename += ".pdf"
-
-        tmp_name = f".download-{uuid.uuid4().hex}.tmp"
-        tmp_path = os.path.join(save_path, tmp_name)
-        final_path = os.path.join(save_path, filename)
-
-        downloaded = 0
-
-        try:
-            with requests.get(url, timeout=timeout, stream=True) as response:
-                response.raise_for_status()
-                with open(tmp_path, "wb") as file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if not chunk:
-                            continue
-                        downloaded += len(chunk)
-                        if downloaded > max_bytes:
-                            raise ValueError(
-                                f"Download exceeded limit ({max_bytes} bytes)"
-                            )
-                        file.write(chunk)
-
-            os.replace(tmp_path, final_path)
-            return filename
-        finally:
-            try:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-            except Exception:
-                pass
-
-    def on_navigate_to_url(self, _data: Dict = None):
-        url, ok = QInputDialog.getText(self, "Browse Web", "Enter your URL:")
-        if ok:
-            try:
-                result = urllib.parse.urlparse(url)
-                is_url = result.scheme in {"http", "https"} and bool(result.netloc)
-            except ValueError:
-                is_url = False
-
-            # If the input is a URL, download it
-            if is_url:
-                if (result.path or "").lower().endswith(".pdf"):
-                    # Handle PDF file
-                    filepath = os.path.expanduser(self.path_settings.pdf_path)
-                    filename = self.download_pdf(url, filepath)
-                else:
-                    # Handle URL
-                    filepath = os.path.expanduser(
-                        self.path_settings.webpages_path
-                    )
-                    filename = self.download_url(url, filepath)
-            elif os.path.isfile(url):
-                filepath = os.path.dirname(url)
-                filename = os.path.basename(url)
-            else:
-                self.logger.error(f"Invalid URL or file path")
-                return
-
-            # Update target files to use only the file that was downloaded or navigated to
-            # and update the index.
-            self.update_chatbot(
-                "target_files", [os.path.join(filepath, filename)]
-            )
-            if not self.api or not hasattr(self.api, "llm"):
-                self.logger.warning(
-                    "MainWindow: self.api.llm is missing. Cannot reload RAG."
-                )
-                return
-            self.api.llm.reload_rag(self.chatbot.target_files)
-            if not self.api or not hasattr(self.api, "llm"):
-                self.logger.warning(
-                    "MainWindow: self.api.llm is missing. Cannot send LLM request."
-                )
-                return
-            self.api.llm.send_request(
-                action=LLMActionType.RAG,
-                prompt="Summarize the text and provide a synopsis of the content. Be concise and informative.",
-                llm_request=LLMRequest.from_default(),
-            )
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -1167,17 +1028,20 @@ class MainWindow(
         )
 
     def initialize_ui(self):
+        total_started_at = time.perf_counter()
         self.logger.debug("Loading UI")
 
+        phase_started_at = time.perf_counter()
         self.ui.setupUi(self)
+        self.logger.info(
+            "MainWindow startup phase setup_ui completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
 
-        # Disable innactive features
-        self.ui.video_button.hide()
-        self.ui.calendar_button.hide()
-        
+        phase_started_at = time.perf_counter()
         # Add legal document menu items to Help menu
         self._add_legal_menu_items()
-        
+
         # Add Download Models menu item to Tools menu
         self._add_download_models_menu_item()
 
@@ -1193,10 +1057,27 @@ class MainWindow(
         self.ui.center_tab_container.currentChanged.connect(
             self._store_active_tab_index
         )
+        self.logger.info(
+            "MainWindow startup phase startup_state_prep completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
 
+        phase_started_at = time.perf_counter()
         self.set_stylesheet()
         self.icon_manager.set_icons()
+        self.logger.info(
+            "MainWindow startup phase styles_and_icons completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
+
+        phase_started_at = time.perf_counter()
         self.restore_state()
+        self.logger.info(
+            "MainWindow startup phase restore_state completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
+
+        phase_started_at = time.perf_counter()
         # Configure default splitter sizes to maximize the canvas area (index 1)
         default_splitter_config = {
             "main_window_splitter": {
@@ -1211,6 +1092,10 @@ class MainWindow(
             namespace="MainWindow",
         )
 
+        splitter_sizes = self.ui.main_window_splitter.sizes()
+        if len(splitter_sizes) > 2 and splitter_sizes[2] > 0:
+            self._restore_knowledgebase_after_startup = True
+
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
         if not self.api:
@@ -1219,11 +1104,27 @@ class MainWindow(
             )
             return
         self.api.clear_status_message()
+        self.logger.info(
+            "MainWindow startup phase splitter_and_status completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
+
+        phase_started_at = time.perf_counter()
         self.initialize_widget_elements()
+        self.logger.info(
+            "MainWindow startup phase initialize_widget_elements completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
         self.last_tray_click_time = 0
         self.settings_window = None
         self.hide_center_tab_header()
+
+        phase_started_at = time.perf_counter()
         self._load_plugins()
+        self.logger.info(
+            "MainWindow startup phase post_init_plugins completed in %.2fs",
+            time.perf_counter() - phase_started_at,
+        )
 
         self.ui.main_window_splitter.splitterMoved.connect(
             self.on_splitter_changed_sizes
@@ -1245,6 +1146,11 @@ class MainWindow(
                 self.logger.debug("Could not create Ctrl+N QAction shortcut")
             except Exception:
                 pass
+
+        self.logger.info(
+            "MainWindow initialize_ui completed in %.2fs",
+            time.perf_counter() - total_started_at,
+        )
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
@@ -1308,17 +1214,46 @@ class MainWindow(
             )
             self.ui.actionSafety_Checker.blockSignals(False)
             self.set_nsfw_filter_tooltip()
-
         self.initialized = True
+
+    @staticmethod
+    def _set_action_checked_state(action, checked: bool) -> None:
+        """Update one toggle without re-triggering its signal."""
+        action.blockSignals(True)
+        action.setChecked(checked)
+        action.blockSignals(False)
+
+    @staticmethod
+    def _allows_loading_toggle(model_type: ModelType) -> bool:
+        """Return True when a loading toggle may still change preference."""
+        return model_type in (ModelType.TTS, ModelType.STT)
+
+    @staticmethod
+    def _modifier_value(modifiers: object) -> int:
+        """Return a stable integer value for Qt keyboard modifiers."""
+        if modifiers is None:
+            return 0
+        value = getattr(modifiers, "value", modifiers)
+        if isinstance(value, int):
+            return value
+        return 0
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
-        for v in self.shortcut_keys:
-            if v.key == event.key():
+        try:
+            event_modifiers = self._modifier_value(event.modifiers())
+            for v in self.shortcut_keys:
+                shortcut_modifiers = int(getattr(v, "modifiers", 0) or 0)
+                if v.key != event.key():
+                    continue
+                if shortcut_modifiers != event_modifiers:
+                    continue
                 for signal in SignalCode:
                     if signal.value == v.signal:
                         self.emit_signal(signal)
-                        break
+                        return
+        except Exception:
+            self.logger.exception("Failed to process keyboard shortcut")
 
     def key_text(self, key_name):
         for shortcutkey in self.shortcut_keys:
@@ -1345,8 +1280,6 @@ class MainWindow(
         if current_active_tab_index == 1:
             self.api.art.canvas.new_document()
         elif current_active_tab_index == 2:
-            self.api.nodegraph.new_document()
-        elif current_active_tab_index == 3:
             self.api.document.new_document()
         self.api.llm.clear_history()
 
@@ -1401,6 +1334,8 @@ class MainWindow(
         if self.quitting:
             return
         self.logger.debug("Quitting")
+        if self._daemon_status_timer.isActive():
+            self._daemon_status_timer.stop()
         self.save_state()
         self.quitting = True
         if not self.api:
@@ -1413,8 +1348,7 @@ class MainWindow(
 
     def handle_quit_application_signal(self):
         self.hide()
-        QApplication.quit()
-        self.close()
+        QTimer.singleShot(0, QApplication.quit)
 
     def show_settings_path(self, name, default_path=None):
         # Note: show_path functionality removed with old agent system
@@ -1468,21 +1402,21 @@ class MainWindow(
         application_setting: str = None,
         data: Dict = None,
     ):
-        if self._model_status[model_type] is ModelStatus.LOADING:
-            val = not val
-        element.blockSignals(True)
-        element.setChecked(val)
-        element.blockSignals(False)
-        QApplication.processEvents()
+        is_loading = self._model_status[model_type] is ModelStatus.LOADING
+        if is_loading and not self._allows_loading_toggle(model_type):
+            self._set_action_checked_state(element, not val)
+            return
+        self._set_action_checked_state(element, val)
         if application_setting:
             settings_data = {}
             settings_data[application_setting] = val
             self.update_application_settings(**settings_data)
-        if self._model_status[model_type] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(load_signal, data)
-            else:
-                self.emit_signal(unload_signal, data)
+        if is_loading:
+            return
+        if val:
+            self.emit_signal(load_signal, data)
+        else:
+            self.emit_signal(unload_signal, data)
 
     def save_state(self):
         self.logger.debug("Saving window state")
@@ -1656,51 +1590,8 @@ class MainWindow(
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
 
-    def on_enable_workflows_toggled(self, message: Dict):
-        self._toggle_agent_workflow_feature(message.get("enabled", False))
-
     def on_retranslate_ui_signal(self):
         self.ui.retranslateUi(self)
-
-    def _toggle_agent_workflow_feature(self, enabled: bool):
-        """
-        Toggles the visibility of the workflow tab and menu based on the given value.
-        """
-        # --- Tab handling ---
-        tab_widget = self.ui.center_tab_container
-        if not self.workflow_tab:
-            self.workflow_tab = self.ui.agent_workflow_tab
-
-        if enabled:
-            # Only add if not present
-            if self.tab_backup != {}:
-                tab_widget.addTab(
-                    self.tab_backup["tab_widget"],
-                    self.tab_backup["tab_text"],
-                )
-                self.tab_backup = {}
-        else:
-            # Remove if present
-            index = tab_widget.indexOf(self.workflow_tab)
-            self.tab_backup = dict(
-                tab_text=tab_widget.tabText(index),
-                tab_widget=tab_widget.widget(index),
-            )
-            if index != -1:
-                tab_widget.removeTab(index)
-
-        # --- Menu handling ---
-        # If menuWorkflow is a QMenu, use menuBar(). If it's an action, use setVisible.
-        if hasattr(self.ui, "menuWorkflow"):
-            menu = self.ui.menuWorkflow
-            # Try both methods for robustness
-            try:
-                menu.menuAction().setVisible(enabled)
-            except Exception:
-                try:
-                    menu.setVisible(enabled)
-                except Exception:
-                    pass
 
     ###### End window handlers ######
 
@@ -1721,9 +1612,37 @@ class MainWindow(
     def show_setup_wizard():
         AppInstaller(close_on_cancel=False)
 
+    def _complete_launcher_splash_handoff(self) -> None:
+        """Dismiss the launcher splash after the first show event."""
+        api = self.refresh_api_reference() or getattr(self, "api", None)
+        app = QApplication.instance()
+        splash = getattr(api, "splash", None)
+        if not api or not splash or app is None:
+            return
+
+        from airunner.app_mixins.ui_runtime_mixin import UIRuntimeMixin
+
+        UIRuntimeMixin._dismiss_splash_screen(api, self, app)
+        self.raise_()
+        self.activateWindow()
+        self.logger.debug("Dismissed launcher splash after showEvent")
+
+    def _handoff_launcher_splash(self) -> None:
+        """Queue splash dismissal after the first show event returns."""
+        if self._launcher_splash_dismissed:
+            return
+        api = getattr(self, "api", None)
+        if not api or not getattr(api, "splash", None):
+            return
+
+        self._launcher_splash_dismissed = True
+        QTimer.singleShot(0, self._complete_launcher_splash_handoff)
+        self.logger.debug("Queued launcher splash dismissal from showEvent")
+
     def showEvent(self, event):
         """Override to update the tray menu text when window is shown."""
         super().showEvent(event)
+        self._handoff_launcher_splash()
         # Make sure we update the menu text whenever the window is shown
         if hasattr(self, "toggle_visibility_action"):
             self.toggle_visibility_action.setText("Hide Window")
@@ -1737,7 +1656,8 @@ class MainWindow(
         self.initialized = True
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
-        
+        self._schedule_main_window_loaded_signal()
+
         # Show donation dialog after window is fully displayed (only on first show)
         if not hasattr(self, "_donation_dialog_shown"):
             self._donation_dialog_shown = True
@@ -1745,7 +1665,7 @@ class MainWindow(
             # Show privacy consent first, then donation dialog
             QTimer.singleShot(300, self._show_privacy_consent_dialog)
             QTimer.singleShot(500, self._show_donation_dialog)
-    
+
     def _show_privacy_consent_dialog(self):
         """Show the privacy consent dialog on first launch."""
         from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
@@ -1890,12 +1810,234 @@ class MainWindow(
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)
 
+    def _refresh_model_status_from_daemon(self) -> None:
+        """Refresh GUI model status from daemon lifecycle state."""
+        if self.api is None or self._daemon_status_refresh_inflight:
+            return
+        client = getattr(self.api, "daemon_client", None)
+        if client is None:
+            return
+        self._daemon_status_refresh_inflight = True
+        threading.Thread(
+            target=self._fetch_daemon_runtime_status,
+            args=(client,),
+            daemon=True,
+        ).start()
+
+    def _fetch_daemon_runtime_status(self, client) -> None:
+        """Fetch one daemon runtime snapshot without blocking the UI."""
+        status = None
+        try:
+            status = client.daemon_runtime_status(
+                auto_start=False,
+                timeout_seconds=self._daemon_status_request_timeout_seconds,
+            )
+        except RuntimeError:
+            pass
+        self.daemon_runtime_status_ready.emit(status)
+
+    def _on_daemon_runtime_status_ready(self, status: object) -> None:
+        """Apply one daemon runtime snapshot on the GUI thread."""
+        self._daemon_status_refresh_inflight = False
+        if not isinstance(status, dict):
+            return
+        runtime_statuses = self._runtime_statuses_from_daemon_status(status)
+        if runtime_statuses:
+            runtime_statuses[ModelType.LLM] = self._effective_llm_status(
+                runtime_statuses.get(ModelType.LLM, ModelStatus.UNLOADED)
+            )
+            for model_type in (
+                ModelType.LLM,
+                ModelType.TTS,
+                ModelType.STT,
+                ModelType.SD,
+            ):
+                self._sync_model_status_value(
+                    model_type,
+                    runtime_statuses.get(model_type, ModelStatus.UNLOADED),
+                )
+        else:
+            loaded_models = self._loaded_model_names_from_runtime_status(status)
+            llm_status = self._effective_llm_status(
+                ModelStatus.LOADED
+                if "LLM" in loaded_models
+                else ModelStatus.UNLOADED
+            )
+            self._sync_model_status_value(ModelType.LLM, llm_status)
+            self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
+            self._sync_model_status(ModelType.STT, "STT", loaded_models)
+            self._sync_model_status(ModelType.SD, "SD", loaded_models)
+        loaded_models = self._loaded_model_names_from_runtime_status(status)
+        self._reconcile_optional_runtime_preferences(loaded_models)
+
+    def _effective_llm_status(
+        self,
+        daemon_status: ModelStatus,
+    ) -> ModelStatus:
+        """Prefer a live local worker over an unloaded daemon summary."""
+        if daemon_status in (ModelStatus.LOADED, ModelStatus.LOADING):
+            return daemon_status
+        worker_manager = getattr(self, "worker_manager", None)
+        worker = getattr(worker_manager, "_llm_generate_worker", None)
+        if worker is None:
+            return daemon_status
+        status_getter = getattr(worker, "current_model_status", None)
+        if not callable(status_getter):
+            return daemon_status
+        local_status = status_getter()
+        if local_status in (ModelStatus.LOADED, ModelStatus.LOADING):
+            return local_status
+        return daemon_status
+
+    @staticmethod
+    def _model_status_from_runtime_summary(summary: dict) -> ModelStatus:
+        """Translate one daemon runtime summary into GUI model status."""
+        runtime_status = str(summary.get("status", "")).strip().lower()
+        if runtime_status == "starting":
+            return ModelStatus.LOADING
+        if runtime_status == "failed":
+            return ModelStatus.FAILED
+        if runtime_status == "ready":
+            return ModelStatus.LOADED
+        if bool(summary.get("loaded")):
+            return ModelStatus.LOADED
+        return ModelStatus.UNLOADED
+
+    @staticmethod
+    def _runtime_statuses_from_daemon_status(
+        status: dict,
+    ) -> dict[ModelType, ModelStatus]:
+        """Return GUI model statuses derived from daemon runtime summaries."""
+        runtime_map = {
+            "llm": ModelType.LLM,
+            "tts": ModelType.TTS,
+            "stt": ModelType.STT,
+            "art": ModelType.SD,
+        }
+        runtimes = status.get("runtimes")
+        if not isinstance(runtimes, list):
+            return {}
+        statuses: dict[ModelType, ModelStatus] = {}
+        for runtime in runtimes:
+            model_type = runtime_map.get(str(runtime.get("runtime", "")).lower())
+            if model_type is None:
+                continue
+            statuses[model_type] = MainWindow._model_status_from_runtime_summary(
+                runtime
+            )
+        return statuses
+
+    @staticmethod
+    def _optional_runtime_preference_specs():
+        """Return daemon-backed runtime preference sync definitions."""
+        return (
+            (
+                ModelType.TTS,
+                "TTS",
+                "tts_enabled",
+                SignalCode.TTS_ENABLE_SIGNAL,
+                SignalCode.TTS_DISABLE_SIGNAL,
+            ),
+            (
+                ModelType.STT,
+                "STT",
+                "stt_enabled",
+                SignalCode.STT_LOAD_SIGNAL,
+                SignalCode.STT_UNLOAD_SIGNAL,
+            ),
+        )
+
+    def _reconcile_optional_runtime_preferences(
+        self,
+        loaded_models: set[str],
+    ) -> None:
+        """Align daemon-backed TTS/STT state with persisted preferences."""
+        now = time.monotonic()
+        for spec in self._optional_runtime_preference_specs():
+            MainWindow._reconcile_optional_runtime_preference(
+                self,
+                spec,
+                loaded_models,
+                now,
+            )
+
+    def _reconcile_optional_runtime_preference(
+        self,
+        spec,
+        loaded_models: set[str],
+        now: float,
+    ) -> None:
+        """Emit one load or unload signal when a preference is out of sync."""
+        model_type, loaded_name, setting_name, load_signal, unload_signal = spec
+        desired_enabled = bool(
+            getattr(self.application_settings, setting_name, False)
+        )
+        is_loaded = loaded_name in loaded_models
+        if desired_enabled == is_loaded:
+            self._runtime_preference_retry_after.pop(model_type, None)
+            return
+        if (
+            desired_enabled
+            and self._model_status[model_type] is ModelStatus.LOADING
+        ):
+            return
+        if now < self._runtime_preference_retry_after.get(model_type, 0.0):
+            return
+        self._runtime_preference_retry_after[model_type] = (
+            now + self._runtime_preference_retry_seconds
+        )
+        signal = load_signal if desired_enabled else unload_signal
+        self.emit_signal(signal, {"source": "runtime_preference_sync"})
+
+    @staticmethod
+    def _loaded_model_names_from_runtime_status(status: dict) -> set[str]:
+        """Return loaded model names using runtime summaries when present."""
+        runtimes = status.get("runtimes")
+        if isinstance(runtimes, list):
+            loaded_models = set()
+            for runtime in runtimes:
+                if not runtime.get("loaded"):
+                    continue
+                runtime_name = str(runtime.get("runtime", "")).upper()
+                if runtime_name == "ART":
+                    runtime_name = "SD"
+                loaded_models.add(runtime_name)
+            return loaded_models
+        lifecycle = status.get("lifecycle") or {}
+        return set(lifecycle.get("loaded_models") or [])
+
+    def _sync_model_status(
+        self,
+        model_type: ModelType,
+        loaded_name: str,
+        loaded_models: set[str],
+    ) -> None:
+        """Emit one model-status update when daemon truth changed."""
+        status = ModelStatus.LOADED
+        if loaded_name not in loaded_models:
+            status = ModelStatus.UNLOADED
+        self._sync_model_status_value(model_type, status)
+
+    def _sync_model_status_value(
+        self,
+        model_type: ModelType,
+        status: ModelStatus,
+    ) -> None:
+        """Emit one model-status update when the status changed."""
+        if self._model_status[model_type] is status:
+            return
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model_type, "status": status},
+        )
+
     def on_model_status_changed_signal(self, data):
         model = data["model"]
         status = data["status"]
         if self._model_status[model] is status:
             return
         self._model_status[model] = status
+        failed_action = None
         if model is ModelType.SD:
             self.ui.actionToggle_Stable_Diffusion.setDisabled(
                 status is ModelStatus.LOADING
@@ -1916,26 +2058,15 @@ class MainWindow(
             elif status is ModelStatus.UNLOADED:
                 self.update_application_settings(llm_enabled=False)
         elif model is ModelType.TTS:
-            self.ui.actionToggle_Text_to_Speech.setDisabled(
-                status is ModelStatus.LOADING
-            )
-            if status is ModelStatus.LOADED:
-                self.update_application_settings(tts_enabled=True)
-            elif status is ModelStatus.FAILED:
-                self.ui.actionToggle_Text_to_Speech.setChecked(False)
-            elif status is ModelStatus.UNLOADED:
-                self.update_application_settings(tts_enabled=False)
+            self.ui.actionToggle_Text_to_Speech.setDisabled(False)
+            if status is ModelStatus.FAILED:
+                failed_action = self.ui.actionToggle_Text_to_Speech
         elif model is ModelType.STT:
-            self.ui.actionToggle_Speech_to_Text.setDisabled(
-                status is ModelStatus.LOADING
-            )
-            if status is ModelStatus.LOADED:
-                self.update_application_settings(stt_enabled=True)
-            elif status is ModelStatus.FAILED:
-                self.ui.actionToggle_Speech_to_Text.setChecked(False)
-            elif status is ModelStatus.UNLOADED:
-                self.update_application_settings(stt_enabled=False)
-        self.initialize_widget_elements()
+            self.ui.actionToggle_Speech_to_Text.setDisabled(False)
+            if status is ModelStatus.FAILED:
+                failed_action = self.ui.actionToggle_Speech_to_Text
+        if failed_action is not None:
+            self._set_action_checked_state(failed_action, False)
         QApplication.processEvents()
 
     def _generate_drawingpad_mask(self):

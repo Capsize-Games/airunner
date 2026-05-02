@@ -1,29 +1,35 @@
 """Art generation endpoints (Stable Diffusion).
 
-Integrates with ARTAPIService and JobTracker for asynchronous image generation.
+Routes art generation through the daemon runtime registry.
 
 NOTE: This module must work in headless/server mode.
-The previous implementation waited for SD_* completion signals that are not
-emitted in that pipeline, causing jobs to stay RUNNING forever.
 """
 
+import base64
 import io
 import asyncio
 import os
 import secrets
 from pathlib import Path
-from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 from PIL.Image import Image as PILImage
 
+from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
+from airunner.runtimes.base import RuntimeClient
+from airunner.runtimes.contracts import (
+    ArtInvocationRequest,
+    RuntimeAction,
+    RuntimeKind,
+    RuntimeMode,
+)
+from airunner.runtimes.registry import RuntimeRegistry, RuntimeRoute
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_ART_MODEL_PATH,
     AIRUNNER_ART_MODEL_VERSION,
-    AIRUNNER_ART_SCHEDULER,
 )
 from airunner.utils.application import get_logger
 from airunner.utils.job_tracker import JobTracker, JobStatus as JobState
@@ -36,17 +42,14 @@ from airunner.components.art.data.generator_settings import (
     GeneratorSettings,
 )
 from airunner.components.settings.data.path_settings import PathSettings
-from airunner.components.art.api.art_services import ARTAPIService
-from airunner.components.art.managers.stablediffusion.image_request import (
-    ImageRequest,
-)
-from airunner.components.art.managers.stablediffusion.image_response import (
-    ImageResponse,
-)
-from airunner.enums import GeneratorSection, SignalCode, StableDiffusionVersion
+from airunner.enums import StableDiffusionVersion
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
+_LOG_ART_STATUS_POLLS = os.environ.get(
+    "AIRUNNER_LOG_ART_STATUS_POLLS",
+    "0",
+) == "1"
 
 
 # ====================
@@ -65,6 +68,10 @@ class GenerationRequest(BaseModel):
     cfg_scale: float = 7.5
     seed: Optional[int] = None
     num_images: int = 1
+    model: Optional[str] = None
+    version: Optional[str] = None
+    scheduler: Optional[str] = None
+    skip_auto_export: bool = False
 
 
 class GenerationResponse(BaseModel):
@@ -110,18 +117,180 @@ class LocalArtModelsResponse(BaseModel):
 # ====================
 
 
-def get_art_service(request: Request):
-    """Get an object that can emit signals to the shared worker graph.
+def get_runtime_registry(request: Request) -> Optional[RuntimeRegistry]:
+    """Return the runtime registry attached to the FastAPI app."""
+    return getattr(request.app.state, "runtime_registry", None)
 
-    Important: emitting signals on a *fresh* ARTAPIService() creates a new
-    SignalMediator with no workers registered, so generation never starts.
-    """
-    airunner_app = getattr(request.app.state, "airunner_app", None)
-    if airunner_app is None:
+
+def require_runtime_registry(request: Request) -> RuntimeRegistry:
+    """Return the runtime registry or raise when it is unavailable."""
+    runtime_registry = get_runtime_registry(request)
+    if runtime_registry is None:
+        raise HTTPException(status_code=503, detail="Art runtime unavailable")
+    return runtime_registry
+
+
+def resolve_art_client(registry: RuntimeRegistry) -> RuntimeClient:
+    """Resolve the art runtime client for the current daemon role."""
+    if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
+        route = RuntimeRoute(
+            RuntimeKind.ART,
+            provider="local",
+            deployment_mode=RuntimeMode.LOCAL_FALLBACK.value,
+        )
+        detail = "Art runtime unavailable"
+    else:
+        route = RuntimeRoute(
+            RuntimeKind.ART,
+            provider="local",
+            deployment_mode=RuntimeMode.SIDECAR.value,
+        )
+        detail = "Art sidecar runtime unavailable"
+
+    if not _has_runtime_route(registry, route):
+        raise HTTPException(status_code=503, detail=detail)
+
+    client = registry.resolve(
+        route.runtime,
+        provider=route.provider,
+        deployment_mode=route.deployment_mode,
+    )
+    logger.debug(
+        "Resolved art runtime route=%s client=%s",
+        route.deployment_mode,
+        type(client).__name__,
+    )
+    return client
+
+
+def _has_runtime_route(registry: RuntimeRegistry, route: RuntimeRoute) -> bool:
+    """Return True when one exact runtime route is registered."""
+    has_route = getattr(registry, "has_route", None)
+    if callable(has_route):
+        return bool(has_route(route))
+    list_routes = getattr(registry, "list_routes", None)
+    if callable(list_routes):
+        normalized = route.normalized()
+        return any(candidate.normalized() == normalized for candidate in list_routes())
+    try:
+        registry.resolve(
+            route.runtime,
+            provider=route.provider,
+            deployment_mode=route.deployment_mode,
+        )
+    except KeyError:
+        return False
+    return True
+
+
+async def _job_cancelled(tracker: JobTracker, job_id: str) -> bool:
+    """Return True when the tracked art job has already been cancelled."""
+    job = await tracker.get_status(job_id)
+    return bool(job is not None and job.status is JobState.CANCELLED)
+
+
+async def _fail_art_job(
+    tracker: JobTracker,
+    job_id: str,
+    message: str,
+) -> None:
+    """Fail one art job unless it has already been cancelled."""
+    if await _job_cancelled(tracker, job_id):
+        return
+    await tracker.fail_job(job_id, message)
+
+
+async def _run_art_job(
+    tracker: JobTracker,
+    job_id: str,
+    request: GenerationRequest,
+    client: RuntimeClient,
+) -> None:
+    """Execute one art runtime request and store the JobTracker result."""
+    metadata = {}
+    if request.version:
+        metadata["version"] = request.version
+    if request.scheduler:
+        metadata["scheduler"] = request.scheduler
+    if request.skip_auto_export:
+        metadata["skip_auto_export"] = True
+    loop = asyncio.get_running_loop()
+    envelope = RequestEnvelope(
+        request_id=job_id,
+        runtime=RuntimeKind.ART,
+        action=RuntimeAction.INVOKE,
+        provider="local",
+        payload=ArtInvocationRequest(
+            prompt=request.prompt,
+            negative_prompt=request.negative_prompt or "",
+            model=request.model,
+            width=request.width,
+            height=request.height,
+            steps=request.steps,
+            cfg_scale=request.cfg_scale,
+            seed=request.seed,
+            num_images=request.num_images,
+            metadata=metadata,
+        ).model_dump(),
+    )
+
+    def on_progress(progress_data: dict) -> None:
+        progress = _coerce_job_progress(progress_data)
+        if progress is None:
+            return
+        asyncio.run_coroutine_threadsafe(
+            tracker.update_progress(job_id, progress, JobState.RUNNING),
+            loop,
+        )
+
+    try:
+        invoke_with_progress = getattr(client, "invoke_with_progress", None)
+        if callable(invoke_with_progress):
+            response = await asyncio.to_thread(
+                invoke_with_progress,
+                envelope,
+                on_progress,
+            )
+        else:
+            response = await asyncio.to_thread(client.invoke, envelope)
+    except Exception as exc:
+        await _fail_art_job(tracker, job_id, str(exc))
+        return
+
+    if response.status is EnvelopeStatus.CANCELLED:
+        await tracker.cancel_job(job_id)
+        return
+    if response.status is EnvelopeStatus.FAILED:
+        detail = response.error.message if response.error else "Art generation failed"
+        await _fail_art_job(tracker, job_id, detail)
+        return
+
+    images = (response.payload or {}).get("images") or []
+    if not images:
+        await _fail_art_job(tracker, job_id, "Art runtime returned no images")
+        return
+
+    try:
+        image_bytes = base64.b64decode(images[0])
+    except Exception as exc:
+        await _fail_art_job(tracker, job_id, f"Invalid image payload: {exc}")
+        return
+
+    if await _job_cancelled(tracker, job_id):
+        return
+    await tracker.complete_job(
+        job_id,
+        {"image_bytes": image_bytes},
+    )
+
+
+def _coerce_job_progress(progress_data: dict) -> Optional[float]:
+    """Return one normalized job progress percentage."""
+    try:
+        progress = float(progress_data.get("progress"))
+    except (TypeError, ValueError):
         return None
-    if not hasattr(airunner_app, "emit_signal"):
-        return None
-    return airunner_app
+    return max(0.0, min(99.0, progress))
 
 
 def _resolve_art_model_path(model_version: Optional[str] = None) -> str:
@@ -308,33 +477,6 @@ async def generate_image(request: GenerationRequest, req: Request):
     """
     logger.info(f"Image generation request (prompt_len={len(request.prompt)})")
 
-    # Ensure the app instance exists so signals route to workers.
-    art_service = get_art_service(req)
-    if not art_service:
-        raise HTTPException(
-            status_code=503, detail="Art service not available"
-        )
-
-    # Ensure SD is enabled in headless mode.
-    if os.environ.get("AIRUNNER_SD_ON") != "1":
-        raise HTTPException(
-            status_code=503,
-            detail="Stable Diffusion service is not enabled (AIRUNNER_SD_ON!=1)",
-        )
-
-    model_version = _resolve_art_model_version()
-
-    model_path = _resolve_art_model_path(model_version=model_version)
-    if not model_path:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "No local art model could be resolved. Set AIRUNNER_ART_MODEL_PATH to an existing local file/dir (or ensure ~/.local/share/airunner/art/models contains a model)."
-            ),
-        )
-
-    logger.info("Resolved art model: version=%s path=%s", model_version, model_path)
-
     # Important: historically, we treated a blank seed as "random" but still
     # passed a constant default seed (42) into the worker request. Some worker
     # paths effectively use that value even when random_seed=True, producing the
@@ -345,6 +487,7 @@ async def generate_image(request: GenerationRequest, req: Request):
     seed_value = int(request.seed) if request.seed is not None else secrets.randbelow(2**31 - 1)
 
     try:
+        client = resolve_art_client(require_runtime_registry(req))
         # Create job
         tracker = JobTracker()
         job_id = await tracker.create_job(
@@ -357,90 +500,27 @@ async def generate_image(request: GenerationRequest, req: Request):
                 "cfg_scale": request.cfg_scale,
                 "seed": seed_value,
                 "num_images": request.num_images,
+                "model": request.model,
+                "version": request.version,
+                "scheduler": request.scheduler,
             }
         )
 
         # Update job to running
-        await tracker.update_progress(job_id, 0.0, JobState.RUNNING)
-
-        # Use the callback-based generation path.
-        # This works in headless/server mode and avoids global signal handlers
-        # that would otherwise leak and/or never fire.
-        loop = asyncio.get_running_loop()
-
-        def _complete_job_from_thread(image: PILImage):
-            fut = asyncio.run_coroutine_threadsafe(
-                tracker.complete_job(job_id, {"image": image}),
-                loop,
+        await tracker.update_progress(job_id, 1.0, JobState.RUNNING)
+        asyncio.create_task(
+            _run_art_job(
+                tracker,
+                job_id,
+                request.model_copy(update={"seed": seed_value}),
+                client,
             )
-            try:
-                fut.result(timeout=10)
-            except FutureTimeoutError:
-                logger.warning(
-                    "Job completion timed out while scheduling job_id=%s",
-                    job_id,
-                )
-
-        def _fail_job_from_thread(error: str):
-            fut = asyncio.run_coroutine_threadsafe(
-                tracker.fail_job(job_id, error),
-                loop,
-            )
-            try:
-                fut.result(timeout=10)
-            except FutureTimeoutError:
-                logger.warning(
-                    "Job failure timed out while scheduling job_id=%s",
-                    job_id,
-                )
-
-        def on_complete(response):
-            try:
-                if isinstance(response, str):
-                    _fail_job_from_thread(response)
-                    return
-
-                images = None
-                if isinstance(response, ImageResponse):
-                    images = response.images
-                elif isinstance(response, dict):
-                    images = response.get("images")
-
-                if not images or images[0] is None:
-                    _fail_job_from_thread("No image returned")
-                    return
-
-                _complete_job_from_thread(images[0])
-            except Exception as exc:
-                _fail_job_from_thread(str(exc))
-
-        image_request = ImageRequest(
-            prompt=request.prompt,
-            negative_prompt=request.negative_prompt or "",
-            width=request.width,
-            height=request.height,
-            steps=request.steps,
-            scale=request.cfg_scale,
-            random_seed=False,
-            seed=seed_value,
-            n_samples=request.num_images,
-            images_per_batch=request.num_images,
-            generator_section=GeneratorSection.TXT2IMG,
-            model_path=model_path,
-            version=model_version,
-        )
-        if AIRUNNER_ART_SCHEDULER:
-            image_request.scheduler = AIRUNNER_ART_SCHEDULER
-
-        image_request.callback = on_complete
-
-        art_service.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL,
-            {"image_request": image_request},
         )
 
         return GenerationResponse(job_id=job_id, status="running")
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error starting generation: {e}")
         raise HTTPException(
@@ -459,7 +539,8 @@ async def get_job_status(job_id: str):
     Returns:
         Job status and progress
     """
-    logger.debug(f"Status check: {job_id}")
+    if _LOG_ART_STATUS_POLLS:
+        logger.debug(f"Status check: {job_id}")
 
     tracker = JobTracker()
     job = await tracker.get_status(job_id)
@@ -505,10 +586,17 @@ async def get_result(job_id: str):
             detail=f"Job not completed (status: {job.status.value})",
         )
 
-    if not job.result or "image" not in job.result:
+    if not job.result or not {
+        "image",
+        "image_bytes",
+    }.intersection(job.result):
         raise HTTPException(status_code=404, detail="Image not found")
 
     try:
+        image_bytes = job.result.get("image_bytes")
+        if image_bytes:
+            return Response(content=image_bytes, media_type="image/png")
+
         # Convert PIL Image to PNG bytes
         image = job.result["image"]
         if not isinstance(image, PILImage):
@@ -516,9 +604,7 @@ async def get_result(job_id: str):
 
         img_io = io.BytesIO()
         image.save(img_io, "PNG")
-        img_io.seek(0)
-
-        return StreamingResponse(img_io, media_type="image/png")
+        return Response(content=img_io.getvalue(), media_type="image/png")
 
     except Exception as e:
         logger.error(f"Error returning image: {e}")
@@ -540,21 +626,17 @@ async def cancel_job(job_id: str, req: Request):
         Success status
     """
     logger.info(f"Cancel job: {job_id}")
-
-    art_service = get_art_service(req)
-    if not art_service:
-        raise HTTPException(
-            status_code=503, detail="Art service not available"
-        )
-
+    client = resolve_art_client(require_runtime_registry(req))
     tracker = JobTracker()
     cancelled = await tracker.cancel_job(job_id)
 
     if not cancelled:
         raise HTTPException(status_code=400, detail="Job cannot be cancelled")
 
-    # Emit interrupt signal
-    art_service.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
+    try:
+        await asyncio.to_thread(client.cancel, job_id)
+    except Exception:
+        pass
 
     return {"status": "cancelled", "job_id": job_id}
 

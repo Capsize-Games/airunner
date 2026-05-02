@@ -9,7 +9,7 @@ from airunner.components.llm.managers.mixins.generation_mixin import (
 )
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.enums import LLMActionType
+from airunner.enums import LLMActionType, ModelStatus, ModelType
 
 
 class TestableGenerationMixin(GenerationMixin):
@@ -24,7 +24,13 @@ class TestableGenerationMixin(GenerationMixin):
         self._interrupted = False
         self._current_model_path = "/path/to/model"
         self.model_path = "/path/to/model"
+        self.model_name = "Qwen3-8B"
+        self.model_status = {ModelType.LLM: ModelStatus.UNLOADED}
+        self._last_load_error = None
+        self.llm_settings = Mock()
+        self.llm_settings.use_local_llm = True
         self.llm_generator_settings = Mock()
+        self.llm_generator_settings.model_id = None
         self.chatbot = Mock()
         self.load = Mock()
         self.unload = Mock()
@@ -38,6 +44,10 @@ class TestableGenerationMixin(GenerationMixin):
     ) -> str:
         """Mock method for getting context-aware system prompt."""
         return "Default system prompt"
+
+    def _augment_custom_system_prompt(self, base_prompt: str, **kwargs) -> str:
+        """Mock prompt augmentation used by the real mixin."""
+        return base_prompt
 
 
 @pytest.fixture
@@ -128,6 +138,28 @@ class TestCreateStreamingCallback:
         callback(" world")
 
         assert complete_response[0] == "Hello world"
+
+    def test_callback_inserts_missing_word_boundary_spaces(
+        self,
+        mixin,
+        llm_request,
+    ):
+        """Adjacent word tokens should be normalized while streaming."""
+        complete_response = [""]
+        sequence_counter = [0]
+
+        callback = mixin._create_streaming_callback(
+            llm_request, complete_response, sequence_counter
+        )
+
+        callback("Hello")
+        callback("world")
+
+        assert complete_response[0] == "Hello world"
+        second_call = (
+            mixin.api.llm.send_llm_text_streamed_signal.call_args_list[1][0][0]
+        )
+        assert second_call.message == " world"
 
     def test_callback_increments_sequence(self, mixin, llm_request):
         """Should increment sequence counter for each token."""
@@ -378,6 +410,23 @@ class TestExtractFinalResponse:
 
         assert extracted == "Third"
 
+    def test_strips_gpt_oss_channel_markup(self, mixin):
+        """Should extract the visible final response from Harmony markup."""
+        ai_msg = AIMessage(
+            content=(
+                "<|channel|>analysis<|message|>"
+                'User says "hello".'
+                "<|end|><|start|>assistant"
+                "<|channel|>final<|message|>"
+                "Hi there!<|return|>"
+            )
+        )
+        result = {"messages": [ai_msg]}
+
+        extracted = mixin._extract_final_response(result)
+
+        assert extracted == "Hi there!"
+
     def test_filters_non_ai_messages(self, mixin):
         """Should filter out non-AIMessage types."""
         from langchain_core.messages import HumanMessage
@@ -460,6 +509,18 @@ class TestDoGenerate:
         assert mixin._workflow_manager.set_token_callback.call_count == 2
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_syncs_request_id_to_workflow_manager(self, mock_torch, mixin):
+        """Should propagate request scope to workflow-side thinking emitters."""
+        mixin._current_request_id = "req-2"
+        mixin._workflow_manager.stream.return_value = []
+
+        mixin._do_generate("Test", LLMActionType.CHAT)
+
+        mixin._workflow_manager.set_request_id.assert_called_once_with(
+            "req-2"
+        )
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_resets_interrupted_flag(self, mock_torch, mixin):
         """Should reset interrupted flag before generation."""
         mixin._interrupted = True
@@ -520,10 +581,85 @@ class TestDoGenerate:
     def test_returns_error_when_no_workflow_manager(self, mock_torch, mixin):
         """Should return error when workflow manager missing."""
         mixin._workflow_manager = None
+        mixin.llm_settings.use_local_llm = False
 
         result = mixin._do_generate("Test", LLMActionType.CHAT)
 
         assert result["response"] == "Error: workflow unavailable"
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_returns_last_load_error_without_retrying_failed_model(
+        self,
+        mock_torch,
+        mixin,
+    ):
+        """Should surface the last load failure instead of retrying immediately."""
+        mixin._workflow_manager = None
+        mixin.model_status[ModelType.LLM] = ModelStatus.FAILED
+        mixin._last_load_error = "GGUF model architecture 'qwen35' is not supported"
+
+        result = mixin._do_generate("Test", LLMActionType.CHAT)
+
+        assert result["response"] == (
+            "Error: GGUF model architecture 'qwen35' is not supported"
+        )
+        mixin.load.assert_not_called()
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.os.path.exists")
+    def test_uses_expected_gguf_artifact_before_reporting_download_in_progress(
+        self,
+        mock_exists,
+        mock_torch,
+        mixin,
+    ):
+        """Should not report download in progress when the expected GGUF exists."""
+        mixin._workflow_manager = None
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.model_path = "/data/text/models/llm/causallm/Qwen3-8B"
+        mixin._get_expected_gguf_path = Mock(
+            return_value="/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+        )
+
+        def exists_side_effect(path):
+            return path == "/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+
+        mock_exists.side_effect = exists_side_effect
+
+        def load_side_effect():
+            mixin._workflow_manager = Mock()
+            mixin._workflow_manager.stream.return_value = []
+
+        mixin.load.side_effect = load_side_effect
+
+        result = mixin._do_generate("Test", LLMActionType.CHAT)
+
+        assert result["response"] == ""
+        mixin.load.assert_called_once()
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.os.path.exists")
+    def test_marks_missing_model_as_retryable_after_download(
+        self,
+        mock_exists,
+        mock_torch,
+        mixin,
+    ):
+        """Should mark download-in-progress failures as retryable."""
+        mixin._workflow_manager = None
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.model_path = "/data/text/models/llm/causallm/Qwen3-8B"
+        mixin._current_model_path = mixin.model_path
+        mixin._get_expected_gguf_path = Mock(
+            return_value="/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+        )
+        mock_exists.return_value = False
+
+        result = mixin._do_generate("Test", LLMActionType.CHAT)
+
+        assert result["retry_after_download"] is True
+        assert "download in progress" in result["response"]
+        mixin.load.assert_not_called()
 
 
 class TestSendFinalMessage:

@@ -14,8 +14,12 @@ parses <tool_call> tags from responses (matching Qwen3's native format).
 """
 
 import json
+import importlib.metadata as importlib_metadata
+import os
 import re
+import time
 import uuid
+from functools import lru_cache
 from pathlib import Path
 from typing import (
     Any,
@@ -45,7 +49,23 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.components.llm.utils.gpt_oss_parser import (
+    GPTOSSStreamParser,
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
 from airunner.utils.application import get_logger
+from packaging.version import InvalidVersion, Version
+
+try:
+    from gguf import GGUFReader
+except ImportError:
+    GGUFReader = None
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 
 class UnsupportedGGUFArchitectureError(Exception):
@@ -55,25 +75,225 @@ class UnsupportedGGUFArchitectureError(Exception):
     transformers-based loading.
     """
     
-    def __init__(self, architecture: str, model_path: str):
+    def __init__(
+        self,
+        architecture: str,
+        model_path: str,
+        runtime_version: Optional[str] = None,
+    ):
         self.architecture = architecture
         self.model_path = model_path
+        self.runtime_version = runtime_version
+        version_message = ""
+        if runtime_version:
+            version_message = (
+                f" Installed llama-cpp-python version: {runtime_version}."
+            )
         super().__init__(
             f"GGUF model architecture '{architecture}' is not supported by llama-cpp-python. "
-            f"Model: {model_path}. Consider using safetensors with transformers instead."
+            f"Model: {model_path}.{version_message} Use a GGUF model "
+            "supported by the installed llama-cpp-python runtime."
         )
 
 
-def _detect_chat_format(model_path: str) -> str:
+_KNOWN_UNSUPPORTED_ARCHITECTURES = {
+    "mistral3": Version("0.3.16"),
+    "qwen35": Version("0.3.16"),
+}
+
+
+def _current_llama_cpp_version() -> Optional[Version]:
+    """Return the installed llama-cpp-python version when available."""
+    try:
+        return Version(importlib_metadata.version("llama-cpp-python"))
+    except (importlib_metadata.PackageNotFoundError, InvalidVersion):
+        return None
+
+
+def _read_gguf_string_field(model_path: str, field_name: str) -> Optional[str]:
+    """Return one GGUF metadata string field when it can be parsed."""
+    if GGUFReader is None or not os.path.exists(model_path):
+        return None
+
+    try:
+        reader = GGUFReader(model_path)
+        field = reader.fields.get(field_name)
+        if field is None or not getattr(field, "parts", None):
+            return None
+
+        value = bytes(field.parts[-1]).decode("utf-8", errors="ignore")
+        value = value.strip()
+        return value or None
+    except Exception:
+        return None
+
+
+def _guess_architecture_from_path(model_path: str) -> Optional[str]:
+    """Return a likely architecture from a known GGUF filename."""
+    filename = os.path.basename(str(model_path)).lower()
+    if "qwen3.5" in filename or "qwen35" in filename:
+        return "qwen35"
+    if "ministral" in filename or "mistral3" in filename:
+        return "mistral3"
+    if "qwen3" in filename:
+        return "qwen3"
+    if "gpt-oss" in filename:
+        return "gptoss"
+    return None
+
+
+def _metadata_int(metadata: Dict[str, Any], field_name: str) -> Optional[int]:
+    """Return one llama.cpp metadata value parsed as an integer."""
+    value = metadata.get(field_name)
+    if value is None:
+        return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _estimate_known_kv_cache_gb(
+    model_path: str,
+    n_ctx: int,
+    *,
+    type_k_bytes: int = 1,
+    type_v_bytes: int = 1,
+) -> Optional[float]:
+    """Estimate KV-cache size for known shipped GGUF models."""
+    filename = os.path.basename(str(model_path)).lower()
+    known_shapes = {
+        "qwen3-8b": (36, 8, 128, 128),
+    }
+
+    for marker, shape in known_shapes.items():
+        if marker not in filename:
+            continue
+
+        block_count, head_count_kv, key_length, value_length = shape
+        kv_bytes = (
+            int(n_ctx)
+            * block_count
+            * head_count_kv
+            * (
+                key_length * int(type_k_bytes)
+                + value_length * int(type_v_bytes)
+            )
+        )
+        return kv_bytes / float(1024 ** 3)
+
+    return None
+
+
+def read_gguf_architecture(model_path: str) -> Optional[str]:
+    """Return the GGUF general.architecture metadata value."""
+    return _read_gguf_string_field(model_path, "general.architecture")
+
+
+def estimate_gguf_kv_cache_gb(
+    model_path: str,
+    n_ctx: int,
+    *,
+    type_k_bytes: int = 1,
+    type_v_bytes: int = 1,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Optional[float]:
+    """Estimate the GGUF KV-cache footprint for one configured context."""
+    metadata_values = metadata or {}
+    architecture = str(
+        metadata_values.get("general.architecture", "")
+    ).strip()
+    if not architecture:
+        estimated = _estimate_known_kv_cache_gb(
+            model_path,
+            n_ctx,
+            type_k_bytes=type_k_bytes,
+            type_v_bytes=type_v_bytes,
+        )
+        if estimated is not None:
+            return estimated
+        return None
+
+    if not architecture:
+        return None
+
+    prefix = f"{architecture}.attention"
+    block_count = _metadata_int(metadata_values, f"{architecture}.block_count")
+    head_count_kv = _metadata_int(
+        metadata_values,
+        f"{prefix}.head_count_kv",
+    )
+    key_length = _metadata_int(metadata_values, f"{prefix}.key_length")
+    value_length = _metadata_int(metadata_values, f"{prefix}.value_length")
+
+    if not all(
+        value is not None
+        for value in (block_count, head_count_kv, key_length, value_length)
+    ):
+        return None
+
+    kv_bytes = (
+        int(n_ctx)
+        * int(block_count)
+        * int(head_count_kv)
+        * (
+            int(key_length) * int(type_k_bytes)
+            + int(value_length) * int(type_v_bytes)
+        )
+    )
+    return kv_bytes / float(1024 ** 3)
+
+
+def detect_known_unsupported_architecture(model_path: str) -> Optional[str]:
+    """Return a known-unsupported GGUF architecture for this runtime."""
+    architecture = _guess_architecture_from_path(model_path)
+    if not architecture:
+        architecture = read_gguf_architecture(model_path)
+    if not architecture:
+        return None
+
+    max_supported_version = _KNOWN_UNSUPPORTED_ARCHITECTURES.get(architecture)
+    runtime_version = _current_llama_cpp_version()
+    if runtime_version is None or max_supported_version is None:
+        return None
+
+    if runtime_version <= max_supported_version:
+        return architecture
+
+    return None
+
+
+@lru_cache(maxsize=16)
+def _llama_chat_format_supported(name: str) -> bool:
+    """Return True when the installed llama_cpp runtime supports a chat format."""
+    if not name:
+        return False
+
+    try:
+        from llama_cpp import llama_chat_format
+
+        llama_chat_format.get_chat_completion_handler(name)
+    except Exception:
+        return False
+
+    return True
+
+
+def _detect_chat_format(model_path: str) -> Optional[str]:
     """Detect the appropriate chat format based on model filename.
     
     Args:
         model_path: Path to the GGUF model file
         
     Returns:
-        Chat format string for llama-cpp-python
+        Chat format string for llama-cpp-python, or None to let
+        llama.cpp use the GGUF's embedded chat template.
     """
     path_lower = model_path.lower()
+
+    if "gpt-oss" in path_lower:
+        return "gpt-oss" if _llama_chat_format_supported("gpt-oss") else None
     
     # Qwen models use chatml
     if "qwen" in path_lower:
@@ -87,8 +307,31 @@ def _detect_chat_format(model_path: str) -> str:
     if any(x in path_lower for x in ["mistral", "ministral", "magistral"]):
         return "mistral-instruct"
     
-    # Default to chatml (most compatible)
-    return "chatml"
+    return None
+
+
+def _get_int_env(name: str) -> Optional[int]:
+    """Parse an integer environment variable if present."""
+    value = os.environ.get(name)
+    if value is None or not str(value).strip():
+        return None
+    try:
+        return int(str(value).strip())
+    except ValueError:
+        return None
+
+
+def _get_bool_env(name: str) -> Optional[bool]:
+    """Parse a boolean environment variable if present."""
+    value = os.environ.get(name)
+    if value is None or not str(value).strip():
+        return None
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    return None
 
 
 class ChatGGUF(BaseChatModel):
@@ -131,6 +374,7 @@ class ChatGGUF(BaseChatModel):
     tools: Optional[List[Dict[str, Any]]] = None
     tool_choice: Optional[str] = None  # "auto", "none", or specific tool name
     enable_thinking: bool = True
+    reasoning_effort: str = "medium"
     chat_format: Optional[str] = None  # Auto-detected if None
     use_yarn: bool = False  # Disabled by default - requires more VRAM
     yarn_orig_ctx: int = 32768  # Qwen3 native context length
@@ -178,8 +422,71 @@ class ChatGGUF(BaseChatModel):
     def model_post_init(self, __context: Any) -> None:
         """Initialize the llama-cpp-python model after Pydantic init."""
         super().model_post_init(__context)
-        self._detected_format = self.chat_format or _detect_chat_format(self.model_path)
+        if self.chat_format is not None:
+            self._detected_format = self.chat_format
+        else:
+            self._detected_format = _detect_chat_format(self.model_path)
         self._load_model()
+
+    def _uses_gpt_oss_parser(self) -> bool:
+        """Return True when GPT-OSS Harmony content needs normalization."""
+        model_path = str(self.model_path).lower()
+        return self._detected_format == "gpt-oss" or "gpt-oss" in model_path
+
+    def _normalized_reasoning_effort(self) -> str:
+        """Return a valid GPT-OSS reasoning-effort value."""
+        effort = str(self.reasoning_effort or "medium").strip().lower()
+        if effort in {"low", "medium", "high"}:
+            return effort
+        return "medium"
+
+    def _resolve_llama_tuning(self) -> Dict[str, Any]:
+        """Resolve optional llama.cpp tuning overrides from the environment."""
+        tuning: Dict[str, Any] = {
+            "n_batch": self.n_batch,
+            "offload_kqv": True,
+        }
+
+        n_batch_override = _get_int_env("AIRUNNER_GGUF_N_BATCH")
+        if n_batch_override is not None:
+            tuning["n_batch"] = n_batch_override
+
+        n_ubatch_override = _get_int_env("AIRUNNER_GGUF_N_UBATCH")
+        if n_ubatch_override is not None:
+            tuning["n_ubatch"] = n_ubatch_override
+
+        n_threads_override = _get_int_env("AIRUNNER_GGUF_N_THREADS")
+        if n_threads_override is not None:
+            tuning["n_threads"] = n_threads_override
+
+        n_threads_batch_override = _get_int_env("AIRUNNER_GGUF_N_THREADS_BATCH")
+        if n_threads_batch_override is not None:
+            tuning["n_threads_batch"] = n_threads_batch_override
+
+        offload_kqv_override = _get_bool_env("AIRUNNER_GGUF_OFFLOAD_KQV")
+        if offload_kqv_override is not None:
+            tuning["offload_kqv"] = offload_kqv_override
+
+        op_offload_override = _get_bool_env("AIRUNNER_GGUF_OP_OFFLOAD")
+        if op_offload_override is not None:
+            tuning["op_offload"] = op_offload_override
+
+        return tuning
+
+    @staticmethod
+    def _format_llama_tuning(tuning: Dict[str, Any]) -> str:
+        """Format tuning fields for concise logging."""
+        keys = [
+            "n_batch",
+            "n_ubatch",
+            "n_threads",
+            "n_threads_batch",
+            "offload_kqv",
+            "op_offload",
+        ]
+        return ", ".join(
+            f"{key}={tuning[key]}" for key in keys if key in tuning
+        )
 
     def _load_model(self) -> None:
         """Load the GGUF model via llama-cpp-python.
@@ -192,35 +499,80 @@ class ChatGGUF(BaseChatModel):
         if self._llama is not None:
             return
 
+        unsupported_architecture = detect_known_unsupported_architecture(
+            self.model_path
+        )
+        if unsupported_architecture is not None:
+            runtime_version = _current_llama_cpp_version()
+            raise UnsupportedGGUFArchitectureError(
+                unsupported_architecture,
+                self.model_path,
+                runtime_version=str(runtime_version)
+                if runtime_version is not None
+                else None,
+            )
+
         try:
-            from llama_cpp import Llama
+            from llama_cpp import Llama, llama_supports_gpu_offload
         except ImportError:
             raise ImportError(
                 "llama-cpp-python is required for GGUF support. "
                 "Install with: pip install llama-cpp-python"
             )
 
-        self.logger.info(f"Loading GGUF model from {self.model_path}")
-        self.logger.info(
-            f"  chat_format={self._detected_format}, n_ctx={self.n_ctx}, "
-            f"n_gpu_layers={self.n_gpu_layers}"
+        gpu_offload_supported = False
+        try:
+            gpu_offload_supported = bool(llama_supports_gpu_offload())
+        except Exception:
+            gpu_offload_supported = False
+
+        cuda_available = bool(
+            torch is not None
+            and hasattr(torch, "cuda")
+            and torch.cuda.is_available()
         )
 
-        # Use standard chatml format - we handle tool calling via prompt injection
-        # and <tool_call> tag parsing (Qwen3 native format)
-        
+        if self.n_gpu_layers != 0 and cuda_available and not gpu_offload_supported:
+            self.logger.warning(
+                "CUDA is available, but this llama-cpp-python build does not support GPU offload. "
+                "GGUF inference will run on CPU until llama-cpp-python is rebuilt with GGML_CUDA=on."
+            )
+
+        self.logger.info(f"Loading GGUF model from {self.model_path}")
+        self.logger.info(
+            f"  chat_format={self._detected_format or 'auto'}, "
+            f"n_ctx={self.n_ctx}, "
+            f"n_gpu_layers={self.n_gpu_layers}"
+        )
+        try:
+            model_size_gb = os.path.getsize(self.model_path) / float(1024 ** 3)
+            self.logger.info(f"  GGUF file size={model_size_gb:.2f} GiB")
+        except OSError:
+            pass
+        if self.n_gpu_layers != 0:
+            self.logger.info(
+                f"  llama.cpp GPU offload support={gpu_offload_supported}"
+            )
+
+        llama_tuning = self._resolve_llama_tuning()
+
         # Build kwargs with optional YaRN support for extended context
         llama_kwargs = {
             "model_path": self.model_path,
             "n_ctx": self.n_ctx,
             "n_gpu_layers": self.n_gpu_layers,
-            "n_batch": self.n_batch,
             "flash_attn": self.flash_attn,
-            "chat_format": self._detected_format,
             "type_k": 8,  # KV cache quantization to save VRAM
             "type_v": 8,
             "verbose": False,
+            **llama_tuning,
         }
+        if self._detected_format is not None:
+            llama_kwargs["chat_format"] = self._detected_format
+
+        self.logger.info(
+            f"  llama.cpp tuning: {self._format_llama_tuning(llama_tuning)}"
+        )
         
         # Add YaRN parameters for extended context (131K)
         # YaRN (Yet another RoPE extensioN) allows extending context beyond native limit
@@ -259,6 +611,20 @@ class ChatGGUF(BaseChatModel):
             else:
                 raise
 
+        estimated_kv_cache_gb = estimate_gguf_kv_cache_gb(
+            self.model_path,
+            self.n_ctx,
+            type_k_bytes=1,
+            type_v_bytes=1,
+            metadata=getattr(self._llama, "metadata", None),
+        )
+        if estimated_kv_cache_gb is not None:
+            self.logger.info(
+                "  estimated q8 KV cache at n_ctx=%s: %.2f GiB",
+                self.n_ctx,
+                estimated_kv_cache_gb,
+            )
+
         self.logger.info("✓ GGUF model loaded successfully")
 
     def _reload_with_tools(self) -> None:
@@ -266,6 +632,15 @@ class ChatGGUF(BaseChatModel):
         # Qwen3 uses <tool_call> tags which we parse from output
         # No special chat format needed
         pass
+
+    def clear_bound_tools(self) -> None:
+        """Clear previously bound tools from the live model instance."""
+        self.tools = None
+        self.tool_choice = None
+
+    def _use_native_tool_calling(self) -> bool:
+        """Return True when llama.cpp native tools should be used."""
+        return bool(self.tools) and self.tool_choice != "none"
 
     def set_interrupted(self, value: bool) -> None:
         """Set the interrupted flag for stopping generation."""
@@ -286,12 +661,14 @@ class ChatGGUF(BaseChatModel):
         """
         converted = []
         tool_instructions_added = False
+        use_native_tool_calling = self._use_native_tool_calling()
         
         for msg in messages:
             if isinstance(msg, SystemMessage):
                 content = msg.content
-                # Inject Qwen3-style tool instructions into system message
-                if self.tools and not tool_instructions_added:
+                # Legacy XML tool instructions are only needed when native
+                # llama.cpp tool calling is unavailable.
+                if self.tools and not use_native_tool_calling and not tool_instructions_added:
                     content = self._inject_tool_instructions(content)
                     tool_instructions_added = True
                 converted.append({
@@ -317,11 +694,45 @@ class ChatGGUF(BaseChatModel):
                 })
         
         # If no system message but we have tools, add one
-        if self.tools and not tool_instructions_added:
+        if self.tools and not use_native_tool_calling and not tool_instructions_added:
             tool_system = self._inject_tool_instructions("")
             converted.insert(0, {"role": "system", "content": tool_system})
+
+        self._apply_gpt_oss_reasoning_effort(converted)
+        self._apply_thinking_directive(converted)
         
         return converted
+
+    def _apply_gpt_oss_reasoning_effort(
+        self, converted: List[Dict[str, Any]]
+    ) -> None:
+        """Inject the documented GPT-OSS reasoning-effort directive."""
+        if not self._uses_gpt_oss_parser():
+            return
+
+        directive = f"reasoning effort {self._normalized_reasoning_effort()}"
+
+        for message in converted:
+            if message.get("role") != "system":
+                continue
+            content = message.get("content")
+            if not isinstance(content, str):
+                return
+            lowered = content.lower()
+            if "reasoning effort low" in lowered:
+                return
+            if "reasoning effort medium" in lowered:
+                return
+            if "reasoning effort high" in lowered:
+                return
+            message["content"] = (
+                f"{content.rstrip()}\n\n{directive}"
+                if content.strip()
+                else directive
+            )
+            return
+
+        converted.insert(0, {"role": "system", "content": directive})
 
     def _inject_tool_instructions(self, system_content: str) -> str:
         """Inject Qwen3-style tool calling instructions into system prompt.
@@ -364,6 +775,30 @@ For each function call, return a json object with function name and arguments wi
 
         return system_content + tool_instructions
 
+    def _apply_thinking_directive(
+        self, converted: List[Dict[str, Any]]
+    ) -> None:
+        """Prefix the final Qwen3 user turn with a no-think directive."""
+        model_path = str(self.model_path).lower()
+        if self.enable_thinking or "qwen3" not in model_path:
+            return
+
+        for message in reversed(converted):
+            if message.get("role") != "user":
+                continue
+            content = message.get("content")
+            if not isinstance(content, str):
+                return
+
+            stripped = content.lstrip()
+            if stripped.startswith("/no_think") or stripped.startswith(
+                "/think"
+            ):
+                return
+
+            message["content"] = f"/no_think\n{content}"
+            return
+
     def _parse_tool_calls(self, content: str) -> List[Dict[str, Any]]:
         """Parse <tool_call> tags from model response.
         
@@ -395,6 +830,75 @@ For each function call, return a json object with function name and arguments wi
                 
         return tool_calls
 
+    def _parse_native_tool_calls(
+        self, raw_tool_calls: Optional[List[Dict[str, Any]]]
+    ) -> List[Dict[str, Any]]:
+        """Parse OpenAI-style native tool calls from llama.cpp responses."""
+        tool_calls: List[Dict[str, Any]] = []
+
+        for raw_call in raw_tool_calls or []:
+            function = raw_call.get("function", {}) if isinstance(raw_call, dict) else {}
+            arguments = function.get("arguments", {})
+
+            if isinstance(arguments, str):
+                try:
+                    arguments = json.loads(arguments) if arguments.strip() else {}
+                except json.JSONDecodeError:
+                    self.logger.warning(
+                        "Failed to parse native tool arguments for %s",
+                        function.get("name", "unknown"),
+                    )
+                    arguments = {}
+
+            tool_calls.append(
+                {
+                    "id": raw_call.get("id") or str(uuid.uuid4()),
+                    "name": function.get("name"),
+                    "args": arguments if isinstance(arguments, dict) else {},
+                    "type": "tool_call",
+                }
+            )
+
+        return tool_calls
+
+    def _merge_native_tool_call_deltas(
+        self,
+        tool_call_buffers: Dict[int, Dict[str, Any]],
+        raw_tool_calls: Optional[List[Dict[str, Any]]],
+    ) -> None:
+        """Merge streaming native tool call deltas into a complete structure."""
+        for raw_call in raw_tool_calls or []:
+            index = raw_call.get("index", len(tool_call_buffers))
+            buffer = tool_call_buffers.setdefault(
+                index,
+                {
+                    "id": None,
+                    "type": "function",
+                    "function": {"name": "", "arguments": ""},
+                },
+            )
+
+            if raw_call.get("id"):
+                buffer["id"] = raw_call["id"]
+            if raw_call.get("type"):
+                buffer["type"] = raw_call["type"]
+
+            function = raw_call.get("function") or {}
+            if function.get("name"):
+                buffer["function"]["name"] += function["name"]
+            if function.get("arguments"):
+                buffer["function"]["arguments"] += function["arguments"]
+
+    def _finalize_native_tool_call_deltas(
+        self, tool_call_buffers: Dict[int, Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Convert buffered streaming tool call deltas into normalized tool calls."""
+        if not tool_call_buffers:
+            return []
+
+        ordered_calls = [tool_call_buffers[index] for index in sorted(tool_call_buffers)]
+        return self._parse_native_tool_calls(ordered_calls)
+
     def _generate(
         self,
         messages: List[BaseMessage],
@@ -419,8 +923,6 @@ For each function call, return a json object with function name and arguments wi
         converted_messages = self._convert_messages(messages)
         
         # Build kwargs for create_chat_completion
-        # NOTE: We do NOT pass tools here - they are in the system prompt
-        # and the model will use <tool_call> tags which we parse ourselves
         chat_kwargs = {
             "messages": converted_messages,
             "max_tokens": self.max_tokens,
@@ -435,14 +937,27 @@ For each function call, return a json object with function name and arguments wi
         if stop:
             chat_kwargs["stop"] = stop
 
-        if self.tools:
+        if self._use_native_tool_calling():
+            chat_kwargs["tools"] = self.tools
+            if self.tool_choice is not None:
+                chat_kwargs["tool_choice"] = self.tool_choice
+
+        if self._use_native_tool_calling():
+            self.logger.debug(
+                f"[TOOL CALL] Passing {len(self.tools or [])} native tools to llama.cpp"
+            )
+        elif self.tools:
             self.logger.debug(f"[TOOL CALL] {len(self.tools)} tools injected in system prompt")
         else:
             self.logger.debug("[TOOL CALL] No tools bound")
 
         # Call native chat completion
+        call_started = time.perf_counter()
         self.logger.debug(f"[TOOL CALL] Calling create_chat_completion with chat_format={self._detected_format}")
         response = self._llama.create_chat_completion(**chat_kwargs)
+        self.logger.info(
+            f"[ChatGGUF._generate] create_chat_completion returned in {time.perf_counter() - call_started:.3f}s"
+        )
         self.logger.debug(f"[TOOL CALL] Response: {response}")
         
         # Extract response
@@ -454,9 +969,17 @@ For each function call, return a json object with function name and arguments wi
         thinking_content = None
         if self.enable_thinking and hasattr(message_data, "get"):
             thinking_content = message_data.get("reasoning_content")
+
+        if self._uses_gpt_oss_parser() or has_gpt_oss_markup(content):
+            parsed = parse_gpt_oss_response(content)
+            content = parsed.content
+            if not thinking_content:
+                thinking_content = parsed.thinking_content
         
-        # Parse tool calls from <tool_call> tags in content (Qwen3 format)
-        tool_calls = self._parse_tool_calls(content)
+        raw_native_tool_calls = message_data.get("tool_calls") if hasattr(message_data, "get") else None
+        tool_calls = self._parse_native_tool_calls(raw_native_tool_calls)
+        if not tool_calls:
+            tool_calls = self._parse_tool_calls(content)
         
         if tool_calls:
             self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from response")
@@ -501,7 +1024,6 @@ For each function call, return a json object with function name and arguments wi
         converted_messages = self._convert_messages(messages)
         self.logger.info(f"[ChatGGUF._stream] Converted {len(converted_messages)} messages")
         
-        # NOTE: We do NOT pass tools - they are in the system prompt
         chat_kwargs = {
             "messages": converted_messages,
             "max_tokens": self.max_tokens,
@@ -516,41 +1038,119 @@ For each function call, return a json object with function name and arguments wi
         if stop:
             chat_kwargs["stop"] = stop
 
+        if self._use_native_tool_calling():
+            chat_kwargs["tools"] = self.tools
+            if self.tool_choice is not None:
+                chat_kwargs["tool_choice"] = self.tool_choice
+
         self._interrupted = False
         full_content = []
+        native_tool_call_buffers: Dict[int, Dict[str, Any]] = {}
         
+        call_started = time.perf_counter()
         self.logger.info(f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}")
         self.logger.info(f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}")
         self.logger.info(f"[ChatGGUF._stream] tool_choice: {self.tool_choice}")
         
         chunk_count = 0
+        gpt_oss_parser = (
+            GPTOSSStreamParser() if self._uses_gpt_oss_parser() else None
+        )
         for chunk in self._llama.create_chat_completion(**chat_kwargs):
             chunk_count += 1
             if chunk_count == 1:
-                self.logger.info(f"[ChatGGUF._stream] First chunk received")
+                self.logger.info(
+                    f"[ChatGGUF._stream] First chunk received after {time.perf_counter() - call_started:.3f}s"
+                )
             if self._interrupted:
                 break
 
             delta = chunk.get("choices", [{}])[0].get("delta", {})
+
+            if "tool_calls" in delta and delta["tool_calls"]:
+                self._merge_native_tool_call_deltas(
+                    native_tool_call_buffers,
+                    delta["tool_calls"],
+                )
+
+            reasoning_text = delta.get("reasoning_content")
             
             # Handle content
             if "content" in delta and delta["content"]:
-                text = delta["content"]
-                full_content.append(text)
+                raw_text = delta["content"]
+                full_content.append(raw_text)
+                text = raw_text
+
+                if gpt_oss_parser is not None or has_gpt_oss_markup(raw_text):
+                    if gpt_oss_parser is None:
+                        gpt_oss_parser = GPTOSSStreamParser()
+                    parsed_delta = gpt_oss_parser.feed(raw_text)
+                    if parsed_delta.analysis_text:
+                        reasoning_text = (
+                            f"{reasoning_text}{parsed_delta.analysis_text}"
+                            if reasoning_text
+                            else parsed_delta.analysis_text
+                        )
+                    text = parsed_delta.final_text
+
+                additional_kwargs: Dict[str, Any] = {}
+                if reasoning_text:
+                    additional_kwargs["reasoning_content"] = reasoning_text
                 
                 chunk_msg = ChatGenerationChunk(
-                    message=AIMessageChunk(content=text)
+                    message=AIMessageChunk(
+                        content=text,
+                        additional_kwargs=additional_kwargs,
+                    )
                 )
                 
                 if run_manager:
                     run_manager.on_llm_new_token(text, chunk=chunk_msg)
                     
                 yield chunk_msg
+            else:
+                additional_kwargs = {}
+                if reasoning_text:
+                    additional_kwargs["reasoning_content"] = reasoning_text
+            if not ("content" in delta and delta["content"]) and additional_kwargs:
+                yield ChatGenerationChunk(
+                    message=AIMessageChunk(
+                        content="",
+                        additional_kwargs=additional_kwargs,
+                    )
+                )
+
+        if gpt_oss_parser is not None:
+            parsed_tail = gpt_oss_parser.finish()
+            if parsed_tail.analysis_text:
+                yield ChatGenerationChunk(
+                    message=AIMessageChunk(
+                        content="",
+                        additional_kwargs={
+                            "reasoning_content": parsed_tail.analysis_text,
+                        },
+                    )
+                )
+            if parsed_tail.final_text:
+                tail_chunk = ChatGenerationChunk(
+                    message=AIMessageChunk(content=parsed_tail.final_text)
+                )
+                if run_manager:
+                    run_manager.on_llm_new_token(
+                        parsed_tail.final_text,
+                        chunk=tail_chunk,
+                    )
+                yield tail_chunk
 
         # After streaming completes, parse <tool_call> tags from full content
-        self.logger.info(f"[ChatGGUF._stream] Stream loop finished. Total chunks: {chunk_count}, content length: {len(''.join(full_content))}")
+        self.logger.info(
+            f"[ChatGGUF._stream] Stream loop finished in {time.perf_counter() - call_started:.3f}s. "
+            f"Total chunks: {chunk_count}, content length: {len(''.join(full_content))}"
+        )
         full_text = "".join(full_content)
-        tool_calls = self._parse_tool_calls(full_text)
+        tool_calls = self._finalize_native_tool_call_deltas(native_tool_call_buffers)
+        if not tool_calls:
+            tool_calls = self._parse_tool_calls(full_text)
         
         if tool_calls:
             self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from streamed response")

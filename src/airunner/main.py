@@ -10,27 +10,42 @@ Do not change the order of the imports.
 # file system, network and log operations.
 # Keep this at the top of the main file.
 ################################################################
-from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
 import sys
+import time
+import warnings
 
-# Prevent Qt WebEngine from crashing
-os.environ["QT_QUICK_BACKEND"] = "software"
-os.environ["QT_XCB_GL_INTEGRATION"] = "none"
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
+)
 
-# Set fontconfig path to avoid "Cannot load default config file" errors
-# This helps Qt WebEngine find font configuration
-if not os.environ.get("FONTCONFIG_PATH"):
-    fontconfig_paths = [
-        "/etc/fonts",
-        "/usr/share/fontconfig",
-        os.path.join(os.path.expanduser("~"), ".config", "fontconfig"),
-    ]
-    for path in fontconfig_paths:
-        if os.path.isdir(path):
-            os.environ["FONTCONFIG_PATH"] = path
-            break
+
+configure_early_torch_allocator_environment()
+
+
+def configure_startup_warning_filters() -> None:
+    """Suppress known third-party startup warnings that add no signal."""
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*urllib3 .* doesn't match a supported version.*",
+        category=Warning,
+        module=r"requests(\..*)?",
+    )
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*validate_default.*has no effect.*",
+        category=UserWarning,
+        module=r"pydantic(\..*)?",
+    )
+
+
+configure_startup_warning_filters()
+
+from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
+
+from airunner.qt_runtime_env import configure_early_qt_environment
+
+configure_early_qt_environment()
 
 """
 Temporary fix for windows - Facehuggershield is not working correctly
@@ -55,9 +70,6 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         os.path.join(os.path.dirname(__file__), "..", "..")
     )
     airunner_src_path = os.path.join(project_root, "src", "airunner")
-    airunner_egg_info_path = os.path.join(
-        project_root, "src", "airunner.egg-info"
-    )
 
     activate(
         activate_shadowlogger=True,
@@ -91,7 +103,6 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             site_packages_path,
             "/usr/share/zoneinfo/",
             airunner_src_path,
-            airunner_egg_info_path,
             "/tmp/",
             "/etc/",
             "/var/log/airunner/",  # Add headless server log directory
@@ -126,6 +137,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # Initialize the logger
 import logging
 
+from airunner.utils.application.logging_utils import (
+    configure_noisy_loggers,
+)
+
 
 # Optimize logger initialization by consolidating configurations
 def initialize_loggers():
@@ -145,19 +160,23 @@ def initialize_loggers():
     ]
     for logger_name in loggers_to_silence:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
+    configure_noisy_loggers()
 
 
 # Call the consolidated logger initialization
 initialize_loggers()
 
 import sys
-from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
+from airunner.settings import (
+    AIRUNNER_BASE_PATH,
+    AIRUNNER_LOG_FILE,
+    AIRUNNER_SAVE_LOG_TO_FILE,
+)
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.utils.download_temp_cleanup import cleanup_stale_download_dirs
 
-base_path = os.path.join(
-    os.path.expanduser("~"), ".local", "share", "airunner"
-)
+base_path = AIRUNNER_BASE_PATH
 
 ################################################################
 # Ensure that the base directory exists.
@@ -167,6 +186,18 @@ try:
     os.makedirs(base_dir, exist_ok=True)
 except FileExistsError:
     pass
+
+startup_logger = logging.getLogger(__name__)
+removed_temp_dirs = cleanup_stale_download_dirs(
+    AIRUNNER_BASE_PATH,
+    logger=startup_logger,
+)
+if removed_temp_dirs:
+    startup_logger.info(
+        "Removed %d stale download temp director%s during startup",
+        len(removed_temp_dirs),
+        "y" if len(removed_temp_dirs) == 1 else "ies",
+    )
 
 DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
@@ -191,7 +222,7 @@ if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
         pass
 
 ################################################################
-# Set the environment variable for PyTorch to use expandable
+# Import torch only after the allocator environment is configured.
 ################################################################
 import torch
 
@@ -221,6 +252,12 @@ _launcher_app = None
 
 def main():
     global _launcher_splash, _launcher_app
+    startup_started_at = float(
+        os.environ.setdefault(
+            "AIRUNNER_PROCESS_START_TIME",
+            f"{time.perf_counter():.9f}",
+        )
+    )
     
     parser = argparse.ArgumentParser(description="AI Runner")
     parser.add_argument(
@@ -268,14 +305,24 @@ def main():
         # Handled in launcher.py, but keep for help output and future use
         pass
 
+    database_started_at = time.perf_counter()
     setup_database()
-
-    # Configure headless logging early, before API/App instantiation
-    # This ensures root logger is configured before service loggers are created
-    sys.stderr.write("DEBUG: main.py starting\n")
+    startup_logger.info(
+        "Startup phase database_setup completed in %.2fs",
+        time.perf_counter() - database_started_at,
+    )
 
     # Start the main application, passing launcher's splash if available
+    api_started_at = time.perf_counter()
     api = API(launcher_splash=_launcher_splash, launcher_app=_launcher_app)
+    startup_logger.info(
+        "Startup phase api_init completed in %.2fs",
+        time.perf_counter() - api_started_at,
+    )
+    startup_logger.info(
+        "Startup time to event-loop handoff: %.2fs",
+        time.perf_counter() - startup_started_at,
+    )
     api.run()
 
 

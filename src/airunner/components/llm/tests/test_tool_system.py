@@ -185,7 +185,9 @@ class TestToolExecutor:
         """Test conversion to FunctionTool."""
 
         @tool(
-            name="convert", category=ToolCategory.SYSTEM, description="Convert"
+            name="convert",
+            category=ToolCategory.SYSTEM,
+            description="Convert values between formats",
         )
         def convert_tool():
             return "converted"

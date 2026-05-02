@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
@@ -24,6 +26,26 @@ from airunner.components.llm.utils import strip_names_from_message
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
+_LOG_CONVERSATION_WEBVIEW_PROGRESS = (
+    os.environ.get("AIRUNNER_LOG_CONVERSATION_WEBVIEW_PROGRESS", "0")
+    == "1"
+)
+
+
+def get_conversation_asset_version() -> str:
+    """Return a cache-busting version for live conversation assets."""
+    static_dir = Path(__file__).resolve().parent.parent / "static"
+    asset_paths = (
+        static_dir / "css" / "conversation.css",
+        static_dir / "js" / "conversation.js",
+    )
+    latest_mtime = max(
+        (path.stat().st_mtime_ns for path in asset_paths if path.exists()),
+        default=0,
+    )
+    return str(latest_mtime)
+
+
 class ConversationWidget(BaseWidget):
     """Widget that displays a conversation using a single QWebEngineView and HTML template.
 
@@ -40,6 +62,7 @@ class ConversationWidget(BaseWidget):
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
             SignalCode.CONVERSATION_DELETED: self.on_delete_conversation,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
             SignalCode.MOOD_SUMMARY_UPDATE_STARTED: self._handle_mood_summary_update_started,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated_signal,
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
@@ -59,32 +82,34 @@ class ConversationWidget(BaseWidget):
         self.loading_widget = LoadingWidget(self)
         self.loading_widget.hide()
         self._page_ready = False  # Flag to prevent early template rendering
+        self._template_rendered = False
+        self._template_render_scheduled = False
+        self._main_window_loaded = False
+        self._shutdown_started = False
         super().__init__()
 
         # Set the custom page immediately after super().__init__()
         if hasattr(self, "ui") and hasattr(self.ui, "stage"):
             custom_page = ConversationWebEnginePage(self.ui.stage, self)
             self.ui.stage.setPage(custom_page)
-            # Add load handlers for debugging
-            self.ui.stage.loadStarted.connect(
-                lambda: self.logger.debug("[ConversationWidget] Load started")
-            )
-            self.ui.stage.loadFinished.connect(
-                lambda ok: self.logger.debug(
-                    f"[ConversationWidget] Load finished: {ok}"
+            if _LOG_CONVERSATION_WEBVIEW_PROGRESS:
+                self.ui.stage.loadStarted.connect(
+                    lambda: self.logger.debug(
+                        "[ConversationWidget] Load started"
+                    )
                 )
-            )
-            self.ui.stage.loadProgress.connect(
-                lambda progress: self.logger.debug(
-                    f"[ConversationWidget] Load progress: {progress}%"
+                self.ui.stage.loadFinished.connect(
+                    lambda ok: self.logger.debug(
+                        f"[ConversationWidget] Load finished: {ok}"
+                    )
                 )
-            )
-            # Mark page as ready and NOW render the template
+                self.ui.stage.loadProgress.connect(
+                    lambda progress: self.logger.debug(
+                        f"[ConversationWidget] Load progress: {progress}%"
+                    )
+                )
+            # Mark page as ready and defer the initial template load until show.
             self._page_ready = True
-            self.logger.debug(
-                "[ConversationWidget] Rendering template after custom page setup"
-            )
-            self.render_template()
 
         self.token_buffer = []
         # Add a streaming buffer to ensure proper token ordering
@@ -98,6 +123,10 @@ class ConversationWidget(BaseWidget):
         self._expected_sequence = 1  # Next expected sequence number
         # Track which message index is currently being streamed to avoid overwriting
         self._active_stream_message_index = None
+        self._rendered_request_ids = set()
+        self._js_ready = False
+        self._chat_bridge_flush_pending = False
+        self._pending_chat_bridge_calls = []
         # prevent right click on self.ui.stage
         self.ui.stage.setContextMenuPolicy(
             Qt.ContextMenuPolicy.PreventContextMenu
@@ -149,6 +178,7 @@ class ConversationWidget(BaseWidget):
     @property
     def template_context(self) -> Dict:
         context = super().template_context
+        context["asset_version"] = get_conversation_asset_version()
         context["messages"] = []
         return context
 
@@ -159,13 +189,33 @@ class ConversationWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        if self._main_window_loaded:
+            self._schedule_initial_template_render()
         if not self.registered:
             self.registered = True
-            self.logger.debug(
-                f"showEvent: self._conversation_id before load: {self._conversation_id}"
-            )
-            if self._conversation_id is None:
-                self.load_conversation()
+
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Render the initial conversation template after app startup."""
+        self._main_window_loaded = True
+        self._schedule_initial_template_render()
+
+    def _schedule_initial_template_render(self) -> None:
+        """Schedule the initial HTML template render once."""
+        if self._template_rendered or self._template_render_scheduled:
+            return
+        self._template_render_scheduled = True
+        QTimer.singleShot(0, self._render_initial_template)
+
+    def _render_initial_template(self) -> None:
+        """Render the conversation template after the widget is shown."""
+        if self._template_rendered:
+            return
+        self._template_rendered = True
+        self.logger.debug(
+            "[ConversationWidget] Rendering template after first show"
+        )
+        self.render_template()
+        self._schedule_chat_bridge_flush()
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
@@ -190,6 +240,7 @@ class ConversationWidget(BaseWidget):
             return
         self._conversation = conversation
         self._conversation_id = conversation.id
+        self._rendered_request_ids.clear()
         messages = (
             self._conversation_history_manager.load_conversation_history(
                 conversation=conversation, max_messages=50
@@ -205,9 +256,73 @@ class ConversationWidget(BaseWidget):
         self._conversation_id = None
         self.conversation_history = []
         self._streamed_messages = []
+        self._rendered_request_ids.clear()
+        self._pending_chat_bridge_calls = []
         # Use explicit clear signal instead of set_conversation([])
         self._chat_bridge.clear_messages()
         self._clear_conversation_widgets()
+
+    def handle_close(self):
+        """Release webview resources before the application exits."""
+        self._stop_ui_update_timer()
+        self._shutdown_web_view()
+
+    def _stop_ui_update_timer(self) -> None:
+        """Stop recurring UI work during shutdown."""
+        if self.ui_update_timer.isActive():
+            self.ui_update_timer.stop()
+
+    def _shutdown_web_view(self) -> None:
+        """Tear down the conversation webview synchronously."""
+        if self._shutdown_started:
+            return
+        self._shutdown_started = True
+        view = self._get_view()
+        if view is None:
+            return
+
+        try:
+            page = view.page()
+        except RuntimeError:
+            page = None
+
+        if page is not None:
+            try:
+                page.setWebChannel(None)
+            except Exception:
+                pass
+
+        try:
+            view.stop()
+            view.close()
+        except Exception:
+            pass
+
+        self._delete_qt_object("_web_channel")
+        self._delete_qt_object("_chat_bridge")
+
+        if page is not None:
+            try:
+                page.deleteLater()
+            except Exception:
+                pass
+
+        try:
+            view.deleteLater()
+            QApplication.processEvents()
+        except Exception:
+            pass
+
+    def _delete_qt_object(self, attr_name: str) -> None:
+        """Delete a Qt object attribute if it exists."""
+        qt_object = getattr(self, attr_name, None)
+        if qt_object is None:
+            return
+        try:
+            qt_object.deleteLater()
+        except Exception:
+            pass
+        setattr(self, attr_name, None)
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         self.hide_status_indicator()
@@ -267,6 +382,7 @@ class ConversationWidget(BaseWidget):
 
         def handle_result(ready):
             if ready:
+                self._js_ready = True
                 callback()
             elif attempt_count < max_attempts:
                 QTimer.singleShot(50, check_ready)
@@ -274,6 +390,60 @@ class ConversationWidget(BaseWidget):
                 callback()
 
         check_ready()
+
+    def _dispatch_chat_bridge_call(
+        self,
+        method_name: str,
+        *args,
+    ) -> None:
+        """Send one bridge event now or queue it until JS is ready."""
+        if self._js_ready:
+            getattr(self._chat_bridge, method_name)(*args)
+            return
+        self._pending_chat_bridge_calls.append((method_name, args))
+        self._schedule_chat_bridge_flush()
+
+    def _schedule_chat_bridge_flush(self) -> None:
+        """Wait for JS once before flushing queued bridge events."""
+        if self._js_ready:
+            self._flush_pending_chat_bridge_calls()
+            return
+        if self._chat_bridge_flush_pending:
+            return
+        self._chat_bridge_flush_pending = True
+        self.wait_for_js_ready(self._flush_pending_chat_bridge_calls)
+
+    def _flush_pending_chat_bridge_calls(self) -> None:
+        """Flush queued bridge events after the web view comes online."""
+        self._chat_bridge_flush_pending = False
+        if not self._js_ready:
+            return
+        pending_calls = self._pending_chat_bridge_calls
+        self._pending_chat_bridge_calls = []
+        for method_name, args in pending_calls:
+            getattr(self._chat_bridge, method_name)(*args)
+
+    def _format_message_for_webview(
+        self,
+        *,
+        content: str,
+        message_id: int,
+        name: str,
+        is_bot: bool,
+        timestamp: str = "",
+        request_id: str = "",
+    ) -> Dict[str, Any]:
+        """Return one formatted message payload for the conversation view."""
+        fmt = FormatterExtended.format_content(content)
+        return {
+            "content": fmt["content"],
+            "content_type": fmt["type"],
+            "id": message_id,
+            "timestamp": timestamp,
+            "name": name,
+            "is_bot": is_bot,
+            "request_id": request_id,
+        }
 
     def wait_for_dom_ready(self, callback, max_attempts=50):
         """Wait for the DOM to be ready before executing callback.
@@ -327,9 +497,7 @@ class ConversationWidget(BaseWidget):
         """
         # If empty list, use clear_messages signal instead
         if not messages:
-            self.logger.warning(
-                "[CONVERSATION] set_conversation called with empty list - this should use clear_messages instead"
-            )
+            self._clear_conversation_widgets()
             return
 
         simplified_messages = []
@@ -348,6 +516,7 @@ class ConversationWidget(BaseWidget):
                 or msg.get("sender")
                 or ("Assistant" if msg.get("is_bot") else "User"),
                 "is_bot": msg.get("is_bot", False),
+                "request_id": msg.get("request_id", ""),
             }
             
             # Preserve thinking and tool usage fields for assistant messages
@@ -374,6 +543,7 @@ class ConversationWidget(BaseWidget):
             self._conversation_id = getattr(self._conversation, "id", None)
 
         def send():
+            self._pending_chat_bridge_calls = []
             self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)
@@ -399,6 +569,7 @@ class ConversationWidget(BaseWidget):
                     f"[TOOL STATUS] Restoring completed status: {tool_status.get('tool_id')}"
                 )
                 self._chat_bridge.updateToolStatus(
+                    tool_status.get("request_id", ""),
                     tool_status.get("tool_id", ""),
                     tool_status.get("tool_name", ""),
                     tool_status.get("query", ""),
@@ -550,10 +721,50 @@ class ConversationWidget(BaseWidget):
         self.conversation = None
         self.conversation_history = []
         self._streamed_messages = []
+        self._rendered_request_ids.clear()
         # Use explicit clear signal instead of set_conversation([])
         if not skip_update:
             self._chat_bridge.clear_messages()
         self._clear_conversation_widgets(skip_update=skip_update)
+
+    def append_user_message_for_request(
+        self,
+        prompt: str,
+        request_id: Optional[str] = None,
+    ) -> None:
+        """Append one user message unless it was already rendered."""
+        if not prompt:
+            return
+        if request_id and request_id in self._rendered_request_ids:
+            return
+        if request_id:
+            self._rendered_request_ids.add(request_id)
+
+        username = getattr(getattr(self, "user", None), "username", "User")
+        self._streamed_messages.append(
+            {
+                "name": username,
+                "content": prompt,
+                "role": "user",
+                "is_bot": False,
+                "request_id": request_id,
+            }
+        )
+        self._streamed_messages = self._assign_message_ids(
+            self._streamed_messages
+        )
+        if self._conversation is not None:
+            self._conversation.value = self._streamed_messages
+        self._dispatch_chat_bridge_call(
+            "append_message",
+            self._format_message_for_webview(
+                content=prompt,
+                message_id=self._streamed_messages[-1]["id"],
+                name=username,
+                is_bot=False,
+                request_id=request_id or "",
+            ),
+        )
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         """Clear the HTML conversation view."""
@@ -668,18 +879,13 @@ class ConversationWidget(BaseWidget):
         """
         request_data = data.get("request_data", {})
         prompt = request_data.get("prompt", "")
-        self._streamed_messages.append(
-            {
-                "name": self.user.username,
-                "content": prompt,
-                "role": "user",
-                "is_bot": False,
-            }
+        request_id = data.get("request_id") or request_data.get(
+            "request_id"
         )
-        self._streamed_messages = self._assign_message_ids(
-            self._streamed_messages
+        self.append_user_message_for_request(
+            prompt,
+            request_id=request_id,
         )
-        self.set_conversation(self._streamed_messages)
 
     def on_tool_status_update(self, data: Dict[str, Any]):
         """Handle tool status updates and display them in the UI.
@@ -702,6 +908,7 @@ class ConversationWidget(BaseWidget):
         status = data.get("status")
         details = data.get("details", "")
         conversation_id = data.get("conversation_id")
+        request_id = data.get("request_id", "")
         timestamp = data.get("timestamp")
 
         if not all([tool_id, tool_name, query, status]):
@@ -743,6 +950,7 @@ class ConversationWidget(BaseWidget):
                 "query": query,
                 "status": status,
                 "details": details,
+                "request_id": request_id,
                 "timestamp": timestamp,
             }
 
@@ -771,6 +979,7 @@ class ConversationWidget(BaseWidget):
             f"[TOOL STATUS] Calling _chat_bridge.updateToolStatus"
         )
         self._chat_bridge.updateToolStatus(
+            request_id or "",
             tool_id,
             tool_name,
             query,
@@ -786,11 +995,17 @@ class ConversationWidget(BaseWidget):
                 - status: "started", "streaming", or "completed"
                 - content: The thinking text content
         """
+        request_id = data.get("request_id", "")
         status = data.get("status", "")
         content = data.get("content", "")
 
         # Send to JavaScript for rendering
-        self._chat_bridge.updateThinkingStatus(status, content)
+        self._dispatch_chat_bridge_call(
+            "updateThinkingStatus",
+            request_id,
+            status,
+            content,
+        )
 
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
@@ -899,23 +1114,31 @@ class ConversationWidget(BaseWidget):
                     "content": combined_content,
                     "role": MessageRole.ASSISTANT.value,
                     "is_bot": True,
+                    "request_id": getattr(
+                        token_response,
+                        "request_id",
+                        "",
+                    ),
                 }
                 self._streamed_messages.append(new_message)
                 self._active_stream_message_index = (
                     len(self._streamed_messages) - 1
                 )
                 # Use appendMessage instead of set_conversation to avoid clearing
-                # Format the message like set_conversation does
-                fmt = FormatterExtended.format_content(combined_content)
-                formatted_message = {
-                    "content": fmt["content"],
-                    "content_type": fmt["type"],
-                    "id": new_message_id,
-                    "timestamp": "",
-                    "name": self.chatbot.botname,
-                    "is_bot": True,
-                }
-                self._chat_bridge.append_message(formatted_message)
+                self._dispatch_chat_bridge_call(
+                    "append_message",
+                    self._format_message_for_webview(
+                        content=combined_content,
+                        message_id=new_message_id,
+                        name=self.chatbot.botname,
+                        is_bot=True,
+                            request_id=getattr(
+                                token_response,
+                                "request_id",
+                                "",
+                            ),
+                    ),
+                )
             else:
                 # Just update the existing message content during streaming
                 self._streamed_messages[self._active_stream_message_index][
@@ -924,16 +1147,19 @@ class ConversationWidget(BaseWidget):
                 # Use incremental update instead of rebuilding entire conversation
                 # Format the content before sending
                 fmt = FormatterExtended.format_content(combined_content)
-                self._chat_bridge.update_last_message_content(fmt["content"])
+                self._dispatch_chat_bridge_call(
+                    "update_last_message_content",
+                    fmt["content"],
+                )
 
         if last_token_was_end:
             self._finalize_stream_state()
-            # Do final full conversation update to ensure IDs are assigned
             if self._streamed_messages:
                 self._streamed_messages = self._assign_message_ids(
                     self._streamed_messages
                 )
-                self.set_conversation(self._streamed_messages)
+                if self._conversation is not None:
+                    self._conversation.value = self._streamed_messages
 
     def _finalize_stream_state(self, partial: bool = False):
         """Reset streaming state after a message completes.

@@ -5,13 +5,19 @@ from typing import Any, Dict, Optional
 
 from diffusers import SchedulerMixin
 
-from controlnet_aux.processor import MODELS as controlnet_aux_models
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def _get_controlnet_aux_models() -> Dict[str, Any]:
+    """Import ControlNet processor metadata only when it is needed."""
+    from controlnet_aux.processor import MODELS as controlnet_aux_models
+
+    return controlnet_aux_models
 
 
 class SomeModelClass:  # legacy test helper
@@ -128,16 +134,36 @@ def load_lora_weights(
     filename = os.path.basename(lora.path)
     adapter_name = os.path.splitext(filename)[0].replace(".", "_")
     # Scale is stored as 0-100 integer, convert to 0.0-1.0 float
-    scale = lora.scale / 100.0 if hasattr(lora, 'scale') else 1.0
+    scale = lora.scale / 100.0 if hasattr(lora, "scale") else 1.0
     try:
         pipe.load_lora_weights(
-            lora_base_path, weight_name=filename, adapter_name=adapter_name, scale=scale
+            lora_base_path,
+            weight_name=filename,
+            adapter_name=adapter_name,
+            scale=scale,
         )
         logger.info(f"Loaded LORA weights: {filename} (scale={scale:.2f})")
         return True
+    except TypeError as error:
+        if "scale" not in str(error):
+            logger.warning(f"Failed to load LORA {filename}: {error}")
+            return False
+
+        try:
+            pipe.load_lora_weights(
+                lora_base_path,
+                weight_name=filename,
+                adapter_name=adapter_name,
+            )
+            logger.info(f"Loaded LORA weights: {filename}")
+            return True
+        except Exception as retry_error:
+            logger.warning(f"Failed to load LORA {filename}: {retry_error}")
+            return False
     except Exception as e:
         logger.warning(f"Failed to load LORA {filename}: {e}")
         return False
+
 
 def unload_lora(pipe: Any, logger: Any) -> None:
     """Unload all LORA weights from the pipeline."""
@@ -210,10 +236,12 @@ def load_controlnet_processor(
     if not controlnet_enabled or not controlnet_model:
         return None
 
-    controlnet_data = controlnet_aux_models[controlnet_model.name]
-    controlnet_class_ = controlnet_data["class"]
-    checkpoint = controlnet_data["checkpoint"]
     try:
+        controlnet_data = _get_controlnet_aux_models()[
+            controlnet_model.name
+        ]
+        controlnet_class_ = controlnet_data["class"]
+        checkpoint = controlnet_data["checkpoint"]
         if checkpoint:
             processor = controlnet_class_.from_pretrained(
                 controlnet_processor_path,

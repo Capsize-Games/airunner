@@ -1,3 +1,4 @@
+import os
 import traceback
 from typing import Dict, Optional, Callable as CallableType
 import inspect
@@ -10,6 +11,15 @@ import queue
 from airunner.utils.application.get_logger import get_logger
 
 logger = get_logger(__name__)
+
+
+def _use_headless_direct_dispatch() -> bool:
+    """Return True when signals should bypass queued Qt delivery."""
+    return os.environ.get("AIRUNNER_HEADLESS", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 class SingletonMeta(type):
@@ -45,7 +55,6 @@ class Signal(QObject):
         # QObject instances and to prevent invoking callbacks on destroyed
         # objects which can lead to segmentation faults.
         self._emitter = _SignalEmitter()
-        self._emitter.signal.connect(self.on_signal_received)
 
         # Determine if the callback is a bound method
         if inspect.ismethod(callback):
@@ -98,10 +107,10 @@ class Signal(QObject):
             self.param_count = len(inspect.signature(cb_for_sig).parameters)
         except (ValueError, TypeError, RecursionError):
             self.param_count = 1
+        self._emitter.signal.connect(self.on_signal_received)
 
     @Slot(object)
     def on_signal_received(self, data: Dict):
-        logger.debug(f"Signal.on_signal_received CALLED")
         try:
             # Resolve the weak reference to get the live callable
             # If this Signal is tied to a QObject, ensure the underlying C++
@@ -111,28 +120,21 @@ class Signal(QObject):
             # If we've been notified that the QObject has been destroyed,
             # skip calling the callback.
             if getattr(self, "_dead", False):
-                logger.debug(f"Object is dead, skipping")
                 return
             cb = None
             try:
                 cb = self._callback_ref()
-            except Exception as e2:
-                logger.debug(f"Exception resolving callback: {e2}")
+            except Exception:
                 cb = None
 
             if cb is None:
                 # The Python callable has been garbage collected; skip
-                logger.debug(f"Callback is None (garbage collected?)")
                 return
 
-            logger.debug(
-                f"About to call callback: {cb} with param_count={self.param_count}"
-            )
             if self.param_count == 0:
                 cb()
             else:
                 cb(data)
-            logger.debug(f"allback completed")
         except Exception as e:
             # Print full traceback and context to aid debugging of signal handlers
             # Use a guarded traceback print: some traceback/inspect utilities
@@ -257,7 +259,7 @@ class SignalMediator(metaclass=SingletonMeta):
             # Default PySide6-based implementation
             if code not in self.signals:
                 self.signals[code] = []
-            logger.info(
+            logger.debug(
                 f"SignalMediator: Registering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
             )
             # Prevent duplicate registrations for the same callback
@@ -292,7 +294,7 @@ class SignalMediator(metaclass=SingletonMeta):
         for s in self.signals[code]:
             try:
                 if s.matches(slot_function):
-                    logger.info(
+                    logger.debug(
                         f"SignalMediator: Unregistering {code} -> {slot_function.__name__ if hasattr(slot_function, '__name__') else slot_function}"
                     )
                     # drop this signal wrapper
@@ -354,9 +356,17 @@ class SignalMediator(metaclass=SingletonMeta):
         elif code in self.signals:
             for signal in self.signals[code]:
                 try:
-                    signal.signal.emit(data)
+                    self._deliver_signal(signal, data)
                 except RuntimeError:
                     pass
+
+    @staticmethod
+    def _deliver_signal(signal: Signal, data: Dict) -> None:
+        """Deliver one signal with headless-safe dispatch semantics."""
+        if _use_headless_direct_dispatch():
+            signal.on_signal_received(data)
+            return
+        signal.signal.emit(data)
 
     def register_pending_request(
         self, request_id: str, callback: Optional[CallableType] = None

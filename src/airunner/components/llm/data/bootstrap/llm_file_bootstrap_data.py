@@ -34,7 +34,41 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "is_embedding_model": False,
         },
         "files": {
-            "Qwen3-8B-Q4_K_M.gguf": 5026889920,
+            "Qwen3-8B-Q4_K_M.gguf": 5027783488,
+        },
+    },
+    "unsloth/Qwen3.5-9B-GGUF": {
+        "path_settings": "llm_causallm_model_path",
+        "context_length": 262144,
+        "native_context_length": 262144,
+        "yarn_max_context_length": 262144,
+        "capabilities": {
+            "function_calling": True,
+            "thinking_capable": True,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
+            "is_embedding_model": False,
+        },
+        "files": {
+            "Qwen3.5-9B-Q8_0.gguf": 9527502048,
+        },
+    },
+    "unsloth/gpt-oss-20b-GGUF": {
+        "path_settings": "llm_causallm_model_path",
+        "context_length": 131072,
+        "native_context_length": 4096,
+        "yarn_max_context_length": 131072,
+        "capabilities": {
+            "function_calling": False,
+            "thinking_capable": False,
+            "rag_capable": True,
+            "vision_capable": False,
+            "code_capable": True,
+            "is_embedding_model": False,
+        },
+        "files": {
+            "gpt-oss-20b-F16.gguf": 13792639168,
         },
     },
     # Code-specialized models

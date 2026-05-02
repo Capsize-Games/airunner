@@ -9,7 +9,6 @@ from airunner.components.agents.expert_agent import (
 from airunner.components.agents.agent_registry import AgentRegistry
 from airunner.components.agents.agent_router import AgentRouter
 from airunner.components.agents.expert_agents import (
-    CalendarExpertAgent,
     CodeExpertAgent,
     ResearchExpertAgent,
     CreativeExpertAgent,
@@ -119,9 +118,9 @@ class TestAgentRegistry:
     def sample_agents(self):
         """Create sample agents for testing."""
         return [
-            CalendarExpertAgent(),
             CodeExpertAgent(),
             ResearchExpertAgent(),
+            CreativeExpertAgent(),
         ]
 
     def test_registry_initialization(self, registry):
@@ -174,23 +173,21 @@ class TestAgentRegistry:
         for agent in sample_agents:
             registry.register(agent)
 
-        # Calendar agent has event_management capability
-        calendar_agents = registry.list_agents_by_capability(
-            "event_management"
-        )
-        assert "calendar_expert" in calendar_agents
-        assert len(calendar_agents) == 1
+        code_agents = registry.list_agents_by_capability("code_generation")
+        assert "code_expert" in code_agents
+        assert len(code_agents) == 1
 
     def test_find_agents_for_task(self, registry, sample_agents):
         """Test finding agents for a task."""
         for agent in sample_agents:
             registry.register(agent)
 
-        # Calendar-related task
-        results = registry.find_agents_for_task("Schedule a meeting tomorrow")
+        results = registry.find_agents_for_task(
+            "Write a Python function to sort a list"
+        )
         assert len(results) > 0
-        assert results[0][0] == "calendar_expert"  # Top match
-        assert results[0][1] > 0.0  # Has a score
+        assert results[0][0] == "code_expert"
+        assert results[0][1] > 0.0
 
     def test_find_agents_with_min_score(self, registry, sample_agents):
         """Test finding agents with minimum score filter."""
@@ -237,7 +234,6 @@ class TestAgentRouter:
     def registry(self):
         """Create registry with sample agents."""
         reg = AgentRegistry()
-        reg.register(CalendarExpertAgent())
         reg.register(CodeExpertAgent())
         reg.register(ResearchExpertAgent())
         reg.register(CreativeExpertAgent())
@@ -249,18 +245,6 @@ class TestAgentRouter:
         return AgentRouter(registry)
 
     @pytest.mark.anyio
-    async def test_route_calendar_task(self, router):
-        """Test routing a calendar task."""
-        result = await router.route_task(
-            "Create a meeting for next Tuesday",
-            min_score=0.05,  # Lower threshold for unit tests
-        )
-
-        assert result["success"] is True
-        assert "calendar_expert" in result["agents_used"]
-        assert "calendar_expert" in result["scores"]
-
-    @pytest.mark.asyncio
     async def test_route_code_task(self, router):
         """Test routing a code task."""
         result = await router.route_task(
@@ -305,9 +289,9 @@ class TestAgentRouter:
     @pytest.mark.asyncio
     async def test_route_task_with_context(self, router):
         """Test routing with context."""
-        context = {"user_preference": "calendar"}
+        context = {"user_preference": "research"}
         result = await router.route_task(
-            "Handle my schedule", context=context, min_score=0.05
+            "Research Python packaging", context=context, min_score=0.05
         )
 
         assert result["success"] is True
@@ -352,35 +336,16 @@ class TestAgentRouter:
         """Test collaboration with non-existent agent."""
         result = await router.collaborate(
             "Test task",
-            required_agents=["calendar_expert", "nonexistent_agent"],
+            required_agents=["research_expert", "nonexistent_agent"],
         )
 
         # Should still succeed with available agent
-        assert "calendar_expert" in result["agents_used"]
+        assert "research_expert" in result["agents_used"]
         assert "nonexistent_agent" not in result["agents_used"]
 
 
 class TestExpertAgents:
     """Integration tests for specific expert agents."""
-
-    @pytest.mark.asyncio
-    async def test_calendar_agent_create_event(self):
-        """Test calendar agent event creation."""
-        agent = CalendarExpertAgent()
-        result = await agent.execute_task("Create a meeting tomorrow at 2pm")
-
-        assert result["success"] is True
-        assert result["result"]["action"] == "create_event"
-        assert "metadata" in result
-
-    @pytest.mark.asyncio
-    async def test_calendar_agent_query_events(self):
-        """Test calendar agent event query."""
-        agent = CalendarExpertAgent()
-        result = await agent.execute_task("What meetings do I have today?")
-
-        assert result["success"] is True
-        assert result["result"]["action"] == "query_events"
 
     @pytest.mark.asyncio
     async def test_code_agent_generate_code(self):
@@ -446,7 +411,6 @@ class TestEndToEndAgentSystem:
     def full_system(self):
         """Set up complete agent system."""
         registry = AgentRegistry()
-        registry.register(CalendarExpertAgent())
         registry.register(CodeExpertAgent())
         registry.register(ResearchExpertAgent())
         registry.register(CreativeExpertAgent())
@@ -460,7 +424,6 @@ class TestEndToEndAgentSystem:
 
         # Test various tasks get routed correctly
         tasks = [
-            ("Schedule a meeting", "calendar_expert"),
             ("Write a Python function", "code_expert"),
             ("Research quantum computing", "research_expert"),
             ("Write a creative story", "creative_expert"),

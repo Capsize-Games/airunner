@@ -8,29 +8,39 @@ import sys
 import importlib.util
 import os
 import subprocess
+import time
 import traceback
 import shutil
 from pathlib import Path
 
-from airunner.components.settings.data.airunner_settings import (
-    AIRunnerSettings,
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
 )
-from airunner.components.settings.data.path_settings import PathSettings
+
+
+configure_early_torch_allocator_environment()
+
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
 from airunner.setup_database import setup_database
-from airunner.components.data.session_manager import _get_session
-from airunner.components.settings.data.path_settings import PathSettings
-from airunner.components.settings.data.application_settings import (
-    ApplicationSettings,
-)
-from airunner.components.llm.data.llm_generator_settings import (
-    LLMGeneratorSettings,
-)
 from airunner.utils.application import get_logger
+from airunner.utils.application.logging_utils import (
+    configure_noisy_loggers,
+)
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
 
 logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
+
+
+def _assert_test_gui_launch_allowed() -> None:
+    """Block launcher-driven GUI startup during automated tests."""
+    if os.environ.get("AIRUNNER_ALLOW_GUI_TEST_LAUNCH") == "1":
+        return
+    if os.environ.get("AIRUNNER_TEST_NO_GUI_LAUNCH") != "1":
+        return
+    raise RuntimeError(
+        "GUI AIRunner startup is disabled during automated tests."
+    )
 
 
 def deep_merge(defaults, current):
@@ -59,7 +69,8 @@ def build_ui_if_needed():
     if not os.path.exists(ui_build_marker):
         try:
             subprocess.run(
-                [sys.executable, "-m", "airunner_build_ui"], check=True
+                [sys.executable, "-m", "airunner.bin.build_ui"],
+                check=True,
             )
             with open(ui_build_marker, "w") as marker:
                 marker.write("UI files built successfully.")
@@ -71,21 +82,84 @@ def build_ui_if_needed():
 cached_settings = {}
 
 
-def register_component_settings():
-    """Register settings for each component with a data/settings.py Pydantic dataclass."""
-    created_count = 0
-    found_count = 0
-
+def _component_settings_files() -> list[Path]:
+    """Return component settings files in a stable order."""
+    settings_files = []
     for entry in os.scandir(COMPONENTS_PATH):
         if not entry.is_dir():
             continue
-        settings_path = os.path.join(entry.path, "data", "settings.py")
-        if not os.path.isfile(settings_path):
-            continue
+        settings_path = Path(entry.path) / "data" / "settings.py"
+        if settings_path.is_file():
+            settings_files.append(settings_path)
+    return sorted(settings_files, key=lambda path: str(path))
+
+
+def _component_settings_signature(settings_files: list[Path]) -> str:
+    """Return a stable signature for component settings sources."""
+    parts = []
+    for settings_path in settings_files:
+        stat = settings_path.stat()
+        relative_path = settings_path.relative_to(COMPONENTS_PATH)
+        parts.append(
+            f"{relative_path}:{stat.st_mtime_ns}:{stat.st_size}"
+        )
+    return "|".join(parts)
+
+
+def _component_settings_cache_path() -> str:
+    """Return the persistent cache file used for settings registration."""
+    cache_dir = os.path.join(AIRUNNER_BASE_PATH, "data")
+    os.makedirs(cache_dir, exist_ok=True)
+    return os.path.join(cache_dir, "component_settings.signature")
+
+
+def _read_component_settings_cache() -> str:
+    """Read the last successful component settings signature."""
+    cache_path = _component_settings_cache_path()
+    try:
+        with open(cache_path, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    except FileNotFoundError:
+        return ""
+
+
+def _write_component_settings_cache(signature: str) -> None:
+    """Persist the last successful component settings signature."""
+    cache_path = _component_settings_cache_path()
+    with open(cache_path, "w", encoding="utf-8") as handle:
+        handle.write(signature)
+
+
+def register_component_settings():
+    """Register settings for each component with a data/settings.py Pydantic dataclass."""
+    from airunner.components.settings.data.airunner_settings import (
+        AIRunnerSettings,
+    )
+
+    created_count = 0
+    found_count = 0
+
+    settings_files = _component_settings_files()
+    if os.environ.get("AIRUNNER_DISABLE_COMPONENT_SETTINGS_CACHE") != "1":
+        settings_signature = _component_settings_signature(settings_files)
+        if AIRunnerSettings.objects.first() and (
+            _read_component_settings_cache() == settings_signature
+        ):
+            logger.info(
+                "register_component_settings: cache hit, skipping"
+            )
+            return
+    else:
+        settings_signature = ""
+
+    for settings_file in settings_files:
+        settings_path = str(settings_file)
         if settings_path in cached_settings:
             continue
         spec = importlib.util.spec_from_file_location(
-            f"airunner.components.{entry.name}.data.settings", settings_path
+            f"airunner.components.{settings_file.parent.parent.name}."
+            "data.settings",
+            settings_path,
         )
         if not spec or not spec.loader:
             continue
@@ -140,6 +214,8 @@ def register_component_settings():
                     logger.warning(
                         f"Failed to create/update default settings for {attr}: {e}\n{traceback.format_exc()}"
                     )
+    if settings_signature:
+        _write_component_settings_cache(settings_signature)
     logger.info(
         f"register_component_settings: found {found_count} settings classes, created {created_count} new entries."
     )
@@ -241,6 +317,15 @@ def _configure_test_mode():
     1. Creates default settings if they don't exist
     2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
     """
+    from airunner.components.data.session_manager import _get_session
+    from airunner.components.llm.data.llm_generator_settings import (
+        LLMGeneratorSettings,
+    )
+    from airunner.components.settings.data.application_settings import (
+        ApplicationSettings,
+    )
+    from airunner.components.settings.data.path_settings import PathSettings
+
     Session = _get_session()
     with Session() as session:
         # Create default path settings if not exists
@@ -283,11 +368,16 @@ def _check_first_run_agreement():
     Returns:
         tuple: (QApplication, bool) - app instance and whether to proceed
     """
+    from airunner.qt_runtime_env import configure_early_qt_environment
+    from airunner.app_mixins.ui_runtime_mixin import prepare_qt_runtime
     from PySide6.QtWidgets import QApplication
     from airunner.utils.settings.get_qsettings import get_qsettings
     from airunner.components.application.gui.dialogs.first_run_agreement_dialog import (
         check_all_agreements,
     )
+
+    configure_early_qt_environment()
+    prepare_qt_runtime()
     
     # Create QApplication if not exists (needed for dialog)
     app = QApplication.instance()
@@ -306,10 +396,16 @@ def _check_first_run_agreement():
 
 def _show_early_splash(existing_app=None):
     """Show splash screen as early as possible, before heavy initialization."""
+    _assert_test_gui_launch_allowed()
+    from airunner.qt_runtime_env import configure_early_qt_environment
+    from airunner.app_mixins.ui_runtime_mixin import prepare_qt_runtime
     from PySide6.QtWidgets import QApplication
     from PySide6.QtGui import QGuiApplication
     from airunner.components.splash_screen.splash_screen import SplashScreen
-    
+
+    configure_early_qt_environment()
+    prepare_qt_runtime()
+
     # Use existing app or create new
     if existing_app is not None:
         app = existing_app
@@ -364,6 +460,14 @@ def _update_splash(splash, message):
 
 
 def main():
+    startup_started_at = float(
+        os.environ.setdefault(
+            "AIRUNNER_PROCESS_START_TIME",
+            f"{time.perf_counter():.9f}",
+        )
+    )
+    configure_noisy_loggers()
+    _assert_test_gui_launch_allowed()
     # Check first-run agreement BEFORE splash screen
     app, proceed = _check_first_run_agreement()
     if not proceed:
@@ -375,11 +479,21 @@ def main():
     
     # Build UI files first
     _update_splash(splash, "Building UI files...")
+    build_ui_started_at = time.perf_counter()
     build_ui_if_needed()
+    logger.info(
+        "Startup phase build_ui completed in %.2fs",
+        time.perf_counter() - build_ui_started_at,
+    )
 
     # --- Ensure database and tables are created before any DB access ---
     _update_splash(splash, "Setting up database...")
+    database_started_at = time.perf_counter()
     setup_database()
+    logger.info(
+        "Startup phase launcher_database_setup completed in %.2fs",
+        time.perf_counter() - database_started_at,
+    )
 
     # --- Configure test mode if running tests ---
     if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
@@ -387,22 +501,34 @@ def main():
 
     # Register component settings after UI build but before main app starts
     _update_splash(splash, "Registering component settings...")
+    settings_started_at = time.perf_counter()
     try:
         register_component_settings()
     except Exception as e:
         logger.error(f"Failed to register component settings: {e}")
         traceback.print_exc()
+    logger.info(
+        "Startup phase register_component_settings completed in %.2fs",
+        time.perf_counter() - settings_started_at,
+    )
 
     # --- SSL certificate auto-generation ---
     _update_splash(splash, "Generating SSL certificates...")
+    from airunner.components.settings.data.path_settings import PathSettings
+
     path_settings = PathSettings.objects.first()
     if not path_settings:
         base_path = AIRUNNER_BASE_PATH
     else:
         base_path = path_settings.base_path
+    cert_started_at = time.perf_counter()
     cert_file, key_file = generate_local_certs_if_needed(base_path)
     os.environ["AIRUNNER_SSL_CERT"] = cert_file
     os.environ["AIRUNNER_SSL_KEY"] = key_file
+    logger.info(
+        "Startup phase ssl_setup completed in %.2fs",
+        time.perf_counter() - cert_started_at,
+    )
 
     # Store splash in environment for main.py to use
     _update_splash(splash, "Loading AI Runner...")
@@ -412,7 +538,15 @@ def main():
     import airunner.main as main_module
     main_module._launcher_splash = splash
     main_module._launcher_app = app
+    logger.info(
+        "Launcher bootstrap completed in %.2fs",
+        time.perf_counter() - startup_started_at,
+    )
     
     # Run the main app (it will use our existing splash and app)
     from airunner.main import main as real_main
     sys.exit(real_main())
+
+
+if __name__ == "__main__":
+    main()

@@ -105,7 +105,7 @@ class TestCreate4bitConfig:
 
         assert isinstance(config, BitsAndBytesConfig)
         assert config.load_in_4bit is True
-        assert config.bnb_4bit_compute_dtype == torch.float16
+        assert config.bnb_4bit_compute_dtype == torch.bfloat16
         assert config.bnb_4bit_use_double_quant is True
         assert config.bnb_4bit_quant_type == "nf4"
 

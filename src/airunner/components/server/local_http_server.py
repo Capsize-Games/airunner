@@ -17,6 +17,14 @@ from airunner.settings import (
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+_LOG_LOCAL_HTTP_ACCESS = (
+    os.environ.get("AIRUNNER_LOCAL_HTTP_ACCESS_LOG", "0") == "1"
+)
+
+
+def should_disable_cache_for_static_file(static_file_path: str) -> bool:
+    """Return whether one static file should bypass webview caching."""
+    return static_file_path.endswith((".css", ".js"))
 
 
 class ReusableTCPServer(ThreadingTCPServer):
@@ -71,6 +79,11 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         self.directories = directories or []
         self.lna_enabled = lna_enabled
         super().__init__(*args, **kwargs)
+
+    def log_message(self, format: str, *args) -> None:
+        """Suppress noisy local asset access logs unless explicitly enabled."""
+        if _LOG_LOCAL_HTTP_ACCESS:
+            super().log_message(format, *args)
 
     def _send_lna_cors_headers(self):
         """Send LNA and CORS headers if lna_enabled, else do nothing (strict mode)."""
@@ -274,8 +287,10 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                             with open(static_file_path, "rb") as f:
                                 self.send_response(200)
                                 self.send_header("Content-type", mime)
-                                # Add no-cache headers for CSS files to ensure fresh content on reload
-                                if static_file_path.endswith(".css"):
+                                # Prevent stale webview assets after local edits.
+                                if should_disable_cache_for_static_file(
+                                    static_file_path
+                                ):
                                     self.send_header(
                                         "Cache-Control",
                                         "no-cache, no-store, must-revalidate",

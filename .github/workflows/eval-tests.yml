@@ -1,31 +1,172 @@
-name: Eval Tests
+name: Hybrid Runtime CI
 
 on:
   pull_request:
-    branches: [ master, llm-refactor ]
+    branches: [master, llm-refactor, hybrid-runtime-foundation]
   push:
-    branches: [ master, llm-refactor ]
+    branches: [master, llm-refactor, hybrid-runtime-foundation]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  PYTHON_VERSION: "3.13"
+  TEST_PROFILES: core,development
+
 jobs:
-  eval-tests:
+  runtime-contract-tests:
     runs-on: ubuntu-latest
-    
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[$TEST_PROFILES]"
+
+      - name: Run runtime contract tests
+        run: |
+          pytest \
+            src/airunner/runtimes/tests/test_contracts.py \
+            src/airunner/runtimes/tests/test_registry.py \
+            src/airunner/api/tests/test_*runtime_registry.py \
+            src/airunner/api/tests/test_*runtime_route.py \
+            src/airunner/api/tests/test_daemon_runtime_routes.py \
+            src/airunner/api/tests/test_daemon_routes_with_sidecar_*.py \
+            -v \
+            --tb=short \
+            --junitxml=runtime-contracts.xml
+        env:
+          AIRUNNER_HEADLESS: "1"
+          AIRUNNER_HTTP_PORT: "8188"
+          AIRUNNER_HTTP_HOST: "127.0.0.1"
+
+      - name: Upload runtime contract results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-contract-results
+          path: runtime-contracts.xml
+
+  launcher-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install launcher build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: Create repo-local test venv
+        run: |
+          python -m venv venv
+          . venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Build Linux launcher
+        run: ./scripts/build_airunner_launcher.sh --clean --target-platform linux
+
+      - name: Run launcher smoke tests
+        run: |
+          . venv/bin/activate
+          pytest \
+            src/airunner/distribution/tests/test_launcher_smoke.py \
+            --tb=short \
+            --junitxml=launcher-smoke.xml | tee launcher-smoke.txt
+
+      - name: Upload launcher smoke results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-smoke-results
+          path: |
+            launcher-smoke.xml
+            launcher-smoke.txt
+
+  runtime-smoke:
+    runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: ["3.13"]
+        include:
+          - name: llm
+            smoke-flag: --llm-runtime-smoke
+          - name: stt
+            smoke-flag: --stt-runtime-smoke
+          - name: art
+            smoke-flag: --art-runtime-smoke
+          - name: tts
+            smoke-flag: --tts-runtime-smoke
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[$TEST_PROFILES]"
+
+      - name: Run ${{ matrix.name }} runtime smoke tests
+        run: |
+          python src/airunner/bin/run_tests.py \
+            ${{ matrix.smoke-flag }} \
+            --verbose
+
+  eval-tests:
+    runs-on: ubuntu-latest
+    needs: runtime-contract-tests
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
       
       - name: Install system dependencies
         run: |
@@ -40,8 +181,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-timeout
+          pip install -e ".[$TEST_PROFILES]"
       
       - name: Run eval tests
         run: |
@@ -49,7 +189,8 @@ jobs:
             -v \
             -m eval \
             --timeout=300 \
-            --tb=short
+            --tb=short \
+            --junitxml=pytest-report.xml | tee pytest-output.txt
         env:
           AIRUNNER_HEADLESS: "1"
           AIRUNNER_HTTP_PORT: "8188"
@@ -59,7 +200,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: eval-test-results-${{ matrix.python-version }}
+          name: eval-test-results-${{ env.PYTHON_VERSION }}
           path: |
             pytest-report.xml
-            pytest-coverage.txt
+            pytest-output.txt

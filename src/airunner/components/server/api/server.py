@@ -53,7 +53,6 @@ from airunner.enums import LLMActionType, SignalCode, EngineResponseCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
 from airunner.components.application.api.api import API
-from airunner.components.calendar.data.event import Event
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.data.conversation import Conversation
 from airunner.utils.application.get_logger import get_logger
@@ -80,13 +79,10 @@ _ART_JOBS: dict[str, dict[str, Any]] = {}
 _ART_JOBS_TTL_SECONDS = 60 * 60  # 1 hour
 
 
-def get_api():
-    """Get or create the API singleton instance."""
+def get_api(create_if_missing: bool = True):
+    """Return the API singleton, optionally creating it on demand."""
     global _api
-    logger.info(
-        f"DEBUG get_api: _api is {'None' if _api is None else type(_api).__name__}"
-    )
-    if _api is None:
+    if _api is None and create_if_missing:
         _api = API()
     return _api
 
@@ -101,13 +97,7 @@ def set_api(api_instance):
         api_instance: The API/App instance to register globally
     """
     global _api
-    logger.info(
-        f"DEBUG set_api: Setting global API to {type(api_instance).__name__}"
-    )
     _api = api_instance
-    logger.info(
-        f"DEBUG set_api: Global API is now {'None' if _api is None else type(_api).__name__}"
-    )
 
 
 class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
@@ -3046,9 +3036,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 return
             deleted_counts = {}
             with session_scope() as session:
-                # Clear calendar events
-                event_count = session.query(Event).delete()
-                deleted_counts["events"] = event_count
+                conversation_count = session.query(Conversation).delete()
+                deleted_counts["conversations"] = conversation_count
                 session.commit()
 
             self.logger.info(f"Test database cleared: {deleted_counts}")

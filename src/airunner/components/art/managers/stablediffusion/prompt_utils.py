@@ -20,8 +20,10 @@ def format_prompt(
     prompt: str,
     additional_prompts: Optional[list] = None,
     second_prompt: bool = False,
+    preset: str = "",
 ) -> str:
-    """Format the main prompt with preset and additional prompts. Default preset to empty string for test compatibility."""
+    """Format the main prompt with optional preset and additional prompts."""
+    prompt = apply_preset_to_prompt(prompt, preset)
     prompt = PromptWeightBridge.convert(prompt)
     if additional_prompts:
         prompts = [f'"{prompt}"']

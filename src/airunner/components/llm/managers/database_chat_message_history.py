@@ -11,7 +11,16 @@ from langchain_core.messages import (
 )
 
 from airunner.components.llm.data.conversation import Conversation
-from airunner.components.llm.utils.thinking_parser import strip_thinking_tags, extract_thinking_and_response
+from airunner.components.llm.utils.thinking_parser import (
+    extract_thinking_and_response,
+    normalize_thinking_content,
+    strip_stored_thinking_prefix,
+    strip_thinking_tags,
+)
+from airunner.components.llm.utils.gpt_oss_parser import (
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
 from airunner.utils.application.get_logger import get_logger
 
 
@@ -112,12 +121,37 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
 
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
+                thinking_content = normalize_thinking_content(
+                    msg.get("thinking_content")
+                )
+                if has_gpt_oss_markup(content):
+                    parsed = parse_gpt_oss_response(content)
+                    content = parsed.content or content
+                    parsed_thinking = normalize_thinking_content(
+                        parsed.thinking_content
+                    )
+                    if parsed_thinking and not thinking_content:
+                        thinking_content = parsed_thinking
+                content = strip_stored_thinking_prefix(
+                    content,
+                    thinking_content,
+                )
 
                 # Map roles to LangChain message types
                 if role == "user":
                     langchain_messages.append(HumanMessage(content=content))
                 elif role in ("assistant", "bot"):
-                    langchain_messages.append(AIMessage(content=content))
+                    additional_kwargs = {}
+                    if thinking_content:
+                        additional_kwargs["thinking_content"] = (
+                            thinking_content
+                        )
+                    langchain_messages.append(
+                        AIMessage(
+                            content=content,
+                            additional_kwargs=additional_kwargs,
+                        )
+                    )
                 elif role == "system":
                     langchain_messages.append(SystemMessage(content=content))
 
@@ -284,13 +318,23 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             if isinstance(message, AIMessage):
                 # Check if thinking_content was stored in additional_kwargs during streaming
                 if hasattr(message, "additional_kwargs") and message.additional_kwargs:
-                    thinking_content = message.additional_kwargs.get("thinking_content")
+                    thinking_content = normalize_thinking_content(
+                        message.additional_kwargs.get("thinking_content")
+                    )
                     self.logger.debug(f"[THINKING SAVE] Found thinking_content in additional_kwargs: {bool(thinking_content)}")
                 
                 # If not found, try to extract from content (for non-streaming or fallback)
                 if not thinking_content:
                     thinking_content, content = extract_thinking_and_response(content)
+                    thinking_content = normalize_thinking_content(
+                        thinking_content
+                    )
                     self.logger.debug(f"[THINKING SAVE] Extracted from content: {bool(thinking_content)}")
+
+                content = strip_stored_thinking_prefix(
+                    content,
+                    thinking_content,
+                )
                 
                 self.logger.debug(f"[THINKING SAVE] Final thinking_content length: {len(thinking_content) if thinking_content else 0}")
 

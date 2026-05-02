@@ -1,4 +1,4 @@
-from typing import List, Optional, Any, Dict
+from typing import Any, Callable, Dict, List, Optional
 from PIL.Image import Image
 from dataclasses import dataclass
 from airunner.components.art.managers.stablediffusion.rect import Rect
@@ -21,6 +21,7 @@ class ImageResponse:
     active_rect: Optional[Rect]
     is_outpaint: bool
     node_id: Optional[str] = None
+    post_display_callback: Optional[Callable[[], None]] = None
 
     def to_dict(self) -> Dict:
         """

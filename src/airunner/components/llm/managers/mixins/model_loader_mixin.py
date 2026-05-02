@@ -235,12 +235,21 @@ class ModelLoaderMixin:
             model_kwargs: Model loading parameters
         """
         if is_mistral3:
-            self._load_mistral3_model(model_path, model_kwargs, config)
+            if config is None:
+                self._load_mistral3_model(model_path, model_kwargs)
+            else:
+                self._load_mistral3_model(model_path, model_kwargs, config)
         else:
-            self._load_standard_model(model_path, model_kwargs, config)
+            if config is None:
+                self._load_standard_model(model_path, model_kwargs)
+            else:
+                self._load_standard_model(model_path, model_kwargs, config)
 
     def _load_mistral3_model(
-        self, model_path: str, model_kwargs: Dict[str, Any], config: Optional[AutoConfig]
+        self,
+        model_path: str,
+        model_kwargs: Dict[str, Any],
+        config: Optional[AutoConfig] = None,
     ) -> None:
         """Load Mistral3 model.
 
@@ -259,13 +268,20 @@ class ModelLoaderMixin:
                 "Mistral3ForConditionalGeneration not available. "
                 "Ensure transformers supports Mistral3 models."
             )
+        load_kwargs = dict(model_kwargs)
+        if config is not None:
+            load_kwargs["config"] = config
         self._model = Mistral3ForConditionalGeneration.from_pretrained(
-            model_path, config=config, **model_kwargs
+            model_path,
+            **load_kwargs,
         )
         self.logger.info("✓ Mistral3 model loaded successfully")
 
     def _load_standard_model(
-        self, model_path: str, model_kwargs: Dict[str, Any], config: Optional[AutoConfig]
+        self,
+        model_path: str,
+        model_kwargs: Dict[str, Any],
+        config: Optional[AutoConfig] = None,
     ) -> None:
         """Load standard causal LM model with fallback.
 
@@ -276,9 +292,13 @@ class ModelLoaderMixin:
             model_path: Path to model directory
             model_kwargs: Model loading parameters
         """
+        load_kwargs = dict(model_kwargs)
+        if config is not None:
+            load_kwargs["config"] = config
         try:
             self._model = AutoModelForCausalLM.from_pretrained(
-                model_path, config=config, **model_kwargs
+                model_path,
+                **load_kwargs,
             )
         except ValueError as ve:
             if "Unrecognized configuration class" in str(ve):

@@ -17,13 +17,43 @@ import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.api.routes import health, llm, art, tts, stt, vision
+from airunner.api.routes import art, daemon, health, llm, stt, tts, vision
 from airunner.api.routes import legacy as legacy_routes
 from airunner.components.llm.core.extensions_loader import load_extensions
 from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
+from airunner.runtimes.bootstrap import build_runtime_registry
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+
+def access_logs_enabled() -> bool:
+    """Return whether uvicorn access logs should be emitted."""
+    return os.environ.get("AIRUNNER_API_ACCESS_LOG", "0") == "1"
+
+
+def _resolve_runtime_registry(app_instance: Any) -> Optional[Any]:
+    """Return or create the runtime registry for an app instance."""
+    runtime_registry = getattr(app_instance, "runtime_registry", None)
+    if runtime_registry is not None:
+        return runtime_registry
+
+    try:
+        runtime_registry = build_runtime_registry(app_instance=app_instance)
+    except Exception:
+        logger.exception("Failed to build runtime registry")
+        return None
+
+    try:
+        setattr(app_instance, "runtime_registry", runtime_registry)
+    except Exception:
+        logger.debug("Unable to attach runtime registry to app instance")
+    return runtime_registry
+
+
+def _resolve_lifecycle_service(app_instance: Any) -> Optional[Any]:
+    """Return the lifecycle service attached to an app instance."""
+    return getattr(app_instance, "lifecycle_service", None)
 
 
 def is_loopback_host(host: str) -> bool:
@@ -88,8 +118,30 @@ def create_app(
         lifespan=lifespan,
     )
 
+    app.state.runtime_registry = None
+    app.state.lifecycle_service = None
+
+    try:
+        app.state.runtime_registry = build_runtime_registry(
+            app_instance=app_instance,
+        )
+    except Exception:
+        logger.exception("Failed to build runtime registry")
+
     if app_instance:
         app.state.airunner_app = app_instance
+        if app.state.runtime_registry is not None:
+            try:
+                setattr(
+                    app_instance,
+                    "runtime_registry",
+                    app.state.runtime_registry,
+                )
+            except Exception:
+                logger.debug("Unable to attach runtime registry to app instance")
+        else:
+            app.state.runtime_registry = _resolve_runtime_registry(app_instance)
+        app.state.lifecycle_service = _resolve_lifecycle_service(app_instance)
 
     # Optional API key auth for production.
     # If AIRUNNER_API_KEY is set, requests must provide it via:
@@ -192,6 +244,7 @@ def create_app(
 
     # Register routers
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
+    app.include_router(daemon.router, prefix="/api/v1/daemon", tags=["daemon"])
     app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
@@ -204,7 +257,7 @@ def create_app(
     # Legacy routes for backwards compatibility.
     app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
 
-    # Optional extensions can register additional routers/middleware.
+    # Explicitly enabled extensions can register additional routers/middleware.
     try:
         stats = load_extensions(force_reload=False)
         module_names = []
@@ -288,7 +341,11 @@ class APIServer:
     def start(self):
         """Start the API server (blocking call)."""
         config = uvicorn.Config(
-            self.app, host=self.host, port=self.port, log_level="info"
+            self.app,
+            host=self.host,
+            port=self.port,
+            log_level="info",
+            access_log=access_logs_enabled(),
         )
 
         self.server = uvicorn.Server(config)

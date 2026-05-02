@@ -1,7 +1,20 @@
 """Unit tests for web tools (search_web and scrape_website)."""
 
+import pytest
 from unittest.mock import patch
+from airunner.components.llm.tools import web_tools
 from airunner.components.llm.tools.web_tools import search_web, scrape_website
+
+
+@pytest.fixture(autouse=True)
+def reset_web_tool_rate_limit():
+    """Disable search cooldown between tests."""
+    web_tools._last_search_time = 0
+    original_cooldown = web_tools._SEARCH_COOLDOWN
+    web_tools._SEARCH_COOLDOWN = 0
+    yield
+    web_tools._last_search_time = 0
+    web_tools._SEARCH_COOLDOWN = original_cooldown
 
 
 class TestSearchWeb:
@@ -28,12 +41,12 @@ class TestSearchWeb:
 
         result = search_web("test query")
 
-        assert "Web search results for 'test query'" in result
-        assert "Test Result 1" in result
-        assert "Test Result 2" in result
-        assert "https://example.com/1" in result
-        assert "https://example.com/2" in result
-        assert "test result snippet" in result
+        assert "Web search results for 'test query'" in result["summary"]
+        assert result["results"][0]["title"] == "Test Result 1"
+        assert result["results"][1]["title"] == "Test Result 2"
+        assert result["results"][0]["link"] == "https://example.com/1"
+        assert result["results"][1]["link"] == "https://example.com/2"
+        assert "test result snippet" in result["summary"]
         mock_search_tool.aggregated_search_sync.assert_called_once_with(
             "test query", category="web"
         )
@@ -47,7 +60,7 @@ class TestSearchWeb:
 
         result = search_web("nonexistent query")
 
-        assert "No search results available" in result
+        assert result == {"results": []}
 
     @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
     def test_search_web_missing_duckduckgo_key(self, mock_search_tool):
@@ -56,7 +69,7 @@ class TestSearchWeb:
 
         result = search_web("test query")
 
-        assert "No search results available" in result
+        assert result == {"results": []}
 
     @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
     def test_search_web_exception(self, mock_search_tool):
@@ -89,10 +102,11 @@ class TestSearchWeb:
         result = search_web("test query")
 
         # Should only contain first 5 results
-        assert "Result 0" in result
-        assert "Result 4" in result
-        assert "Result 5" not in result
-        assert "Result 9" not in result
+        assert len(result["results"]) == 10
+        assert "Result 0" in result["summary"]
+        assert "Result 4" in result["summary"]
+        assert "Result 5" not in result["summary"]
+        assert "Result 9" not in result["summary"]
 
     @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
     def test_search_web_truncates_long_snippets(self, mock_search_tool):
@@ -111,10 +125,10 @@ class TestSearchWeb:
         result = search_web("test query")
 
         # Snippet should be truncated to 200 chars
-        assert (
-            len([line for line in result.split("\n") if "AAA" in line][0])
-            < 250
-        )
+        snippet_line = [
+            line for line in result["summary"].split("\n") if "AAA" in line
+        ][0]
+        assert len(snippet_line) < 250
 
 
 class TestScrapeWebsite:
@@ -125,15 +139,16 @@ class TestScrapeWebsite:
     )
     def test_scrape_website_success(self, mock_extractor):
         """Test successful website scraping."""
-        mock_extractor.fetch_and_extract.return_value = (
-            "Test Page\n\nThis is test content."
-        )
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Test Page",
+            "content": "This is test content.",
+        }
 
         result = scrape_website("https://example.com")
 
-        assert "Test Page" in result
-        assert "This is test content" in result
-        mock_extractor.fetch_and_extract.assert_called_once_with(
+        assert result["title"] == "Test Page"
+        assert "This is test content" in result["content"]
+        mock_extractor.fetch_and_extract_with_metadata.assert_called_once_with(
             "https://example.com", use_cache=True
         )
 
@@ -142,11 +157,14 @@ class TestScrapeWebsite:
     )
     def test_scrape_website_with_selector(self, mock_extractor):
         """Test scraping with CSS selector."""
-        mock_extractor.fetch_and_extract.return_value = "Target content"
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Selector Page",
+            "content": "Target content",
+        }
 
         result = scrape_website("https://example.com")
 
-        assert "Target content" in result
+        assert result["content"] == "Target content"
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
@@ -154,51 +172,56 @@ class TestScrapeWebsite:
     def test_scrape_website_removes_scripts(self, mock_extractor):
         """Test that scripts and styles are removed."""
         # WebContentExtractor should already remove scripts/styles
-        mock_extractor.fetch_and_extract.return_value = "Actual content"
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Clean Page",
+            "content": "Actual content",
+        }
 
         result = scrape_website("https://example.com")
 
-        assert "Actual content" in result
-        assert "console.log" not in result
-        assert "color: red" not in result
+        assert result["content"] == "Actual content"
+        assert "console.log" not in result["content"]
+        assert "color: red" not in result["content"]
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_timeout(self, mock_extractor):
         """Test handling of request timeout."""
-        mock_extractor.fetch_and_extract.side_effect = TimeoutError(
+        mock_extractor.fetch_and_extract_with_metadata.side_effect = TimeoutError(
             "Request timed out"
         )
 
         result = scrape_website("https://example.com")
 
-        assert "Error scraping" in result
-        assert "timed out" in result.lower()
+        assert "Error scraping" in result["error"]
+        assert "timed out" in result["error"].lower()
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_connection_error(self, mock_extractor):
         """Test handling of connection error."""
-        mock_extractor.fetch_and_extract.side_effect = ConnectionError(
+        mock_extractor.fetch_and_extract_with_metadata.side_effect = ConnectionError(
             "Could not connect"
         )
 
         result = scrape_website("https://example.com")
 
-        assert "Error scraping" in result
+        assert "Error scraping" in result["error"]
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_http_error(self, mock_extractor):
         """Test handling of HTTP error."""
-        mock_extractor.fetch_and_extract.side_effect = Exception("HTTP 404")
+        mock_extractor.fetch_and_extract_with_metadata.side_effect = Exception(
+            "HTTP 404"
+        )
 
         result = scrape_website("https://example.com")
 
-        assert "Error scraping" in result
+        assert "Error scraping" in result["error"]
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
@@ -206,11 +229,14 @@ class TestScrapeWebsite:
     def test_scrape_website_invalid_selector(self, mock_extractor):
         """Test handling of non-matching CSS selector."""
         # Empty content indicates no matching elements
-        mock_extractor.fetch_and_extract.return_value = ""
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Empty Page",
+            "content": "",
+        }
 
         result = scrape_website("https://example.com")
 
-        assert "Could not extract content" in result
+        assert "Could not extract content" in result["error"]
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
@@ -218,12 +244,15 @@ class TestScrapeWebsite:
     def test_scrape_website_truncates_long_content(self, mock_extractor):
         """Test that very long content is returned."""
         long_content = "A" * 10000
-        mock_extractor.fetch_and_extract.return_value = long_content
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Long Page",
+            "content": long_content,
+        }
 
         result = scrape_website("https://example.com")
 
         # Content should be returned (WebContentExtractor may handle truncation internally)
-        assert "A" in result
+        assert "A" in result["content"]
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
@@ -231,12 +260,15 @@ class TestScrapeWebsite:
     def test_scrape_website_uses_browser_headers(self, mock_extractor):
         """Test that browser-like headers are sent."""
         # WebContentExtractor should handle headers internally
-        mock_extractor.fetch_and_extract.return_value = "Test content"
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Header Page",
+            "content": "Test content",
+        }
 
         result = scrape_website("https://example.com")
 
-        assert "Test content" in result
-        mock_extractor.fetch_and_extract.assert_called_once()
+        assert result["content"] == "Test content"
+        mock_extractor.fetch_and_extract_with_metadata.assert_called_once()
 
     @patch(
         "airunner.components.tools.web_content_extractor.WebContentExtractor"
@@ -244,9 +276,12 @@ class TestScrapeWebsite:
     def test_scrape_website_has_timeout(self, mock_extractor):
         """Test that requests have a timeout."""
         # WebContentExtractor should handle timeouts internally
-        mock_extractor.fetch_and_extract.return_value = "Test content"
+        mock_extractor.fetch_and_extract_with_metadata.return_value = {
+            "title": "Timeout Page",
+            "content": "Test content",
+        }
 
         result = scrape_website("https://example.com")
 
-        assert "Test content" in result
-        mock_extractor.fetch_and_extract.assert_called_once()
+        assert result["content"] == "Test content"
+        mock_extractor.fetch_and_extract_with_metadata.assert_called_once()

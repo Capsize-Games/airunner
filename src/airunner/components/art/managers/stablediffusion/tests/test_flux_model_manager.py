@@ -232,6 +232,9 @@ class TestFluxModelManager:
         from airunner.components.art.managers.stablediffusion.image_request import (
             ImageRequest,
         )
+        from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+            BaseDiffusersModelManager,
+        )
 
         manager = FluxModelManager()
         manager.image_request = ImageRequest()
@@ -242,7 +245,7 @@ class TestFluxModelManager:
         ) as mock_method:
             # Mock parent's _prepare_pipe_data to return base data
             with patch.object(
-                FluxModelManager.__bases__[0],
+                BaseDiffusersModelManager,
                 "_prepare_pipe_data",
                 return_value={"test": "data"},
             ):

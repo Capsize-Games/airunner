@@ -129,10 +129,28 @@ class EventHandlerMixin:
         - Ctrl+C for copying image to clipboard
         - Ctrl+V for pasting image from clipboard
         - Ctrl+X for cutting image
+        - Ctrl+0 for resetting zoom
 
         Args:
             event: Qt keyboard event.
         """
+        if (
+            event.key() == Qt.Key.Key_0
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            and hasattr(self, "zoom_handler")
+        ):
+            self.zoom_handler.zoom_level = 1.0
+            self.setTransform(self.zoom_handler.on_zoom_level_changed())
+            self.do_draw()
+            self.api.art.canvas.update_grid_info(
+                {
+                    "offset_x": self.canvas_offset_x,
+                    "offset_y": self.canvas_offset_y,
+                }
+            )
+            event.accept()
+            return
+
         # Handle Ctrl+C (copy)
         if event.key() == Qt.Key.Key_C and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             self.api.art.canvas.copy_image()
@@ -227,6 +245,7 @@ class EventHandlerMixin:
             loaded_offset = QPointF(
                 self.canvas_offset.x(), self.canvas_offset.y()
             )
+            self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
 
             # Clear any cached positions since we're starting fresh
             if self.scene and hasattr(self.scene, "original_item_positions"):
@@ -262,18 +281,11 @@ class EventHandlerMixin:
 
             self._initialized = True
 
-            # If canvas_offset is (0,0), the user had clicked "center" before closing.
-            # We need to recenter for the current viewport, but viewport size may not be 
-            # correct yet during showEvent. Store a flag and do it in the delayed callback.
-            self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
-            
             if self._needs_recenter_on_show:
-                self.logger.info(
+                self.logger.debug(
                     "[SHOW] Canvas offset is (0,0) - will recenter after window settles"
                 )
-                # Clear cached positions so they get recalculated
-                if self.scene and hasattr(self.scene, "original_item_positions"):
-                    self.scene.original_item_positions = {}
+                self._preview_centered_layout()
             else:
                 # Non-zero offset means user panned - restore exact positions
                 self.align_canvas_items_to_viewport()
@@ -287,7 +299,7 @@ class EventHandlerMixin:
             # Check if viewport size changed while we were hidden
             current_viewport_size = self.viewport().size()
             if current_viewport_size != self._last_viewport_size:
-                self.logger.info(
+                self.logger.debug(
                     f"[SHOW] Viewport size changed while hidden: {self._last_viewport_size} -> {current_viewport_size}"
                 )
 
@@ -325,7 +337,7 @@ class EventHandlerMixin:
         # Check if we need to recenter (user had clicked center before closing)
         if getattr(self, "_needs_recenter_on_show", False):
             self._needs_recenter_on_show = False
-            self.logger.info(
+            self.logger.debug(
                 "[FINISH] Recentering for current viewport (delayed)"
             )
             
@@ -338,7 +350,7 @@ class EventHandlerMixin:
                 self.application_settings.working_height,
             )
             self.center_pos = QPointF(pos_x, pos_y)
-            self.logger.info(
+            self.logger.debug(
                 f"[FINISH] Calculated center_pos: x={pos_x}, y={pos_y}"
             )
             
@@ -377,13 +389,19 @@ class EventHandlerMixin:
 
         # Skip compensation during initial state restoration
         if self._is_restoring_state or not self._initialized:
-            self.logger.info(
+            self.logger.debug(
                 f"[RESIZE] Skipping compensation - _is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
             )
             self._last_viewport_size = self.viewport().size()
+            if (
+                self._is_restoring_state
+                and self._initialized
+                and getattr(self, "_needs_recenter_on_show", False)
+            ):
+                self._preview_centered_layout()
             return
 
-        self.logger.info(
+        self.logger.debug(
             f"[RESIZE] Processing resize - old_size={self._last_viewport_size}, new_size={self.viewport().size()}"
         )
 

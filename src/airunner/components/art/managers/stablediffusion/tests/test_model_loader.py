@@ -1,4 +1,5 @@
 import types
+import sys
 
 
 from airunner.components.art.managers.stablediffusion import model_loader
@@ -121,3 +122,35 @@ def test_load_controlnet_processor_returns_none_when_disabled():
         ),
     )
     assert res is None
+
+
+def test_load_controlnet_processor_imports_models_lazily(monkeypatch):
+    class FakeProcessor:
+        @classmethod
+        def from_pretrained(cls, _path, **_kwargs):
+            return cls()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "controlnet_aux.processor",
+        types.SimpleNamespace(
+            MODELS={
+                "Depth": {
+                    "class": FakeProcessor,
+                    "checkpoint": "depth",
+                }
+            }
+        ),
+    )
+
+    result = model_loader.load_controlnet_processor(
+        True,
+        controlnet_model=types.SimpleNamespace(name="Depth"),
+        controlnet_processor_path="/tmp",
+        logger=types.SimpleNamespace(
+            info=lambda *a, **k: None,
+            error=lambda *a, **k: None,
+        ),
+    )
+
+    assert isinstance(result, FakeProcessor)

@@ -79,7 +79,33 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         supports_function_calling=True,
         quantization="4bit",
         gpu_memory_gb=8.0,
-        priority=95,  # Higher priority - supports both thinking and instruct modes
+        priority=100,
+    ),
+    "Qwen/Qwen3.5-9B": ModelSpec(
+        model_path="Qwen/Qwen3.5-9B",
+        capabilities=[
+            ModelCapability.PRIMARY_CONVERSATION,
+            ModelCapability.PROMPT_ENHANCEMENT,
+            ModelCapability.SUMMARIZATION,
+            ModelCapability.TRANSLATION,
+        ],
+        max_context=262144,
+        supports_function_calling=True,
+        quantization="gguf",
+        gpu_memory_gb=10.0,
+        priority=95,
+    ),
+    "openai/gpt-oss-20b": ModelSpec(
+        model_path="openai/gpt-oss-20b",
+        capabilities=[
+            ModelCapability.CODE_GENERATION,
+            ModelCapability.CODE_EDITING,
+        ],
+        max_context=131072,
+        supports_function_calling=False,
+        quantization="gguf",
+        gpu_memory_gb=14.0,
+        priority=92,
     ),
     # Specialized Small Models (2-3B for specific tasks)
     "Qwen/Qwen2.5-3B-Instruct": ModelSpec(
@@ -138,12 +164,12 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
 # Capability to Model Mapping
 # Maps capabilities to preferred models
 CAPABILITY_TO_MODEL: Dict[ModelCapability, str] = {
-    ModelCapability.PRIMARY_CONVERSATION: "Qwen/Qwen2.5-7B-Instruct",
-    ModelCapability.PROMPT_ENHANCEMENT: "Qwen/Qwen2.5-3B-Instruct",
-    ModelCapability.CODE_GENERATION: "Qwen/Qwen2.5-Coder-7B-Instruct",
-    ModelCapability.CODE_EDITING: "Qwen/Qwen2.5-Coder-7B-Instruct",
-    ModelCapability.SUMMARIZATION: "Qwen/Qwen2.5-3B-Instruct",
-    ModelCapability.TRANSLATION: "Qwen/Qwen2.5-3B-Instruct",
+    ModelCapability.PRIMARY_CONVERSATION: "Qwen/Qwen3-8B",
+    ModelCapability.PROMPT_ENHANCEMENT: "Qwen/Qwen3.5-9B",
+    ModelCapability.CODE_GENERATION: "openai/gpt-oss-20b",
+    ModelCapability.CODE_EDITING: "openai/gpt-oss-20b",
+    ModelCapability.SUMMARIZATION: "Qwen/Qwen3.5-9B",
+    ModelCapability.TRANSLATION: "Qwen/Qwen3.5-9B",
 }
 
 

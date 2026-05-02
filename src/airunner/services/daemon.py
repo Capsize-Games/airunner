@@ -8,106 +8,45 @@ Runs AI Runner as a background service without GUI, providing:
 - Health monitoring
 """
 
-import os
-import sys
-import signal
 import argparse
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any
-import time
+import logging
+import os
+import signal
+import sys
 import threading
+import time
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from airunner_startup_env import (
+    configure_early_torch_allocator_environment,
+)
+
+
+def _configure_daemon_environment() -> None:
+    """Set headless-safe environment defaults before imports."""
+    os.environ.setdefault("AIRUNNER_HEADLESS", "1")
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    os.environ.setdefault(
+        "QT_LOGGING_RULES",
+        "*.debug=false;qt.qpa.*=false",
+    )
+    configure_early_torch_allocator_environment()
+
+
+_configure_daemon_environment()
+
 from airunner.api.server import APIServer
-from logger.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
 from airunner.app import App
+from airunner.services.daemon_config import DaemonConfig
 from airunner.utils.application import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-
-# Set PyTorch CUDA config before any torch imports
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
-
-
-class DaemonConfig:
-    """Configuration for daemon mode."""
-
-    def __init__(self, config_path: Optional[Path] = None):
-        """
-        Load daemon configuration.
-
-        Args:
-            config_path: Path to daemon.yaml configuration file
-        """
-        self.config_path = config_path or self._default_config_path()
-        self.config = self._load_config()
-
-    def _default_config_path(self) -> Path:
-        """Get default configuration path."""
-        if sys.platform == "win32":
-            config_dir = Path(os.environ.get("APPDATA", "")) / "airunner"
-        else:
-            config_dir = Path.home() / ".config" / "airunner"
-
-        return config_dir / "daemon.yaml"
-
-    def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from file."""
-        if not self.config_path.exists():
-            return self._default_config()
-
-        try:
-            with open(self.config_path, "r") as f:
-                config = yaml.safe_load(f) or {}
-            return {**self._default_config(), **config}
-        except Exception as e:
-            logger.error(f"Failed to load config from {self.config_path}: {e}")
-            return self._default_config()
-
-    def _default_config(self) -> Dict[str, Any]:
-        """Get default configuration."""
-        return {
-            # Server settings
-            "server": {
-                "host": "127.0.0.1",
-                "port": 8188,
-                "enable_cors": True,
-                "allowed_origins": [
-                    "http://localhost:*",
-                    "http://127.0.0.1:*",
-                ],
-            },
-            # Model persistence
-            "models": {
-                "persistence_mode": "timeout",  # keep_loaded, timeout, per_request
-                "timeout_minutes": 30,
-                "preload": [],  # List of model IDs to preload on startup
-            },
-            # Health monitoring
-            "health": {
-                "heartbeat_interval": 30,  # seconds
-                "heartbeat_file": "~/.airunner/daemon_heartbeat",
-            },
-            # Logging
-            "logging": {
-                "level": "INFO",
-                "file": "~/.airunner/logs/daemon.log",
-                "max_bytes": 50 * 1024 * 1024,  # 50MB
-                "backup_count": 5,
-            },
-        }
-
-    def save(self):
-        """Save configuration to file."""
-        try:
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_path, "w") as f:
-                yaml.safe_dump(self.config, f, default_flow_style=False)
-        except Exception as e:
-            logger.error(f"Failed to save config to {self.config_path}: {e}")
 
 
 class AIRunnerDaemon:
@@ -126,6 +65,7 @@ class AIRunnerDaemon:
         self.shutdown_requested = False
         self._setup_logging()
         self._setup_signal_handlers()
+        self.lifecycle_service = None
 
     def _setup_logging(self):
         """Configure logging for daemon mode."""
@@ -134,33 +74,38 @@ class AIRunnerDaemon:
             log_config.get("file", "~/.airunner/logs/daemon.log")
         ).expanduser()
         log_level = getattr(logging, log_config.get("level", "INFO"))
-
-        # Create log directory
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-
-        # Configure rotating file handler
-        handler = RotatingFileHandler(
-            log_file,
-            maxBytes=log_config.get("max_bytes", 50 * 1024 * 1024),
-            backupCount=log_config.get("backup_count", 5),
+        log_to_file = (
+            os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1"
+            or bool(log_config.get("to_file", False))
         )
 
-        formatter = logger.Formatter(
+        root_logger = logging.getLogger()
+        root_logger.handlers.clear()
+        root_logger.setLevel(log_level)
+
+        formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        handler.setFormatter(formatter)
 
-        # Configure root logger
-        root_logger = logger.getLogger()
-        root_logger.setLevel(log_level)
-        root_logger.addHandler(handler)
+        if log_to_file:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            handler = RotatingFileHandler(
+                log_file,
+                maxBytes=log_config.get("max_bytes", 50 * 1024 * 1024),
+                backupCount=log_config.get("backup_count", 5),
+            )
+            handler.setFormatter(formatter)
+            root_logger.addHandler(handler)
 
         # Also log to console
-        console_handler = logger.StreamHandler()
+        console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
 
-        logger.info("Daemon logging initialized")
+        if log_to_file:
+            logger.info("Daemon logging initialized with file output")
+        else:
+            logger.info("Daemon logging initialized without file output")
 
     def _setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown."""
@@ -189,8 +134,8 @@ class AIRunnerDaemon:
         logger.info("Starting AI Runner daemon...")
 
         try:
-            # Initialize App in headless mode (no GUI)
-            self.app = App(headless=True, no_splash=True)
+            self.app = self._create_headless_app()
+            self._initialize_lifecycle_service()
 
             logger.info("AI Runner app initialized in headless mode")
 
@@ -211,6 +156,23 @@ class AIRunnerDaemon:
         except Exception as e:
             logger.error(f"Fatal error in daemon: {e}", exc_info=True)
             sys.exit(1)
+
+    def _create_headless_app(self) -> App:
+        """Create the daemon-owned App without embedded server ownership."""
+        return App(
+            headless=True,
+            no_splash=True,
+            start_headless_api_server=False,
+            initialize_headless_lifecycle=False,
+        )
+
+    def _initialize_lifecycle_service(self) -> None:
+        """Initialize runtime lifecycle through the reusable service."""
+        if not self.app:
+            raise RuntimeError("Daemon App must exist before lifecycle init")
+        self.lifecycle_service = self.app.ensure_lifecycle_service()
+        self.lifecycle_service.initialize()
+        self.lifecycle_service.preload_llm_model()
 
     def _preload_models(self):
         """Preload configured models on startup."""
@@ -338,6 +300,7 @@ class AIRunnerDaemon:
             if self.app:
                 logger.info("Cleaning up application...")
                 try:
+                    self._shutdown_runtime_clients()
                     if hasattr(self.app, "cleanup"):
                         self.app.cleanup()
                 except Exception as e:
@@ -351,6 +314,25 @@ class AIRunnerDaemon:
 
         finally:
             sys.exit(0)
+
+    def _shutdown_runtime_clients(self) -> None:
+        """Close runtime clients owned by the daemon-backed app instance."""
+        runtime_registry = getattr(self.app, "runtime_registry", None)
+        if runtime_registry is None:
+            return
+
+        seen_clients = set()
+        for route in runtime_registry.list_routes():
+            client = runtime_registry.resolve(
+                route.runtime,
+                route.provider,
+                route.deployment_mode,
+            )
+            client_id = id(client)
+            if client_id in seen_clients:
+                continue
+            seen_clients.add(client_id)
+            client.close()
 
 
 def main():

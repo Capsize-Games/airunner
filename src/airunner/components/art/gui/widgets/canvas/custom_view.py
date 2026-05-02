@@ -149,7 +149,7 @@ class CustomGraphicsView(
         loaded_offset = QPointF(x, y)
         self.canvas_offset = loaded_offset
 
-        self.logger.info(
+        self.logger.debug(
             f"[LOAD] Canvas offset loaded from settings: x={x}, y={y}"
         )
 
@@ -158,7 +158,7 @@ class CustomGraphicsView(
         center_y = self.settings.value("center_pos_y", None)
         if center_x is not None and center_y is not None:
             self.center_pos = QPointF(float(center_x), float(center_y))
-            self.logger.info(
+            self.logger.debug(
                 f"[LOAD] Center pos loaded from settings: x={center_x}, y={center_y}"
             )
         else:
@@ -169,14 +169,14 @@ class CustomGraphicsView(
         """Save the canvas offset to QSettings."""
         self.settings.setValue("canvas_offset_x", self.canvas_offset_x)
         self.settings.setValue("canvas_offset_y", self.canvas_offset_y)
-        self.logger.info(
+        self.logger.debug(
             f"[SAVE] Canvas offset saved: x={self.canvas_offset_x}, y={self.canvas_offset_y}"
         )
 
         # Save center_pos (grid origin)
         self.settings.setValue("center_pos_x", self.center_pos.x())
         self.settings.setValue("center_pos_y", self.center_pos.y())
-        self.logger.info(
+        self.logger.debug(
             f"[SAVE] Center pos saved: x={self.center_pos.x()}, y={self.center_pos.y()}"
         )
         
@@ -381,9 +381,13 @@ class CustomGraphicsView(
             self.logger.error("No scene in updateImagePositions")
             return
 
-        self.scene.update_image_position(
-            self.canvas_offset, original_item_positions
-        )
+        positions = original_item_positions
+        if positions is None and not self.scene.original_item_positions:
+            positions = self.original_item_positions()
+
+        self.scene.update_image_position(self.canvas_offset, positions)
+        if positions is not None:
+            self.scene.original_item_positions.update(positions)
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()

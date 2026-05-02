@@ -53,7 +53,7 @@ class ActiveGridAreaMixin:
 
         # Skip repositioning during drag to prevent interference
         if self.scene and getattr(self.scene, "is_dragging", False):
-            self.logger.info(
+            self.logger.debug(
                 "[ACTIVE GRID] Skipping show_active_grid_area - is_dragging is True"
             )
             return
@@ -74,7 +74,7 @@ class ActiveGridAreaMixin:
         absolute_x = self.active_grid_settings.pos_x
         absolute_y = self.active_grid_settings.pos_y
 
-        self.logger.info(
+        self.logger.debug(
             f"[LOAD GRID] Active grid absolute position from DB: x={absolute_x}, y={absolute_y}, canvas_offset=({self.canvas_offset_x}, {self.canvas_offset_y})"
         )
 
@@ -111,14 +111,14 @@ class ActiveGridAreaMixin:
         absolute_pos = QPointF(absolute_x, absolute_y)
         display_pos = manager.absolute_to_display(absolute_pos, view_state)
 
-        self.logger.info(
+        self.logger.debug(
             f"[LOAD GRID] Setting grid display position: x={display_pos.x()}, y={display_pos.y()} (absolute: {absolute_x}, {absolute_y}, offset: {self.canvas_offset_x}, {self.canvas_offset_y}, compensation: {self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()})"
         )
         self.active_grid_area.setPos(display_pos.x(), display_pos.y())
 
         # Log actual scene position after setPos
         actual_pos = self.active_grid_area.scenePos()
-        self.logger.info(
+        self.logger.debug(
             f"[LOAD GRID] Active grid actual scene position after setPos: ({actual_pos.x()}, {actual_pos.y()})"
         )
 

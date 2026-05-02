@@ -3,18 +3,27 @@
 Test runner script for AI Runner project.
 
 This script provides a unified interface for running different test suites:
-- Unit tests: Component-level tests in src/airunner/components/*/tests/
+- Unit tests: Safe component tests excluding GUI/widget-only suites
 - Eval tests: Evaluation framework tests in src/airunner/components/llm/tests/eval/
+- LLM runtime smoke tests: safe route/runtime checks with no app startup
+- STT runtime smoke tests: safe route/worker checks with no app startup
+- Art runtime smoke tests: safe daemon-backed art checks with no app startup
+- TTS runtime smoke tests: safe daemon-backed TTS checks with no app startup
 
 Usage:
     python run_tests.py --unit              # Run unit tests only
     python run_tests.py --eval              # Run eval tests only
-    python run_tests.py --all               # Run all tests
+    python run_tests.py --all               # Run unit + runtime smoke + eval
     python run_tests.py --unit --verbose    # Run unit tests with verbose output
     python run_tests.py --component llm     # Run tests for specific component
+    python run_tests.py --llm-runtime-smoke # Run safe LLM runtime smoke tests
+    python run_tests.py --stt-runtime-smoke # Run safe STT runtime smoke tests
+    python run_tests.py --art-runtime-smoke # Run safe art runtime smoke tests
+    python run_tests.py --tts-runtime-smoke # Run safe TTS runtime smoke tests
 
 Note: Eval tests use pytest fixtures to automatically manage the headless server.
       The server will start/stop automatically when tests run.
+    The default unit suite skips GUI-only tests and blocks GUI app startup.
 """
 
 import argparse
@@ -22,6 +31,16 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
+
+def _build_pytest_env(skip_gui: bool = False) -> dict[str, str]:
+    """Return environment guards for pytest subprocesses."""
+    env = {"AIRUNNER_TEST_NO_GUI_LAUNCH": "1"}
+    if skip_gui:
+        env["AIRUNNER_SKIP_GUI_TESTS"] = "1"
+        env["AIRUNNER_SKIP_EVAL_TESTS"] = "1"
+        env["AIRUNNER_SKIP_FUNCTIONAL_TESTS"] = "1"
+    return env
 
 
 def kill_stale_servers():
@@ -113,10 +132,10 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
                 f"Error: Component '{component}' has no tests directory at {test_path}"
             )
             return 1
-        description = f"Unit tests for {component} component"
+        description = f"Safe unit tests for {component} component"
     else:
         test_path = base_path
-        description = "All unit tests"
+        description = "Safe unit tests (GUI suites excluded)"
 
     cmd = ["pytest", str(test_path)]
 
@@ -130,11 +149,14 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         [
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
+            "-m",
+            "not gui and not eval and not benchmark and not integration",
             "--ignore=src/airunner/components/eval",  # Exclude eval tests
+            "--ignore=src/airunner/components/server/tests/functional",
         ]
     )
 
-    return run_command(cmd, description)
+    return run_command(cmd, description, env=_build_pytest_env(skip_gui=True))
 
 
 def run_eval_tests(
@@ -188,7 +210,7 @@ def run_eval_tests(
         cmd.extend(["-m", "not slow"])
 
     # Pass model argument to pytest if specified
-    env = {}
+    env = _build_pytest_env()
     if model:
         env["AIRUNNER_TEST_MODEL_PATH"] = model
         # Also pass to pytest as --model flag
@@ -201,6 +223,98 @@ def run_eval_tests(
     return run_command(cmd, description, env=env)
 
 
+def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
+    """Run the safe llama.cpp runtime smoke suite."""
+    test_path = Path("src/airunner/api/tests")
+    cmd = [
+        "pytest",
+        str(test_path),
+        "-m",
+        "llm_runtime_smoke",
+    ]
+
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.append("--tb=short")
+
+    cmd.extend(["--color=yes", "-ra"])
+    return run_command(
+        cmd,
+        "LLM runtime smoke tests",
+        env=_build_pytest_env(),
+    )
+
+
+def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
+    """Run the safe STT runtime smoke suite."""
+    test_path = Path("src/airunner/api/tests")
+    cmd = [
+        "pytest",
+        str(test_path),
+        "-m",
+        "stt_runtime_smoke",
+    ]
+
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.append("--tb=short")
+
+    cmd.extend(["--color=yes", "-ra"])
+    return run_command(
+        cmd,
+        "STT runtime smoke tests",
+        env=_build_pytest_env(),
+    )
+
+
+def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
+    """Run the safe art runtime smoke suite."""
+    test_path = Path("src/airunner/api/tests")
+    cmd = [
+        "pytest",
+        str(test_path),
+        "-m",
+        "art_runtime_smoke",
+    ]
+
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.append("--tb=short")
+
+    cmd.extend(["--color=yes", "-ra"])
+    return run_command(
+        cmd,
+        "Art runtime smoke tests",
+        env=_build_pytest_env(),
+    )
+
+
+def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
+    """Run the safe TTS runtime smoke suite."""
+    test_path = Path("src/airunner/api/tests")
+    cmd = [
+        "pytest",
+        str(test_path),
+        "-m",
+        "tts_runtime_smoke",
+    ]
+
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.append("--tb=short")
+
+    cmd.extend(["--color=yes", "-ra"])
+    return run_command(
+        cmd,
+        "TTS runtime smoke tests",
+        env=_build_pytest_env(),
+    )
+
+
 def main():
     """Main entry point for test runner."""
     parser = argparse.ArgumentParser(
@@ -209,7 +323,11 @@ def main():
         epilog="""
 Examples:
   %(prog)s --unit                    Run all unit tests
-  %(prog)s --eval                    Run eval tests only
+    %(prog)s --eval                    Run eval tests only
+    %(prog)s --llm-runtime-smoke       Run safe llama.cpp runtime smoke tests
+    %(prog)s --stt-runtime-smoke       Run safe STT runtime smoke tests
+    %(prog)s --art-runtime-smoke       Run safe art runtime smoke tests
+    %(prog)s --tts-runtime-smoke       Run safe TTS runtime smoke tests
   %(prog)s --eval --model /path/to/model    Test with specific model
   %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
   %(prog)s --eval --skip-slow        Run only fast eval tests
@@ -230,7 +348,33 @@ Examples:
     )
 
     parser.add_argument(
-        "--all", action="store_true", help="Run all tests (unit + eval)"
+        "--llm-runtime-smoke",
+        action="store_true",
+        help="Run safe llama.cpp runtime smoke tests",
+    )
+
+    parser.add_argument(
+        "--stt-runtime-smoke",
+        action="store_true",
+        help="Run safe STT runtime smoke tests",
+    )
+
+    parser.add_argument(
+        "--art-runtime-smoke",
+        action="store_true",
+        help="Run safe art runtime smoke tests",
+    )
+
+    parser.add_argument(
+        "--tts-runtime-smoke",
+        action="store_true",
+        help="Run safe TTS runtime smoke tests",
+    )
+
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run all tests (unit + runtime smoke + eval)",
     )
 
     parser.add_argument(
@@ -264,7 +408,15 @@ Examples:
     args = parser.parse_args()
 
     # Default to running unit tests if no flags specified
-    if not (args.unit or args.eval or args.all):
+    if not (
+        args.unit
+        or args.eval
+        or args.llm_runtime_smoke
+        or args.stt_runtime_smoke
+        or args.art_runtime_smoke
+        or args.tts_runtime_smoke
+        or args.all
+    ):
         args.unit = True
 
     exit_codes = []
@@ -274,6 +426,22 @@ Examples:
         exit_code = run_unit_tests(
             component=args.component, verbose=args.verbose
         )
+        exit_codes.append(exit_code)
+
+    if args.llm_runtime_smoke or args.all:
+        exit_code = run_llm_runtime_smoke_tests(verbose=args.verbose)
+        exit_codes.append(exit_code)
+
+    if args.stt_runtime_smoke or args.all:
+        exit_code = run_stt_runtime_smoke_tests(verbose=args.verbose)
+        exit_codes.append(exit_code)
+
+    if args.art_runtime_smoke or args.all:
+        exit_code = run_art_runtime_smoke_tests(verbose=args.verbose)
+        exit_codes.append(exit_code)
+
+    if args.tts_runtime_smoke or args.all:
+        exit_code = run_tts_runtime_smoke_tests(verbose=args.verbose)
         exit_codes.append(exit_code)
 
     # Run eval tests

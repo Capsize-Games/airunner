@@ -79,9 +79,13 @@ class ConversationManagementMixin:
             return
 
         if conversation:
-            self._workflow_manager.set_conversation_id(
-                conversation.id, ephemeral=ephemeral
-            )
+            if ephemeral:
+                self._workflow_manager.set_conversation_id(
+                    conversation.id,
+                    ephemeral=True,
+                )
+            else:
+                self._workflow_manager.set_conversation_id(conversation.id)
         else:
             self._workflow_manager.clear_memory()
 

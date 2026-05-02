@@ -10,9 +10,6 @@ from openevals.llm import create_llm_as_judge
 
 from airunner.components.agents.agent_registry import AgentRegistry
 from airunner.components.agents.agent_router import AgentRouter
-from airunner.components.agents.expert_agents.calendar_agent import (
-    CalendarExpertAgent,
-)
 from airunner.components.agents.expert_agents.code_agent import (
     CodeExpertAgent,
 )
@@ -79,12 +76,10 @@ class AgentSystemEvaluator:
         self.router = AgentRouter(self.registry)
 
         # Register all expert agents
-        self.calendar_agent = CalendarExpertAgent()
         self.code_agent = CodeExpertAgent()
         self.research_agent = ResearchExpertAgent()
         self.creative_agent = CreativeExpertAgent()
 
-        self.registry.register(self.calendar_agent)
         self.registry.register(self.code_agent)
         self.registry.register(self.research_agent)
         self.registry.register(self.creative_agent)
@@ -111,11 +106,6 @@ def evaluator():
 # Test cases with reference outputs
 test_cases = [
     {
-        "task": "Schedule a team meeting for next Tuesday at 2pm",
-        "expected_agent_type": "calendar",
-        "expected_agent_name": "calendar_expert",
-    },
-    {
         "task": "Write a Python function to calculate fibonacci numbers",
         "expected_agent_type": "code",
         "expected_agent_name": "code_expert",
@@ -131,14 +121,19 @@ test_cases = [
         "expected_agent_name": "creative_expert",
     },
     {
-        "task": "Create a reminder to call the dentist tomorrow",
-        "expected_agent_type": "calendar",
-        "expected_agent_name": "calendar_expert",
-    },
-    {
-        "task": "Debug this Python code that's throwing an exception",
+        "task": "Refactor this slow Python loop into idiomatic code",
         "expected_agent_type": "code",
         "expected_agent_name": "code_expert",
+    },
+    {
+        "task": "Summarize the main findings of this technical article",
+        "expected_agent_type": "research",
+        "expected_agent_name": "research_expert",
+    },
+    {
+        "task": "Brainstorm taglines for a time-travel novel",
+        "expected_agent_type": "creative",
+        "expected_agent_name": "creative_expert",
     },
 ]
 
@@ -287,10 +282,10 @@ async def test_multi_agent_collaboration_quality(evaluator):
         },
         {
             "task": (
-                "Brainstorm creative ideas for a story, "
-                "then schedule time to write it"
+                "Research folklore about time travel, "
+                "then write a short story outline"
             ),
-            "required_agents": ["creative_expert", "calendar_expert"],
+            "required_agents": ["research_expert", "creative_expert"],
         },
     ]
 

@@ -31,6 +31,8 @@ class ZoomMixin:
         # Redraw lines
         self.do_draw()
 
+        self._update_zoom_grid_info()
+
     def wheelEvent(self, event):
         """Handle mouse wheel events for zooming.
 
@@ -44,3 +46,19 @@ class ZoomMixin:
 
         # Redraw grid lines
         self.do_draw()
+
+        self._update_zoom_grid_info()
+
+    def _update_zoom_grid_info(self) -> None:
+        """Refresh the canvas HUD after the zoom level changes."""
+        api = getattr(self, "api", None)
+        art = getattr(api, "art", None)
+        canvas = getattr(art, "canvas", None)
+        if canvas is None:
+            return
+        canvas.update_grid_info(
+            {
+                "offset_x": self.canvas_offset_x,
+                "offset_y": self.canvas_offset_y,
+            }
+        )

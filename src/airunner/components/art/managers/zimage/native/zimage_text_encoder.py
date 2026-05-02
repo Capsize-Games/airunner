@@ -9,13 +9,14 @@ Based on ComfyUI's comfy/text_encoders/z_image.py implementation.
 
 from __future__ import annotations
 
+import gc
 import logging
 import os
-import gc
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+from safetensors import safe_open
 from transformers import (
     Qwen2Tokenizer,
     AutoTokenizer,
@@ -25,6 +26,56 @@ from transformers import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SAFE_TENSORS_FORMATS = {"pt", "tf", "flax", "mlx"}
+
+
+def _resolve_transformers_weights_override(model_path: str) -> Optional[str]:
+    """Prefer the sharded index when a merged safetensors file is nonstandard.
+
+    Some AIRunner-managed Z-Image text encoder folders contain both:
+    - valid sharded weights referenced by `model.safetensors.index.json`
+    - a merged `model.safetensors` convenience file whose metadata does not
+      advertise a standard transformers format.
+
+    Recent transformers releases prefer the single file when it exists and then
+    reject it during metadata validation. When that happens, forcing the sharded
+    index keeps loading on the supported path.
+    """
+    if not os.path.isdir(model_path):
+        return None
+
+    index_name = "model.safetensors.index.json"
+    index_path = os.path.join(model_path, index_name)
+    merged_path = os.path.join(model_path, "model.safetensors")
+
+    if not os.path.isfile(index_path) or not os.path.isfile(merged_path):
+        return None
+
+    try:
+        with safe_open(merged_path, framework="pt") as handle:
+            metadata = handle.metadata() or {}
+    except Exception as exc:
+        logger.warning(
+            "Failed to inspect merged text encoder safetensors at %s: %s. "
+            "Falling back to sharded index.",
+            merged_path,
+            exc,
+        )
+        return index_name
+
+    file_format = metadata.get("format")
+    if file_format in _SAFE_TENSORS_FORMATS:
+        return None
+
+    logger.info(
+        "Detected nonstandard safetensors metadata for %s (format=%s). "
+        "Using sharded text encoder weights via %s instead.",
+        merged_path,
+        file_format,
+        index_name,
+    )
+    return index_name
 
 
 class ZImageTokenizer:
@@ -151,6 +202,7 @@ class ZImageTextEncoder(nn.Module):
         quantization: Optional[str] = None,
         device_map: Optional[str] = None,
         max_memory: Optional[Dict[str, str]] = None,
+        enable_cpu_offload: bool = False,
     ):
         super().__init__()
         
@@ -161,6 +213,10 @@ class ZImageTextEncoder(nn.Module):
         self._device = device
         self._device_map = device_map
         self._max_memory = max_memory
+        self._enable_cpu_offload = enable_cpu_offload
+        self._prefer_cpu_execution = (
+            device is not None and torch.device(device).type == "cpu"
+        )
         
         self.model: Optional[nn.Module] = None
         self.tokenizer: Optional[ZImageTokenizer] = None
@@ -198,6 +254,12 @@ class ZImageTextEncoder(nn.Module):
                 model_path,
                 trust_remote_code=True,
             )
+
+            transformers_weights = _resolve_transformers_weights_override(
+                model_path
+            )
+            if transformers_weights is not None:
+                config.transformers_weights = transformers_weights
             
             # Configure quantization
             quantization_config = None
@@ -209,8 +271,13 @@ class ZImageTextEncoder(nn.Module):
                     bnb_4bit_quant_type="nf4",
                 )
             elif self.quantization == "8bit":
+                quantization_kwargs = {"load_in_8bit": True}
+                if self._enable_cpu_offload:
+                    quantization_kwargs[
+                        "llm_int8_enable_fp32_cpu_offload"
+                    ] = True
                 quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=True,
+                    **quantization_kwargs,
                 )
             
             # Load model
@@ -222,7 +289,7 @@ class ZImageTextEncoder(nn.Module):
             load_kwargs = {
                 "config": config,
                 "quantization_config": quantization_config,
-                "torch_dtype": self.dtype,
+                "dtype": self.dtype,
                 "device_map": device_map,
                 "trust_remote_code": True,
             }
@@ -248,6 +315,31 @@ class ZImageTextEncoder(nn.Module):
         except Exception as e:
             logger.error(f"Failed to load text encoder: {e}")
             raise
+
+    @property
+    def uses_accelerate_offload(self) -> bool:
+        """Return True when the loaded model uses a mixed device map."""
+        if self.model is None:
+            return False
+        device_map = getattr(self.model, "hf_device_map", None)
+        if not isinstance(device_map, dict):
+            return False
+        return any(target in {"cpu", "disk"} for target in device_map.values())
+
+    @property
+    def prefer_cpu_execution(self) -> bool:
+        """Return True when prompt encoding should stay on CPU."""
+        return self._prefer_cpu_execution
+
+    def unload_model(self) -> None:
+        """Release model weights while keeping tokenizer and load settings."""
+        if self.model is None:
+            return
+        del self.model
+        self.model = None
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
     def encode(
         self,

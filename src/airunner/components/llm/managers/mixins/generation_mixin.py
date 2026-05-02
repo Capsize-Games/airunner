@@ -19,11 +19,28 @@ from langchain_core.messages import AIMessage
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.enums import LLMActionType, SignalCode
+from airunner.components.llm.utils.gpt_oss_parser import (
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
+from airunner.components.llm.utils.stream_text import prepare_stream_chunk
+from airunner.enums import LLMActionType, ModelStatus, ModelType, SignalCode
 
 
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
+
+    def _sync_request_scope_to_workflow_manager(self) -> None:
+        """Propagate the active request ID to workflow-scoped emitters."""
+        if not self._workflow_manager:
+            return
+
+        request_id = getattr(self, "_current_request_id", None)
+        if hasattr(self._workflow_manager, "set_request_id"):
+            self._workflow_manager.set_request_id(request_id)
+            return
+
+        setattr(self._workflow_manager, "_current_request_id", request_id)
 
     def _clamp_generation_tokens(self, generation_kwargs: Dict[str, Any]) -> None:
         """Ensure max_new_tokens does not exceed target context.
@@ -173,6 +190,9 @@ class GenerationMixin:
             """Forward streaming tokens to the GUI and accumulate response."""
             if not token_text:
                 return
+            token_text = prepare_stream_chunk(complete_response[0], token_text)
+            if not token_text:
+                return
             complete_response[0] += token_text
             sequence_counter[0] += 1
             if not getattr(self, "_current_request_id", None):
@@ -274,6 +294,10 @@ class GenerationMixin:
         if len(final_messages) > 0:
             final_content = final_messages[-1].content or ""
             if final_content:
+                if has_gpt_oss_markup(final_content):
+                    parsed = parse_gpt_oss_response(final_content)
+                    if parsed.content:
+                        return parsed.content
                 # If the model is using ReAct format, extract only the response
                 # before "Action:" to avoid showing tool calls to the user
                 if "\nAction:" in final_content:
@@ -377,14 +401,38 @@ class GenerationMixin:
                 pass
 
         if not self._workflow_manager:
+            model_status = getattr(self, "model_status", {}).get(ModelType.LLM)
+            last_load_error = str(
+                getattr(self, "_last_load_error", "") or ""
+            ).strip()
+            if model_status == ModelStatus.FAILED and last_load_error:
+                self.logger.error(
+                    "Workflow manager unavailable because model load failed: %s",
+                    last_load_error,
+                )
+                return {
+                    "response": f"Error: {last_load_error}",
+                    "error": last_load_error,
+                }
+
             model_path = None
+            expected_gguf_path = None
             try:
                 model_path = self.model_path
             except Exception:
                 model_path = None
 
+            try:
+                if hasattr(self, "_get_expected_gguf_path"):
+                    expected_gguf_path = self._get_expected_gguf_path()
+            except Exception:
+                expected_gguf_path = None
+
             if self.llm_settings.use_local_llm and model_path:
-                model_name = os.path.basename(model_path.rstrip("/")) or "(unknown)"
+                try:
+                    model_name = self.model_name
+                except Exception:
+                    model_name = os.path.basename(model_path.rstrip("/")) or "(unknown)"
                 is_gguf = False
                 try:
                     if hasattr(self, "_is_gguf_quantization_selected"):
@@ -393,7 +441,9 @@ class GenerationMixin:
                     is_gguf = False
 
                 gguf_present = False
-                if is_gguf:
+                if expected_gguf_path:
+                    gguf_present = os.path.exists(expected_gguf_path)
+                elif is_gguf:
                     # In GGUF mode, the configured model path may be a directory.
                     # Consider the model "ready" only once a .gguf file exists.
                     try:
@@ -407,8 +457,26 @@ class GenerationMixin:
                     except Exception:
                         gguf_present = False
 
-                model_missing = (not os.path.exists(model_path)) or (is_gguf and not gguf_present)
-                if model_missing:
+                model_ready = os.path.exists(model_path)
+                if expected_gguf_path:
+                    model_ready = gguf_present
+                elif is_gguf:
+                    model_ready = model_ready and gguf_present
+
+                if model_ready and hasattr(self, "load"):
+                    try:
+                        self.load()
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to load local model before generation"
+                        )
+                    if not self._workflow_manager and hasattr(self, "_load_workflow_manager"):
+                        try:
+                            self._load_workflow_manager()
+                        except Exception:
+                            pass
+
+                if not model_ready:
                     self.logger.error(
                         "Workflow manager unavailable because model is missing; "
                         "download likely in progress"
@@ -417,11 +485,14 @@ class GenerationMixin:
                         "response": (
                             f"Error: model '{model_name}' is not ready yet (download in progress). "
                             "Please wait for the download to finish and try again."
-                        )
+                        ),
+                        "retry_after_download": True,
                     }
 
             self.logger.error("Workflow manager is not initialized")
             return {"response": "Error: workflow unavailable"}
+
+        self._sync_request_scope_to_workflow_manager()
 
         callback = self._create_streaming_callback(
             llm_request, complete_response, sequence_counter

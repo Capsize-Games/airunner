@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 import psutil
 import torch
@@ -24,134 +23,107 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         self.signal_handlers = {
             SignalCode.LOG_LOGGED_SIGNAL: self.on_log_logged_signal,
         }
+        self._gpu_stats_warning_logged = False
         super().__init__(*args, **kwargs)
 
         # Track console history
         self.console_history = []
 
-        self.timer = QTimer()
+        self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_memory_stats)
         self.timer.start(500)
+        self.update_memory_stats()
 
     def showEvent(self, event):
         super().showEvent(event)
         self.set_stylesheet()
 
     def update_memory_stats(self):
-        # Clear the table
+        """Refresh the memory usage table."""
         headers = [
             "Device",
             "Used Memory",
             "Total Memory",
             "Free Memory",
         ]
-        col_count = len(headers)
-
-        # Get GPU details
         device_count = torch.cuda.device_count()
-        row_count = device_count + 1  # Add 1 for CPU
+        row_count = device_count + 1
 
-        self.ui.memory_stats.setColumnCount(col_count)
+        self.ui.memory_stats.setColumnCount(len(headers))
         self.ui.memory_stats.setRowCount(row_count)
         self.ui.memory_stats.setHorizontalHeaderLabels(headers)
+        self._populate_gpu_rows(device_count)
+        self._populate_cpu_row(row_count - 1)
 
-        # Get nvidia-smi stats
-        nvidia_smi_stats = []
-        try:
-            result = subprocess.run(
-                [
-                    "nvidia-smi",
-                    "--query-gpu=memory.used,memory.total",
-                    "--format=csv,noheader,nounits",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            for line in result.stdout.strip().split("\n"):
-                used, total = line.split(",")
-                nvidia_smi_stats.append(
-                    (float(used.strip()) / 1024, float(total.strip()) / 1024)
-                )  # Convert MB to GB
-        except Exception as e:
-            nvidia_smi_stats = [(0, 0)] * device_count
-            self.logger.warning(f"nvidia-smi not available or failed: {e}")
-
-        for i in range(device_count):
-            device = torch.device(f"cuda:{i}")
+    def _populate_gpu_rows(self, device_count: int) -> None:
+        """Fill one table row per CUDA device."""
+        for index in range(device_count):
+            device = torch.device(f"cuda:{index}")
             try:
-                torch.cuda.set_device(device)
-            except RuntimeError as e:
-                self.logger.error(f"Error setting device: {e}")
+                stats = gpu_memory_stats(device)
+            except RuntimeError as exc:
+                self._log_gpu_stats_warning_once(exc)
                 continue
-            stats = gpu_memory_stats(device)
-            free_mem = stats["free"]
-            device_name = stats["device_name"]
-            # Use nvidia-smi for used/total, fallback to torch if unavailable
-            nvidia_used, nvidia_total = (
-                nvidia_smi_stats[i] if i < len(nvidia_smi_stats) else (0, 0)
-            )
-            used_mem = (
-                round(nvidia_used, 2)
-                if nvidia_used
-                else round(stats["allocated"], 2)
-            )
-            total_mem = (
-                round(nvidia_total, 2)
-                if nvidia_total
-                else round(stats["total"], 2)
-            )
-            free_mem = round(free_mem, 2)
-            self.ui.memory_stats.setItem(i, 0, QTableWidgetItem(device_name))
-            self.ui.memory_stats.setItem(
-                i, 1, QTableWidgetItem(f"{used_mem}GB")
-            )
-            self.ui.memory_stats.setItem(
-                i, 2, QTableWidgetItem(f"{total_mem}GB")
-            )
-            self.ui.memory_stats.setItem(
-                i, 3, QTableWidgetItem(f"{free_mem}GB")
-            )
-            # Set colors
-            self.ui.memory_stats.item(i, 1).setForeground(Qt.GlobalColor.red)
-            self.ui.memory_stats.item(i, 2).setForeground(
-                Qt.GlobalColor.yellow
-            )
-            self.ui.memory_stats.item(i, 3).setForeground(Qt.GlobalColor.green)
 
-        # Get memory details for the current process (CPU)
+            self._set_memory_row(
+                index,
+                str(stats["device_name"]),
+                float(stats["used"]),
+                float(stats["total"]),
+                float(stats["free"]),
+            )
+
+    def _populate_cpu_row(self, row: int) -> None:
+        """Fill the CPU memory row."""
         try:
             process = psutil.Process(os.getpid())
             memory_info = process.memory_info()
         except Exception:
             return
+
         used = memory_info.rss / (1024.0**3)  # Resident Set Size
         total = psutil.virtual_memory().total / (1024.0**3)
         available = total - used
-        # truncate to 2 decimal places
-        used = round(used, 2)
-        total = round(total, 2)
-        available = round(available, 2)
-        self.ui.memory_stats.setItem(row_count - 1, 0, QTableWidgetItem("CPU"))
-        self.ui.memory_stats.setItem(
-            row_count - 1, 1, QTableWidgetItem(f"{used}GB")
-        )
-        self.ui.memory_stats.setItem(
-            row_count - 1, 2, QTableWidgetItem(f"{total}GB")
-        )
-        self.ui.memory_stats.setItem(
-            row_count - 1, 3, QTableWidgetItem(f"{available}GB")
-        )
-        # Set colors
-        self.ui.memory_stats.item(row_count - 1, 1).setForeground(
-            Qt.GlobalColor.red
-        )
-        self.ui.memory_stats.item(row_count - 1, 2).setForeground(
+        self._set_memory_row(row, "CPU", used, total, available)
+
+    def _set_memory_row(
+        self,
+        row: int,
+        device_name: str,
+        used_mem: float,
+        total_mem: float,
+        free_mem: float,
+    ) -> None:
+        """Set one table row and apply status colors."""
+        items = [
+            QTableWidgetItem(device_name),
+            QTableWidgetItem(f"{round(used_mem, 2)}GB"),
+            QTableWidgetItem(f"{round(total_mem, 2)}GB"),
+            QTableWidgetItem(f"{round(free_mem, 2)}GB"),
+        ]
+        for column, item in enumerate(items):
+            self.ui.memory_stats.setItem(row, column, item)
+
+        self.ui.memory_stats.item(row, 1).setForeground(Qt.GlobalColor.red)
+        self.ui.memory_stats.item(row, 2).setForeground(
             Qt.GlobalColor.yellow
         )
-        self.ui.memory_stats.item(row_count - 1, 3).setForeground(
+        self.ui.memory_stats.item(row, 3).setForeground(
             Qt.GlobalColor.green
         )
+
+    def _log_gpu_stats_warning_once(self, error: Exception) -> None:
+        """Log one GPU stats warning instead of spamming every refresh."""
+        if self._gpu_stats_warning_logged:
+            return
+        self._gpu_stats_warning_logged = True
+        self.logger.warning(f"GPU stats unavailable: {error}")
+
+    def closeEvent(self, event):
+        """Stop background polling when the stats window closes."""
+        if self.timer.isActive():
+            self.timer.stop()
+        super().closeEvent(event)
 
     @staticmethod
     def set_color(_row, _col, status):

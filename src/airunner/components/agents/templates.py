@@ -98,24 +98,6 @@ AGENT_TEMPLATES: Dict[str, AgentTemplate] = {
             "search_files",
         ],
     ),
-    "calendar": AgentTemplate(
-        name="calendar",
-        description="Calendar and scheduling expert",
-        system_prompt=(
-            "You are a professional scheduling assistant who helps manage "
-            "calendars, organize events, and coordinate schedules efficiently. "
-            "You understand time zones, handle recurring events, and provide "
-            "proactive reminders."
-        ),
-        tools=[
-            "create_event",
-            "list_events",
-            "update_event",
-            "delete_event",
-            "create_reminder",
-            "list_reminders",
-        ],
-    ),
     "custom": AgentTemplate(
         name="custom",
         description="Custom agent with user-defined configuration",

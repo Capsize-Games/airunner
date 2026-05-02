@@ -1,4 +1,5 @@
 import logging
+import os
 import warnings
 import time
 from typing import List
@@ -7,6 +8,15 @@ from airunner.vendor.facehuggershield.shadowlogger.base_tracker import BaseTrack
 from airunner.vendor.facehuggershield.shadowlogger.intercept_handler import (
     InterceptHandler,
 )
+
+
+def _default_log_level() -> int:
+    """Return the configured app log level for shadow logging."""
+    level_name = os.environ.get("AIRUNNER_LOG_LEVEL", "INFO")
+    try:
+        return int(level_name)
+    except ValueError:
+        return getattr(logging, level_name.upper(), logging.INFO)
 
 
 class PrefixFilter(logging.Filter):
@@ -37,7 +47,7 @@ class ShadowLogger(logging.Logger):
     message_format: str = (
         "%(asctime)s - SHADOWLOGGER - %(levelname)s - %(prefix)s - %(message)s - %(lineno)d"
     )
-    log_level: int = logging.DEBUG
+    log_level: int = _default_log_level()
 
     def __init__(
         self, show_stdout: bool = True, trackers: List[BaseTracker] = None
@@ -128,7 +138,7 @@ class ShadowLogger(logging.Logger):
         :return: None
         """
         if level is None:
-            level = logging.DEBUG
+            level = _default_log_level()
         self.setLevel(level)
         self.__stream_handler.setLevel(level)
         self.intercept_handler.setLevel(

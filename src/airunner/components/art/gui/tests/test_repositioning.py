@@ -1,5 +1,6 @@
 import types
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -441,8 +442,8 @@ def test_showEvent_loads_offset_and_preserves_it():
     assert view._grid_compensation_offset.y() == 0.0
 
 
-def test_recenter_grid_resets_offsets_and_repositions():
-    """Test that recenter_grid_signal handler resets offsets and repositions items."""
+def test_recenter_grid_resets_offsets_without_repositioning_items():
+    """Recenter should preserve image and active-grid absolute positions."""
     view = CustomGraphicsView()
     active, grid, app_settings = make_settings(
         pos_x=100, pos_y=150, working_width=512, working_height=512
@@ -462,13 +463,9 @@ def test_recenter_grid_resets_offsets_and_repositions():
         fake_get_or_cache_settings, view
     )
 
-    # Stub update method to capture calls
-    update_calls = []
-
-    def fake_update_active_grid_settings(**kwargs):
-        update_calls.append(kwargs)
-
-    view.update_active_grid_settings = fake_update_active_grid_settings
+    view.update_active_grid_settings = Mock()
+    view.recenter_layer_positions = Mock(return_value={})
+    view.updateImagePositions = Mock()
 
     view.setProperty("canvas_type", "image")
     _ = view.scene
@@ -508,10 +505,9 @@ def test_recenter_grid_resets_offsets_and_repositions():
     assert view._grid_compensation_offset.x() == 0.0
     assert view._grid_compensation_offset.y() == 0.0
 
-    # Check that active_grid_settings were updated (captured in update_calls)
-    assert len(update_calls) > 0
-    assert "pos_x" in update_calls[0]
-    assert "pos_y" in update_calls[0]
+    view.update_active_grid_settings.assert_not_called()
+    view.recenter_layer_positions.assert_not_called()
+    view.updateImagePositions.assert_called_once_with()
 
 
 def test_negligible_resize_skipped():

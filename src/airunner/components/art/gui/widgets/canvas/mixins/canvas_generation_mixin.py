@@ -4,6 +4,7 @@ Handles AI-generated image integration into the canvas including
 placement, persistence, and history management.
 """
 
+from functools import partial
 from typing import Optional, Dict
 
 
@@ -29,36 +30,111 @@ class CanvasGenerationMixin:
                 {"image_response": image_response}
             )
 
+    def _cache_pending_layer_image(self, layer_id, image) -> None:
+        """Preserve a generated image for the next layer refresh."""
+        if layer_id is None or image is None:
+            return
+
+        pending_layer_images = getattr(self, "_pending_layer_images", None)
+        if not isinstance(pending_layer_images, dict):
+            pending_layer_images = {}
+            self._pending_layer_images = pending_layer_images
+
+        pending_layer_images[layer_id] = image
+
     def on_send_image_to_canvas_signal(self, data: Optional[Dict] = None):
         """Handle generated image by creating a new layer.
 
         Args:
             data: Dict containing 'image_response' with generated images
         """
-        self.logger.info(f"[CANVAS DEBUG] on_send_image_to_canvas_signal called with data keys: {data.keys() if data else 'None'}")
+        self.logger.debug(
+            "[CANVAS DEBUG] on_send_image_to_canvas_signal keys=%s",
+            list(data.keys()) if data else None,
+        )
         if data is None:
-            self.logger.warning("[CANVAS DEBUG] data is None, returning early")
+            self.logger.debug(
+                "[CANVAS DEBUG] data is None, returning early"
+            )
             return
 
         image_response = data.get("image_response")
         self.cached_send_image_to_canvas = None
         if not image_response or not image_response.images:
-            self.logger.warning(f"[CANVAS DEBUG] No images in response. image_response={image_response}, images={getattr(image_response, 'images', 'NO ATTR')}")
+            self.logger.debug(
+                "[CANVAS DEBUG] No images in response. image_response=%s images=%s",
+                image_response,
+                getattr(image_response, "images", "NO ATTR"),
+            )
             return
 
-        self.logger.info(f"[CANVAS DEBUG] Got {len(image_response.images)} images, first image: {image_response.images[0]}")
         image = image_response.images[0]
 
         # Get the current selected layer for the generated image
         layer_id = self._add_image_to_undo()
-        self.logger.info(f"[CANVAS DEBUG] layer_id from _add_image_to_undo: {layer_id}")
+        self._cache_pending_layer_image(layer_id, image)
+        self.logger.debug(
+            "[CANVAS DEBUG] layer_id from _add_image_to_undo: %s",
+            layer_id,
+        )
 
         # Load the image to the scene (mark as generated for proper positioning)
-        self.logger.info(f"[CANVAS DEBUG] Calling _load_image_from_object with image={image}, generated=True")
+        self.logger.debug(
+            "[CANVAS DEBUG] Calling _load_image_from_object; generated=True"
+        )
         self._load_image_from_object(image=image, generated=True)
-        self.logger.info(f"[CANVAS DEBUG] _load_image_from_object completed")
+        self.logger.debug(
+            "[CANVAS DEBUG] _load_image_from_object completed"
+        )
+        self._notify_generated_image_ready()
+        self._schedule_generated_follow_up(
+            partial(self._finalize_generated_image, layer_id, image)
+        )
 
-        # Persist the image to the database
+        post_display_callback = getattr(
+            image_response,
+            "post_display_callback",
+            None,
+        )
+        if callable(post_display_callback):
+            self._schedule_generated_follow_up(post_display_callback)
+
+    def _notify_generated_image_ready(self) -> None:
+        """Notify the view layer so the new image can paint immediately."""
+        try:
+            if self.api and hasattr(self.api, "art"):
+                self.api.art.canvas.image_updated()
+        except Exception as exc:
+            self.logger.debug(
+                f"image_updated notification failed: {exc}"
+            )
+
+    def _schedule_generated_follow_up(self, callback) -> None:
+        """Run heavy follow-up work after the first canvas update is queued."""
+        try:
+            from PySide6.QtCore import QTimer
+
+            QTimer.singleShot(0, callback)
+        except Exception as exc:
+            self.logger.debug(
+                f"Falling back to inline generated follow-up: {exc}"
+            )
+            callback()
+
+    def _finalize_generated_image(self, layer_id, image) -> None:
+        """Persist generated image state after the initial canvas handoff."""
+        self._persist_generated_layer_image(layer_id, image)
+        self._commit_layer_history_transaction(layer_id, "image")
+        try:
+            self._refresh_layer_display()
+        except Exception as exc:
+            self.logger.error(
+                f"Failed to refresh layer display: {exc}",
+                exc_info=True,
+            )
+
+    def _persist_generated_layer_image(self, layer_id, image) -> None:
+        """Persist one generated image to layer storage."""
         try:
             rgba_image = (
                 image if image.mode == "RGBA" else image.convert("RGBA")
@@ -71,34 +147,13 @@ class CanvasGenerationMixin:
                 + rgba_image.tobytes()
             )
             self.update_drawing_pad_settings(
-                layer_id=layer_id, image=raw_binary
+                layer_id=layer_id,
+                image=raw_binary,
             )
             self._pending_image_binary = raw_binary
             self._current_active_image_binary = raw_binary
         except Exception:
             pass
-
-        # Commit to undo history
-        self._commit_layer_history_transaction(layer_id, "image")
-
-        # Defer layer display refresh to next event loop
-        # This allows the canvas image to display immediately
-        try:
-            from PySide6.QtCore import QTimer
-
-            QTimer.singleShot(0, self._refresh_layer_display)
-        except Exception as e:
-            self.logger.error(
-                f"Failed to schedule layer display refresh: {e}",
-                exc_info=True,
-            )
-
-        # Notify other components that the canvas image changed (matches drop/paste flow)
-        try:
-            if self.api and hasattr(self.api, "art"):
-                self.api.art.canvas.image_updated()
-        except Exception as e:
-            self.logger.debug(f"image_updated notification failed: {e}")
 
     def on_image_generated_signal(self, data: Dict):
         """Handle image generation completion signal.

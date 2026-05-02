@@ -1,7 +1,7 @@
 """Unit tests for CanvasGenerationMixin AI image integration."""
 
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from PIL import Image
 
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
@@ -19,6 +19,7 @@ def generation_scene(qapp, mock_scene_with_settings):
     scene.update_drawing_pad_settings = MagicMock()
     scene._pending_image_binary = None
     scene._current_active_image_binary = None
+    scene._pending_layer_images = {}
     scene._commit_layer_history_transaction = MagicMock()
     scene._refresh_layer_display = MagicMock()
     scene._handle_outpaint = MagicMock()
@@ -40,6 +41,22 @@ def generation_scene(qapp, mock_scene_with_settings):
     )
     scene._handle_image_generated_signal = (
         CustomScene._handle_image_generated_signal.__get__(scene, CustomScene)
+    )
+    scene._notify_generated_image_ready = (
+        CustomScene._notify_generated_image_ready.__get__(
+            scene,
+            CustomScene,
+        )
+    )
+    scene._schedule_generated_follow_up = lambda callback: callback()
+    scene._finalize_generated_image = (
+        CustomScene._finalize_generated_image.__get__(scene, CustomScene)
+    )
+    scene._persist_generated_layer_image = (
+        CustomScene._persist_generated_layer_image.__get__(
+            scene,
+            CustomScene,
+        )
     )
 
     return scene
@@ -194,6 +211,20 @@ class TestSendImageToCanvas:
             5, "image"
         )
 
+    def test_send_image_caches_layer_image_for_refresh(
+        self, generation_scene
+    ):
+        """Test the generated image stays in memory for layer refresh."""
+        test_image = Image.new("RGB", (50, 50))
+        mock_response = MagicMock()
+        mock_response.images = [test_image]
+        data = {"image_response": mock_response}
+        generation_scene._add_image_to_undo.return_value = 7
+
+        generation_scene.on_send_image_to_canvas_signal(data)
+
+        assert generation_scene._pending_layer_images[7] is test_image
+
     def test_send_image_refreshes_layer_display(self, generation_scene):
         """Test layer display is refreshed."""
         test_image = Image.new("RGB", (50, 50))
@@ -201,7 +232,11 @@ class TestSendImageToCanvas:
         mock_response.images = [test_image]
         data = {"image_response": mock_response}
 
-        generation_scene.on_send_image_to_canvas_signal(data)
+        with patch(
+            "PySide6.QtCore.QTimer.singleShot",
+            side_effect=lambda _delay, callback: callback(),
+        ):
+            generation_scene.on_send_image_to_canvas_signal(data)
 
         generation_scene._refresh_layer_display.assert_called_once()
 
@@ -229,7 +264,11 @@ class TestSendImageToCanvas:
         )
 
         # Should not raise (exception is caught internally)
-        generation_scene.on_send_image_to_canvas_signal(data)
+        with patch(
+            "PySide6.QtCore.QTimer.singleShot",
+            side_effect=lambda _delay, callback: callback(),
+        ):
+            generation_scene.on_send_image_to_canvas_signal(data)
 
         # Method was attempted
         generation_scene._refresh_layer_display.assert_called_once()

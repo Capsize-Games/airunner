@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import QMessageBox
 from typing import Optional, Dict, Any, List
 
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
 
@@ -560,9 +560,7 @@ class CanvasWidget(BaseWidget):
             event: The show event.
         """
         super().showEvent(event)
-        if not self._default_splitter_settings_applied and self.isVisible():
-            self._apply_default_splitter_settings()
-            self._default_splitter_settings_applied = True
+        self._schedule_default_splitter_settings()
 
         self.set_prompt_editor_button_checked()
         self.set_art_tools_button_checked()
@@ -585,7 +583,6 @@ class CanvasWidget(BaseWidget):
         widget geometry is more likely to be initialized.
         """
         if hasattr(self, "ui") and self.ui is not None:
-            QApplication.processEvents()  # Ensure pending layout events are processed
             default_canvas_splitter_config = {
                 "splitter": {
                     "index_to_maximize": 1,
@@ -599,8 +596,18 @@ class CanvasWidget(BaseWidget):
             # This case should ideally not happen if __init__ completed successfully.
             # Consider logging if a logger is available and configured for this class.
             self.logger.error(
-                f"Error in CanvasWidget: UI not available when attempting to apply default splitter settings."
+                "Error in CanvasWidget: UI not available when applying "
+                "default splitter settings."
             )
+
+    def _schedule_default_splitter_settings(self) -> None:
+        """Apply splitter settings after the show event unwinds."""
+        if self._default_splitter_settings_applied:
+            return
+        if not self.isVisible():
+            return
+        self._default_splitter_settings_applied = True
+        QTimer.singleShot(0, self._apply_default_splitter_settings)
 
     def _update_cursor(self, message: Optional[Dict] = None):
         message = message or {}

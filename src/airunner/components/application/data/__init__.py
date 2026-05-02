@@ -46,12 +46,6 @@ from airunner.components.llm.data.summary import Summary
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.image_filter_value import ImageFilterValue
 from airunner.components.stt.data.whisper_settings import WhisperSettings
-from airunner.components.news.data.news import RSSFeed, Category, Article
-from airunner.components.nodegraph.data.workflow import Workflow
-from airunner.components.nodegraph.data.workflow_node import WorkflowNode
-from airunner.components.nodegraph.data.workflow_connection import (
-    WorkflowConnection,
-)
 from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.components.settings.data.language_settings import (
     LanguageSettings,
@@ -99,14 +93,8 @@ classes = [
     ImageFilter,
     ImageFilterValue,
     WhisperSettings,
-    RSSFeed,
-    Category,
-    Article,
     VoiceSettings,
     OpenVoiceSettings,
-    Workflow,
-    WorkflowNode,
-    WorkflowConnection,
     RAGSettings,
     LanguageSettings,
     AIRunnerSettings,

@@ -9,6 +9,29 @@ from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
+_NOISY_LOGGERS = (
+    "PIL.PngImagePlugin",
+    "sqlalchemy.engine",
+    "sqlalchemy.engine.Engine",
+    "sqlalchemy.orm",
+    "sqlalchemy.orm.mapper",
+    "sqlalchemy.orm.mapper.Mapper",
+    "sqlalchemy.orm.relationships",
+    "sqlalchemy.orm.relationships.RelationshipProperty",
+    "sqlalchemy.orm.strategies",
+    "sqlalchemy.orm.strategies.LazyLoader",
+    "sqlalchemy.orm.path_registry",
+    "sqlalchemy.pool",
+    "sqlalchemy.pool.impl.QueuePool",
+    "uvicorn.access",
+)
+
+
+def configure_noisy_loggers() -> None:
+    """Raise levels for third-party loggers that flood startup logs."""
+    for logger_name in _NOISY_LOGGERS:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
 
 def _get_log_level_from_env() -> int:
     """Get log level from environment variable."""
@@ -116,7 +139,7 @@ def _setup_file_logging(
     root_logger: logging.Logger, log_level: int, formatter: logging.Formatter
 ) -> None:
     """Setup file logging if enabled."""
-    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") != "1":
+    if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") != "1":
         return
 
     log_file = _get_log_file_path(root_logger)
@@ -181,6 +204,8 @@ def configure_headless_logging():
     except Exception:
         # If this fails, continue gracefully - headless root logging still applies
         pass
+
+    configure_noisy_loggers()
 
     root_logger.info(
         f"Logging configured at {logging.getLevelName(log_level)} level"

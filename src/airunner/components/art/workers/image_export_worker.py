@@ -17,6 +17,13 @@ class ImageExportWorker(Worker):
         self._export_images(images, data)
 
     def _export_images(self, images, data):
+        image_request = data.get("image_request")
+        if data.get("skip_auto_export") or getattr(
+            image_request,
+            "skip_auto_export",
+            False,
+        ):
+            return
         application_settings = data.get("application_settings")
         path_settings = data.get("path_settings")
         if not application_settings.auto_export_images:

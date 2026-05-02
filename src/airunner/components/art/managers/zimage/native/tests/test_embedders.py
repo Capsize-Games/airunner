@@ -104,11 +104,11 @@ class TestEmbedND:
         output = embedder(ids)
         
         # RoPE output is concatenated rotation matrices along axes
-        # Shape: (batch, seq, 1, n_axes * axes_dim/2, 2, 2)
+        # Shape: (batch, 1, seq, n_axes * axes_dim/2, 2, 2)
         assert output.ndim == 6
         assert output.shape[0] == batch_size
-        assert output.shape[1] == seq_len
-        assert output.shape[2] == 1  # unsqueeze(2)
+        assert output.shape[1] == 1
+        assert output.shape[2] == seq_len
         # Final dimensions are rotation matrix (2, 2)
         assert output.shape[-2:] == (2, 2)
 

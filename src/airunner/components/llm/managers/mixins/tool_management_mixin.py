@@ -31,6 +31,23 @@ class ToolManagementMixin:
         # Reset to original unbound model
         self._chat_model = self._original_chat_model
 
+        if hasattr(self._chat_model, "clear_bound_tools"):
+            try:
+                self._chat_model.clear_bound_tools()
+            except Exception as e:
+                self.logger.debug("Failed to clear bound tools via clear_bound_tools(): %s", e)
+        else:
+            if hasattr(self._chat_model, "tools"):
+                try:
+                    self._chat_model.tools = None
+                except Exception:
+                    pass
+            if hasattr(self._chat_model, "tool_choice"):
+                try:
+                    self._chat_model.tool_choice = None
+                except Exception:
+                    pass
+
         # Skip if no tools provided
         if not self._tools or len(self._tools) == 0:
             self.logger.info("No tools provided - skipping tool binding")
@@ -154,7 +171,7 @@ class ToolManagementMixin:
             "IMPORTANT: Decide whether to use a tool based on what the user asks for.",
             "",
             "Use tools when the user wants you to PERFORM AN ACTION:",
-            "  - Create, update, delete data (calendar events, files, etc.)",
+            "  - Create, update, delete data (records, files, etc.)",
             "  - Generate content (images, code, etc.)",
             "  - Search or retrieve information from external sources",
             "  - Execute commands or operations",

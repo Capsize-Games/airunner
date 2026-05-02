@@ -1,7 +1,14 @@
 import os
 import json
 from PySide6.QtCore import Slot, Qt
-from PySide6.QtWidgets import QWidget, QTableWidgetItem, QCheckBox, QHBoxLayout
+from PySide6.QtWidgets import (
+    QWidget,
+    QTableWidgetItem,
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+)
 
 from airunner.components.llm.data.chatbot import Chatbot
 from airunner.components.llm.data.fine_tuned_model import FineTunedModel
@@ -22,13 +29,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._deferred_startup_loaded = False
         self.download_manager = None
         self.quantization_dialog = None
-        self.initialize_form()
-        
-        # Hide model/provider controls - they're now in the chat prompt widget
-        self._hide_model_provider_controls()
-        
+        self._setup_runtime_preference_controls()
+
         self.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
             self.on_download_complete,
@@ -49,10 +54,41 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             SignalCode.LLM_QUANTIZATION_FAILED,
             self.on_quantization_failed,
         )
+        self.register(
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
+            self.on_main_window_loaded_signal,
+        )
+
+    def _finish_deferred_startup(self) -> None:
+        """Initialize the expensive LLM settings controls on first show."""
+        if self._deferred_startup_loaded:
+            return
+
+        self._deferred_startup_loaded = True
+        self.initialize_form()
         self._setup_adapters_table()
         self._load_adapters()
         self._setup_quantization_dropdown()
+        self._setup_runtime_precision_dropdown()
         self._update_quantize_button_state()  # Initialize button state
+
+    def _setup_runtime_preference_controls(self) -> None:
+        """Add the moved footer precision selector to the settings panel."""
+        if hasattr(self, "_runtime_precision_dropdown"):
+            return
+
+        self._runtime_precision_label = QLabel("Runtime Precision:")
+        self._runtime_precision_dropdown = QComboBox(self.ui.model_selection_group)
+        self._runtime_precision_dropdown.setMinimumHeight(30)
+        self._runtime_precision_dropdown.setToolTip(
+            "Preferred precision to use when loading compatible local models."
+        )
+        self._runtime_precision_dropdown.currentIndexChanged.connect(
+            self.on_runtime_precision_changed
+        )
+
+        self.ui.quantization_layout.addWidget(self._runtime_precision_label)
+        self.ui.quantization_layout.addWidget(self._runtime_precision_dropdown)
 
     def _hide_model_provider_controls(self) -> None:
         """Hide model and provider controls since they're now in chat prompt widget."""
@@ -69,6 +105,14 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         if hasattr(self.ui, "line_2"):
             self.ui.line_2.setVisible(False)
 
+    def _get_local_model_storage_path(self, model_id: str) -> str:
+        """Return the configured storage directory for a local model."""
+        return LLMProviderConfig.get_local_storage_path(
+            self.path_settings.base_path,
+            ModelService.LOCAL.value,
+            model_id=model_id,
+        )
+
     @Slot(str)
     def on_model_path_textChanged(self, val: str):
         self.update_llm_generator_settings(model_path=val)
@@ -79,6 +123,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.api.llm.model_changed(model_service)
         self._update_model_dropdown_visibility()
         self._populate_model_dropdown(model_service)
+        self._setup_runtime_precision_dropdown()
 
     @Slot(str)
     def on_model_dropdown_currentTextChanged(self, display_text: str):
@@ -102,6 +147,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 self.ui.model_path.setPlaceholderText(
                     "Enter custom model path"
                 )
+                self.update_llm_generator_settings(model_id="custom")
                 self.ui.download_model_button.setVisible(False)
             else:
                 # Use standard path for known models
@@ -110,12 +156,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 )
                 if model_info:
                     model_name = model_info["name"]
+                    model_path = self._get_local_model_storage_path(model_id)
                     self.update_llm_generator_settings(
-                        model_version=model_name
-                    )
-                    model_path = os.path.join(
-                        os.path.expanduser(self.path_settings.base_path),
-                        f"text/models/llm/causallm/{model_name}",
+                        model_version=model_name,
+                        model_id=model_id,
+                        model_path=model_path,
                     )
                     print(f"  Setting model_path to: {model_path}")
                     self.ui.model_path.setText(model_path)
@@ -139,6 +184,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
         # Update model info label
         self._update_model_info_label()
+        self._setup_runtime_precision_dropdown()
 
         # Update quantize button state
         self._update_quantize_button_state()
@@ -183,10 +229,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             
             gguf_info = LLMProviderConfig.get_gguf_info(provider, model_id)
             model_name = model_info["name"]
-            model_path = os.path.join(
-                os.path.expanduser(self.settings.base_path),
-                f"text/models/llm/causallm/{model_name}",
-            )
+            model_path = self._get_local_model_storage_path(model_id)
             
             # Emit signal for GGUF download
             self.emit_signal(
@@ -207,10 +250,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         quantization_bits = index_to_quant.get(quant_index, 4)
 
         model_name = model_info["name"]
-        model_path = os.path.join(
-            os.path.expanduser(self.settings.base_path),
-            f"text/models/llm/causallm/{model_name}",
-        )
+        model_path = self._get_local_model_storage_path(model_id)
 
         # Emit signal to show download dialog (same as when model is required during chat)
         self.emit_signal(
@@ -298,10 +338,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             
             # Trigger GGUF download
             model_name = model_info["name"]
-            download_path = os.path.join(
-                os.path.expanduser(self.path_settings.base_path),
-                f"text/models/llm/causallm/{model_name}",
-            )
+            download_path = self._get_local_model_storage_path(model_id)
             
             self.logger.info(f"Emitting LLM_MODEL_DOWNLOAD_REQUIRED for GGUF: {model_name} -> {download_path}")
             self.emit_signal(
@@ -454,6 +491,10 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     def showEvent(self, event):
         super().showEvent(event)
 
+    def on_main_window_loaded_signal(self, _data=None) -> None:
+        """Finish expensive settings setup after startup completes."""
+        self._finish_deferred_startup()
+
     def early_stopping_toggled(self, val):
         self.update_chatbot("early_stopping", val)
 
@@ -501,12 +542,13 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             )
             if model_info:
                 model_name = model_info["name"]
-                model_path = os.path.join(
-                    os.path.expanduser(self.path_settings.base_path),
-                    f"text/models/llm/causallm/{model_name}",
-                )
+                model_path = self._get_local_model_storage_path(default_model_id)
                 # Save to database
-                self.update_llm_generator_settings(model_path=model_path)
+                self.update_llm_generator_settings(
+                    model_path=model_path,
+                    model_id=default_model_id,
+                    model_version=model_name,
+                )
                 # Set dropdown to default model
                 self.ui.model_dropdown.setCurrentText(default_model_id)
 
@@ -648,6 +690,106 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         qs.setValue("llm_settings/quantization_bits", 0)
         qs.sync()
         self.update_llm_generator_settings(quantization_bits=0)
+
+    def _setup_runtime_precision_dropdown(self) -> None:
+        """Populate the moved runtime-precision selector."""
+        dropdown = getattr(self, "_runtime_precision_dropdown", None)
+        label = getattr(self, "_runtime_precision_label", None)
+        if dropdown is None or label is None:
+            return
+
+        provider = self.ui.model_service.currentText()
+        dropdown.blockSignals(True)
+        dropdown.clear()
+
+        if provider != ModelService.LOCAL.value:
+            label.setVisible(False)
+            dropdown.setVisible(False)
+            dropdown.blockSignals(False)
+            return
+
+        label.setVisible(True)
+        dropdown.setVisible(True)
+        dropdown.setEnabled(True)
+
+        precision_options = [
+            ("4-bit", "4bit"),
+            ("8-bit", "8bit"),
+            ("FP16", "float16"),
+            ("BF16", "bfloat16"),
+        ]
+        precision_hierarchy = ["4bit", "8bit", "float16", "bfloat16"]
+        native_precision = self._get_model_native_precision()
+        native_index = (
+            precision_hierarchy.index(native_precision)
+            if native_precision in precision_hierarchy
+            else len(precision_hierarchy) - 1
+        )
+
+        for display_name, value in precision_options:
+            option_index = precision_hierarchy.index(value)
+            if option_index <= native_index:
+                dropdown.addItem(display_name, value)
+
+        current_dtype = getattr(self.llm_generator_settings, "dtype", "4bit")
+        current_dtype = str(current_dtype or "4bit")
+        for index in range(dropdown.count()):
+            if dropdown.itemData(index) == current_dtype:
+                dropdown.setCurrentIndex(index)
+                break
+        else:
+            if dropdown.count() > 0:
+                dropdown.setCurrentIndex(0)
+
+        dropdown.blockSignals(False)
+
+    @Slot(int)
+    def on_runtime_precision_changed(self, index: int) -> None:
+        """Persist one runtime-precision selection from the settings panel."""
+        dropdown = getattr(self, "_runtime_precision_dropdown", None)
+        if dropdown is None or index < 0:
+            return
+
+        precision = dropdown.itemData(index)
+        if not precision:
+            return
+
+        self.update_llm_generator_settings(dtype=precision)
+
+    def _get_model_native_precision(self) -> str:
+        """Determine the native precision of the selected local model."""
+        model_path = getattr(self.llm_generator_settings, "model_path", "") or ""
+
+        if not model_path or not os.path.exists(model_path):
+            return "bfloat16"
+
+        config_path = os.path.join(model_path, "config.json")
+        if not os.path.exists(config_path):
+            return "bfloat16"
+
+        try:
+            with open(config_path, "r", encoding="utf-8") as handle:
+                config = json.load(handle)
+
+            torch_dtype = config.get("torch_dtype", "")
+            if torch_dtype == "bfloat16":
+                return "bfloat16"
+            if torch_dtype == "float16":
+                return "float16"
+            if torch_dtype == "float32":
+                return "bfloat16"
+
+            quantization_config = config.get("quantization_config", {})
+            if quantization_config:
+                bits = quantization_config.get("bits", 4)
+                if bits == 4:
+                    return "4bit"
+                if bits == 8:
+                    return "8bit"
+
+            return "bfloat16"
+        except (json.JSONDecodeError, OSError, KeyError):
+            return "bfloat16"
 
     @Slot(int)
     def on_quantization_changed(self, index: int):

@@ -4,7 +4,7 @@ This mixin provides layer management functionality for the canvas scene,
 including layer visibility, deletion, reordering, and transaction management.
 """
 
-from typing import List, Dict, Any, Iterable
+from typing import List, Dict, Any, Iterable, Optional
 
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
@@ -247,6 +247,37 @@ class CanvasLayerMixin:
             else:
                 self._create_new_layer_item(layer_id, data)
 
+    def _pop_pending_layer_image(self, layer_id: int):
+        """Return a cached generated image for a pending layer refresh."""
+        pending_layer_images = getattr(self, "_pending_layer_images", None)
+        if not isinstance(pending_layer_images, dict):
+            return None
+        return pending_layer_images.pop(layer_id, None)
+
+    def _load_layer_image(self, layer_id: int):
+        """Load a layer image, preferring the in-memory generated copy."""
+        image = self._pop_pending_layer_image(layer_id)
+        if image is not None:
+            return image
+
+        drawing_pad = DrawingPadSettings.objects.filter_by_first(
+            layer_id=layer_id
+        )
+        if not drawing_pad or not drawing_pad.image:
+            return None
+
+        return convert_binary_to_image(drawing_pad.image)
+
+    def _convert_layer_image_to_qimage(self, image) -> Optional[object]:
+        """Convert a PIL image to QImage using the scene cache when present."""
+        converter = getattr(self, "_convert_and_cache_qimage", None)
+        qimage = converter(image) if callable(converter) else None
+        if qimage is None or qimage.isNull():
+            qimage = pil_to_qimage(image)
+        if qimage is None or qimage.isNull():
+            return None
+        return qimage
+
     def _update_existing_layer_item(self, layer_id: int, data: Dict) -> None:
         """Update properties of existing layer item.
 
@@ -260,16 +291,11 @@ class CanvasLayerMixin:
             item.setOpacity(data["opacity"])
             item.setZValue(data["order"])
 
-            # Reload image from database in case it changed (e.g., from drop/paste)
-            drawing_pad = DrawingPadSettings.objects.filter_by_first(
-                layer_id=layer_id
-            )
-            if drawing_pad and drawing_pad.image:
-                image = convert_binary_to_image(drawing_pad.image)
-                if image is not None:
-                    qimage = pil_to_qimage(image)
-                    if qimage is not None:
-                        item.updateImage(qimage)
+            image = self._load_layer_image(layer_id)
+            if image is not None:
+                qimage = self._convert_layer_image_to_qimage(image)
+                if qimage is not None:
+                    item.updateImage(qimage)
         except RuntimeError as e:
             if "Internal C++ object" in str(e) and "already deleted" in str(e):
                 del self._layer_items[layer_id]
@@ -285,18 +311,11 @@ class CanvasLayerMixin:
         if not layer_record:
             return
 
-        # Get the image from DrawingPadSettings for this layer
-        drawing_pad = DrawingPadSettings.objects.filter_by_first(
-            layer_id=layer_id
-        )
-        if not drawing_pad or not drawing_pad.image:
-            return
-
-        image = convert_binary_to_image(drawing_pad.image)
+        image = self._load_layer_image(layer_id)
         if image is None:
             return
 
-        qimage = pil_to_qimage(image)
+        qimage = self._convert_layer_image_to_qimage(image)
         if qimage is None:
             return
 

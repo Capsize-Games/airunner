@@ -18,7 +18,6 @@ Each service module provides a class for interacting with a specific domain via 
 - **image_filter_services.py**: Image filter application and preview.
 - **llm_services.py**: Large Language Model (LLM) requests, chat, and RAG operations.
 - **lora_services.py**: LoRA (Low-Rank Adaptation) model management.
-- **nodegraph_services.py**: Node graph workflow execution and management.
 - **stt_services.py**: Speech-to-text (STT) processing.
 - **tts_services.py**: Text-to-speech (TTS) playback and control.
 - **video_services.py**: Video generation and progress updates.

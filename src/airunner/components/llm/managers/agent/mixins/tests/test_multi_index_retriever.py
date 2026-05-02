@@ -37,6 +37,7 @@ class TestRetrieve:
     def test_returns_empty_when_no_active_documents(self):
         """Should return empty list when no active documents."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = []
         mock_rag.logger = Mock()
 
@@ -54,6 +55,7 @@ class TestRetrieve:
     def test_loads_and_searches_each_active_document(self):
         """Should load index for each active document and search it."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1", "doc2"]
         mock_rag.logger = Mock()
 
@@ -94,6 +96,7 @@ class TestRetrieve:
     def test_sorts_results_by_score_descending(self):
         """Should sort all results by score (highest first)."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1", "doc2"]
         mock_rag.logger = Mock()
 
@@ -134,6 +137,7 @@ class TestRetrieve:
     def test_limits_to_top_k_results(self):
         """Should return only top K results across all indexes."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1", "doc2"]
         mock_rag.logger = Mock()
 
@@ -165,6 +169,7 @@ class TestRetrieve:
     def test_skips_documents_with_failed_index_load(self):
         """Should skip documents where index loading fails."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1", "doc2"]
         mock_rag.logger = Mock()
 
@@ -193,6 +198,7 @@ class TestRetrieve:
     def test_continues_on_retrieval_error(self):
         """Should log error and continue with other indexes if retrieval fails."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1", "doc2"]
         mock_rag.logger = Mock()
 
@@ -225,6 +231,7 @@ class TestRetrieve:
     def test_logs_search_info(self):
         """Should log information about search."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1"]
         mock_rag.logger = Mock()
         mock_rag._load_doc_index.return_value = Mock()
@@ -242,6 +249,7 @@ class TestRetrieve:
     def test_handles_none_scores_gracefully(self):
         """Should handle nodes with None scores when sorting."""
         mock_rag = Mock()
+        mock_rag._index = None
         mock_rag._get_active_document_ids.return_value = ["doc1"]
         mock_rag.logger = Mock()
         mock_rag._load_doc_index.return_value = Mock()

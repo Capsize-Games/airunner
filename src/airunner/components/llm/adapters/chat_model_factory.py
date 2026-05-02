@@ -1,17 +1,23 @@
 """Factory for creating LangChain ChatModel instances based on AI Runner settings."""
 
+import os
 from typing import Any, Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from airunner.components.llm.adapters.chat_huggingface_local import (
-    ChatHuggingFaceLocal,
-)
 from airunner.components.llm.adapters.chat_gguf import (
     ChatGGUF,
     UnsupportedGGUFArchitectureError,
     find_gguf_file,
     is_gguf_model,
 )
+from airunner.components.llm.adapters.chat_model_factory_helpers import (
+    get_chatbot_params,
+    get_db_settings,
+    get_enable_thinking,
+    get_quantization_bits,
+    get_reasoning_effort,
+)
+from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.utils.model_optimizer import get_model_optimizer
 
 
@@ -20,11 +26,16 @@ class ChatModelFactory:
     Factory for creating appropriate LangChain ChatModel instances.
 
     Supports:
-    - HuggingFace local models (with pre-loaded model+tokenizer)
+    - GGUF local models via llama.cpp
     - OpenRouter API
     - Ollama
     - OpenAI (future)
     """
+
+    _LOCAL_GGUF_ONLY_MESSAGE = (
+        "Local LLM mode requires a GGUF model running through llama.cpp. "
+        "Transformers-based local loading and inference are disabled."
+    )
 
     @staticmethod
     def create_local_model(
@@ -38,43 +49,9 @@ class ChatModelFactory:
         repetition_penalty: float = 1.15,
         do_sample: bool = True,
         enable_thinking: bool = True,
-    ) -> ChatHuggingFaceLocal:
-        """
-        Create a ChatModel for locally-loaded HuggingFace models.
-
-        Args:
-            model: Pre-loaded HuggingFace model
-            tokenizer: Pre-loaded HuggingFace tokenizer
-            model_path: Path to model directory (for Mistral native tokenizer)
-            max_new_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter
-            repetition_penalty: Penalty for repeating tokens
-            do_sample: Whether to use sampling
-            enable_thinking: Enable Qwen3 thinking mode (<think>...</think>)
-
-        Returns:
-            ChatHuggingFaceLocal instance
-        """
-        chat_model = ChatHuggingFaceLocal(
-            model=model,
-            tokenizer=tokenizer,
-            model_path=model_path,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            repetition_penalty=repetition_penalty,
-            do_sample=do_sample,
-            enable_thinking=enable_thinking,
-        )
-
-        # Initialize Mistral tokenizer if available
-        if model_path:
-            chat_model._init_mistral_tokenizer()
-
-        return chat_model
+    ) -> BaseChatModel:
+        """Reject the removed transformers-based local execution path."""
+        raise ValueError(ChatModelFactory._LOCAL_GGUF_ONLY_MESSAGE)
 
     @staticmethod
     def create_gguf_model(
@@ -89,6 +66,8 @@ class ChatModelFactory:
         repeat_penalty: float = 1.15,
         flash_attn: bool = True,
         enable_thinking: bool = True,
+        reasoning_effort: str = "medium",
+        chat_format: Optional[str] = None,
         use_yarn: bool = False,  # Disabled by default - requires more VRAM
         yarn_orig_ctx: int = 32768,  # Qwen3 native context
     ) -> ChatGGUF:
@@ -113,6 +92,8 @@ class ChatModelFactory:
             repeat_penalty: Penalty for repeating tokens
             flash_attn: Use flash attention to reduce VRAM usage
             enable_thinking: Enable thinking mode (Qwen3-style)
+            reasoning_effort: GPT-OSS reasoning effort (low, medium, high)
+            chat_format: Optional llama.cpp chat format override
             use_yarn: Enable YaRN for extended context (requires more VRAM)
             yarn_orig_ctx: Original context length for YaRN scaling
 
@@ -137,6 +118,8 @@ class ChatModelFactory:
             repeat_penalty=repeat_penalty,
             flash_attn=flash_attn,
             enable_thinking=enable_thinking,
+            reasoning_effort=reasoning_effort,
+            chat_format=chat_format,
             use_yarn=use_yarn,
             yarn_orig_ctx=yarn_orig_ctx,
         )
@@ -270,6 +253,46 @@ class ChatModelFactory:
             )
 
     @staticmethod
+    def _load_local_execution_components(
+        *,
+        llm_settings: Any,
+        model_path: Optional[str],
+    ) -> tuple[Any, Any]:
+        """Reject the removed transformers-based local execution path."""
+        raise ValueError(ChatModelFactory._LOCAL_GGUF_ONLY_MESSAGE)
+
+    @staticmethod
+    def _resolve_local_model_id(
+        db_settings: Any,
+        model_path: Optional[str],
+    ) -> Optional[str]:
+        """Resolve a local model identifier from settings or model path."""
+        model_id = getattr(db_settings, "model_id", None) if db_settings else None
+        if model_id:
+            return model_id
+        if not model_path:
+            return None
+        return LLMProviderConfig.resolve_model_id(
+            "local",
+            os.path.basename(str(model_path)),
+        )
+
+    @staticmethod
+    def _get_local_gguf_runtime_params(
+        model_id: Optional[str],
+    ) -> dict[str, Any]:
+        """Return llama.cpp runtime overrides for supported local GGUFs."""
+        if not model_id:
+            return {}
+
+        model_info = LLMProviderConfig.get_model_info("local", model_id) or {}
+        runtime_params: dict[str, Any] = {}
+        default_n_ctx = model_info.get("gguf_default_n_ctx")
+        if default_n_ctx:
+            runtime_params["n_ctx"] = int(default_n_ctx)
+        return runtime_params
+
+    @staticmethod
     def create_from_settings(
         llm_settings: Any,
         model: Optional[Any] = None,
@@ -280,17 +303,17 @@ class ChatModelFactory:
         """
         Create appropriate ChatModel based on AI Runner settings.
 
-        This method intelligently selects the best model format:
-        - If quantization_bits=0 (GGUF), prefer GGUF format
-        - If GGUF file exists, use it even if not explicitly requested
-        - Otherwise, use SafeTensors with BitsAndBytes quantization
+        This method selects the supported runtime backend:
+        - Prefer GGUF format for local llama.cpp execution
+        - Reuse an existing GGUF when one is already available
+        - Reject non-GGUF local execution instead of falling back
 
         Args:
             llm_settings: LLMSettings instance
-            model: Pre-loaded HuggingFace model (for local mode)
-            tokenizer: Pre-loaded HuggingFace tokenizer (for local mode)
+            model: Ignored legacy parameter retained for compatibility
+            tokenizer: Ignored legacy parameter retained for compatibility
             chatbot: Chatbot settings instance
-            model_path: Path to model directory (for Mistral native tokenizer)
+            model_path: Path to model directory or GGUF artifact
 
         Returns:
             Appropriate ChatModel instance
@@ -298,45 +321,50 @@ class ChatModelFactory:
         Raises:
             ValueError: If settings are invalid or required components missing
         """
-        # Get quantization preference from settings
-        # Default to GGUF (0) - GGUF is the only supported quantization format
-        from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-        from airunner.utils.settings.get_qsettings import get_qsettings
-        
-        db_settings = LLMGeneratorSettings.objects.first()
-        quantization_bits = 0  # Default to GGUF
-        
-        # Check QSettings first (UI preference)
-        try:
-            qs = get_qsettings()
-            saved = qs.value("llm_settings/quantization_bits", None)
-            if saved is not None:
-                quantization_bits = int(saved)
-        except Exception:
-            pass
-        
-        # Database setting overrides if present
-        if db_settings is not None:
-            db_quant = getattr(db_settings, "quantization_bits", None)
-            if db_quant is not None:
-                quantization_bits = db_quant
-        
+        db_settings = get_db_settings()
+        quantization_bits = get_quantization_bits(db_settings)
         optimizer = get_model_optimizer()
+        resolved_model_id = ChatModelFactory._resolve_local_model_id(
+            db_settings,
+            model_path,
+        )
         
         # Check for GGUF model - either explicitly requested or already available
         if model_path:
             # User explicitly wants GGUF (quantization_bits=0)
             use_gguf = quantization_bits == 0
-            
+
+            preferred_gguf_path = None
+            gguf_info = None
+            if db_settings is not None:
+                model_id = getattr(db_settings, "model_id", None)
+                if model_id:
+                    gguf_info = LLMProviderConfig.get_gguf_info("local", model_id)
+                if gguf_info and not str(model_path).endswith(".gguf"):
+                    candidate = os.path.join(model_path, gguf_info["filename"])
+                    if os.path.exists(candidate):
+                        preferred_gguf_path = candidate
+
             # Also check if GGUF is available even if not explicitly requested
-            existing_gguf = optimizer.find_existing_gguf(model_path)
-            
-            if use_gguf or existing_gguf or is_gguf_model(model_path):
+            allow_generic_directory_scan = gguf_info is None or str(model_path).endswith(
+                ".gguf"
+            )
+            generic_existing_gguf = (
+                optimizer.find_existing_gguf(model_path)
+                if allow_generic_directory_scan
+                else None
+            )
+            existing_gguf = preferred_gguf_path or generic_existing_gguf
+            generic_gguf_available = (
+                is_gguf_model(model_path) if allow_generic_directory_scan else False
+            )
+
+            if use_gguf or existing_gguf or generic_gguf_available:
                 # Determine which GGUF file to use
                 gguf_path = existing_gguf or model_path
                 
                 # If user wants GGUF but no GGUF exists, try to convert
-                if use_gguf and not existing_gguf and not is_gguf_model(model_path):
+                if use_gguf and not existing_gguf and not generic_gguf_available:
                     quant_type = optimizer.bits_to_gguf_quantization(quantization_bits)
                     converted = optimizer.ensure_gguf(model_path, quant_type)
                     if converted:
@@ -346,96 +374,68 @@ class ChatModelFactory:
                         pass
                 
                 # Only use GGUF if we have a valid path
-                if gguf_path and (is_gguf_model(gguf_path) or optimizer.find_existing_gguf(gguf_path)):
-                    # Get generation parameters from chatbot settings
-                    params = {}
-                    if chatbot:
-                        params = {
-                            "max_tokens": getattr(chatbot, "max_new_tokens", 4096),
-                            "temperature": getattr(chatbot, "temperature", 700) / 10000.0,
-                            "top_p": getattr(chatbot, "top_p", 900) / 1000.0,
-                            "top_k": getattr(chatbot, "top_k", 20),
-                            "repeat_penalty": getattr(chatbot, "repetition_penalty", 115) / 100.0,
-                        }
-
-                    # Get enable_thinking from database
-                    enable_thinking = True
-                    if db_settings is not None and hasattr(db_settings, "enable_thinking"):
-                        db_value = getattr(db_settings, "enable_thinking", None)
-                        if db_value is not None:
-                            enable_thinking = db_value
+                has_valid_gguf_path = bool(
+                    gguf_path and (
+                        str(gguf_path).endswith(".gguf")
+                        or (
+                            allow_generic_directory_scan
+                            and (
+                                is_gguf_model(gguf_path)
+                                or optimizer.find_existing_gguf(gguf_path)
+                            )
+                        )
+                    )
+                )
+                if has_valid_gguf_path:
+                    params = get_chatbot_params(chatbot, local_mode=False)
+                    resolved_model_id = (
+                        resolved_model_id
+                        or ChatModelFactory._resolve_local_model_id(
+                            None,
+                            gguf_path,
+                        )
+                    )
+                    params.update(
+                        ChatModelFactory._get_local_gguf_runtime_params(
+                            resolved_model_id,
+                        )
+                    )
+                    enable_thinking = get_enable_thinking(
+                        db_settings,
+                        llm_settings,
+                    )
+                    reasoning_effort = get_reasoning_effort(
+                        db_settings,
+                        llm_settings,
+                    )
 
                     try:
                         return ChatModelFactory.create_gguf_model(
                             model_path=gguf_path,
                             enable_thinking=enable_thinking,
+                            reasoning_effort=reasoning_effort,
                             **params
                         )
                     except UnsupportedGGUFArchitectureError as e:
-                        # GGUF model architecture not supported by llama-cpp-python
-                        # This can happen with very new models like Ministral 3
-                        # Raise with clear message - caller must provide transformers model
+                        version_message = ""
+                        if getattr(e, "runtime_version", None):
+                            version_message = (
+                                f" Installed version: {e.runtime_version}."
+                            )
                         raise ValueError(
-                            f"GGUF model architecture '{e.architecture}' is not yet supported by llama-cpp-python. "
-                            f"The model '{e.model_path}' requires a newer version of llama-cpp-python. "
-                            "Please try a different model or wait for llama-cpp-python to add support."
+                            f"GGUF model architecture '{e.architecture}' is "
+                            "not yet supported by the installed "
+                            "llama-cpp-python runtime."
+                            f"{version_message} The model '{e.model_path}' "
+                            "requires a newer version of llama-cpp-python "
+                            "or a different GGUF build."
                         ) from e
 
-        # Local HuggingFace model
         if getattr(llm_settings, "use_local_llm", True):
-            if not model:
-                raise ValueError("Local LLM mode requires pre-loaded model")
-
-            # Tokenizer is optional for Mistral3 models (they use mistral_common)
-            # For other models, tokenizer is required
-            if not tokenizer and not model_path:
-                raise ValueError(
-                    "Local LLM mode requires either tokenizer or model_path for Mistral3 models"
-                )
-
-            # Get generation parameters from chatbot settings
-            params = {}
-            if chatbot:
-                params = {
-                    "max_new_tokens": getattr(chatbot, "max_new_tokens", 500),
-                    "temperature": getattr(chatbot, "temperature", 700)
-                    / 10000.0,
-                    "top_p": getattr(chatbot, "top_p", 900) / 1000.0,
-                    "top_k": getattr(chatbot, "top_k", 50),
-                    "repetition_penalty": getattr(
-                        chatbot, "repetition_penalty", 115
-                    )
-                    / 100.0,
-                    "do_sample": getattr(chatbot, "do_sample", True),
-                }
-
-            # Get enable_thinking from database (LLMGeneratorSettings) first,
-            # then fall back to llm_settings dataclass, then default to True
-            from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-            db_settings = LLMGeneratorSettings.objects.first()
-            enable_thinking = True  # Default
-            if db_settings is not None and hasattr(db_settings, "enable_thinking"):
-                db_value = getattr(db_settings, "enable_thinking", None)
-                if db_value is not None:
-                    enable_thinking = db_value
-                else:
-                    # Fall back to llm_settings dataclass
-                    enable_thinking = getattr(llm_settings, "enable_thinking", True)
-            else:
-                enable_thinking = getattr(llm_settings, "enable_thinking", True)
-
-            return ChatModelFactory.create_local_model(
-                model=model,
-                tokenizer=tokenizer,
-                model_path=model_path,
-                enable_thinking=enable_thinking,
-                **params
-            )
+            raise ValueError(ChatModelFactory._LOCAL_GGUF_ONLY_MESSAGE)
 
         # OpenRouter
         if getattr(llm_settings, "use_openrouter", False):
-            import os
-
             api_key = os.getenv("OPENROUTER_API_KEY")
             if not api_key:
                 raise ValueError(
@@ -478,8 +478,6 @@ class ChatModelFactory:
 
         # OpenAI (future)
         if getattr(llm_settings, "use_openai", False):
-            import os
-
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError(
@@ -499,12 +497,6 @@ class ChatModelFactory:
                 model_name=model_name,
                 temperature=temperature,
                 max_tokens=max_tokens,
-            )
-
-        # Default to local if nothing else specified
-        if model and tokenizer:
-            return ChatModelFactory.create_local_model(
-                model=model, tokenizer=tokenizer, model_path=model_path
             )
 
         raise ValueError(

@@ -1,5 +1,6 @@
 """Tests for EventHandlerMixin."""
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 from PySide6.QtCore import QEvent, QPointF, QSize, Qt, QTimer
 from PySide6.QtGui import QMouseEvent, QResizeEvent, QKeyEvent
@@ -93,6 +94,7 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
 
         # Methods to mock
         self.draw_grid = Mock()
+        self.setTransform = Mock()
         self.save_canvas_offset = Mock()
         self.load_canvas_offset = Mock()
         self.do_draw = Mock()
@@ -103,7 +105,14 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
         self.update_active_grid_area_position = Mock()
         self.updateImagePositions = Mock()
         self._apply_viewport_compensation = Mock()
+        self._preview_centered_layout = Mock()
+        self.update_active_grid_settings = Mock()
+        self.recenter_layer_positions = Mock(return_value={})
         self._remove_text_item = Mock()
+        self.zoom_handler = SimpleNamespace(
+            zoom_level=2.5,
+            on_zoom_level_changed=Mock(return_value=Mock()),
+        )
 
         # Mock super() methods that EventHandlerMixin calls
         self._super_wheelEvent = Mock()
@@ -347,6 +356,27 @@ class TestEventHandlerMixin:
 
         mixin._remove_text_item.assert_not_called()
 
+    def test_keyPressEvent_ctrl_zero_resets_zoom(self, qapp):
+        """Ctrl+0 should reset zoom and refresh the HUD."""
+        mixin = TestableEventHandlerMixin()
+        event = Mock(spec=QKeyEvent)
+        event.key.return_value = Qt.Key.Key_0
+        event.modifiers.return_value = Qt.KeyboardModifier.ControlModifier
+        event.accept = Mock()
+
+        mixin.keyPressEvent(event)
+
+        assert mixin.zoom_handler.zoom_level == 1.0
+        mixin.setTransform.assert_called_once()
+        mixin.do_draw.assert_called_once()
+        mixin.api.art.canvas.update_grid_info.assert_called_once_with(
+            {
+                "offset_x": mixin.canvas_offset_x,
+                "offset_y": mixin.canvas_offset_y,
+            }
+        )
+        event.accept.assert_called_once()
+
     def test_do_pan_update(self, qapp):
         """Test _do_pan_update refreshes positions and grid."""
         mixin = TestableEventHandlerMixin()
@@ -374,6 +404,11 @@ class TestEventHandlerMixin:
         mixin.scene.original_item_positions = {}
         mixin.scene._refresh_layer_display = Mock()
         mixin.scene.show_event = Mock()
+        mixin.load_canvas_offset = Mock(
+            side_effect=lambda: setattr(
+                mixin, "canvas_offset", QPointF(123.0, 456.0)
+            )
+        )
 
         # Mock QTimer.singleShot to execute callback immediately
         with patch(
@@ -392,6 +427,25 @@ class TestEventHandlerMixin:
         mixin.show_active_grid_area.assert_called_once()
         mixin.scene._refresh_layer_display.assert_called_once()
         mixin.align_canvas_items_to_viewport.assert_called_once()
+        mixin._preview_centered_layout.assert_not_called()
+
+    def test_showEvent_zero_offset_previews_centered_layout(self, qapp):
+        """Zero-offset startup should preview centered positions immediately."""
+        mixin = TestableEventHandlerMixin()
+        mixin._initialized = False
+        mixin.scene.original_item_positions = {}
+        mixin.scene._refresh_layer_display = Mock()
+
+        with patch(
+            "airunner.components.art.gui.widgets.canvas.mixins.event_handler_mixin.QTimer.singleShot",
+            side_effect=lambda delay, func: None,
+        ):
+            event = Mock(spec=QEvent)
+            mixin.showEvent(event)
+
+        assert mixin._needs_recenter_on_show is True
+        mixin._preview_centered_layout.assert_called_once_with()
+        mixin.align_canvas_items_to_viewport.assert_not_called()
 
     def test_showEvent_subsequent_show_no_resize(self, qapp):
         """Test showEvent on subsequent show with unchanged viewport."""

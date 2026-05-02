@@ -17,20 +17,43 @@ class TestModelRegistry(unittest.TestCase):
         self.assertGreater(len(models), 0)
 
     def test_get_model_by_id(self):
-        model = self.registry.get_model("mistralai/Ministral-3-8B-Instruct-2512")
+        model = self.registry.get_model("qwen3-8b")
         self.assertIsNotNone(model)
-        self.assertEqual(model.name, "Ministral 3 8B")
-        self.assertEqual(model.provider, ModelProvider.MISTRAL)
+        self.assertEqual(model.name, "Qwen3-8B")
+        self.assertEqual(model.provider, ModelProvider.QWEN)
+        self.assertEqual(model.preferred_runtime_format, "gguf")
+        self.assertEqual(model.runtime_backend, "llama.cpp")
+
+    def test_get_model_by_download_alias(self):
+        model = self.registry.get_model("Qwen/Qwen3-8B-GGUF")
+
+        self.assertIsNotNone(model)
+        self.assertEqual(model.model_id, "qwen3-8b")
+
+    def test_get_qwen35_model_by_download_alias(self):
+        model = self.registry.get_model("unsloth/Qwen3.5-9B-GGUF")
+
+        self.assertIsNotNone(model)
+        self.assertEqual(model.model_id, "qwen3.5-9b")
+        self.assertEqual(model.provider, ModelProvider.QWEN)
+
+    def test_get_gpt_oss_model_by_filename_alias(self):
+        model = self.registry.get_model("gpt-oss-20b-F16.gguf")
+
+        self.assertIsNotNone(model)
+        self.assertEqual(model.model_id, "gpt-oss-20b")
+        self.assertEqual(model.provider, ModelProvider.OPENAI)
+        self.assertEqual(model.runtime_backend, "llama.cpp")
 
     def test_get_nonexistent_model(self):
         model = self.registry.get_model("nonexistent/model")
         self.assertIsNone(model)
 
     def test_list_models_by_provider(self):
-        models = self.registry.list_models(provider=ModelProvider.MISTRAL)
+        models = self.registry.list_models(provider=ModelProvider.QWEN)
         self.assertGreater(len(models), 0)
         for model in models:
-            self.assertEqual(model.provider, ModelProvider.MISTRAL)
+            self.assertEqual(model.provider, ModelProvider.QWEN)
 
     def test_list_models_by_type(self):
         models = self.registry.list_models(model_type=ModelType.LLM)
@@ -59,14 +82,16 @@ class TestModelRegistry(unittest.TestCase):
             recommended_ram_gb=32.0,
             supports_quantization=True,
             huggingface_id="test/model",
+            model_id="test-model",
         )
 
         self.registry.register_model(new_model)
-        retrieved = self.registry.get_model("test/model")
+        retrieved = self.registry.get_model("test-model")
 
         self.assertIsNotNone(retrieved)
         self.assertEqual(retrieved.name, "Test Model")
         self.assertEqual(retrieved.provider, ModelProvider.LLAMA)
+        self.assertEqual(self.registry.get_model("test/model").model_id, "test-model")
 
 
 if __name__ == "__main__":

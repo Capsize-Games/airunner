@@ -163,9 +163,11 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
     ),
 )
 
-AIRUNNER_BASE_PATH = os.environ.get(
-    "AIRUNNER_BASE_PATH",
-    os.path.expanduser("~/.local/share/airunner")
+AIRUNNER_BASE_PATH = os.path.expanduser(
+    os.environ.get(
+        "AIRUNNER_BASE_PATH",
+        "~/.local/share/airunner",
+    )
 )
 AIRUNNER_USER_DATA_PATH = AIRUNNER_BASE_PATH
 MODELS_DIR = os.path.join(AIRUNNER_BASE_PATH, "models")
@@ -225,9 +227,7 @@ if DEV_ENV:
 AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", default_name)
 
 # Set the database URL
-DB_PATH = os.path.expanduser(
-    os.path.join("~", ".local", "share", "airunner", "data", AIRUNNER_DB_NAME)
-)
+DB_PATH = os.path.join(AIRUNNER_BASE_PATH, "data", AIRUNNER_DB_NAME)
 default_url = "sqlite:///" + DB_PATH
 AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
 if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:
@@ -334,7 +334,7 @@ AIRUNNER_MEM_STT_DEVICE = os.environ.get("AIRUNNER_MEM_STT_DEVICE", None)
 
 
 def get_log_level_from_env():
-    log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL", "DEBUG").upper()
+    log_level_str = os.environ.get("AIRUNNER_LOG_LEVEL", "INFO").upper()
     log_levels = {
         "CRITICAL": logging.CRITICAL,
         "ERROR": logging.ERROR,
@@ -343,7 +343,7 @@ def get_log_level_from_env():
         "DEBUG": logging.DEBUG,
         "NOTSET": logging.NOTSET,
     }
-    return log_levels.get(log_level_str, logging.DEBUG)
+    return log_levels.get(log_level_str, logging.INFO)
 
 
 AIRUNNER_LOG_LEVEL = get_log_level_from_env()
@@ -358,7 +358,7 @@ AIRUNNER_LOG_FILE = os.environ.get(
     "AIRUNNER_LOG_FILE", os.path.join(AIRUNNER_BASE_PATH, "airunner.log")
 )
 AIRUNNER_SAVE_LOG_TO_FILE = (
-    os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1"
+    os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1"
 )
 AIRUNNER_DISABLE_FACEHUGGERSHIELD = (
     os.environ.get("AIRUNNER_DISABLE_FACEHUGGERSHIELD", "0") == "1"
@@ -457,10 +457,6 @@ SLASH_COMMANDS = {
     "clear": {
         "tool": "clear_conversation",
         "description": "Clear the current conversation history",
-    },
-    "calendar": {
-        "tool": "get_calendar_events",
-        "description": "View your calendar events",
     },
 }
 

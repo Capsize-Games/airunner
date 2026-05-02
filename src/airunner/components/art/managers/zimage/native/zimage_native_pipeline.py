@@ -585,6 +585,9 @@ class ZImageNativePipeline:
         Some tensors like padding tokens are created in __init__ but not in checkpoint.
         These remain on meta device and need to be materialized with actual data.
         """
+        materialized_params = 0
+        materialized_buffers = 0
+
         for name, param in self.transformer.named_parameters():
             if param.device.type == 'meta':
                 # Create actual tensor on target device with zeros
@@ -601,7 +604,7 @@ class ZImageNativePipeline:
                     else:
                         module = getattr(module, part)
                 setattr(module, parts[-1], new_param)
-                logger.debug(f"Materialized meta parameter: {name}")
+                materialized_params += 1
         
         for name, buffer in self.transformer.named_buffers():
             if buffer.device.type == 'meta':
@@ -616,7 +619,14 @@ class ZImageNativePipeline:
                     else:
                         module = getattr(module, part)
                 module.register_buffer(parts[-1], new_buffer)
-                logger.debug(f"Materialized meta buffer: {name}")
+                materialized_buffers += 1
+
+        if materialized_params or materialized_buffers:
+            logger.debug(
+                "Materialized %d meta parameters and %d meta buffers",
+                materialized_params,
+                materialized_buffers,
+            )
     
     def _convert_checkpoint_key(self, key: str) -> Optional[str]:
         """
@@ -679,30 +689,147 @@ class ZImageNativePipeline:
         
         # Override quantization if use_4bit is specified
         quantization = "4bit" if use_4bit else self.text_encoder_quantization
-
-        # Constrain text encoder GPU budget to avoid 16GB spikes
-        max_memory = None
-        device_map = "auto"
-        if torch.cuda.is_available():
-            total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-            # Leave ~8GB for transformer/activations, cap text encoder at remainder
-            usable_gpu = max(total_vram_gb - 8.0, 2.0)
-            max_memory = {0: f"{usable_gpu:.0f}GiB", "cpu": "32GiB"}
+        plan = self._build_text_encoder_load_plan(quantization)
 
         self.text_encoder = ZImageTextEncoder(
             model_path=path,
             tokenizer_path=tok_path,
-            device=self.device,
+            device=plan["device"],
             dtype=self.dtype,
-            quantization=quantization,
-            device_map=device_map,
-            max_memory=max_memory,
+            quantization=plan["quantization"],
+            device_map=plan["device_map"],
+            max_memory=plan["max_memory"],
+            enable_cpu_offload=plan["enable_cpu_offload"],
         )
         
         self.tokenizer = self.text_encoder.tokenizer
         
         self._loaded_components.append("text_encoder")
         logger.info("Text encoder loaded successfully")
+
+    def _build_text_encoder_load_plan(
+        self,
+        quantization: Optional[str],
+    ) -> Dict[str, Any]:
+        """Choose a text-encoder loading strategy for current free VRAM."""
+        plan = {
+            "quantization": quantization,
+            "device": self.device,
+            "device_map": None,
+            "max_memory": None,
+            "enable_cpu_offload": False,
+        }
+        if not torch.cuda.is_available():
+            return plan
+
+        free_vram_gb = torch.cuda.mem_get_info()[0] / (1024**3)
+        total_vram_gb = (
+            torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        )
+        cpu_budget = "32GiB"
+        if quantization in {"4bit", "8bit"} and free_vram_gb < 4.0:
+            logger.info(
+                "Low free VRAM after transformer load (%.2f GiB). "
+                "Loading text encoder on CPU to avoid prompt-encoding OOMs.",
+                free_vram_gb,
+            )
+            plan.update(
+                {
+                    "quantization": None,
+                    "device": torch.device("cpu"),
+                    "device_map": None,
+                    "max_memory": None,
+                    "enable_cpu_offload": False,
+                }
+            )
+            return plan
+
+        gpu_budget = max(
+            int(max(min(total_vram_gb - 8.0, free_vram_gb - 1.0), 2.0)),
+            2,
+        )
+        logger.info(
+            "Text encoder load budget: free_vram=%.2f GiB, total_vram=%.2f GiB, gpu_budget=%sGiB.",
+            free_vram_gb,
+            total_vram_gb,
+            gpu_budget,
+        )
+        plan.update(
+            {
+                "device_map": "auto",
+                "max_memory": {0: f"{gpu_budget}GiB", "cpu": cpu_budget},
+            }
+        )
+        return plan
+
+    def _ensure_text_encoder_ready(self) -> None:
+        """Load text encoder weights on demand before prompt encoding."""
+        if self.text_encoder is None:
+            raise RuntimeError("Text encoder not loaded")
+        if self.text_encoder.model is None and self.text_encoder.model_path:
+            logger.info("Reloading text encoder for prompt encoding")
+            self.text_encoder.load_model(self.text_encoder.model_path)
+
+    def _prepare_text_encoder_for_encoding(self) -> None:
+        """Move fully GPU-resident encoders back to the active device."""
+        self._ensure_text_encoder_ready()
+        if self.text_encoder is None or self.text_encoder.model is None:
+            return
+        if self.text_encoder.prefer_cpu_execution:
+            logger.debug("Keeping text encoder on CPU for prompt encoding")
+            return
+        if self.text_encoder.uses_accelerate_offload:
+            logger.debug("Using accelerate-managed text encoder placement")
+            return
+        current_device = next(self.text_encoder.model.parameters()).device
+        if current_device.type == "cpu":
+            logger.debug("Moving text encoder back to GPU for encoding")
+            self.text_encoder.model.to(self.device)
+
+    def _ensure_vae_on_device(self) -> None:
+        """Move the VAE to the active device before encode/decode."""
+        if self.vae is None:
+            raise RuntimeError("VAE not loaded")
+        vae_device = next(self.vae.parameters()).device
+        if vae_device != self.device:
+            logger.debug(f"Moving VAE from {vae_device} to {self.device}")
+            self.vae.to(self.device)
+
+    def _release_text_encoder_after_encoding(self) -> None:
+        """Free text-encoder GPU memory once prompt embeddings are ready."""
+        if self.text_encoder is None or self.text_encoder.model is None:
+            return
+        if self.text_encoder.prefer_cpu_execution:
+            logger.debug("Keeping CPU-resident text encoder loaded")
+            return
+        if self.text_encoder.uses_accelerate_offload:
+            self.text_encoder.unload_model()
+            logger.debug("Released accelerate-managed text encoder after encoding")
+            return
+        self.text_encoder.model.to("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
+        logger.debug("Offloaded text encoder to CPU")
+
+    def _move_prompt_conditioning_to_device(
+        self,
+        prompt_embeds: torch.Tensor,
+        negative_embeds: Optional[torch.Tensor],
+        attention_mask: Optional[torch.Tensor],
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """Move prompt-conditioning tensors to the transformer device."""
+        prompt_embeds = prompt_embeds.to(
+            device=self.device,
+            dtype=self.dtype,
+        )
+        if negative_embeds is not None:
+            negative_embeds = negative_embeds.to(
+                device=self.device,
+                dtype=self.dtype,
+            )
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(self.device)
+        return prompt_embeds, negative_embeds, attention_mask
     
     def load_vae(
         self,
@@ -719,12 +846,18 @@ class ZImageNativePipeline:
             raise ValueError("No VAE path provided")
         
         logger.info(f"Loading VAE from {path}")
+        vae_device = self.device
+        if self.device.type == "cuda":
+            vae_device = torch.device("cpu")
+            logger.info(
+                "Loading VAE on CPU; it will move to GPU on first use"
+            )
         
         # Load VAE using diffusers' AutoencoderKL
         self.vae = AutoencoderKL.from_pretrained(
             path,
             torch_dtype=self.dtype,
-        ).to(self.device)
+        ).to(vae_device)
         self.vae.eval()
 
         # Reduce VRAM during decode by tiling/slicing
@@ -851,13 +984,7 @@ class ZImageNativePipeline:
         
         # Encode prompts
         if self.text_encoder is not None:
-            # Ensure text encoder is on GPU before encoding
-            if hasattr(self.text_encoder, 'model') and self.text_encoder.model is not None:
-                current_device = next(self.text_encoder.model.parameters()).device
-                if current_device.type == 'cpu':
-                    logger.debug("Moving text encoder back to GPU for encoding")
-                    self.text_encoder.model.to(self.device)
-            
+            self._prepare_text_encoder_for_encoding()
             prompt_embeds, negative_embeds, attention_mask = self.encode_prompt(
                 prompt, negative_prompt
             )
@@ -868,13 +995,16 @@ class ZImageNativePipeline:
                     negative_embeds = negative_embeds.repeat(num_images_per_prompt, 1, 1)
                 if attention_mask is not None:
                     attention_mask = attention_mask.repeat(num_images_per_prompt, 1)
-            
-            # Offload text encoder to CPU to free GPU memory for generation
-            if hasattr(self.text_encoder, 'model') and self.text_encoder.model is not None:
-                self.text_encoder.model.to('cpu')
-                gc.collect()
-                torch.cuda.empty_cache()
-                logger.debug("Offloaded text encoder to CPU")
+
+            prompt_embeds, negative_embeds, attention_mask = (
+                self._move_prompt_conditioning_to_device(
+                    prompt_embeds,
+                    negative_embeds,
+                    attention_mask,
+                )
+            )
+
+            self._release_text_encoder_after_encoding()
         else:
             # Dummy embeddings for testing
             prompt_embeds = torch.randn(
@@ -942,6 +1072,7 @@ class ZImageNativePipeline:
             height = int(height)
             width = int(width)
 
+            self._ensure_vae_on_device()
             init_image = self.image_processor.preprocess(
                 image,
                 height=height,
@@ -970,10 +1101,25 @@ class ZImageNativePipeline:
                 # Mirror diffusers img2img init: blend by normalized timestep fraction
                 timestep_value = float(timesteps[0].item()) if timesteps.numel() > 0 else 0.0
                 timestep_ratio = timestep_value / max(self.scheduler.config.num_train_timesteps, 1)
-                logger.info(f"[IMG2IMG] strength={strength}, t_start={t_start}, first_timestep={timestep_value}, timestep_ratio={timestep_ratio:.4f}")
-                logger.info(f"[IMG2IMG] image_latents std={image_latents.std().item():.4f}, noise std={noise.std().item():.4f}")
+                logger.debug(
+                    "[IMG2IMG] strength=%s, t_start=%s, first_timestep=%s, timestep_ratio=%.4f",
+                    strength,
+                    t_start,
+                    timestep_value,
+                    timestep_ratio,
+                )
+                logger.debug(
+                    "[IMG2IMG] image_latents std=%.4f, noise std=%.4f",
+                    image_latents.std().item(),
+                    noise.std().item(),
+                )
                 latents = (1.0 - timestep_ratio) * image_latents + timestep_ratio * noise
-                logger.info(f"[IMG2IMG] blended latents std={latents.std().item():.4f} (image_weight={1.0-timestep_ratio:.4f}, noise_weight={timestep_ratio:.4f})")
+                logger.debug(
+                    "[IMG2IMG] blended latents std=%.4f (image_weight=%.4f, noise_weight=%.4f)",
+                    latents.std().item(),
+                    1.0 - timestep_ratio,
+                    timestep_ratio,
+                )
             else:
                 latents = latents.to(device=self.device, dtype=torch.float32)
         else:
@@ -1027,7 +1173,13 @@ class ZImageNativePipeline:
             noise_pred = -noise_pred
             
             # Debug logging for all steps
-            logger.info(f"[DEBUG] Step {i}: t={t.item():.2f}, latents std={latents.std().item():.4f}, noise_pred std={noise_pred.std().item():.4f}")
+            logger.debug(
+                "[DEBUG] Step %s: t=%.2f, latents std=%.4f, noise_pred std=%.4f",
+                i,
+                t.item(),
+                latents.std().item(),
+                noise_pred.std().item(),
+            )
             
             # Apply CFG
             if use_cfg:
@@ -1043,7 +1195,11 @@ class ZImageNativePipeline:
             latents = scheduler_output.prev_sample if hasattr(scheduler_output, "prev_sample") else scheduler_output
             
             # Debug: check latents after scheduler step
-            logger.info(f"[DEBUG] Step {i} after: latents std={latents.std().item():.4f}")
+            logger.debug(
+                "[DEBUG] Step %s after: latents std=%.4f",
+                i,
+                latents.std().item(),
+            )
             
             # Callback
             if callback is not None and (i + 1) % callback_steps == 0:
@@ -1059,13 +1215,11 @@ class ZImageNativePipeline:
         
         # Decode latents on GPU
         if self.vae is not None:
+            self._ensure_vae_on_device()
             # Scale latents for VAE
             latents = latents / self.vae.config.scaling_factor
             latents = latents.to(dtype=self.vae.dtype, device=self.device)
-            
-            # Ensure VAE is on GPU
-            self.vae.to(self.device)
-            
+
             images = self.vae.decode(latents).sample
             images = (images / 2 + 0.5).clamp(0, 1)
         else:
@@ -1074,10 +1228,16 @@ class ZImageNativePipeline:
         
         # Convert to PIL if requested
         if output_type == "pil":
-            
-            # Convert to numpy: (B, C, H, W) -> (B, H, W, C)
-            images_np = images.permute(0, 2, 3, 1).cpu().float().numpy()
-            images_np = (images_np * 255).clip(0, 255).astype(np.uint8)
+            # Convert to uint8 before the device hop to avoid an extra CPU float copy.
+            images_np = (
+                images.mul(255)
+                .clamp(0, 255)
+                .to(torch.uint8)
+                .permute(0, 2, 3, 1)
+                .contiguous()
+                .cpu()
+                .numpy()
+            )
             
             pil_images = [Image.fromarray(img) for img in images_np]
             return pil_images

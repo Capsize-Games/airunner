@@ -67,7 +67,6 @@ class SignalCode(Enum):
     CANVAS_UPDATE_IMAGE_POSITIONS = "canvas_update_image_positions"
     WIDGET_ELEMENT_CHANGED_SIGNAL = "widget_element_changed_signal"
     REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
-    NAVIGATE_TO_URL = "navigate_to_url"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
@@ -332,32 +331,8 @@ class SignalCode(Enum):
     VOICE_SAVED = "voice_saved"
     PLAYBACK_DEVICE_CHANGED = "playback_device_changed"
     RECORDING_DEVICE_CHANGED = "recording_device_changed"
-    NODE_EXECUTION_COMPLETED_SIGNAL = "node_execution_completed_signal"
-    CLEAR_WORKFLOW_SIGNAL = "clear_workflow_signal"
-    WORKFLOW_LOAD_SIGNAL = "workflow_load_signal"
-    REGISTER_GRAPH_SIGNAL = "register_graph_signal"
-    ENABLE_WORKFLOWS_TOGGLED = "enable_workflows_toggled"
     SEND_IMAGE_TO_CANVAS_SIGNAL = "send_image_to_canvas_signal"
-    RUN_WORKFLOW_SIGNAL = "run_workflow_signal"
-    STOP_WORKFLOW_SIGNAL = "stop_workflow_signal"
-    WORKFLOW_EXECUTION_COMPLETED_SIGNAL = "workflow_execution_completed_signal"
-    PAUSE_WORKFLOW_SIGNAL = "pause_workflow_signal"
     INPUT_IMAGE_SETTINGS_CHANGED = "input_image_settings_changed"
-
-    # Video generation signals
-    VIDEO_LOAD_SIGNAL = "video_load_signal"
-    VIDEO_UNLOAD_SIGNAL = "video_unload_signal"
-    VIDEO_GENERATE_SIGNAL = "video_generate_signal"
-    VIDEO_GENERATED_SIGNAL = "video_generated_signal"
-    VIDEO_GENERATION_STARTED_SIGNAL = "video_generation_started_signal"
-    VIDEO_GENERATION_FAILED_SIGNAL = "video_generation_failed_signal"
-    VIDEO_MODEL_CHANGED_SIGNAL = "video_model_changed_signal"
-    VIDEO_MODEL_DOWNLOAD_REQUIRED = "video_model_download_required"
-    INTERRUPT_VIDEO_GENERATION_SIGNAL = "interrupt_video_generation_signal"
-    VIDEO_PROGRESS_SIGNAL = "video_progress_signal"
-    VIDEO_FRAME_UPDATE_SIGNAL = "video_frame_update_signal"
-    NODEGRAPH_ZOOM = "nodegraph_zoom"
-    NODEGRAPH_PAN = "nodegraph_pan"
     LLM_MODEL_DOWNLOAD_PROGRESS = "llm_model_download_progress"
     MOOD_SUMMARY_UPDATE_STARTED = "mood_summary_update_started_signal"
     WIDGET_COMMAND_SIGNAL = "widget_command_signal"
@@ -447,10 +422,6 @@ class UISection(Enum):
     HOME = "home"
     ART = "art"  # Image generation and canvas manipulation
     DOCUMENT_EDITOR = "document_editor"  # Code/document editing
-    CALENDAR = "calendar"
-    WORKFLOW_EDITOR = "workflow_editor"  # Agent workflow design
-    VISUALIZER = "visualizer"  # Audio/media visualization
-    VIDEO = "video"  # Video generation
     UNKNOWN = "unknown"
 
     @classmethod
@@ -467,10 +438,6 @@ class UISection(Enum):
             "home_button": cls.HOME,
             "art_editor_button": cls.ART,
             "document_editor_button": cls.DOCUMENT_EDITOR,
-            "calendar_button": cls.CALENDAR,
-            "workflow_editor_button": cls.WORKFLOW_EDITOR,
-            "visualizer_button": cls.VISUALIZER,
-            "video_button": cls.VIDEO,
         }
         return mapping.get(button_name, cls.UNKNOWN)
 
@@ -493,20 +460,6 @@ class UISection(Enum):
                 "They can create, edit, and run Python scripts or other text documents. "
                 "The editor supports syntax highlighting, line numbers, and script execution. "
                 "Relevant tools include code generation, file operations, and code validation."
-            ),
-            UISection.CALENDAR: (
-                "The user is in the CALENDAR section for scheduling and time management. "
-                "Relevant tools include calendar operations for creating, viewing, and managing events."
-            ),
-            UISection.WORKFLOW_EDITOR: (
-                "The user is in the WORKFLOW EDITOR section for designing agent workflows. "
-                "They can create and edit node-based workflows that chain LLM operations together."
-            ),
-            UISection.VISUALIZER: (
-                "The user is in the VISUALIZER section for audio/media visualization."
-            ),
-            UISection.VIDEO: (
-                "The user is in the VIDEO section for video generation and editing."
             ),
             UISection.UNKNOWN: "",
         }
@@ -658,10 +611,6 @@ class ModelType(Enum):
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
-    VIDEO = "Video Model"
-    HUNYUAN_VIDEO = "HunyuanVideo"
-    COGVIDEOX = "CogVideoX"
-    ANIMATEDIFF = "AnimateDiff"
 
 
 class HandlerState(Enum):

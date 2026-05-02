@@ -59,9 +59,6 @@ class ApplicationSettings(BaseModel):
     user_agreement_checked = Column(Boolean, default=True)
     age_agreement_checked = Column(Boolean, default=True)
     llama_license_agreement_checked = Column(Boolean, default=True)
-    nodegraph_zoom = Column(Integer, default=0)
-    nodegraph_center_x = Column(Integer, default=0)
-    nodegraph_center_y = Column(Integer, default=0)
     detected_language = Column(String, default=AvailableLanguage.EN.value)
     use_detected_language = Column(Boolean, default=True)
     # Service settings

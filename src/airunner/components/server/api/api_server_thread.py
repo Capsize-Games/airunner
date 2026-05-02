@@ -12,7 +12,11 @@ import os
 
 import uvicorn
 
-from airunner.api.server import create_app, is_loopback_host
+from airunner.api.server import (
+    access_logs_enabled,
+    create_app,
+    is_loopback_host,
+)
 from airunner.components.server.api.server import get_api
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -69,7 +73,7 @@ class APIServerThread(threading.Thread):
                 host=self.host,
                 port=self.port,
                 log_level="info",
-                access_log=True,
+                access_log=access_logs_enabled(),
             )
             self.server = uvicorn.Server(config)
             self.server.run()

@@ -8,14 +8,7 @@ This module tests component loading and unloading functionality including:
 - Component unloading and memory cleanup
 """
 
-import sys
-from unittest.mock import Mock, MagicMock, patch
-
-
-# Mock heavy dependencies before importing the mixin
-sys.modules["airunner.components.llm.adapters"] = MagicMock()
-sys.modules["airunner.components.llm.managers.tool_manager"] = MagicMock()
-sys.modules["airunner.components.llm.managers.workflow_manager"] = MagicMock()
+from unittest.mock import Mock, patch
 
 from airunner.components.llm.managers.mixins.component_loader_mixin import (
     ComponentLoaderMixin,
@@ -28,6 +21,8 @@ class MockComponentLoader(ComponentLoaderMixin):
     def __init__(self):
         self.logger = Mock()
         self.llm_settings = Mock()
+        self.llm_settings.use_local_llm = True
+        self._last_load_error = None
         self._model = None
         self._tokenizer = None
         self._chat_model = None
@@ -71,8 +66,8 @@ class TestLoadChatModel:
         mock_factory.assert_not_called()
         assert loader._chat_model == existing_model
 
-    def test_load_chat_model_initializes_rag_if_available(self):
-        """Test RAG initialization after ChatModel creation."""
+    def test_load_chat_model_keeps_rag_lazy_when_available(self):
+        """Test chat model loading does not eagerly initialize RAG."""
         loader = MockComponentLoader()
         loader._setup_rag = Mock()
         mock_chat_model = Mock()
@@ -83,10 +78,7 @@ class TestLoadChatModel:
         ):
             loader._load_chat_model()
 
-        loader._setup_rag.assert_called_once()
-        loader.logger.info.assert_any_call(
-            "Initializing RAG system now that LLM is loaded"
-        )
+        loader._setup_rag.assert_not_called()
 
     def test_load_chat_model_skips_rag_if_not_available(self):
         """Test that RAG initialization is skipped if _setup_rag doesn't exist."""
@@ -113,6 +105,7 @@ class TestLoadChatModel:
             loader._load_chat_model()
 
         assert loader._chat_model is None
+        assert loader._last_load_error == "Factory error"
         loader.logger.error.assert_called_once()
         assert "Error creating ChatModel" in str(loader.logger.error.call_args)
 
@@ -212,8 +205,13 @@ class TestLoadWorkflowManager:
             system_prompt="Test system prompt",
             chat_model=loader._chat_model,
             tools=None,
-            max_tokens=2000,
+            max_history_tokens=8000,
             conversation_id=None,
+            use_mode_routing=False,
+            mode_override=None,
+            llm_settings=loader.llm_settings,
+            chatbot=None,
+            signal_emitter=loader,
         )
 
     def test_load_workflow_manager_skips_if_already_loaded(self):

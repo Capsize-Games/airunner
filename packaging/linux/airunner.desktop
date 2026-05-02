@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AIRunner
+Comment=Run local open source AI models with one bundled launcher
+Exec=airunner
+Icon=airunner
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=true

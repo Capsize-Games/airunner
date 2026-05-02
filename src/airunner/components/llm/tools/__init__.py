@@ -40,7 +40,6 @@ from airunner.components.llm.tools import (
     math_tools,
     reasoning_tools,
     web_tools,
-    calendar_tools,
     rag_tools,
     knowledge_tools,
     user_data_tools,
@@ -63,11 +62,8 @@ from airunner.components.llm.tools import (
 
 # Long-running project management tools
 from airunner.components.llm.long_running import tools as project_tools
-from airunner.components.calendar.tools import (
-    calendar_tools as langchain_calendar_tools,
-)
 
-# Load optional extensions (gitignored `extensions/` folder).
+# Load explicitly enabled external extensions.
 # Extensions register tools via the same ToolRegistry and can override by name.
 try:
     from airunner.components.llm.core.extensions_loader import load_extensions
@@ -100,14 +96,12 @@ __all__ = [
     "math_tools",
     "reasoning_tools",
     "web_tools",
-    "calendar_tools",
     "rag_tools",
     "knowledge_tools",
     "user_data_tools",
     "agent_tools",
     "mood_tools",
     "generation_tools",
-    "langchain_calendar_tools",
     # Phase 2: Mode-specific tools
     "author_tools",
     "code_tools",

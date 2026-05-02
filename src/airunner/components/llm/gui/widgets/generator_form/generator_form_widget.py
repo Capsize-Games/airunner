@@ -17,6 +17,28 @@ class GeneratorForm(BaseWidget):
     widget_class_ = Ui_generator_form
     changed_signal = Signal(str, object)
 
+    def _ensure_settings_tab_loaded(self):
+        """Create the hidden settings page only when it becomes active."""
+        if getattr(self.ui, "llm_settings", None) is not None:
+            return self.ui.llm_settings
+
+        from airunner.components.llm.gui.widgets.llm_settings_widget import (
+            LLMSettingsWidget,
+        )
+
+        widget = LLMSettingsWidget(self.ui.tab)
+        widget.setObjectName("llm_settings")
+        self.ui.gridLayout.addWidget(widget, 0, 0, 1, 1)
+
+        placeholder = getattr(self.ui, "llm_settings_placeholder", None)
+        if placeholder is not None:
+            self.ui.gridLayout.removeWidget(placeholder)
+            placeholder.deleteLater()
+            self.ui.llm_settings_placeholder = None
+
+        self.ui.llm_settings = widget
+        return widget
+
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.GENERATE_IMAGE_FROM_IMAGE_SIGNAL: self.handle_generate_image_from_image,
@@ -36,6 +58,8 @@ class GeneratorForm(BaseWidget):
 
     @Slot(int)
     def on_generator_form_tabs_currentChanged(self, index: int):
+        if index == 1:
+            self._ensure_settings_tab_loaded()
         self.qsettings.setValue("tabs/left/active_index", index)
 
     @property
@@ -169,4 +193,6 @@ class GeneratorForm(BaseWidget):
         super().showEvent(event)
         self.initialized = True
         active_index = int(self.qsettings.value("tabs/left/active_index", 0))
+        if active_index == 1:
+            self._ensure_settings_tab_loaded()
         self.ui.generator_form_tabs.setCurrentIndex(active_index)

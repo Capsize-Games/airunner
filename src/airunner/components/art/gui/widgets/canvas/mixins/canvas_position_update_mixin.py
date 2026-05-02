@@ -133,7 +133,7 @@ class CanvasPositionUpdateMixin(MediatorMixin, SettingsMixin):
                 )
 
                 original_pos = original_item_positions[layer_item]
-                self.logger.info(
+                self.logger.debug(
                     f"[UPDATE_POS] Layer {layer_id}: using position "
                     f"x={original_pos.x()}, y={original_pos.y()}"
                 )
@@ -162,7 +162,7 @@ class CanvasPositionUpdateMixin(MediatorMixin, SettingsMixin):
             original_item_positions: Dict to update with position.
         """
         if layer_item not in original_item_positions:
-            self.logger.info(
+            self.logger.debug(
                 f"[UPDATE_POS] Layer {layer_id} item (id={id(layer_item)}) "
                 f"NOT in original_item_positions, reading from settings"
             )
@@ -178,7 +178,7 @@ class CanvasPositionUpdateMixin(MediatorMixin, SettingsMixin):
                     abs_y = layer_item.pos().y()
 
                 original_item_positions[layer_item] = QPointF(abs_x, abs_y)
-                self.logger.info(
+                self.logger.debug(
                     f"[UPDATE_POS] Layer {layer_id}: read from settings "
                     f"x={abs_x}, y={abs_y}"
                 )
@@ -186,7 +186,7 @@ class CanvasPositionUpdateMixin(MediatorMixin, SettingsMixin):
                 current_pos = layer_item.pos()
                 original_item_positions[layer_item] = current_pos
         else:
-            self.logger.info(
+            self.logger.debug(
                 f"[UPDATE_POS] Layer {layer_id} item (id={id(layer_item)}) "
                 f"FOUND in original_item_positions"
             )

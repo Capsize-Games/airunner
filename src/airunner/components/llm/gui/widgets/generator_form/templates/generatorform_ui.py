@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidge
     QWidget)
 
 from airunner.components.chat.gui.widgets.chat_prompt_widget import ChatPromptWidget
-from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 
 class Ui_generator_form(object):
     def setupUi(self, generator_form):
@@ -60,10 +59,10 @@ class Ui_generator_form(object):
         self.tab.setObjectName(u"tab")
         self.gridLayout = QGridLayout(self.tab)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.llm_settings = LLMSettingsWidget(self.tab)
-        self.llm_settings.setObjectName(u"llm_settings")
+        self.llm_settings_placeholder = QWidget(self.tab)
+        self.llm_settings_placeholder.setObjectName(u"llm_settings_placeholder")
 
-        self.gridLayout.addWidget(self.llm_settings, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.llm_settings_placeholder, 0, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.tab, "")
 

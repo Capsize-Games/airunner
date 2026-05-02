@@ -43,6 +43,13 @@ class TokenizerLoaderMixin:
         Returns:
             True if model is Mistral3, False otherwise.
         """
+        is_mistral3_type = getattr(config, "model_type", None) in {
+            "mistral3",
+            "ministral3",
+        }
+        if is_mistral3_type:
+            return True
+
         # Primary check: use path-based detection (works with patched config)
         if is_ministral3_model(self.model_path):
             return True

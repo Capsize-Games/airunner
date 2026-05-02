@@ -66,7 +66,11 @@ class ModelLoadingMixin:
             # and attempt to swap if auto_swap is enabled
             if auto_swap:
                 # Check if any models are currently loaded
-                active_models = self.get_active_models()
+                active_models = [
+                    model
+                    for model in self.get_active_models()
+                    if model.model_id != model_id
+                ]
                 if active_models:
                     self.logger.info(
                         f"Found {len(active_models)} active models while loading unregistered model"

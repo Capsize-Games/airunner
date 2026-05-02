@@ -24,6 +24,7 @@ from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_open_tag,
     detect_thinking_close_tag,
 )
+from airunner.components.llm.utils.stream_text import combine_stream_chunks
 from airunner.enums import SignalCode
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
@@ -170,6 +171,19 @@ class NodeFunctionsMixin:
                 "workflow_continuation": True,
             }
         else:
+            if self._should_return_tool_direct(tool_name):
+                self.logger.info(
+                    f"Force response node: returning direct tool result for '{tool_name}'"
+                )
+                return {
+                    "messages": [
+                        self._create_direct_tool_response_message(
+                            tool_messages, tool_name
+                        )
+                    ],
+                    "workflow_continuation": False,
+                }
+
             self.logger.info(
                 f"Force response node: Generating answer from {len(all_tool_content)} chars across {len(tool_messages)} tool result(s)"
             )
@@ -240,6 +254,35 @@ class NodeFunctionsMixin:
                 all_tool_content += tool_msg.content
                 all_tool_content += "\n"
         return all_tool_content
+
+    def _get_bound_tool(self, tool_name: str) -> Optional[Any]:
+        """Return the currently bound tool object by name."""
+        for tool in getattr(self, "_tools", []) or []:
+            if getattr(tool, "name", None) == tool_name:
+                return tool
+        return None
+
+    def _should_return_tool_direct(self, tool_name: str) -> bool:
+        """Check whether a bound tool should bypass the post-tool model pass."""
+        tool = self._get_bound_tool(tool_name)
+        return bool(tool and getattr(tool, "return_direct", False))
+
+    def _create_direct_tool_response_message(
+        self, tool_messages: List[Any], tool_name: str
+    ) -> AIMessage:
+        """Create an assistant message directly from tool output."""
+        direct_content = ""
+        for tool_message in reversed(tool_messages):
+            if getattr(tool_message, "name", None) == tool_name and getattr(
+                tool_message, "content", None
+            ):
+                direct_content = str(tool_message.content).strip()
+                break
+
+        if not direct_content and tool_messages:
+            direct_content = str(getattr(tool_messages[-1], "content", "")).strip()
+
+        return AIMessage(content=direct_content, tool_calls=[])
 
     def _generate_forced_response_message(
         self,
@@ -780,6 +823,12 @@ Based on the search results above, provide a clear, conversational answer to the
             
             if tool_name in NO_RESPONSE_TOOLS:
                 continue
+
+            if self._should_return_tool_direct(tool_name):
+                self.logger.info(
+                    f"[ROUTE DEBUG] Tool '{tool_name}' is return_direct - routing to force_response"
+                )
+                return "force_response"
             
             # Check if tool result indicates success for task-completing tools
             last_tool_content = str(getattr(last_tool_msg, 'content', ''))
@@ -1750,6 +1799,7 @@ Based on the search results above, provide a clear, conversational answer to the
         in_thinking_block = False
         thinking_started = False  # Track if we've already seen an opening tag
         thinking_tag_format = ""  # "angle" or "brackets" - set when opening tag detected
+        using_reasoning_deltas = False
         thinking_content = []
         final_thinking_content = None  # Store completed thinking content for DB persistence
         
@@ -1766,6 +1816,20 @@ Based on the search results above, provide a clear, conversational answer to the
         has_streamed_content = False
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
+        request_id = getattr(self, "_current_request_id", None)
+
+        def emit_thinking_signal(status: str, content: str) -> None:
+            """Emit one request-scoped thinking update to the GUI."""
+            if not has_emitter:
+                return
+            self._signal_emitter.emit_signal(
+                SignalCode.LLM_THINKING_SIGNAL,
+                {
+                    "status": status,
+                    "content": content,
+                    "request_id": request_id,
+                },
+            )
         # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
         # suppress/buffer tokens. Some models can emit the *entire* answer inside <think> blocks;
         # suppressing thinking would then swallow all output for NDJSON clients.
@@ -1788,6 +1852,13 @@ Based on the search results above, provide a clear, conversational answer to the
 
                 chunk_message = getattr(chunk, "message", chunk)
                 text = getattr(chunk_message, "content", "") or ""
+                additional_kwargs = (
+                    getattr(chunk_message, "additional_kwargs", {}) or {}
+                )
+                reasoning_delta = (
+                    additional_kwargs.get("thinking_content")
+                    or additional_kwargs.get("reasoning_content")
+                )
 
                 # Always capture last chunk (might have tool_calls with no content)
                 last_chunk_message = chunk_message
@@ -1797,14 +1868,39 @@ Based on the search results above, provide a clear, conversational answer to the
                 if chunk_tool_calls:
                     collected_tool_calls.extend(chunk_tool_calls)
 
-                # Only skip if content is empty AND no tool_calls
-                if not text and not chunk_tool_calls:
+                # Only skip if content, tool calls, and reasoning are all empty.
+                if not text and not chunk_tool_calls and not reasoning_delta:
                     continue
 
                 streamed_content.append(text)
                 
                 # Debug: Log every chunk
                 # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
+
+                if suppress_thinking_blocks and reasoning_delta:
+                    if not thinking_started:
+                        thinking_started = True
+                        using_reasoning_deltas = True
+                        emit_thinking_signal("started", "")
+
+                    thinking_content.append(reasoning_delta)
+                    emit_thinking_signal("streaming", reasoning_delta)
+
+                    if not text:
+                        continue
+
+                if (
+                    suppress_thinking_blocks
+                    and using_reasoning_deltas
+                    and text
+                ):
+                    using_reasoning_deltas = False
+                    final_thinking_content = "".join(thinking_content)
+                    emit_thinking_signal(
+                        "completed",
+                        final_thinking_content,
+                    )
+                    thinking_content = []
                 
                 if suppress_thinking_blocks:
                     # Detect thinking block boundaries using format-agnostic helpers
@@ -1815,11 +1911,7 @@ Based on the search results above, provide a clear, conversational answer to the
                         thinking_started = True
                         thinking_tag_format = tag_format
                         # Emit thinking started signal
-                        if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                            self._signal_emitter.emit_signal(
-                                SignalCode.LLM_THINKING_SIGNAL,
-                                {"status": "started", "content": ""}
-                            )
+                        emit_thinking_signal("started", "")
 
                         # Check if closing tag is also in this chunk (entire thinking block in one chunk)
                         found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
@@ -1827,21 +1919,19 @@ Based on the search results above, provide a clear, conversational answer to the
                             # Both tags in same chunk - extract thinking and remaining content
                             if before_close:
                                 thinking_content.append(before_close)
-                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                    self._signal_emitter.emit_signal(
-                                        SignalCode.LLM_THINKING_SIGNAL,
-                                        {"status": "streaming", "content": before_close}
-                                    )
+                                emit_thinking_signal(
+                                    "streaming",
+                                    before_close,
+                                )
 
                             # Mark thinking as complete
                             in_thinking_block = False
                             final_thinking_content = "".join(thinking_content)
 
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "completed", "content": final_thinking_content}
-                                )
+                            emit_thinking_signal(
+                                "completed",
+                                final_thinking_content,
+                            )
                             thinking_content = []
 
                             # Stream any content after closing tag to the main callback
@@ -1857,11 +1947,10 @@ Based on the search results above, provide a clear, conversational answer to the
                         elif after_think:
                             # Only opening tag in this chunk, stream content to thinking
                             thinking_content.append(after_think)
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": after_think}
-                                )
+                            emit_thinking_signal(
+                                "streaming",
+                                after_think,
+                            )
                         continue  # Skip normal processing for this chunk
 
                     # If we're in a thinking block, emit thinking content
@@ -1871,11 +1960,10 @@ Based on the search results above, provide a clear, conversational answer to the
                         if found_close:
                             if before_close:
                                 thinking_content.append(before_close)
-                                if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                    self._signal_emitter.emit_signal(
-                                        SignalCode.LLM_THINKING_SIGNAL,
-                                        {"status": "streaming", "content": before_close}
-                                    )
+                                emit_thinking_signal(
+                                    "streaming",
+                                    before_close,
+                                )
 
                             # Mark thinking as complete
                             in_thinking_block = False
@@ -1883,11 +1971,10 @@ Based on the search results above, provide a clear, conversational answer to the
                             # Save thinking content for DB persistence BEFORE clearing the list
                             final_thinking_content = "".join(thinking_content)
 
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "completed", "content": final_thinking_content}
-                                )
+                            emit_thinking_signal(
+                                "completed",
+                                final_thinking_content,
+                            )
                             thinking_content = []
 
                             # Stream any content after closing tag to the main callback
@@ -1902,11 +1989,7 @@ Based on the search results above, provide a clear, conversational answer to the
                                     )
                         else:
                             # Stream thinking content to GUI
-                            if hasattr(self, "_signal_emitter") and self._signal_emitter:
-                                self._signal_emitter.emit_signal(
-                                    SignalCode.LLM_THINKING_SIGNAL,
-                                    {"status": "streaming", "content": text}
-                                )
+                            emit_thinking_signal("streaming", text)
                             thinking_content.append(text)
                         continue  # Don't stream thinking to main callback
                 
@@ -2005,6 +2088,13 @@ Based on the search results above, provide a clear, conversational answer to the
                             exc_info=True,
                         )
 
+            if using_reasoning_deltas and thinking_content:
+                final_thinking_content = "".join(thinking_content)
+                emit_thinking_signal(
+                    "completed",
+                    final_thinking_content,
+                )
+
             # Return message if we have content or tool_calls
             if streamed_content or last_chunk_message:
                 # Use final_thinking_content if available (from completed thinking block)
@@ -2069,11 +2159,13 @@ Based on the search results above, provide a clear, conversational answer to the
                     getattr(last_chunk_message, "tool_calls", None) or []
                 )
 
-        complete_content = "".join(streamed_content)
-        
-        # Strip <think>...</think> blocks from Qwen3 responses
-        # The thinking is useful for reasoning but shouldn't be in final output
-        complete_content = strip_thinking_tags(complete_content)
+        visible_chunks = []
+        for chunk in streamed_content:
+            cleaned_chunk = strip_thinking_tags(chunk)
+            if cleaned_chunk:
+                visible_chunks.append(cleaned_chunk)
+
+        complete_content = combine_stream_chunks(visible_chunks)
         
         # Store thinking content in additional_kwargs so it can be saved to DB
         if thinking_content:

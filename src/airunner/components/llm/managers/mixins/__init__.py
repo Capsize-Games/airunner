@@ -12,6 +12,9 @@ from airunner.components.llm.managers.mixins.conversation_management_mixin impor
 from airunner.components.llm.managers.mixins.generation_mixin import (
     GenerationMixin,
 )
+from airunner.components.llm.managers.mixins.model_availability_mixin import (
+    ModelAvailabilityMixin,
+)
 from airunner.components.llm.managers.mixins.model_loader_mixin import (
     ModelLoaderMixin,
 )
@@ -20,6 +23,9 @@ from airunner.components.llm.managers.mixins.property_mixin import (
 )
 from airunner.components.llm.managers.mixins.quantization_config_mixin import (
     QuantizationConfigMixin,
+)
+from airunner.components.llm.managers.mixins.request_handling_mixin import (
+    RequestHandlingMixin,
 )
 from airunner.components.llm.managers.mixins.specialized_model_mixin import (
     SpecializedModelMixin,
@@ -32,6 +38,12 @@ from airunner.components.llm.managers.mixins.system_prompt_mixin import (
 )
 from airunner.components.llm.managers.mixins.tokenizer_loader_mixin import (
     TokenizerLoaderMixin,
+)
+from airunner.components.llm.managers.mixins.tool_classification_mixin import (
+    ToolClassificationMixin,
+)
+from airunner.components.llm.managers.mixins.tool_filtering_mixin import (
+    ToolFilteringMixin,
 )
 from airunner.components.llm.managers.mixins.validation_mixin import (
     ValidationMixin,
@@ -60,13 +72,17 @@ __all__ = [
     "ComponentLoaderMixin",
     "ConversationManagementMixin",
     "GenerationMixin",
+    "ModelAvailabilityMixin",
     "ModelLoaderMixin",
     "PropertyMixin",
     "QuantizationConfigMixin",
+    "RequestHandlingMixin",
     "SpecializedModelMixin",
     "StatusManagementMixin",
     "SystemPromptMixin",
     "TokenizerLoaderMixin",
+    "ToolClassificationMixin",
+    "ToolFilteringMixin",
     "ValidationMixin",
     "ToolManagementMixin",
     "ToolExecutionMixin",

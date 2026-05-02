@@ -3255,54 +3255,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </message>
 </context>
 <context>
-    <name>node_graph_widget</name>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="68"/>
-        <source>New workflow</source>
-        <translation>新しいワークフロー</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="85"/>
-        <source>Delete workflow</source>
-        <translation>ワークフローを削除</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="102"/>
-        <source>Stop workflow</source>
-        <translation>ワークフローを停止</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="116"/>
-        <source>Clear workflow</source>
-        <translation>ワークフローをクリア</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="133"/>
-        <source>Run workflow</source>
-        <translation>ワークフローを実行</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="150"/>
-        <source>Load workflow</source>
-        <translation>ワークフローを読み込む</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="167"/>
-        <source>Save workflow</source>
-        <translation>ワークフローを保存</translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="197"/>
-        <source>Pause workflow</source>
-        <translation>ワークフローを一時停止</translation>
-    </message>
-</context>
-<context>
     <name>open_voice_preferences</name>
     <message>
         <location filename="../gui/widgets/tts/templates/open_voice_preferences.ui" line="17"/>
@@ -3593,19 +3545,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <location filename="../gui/widgets/rag_settings/templates/rag_settings.ui" line="52"/>
         <source>Service</source>
         <translation>サービス</translation>
-    </message>
-</context>
-<context>
-    <name>scheduler_node</name>
-    <message>
-        <location filename="../gui/widgets/nodegraph/nodes/art/templates/scheduler.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/nodes/art/templates/scheduler.ui" line="20"/>
-        <source>Scheduler</source>
-        <translation>スケジューラ</translation>
     </message>
 </context>
 <context>
@@ -4759,19 +4698,6 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
         <location filename="../gui/widgets/user/templates/user_settings.ui" line="55"/>
         <source>Username</source>
         <translation>ユーザー名</translation>
-    </message>
-</context>
-<context>
-    <name>variables_panel</name>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/variables_panel.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/widgets/nodegraph/templates/variables_panel.ui" line="39"/>
-        <source>Add Variable</source>
-        <translation>変数を追加</translation>
     </message>
 </context>
 <context>

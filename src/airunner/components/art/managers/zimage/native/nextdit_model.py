@@ -122,6 +122,7 @@ class NextDiT(nn.Module):
             in_channels,
             dim,
             n_heads,
+            n_kv_heads,
             time_scale,
             pad_tokens_multiple,
             z_image_modulation,
@@ -176,6 +177,7 @@ class NextDiT(nn.Module):
         in_channels: int,
         dim: int,
         n_heads: int,
+        n_kv_heads: Optional[int],
         time_scale: float,
         pad_tokens_multiple: Optional[int],
         z_image_modulation: bool,
@@ -189,6 +191,7 @@ class NextDiT(nn.Module):
         self.pad_tokens_multiple = pad_tokens_multiple
         self.dim = dim
         self.n_heads = n_heads
+        self.n_kv_heads = n_kv_heads if n_kv_heads is not None else n_heads
         self.z_image_modulation = z_image_modulation
 
     @staticmethod
@@ -244,7 +247,7 @@ class NextDiT(nn.Module):
     def _build_t_embedder(dim: int, z_image_modulation: bool, device, dtype) -> TimestepEmbedder:
         return TimestepEmbedder(
             min(dim, 1024),
-            output_size=256 if z_image_modulation else None,
+            output_size=min(dim, 256) if z_image_modulation else None,
             device=device,
             dtype=dtype,
         )
@@ -282,6 +285,7 @@ class NextDiT(nn.Module):
         device,
         dtype,
     ) -> None:
+        self.n_refiner_layers = count
         self.noise_refiner = self._build_refiner_layers(
             count,
             True,
@@ -325,6 +329,7 @@ class NextDiT(nn.Module):
         device,
         dtype,
     ) -> None:
+        self.n_layers = count
         self.layers = self._build_main_layers(
             count,
             dim,
