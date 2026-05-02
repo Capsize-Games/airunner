@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
@@ -29,6 +30,20 @@ _LOG_CONVERSATION_WEBVIEW_PROGRESS = (
     os.environ.get("AIRUNNER_LOG_CONVERSATION_WEBVIEW_PROGRESS", "0")
     == "1"
 )
+
+
+def get_conversation_asset_version() -> str:
+    """Return a cache-busting version for live conversation assets."""
+    static_dir = Path(__file__).resolve().parent.parent / "static"
+    asset_paths = (
+        static_dir / "css" / "conversation.css",
+        static_dir / "js" / "conversation.js",
+    )
+    latest_mtime = max(
+        (path.stat().st_mtime_ns for path in asset_paths if path.exists()),
+        default=0,
+    )
+    return str(latest_mtime)
 
 
 class ConversationWidget(BaseWidget):
@@ -163,6 +178,7 @@ class ConversationWidget(BaseWidget):
     @property
     def template_context(self) -> Dict:
         context = super().template_context
+        context["asset_version"] = get_conversation_asset_version()
         context["messages"] = []
         return context
 

@@ -492,6 +492,18 @@ class TestDoGenerate:
         assert mixin._workflow_manager.set_token_callback.call_count == 2
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_syncs_request_id_to_workflow_manager(self, mock_torch, mixin):
+        """Should propagate request scope to workflow-side thinking emitters."""
+        mixin._current_request_id = "req-2"
+        mixin._workflow_manager.stream.return_value = []
+
+        mixin._do_generate("Test", LLMActionType.CHAT)
+
+        mixin._workflow_manager.set_request_id.assert_called_once_with(
+            "req-2"
+        )
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_resets_interrupted_flag(self, mock_torch, mixin):
         """Should reset interrupted flag before generation."""
         mixin._interrupted = True

@@ -148,3 +148,11 @@ def test_render_initial_template_primes_chat_bridge_readiness():
 
     widget.render_template.assert_called_once_with()
     widget._schedule_chat_bridge_flush.assert_called_once_with()
+
+
+def test_conversation_asset_version_tracks_static_assets():
+    """Conversation asset version should change with source asset mtimes."""
+    asset_version = module.get_conversation_asset_version()
+
+    assert asset_version.isdigit()
+    assert int(asset_version) > 0

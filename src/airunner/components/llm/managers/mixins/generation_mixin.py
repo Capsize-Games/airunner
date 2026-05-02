@@ -26,6 +26,18 @@ from airunner.enums import LLMActionType, ModelStatus, ModelType, SignalCode
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
 
+    def _sync_request_scope_to_workflow_manager(self) -> None:
+        """Propagate the active request ID to workflow-scoped emitters."""
+        if not self._workflow_manager:
+            return
+
+        request_id = getattr(self, "_current_request_id", None)
+        if hasattr(self._workflow_manager, "set_request_id"):
+            self._workflow_manager.set_request_id(request_id)
+            return
+
+        setattr(self._workflow_manager, "_current_request_id", request_id)
+
     def _clamp_generation_tokens(self, generation_kwargs: Dict[str, Any]) -> None:
         """Ensure max_new_tokens does not exceed target context.
 
@@ -471,6 +483,8 @@ class GenerationMixin:
 
             self.logger.error("Workflow manager is not initialized")
             return {"response": "Error: workflow unavailable"}
+
+        self._sync_request_scope_to_workflow_manager()
 
         callback = self._create_streaming_callback(
             llm_request, complete_response, sequence_counter

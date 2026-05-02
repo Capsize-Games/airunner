@@ -350,6 +350,14 @@ async function appendMessage(msg, scroll = true) {
 
     const messageElement = createMessageElement(msg);
     container.appendChild(messageElement);
+    if (msg.is_bot && msg.request_id) {
+        const widget = document.getElementById(
+            getStatusWidgetDomId(msg.request_id)
+        );
+        if (widget && widget.parentElement === container) {
+            container.insertBefore(widget, messageElement);
+        }
+    }
     if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
         try { await window.MathJax.typesetPromise([messageElement]); } catch { }
     }

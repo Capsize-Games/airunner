@@ -22,6 +22,11 @@ _LOG_LOCAL_HTTP_ACCESS = (
 )
 
 
+def should_disable_cache_for_static_file(static_file_path: str) -> bool:
+    """Return whether one static file should bypass webview caching."""
+    return static_file_path.endswith((".css", ".js"))
+
+
 class ReusableTCPServer(ThreadingTCPServer):
     allow_reuse_address = True
 
@@ -282,8 +287,10 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                             with open(static_file_path, "rb") as f:
                                 self.send_response(200)
                                 self.send_header("Content-type", mime)
-                                # Add no-cache headers for CSS files to ensure fresh content on reload
-                                if static_file_path.endswith(".css"):
+                                # Prevent stale webview assets after local edits.
+                                if should_disable_cache_for_static_file(
+                                    static_file_path
+                                ):
                                     self.send_header(
                                         "Cache-Control",
                                         "no-cache, no-store, must-revalidate",
