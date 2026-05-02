@@ -20,7 +20,7 @@ from langchain_core.messages import AIMessage
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.utils.stream_text import prepare_stream_chunk
-from airunner.enums import LLMActionType, SignalCode
+from airunner.enums import LLMActionType, ModelStatus, ModelType, SignalCode
 
 
 class GenerationMixin:
@@ -381,6 +381,20 @@ class GenerationMixin:
                 pass
 
         if not self._workflow_manager:
+            model_status = getattr(self, "model_status", {}).get(ModelType.LLM)
+            last_load_error = str(
+                getattr(self, "_last_load_error", "") or ""
+            ).strip()
+            if model_status == ModelStatus.FAILED and last_load_error:
+                self.logger.error(
+                    "Workflow manager unavailable because model load failed: %s",
+                    last_load_error,
+                )
+                return {
+                    "response": f"Error: {last_load_error}",
+                    "error": last_load_error,
+                }
+
             model_path = None
             expected_gguf_path = None
             try:
@@ -451,7 +465,8 @@ class GenerationMixin:
                         "response": (
                             f"Error: model '{model_name}' is not ready yet (download in progress). "
                             "Please wait for the download to finish and try again."
-                        )
+                        ),
+                        "retry_after_download": True,
                     }
 
             self.logger.error("Workflow manager is not initialized")

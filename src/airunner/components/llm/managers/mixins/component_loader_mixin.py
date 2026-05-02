@@ -83,6 +83,7 @@ class ComponentLoaderMixin:
                 model_path=self._current_model_path,
             )
             self._release_local_execution_ownership()
+            self._last_load_error = None
             self.logger.info(
                 f"ChatModel created: {type(self._chat_model).__name__}"
             )
@@ -93,6 +94,7 @@ class ComponentLoaderMixin:
 
         except Exception as e:
             self.logger.error(f"Error creating ChatModel: {e}")
+            self._last_load_error = str(e)
             self._chat_model = None
 
     def _load_tool_manager(self) -> None:

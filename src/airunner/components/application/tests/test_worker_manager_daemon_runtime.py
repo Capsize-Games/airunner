@@ -464,6 +464,61 @@ def test_llm_unload_signal_queues_local_worker_request():
     ]
 
 
+def test_llm_model_changed_signal_is_ui_only_by_default():
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(client)
+    manager._llm_generate_worker = SimpleNamespace(
+        on_llm_model_changed_signal=Mock()
+    )
+
+    WorkerManager.on_llm_model_changed_signal(
+        manager,
+        {"model_path": "/tmp/model", "model_name": "Model"},
+    )
+
+    assert client.calls == []
+    manager._llm_generate_worker.on_llm_model_changed_signal.assert_not_called()
+
+
+def test_llm_model_changed_signal_unloads_daemon_when_requested():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+    manager._llm_generate_worker = SimpleNamespace(
+        on_llm_model_changed_signal=Mock()
+    )
+
+    WorkerManager.on_llm_model_changed_signal(
+        manager,
+        {"reload_runtime": True},
+    )
+
+    assert client.calls == [("unload", "llm"), ("wait", "llm", False)]
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.UNLOADED},
+        ),
+    ]
+    manager._llm_generate_worker.on_llm_model_changed_signal.assert_not_called()
+
+
+def test_llm_model_changed_signal_unloads_local_worker_when_requested():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    manager._llm_generate_worker = SimpleNamespace(
+        on_llm_model_changed_signal=Mock()
+    )
+
+    WorkerManager.on_llm_model_changed_signal(
+        manager,
+        {"reload_runtime": True, "model_name": "Model"},
+    )
+
+    manager._llm_generate_worker.on_llm_model_changed_signal.assert_called_once_with(
+        {"reload_runtime": True, "model_name": "Model"}
+    )
+
+
 def test_stt_unload_signal_queues_local_worker_request():
     client = None
     manager, _emitted = _worker_manager(client)

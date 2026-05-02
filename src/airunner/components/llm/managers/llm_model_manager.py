@@ -99,6 +99,7 @@ class LLMModelManager(
     _history: Optional[List] = []
     _interrupted: bool = False
     _current_request_id: Optional[str] = None
+    _last_load_error: Optional[str] = None
 
     llm_settings: LLMSettings
 
@@ -119,6 +120,7 @@ class LLMModelManager(
         self._current_model_path = None
         self._hw_profiler = None
         self._current_request_id = None
+        self._last_load_error = None
 
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM.
@@ -153,6 +155,8 @@ class LLMModelManager(
                 self.model_status[ModelType.LLM],
             )
             return
+
+        self._last_load_error = None
 
         if not self._validate_model_path():
             return
@@ -218,6 +222,7 @@ class LLMModelManager(
         ):
             return
 
+        self._last_load_error = None
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._unload_components()
 

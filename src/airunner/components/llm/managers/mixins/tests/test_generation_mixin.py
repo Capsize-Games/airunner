@@ -9,7 +9,7 @@ from airunner.components.llm.managers.mixins.generation_mixin import (
 )
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.enums import LLMActionType
+from airunner.enums import LLMActionType, ModelStatus, ModelType
 
 
 class TestableGenerationMixin(GenerationMixin):
@@ -25,6 +25,8 @@ class TestableGenerationMixin(GenerationMixin):
         self._current_model_path = "/path/to/model"
         self.model_path = "/path/to/model"
         self.model_name = "Qwen3-8B"
+        self.model_status = {ModelType.LLM: ModelStatus.UNLOADED}
+        self._last_load_error = None
         self.llm_settings = Mock()
         self.llm_settings.use_local_llm = True
         self.llm_generator_settings = Mock()
@@ -557,6 +559,24 @@ class TestDoGenerate:
         assert result["response"] == "Error: workflow unavailable"
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_returns_last_load_error_without_retrying_failed_model(
+        self,
+        mock_torch,
+        mixin,
+    ):
+        """Should surface the last load failure instead of retrying immediately."""
+        mixin._workflow_manager = None
+        mixin.model_status[ModelType.LLM] = ModelStatus.FAILED
+        mixin._last_load_error = "GGUF model architecture 'qwen35' is not supported"
+
+        result = mixin._do_generate("Test", LLMActionType.CHAT)
+
+        assert result["response"] == (
+            "Error: GGUF model architecture 'qwen35' is not supported"
+        )
+        mixin.load.assert_not_called()
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     @patch("airunner.components.llm.managers.mixins.generation_mixin.os.path.exists")
     def test_uses_expected_gguf_artifact_before_reporting_download_in_progress(
         self,
@@ -587,6 +607,30 @@ class TestDoGenerate:
 
         assert result["response"] == ""
         mixin.load.assert_called_once()
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.os.path.exists")
+    def test_marks_missing_model_as_retryable_after_download(
+        self,
+        mock_exists,
+        mock_torch,
+        mixin,
+    ):
+        """Should mark download-in-progress failures as retryable."""
+        mixin._workflow_manager = None
+        mixin.llm_generator_settings.model_id = "qwen3-8b"
+        mixin.model_path = "/data/text/models/llm/causallm/Qwen3-8B"
+        mixin._current_model_path = mixin.model_path
+        mixin._get_expected_gguf_path = Mock(
+            return_value="/data/text/models/llm/causallm/Qwen/Qwen3-8B-Q4_K_M.gguf"
+        )
+        mock_exists.return_value = False
+
+        result = mixin._do_generate("Test", LLMActionType.CHAT)
+
+        assert result["retry_after_download"] is True
+        assert "download in progress" in result["response"]
+        mixin.load.assert_not_called()
 
 
 class TestSendFinalMessage:

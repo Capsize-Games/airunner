@@ -161,14 +161,15 @@ The headless server exposes an HTTP API on port 8080 with endpoints:
   pip install -e ".[openvoice_jp,openvoice_kr]"
   ```
 
-5. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
+5. **Install llama-cpp-python with CUDA (Python 3.13, Linux):**
   ```bash
-  CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
-    pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
+  pip install --no-cache-dir \
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
+    "llama-cpp-python==0.3.21"
   ```
-  - Uses GGML_CUDA (CUBLAS flag is deprecated).
-  - `90` matches RTX 5080 class GPUs; drop `-DGGML_CUDA_ARCHITECTURES` if you are unsure and let it auto-detect.
-  - On Python 3.12 you may instead use the prebuilt wheel: `--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"`.
+  - This is the verified runtime for `Qwen3.5-9B-Q8_0.gguf` in this repo.
+  - The `cu124` wheel enables GPU offload on Linux without rebuilding from source.
+  - If you must build from source for an RTX 5080 / compute capability 12.0, use CUDA toolkit 12.8+ and `GGML_CUDA_ARCHITECTURES=120`.
 
 6. **Run:**
    ```bash

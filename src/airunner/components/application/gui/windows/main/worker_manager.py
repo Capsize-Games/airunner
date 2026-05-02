@@ -1455,7 +1455,16 @@ class WorkerManager(Worker):
         if self._fara_worker is not None:
             self.fara_worker.on_fara_model_download_required_signal(data)
 
+    def _llm_model_change_requires_runtime_reload(self, data) -> bool:
+        """Return True when a model-change notification should unload."""
+        if not isinstance(data, dict):
+            return False
+        return bool(data.get("reload_runtime"))
+
     def on_llm_model_changed_signal(self, data):
+        if not self._llm_model_change_requires_runtime_reload(data):
+            return
+
         from airunner.enums import ModelType
 
         if self._control_daemon_runtime("llm", "unload", ModelType.LLM):

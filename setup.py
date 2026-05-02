@@ -73,7 +73,7 @@ ART_REQUIREMENTS = [
 ]
 
 LLM_NATIVE_REQUIREMENTS = [
-    "llama-cpp-python==0.3.16",
+    "llama-cpp-python==0.3.21",
     "bitsandbytes==0.45.5",
     "sentence_transformers==3.4.1",
     "cryptography==44.0.3",

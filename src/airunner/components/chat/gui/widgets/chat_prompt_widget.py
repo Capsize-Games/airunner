@@ -1692,6 +1692,21 @@ class ChatPromptWidget(BaseWidget):
         # Update precision dropdown for new provider
         self._populate_precision_dropdown()
 
+    def _emit_llm_model_changed_signal(
+        self,
+        model_path: str,
+        model_name: str,
+    ) -> None:
+        """Emit a UI-only LLM model change notification."""
+        self.emit_signal(
+            SignalCode.LLM_MODEL_CHANGED,
+            {
+                "model_path": model_path,
+                "model_name": model_name,
+                "reload_runtime": False,
+            },
+        )
+
     @Slot(int)
     def on_model_changed(self, index: int) -> None:
         """Handle model selection change from dropdown."""
@@ -1734,12 +1749,8 @@ class ChatPromptWidget(BaseWidget):
                 model_version=model_name,
                 model_id=model_id,  # Save the provider config model ID
             )
-            
-            # Emit signal that model changed (will trigger reload/download)
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": model_path, "model_name": model_name},
-            )
+
+            self._emit_llm_model_changed_signal(model_path, model_name)
         else:
             # Ollama or OpenRouter - just update model_version
             self.update_llm_generator_settings(
@@ -1747,12 +1758,8 @@ class ChatPromptWidget(BaseWidget):
                 model_path="",  # Not used for remote providers
                 model_id=model_id,  # Save the model ID
             )
-            
-            # Emit signal
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": "", "model_name": model_id},
-            )
+
+            self._emit_llm_model_changed_signal("", model_id)
         
         # Update thinking checkbox visibility based on new model
         self._update_thinking_checkbox_visibility()
@@ -1782,14 +1789,10 @@ class ChatPromptWidget(BaseWidget):
         
         self.logger.info(f"Precision changed to: {precision}")
         self.update_llm_generator_settings(dtype=precision)
-        
-        # Emit signal to reload model with new precision
-        self.emit_signal(
-            SignalCode.LLM_MODEL_CHANGED,
-            {
-                "model_path": getattr(self.llm_generator_settings, "model_path", ""),
-                "model_name": getattr(self.llm_generator_settings, "model_version", ""),
-            },
+
+        self._emit_llm_model_changed_signal(
+            getattr(self.llm_generator_settings, "model_path", ""),
+            getattr(self.llm_generator_settings, "model_version", ""),
         )
 
     def _populate_precision_dropdown(self) -> None:
@@ -1951,20 +1954,14 @@ class ChatPromptWidget(BaseWidget):
                 model_path=model_path,
                 model_version=model_name,
             )
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": model_path, "model_name": model_name},
-            )
+            self._emit_llm_model_changed_signal(model_path, model_name)
         else:
             # Ollama or OpenRouter - just set the model name
             self.update_llm_generator_settings(
                 model_version=custom_model,
                 model_path="",
             )
-            self.emit_signal(
-                SignalCode.LLM_MODEL_CHANGED,
-                {"model_path": "", "model_name": custom_model},
-            )
+            self._emit_llm_model_changed_signal("", custom_model)
 
     def _on_custom_model_entered(self) -> None:
         """Handle when user presses Enter after typing a custom model."""

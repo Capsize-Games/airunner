@@ -14,6 +14,7 @@ parses <tool_call> tags from responses (matching Qwen3's native format).
 """
 
 import json
+import importlib.metadata as importlib_metadata
 import os
 import re
 import time
@@ -48,6 +49,12 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from packaging.version import InvalidVersion, Version
+
+try:
+    from gguf import GGUFReader
+except ImportError:
+    GGUFReader = None
 
 try:
     import torch
@@ -62,13 +69,78 @@ class UnsupportedGGUFArchitectureError(Exception):
     transformers-based loading.
     """
     
-    def __init__(self, architecture: str, model_path: str):
+    def __init__(
+        self,
+        architecture: str,
+        model_path: str,
+        runtime_version: Optional[str] = None,
+    ):
         self.architecture = architecture
         self.model_path = model_path
+        self.runtime_version = runtime_version
+        version_message = ""
+        if runtime_version:
+            version_message = (
+                f" Installed llama-cpp-python version: {runtime_version}."
+            )
         super().__init__(
             f"GGUF model architecture '{architecture}' is not supported by llama-cpp-python. "
-            f"Model: {model_path}. Consider using safetensors with transformers instead."
+            f"Model: {model_path}.{version_message} Consider using safetensors with transformers instead."
         )
+
+
+_KNOWN_UNSUPPORTED_ARCHITECTURES = {
+    "mistral3": Version("0.3.16"),
+    "qwen35": Version("0.3.16"),
+}
+
+
+def _current_llama_cpp_version() -> Optional[Version]:
+    """Return the installed llama-cpp-python version when available."""
+    try:
+        return Version(importlib_metadata.version("llama-cpp-python"))
+    except (importlib_metadata.PackageNotFoundError, InvalidVersion):
+        return None
+
+
+def _read_gguf_string_field(model_path: str, field_name: str) -> Optional[str]:
+    """Return one GGUF metadata string field when it can be parsed."""
+    if GGUFReader is None or not os.path.exists(model_path):
+        return None
+
+    try:
+        reader = GGUFReader(model_path)
+        field = reader.fields.get(field_name)
+        if field is None or not getattr(field, "parts", None):
+            return None
+
+        value = bytes(field.parts[-1]).decode("utf-8", errors="ignore")
+        value = value.strip()
+        return value or None
+    except Exception:
+        return None
+
+
+def read_gguf_architecture(model_path: str) -> Optional[str]:
+    """Return the GGUF general.architecture metadata value."""
+    return _read_gguf_string_field(model_path, "general.architecture")
+
+
+def detect_known_unsupported_architecture(model_path: str) -> Optional[str]:
+    """Return a known-unsupported GGUF architecture for this runtime."""
+    architecture = read_gguf_architecture(model_path)
+    if not architecture:
+        return None
+
+    max_supported_version = _KNOWN_UNSUPPORTED_ARCHITECTURES.get(architecture)
+    runtime_version = _current_llama_cpp_version()
+    if runtime_version is None or max_supported_version is None:
+        return None
+
+    if runtime_version <= max_supported_version:
+        return architecture
+
+    return None
 
 
 def _detect_chat_format(model_path: str) -> str:
@@ -270,6 +342,19 @@ class ChatGGUF(BaseChatModel):
         """
         if self._llama is not None:
             return
+
+        unsupported_architecture = detect_known_unsupported_architecture(
+            self.model_path
+        )
+        if unsupported_architecture is not None:
+            runtime_version = _current_llama_cpp_version()
+            raise UnsupportedGGUFArchitectureError(
+                unsupported_architecture,
+                self.model_path,
+                runtime_version=str(runtime_version)
+                if runtime_version is not None
+                else None,
+            )
 
         try:
             from llama_cpp import Llama, llama_supports_gpu_offload

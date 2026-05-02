@@ -174,11 +174,14 @@ class LLMGenerateWorker(
         self.model_manager.on_section_changed()
 
     def on_llm_model_changed_signal(self, data: Dict) -> None:
-        """Handle model change - unload without clearing manager reference.
+        """Unload only when a model change explicitly requests reload.
 
         Args:
             data: Signal data dictionary
         """
+        if not isinstance(data, dict) or not data.get("reload_runtime"):
+            return
+
         if self._model_manager:
             self._model_manager.unload()
 
@@ -518,6 +521,7 @@ class LLMGenerateWorker(
                 message, self.context_manager.all_contexts()
             )
         except Exception as e:
+            self._pending_llm_request = None
             # In headless API mode, unhandled exceptions would otherwise leave
             # the HTTP request hanging forever (no streamed end-of-message).
             self.logger.exception(f"LLM request failed: {e}")
@@ -558,6 +562,9 @@ class LLMGenerateWorker(
         # Check for error responses (response starting with "Error:")
         if result:
             response_text = result.get("response", "")
+            retry_after_download = bool(
+                result.get("retry_after_download")
+            )
             has_error = result.get("error") or (
                 isinstance(response_text, str)
                 and response_text.startswith("Error:")
@@ -573,9 +580,15 @@ class LLMGenerateWorker(
                 # The generation_mixin already handles streaming tokens and sending
                 # the end-of-message signal. Emitting here would cause duplicate
                 # TTS generation (the full message would be spoken twice).
-            else:
+            elif retry_after_download:
                 self.logger.info(
-                    f"Request failed with error, keeping pending request for retry after download"
+                    "Request failed while model download is still pending; "
+                    "keeping pending request for automatic retry"
+                )
+            else:
+                self._pending_llm_request = None
+                self.logger.info(
+                    "Request failed with non-retryable error, clearing pending request"
                 )
 
                 # For headless HTTP API consumers, we must still send an

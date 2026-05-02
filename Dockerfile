@@ -68,7 +68,7 @@ RUN python3.13 -m pip install --upgrade pip setuptools wheel
 # Default to CPU builds so local dev works without NVIDIA drivers.
 # To enable CUDA builds, pass: --build-arg AIRUNNER_ENABLE_CUDA=1
 ARG AIRUNNER_ENABLE_CUDA=0
-ARG GGML_CUDA_ARCHITECTURES=90
+ARG GGML_CUDA_ARCHITECTURES=
 RUN set -e; \
     if printf '%s' ",${AIRUNNER_INSTALL_PROFILES}," | \
         grep -Eq ',(llm-native|headless|desktop|all|all_dev|all_native|all_dev_native),'; then \
@@ -82,14 +82,17 @@ RUN set -e; \
                 "${CUDA_STUB_DIR}/libcuda.so.1"; \
             export LD_LIBRARY_PATH="${CUDA_STUB_DIR}:${LD_LIBRARY_PATH:-}"; \
             export LIBRARY_PATH="${CUDA_STUB_DIR}:${LIBRARY_PATH:-}"; \
-            export CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=${GGML_CUDA_ARCHITECTURES} -DCMAKE_CUDA_ARCHITECTURES=${GGML_CUDA_ARCHITECTURES} -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,${CUDA_STUB_DIR}"; \
+            export CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,${CUDA_STUB_DIR}"; \
+            if [ -n "${GGML_CUDA_ARCHITECTURES}" ]; then \
+                export CMAKE_ARGS="${CMAKE_ARGS} -DGGML_CUDA_ARCHITECTURES=${GGML_CUDA_ARCHITECTURES} -DCMAKE_CUDA_ARCHITECTURES=${GGML_CUDA_ARCHITECTURES}"; \
+            fi; \
         else \
             export CMAKE_ARGS="-DGGML_CUDA=off"; \
         fi; \
         export FORCE_CMAKE=1; \
         python3.13 -m pip install --no-cache-dir \
             --no-binary=llama-cpp-python \
-            "llama-cpp-python==0.3.16"; \
+            "llama-cpp-python==0.3.21"; \
     fi
 
 # Set working directory

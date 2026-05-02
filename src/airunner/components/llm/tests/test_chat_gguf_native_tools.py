@@ -1,8 +1,15 @@
 from unittest.mock import patch
 
+import pytest
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from airunner.components.llm.adapters.chat_gguf import ChatGGUF
+from airunner.components.llm.adapters.chat_gguf import (
+    ChatGGUF,
+    UnsupportedGGUFArchitectureError,
+    detect_known_unsupported_architecture,
+)
+from packaging.version import Version
 from airunner.components.llm.tools.system_tools import get_current_datetime
 
 
@@ -28,6 +35,31 @@ def _build_chat_gguf(fake_llama, model_path="/tmp/fake.gguf"):
 
 
 class TestChatGGUFNativeTools:
+    def test_known_unsupported_architecture_raises_before_llama_load(self):
+        with patch(
+            "airunner.components.llm.adapters.chat_gguf.detect_known_unsupported_architecture",
+            return_value="qwen35",
+        ), patch(
+            "airunner.components.llm.adapters.chat_gguf._current_llama_cpp_version",
+            return_value="0.3.16",
+        ):
+            with pytest.raises(UnsupportedGGUFArchitectureError) as exc_info:
+                ChatGGUF(model_path="/tmp/Qwen3.5-9B-Q8_0.gguf")
+
+        assert exc_info.value.architecture == "qwen35"
+
+    def test_qwen35_not_flagged_on_newer_runtime(self):
+        with patch(
+            "airunner.components.llm.adapters.chat_gguf.read_gguf_architecture",
+            return_value="qwen35",
+        ), patch(
+            "airunner.components.llm.adapters.chat_gguf._current_llama_cpp_version",
+            return_value=Version("0.3.21"),
+        ):
+            assert detect_known_unsupported_architecture(
+                "/tmp/Qwen3.5-9B-Q8_0.gguf"
+            ) is None
+
     def test_generate_does_not_pass_enable_thinking_kwarg(self):
         fake_llama = FakeLlama(
             response={

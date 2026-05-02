@@ -22,6 +22,7 @@ class MockComponentLoader(ComponentLoaderMixin):
         self.logger = Mock()
         self.llm_settings = Mock()
         self.llm_settings.use_local_llm = True
+        self._last_load_error = None
         self._model = None
         self._tokenizer = None
         self._chat_model = None
@@ -104,6 +105,7 @@ class TestLoadChatModel:
             loader._load_chat_model()
 
         assert loader._chat_model is None
+        assert loader._last_load_error == "Factory error"
         loader.logger.error.assert_called_once()
         assert "Error creating ChatModel" in str(loader.logger.error.call_args)
 

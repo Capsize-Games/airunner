@@ -401,9 +401,14 @@ class ChatModelFactory:
                         # GGUF model architecture not supported by llama-cpp-python
                         # This can happen with very new models like Ministral 3
                         # Raise with clear message - caller must provide transformers model
+                        version_message = ""
+                        if getattr(e, "runtime_version", None):
+                            version_message = (
+                                f" Installed version: {e.runtime_version}."
+                            )
                         raise ValueError(
-                            f"GGUF model architecture '{e.architecture}' is not yet supported by llama-cpp-python. "
-                            f"The model '{e.model_path}' requires a newer version of llama-cpp-python. "
+                            f"GGUF model architecture '{e.architecture}' is not yet supported by the installed llama-cpp-python runtime."
+                            f"{version_message} The model '{e.model_path}' requires a newer version of llama-cpp-python. "
                             "Please try a different model or wait for llama-cpp-python to add support."
                         ) from e
 
