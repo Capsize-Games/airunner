@@ -63,6 +63,43 @@ def test_messages_property_strips_legacy_thinking_prefix(monkeypatch):
     )
 
 
+def test_messages_property_normalizes_gpt_oss_channel_content(monkeypatch):
+    """Stored Harmony markup should reload into visible content."""
+    conversation = SimpleNamespace(
+        value=[
+            {
+                "role": "assistant",
+                "content": (
+                    "<|channel|>analysis<|message|>"
+                    'Okay, the user said "Hello". I need to respond.'
+                    "<|end|><|start|>assistant"
+                    "<|channel|>final<|message|>"
+                    "Hello!<|return|>"
+                ),
+            }
+        ]
+    )
+    history = DatabaseChatMessageHistory.__new__(DatabaseChatMessageHistory)
+    history.ephemeral = False
+    history._conversation = conversation
+    history.conversation_id = 45
+    history.logger = Mock()
+
+    monkeypatch.setattr(
+        Conversation.objects,
+        "get",
+        lambda _conversation_id: conversation,
+    )
+
+    messages = history.messages
+
+    assert messages[0].content == "Hello!"
+    assert (
+        messages[0].additional_kwargs["thinking_content"]
+        == 'Okay, the user said "Hello". I need to respond.'
+    )
+
+
 def test_load_conversation_history_strips_legacy_thinking_prefix():
     """Restarted conversation rendering should keep thinking separate."""
     conversation = SimpleNamespace(
@@ -85,6 +122,51 @@ def test_load_conversation_history_strips_legacy_thinking_prefix():
                         "text": (
                             'Okay,the user said" Hello".I need '
                             'to respond.Hello!'
+                        ),
+                    }
+                ],
+            }
+        ],
+    )
+
+    messages = ConversationHistoryManager().load_conversation_history(
+        conversation=conversation,
+    )
+
+    assert messages[0]["content"] == "Hello!"
+    assert (
+        messages[0]["thinking_content"]
+        == 'Okay, the user said "Hello". I need to respond.'
+    )
+
+
+def test_load_conversation_history_normalizes_gpt_oss_channel_content():
+    """Restarted GPT-OSS rows should render without Harmony markup."""
+    conversation = SimpleNamespace(
+        id=45,
+        chatbot_name="Computer",
+        user_name="User",
+        value=[
+            {
+                "role": "assistant",
+                "content": (
+                    "<|channel|>analysis<|message|>"
+                    'Okay, the user said "Hello". I need to respond.'
+                    "<|end|><|start|>assistant"
+                    "<|channel|>final<|message|>"
+                    "Hello!<|return|>"
+                ),
+                "timestamp": "2026-04-30T14:00:00+00:00",
+                "blocks": [
+                    {
+                        "block_type": "text",
+                        "text": (
+                            "<|channel|>analysis<|message|>"
+                            'Okay, the user said "Hello". '
+                            "I need to respond.<|end|>"
+                            "<|start|>assistant"
+                            "<|channel|>final<|message|>"
+                            "Hello!<|return|>"
                         ),
                     }
                 ],

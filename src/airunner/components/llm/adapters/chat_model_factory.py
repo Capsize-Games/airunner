@@ -15,6 +15,7 @@ from airunner.components.llm.adapters.chat_model_factory_helpers import (
     get_db_settings,
     get_enable_thinking,
     get_quantization_bits,
+    get_reasoning_effort,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.utils.model_optimizer import get_model_optimizer
@@ -65,6 +66,7 @@ class ChatModelFactory:
         repeat_penalty: float = 1.15,
         flash_attn: bool = True,
         enable_thinking: bool = True,
+        reasoning_effort: str = "medium",
         chat_format: Optional[str] = None,
         use_yarn: bool = False,  # Disabled by default - requires more VRAM
         yarn_orig_ctx: int = 32768,  # Qwen3 native context
@@ -90,6 +92,7 @@ class ChatModelFactory:
             repeat_penalty: Penalty for repeating tokens
             flash_attn: Use flash attention to reduce VRAM usage
             enable_thinking: Enable thinking mode (Qwen3-style)
+            reasoning_effort: GPT-OSS reasoning effort (low, medium, high)
             chat_format: Optional llama.cpp chat format override
             use_yarn: Enable YaRN for extended context (requires more VRAM)
             yarn_orig_ctx: Original context length for YaRN scaling
@@ -115,6 +118,7 @@ class ChatModelFactory:
             repeat_penalty=repeat_penalty,
             flash_attn=flash_attn,
             enable_thinking=enable_thinking,
+            reasoning_effort=reasoning_effort,
             chat_format=chat_format,
             use_yarn=use_yarn,
             yarn_orig_ctx=yarn_orig_ctx,
@@ -400,11 +404,16 @@ class ChatModelFactory:
                         db_settings,
                         llm_settings,
                     )
+                    reasoning_effort = get_reasoning_effort(
+                        db_settings,
+                        llm_settings,
+                    )
 
                     try:
                         return ChatModelFactory.create_gguf_model(
                             model_path=gguf_path,
                             enable_thinking=enable_thinking,
+                            reasoning_effort=reasoning_effort,
                             **params
                         )
                     except UnsupportedGGUFArchitectureError as e:

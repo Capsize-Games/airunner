@@ -6,6 +6,7 @@ from PIL import Image
 from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QPoint
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QListWidget,
     QListWidgetItem,
     QFrame,
@@ -157,6 +158,8 @@ class ChatPromptWidget(BaseWidget):
                 enable_thinking = True
             self.ui.thinking_checkbox.setChecked(enable_thinking)
             self.ui.thinking_checkbox.blockSignals(False)
+
+        self._create_reasoning_effort_dropdown()
         
         self._prompt_shortcuts_configured = False
         self._prompt_submit_shortcuts: List[QShortcut] = []
@@ -464,6 +467,7 @@ class ChatPromptWidget(BaseWidget):
         # Create LLMRequest optimized for the action type
         llm_request = LLMRequest.for_action(action)
         llm_request.enable_thinking = self._is_thinking_enabled_for_request()
+        llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
         
         # Set force_tool if slash command specifies one
         if force_tool:
@@ -498,6 +502,9 @@ class ChatPromptWidget(BaseWidget):
 
     def _is_thinking_enabled_for_request(self) -> bool:
         """Return the user-selected thinking preference for this request."""
+        if self._model_supports_reasoning_effort():
+            return False
+
         if hasattr(self.ui, "thinking_checkbox"):
             try:
                 return bool(self.ui.thinking_checkbox.isChecked())
@@ -510,6 +517,26 @@ class ChatPromptWidget(BaseWidget):
             True,
         )
         return True if enable_thinking is None else bool(enable_thinking)
+
+    def _get_reasoning_effort_for_request(self) -> Optional[str]:
+        """Return the request-scoped GPT-OSS reasoning effort."""
+        if not self._model_supports_reasoning_effort():
+            return None
+
+        if hasattr(self.ui, "reasoning_effort_dropdown"):
+            effort = self.ui.reasoning_effort_dropdown.currentData()
+            if effort in {"low", "medium", "high"}:
+                return effort
+
+        effort = getattr(
+            self.llm_generator_settings,
+            "reasoning_effort",
+            "medium",
+        )
+        effort = str(effort or "medium").strip().lower()
+        if effort in {"low", "medium", "high"}:
+            return effort
+        return "medium"
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -605,11 +632,38 @@ class ChatPromptWidget(BaseWidget):
         if self._startup_controls_loaded:
             return
         self._startup_controls_loaded = True
-        self._populate_provider_dropdown()
+        self._hide_footer_controls_moved_to_settings()
         self._populate_model_dropdown()
-        self._populate_precision_dropdown()
+        self._populate_reasoning_effort_dropdown()
         if hasattr(self.ui, "thinking_checkbox"):
             self._update_thinking_checkbox_visibility()
+
+    def _create_reasoning_effort_dropdown(self) -> None:
+        """Add a compact GPT-OSS reasoning selector to the footer."""
+        if hasattr(self.ui, "reasoning_effort_dropdown"):
+            return
+
+        dropdown = QComboBox(self.ui.footer_container)
+        dropdown.setObjectName("reasoning_effort_dropdown")
+        dropdown.setMinimumHeight(30)
+        dropdown.setMinimumWidth(96)
+        dropdown.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        dropdown.setToolTip("GPT-OSS reasoning effort")
+
+        spacer_index = self.ui.horizontalLayout_2.indexOf(self.ui.footer_spacer)
+        self.ui.horizontalLayout_2.insertWidget(spacer_index, dropdown)
+        dropdown.currentIndexChanged.connect(self.on_reasoning_effort_changed)
+        dropdown.hide()
+        self.ui.reasoning_effort_dropdown = dropdown
+
+    def _hide_footer_controls_moved_to_settings(self) -> None:
+        """Hide footer controls that now live in the settings panel."""
+        if hasattr(self.ui, "provider_dropdown"):
+            self.ui.provider_dropdown.setVisible(False)
+        if hasattr(self.ui, "precision_dropdown"):
+            self.ui.precision_dropdown.setVisible(False)
 
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Finish non-critical startup work after the main window loads."""
@@ -1060,6 +1114,49 @@ class ChatPromptWidget(BaseWidget):
 
         return False
 
+    def _model_supports_reasoning_effort(self) -> bool:
+        """Return True when the current model exposes GPT-OSS effort modes."""
+        settings = getattr(self, "llm_generator_settings", None)
+        if not settings:
+            return False
+
+        model_version = getattr(settings, "model_version", "") or ""
+        model_path = getattr(settings, "model_path", "") or ""
+        model_id = getattr(settings, "model_id", "") or ""
+
+        return any(
+            self._lookup_model_supports_reasoning_effort(source)
+            for source in (model_id, model_version, model_path)
+            if source
+        )
+
+    def _lookup_model_supports_reasoning_effort(self, source: str) -> bool:
+        """Look up whether one model source supports GPT-OSS effort modes."""
+        normalized_source = str(source or "").strip().lower()
+        if not normalized_source:
+            return False
+
+        for model_info in LLMProviderConfig.LOCAL_MODELS.values():
+            aliases = [
+                model_info.get("name", ""),
+                model_info.get("repo_id", ""),
+                model_info.get("gguf_filename", ""),
+            ]
+            if any(
+                alias
+                and (
+                    normalized_source == str(alias).strip().lower()
+                    or str(alias).strip().lower() in normalized_source
+                    or normalized_source in str(alias).strip().lower()
+                )
+                for alias in aliases
+            ):
+                return bool(
+                    model_info.get("supports_reasoning_effort", False)
+                )
+
+        return "gpt-oss" in normalized_source
+
     def _get_model_capabilities(self) -> Dict[str, bool]:
         """Get the capabilities of the current model.
         
@@ -1149,12 +1246,23 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def _update_thinking_checkbox_visibility(self) -> None:
-        """Update the visibility of the thinking checkbox based on model capability."""
+        """Update footer reasoning controls for the current model."""
         if not hasattr(self.ui, "thinking_checkbox"):
             return
-        
+
         supports_thinking = self._model_supports_thinking()
-        self.ui.thinking_checkbox.setVisible(supports_thinking)
+        supports_reasoning_effort = self._model_supports_reasoning_effort()
+
+        self.ui.thinking_checkbox.setVisible(
+            supports_thinking and not supports_reasoning_effort
+        )
+
+        if hasattr(self.ui, "reasoning_effort_dropdown"):
+            if supports_reasoning_effort:
+                self._populate_reasoning_effort_dropdown()
+            self.ui.reasoning_effort_dropdown.setVisible(
+                supports_reasoning_effort
+            )
 
     def _refresh_model_context_tokens(self) -> None:
         self._model_context_tokens = self._resolve_model_context_length()
@@ -1179,19 +1287,37 @@ class ChatPromptWidget(BaseWidget):
             return
 
         column = data.get("column_name")
-        if column not in {"model_version", "model_service", "model_path"}:
+        if column in {"model_version", "model_service", "model_path"}:
+            self._populate_model_dropdown()
+            self._refresh_model_context_tokens()
+            self._update_thinking_checkbox_visibility()
+            self._update_action_dropdown()
+            self._update_attach_button_visibility()
+            prompt_text = (
+                self.ui.prompt.toPlainText().strip()
+                if hasattr(self.ui, "prompt")
+                else self.prompt
+            )
+            self._update_token_count_label(prompt_text)
             return
 
-        self._refresh_model_context_tokens()
-        self._update_thinking_checkbox_visibility()
-        self._update_action_dropdown()
-        self._update_attach_button_visibility()
-        prompt_text = (
-            self.ui.prompt.toPlainText().strip()
-            if hasattr(self.ui, "prompt")
-            else self.prompt
-        )
-        self._update_token_count_label(prompt_text)
+        if column == "reasoning_effort":
+            self._populate_reasoning_effort_dropdown()
+            return
+
+        if column == "enable_thinking" and hasattr(
+            self.ui, "thinking_checkbox"
+        ):
+            enable_thinking = getattr(
+                self.llm_generator_settings,
+                "enable_thinking",
+                True,
+            )
+            self.ui.thinking_checkbox.blockSignals(True)
+            self.ui.thinking_checkbox.setChecked(
+                True if enable_thinking is None else bool(enable_thinking)
+            )
+            self.ui.thinking_checkbox.blockSignals(False)
 
     def clear_prompt(self):
         self.prompt = ""
@@ -1375,9 +1501,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.model_dropdown.clear()
         
         # Get current provider from dropdown or settings
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        provider = self._current_model_service()
         
         # Make dropdown editable for custom model entry
         self.ui.model_dropdown.setEditable(True)
@@ -1525,6 +1649,7 @@ class ChatPromptWidget(BaseWidget):
                             self.ui.model_dropdown.setCurrentIndex(i)
                             self._update_model_tooltip(model_id)
                             return
+            self._select_and_save_default_model(provider)
         else:
             # For Ollama/OpenRouter, match by model_version
             current_model = getattr(self.llm_generator_settings, "model_version", "") or ""
@@ -1536,6 +1661,9 @@ class ChatPromptWidget(BaseWidget):
                         return
                 # If not found in list, it might be custom - set as text
                 self.ui.model_dropdown.setEditText(current_model)
+                return
+
+            self._select_and_save_default_model(provider)
 
     def _select_and_save_default_model(self, provider: str) -> None:
         """Select and save the first available model as default.
@@ -1589,11 +1717,8 @@ class ChatPromptWidget(BaseWidget):
         """Update the model dropdown tooltip with model metadata."""
         if not hasattr(self.ui, "model_dropdown"):
             return
-        
-        # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+
+        provider = self._current_model_service()
         
         if model_id == "custom":
             if provider == ModelService.LOCAL.value:
@@ -1725,9 +1850,7 @@ class ChatPromptWidget(BaseWidget):
         model_text = self.ui.model_dropdown.currentText()
         
         # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        provider = self._current_model_service()
         
         # Handle custom model entry
         if model_id == "custom" or not model_id:
@@ -1775,9 +1898,6 @@ class ChatPromptWidget(BaseWidget):
         # Update context tokens
         self._refresh_model_context_tokens()
         
-        # Update precision dropdown for new model
-        self._populate_precision_dropdown()
-
     @Slot(int)
     def on_precision_changed(self, index: int) -> None:
         """Handle precision selection change from dropdown.
@@ -1987,12 +2107,64 @@ class ChatPromptWidget(BaseWidget):
                 return
         
         # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
+        provider = self._current_model_service()
         
         # Handle as custom model
         self._handle_custom_model(provider, custom_text)
+
+    def _populate_reasoning_effort_dropdown(self) -> None:
+        """Populate the GPT-OSS reasoning-effort selector."""
+        if not hasattr(self.ui, "reasoning_effort_dropdown"):
+            return
+
+        dropdown = self.ui.reasoning_effort_dropdown
+        dropdown.blockSignals(True)
+        dropdown.clear()
+        dropdown.addItem("Low", "low")
+        dropdown.addItem("Med", "medium")
+        dropdown.addItem("High", "high")
+
+        current_effort = str(
+            getattr(self.llm_generator_settings, "reasoning_effort", "medium")
+            or "medium"
+        ).strip().lower()
+        if current_effort not in {"low", "medium", "high"}:
+            current_effort = "medium"
+
+        for index in range(dropdown.count()):
+            if dropdown.itemData(index) == current_effort:
+                dropdown.setCurrentIndex(index)
+                break
+
+        dropdown.blockSignals(False)
+
+    @Slot(int)
+    def on_reasoning_effort_changed(self, index: int) -> None:
+        """Persist one GPT-OSS reasoning-effort selection."""
+        if index < 0 or not hasattr(self.ui, "reasoning_effort_dropdown"):
+            return
+
+        effort = self.ui.reasoning_effort_dropdown.itemData(index)
+        if effort not in {"low", "medium", "high"}:
+            return
+
+        self.update_llm_generator_settings(reasoning_effort=effort)
+
+    def _current_model_service(self) -> str:
+        """Return the current model-service setting used by the footer."""
+        provider = getattr(
+            self.llm_generator_settings,
+            "model_service",
+            ModelService.LOCAL.value,
+        )
+        provider = str(provider or ModelService.LOCAL.value).strip().lower()
+        if provider in {
+            ModelService.LOCAL.value,
+            ModelService.OLLAMA.value,
+            ModelService.OPENROUTER.value,
+        }:
+            return provider
+        return ModelService.LOCAL.value
 
     def on_section_changed_signal(self, data: Dict) -> None:
         """Track the currently active main window section."""

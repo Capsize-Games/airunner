@@ -17,6 +17,10 @@ from airunner.components.llm.utils.thinking_parser import (
     strip_stored_thinking_prefix,
     strip_thinking_tags,
 )
+from airunner.components.llm.utils.gpt_oss_parser import (
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
 from airunner.utils.application.get_logger import get_logger
 
 
@@ -120,6 +124,14 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 thinking_content = normalize_thinking_content(
                     msg.get("thinking_content")
                 )
+                if has_gpt_oss_markup(content):
+                    parsed = parse_gpt_oss_response(content)
+                    content = parsed.content or content
+                    parsed_thinking = normalize_thinking_content(
+                        parsed.thinking_content
+                    )
+                    if parsed_thinking and not thinking_content:
+                        thinking_content = parsed_thinking
                 content = strip_stored_thinking_prefix(
                     content,
                     thinking_content,

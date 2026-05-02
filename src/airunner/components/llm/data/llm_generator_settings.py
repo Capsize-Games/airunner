@@ -56,3 +56,4 @@ class LLMGeneratorSettings(BaseModel):
 
     # Qwen3 thinking mode (enables <think>...</think> reasoning)
     enable_thinking = Column(Boolean, default=True)
+    reasoning_effort = Column(String, default="medium")

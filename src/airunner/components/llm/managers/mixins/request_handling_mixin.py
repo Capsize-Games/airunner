@@ -109,6 +109,9 @@ class RequestHandlingMixin:
         )
         self._prepare_request_rag(data, llm_request, selected_categories)
         thinking_patches = self._apply_request_thinking_override(llm_request)
+        reasoning_patches = self._apply_request_reasoning_effort_override(
+            llm_request
+        )
 
         if request_tool_defaults and self._tool_manager:
             self._tool_manager.set_request_tool_defaults(request_tool_defaults)
@@ -124,6 +127,7 @@ class RequestHandlingMixin:
             )
         finally:
             self._restore_thinking_patches(thinking_patches)
+            self._restore_reasoning_effort_patches(reasoning_patches)
             if request_tool_defaults and self._tool_manager:
                 self._tool_manager.clear_request_tool_defaults()
 
@@ -482,5 +486,47 @@ class RequestHandlingMixin:
         for target, original in thinking_patches:
             try:
                 setattr(target, "enable_thinking", original)
+            except Exception:
+                continue
+
+    def _apply_request_reasoning_effort_override(
+        self,
+        llm_request: Any,
+    ) -> list[tuple[Any, Any]]:
+        """Patch GPT-OSS reasoning effort on active chat models for one request."""
+        reasoning_effort = getattr(llm_request, "reasoning_effort", None)
+        if isinstance(reasoning_effort, str):
+            reasoning_effort = reasoning_effort.strip().lower() or None
+        if reasoning_effort not in {"low", "medium", "high"}:
+            return []
+
+        reasoning_patches: list[tuple[Any, Any]] = []
+        targets = [self._chat_model]
+        if self._workflow_manager:
+            targets.append(
+                getattr(self._workflow_manager, "_original_chat_model", None)
+            )
+
+        for target in targets:
+            if target is None or not hasattr(target, "reasoning_effort"):
+                continue
+            try:
+                reasoning_patches.append(
+                    (target, getattr(target, "reasoning_effort"))
+                )
+                setattr(target, "reasoning_effort", reasoning_effort)
+            except Exception:
+                continue
+
+        return reasoning_patches
+
+    def _restore_reasoning_effort_patches(
+        self,
+        reasoning_patches: list[tuple[Any, Any]],
+    ) -> None:
+        """Restore chat-model GPT-OSS reasoning effort after request completion."""
+        for target, original in reasoning_patches:
+            try:
+                setattr(target, "reasoning_effort", original)
             except Exception:
                 continue

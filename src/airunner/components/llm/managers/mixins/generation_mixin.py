@@ -19,6 +19,10 @@ from langchain_core.messages import AIMessage
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.components.llm.utils.gpt_oss_parser import (
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
 from airunner.components.llm.utils.stream_text import prepare_stream_chunk
 from airunner.enums import LLMActionType, ModelStatus, ModelType, SignalCode
 
@@ -290,6 +294,10 @@ class GenerationMixin:
         if len(final_messages) > 0:
             final_content = final_messages[-1].content or ""
             if final_content:
+                if has_gpt_oss_markup(final_content):
+                    parsed = parse_gpt_oss_response(final_content)
+                    if parsed.content:
+                        return parsed.content
                 # If the model is using ReAct format, extract only the response
                 # before "Action:" to avoid showing tool calls to the user
                 if "\nAction:" in final_content:

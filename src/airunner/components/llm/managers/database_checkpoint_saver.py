@@ -99,8 +99,10 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     last_msg = messages[-1]
                     last_msg_type = type(last_msg).__name__
                     last_msg_content = getattr(last_msg, "content", "")[:100]
-                    self.logger.info(
-                        f"🔵 Last message type: {last_msg_type}, content preview: '{last_msg_content}'"
+                    self.logger.debug(
+                        "Checkpoint persistence preview - type=%s, content=%r",
+                        last_msg_type,
+                        last_msg_content,
                     )
 
                 # CRITICAL FIX: Only append NEW messages, don't clear existing ones.

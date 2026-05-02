@@ -410,6 +410,23 @@ class TestExtractFinalResponse:
 
         assert extracted == "Third"
 
+    def test_strips_gpt_oss_channel_markup(self, mixin):
+        """Should extract the visible final response from Harmony markup."""
+        ai_msg = AIMessage(
+            content=(
+                "<|channel|>analysis<|message|>"
+                'User says "hello".'
+                "<|end|><|start|>assistant"
+                "<|channel|>final<|message|>"
+                "Hi there!<|return|>"
+            )
+        )
+        result = {"messages": [ai_msg]}
+
+        extracted = mixin._extract_final_response(result)
+
+        assert extracted == "Hi there!"
+
     def test_filters_non_ai_messages(self, mixin):
         """Should filter out non-AIMessage types."""
         from langchain_core.messages import HumanMessage

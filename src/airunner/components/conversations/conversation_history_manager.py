@@ -7,6 +7,10 @@ from airunner.components.llm.utils.thinking_parser import (
     normalize_thinking_content,
     strip_stored_thinking_prefix,
 )
+from airunner.components.llm.utils.gpt_oss_parser import (
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -273,6 +277,14 @@ class ConversationHistoryManager:
                     )
 
                 if is_bot:
+                    if has_gpt_oss_markup(content):
+                        parsed = parse_gpt_oss_response(content)
+                        content = parsed.content or content
+                        parsed_thinking = normalize_thinking_content(
+                            parsed.thinking_content
+                        )
+                        if parsed_thinking and not post_tool_thinking:
+                            post_tool_thinking = parsed_thinking
                     content = strip_stored_thinking_prefix(
                         content,
                         post_tool_thinking,

@@ -67,3 +67,45 @@ def test_create_from_settings_keeps_ollama_provider_routing():
         base_url="http://localhost:11434",
         temperature=0.7,
     )
+
+
+def test_create_from_settings_passes_reasoning_effort_to_gguf_model():
+    """GPT-OSS reasoning effort should flow into GGUF model creation."""
+    llm_settings = SimpleNamespace(
+        use_local_llm=True,
+        enable_thinking=True,
+        reasoning_effort="high",
+    )
+    db_settings = SimpleNamespace(
+        model_id="gpt-oss-20b",
+        quantization_bits=0,
+        enable_thinking=True,
+        reasoning_effort="low",
+    )
+    optimizer = SimpleNamespace(
+        find_existing_gguf=lambda *_args, **_kwargs: None,
+        bits_to_gguf_quantization=lambda *_args, **_kwargs: "Q4_K_M",
+        ensure_gguf=lambda *_args, **_kwargs: None,
+    )
+
+    with patch(
+        "airunner.components.llm.adapters.chat_model_factory.get_db_settings",
+        return_value=db_settings,
+    ), patch(
+        "airunner.components.llm.adapters.chat_model_factory.get_quantization_bits",
+        return_value=0,
+    ), patch(
+        "airunner.components.llm.adapters.chat_model_factory.get_model_optimizer",
+        return_value=optimizer,
+    ), patch.object(
+        ChatModelFactory,
+        "create_gguf_model",
+        return_value="gguf-model",
+    ) as mock_create_gguf:
+        result = ChatModelFactory.create_from_settings(
+            llm_settings=llm_settings,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+
+    assert result == "gguf-model"
+    assert mock_create_gguf.call_args.kwargs["reasoning_effort"] == "low"

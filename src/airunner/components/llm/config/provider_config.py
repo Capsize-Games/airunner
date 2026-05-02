@@ -17,6 +17,13 @@ from typing import Any, Dict, List, Optional
 class LLMProviderConfig:
     """Available models for each LLM provider."""
 
+    _SUPPORTED_LOCAL_MODEL_IDS = (
+        "qwen3-8b",
+        "qwen3.5-9b",
+        "gpt-oss-20b",
+        "custom",
+    )
+
     # Local HuggingFace models available for download
     # Models can have optional GGUF variants via gguf_repo_id and gguf_filename
     LOCAL_MODELS = {
@@ -164,6 +171,7 @@ class LLMProviderConfig:
             "function_calling": False,
             "tool_calling_mode": "react",
             "supports_thinking": False,
+            "supports_reasoning_effort": True,
             "rag_capable": True,
             "vision_capable": False,
             "code_capable": True,
@@ -377,7 +385,11 @@ class LLMProviderConfig:
             List of model identifiers
         """
         if provider == "local":
-            return list(cls.LOCAL_MODELS.keys())
+            return [
+                model_id
+                for model_id in cls._SUPPORTED_LOCAL_MODEL_IDS
+                if model_id in cls.LOCAL_MODELS
+            ]
         elif provider == "openrouter":
             return cls.OPENROUTER_MODELS
         elif provider == "ollama":

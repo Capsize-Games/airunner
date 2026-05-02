@@ -10,6 +10,7 @@ This script tests the universal model management system to ensure:
 """
 
 import logging
+from unittest.mock import patch
 from airunner.components.model_management import (
     ModelResourceManager,
     ModelState,
@@ -152,6 +153,29 @@ def test_active_models_reporting():
         logger.info("✓ No active models after cleanup")
 
     logger.info("✓ Active models reporting test passed!")
+
+
+def test_prepare_model_loading_ignores_target_loading_state(caplog):
+    """Unregistered loads should not count the target model as already active."""
+    manager = ModelResourceManager()
+    manager._model_states.clear()
+    manager._model_types.clear()
+
+    caplog.set_level(logging.INFO)
+
+    with patch.object(manager.registry, "get_model", return_value=None), patch.object(
+        manager,
+        "request_model_swap",
+        side_effect=AssertionError("request_model_swap should not be called"),
+    ):
+        result = manager.prepare_model_loading(
+            model_id="/path/to/unregistered.gguf",
+            model_type="llm",
+            auto_swap=True,
+        )
+
+    assert result["can_load"] is True
+    assert "Found 1 active models" not in caplog.text
 
 
 def test_memory_breakdown():

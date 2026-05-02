@@ -19,6 +19,7 @@ import os
 import re
 import time
 import uuid
+from functools import lru_cache
 from pathlib import Path
 from typing import (
     Any,
@@ -48,6 +49,11 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.components.llm.utils.gpt_oss_parser import (
+    GPTOSSStreamParser,
+    has_gpt_oss_markup,
+    parse_gpt_oss_response,
+)
 from airunner.utils.application import get_logger
 from packaging.version import InvalidVersion, Version
 
@@ -122,14 +128,128 @@ def _read_gguf_string_field(model_path: str, field_name: str) -> Optional[str]:
         return None
 
 
+def _guess_architecture_from_path(model_path: str) -> Optional[str]:
+    """Return a likely architecture from a known GGUF filename."""
+    filename = os.path.basename(str(model_path)).lower()
+    if "qwen3.5" in filename or "qwen35" in filename:
+        return "qwen35"
+    if "ministral" in filename or "mistral3" in filename:
+        return "mistral3"
+    if "qwen3" in filename:
+        return "qwen3"
+    if "gpt-oss" in filename:
+        return "gptoss"
+    return None
+
+
+def _metadata_int(metadata: Dict[str, Any], field_name: str) -> Optional[int]:
+    """Return one llama.cpp metadata value parsed as an integer."""
+    value = metadata.get(field_name)
+    if value is None:
+        return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _estimate_known_kv_cache_gb(
+    model_path: str,
+    n_ctx: int,
+    *,
+    type_k_bytes: int = 1,
+    type_v_bytes: int = 1,
+) -> Optional[float]:
+    """Estimate KV-cache size for known shipped GGUF models."""
+    filename = os.path.basename(str(model_path)).lower()
+    known_shapes = {
+        "qwen3-8b": (36, 8, 128, 128),
+    }
+
+    for marker, shape in known_shapes.items():
+        if marker not in filename:
+            continue
+
+        block_count, head_count_kv, key_length, value_length = shape
+        kv_bytes = (
+            int(n_ctx)
+            * block_count
+            * head_count_kv
+            * (
+                key_length * int(type_k_bytes)
+                + value_length * int(type_v_bytes)
+            )
+        )
+        return kv_bytes / float(1024 ** 3)
+
+    return None
+
+
 def read_gguf_architecture(model_path: str) -> Optional[str]:
     """Return the GGUF general.architecture metadata value."""
     return _read_gguf_string_field(model_path, "general.architecture")
 
 
+def estimate_gguf_kv_cache_gb(
+    model_path: str,
+    n_ctx: int,
+    *,
+    type_k_bytes: int = 1,
+    type_v_bytes: int = 1,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Optional[float]:
+    """Estimate the GGUF KV-cache footprint for one configured context."""
+    metadata_values = metadata or {}
+    architecture = str(
+        metadata_values.get("general.architecture", "")
+    ).strip()
+    if not architecture:
+        estimated = _estimate_known_kv_cache_gb(
+            model_path,
+            n_ctx,
+            type_k_bytes=type_k_bytes,
+            type_v_bytes=type_v_bytes,
+        )
+        if estimated is not None:
+            return estimated
+        return None
+
+    if not architecture:
+        return None
+
+    prefix = f"{architecture}.attention"
+    block_count = _metadata_int(metadata_values, f"{architecture}.block_count")
+    head_count_kv = _metadata_int(
+        metadata_values,
+        f"{prefix}.head_count_kv",
+    )
+    key_length = _metadata_int(metadata_values, f"{prefix}.key_length")
+    value_length = _metadata_int(metadata_values, f"{prefix}.value_length")
+
+    if not all(
+        value is not None
+        for value in (block_count, head_count_kv, key_length, value_length)
+    ):
+        return None
+
+    kv_bytes = (
+        int(n_ctx)
+        * int(block_count)
+        * int(head_count_kv)
+        * (
+            int(key_length) * int(type_k_bytes)
+            + int(value_length) * int(type_v_bytes)
+        )
+    )
+    return kv_bytes / float(1024 ** 3)
+
+
 def detect_known_unsupported_architecture(model_path: str) -> Optional[str]:
     """Return a known-unsupported GGUF architecture for this runtime."""
-    architecture = read_gguf_architecture(model_path)
+    architecture = _guess_architecture_from_path(model_path)
+    if not architecture:
+        architecture = read_gguf_architecture(model_path)
     if not architecture:
         return None
 
@@ -144,6 +264,22 @@ def detect_known_unsupported_architecture(model_path: str) -> Optional[str]:
     return None
 
 
+@lru_cache(maxsize=16)
+def _llama_chat_format_supported(name: str) -> bool:
+    """Return True when the installed llama_cpp runtime supports a chat format."""
+    if not name:
+        return False
+
+    try:
+        from llama_cpp import llama_chat_format
+
+        llama_chat_format.get_chat_completion_handler(name)
+    except Exception:
+        return False
+
+    return True
+
+
 def _detect_chat_format(model_path: str) -> Optional[str]:
     """Detect the appropriate chat format based on model filename.
     
@@ -155,6 +291,9 @@ def _detect_chat_format(model_path: str) -> Optional[str]:
         llama.cpp use the GGUF's embedded chat template.
     """
     path_lower = model_path.lower()
+
+    if "gpt-oss" in path_lower:
+        return "gpt-oss" if _llama_chat_format_supported("gpt-oss") else None
     
     # Qwen models use chatml
     if "qwen" in path_lower:
@@ -235,6 +374,7 @@ class ChatGGUF(BaseChatModel):
     tools: Optional[List[Dict[str, Any]]] = None
     tool_choice: Optional[str] = None  # "auto", "none", or specific tool name
     enable_thinking: bool = True
+    reasoning_effort: str = "medium"
     chat_format: Optional[str] = None  # Auto-detected if None
     use_yarn: bool = False  # Disabled by default - requires more VRAM
     yarn_orig_ctx: int = 32768  # Qwen3 native context length
@@ -287,6 +427,18 @@ class ChatGGUF(BaseChatModel):
         else:
             self._detected_format = _detect_chat_format(self.model_path)
         self._load_model()
+
+    def _uses_gpt_oss_parser(self) -> bool:
+        """Return True when GPT-OSS Harmony content needs normalization."""
+        model_path = str(self.model_path).lower()
+        return self._detected_format == "gpt-oss" or "gpt-oss" in model_path
+
+    def _normalized_reasoning_effort(self) -> str:
+        """Return a valid GPT-OSS reasoning-effort value."""
+        effort = str(self.reasoning_effort or "medium").strip().lower()
+        if effort in {"low", "medium", "high"}:
+            return effort
+        return "medium"
 
     def _resolve_llama_tuning(self) -> Dict[str, Any]:
         """Resolve optional llama.cpp tuning overrides from the environment."""
@@ -392,6 +544,11 @@ class ChatGGUF(BaseChatModel):
             f"n_ctx={self.n_ctx}, "
             f"n_gpu_layers={self.n_gpu_layers}"
         )
+        try:
+            model_size_gb = os.path.getsize(self.model_path) / float(1024 ** 3)
+            self.logger.info(f"  GGUF file size={model_size_gb:.2f} GiB")
+        except OSError:
+            pass
         if self.n_gpu_layers != 0:
             self.logger.info(
                 f"  llama.cpp GPU offload support={gpu_offload_supported}"
@@ -453,6 +610,20 @@ class ChatGGUF(BaseChatModel):
                 )
             else:
                 raise
+
+        estimated_kv_cache_gb = estimate_gguf_kv_cache_gb(
+            self.model_path,
+            self.n_ctx,
+            type_k_bytes=1,
+            type_v_bytes=1,
+            metadata=getattr(self._llama, "metadata", None),
+        )
+        if estimated_kv_cache_gb is not None:
+            self.logger.info(
+                "  estimated q8 KV cache at n_ctx=%s: %.2f GiB",
+                self.n_ctx,
+                estimated_kv_cache_gb,
+            )
 
         self.logger.info("✓ GGUF model loaded successfully")
 
@@ -527,9 +698,41 @@ class ChatGGUF(BaseChatModel):
             tool_system = self._inject_tool_instructions("")
             converted.insert(0, {"role": "system", "content": tool_system})
 
+        self._apply_gpt_oss_reasoning_effort(converted)
         self._apply_thinking_directive(converted)
         
         return converted
+
+    def _apply_gpt_oss_reasoning_effort(
+        self, converted: List[Dict[str, Any]]
+    ) -> None:
+        """Inject the documented GPT-OSS reasoning-effort directive."""
+        if not self._uses_gpt_oss_parser():
+            return
+
+        directive = f"reasoning effort {self._normalized_reasoning_effort()}"
+
+        for message in converted:
+            if message.get("role") != "system":
+                continue
+            content = message.get("content")
+            if not isinstance(content, str):
+                return
+            lowered = content.lower()
+            if "reasoning effort low" in lowered:
+                return
+            if "reasoning effort medium" in lowered:
+                return
+            if "reasoning effort high" in lowered:
+                return
+            message["content"] = (
+                f"{content.rstrip()}\n\n{directive}"
+                if content.strip()
+                else directive
+            )
+            return
+
+        converted.insert(0, {"role": "system", "content": directive})
 
     def _inject_tool_instructions(self, system_content: str) -> str:
         """Inject Qwen3-style tool calling instructions into system prompt.
@@ -766,6 +969,12 @@ For each function call, return a json object with function name and arguments wi
         thinking_content = None
         if self.enable_thinking and hasattr(message_data, "get"):
             thinking_content = message_data.get("reasoning_content")
+
+        if self._uses_gpt_oss_parser() or has_gpt_oss_markup(content):
+            parsed = parse_gpt_oss_response(content)
+            content = parsed.content
+            if not thinking_content:
+                thinking_content = parsed.thinking_content
         
         raw_native_tool_calls = message_data.get("tool_calls") if hasattr(message_data, "get") else None
         tool_calls = self._parse_native_tool_calls(raw_native_tool_calls)
@@ -844,6 +1053,9 @@ For each function call, return a json object with function name and arguments wi
         self.logger.info(f"[ChatGGUF._stream] tool_choice: {self.tool_choice}")
         
         chunk_count = 0
+        gpt_oss_parser = (
+            GPTOSSStreamParser() if self._uses_gpt_oss_parser() else None
+        )
         for chunk in self._llama.create_chat_completion(**chat_kwargs):
             chunk_count += 1
             if chunk_count == 1:
@@ -862,14 +1074,28 @@ For each function call, return a json object with function name and arguments wi
                 )
 
             reasoning_text = delta.get("reasoning_content")
-            additional_kwargs: Dict[str, Any] = {}
-            if reasoning_text:
-                additional_kwargs["reasoning_content"] = reasoning_text
             
             # Handle content
             if "content" in delta and delta["content"]:
-                text = delta["content"]
-                full_content.append(text)
+                raw_text = delta["content"]
+                full_content.append(raw_text)
+                text = raw_text
+
+                if gpt_oss_parser is not None or has_gpt_oss_markup(raw_text):
+                    if gpt_oss_parser is None:
+                        gpt_oss_parser = GPTOSSStreamParser()
+                    parsed_delta = gpt_oss_parser.feed(raw_text)
+                    if parsed_delta.analysis_text:
+                        reasoning_text = (
+                            f"{reasoning_text}{parsed_delta.analysis_text}"
+                            if reasoning_text
+                            else parsed_delta.analysis_text
+                        )
+                    text = parsed_delta.final_text
+
+                additional_kwargs: Dict[str, Any] = {}
+                if reasoning_text:
+                    additional_kwargs["reasoning_content"] = reasoning_text
                 
                 chunk_msg = ChatGenerationChunk(
                     message=AIMessageChunk(
@@ -882,13 +1108,39 @@ For each function call, return a json object with function name and arguments wi
                     run_manager.on_llm_new_token(text, chunk=chunk_msg)
                     
                 yield chunk_msg
-            elif additional_kwargs:
+            else:
+                additional_kwargs = {}
+                if reasoning_text:
+                    additional_kwargs["reasoning_content"] = reasoning_text
+            if not ("content" in delta and delta["content"]) and additional_kwargs:
                 yield ChatGenerationChunk(
                     message=AIMessageChunk(
                         content="",
                         additional_kwargs=additional_kwargs,
                     )
                 )
+
+        if gpt_oss_parser is not None:
+            parsed_tail = gpt_oss_parser.finish()
+            if parsed_tail.analysis_text:
+                yield ChatGenerationChunk(
+                    message=AIMessageChunk(
+                        content="",
+                        additional_kwargs={
+                            "reasoning_content": parsed_tail.analysis_text,
+                        },
+                    )
+                )
+            if parsed_tail.final_text:
+                tail_chunk = ChatGenerationChunk(
+                    message=AIMessageChunk(content=parsed_tail.final_text)
+                )
+                if run_manager:
+                    run_manager.on_llm_new_token(
+                        parsed_tail.final_text,
+                        chunk=tail_chunk,
+                    )
+                yield tail_chunk
 
         # After streaming completes, parse <tool_call> tags from full content
         self.logger.info(
