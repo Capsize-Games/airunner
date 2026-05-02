@@ -168,15 +168,6 @@ def set_default_shortcut_keys():
                 "signal": SignalCode.INTERRUPT_PROCESS_SIGNAL.value,
             },
             {
-                "display_name": "Navigate",
-                "text": "Shift+Ctrl+P",
-                "key": QtCore.Qt.Key.Key_P.value,
-                "modifiers": QtCore.Qt.KeyboardModifier.ShiftModifier.value
-                | QtCore.Qt.KeyboardModifier.ControlModifier.value,
-                "description": "URL key. Responsible for navigating to a URL.",
-                "signal": SignalCode.NAVIGATE_TO_URL.value,
-            },
-            {
                 "display_name": "Quit",
                 "text": "Ctrl+Q",
                 "key": QtCore.Qt.Key.Key_Q.value,
