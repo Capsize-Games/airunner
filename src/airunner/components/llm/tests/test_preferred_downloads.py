@@ -233,3 +233,34 @@ class TestSharedGGUFSelection:
             mock_create_gguf.call_args.kwargs["model_path"]
             == str(preferred_gguf)
         )
+
+    def test_create_from_settings_applies_gpt_oss_gguf_runtime_overrides(
+        self,
+        tmp_path,
+    ):
+        gguf_path = tmp_path / "gpt-oss-20b-F16.gguf"
+        gguf_path.write_text("gguf")
+
+        with patch(
+            "airunner.utils.settings.get_qsettings.get_qsettings"
+        ) as mock_qsettings, patch(
+            "airunner.components.llm.data.llm_generator_settings.LLMGeneratorSettings"
+        ) as mock_db_settings, patch.object(
+            ChatModelFactory,
+            "create_gguf_model",
+            return_value="gguf-model",
+        ) as mock_create_gguf:
+            mock_qsettings.return_value.value.return_value = None
+            mock_db_settings.objects.first.return_value = SimpleNamespace(
+                model_id="gpt-oss-20b",
+                quantization_bits=0,
+                enable_thinking=False,
+            )
+
+            result = ChatModelFactory.create_from_settings(
+                llm_settings=SimpleNamespace(use_local_llm=True),
+                model_path=str(gguf_path),
+            )
+
+        assert result == "gguf-model"
+        assert mock_create_gguf.call_args.kwargs["n_ctx"] == 4096

@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from airunner.components.llm.adapters.chat_gguf import (
     ChatGGUF,
     UnsupportedGGUFArchitectureError,
+    _detect_chat_format,
     detect_known_unsupported_architecture,
 )
 from packaging.version import Version
@@ -35,6 +36,9 @@ def _build_chat_gguf(fake_llama, model_path="/tmp/fake.gguf"):
 
 
 class TestChatGGUFNativeTools:
+    def test_gpt_oss_prefers_embedded_chat_template(self):
+        assert _detect_chat_format("/tmp/gpt-oss-20b-F16.gguf") is None
+
     def test_known_unsupported_architecture_raises_before_llama_load(self):
         with patch(
             "airunner.components.llm.adapters.chat_gguf.detect_known_unsupported_architecture",

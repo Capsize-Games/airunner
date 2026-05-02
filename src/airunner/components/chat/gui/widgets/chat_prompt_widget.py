@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from PIL import Image
-from PySide6.QtCore import QTimer, Slot, Qt, QPoint
+from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QPoint
 from PySide6.QtWidgets import (
     QApplication,
     QListWidget,
@@ -537,16 +537,8 @@ class ChatPromptWidget(BaseWidget):
         if not hasattr(self.ui, "prompt") or self.ui.prompt is None:
             return
 
-        self._prompt_submit_shortcuts = [
-            self._create_prompt_shortcut(
-                Qt.Key.Key_Return,
-                self._on_submit_shortcut,
-            ),
-            self._create_prompt_shortcut(
-                Qt.Key.Key_Enter,
-                self._on_submit_shortcut,
-            ),
-        ]
+        self.ui.prompt.installEventFilter(self)
+        self._prompt_submit_shortcuts = []
         self._slash_popup_shortcuts = [
             self._create_prompt_shortcut(
                 Qt.Key.Key_Up,
@@ -591,6 +583,22 @@ class ChatPromptWidget(BaseWidget):
         if self._disabled:
             return
         self.do_generate()
+
+    def _is_prompt_submit_keypress(self, event: QEvent) -> bool:
+        """Return True when a keypress should submit the current prompt."""
+        if event.type() != QEvent.Type.KeyPress:
+            return False
+        if event.key() not in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            return False
+
+        modifiers = event.modifiers()
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            return False
+
+        effective_modifiers = (
+            modifiers & ~Qt.KeyboardModifier.KeypadModifier
+        )
+        return effective_modifiers == Qt.KeyboardModifier.NoModifier
 
     def _finish_startup_controls_if_ready(self) -> None:
         """Populate startup controls after the main window is ready."""
@@ -2244,7 +2252,7 @@ class ChatPromptWidget(BaseWidget):
         return self._active_section == "art_editor_button"
 
     def eventFilter(self, obj, event) -> bool:
-        """Handle events for installed event filters (prompt drag-drop).
+        """Handle prompt submission and prompt drag-drop events.
         
         Args:
             obj: The object receiving the event.
@@ -2253,6 +2261,12 @@ class ChatPromptWidget(BaseWidget):
         Returns:
             True if event was handled, False otherwise.
         """
+        if hasattr(self.ui, "prompt") and obj is self.ui.prompt:
+            if self._is_prompt_submit_keypress(event):
+                if not self._disabled:
+                    self.do_generate()
+                return True
+
         # Handle drag events on prompt viewport
         if hasattr(self.ui, "prompt") and obj is self.ui.prompt.viewport():
             if event.type() == event.Type.DragEnter:

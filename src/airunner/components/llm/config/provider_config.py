@@ -177,6 +177,7 @@ class LLMProviderConfig:
             "description": "GPT-OSS 20B GGUF for local llama.cpp code and reasoning workloads",
             "gguf_repo_id": "unsloth/gpt-oss-20b-GGUF",
             "gguf_filename": "gpt-oss-20b-F16.gguf",
+            "gguf_default_n_ctx": 4096,
             "local_storage_subdir": "gpt_oss",
             "aliases": [
                 "GPT-OSS",

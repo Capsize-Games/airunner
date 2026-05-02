@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt
 
 from airunner.components.chat.gui.widgets import chat_prompt_widget as module
 from airunner.components.chat.gui.widgets.chat_prompt_widget import (
@@ -225,7 +225,10 @@ def test_configure_prompt_shortcuts_preserves_native_keypress_event(
             self._prompt_submit_shortcuts = []
             self._slash_popup_shortcuts = []
             self.ui = SimpleNamespace(
-                prompt=SimpleNamespace(keyPressEvent=native_keypress)
+                prompt=SimpleNamespace(
+                    keyPressEvent=native_keypress,
+                    installEventFilter=Mock(),
+                )
             )
 
         def _on_submit_shortcut(self):
@@ -242,7 +245,8 @@ def test_configure_prompt_shortcuts_preserves_native_keypress_event(
     widget._configure_prompt_shortcuts()
 
     assert widget.ui.prompt.keyPressEvent is native_keypress
-    assert len(widget._prompt_submit_shortcuts) == 2
+    widget.ui.prompt.installEventFilter.assert_called_once_with(widget)
+    assert len(widget._prompt_submit_shortcuts) == 0
     assert len(widget._slash_popup_shortcuts) == 4
     assert all(
         shortcut.context == Qt.ShortcutContext.WidgetShortcut
@@ -250,6 +254,30 @@ def test_configure_prompt_shortcuts_preserves_native_keypress_event(
         + widget._slash_popup_shortcuts
     )
     assert all(not shortcut.enabled for shortcut in widget._slash_popup_shortcuts)
+
+
+def test_plain_enter_is_treated_as_prompt_submit():
+    """Plain Enter should submit the prompt."""
+    widget = SimpleNamespace()
+    event = SimpleNamespace(
+        type=lambda: QEvent.Type.KeyPress,
+        key=lambda: Qt.Key.Key_Return,
+        modifiers=lambda: Qt.KeyboardModifier.NoModifier,
+    )
+
+    assert ChatPromptWidget._is_prompt_submit_keypress(widget, event) is True
+
+
+def test_shift_enter_is_not_treated_as_prompt_submit():
+    """Shift+Enter should remain available for newline insertion."""
+    widget = SimpleNamespace()
+    event = SimpleNamespace(
+        type=lambda: QEvent.Type.KeyPress,
+        key=lambda: Qt.Key.Key_Return,
+        modifiers=lambda: Qt.KeyboardModifier.ShiftModifier,
+    )
+
+    assert ChatPromptWidget._is_prompt_submit_keypress(widget, event) is False
 
 
 def test_chat_prompt_uses_chat_action_by_default():

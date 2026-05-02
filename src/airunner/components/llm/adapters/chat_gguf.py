@@ -85,7 +85,8 @@ class UnsupportedGGUFArchitectureError(Exception):
             )
         super().__init__(
             f"GGUF model architecture '{architecture}' is not supported by llama-cpp-python. "
-            f"Model: {model_path}.{version_message} Consider using safetensors with transformers instead."
+            f"Model: {model_path}.{version_message} Use a GGUF model "
+            "supported by the installed llama-cpp-python runtime."
         )
 
 
@@ -143,14 +144,15 @@ def detect_known_unsupported_architecture(model_path: str) -> Optional[str]:
     return None
 
 
-def _detect_chat_format(model_path: str) -> str:
+def _detect_chat_format(model_path: str) -> Optional[str]:
     """Detect the appropriate chat format based on model filename.
     
     Args:
         model_path: Path to the GGUF model file
         
     Returns:
-        Chat format string for llama-cpp-python
+        Chat format string for llama-cpp-python, or None to let
+        llama.cpp use the GGUF's embedded chat template.
     """
     path_lower = model_path.lower()
     
@@ -166,8 +168,7 @@ def _detect_chat_format(model_path: str) -> str:
     if any(x in path_lower for x in ["mistral", "ministral", "magistral"]):
         return "mistral-instruct"
     
-    # Default to chatml (most compatible)
-    return "chatml"
+    return None
 
 
 def _get_int_env(name: str) -> Optional[int]:
@@ -281,7 +282,10 @@ class ChatGGUF(BaseChatModel):
     def model_post_init(self, __context: Any) -> None:
         """Initialize the llama-cpp-python model after Pydantic init."""
         super().model_post_init(__context)
-        self._detected_format = self.chat_format or _detect_chat_format(self.model_path)
+        if self.chat_format is not None:
+            self._detected_format = self.chat_format
+        else:
+            self._detected_format = _detect_chat_format(self.model_path)
         self._load_model()
 
     def _resolve_llama_tuning(self) -> Dict[str, Any]:
@@ -384,7 +388,8 @@ class ChatGGUF(BaseChatModel):
 
         self.logger.info(f"Loading GGUF model from {self.model_path}")
         self.logger.info(
-            f"  chat_format={self._detected_format}, n_ctx={self.n_ctx}, "
+            f"  chat_format={self._detected_format or 'auto'}, "
+            f"n_ctx={self.n_ctx}, "
             f"n_gpu_layers={self.n_gpu_layers}"
         )
         if self.n_gpu_layers != 0:
@@ -400,12 +405,13 @@ class ChatGGUF(BaseChatModel):
             "n_ctx": self.n_ctx,
             "n_gpu_layers": self.n_gpu_layers,
             "flash_attn": self.flash_attn,
-            "chat_format": self._detected_format,
             "type_k": 8,  # KV cache quantization to save VRAM
             "type_v": 8,
             "verbose": False,
             **llama_tuning,
         }
+        if self._detected_format is not None:
+            llama_kwargs["chat_format"] = self._detected_format
 
         self.logger.info(
             f"  llama.cpp tuning: {self._format_llama_tuning(llama_tuning)}"

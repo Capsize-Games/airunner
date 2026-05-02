@@ -125,20 +125,24 @@ class LLMModelManager(
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM.
         
-        For GGUF models, we skip loading the HuggingFace model and tokenizer
-        since ChatLlamaCpp (via ChatGGUF) handles everything internally.
+        Local execution is GGUF-only. The llama.cpp adapter owns GGUF loading,
+        so manager-side transformers loading is skipped entirely.
         """
         if self.llm_settings.use_local_llm:
-            # Check if this is a GGUF model - if so, skip HF loading
             from airunner.components.llm.adapters import is_gguf_model
+
             if is_gguf_model(self.model_path):
                 self.logger.info(
                     f"GGUF model detected at {self.model_path}, "
-                    "skipping HuggingFace model/tokenizer loading"
+                    "skipping manager-side tokenizer/model loading"
                 )
                 return
-            self._load_tokenizer()
-            self._load_model()
+
+            self.logger.info(
+                "Skipping manager-side local model loading for non-GGUF "
+                "path %s; local LLM mode now requires GGUF/llama.cpp.",
+                self.model_path,
+            )
 
     def load(self) -> None:
         """Load the LLM model and its supporting orchestration components."""
