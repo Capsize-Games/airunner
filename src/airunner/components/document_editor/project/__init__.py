@@ -12,6 +12,9 @@ from airunner.components.document_editor.project.airunner_project_manager import
 from airunner.components.document_editor.project.airunner_project_open_result import (
     AirunnerProjectOpenResult,
 )
+from airunner.components.document_editor.project.airunner_project_state_service import (
+    AirunnerProjectStateService,
+)
 from airunner.components.document_editor.project.airunner_project_service import (
     AirunnerProjectService,
 )
@@ -34,6 +37,7 @@ __all__ = [
     "AirunnerProjectOpenResult",
     "AirunnerProjectRoot",
     "AirunnerProjectService",
+    "AirunnerProjectStateService",
     "AirunnerProjectSettings",
     "AirunnerRecentProjectEntry",
     "AirunnerTrustLevel",

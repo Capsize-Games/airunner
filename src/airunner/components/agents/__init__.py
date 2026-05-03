@@ -11,12 +11,30 @@ from airunner.components.agents.expert_agents import (
     ResearchExpertAgent,
     CreativeExpertAgent,
 )
+from airunner.components.agents.runtime import AgentMessageChannel
+from airunner.components.agents.runtime import AgentMessageRecord
+from airunner.components.agents.runtime import AgentRole
+from airunner.components.agents.runtime import AgentRunRecord
+from airunner.components.agents.runtime import AgentRunStatus
+from airunner.components.agents.runtime import AgentSessionRecord
+from airunner.components.agents.runtime import AgentTaskRecord
+from airunner.components.agents.runtime import AgentTaskStatus
+from airunner.components.agents.runtime import AgentToolCallRecord
 
 __all__ = [
+    "AgentMessageChannel",
+    "AgentMessageRecord",
     "ExpertAgent",
     "AgentCapability",
     "AgentRegistry",
     "AgentRouter",
+    "AgentRole",
+    "AgentRunRecord",
+    "AgentRunStatus",
+    "AgentSessionRecord",
+    "AgentTaskRecord",
+    "AgentTaskStatus",
+    "AgentToolCallRecord",
     "CodeExpertAgent",
     "ResearchExpertAgent",
     "CreativeExpertAgent",
