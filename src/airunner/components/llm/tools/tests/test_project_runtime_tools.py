@@ -11,14 +11,18 @@ from airunner.components.agents.runtime import AgentSessionRecord
 from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.document_editor.project import (
+    AirunnerAutonomyMode,
     AirunnerProjectService,
 )
 from airunner.components.document_editor.project import (
+    AirunnerProjectSettings,
     AirunnerProjectStateService,
 )
+from airunner.components.document_editor.project import AirunnerTrustLevel
 from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.components.llm.core.tool_registry import ToolRegistry
 from airunner.components.llm.tools.project_runtime_tools import (
+    project_run_command,
     project_get_workspace_summary,
 )
 from airunner.components.llm.tools.project_runtime_tools_handler import (
@@ -44,7 +48,13 @@ def _python_command(snippet: str) -> str:
 def _build_project(tmp_path) -> AirunnerProjectService:
     """Create an initialized .airunner project for testing."""
     project_service = AirunnerProjectService(str(tmp_path / "runtime-project"))
-    project_service.initialize(project_name="Runtime Project")
+    project_service.initialize(
+        project_name="Runtime Project",
+        settings=AirunnerProjectSettings(
+            trust_level=AirunnerTrustLevel.TRUSTED,
+            autonomy_mode=AirunnerAutonomyMode.FULL_AUTONOMY,
+        ),
+    )
     return project_service
 
 
@@ -177,6 +187,29 @@ def test_project_runtime_handler_reports_diagnostics_and_summary(
     assert any(root["file_count"] >= 2 for root in summary["roots"])
 
 
+def test_project_runtime_tools_block_commands_without_approval_in_review_first(
+    tmp_path,
+):
+    """Review-first projects should block commands until approved."""
+    project_service = AirunnerProjectService(str(tmp_path / "runtime-project"))
+    project_service.initialize(project_name="Runtime Project")
+
+    blocked = project_run_command(
+        str(project_service.project_path),
+        _python_command("print('blocked')"),
+    )
+    allowed = project_run_command(
+        str(project_service.project_path),
+        _python_command("print('allowed')"),
+        approved=True,
+    )
+
+    assert blocked["success"] is False
+    assert blocked["error"] == "Command approval required for this project."
+    assert blocked["details"]["policy"]["autonomy_mode"] == "review-first"
+    assert allowed["success"] is True
+
+
 def test_project_runtime_tools_are_registered_and_callable(tmp_path):
     """Project runtime tools should be registered in the tool registry."""
     expected_tools = [
@@ -199,3 +232,4 @@ def test_project_runtime_tools_are_registered_and_callable(tmp_path):
 
     assert summary["success"] is True
     assert summary["project_name"] == "Runtime Project"
+    assert summary["policy"]["autonomy_mode"] == "full-autonomy"

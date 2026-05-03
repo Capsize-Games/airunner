@@ -1,6 +1,9 @@
 """Project-aware runtime, diagnostics, and workspace query tools."""
 
 from airunner.components.llm.core.tool_registry import ToolCategory, tool
+from airunner.components.llm.tools.project_policy_gate import (
+    ProjectPolicyGate,
+)
 from airunner.components.llm.tools.project_runtime_tools_handler import (
     ProjectRuntimeToolsHandler,
 )
@@ -12,6 +15,14 @@ def _handler(
 ) -> ProjectRuntimeToolsHandler:
     """Create a project-aware runtime tools handler."""
     return ProjectRuntimeToolsHandler(project_path, run_id=run_id)
+
+
+def _policy_gate(
+    project_path: str,
+    run_id: str | None = None,
+) -> ProjectPolicyGate:
+    """Create a wrapper-level policy gate for runtime tools."""
+    return ProjectPolicyGate(project_path, run_id=run_id)
 
 
 @tool(
@@ -29,9 +40,16 @@ def project_run_command(
     root_name: str | None = None,
     rel_working_directory: str = "",
     environment: dict[str, str] | None = None,
+    approved: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Start a project-scoped terminal command."""
+    blocked = _policy_gate(project_path, run_id).require_command_approval(
+        "project_run_command",
+        approved=approved,
+    )
+    if blocked:
+        return blocked
     return _handler(project_path, run_id).run_command(
         command,
         root_name=root_name,
@@ -168,4 +186,6 @@ def project_get_workspace_summary(
     run_id: str | None = None,
 ) -> dict:
     """Return project workspace context for agent planning."""
-    return _handler(project_path, run_id).workspace_summary()
+    summary = _handler(project_path, run_id).workspace_summary()
+    summary["policy"] = _policy_gate(project_path, run_id).policy_context()
+    return summary

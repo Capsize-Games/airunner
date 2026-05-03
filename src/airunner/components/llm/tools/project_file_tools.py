@@ -7,6 +7,9 @@ from airunner.components.llm.tools.project_generated_write_review_handler import
 from airunner.components.llm.tools.project_operations_handler import (
     ProjectOperationsHandler,
 )
+from airunner.components.llm.tools.project_policy_gate import (
+    ProjectPolicyGate,
+)
 
 
 def _handler(
@@ -23,6 +26,14 @@ def _review_handler(
 ) -> ProjectGeneratedWriteReviewHandler:
     """Create a project-aware generated-write review handler."""
     return ProjectGeneratedWriteReviewHandler(project_path, run_id=run_id)
+
+
+def _policy_gate(
+    project_path: str,
+    run_id: str | None = None,
+) -> ProjectPolicyGate:
+    """Create a wrapper-level policy gate for project tools."""
+    return ProjectPolicyGate(project_path, run_id=run_id)
 
 
 @tool(
@@ -137,9 +148,16 @@ def project_create_file(
     content: str,
     root_name: str | None = None,
     overwrite: bool = False,
+    reviewed: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Create one project-scoped file and audit the operation."""
+    blocked = _policy_gate(project_path, run_id).require_file_review(
+        "project_create_file",
+        reviewed=reviewed,
+    )
+    if blocked:
+        return blocked
     return _handler(project_path, run_id).create_file(
         rel_path,
         content,
@@ -163,9 +181,16 @@ def project_edit_file(
     content: str,
     root_name: str | None = None,
     backup: bool = True,
+    reviewed: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Replace one project-scoped file and audit the operation."""
+    blocked = _policy_gate(project_path, run_id).require_file_review(
+        "project_edit_file",
+        reviewed=reviewed,
+    )
+    if blocked:
+        return blocked
     return _handler(project_path, run_id).edit_file(
         rel_path,
         content,
@@ -191,9 +216,16 @@ def project_patch_file(
     root_name: str | None = None,
     expected_occurrences: int = 1,
     backup: bool = True,
+    reviewed: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Patch one project file by replacing exact text."""
+    blocked = _policy_gate(project_path, run_id).require_file_review(
+        "project_patch_file",
+        reviewed=reviewed,
+    )
+    if blocked:
+        return blocked
     return _handler(project_path, run_id).patch_file(
         rel_path,
         old_text,
@@ -219,9 +251,16 @@ def project_rename_file(
     new_rel_path: str,
     root_name: str | None = None,
     new_root_name: str | None = None,
+    reviewed: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Rename or move one project file."""
+    blocked = _policy_gate(project_path, run_id).require_file_review(
+        "project_rename_file",
+        reviewed=reviewed,
+    )
+    if blocked:
+        return blocked
     return _handler(project_path, run_id).rename_file(
         rel_path,
         new_rel_path,
@@ -244,9 +283,16 @@ def project_delete_file(
     rel_path: str,
     root_name: str | None = None,
     backup: bool = True,
+    reviewed: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Delete one project-scoped file."""
+    blocked = _policy_gate(project_path, run_id).require_file_review(
+        "project_delete_file",
+        reviewed=reviewed,
+    )
+    if blocked:
+        return blocked
     return _handler(project_path, run_id).delete_file(
         rel_path,
         root_name=root_name,
@@ -307,9 +353,16 @@ def project_get_generated_write_diff(
 def project_revert_generated_write(
     project_path: str,
     generated_write_id: str,
+    reviewed: bool = False,
     run_id: str | None = None,
 ) -> dict:
     """Revert one generated write from its persisted audit record."""
+    blocked = _policy_gate(project_path, run_id).require_file_review(
+        "project_revert_generated_write",
+        reviewed=reviewed,
+    )
+    if blocked:
+        return blocked
     return _review_handler(project_path, run_id).revert_generated_write(
         generated_write_id
     ).to_dict()

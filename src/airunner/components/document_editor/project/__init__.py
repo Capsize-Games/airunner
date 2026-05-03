@@ -12,6 +12,12 @@ from airunner.components.document_editor.project.airunner_project_manager import
 from airunner.components.document_editor.project.airunner_project_open_result import (
     AirunnerProjectOpenResult,
 )
+from airunner.components.document_editor.project.airunner_project_policy_enforcer import (
+    AirunnerProjectPolicyDecision,
+)
+from airunner.components.document_editor.project.airunner_project_policy_enforcer import (
+    AirunnerProjectPolicyEnforcer,
+)
 from airunner.components.document_editor.project.airunner_project_state_service import (
     AirunnerProjectStateService,
 )
@@ -35,6 +41,8 @@ __all__ = [
     "AirunnerAutonomyMode",
     "AirunnerProjectManager",
     "AirunnerProjectOpenResult",
+    "AirunnerProjectPolicyDecision",
+    "AirunnerProjectPolicyEnforcer",
     "AirunnerProjectRoot",
     "AirunnerProjectService",
     "AirunnerProjectStateService",

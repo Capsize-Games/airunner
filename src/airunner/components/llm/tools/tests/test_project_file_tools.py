@@ -7,11 +7,14 @@ from airunner.components.agents.runtime import AgentSessionRecord
 from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.document_editor.project import (
+    AirunnerAutonomyMode,
     AirunnerProjectService,
 )
 from airunner.components.document_editor.project import (
+    AirunnerProjectSettings,
     AirunnerProjectStateService,
 )
+from airunner.components.document_editor.project import AirunnerTrustLevel
 from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.components.llm.core.tool_registry import ToolRegistry
 from airunner.components.llm.tools.project_file_tools import (
@@ -33,6 +36,10 @@ def _build_project(tmp_path) -> tuple[AirunnerProjectService, str]:
     project_service.initialize(
         project_name="Demo Project",
         additional_roots=[str(extra_root)],
+        settings=AirunnerProjectSettings(
+            trust_level=AirunnerTrustLevel.TRUSTED,
+            autonomy_mode=AirunnerAutonomyMode.FULL_AUTONOMY,
+        ),
     )
     root_names = [root.name for root in project_service.list_roots()]
     shared_root = next(name for name in root_names if name != "workspace")
@@ -197,6 +204,31 @@ def test_project_review_tools_show_diffs_and_revert_writes(tmp_path):
         edited["details"]["generated_write_id"]
     ).metadata["reverted_at"]
     assert project_service.read_file("notes/todo.md") == "- original\n"
+
+
+def test_project_file_tools_block_writes_without_review_in_review_first(
+    tmp_path,
+):
+    """Review-first projects should block file writes until reviewed."""
+    project_service = AirunnerProjectService(str(tmp_path / "demo-project"))
+    project_service.initialize(project_name="Demo Project")
+
+    blocked = project_create_file(
+        str(project_service.project_path),
+        "notes/todo.md",
+        "- blocked\n",
+    )
+    allowed = project_create_file(
+        str(project_service.project_path),
+        "notes/todo.md",
+        "- allowed\n",
+        reviewed=True,
+    )
+
+    assert blocked["success"] is False
+    assert blocked["error"] == "File review required for this project."
+    assert blocked["details"]["policy"]["autonomy_mode"] == "review-first"
+    assert allowed["success"] is True
 
 
 def test_project_tools_are_registered_and_callable(tmp_path):

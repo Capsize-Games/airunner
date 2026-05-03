@@ -6,6 +6,7 @@ import pytest
 
 from airunner.components.document_editor.project import (
     AirunnerAutonomyMode,
+    AirunnerProjectPolicyEnforcer,
     AirunnerProjectRoot,
     AirunnerProjectService,
     AirunnerProjectSettings,
@@ -29,6 +30,40 @@ def test_project_settings_reject_untrusted_autonomy_modes():
     assert settings.validate() == [
         "Untrusted projects must use review-first autonomy mode."
     ]
+
+
+def test_project_policy_enforcer_reports_mode_requirements(tmp_path):
+    """Policy decisions should reflect the persisted autonomy mode."""
+    review_service = AirunnerProjectService(str(tmp_path / "review-project"))
+    review_service.initialize(project_name="Review Project")
+    review_enforcer = AirunnerProjectPolicyEnforcer(review_service)
+
+    mixed_service = AirunnerProjectService(str(tmp_path / "mixed-project"))
+    mixed_service.initialize(
+        project_name="Mixed Project",
+        settings=AirunnerProjectSettings(
+            trust_level=AirunnerTrustLevel.TRUSTED,
+            autonomy_mode=AirunnerAutonomyMode.MIXED,
+        ),
+    )
+    mixed_enforcer = AirunnerProjectPolicyEnforcer(mixed_service)
+
+    full_service = AirunnerProjectService(str(tmp_path / "full-project"))
+    full_service.initialize(
+        project_name="Full Project",
+        settings=AirunnerProjectSettings(
+            trust_level=AirunnerTrustLevel.TRUSTED,
+            autonomy_mode=AirunnerAutonomyMode.FULL_AUTONOMY,
+        ),
+    )
+    full_enforcer = AirunnerProjectPolicyEnforcer(full_service)
+
+    assert not review_enforcer.command_decision().allowed
+    assert not review_enforcer.file_write_decision().allowed
+    assert mixed_enforcer.command_decision().allowed
+    assert not mixed_enforcer.file_write_decision().allowed
+    assert full_enforcer.command_decision().allowed
+    assert full_enforcer.file_write_decision().allowed
 
 
 def test_workspace_config_round_trips_multiple_roots():
