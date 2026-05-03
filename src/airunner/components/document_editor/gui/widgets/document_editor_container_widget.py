@@ -10,10 +10,15 @@ from typing import Dict
 from airunner.components.document_editor.gui.templates.document_editor_container_ui import (
     Ui_document_editor_container,
 )
+from airunner.components.document_editor.project import (
+    AirunnerProjectService,
+    AirunnerPythonWorkflowService,
+)
 from airunner.components.document_editor.workspace_shell_support import (
     active_document_summary,
     agent_activity_entry,
     bottom_panel_definitions,
+    python_workflow_summary,
     problem_entry,
     side_panel_definitions,
     workspace_roots_summary,
@@ -346,12 +351,26 @@ class DocumentEditorContainerWidget(BaseWidget):
         self.set_project_search_results(
             workspace_roots_summary(root_paths)
         )
+        self._refresh_python_workflow_summary(root_paths)
         self.append_agent_activity(
             agent_activity_entry(
                 "Configured workspace roots",
                 f"{len(root_paths)} root(s)",
             )
         )
+
+    def _refresh_python_workflow_summary(
+        self,
+        root_paths: list[str],
+    ) -> None:
+        """Refresh the problems panel with Python workflow guidance."""
+        if not root_paths:
+            return
+        project_service = AirunnerProjectService(root_paths[0])
+        if not project_service.exists():
+            return
+        summary = AirunnerPythonWorkflowService(project_service).summary()
+        self.set_problems_text(python_workflow_summary(summary))
 
     def run_script(self, data: Dict) -> None:
         document_path = data.get("document_path")

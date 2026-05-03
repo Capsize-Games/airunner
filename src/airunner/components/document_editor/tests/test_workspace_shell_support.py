@@ -5,6 +5,8 @@ from airunner.components.document_editor.workspace_shell_support import (
     bottom_panel_definitions,
     generated_write_review_summary,
     generated_write_review_text,
+    python_diagnostics_summary,
+    python_workflow_summary,
     side_panel_definitions,
     workspace_roots_summary,
 )
@@ -56,3 +58,43 @@ def test_generated_write_review_text_includes_diff_preview():
 
     assert "Diff:" in text
     assert "+++ workspace:src/app.py" in text
+
+
+def test_python_workflow_summary_lists_quality_commands():
+    """Problems-panel summaries should render Python workflow commands."""
+    summary = python_workflow_summary(
+        {
+            "python_environment": {"manager": "venv"},
+            "bootstrap_command": "python -m pip install -e .[dev]",
+            "commands": {
+                "tests": "python -m pytest",
+                "lint": "python quality_report.py --path .",
+                "format": "python -m ruff format .",
+                "diagnostics": "python quality_report.py --path . --json",
+            },
+        }
+    )
+
+    assert "Python workflow (venv):" in summary
+    assert "- tests: python -m pytest" in summary
+    assert "- format: python -m ruff format ." in summary
+
+
+def test_python_diagnostics_summary_renders_counts():
+    """Problems-panel summaries should render Python diagnostics counts."""
+    summary = python_diagnostics_summary(
+        {
+            "summary": {
+                "files_checked": 2,
+                "issue_count": 3,
+                "error_count": 1,
+                "warning_count": 2,
+                "quality_report_enabled": True,
+                "quality_report_issue_count": 2,
+            }
+        }
+    )
+
+    assert "Python diagnostics:" in summary
+    assert "- files checked: 2" in summary
+    assert "- quality report: 2 issue(s)" in summary

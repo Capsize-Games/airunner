@@ -100,6 +100,44 @@ def generated_write_review_text(summary: str, diff_text: str | None) -> str:
     return f"{summary}\n\nDiff:\n{diff_text}"
 
 
+def python_workflow_summary(summary: dict[str, object]) -> str:
+    """Return a problems-panel summary for Python workflow commands."""
+    commands = summary.get("commands", {}) if isinstance(summary, dict) else {}
+    environment = (
+        summary.get("python_environment") if isinstance(summary, dict) else None
+    )
+    manager = "system"
+    if isinstance(environment, dict) and environment.get("manager"):
+        manager = str(environment["manager"])
+    lines = [f"Python workflow ({manager}):"]
+    bootstrap_command = summary.get("bootstrap_command")
+    if bootstrap_command:
+        lines.append(f"- bootstrap: {bootstrap_command}")
+    for key in ("tests", "lint", "format", "diagnostics"):
+        command = commands.get(key)
+        if command:
+            lines.append(f"- {key}: {command}")
+    return "\n".join(lines)
+
+
+def python_diagnostics_summary(result: dict[str, object]) -> str:
+    """Return a problems-panel summary for Python diagnostics results."""
+    summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    lines = [
+        "Python diagnostics:",
+        f"- files checked: {summary.get('files_checked', 0)}",
+        f"- issues: {summary.get('issue_count', 0)}",
+        f"- errors: {summary.get('error_count', 0)}",
+        f"- warnings: {summary.get('warning_count', 0)}",
+    ]
+    if summary.get("quality_report_enabled"):
+        lines.append(
+            "- quality report: "
+            f"{summary.get('quality_report_issue_count', 0)} issue(s)"
+        )
+    return "\n".join(lines)
+
+
 def agent_activity_entry(action: str, subject: str) -> str:
     """Return a one-line activity entry for the agent panel."""
     return f"{action}: {subject}"

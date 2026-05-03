@@ -69,6 +69,8 @@ class AirunnerPythonProjectScaffolder:
             'readme = "README.md"\n'
             'requires-python = ">=3.11"\n'
             'dependencies = []\n\n'
+            "[project.optional-dependencies]\n"
+            'dev = ["pytest>=8", "ruff>=0.6"]\n\n'
             "[tool.setuptools.packages.find]\n"
             'where = ["src"]\n\n'
             "[tool.pytest.ini_options]\n"

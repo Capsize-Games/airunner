@@ -11,6 +11,7 @@ from airunner.components.document_editor.project import (
     AirunnerProjectService,
     AirunnerProjectSettings,
     AirunnerPythonEnvironmentSelection,
+    AirunnerPythonWorkflowService,
     AirunnerTrustLevel,
     AirunnerWorkspaceConfig,
 )
@@ -210,3 +211,31 @@ def test_project_settings_round_trip_python_environment_metadata():
     assert restored.bootstrap_profile == "python-package"
     assert restored.python_environment is not None
     assert restored.python_environment.manager == "venv"
+
+
+def test_python_workflow_service_uses_selected_environment(tmp_path):
+    """Python workflow commands should honor persisted environment metadata."""
+    project_path = tmp_path / "workflow-project"
+    service = AirunnerProjectService(str(project_path))
+    service.initialize(
+        project_name="Workflow Project",
+        settings=AirunnerProjectSettings(
+            bootstrap_profile="python-package",
+            python_environment=AirunnerPythonEnvironmentSelection(
+                manager="venv",
+                interpreter_path="/tmp/workflow/.venv/bin/python",
+                activate_command="source /tmp/workflow/.venv/bin/activate",
+            ),
+        ),
+    )
+    workflows = AirunnerPythonWorkflowService(service)
+
+    summary = workflows.summary()
+
+    assert summary["python_environment"]["manager"] == "venv"
+    assert "source /tmp/workflow/.venv/bin/activate &&" in summary[
+        "bootstrap_command"
+    ]
+    assert "/tmp/workflow/.venv/bin/python -m pytest" in summary[
+        "commands"
+    ]["tests"]

@@ -1,7 +1,5 @@
 """Project-aware runtime, diagnostics, and workspace query helpers."""
 
-import ast
-import os
 from threading import RLock
 
 from airunner.components.agents.runtime.agent_runtime_support import (
@@ -16,10 +14,15 @@ from airunner.components.document_editor.project.airunner_project_service import
 from airunner.components.document_editor.project.airunner_project_state_service import (
     AirunnerProjectStateService,
 )
+from airunner.components.document_editor.project.airunner_python_workflow_service import (
+    AirunnerPythonWorkflowService,
+)
 from airunner.components.document_editor.terminal import (
     TerminalSessionManager,
 )
-from airunner.components.llm.tools.code_validator import CodeValidator
+from airunner.components.llm.tools.project_runtime_diagnostics_support import (
+    ProjectRuntimeDiagnosticsSupport,
+)
 
 
 class ProjectRuntimeToolsHandler:
@@ -36,6 +39,12 @@ class ProjectRuntimeToolsHandler:
                 "The target path is not an initialized .airunner project."
             )
         self.state_service = AirunnerProjectStateService(self.project_service)
+        self.python_workflows = AirunnerPythonWorkflowService(
+            self.project_service
+        )
+        self.diagnostics_support = ProjectRuntimeDiagnosticsSupport(
+            self.project_service
+        )
         self.run_id = run_id
 
     def run_command(
@@ -46,45 +55,120 @@ class ProjectRuntimeToolsHandler:
         rel_working_directory: str = "",
         environment: dict[str, str] | None = None,
     ) -> dict[str, object]:
+        """Run an arbitrary shell command inside one project root."""
         root = self._default_root(root_name)
-        try:
-            working_directory = self._working_directory(
-                rel_working_directory,
-                root,
-            )
-        except ValueError as exc:
-            return self._error("project_run_command", str(exc))
-        manager = self._terminal_manager()
-        session_id = manager.start_shell_session(
-            command,
-            working_directory=working_directory,
-            environment=environment,
-        )
-        self._register_session(
-            session_id,
-            command,
-            root,
-            working_directory,
-        )
         arguments = {
             "command": command,
             "root_name": root,
             "rel_working_directory": rel_working_directory,
             "environment_keys": sorted((environment or {}).keys()),
         }
-        return self._audited_result(
+        return self._start_command(
             "project_run_command",
             arguments,
-            session_id=session_id,
+            command=command,
             root_name=root,
-            working_directory=working_directory,
-            is_running=True,
-            exit_code=None,
-            output="",
-            output_length=0,
-            message=f"Started command in {working_directory}.",
+            rel_working_directory=rel_working_directory,
+            environment=environment,
         )
-
+    def run_python_tests(
+        self,
+        *,
+        root_name: str | None = None,
+        rel_working_directory: str = "",
+        extra_args: list[str] | None = None,
+    ) -> dict[str, object]:
+        """Run Python tests using the selected project environment."""
+        context = self.python_workflows.context(
+            root_name,
+            rel_working_directory,
+        )
+        summary = self.python_workflows.summary(
+            root_name=root_name,
+            rel_working_directory=rel_working_directory,
+        )
+        command = self.python_workflows.build_test_command(
+            context,
+            extra_args=extra_args,
+        )
+        return self._start_python_workflow(
+            "project_run_python_tests",
+            "tests",
+            command,
+            summary,
+            rel_working_directory=rel_working_directory,
+            extra_args=extra_args or [],
+        )
+    def run_python_lint(
+        self,
+        *,
+        root_name: str | None = None,
+        rel_working_directory: str = "",
+    ) -> dict[str, object]:
+        """Run Python linting using the selected project environment."""
+        context = self.python_workflows.context(
+            root_name,
+            rel_working_directory,
+        )
+        summary = self.python_workflows.summary(
+            root_name=root_name,
+            rel_working_directory=rel_working_directory,
+        )
+        command = self.python_workflows.build_lint_command(context)
+        return self._start_python_workflow(
+            "project_run_python_lint",
+            "lint",
+            command,
+            summary,
+            rel_working_directory=rel_working_directory,
+        )
+    def run_python_format(
+        self,
+        *,
+        root_name: str | None = None,
+        rel_working_directory: str = "",
+        paths: list[str] | None = None,
+        check_only: bool = False,
+    ) -> dict[str, object]:
+        """Run Python formatting using the selected project environment."""
+        context = self.python_workflows.context(
+            root_name,
+            rel_working_directory,
+        )
+        summary = self.python_workflows.summary(
+            root_name=root_name,
+            rel_working_directory=rel_working_directory,
+        )
+        command = self.python_workflows.build_format_command(
+            context,
+            paths=paths,
+            check_only=check_only,
+        )
+        return self._start_python_workflow(
+            "project_run_python_format",
+            "format",
+            command,
+            summary,
+            rel_working_directory=rel_working_directory,
+            check_only=check_only,
+            paths=paths or ["."],
+        )
+    def python_workflow_summary(
+        self,
+        *,
+        root_name: str | None = None,
+        rel_working_directory: str = "",
+    ) -> dict[str, object]:
+        """Return the resolved Python workflow commands for a project."""
+        return self._result(
+            "project_get_python_workflow_summary",
+            True,
+            python=self.python_workflows.summary(
+                root_name=root_name,
+                rel_working_directory=rel_working_directory,
+            ),
+            message="Python workflow summary ready.",
+        )
     def read_terminal_output(
         self,
         session_id: str,
@@ -92,6 +176,7 @@ class ProjectRuntimeToolsHandler:
         offset: int = 0,
         limit: int = 4000,
     ) -> dict[str, object]:
+        """Read output from one tracked terminal session."""
         if offset < 0:
             return self._error(
                 "project_read_terminal_output",
@@ -115,7 +200,6 @@ class ProjectRuntimeToolsHandler:
             next_offset=offset + len(chunk),
             message="Terminal output retrieved.",
         )
-
     def send_terminal_input(
         self,
         session_id: str,
@@ -123,6 +207,7 @@ class ProjectRuntimeToolsHandler:
         *,
         append_newline: bool = True,
     ) -> dict[str, object]:
+        """Send interactive input to one running terminal session."""
         try:
             session = self._session_info(session_id)
         except ValueError as exc:
@@ -137,27 +222,26 @@ class ProjectRuntimeToolsHandler:
                 "project_send_terminal_input",
                 f"Terminal session {session_id} is not running.",
             )
-        arguments = {
-            "session_id": session_id,
-            "root_name": session["root_name"],
-            "append_newline": append_newline,
-        }
         return self._audited_result(
             "project_send_terminal_input",
-            arguments,
+            {
+                "session_id": session_id,
+                "root_name": session["root_name"],
+                "append_newline": append_newline,
+            },
             session_id=session_id,
             root_name=session["root_name"],
             is_running=True,
             exit_code=None,
             message=f"Sent input to terminal session {session_id}.",
         )
-
     def stop_command(
         self,
         session_id: str,
         *,
         timeout: float = 1.0,
     ) -> dict[str, object]:
+        """Stop one running terminal session."""
         try:
             session = self._session_info(session_id)
         except ValueError as exc:
@@ -171,21 +255,17 @@ class ProjectRuntimeToolsHandler:
                 "project_stop_command",
                 f"Terminal session {session_id} could not be stopped.",
             )
-        arguments = {
-            "session_id": session_id,
-            "timeout": timeout,
-        }
         return self._audited_result(
             "project_stop_command",
-            arguments,
+            {"session_id": session_id, "timeout": timeout},
             session_id=session_id,
             root_name=session["root_name"],
             is_running=self._is_running(session_id),
             exit_code=self._exit_code(session_id),
             message=f"Stopped terminal session {session_id}.",
         )
-
     def list_terminal_sessions(self) -> dict[str, object]:
+        """List all terminal sessions that belong to this project."""
         sessions = [
             self._session_snapshot(item)
             for item in self._project_sessions()
@@ -196,8 +276,8 @@ class ProjectRuntimeToolsHandler:
             sessions=sessions,
             message=f"Found {len(sessions)} terminal session(s).",
         )
-
     def workspace_summary(self) -> dict[str, object]:
+        """Return high-level workspace context for UI or agent planning."""
         workspace = self.project_service.load_workspace()
         roots = [self._root_summary(root.name) for root in workspace.roots]
         return self._result(
@@ -210,9 +290,9 @@ class ProjectRuntimeToolsHandler:
             validation_errors=self.project_service.validate(),
             terminal_sessions=self.list_terminal_sessions()["sessions"],
             audited_tool_calls=len(self.state_service.list_tool_calls()),
+            python=self.python_workflows.summary(),
             message="Workspace summary ready.",
         )
-
     def diagnostics(
         self,
         *,
@@ -222,173 +302,90 @@ class ProjectRuntimeToolsHandler:
         pattern: str = "*.py",
         max_files: int = 50,
     ) -> dict[str, object]:
-        files = self._diagnostic_targets(
-            rel_paths,
-            root_name,
-            rel_dir,
-            pattern,
-            max_files,
+        """Collect merged diagnostics for project files."""
+        diagnostic_data = self.diagnostics_support.collect(
+            rel_paths=rel_paths,
+            root_name=root_name,
+            rel_dir=rel_dir,
+            pattern=pattern,
+            max_files=max_files,
         )
-        validator = CodeValidator()
-        validation = validator.validate_files(
-            [item["abs_path"] for item in files if item["rel_path"].endswith(".py")]
-        )
-        diagnostics = self._merged_diagnostics(files, validation)
+        files_checked = diagnostic_data["summary"]["files_checked"]
         return self._result(
             "project_get_diagnostics",
             True,
-            diagnostics=diagnostics,
-            summary=self._diagnostic_summary(files, diagnostics, validator),
-            message=f"Collected diagnostics for {len(files)} file(s).",
-        )
-
-    def _diagnostic_targets(
-        self,
-        rel_paths: list[str] | None,
-        root_name: str | None,
-        rel_dir: str,
-        pattern: str,
-        max_files: int,
-    ) -> list[dict[str, str]]:
-        if rel_paths:
-            root = self._default_root(root_name)
-            return [self._file_descriptor(item, root) for item in rel_paths]
-        files: list[dict[str, str]] = []
-        for root in self._scan_roots(root_name):
-            manager = self.project_service.get_workspace_manager(root)
-            paths = manager.list_files(rel_dir, pattern, recursive=True)
-            for rel_path in sorted(paths):
-                if not manager.get_file_info(rel_path).get("is_file"):
-                    continue
-                files.append(self._file_descriptor(rel_path, root))
-                if len(files) >= max_files:
-                    return files
-        return files
-
-    def _file_descriptor(
-        self,
-        rel_path: str,
-        root_name: str,
-    ) -> dict[str, str]:
-        return {
-            "root_name": root_name,
-            "rel_path": rel_path,
-            "abs_path": self.project_service.resolve_path(rel_path, root_name),
-        }
-
-    def _merged_diagnostics(
-        self,
-        files: list[dict[str, str]],
-        validation_results: list,
-    ) -> list[dict[str, object]]:
-        merged: dict[tuple[object, ...], dict[str, object]] = {}
-        for item in self._validator_diagnostics(validation_results):
-            merged[self._diagnostic_key(item)] = item
-        for item in self._syntax_diagnostics(files):
-            merged[self._diagnostic_key(item)] = item
-        return sorted(
-            merged.values(),
-            key=lambda item: (
-                item["root_name"],
-                item["rel_path"],
-                item["line"],
-                item["column"],
-                item["code"],
+            diagnostics=diagnostic_data["diagnostics"],
+            summary=diagnostic_data["summary"],
+            python=self.python_workflows.summary(
+                root_name=root_name,
+                rel_working_directory=rel_dir,
             ),
+            message=f"Collected diagnostics for {files_checked} file(s).",
         )
-
-    def _validator_diagnostics(
+    def _start_python_workflow(
         self,
-        validation_results: list,
-    ) -> list[dict[str, object]]:
-        diagnostics: list[dict[str, object]] = []
-        for result in validation_results:
-            root_name, rel_path = self._relative_file_info(result.file_path)
-            for issue in result.issues:
-                diagnostics.append(
-                    {
-                        "root_name": root_name,
-                        "rel_path": rel_path,
-                        "line": issue.line,
-                        "column": issue.column,
-                        "severity": issue.severity.value,
-                        "code": issue.code,
-                        "message": issue.message,
-                        "tool": issue.tool,
-                    }
-                )
-        return diagnostics
-
-    def _syntax_diagnostics(
-        self,
-        files: list[dict[str, str]],
-    ) -> list[dict[str, object]]:
-        diagnostics: list[dict[str, object]] = []
-        for item in files:
-            if not item["rel_path"].endswith(".py"):
-                continue
-            try:
-                with open(item["abs_path"], "r", encoding="utf-8") as handle:
-                    ast.parse(handle.read(), filename=item["abs_path"])
-            except SyntaxError as exc:
-                diagnostics.append(
-                    {
-                        "root_name": item["root_name"],
-                        "rel_path": item["rel_path"],
-                        "line": exc.lineno or 1,
-                        "column": exc.offset or 1,
-                        "severity": "error",
-                        "code": "syntax",
-                        "message": exc.msg,
-                        "tool": "python-parser",
-                    }
-                )
-            except OSError:
-                continue
-        return diagnostics
-
-    def _diagnostic_summary(
-        self,
-        files: list[dict[str, str]],
-        diagnostics: list[dict[str, object]],
-        validator: CodeValidator,
+        operation: str,
+        workflow: str,
+        command: str,
+        summary: dict[str, object],
+        **arguments,
     ) -> dict[str, object]:
-        return {
-            "files_checked": len(files),
-            "issue_count": len(diagnostics),
-            "error_count": self._severity_count(diagnostics, "error"),
-            "warning_count": self._severity_count(diagnostics, "warning"),
-            "info_count": self._severity_count(diagnostics, "info"),
-            "flake8_enabled": validator.enable_flake8,
-            "mypy_enabled": validator.enable_mypy,
-        }
-
-    def _severity_count(
-        self,
-        diagnostics: list[dict[str, object]],
-        severity: str,
-    ) -> int:
-        return sum(1 for item in diagnostics if item["severity"] == severity)
-
-    def _relative_file_info(self, abs_path: str) -> tuple[str, str]:
-        info = self.project_service.project_relative_path(abs_path)
-        if info is None:
-            return self._default_root(None), os.path.basename(abs_path)
-        return info
-
-    def _diagnostic_key(
-        self,
-        item: dict[str, object],
-    ) -> tuple[object, ...]:
-        return (
-            item["root_name"],
-            item["rel_path"],
-            item["line"],
-            item["column"],
-            item["code"],
-            item["message"],
+        return self._start_command(
+            operation,
+            {"root_name": summary["root_name"], **arguments},
+            command=command,
+            root_name=str(summary["root_name"]),
+            rel_working_directory=str(
+                arguments.get("rel_working_directory", "")
+            ),
+            extra_fields={
+                "workflow": workflow,
+                "resolved_command": command,
+                "python": summary,
+            },
         )
-
+    def _start_command(
+        self,
+        operation: str,
+        arguments: dict[str, object],
+        *,
+        command: str,
+        root_name: str,
+        rel_working_directory: str,
+        environment: dict[str, str] | None = None,
+        extra_fields: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        try:
+            working_directory = self._working_directory(
+                rel_working_directory,
+                root_name,
+            )
+        except ValueError as exc:
+            return self._error(operation, str(exc))
+        session_id = self._terminal_manager().start_shell_session(
+            command,
+            working_directory=working_directory,
+            environment=environment,
+        )
+        self._register_session(
+            session_id,
+            command,
+            root_name,
+            working_directory,
+        )
+        return self._audited_result(
+            operation,
+            arguments,
+            session_id=session_id,
+            root_name=root_name,
+            working_directory=working_directory,
+            is_running=True,
+            exit_code=None,
+            output="",
+            output_length=0,
+            **(extra_fields or {}),
+            message=f"Started command in {working_directory}.",
+        )
     def _register_session(
         self,
         session_id: str,
@@ -419,7 +416,9 @@ class ProjectRuntimeToolsHandler:
         project_path = str(self.project_service.project_path)
         with self._registry_lock:
             sessions = list(self._terminal_sessions.values())
-        return [item for item in sessions if item["project_path"] == project_path]
+        return [
+            item for item in sessions if item["project_path"] == project_path
+        ]
 
     def _session_snapshot(
         self,
@@ -441,17 +440,17 @@ class ProjectRuntimeToolsHandler:
     def _root_summary(self, root_name: str) -> dict[str, object]:
         manager = self.project_service.get_workspace_manager(root_name)
         files = manager.list_files("", pattern="*", recursive=True)
-        count = 0
+        file_count = 0
         for rel_path in files:
             if rel_path.startswith(".airunner"):
                 continue
             if not manager.get_file_info(rel_path).get("is_file"):
                 continue
-            count += 1
+            file_count += 1
         return {
             "name": root_name,
             "path": self.project_service.resolve_root_path(root_name),
-            "file_count": count,
+            "file_count": file_count,
         }
 
     def _working_directory(
@@ -459,8 +458,10 @@ class ProjectRuntimeToolsHandler:
         rel_working_directory: str,
         root_name: str,
     ) -> str:
-        rel_path = rel_working_directory or "."
-        return self.project_service.resolve_path(rel_path, root_name)
+        return self.project_service.resolve_path(
+            rel_working_directory or ".",
+            root_name,
+        )
 
     def _terminal_manager(self) -> TerminalSessionManager:
         project_path = str(self.project_service.project_path)
@@ -482,11 +483,6 @@ class ProjectRuntimeToolsHandler:
     def _default_root(self, root_name: str | None) -> str:
         workspace = self.project_service.load_workspace()
         return root_name or workspace.primary_root
-
-    def _scan_roots(self, root_name: str | None) -> list[str]:
-        if root_name:
-            return [self._default_root(root_name)]
-        return [root.name for root in self.project_service.list_roots()]
 
     def _record_tool_call(
         self,

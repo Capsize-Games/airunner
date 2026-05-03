@@ -22,8 +22,11 @@ from airunner.components.document_editor.project import AirunnerTrustLevel
 from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.components.llm.core.tool_registry import ToolRegistry
 from airunner.components.llm.tools.project_runtime_tools import (
-    project_run_command,
     project_get_workspace_summary,
+    project_get_python_workflow_summary,
+    project_run_command,
+    project_run_python_lint,
+    project_run_python_tests,
 )
 from airunner.components.llm.tools.project_runtime_tools_handler import (
     ProjectRuntimeToolsHandler,
@@ -172,7 +175,7 @@ def test_project_runtime_handler_reports_diagnostics_and_summary(
     )
     project_service.write_file(
         "src/good.py",
-        "def good() -> int:\n    return 1\n",
+        "def good(x):\n    return x\n",
     )
     handler = ProjectRuntimeToolsHandler(str(project_service.project_path))
 
@@ -182,9 +185,47 @@ def test_project_runtime_handler_reports_diagnostics_and_summary(
     assert diagnostics["success"] is True
     assert diagnostics["summary"]["files_checked"] == 1
     assert any(item["code"] == "syntax" for item in diagnostics["diagnostics"])
+    quality = handler.diagnostics(rel_paths=["src/good.py"])
+    assert quality["summary"]["quality_report_enabled"] is True
+    assert any(
+        item["code"] == "missing_docstring"
+        for item in quality["diagnostics"]
+    )
     assert summary["success"] is True
     assert summary["primary_root"] == "workspace"
     assert any(root["file_count"] >= 2 for root in summary["roots"])
+    assert "tests" in summary["python"]["commands"]
+
+
+def test_project_runtime_handler_runs_python_quality_workflows(tmp_path):
+    """Dedicated Python workflow helpers should start test and lint runs."""
+    project_service = _build_project(tmp_path)
+    project_service.write_file(
+        "tests/test_sample.py",
+        "def test_ok() -> None:\n    assert True\n",
+    )
+    handler = ProjectRuntimeToolsHandler(str(project_service.project_path))
+
+    test_run = handler.run_python_tests(extra_args=["tests/test_sample.py"])
+    lint_run = handler.run_python_lint()
+
+    _wait_for(
+        lambda: not handler.read_terminal_output(test_run["session_id"])[
+            "is_running"
+        ]
+    )
+    _wait_for(
+        lambda: not handler.read_terminal_output(lint_run["session_id"])[
+            "is_running"
+        ]
+    )
+
+    assert test_run["success"] is True
+    assert test_run["workflow"] == "tests"
+    assert "-m pytest" in test_run["resolved_command"]
+    assert lint_run["success"] is True
+    assert lint_run["workflow"] == "lint"
+    assert "code_quality_report.py" in lint_run["resolved_command"]
 
 
 def test_project_runtime_tools_block_commands_without_approval_in_review_first(
@@ -214,11 +255,15 @@ def test_project_runtime_tools_are_registered_and_callable(tmp_path):
     """Project runtime tools should be registered in the tool registry."""
     expected_tools = [
         "project_run_command",
+        "project_run_python_tests",
+        "project_run_python_lint",
+        "project_run_python_format",
         "project_read_terminal_output",
         "project_send_terminal_input",
         "project_stop_command",
         "project_list_terminal_sessions",
         "project_get_diagnostics",
+        "project_get_python_workflow_summary",
         "project_get_workspace_summary",
     ]
 
@@ -229,7 +274,30 @@ def test_project_runtime_tools_are_registered_and_callable(tmp_path):
 
     project_service = _build_project(tmp_path)
     summary = project_get_workspace_summary(str(project_service.project_path))
+    python_summary = project_get_python_workflow_summary(
+        str(project_service.project_path)
+    )
 
     assert summary["success"] is True
     assert summary["project_name"] == "Runtime Project"
     assert summary["policy"]["autonomy_mode"] == "full-autonomy"
+    assert python_summary["success"] is True
+    assert "tests" in python_summary["python"]["commands"]
+
+
+def test_project_runtime_tools_block_python_workflows_without_approval(
+    tmp_path,
+):
+    """Review-first projects should gate Python workflow commands."""
+    project_service = AirunnerProjectService(str(tmp_path / "runtime-project"))
+    project_service.initialize(project_name="Runtime Project")
+
+    blocked = project_run_python_lint(str(project_service.project_path))
+    allowed = project_run_python_tests(
+        str(project_service.project_path),
+        approved=True,
+    )
+
+    assert blocked["success"] is False
+    assert blocked["error"] == "Command approval required for this project."
+    assert allowed["success"] is True

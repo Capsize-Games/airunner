@@ -24,6 +24,9 @@ from airunner.components.document_editor.project.airunner_python_environment_sel
 from airunner.components.document_editor.project.airunner_python_project_scaffolder import (
     AirunnerPythonProjectScaffolder,
 )
+from airunner.components.document_editor.project.airunner_python_workflow_service import (
+    AirunnerPythonWorkflowService,
+)
 from airunner.components.document_editor.project.airunner_project_state_service import (
     AirunnerProjectStateService,
 )
@@ -52,6 +55,7 @@ __all__ = [
     "AirunnerProjectRoot",
     "AirunnerPythonEnvironmentSelection",
     "AirunnerPythonProjectScaffolder",
+    "AirunnerPythonWorkflowService",
     "AirunnerProjectService",
     "AirunnerProjectStateService",
     "AirunnerProjectSettings",

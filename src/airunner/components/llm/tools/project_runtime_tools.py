@@ -145,6 +145,121 @@ def project_list_terminal_sessions(
 
 
 @tool(
+    name="project_run_python_tests",
+    category=ToolCategory.PROJECT,
+    description=(
+        "Run pytest inside an initialized .airunner project using the "
+        "project's selected Python environment metadata."
+    ),
+    keywords=["project", "python", "tests", "pytest", "validate"],
+)
+def project_run_python_tests(
+    project_path: str,
+    root_name: str | None = None,
+    rel_working_directory: str = "",
+    extra_args: list[str] | None = None,
+    approved: bool = False,
+    run_id: str | None = None,
+) -> dict:
+    """Run Python tests inside a project workspace."""
+    blocked = _policy_gate(project_path, run_id).require_command_approval(
+        "project_run_python_tests",
+        approved=approved,
+    )
+    if blocked:
+        return blocked
+    return _handler(project_path, run_id).run_python_tests(
+        root_name=root_name,
+        rel_working_directory=rel_working_directory,
+        extra_args=extra_args,
+    )
+
+
+@tool(
+    name="project_run_python_lint",
+    category=ToolCategory.PROJECT,
+    description=(
+        "Run AIRunner's Python code-quality lint workflow inside an "
+        "initialized .airunner project using the selected environment."
+    ),
+    keywords=["project", "python", "lint", "quality", "diagnostics"],
+)
+def project_run_python_lint(
+    project_path: str,
+    root_name: str | None = None,
+    rel_working_directory: str = "",
+    approved: bool = False,
+    run_id: str | None = None,
+) -> dict:
+    """Run Python linting inside a project workspace."""
+    blocked = _policy_gate(project_path, run_id).require_command_approval(
+        "project_run_python_lint",
+        approved=approved,
+    )
+    if blocked:
+        return blocked
+    return _handler(project_path, run_id).run_python_lint(
+        root_name=root_name,
+        rel_working_directory=rel_working_directory,
+    )
+
+
+@tool(
+    name="project_run_python_format",
+    category=ToolCategory.PROJECT,
+    description=(
+        "Run Python formatting inside an initialized .airunner project "
+        "using the selected environment metadata."
+    ),
+    keywords=["project", "python", "format", "ruff", "style"],
+)
+def project_run_python_format(
+    project_path: str,
+    root_name: str | None = None,
+    rel_working_directory: str = "",
+    paths: list[str] | None = None,
+    check_only: bool = False,
+    approved: bool = False,
+    run_id: str | None = None,
+) -> dict:
+    """Run Python formatting inside a project workspace."""
+    blocked = _policy_gate(project_path, run_id).require_command_approval(
+        "project_run_python_format",
+        approved=approved,
+    )
+    if blocked:
+        return blocked
+    return _handler(project_path, run_id).run_python_format(
+        root_name=root_name,
+        rel_working_directory=rel_working_directory,
+        paths=paths,
+        check_only=check_only,
+    )
+
+
+@tool(
+    name="project_get_python_workflow_summary",
+    category=ToolCategory.PROJECT,
+    description=(
+        "Return the resolved Python test, lint, format, bootstrap, and "
+        "diagnostics commands for an initialized .airunner project."
+    ),
+    keywords=["project", "python", "workflow", "summary", "quality"],
+)
+def project_get_python_workflow_summary(
+    project_path: str,
+    root_name: str | None = None,
+    rel_working_directory: str = "",
+    run_id: str | None = None,
+) -> dict:
+    """Return Python workflow command metadata for a project."""
+    return _handler(project_path, run_id).python_workflow_summary(
+        root_name=root_name,
+        rel_working_directory=rel_working_directory,
+    )
+
+
+@tool(
     name="project_get_diagnostics",
     category=ToolCategory.PROJECT,
     description=(
