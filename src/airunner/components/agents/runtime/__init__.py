@@ -26,9 +26,21 @@ from airunner.components.agents.runtime.agent_tool_call_record import (
     AgentToolCallRecord,
 )
 
+
+def __getattr__(name: str):
+    """Lazily expose runtime helpers that depend on project services."""
+    if name == "AgentBackgroundRunManager":
+        from airunner.components.agents.runtime.agent_background_run_manager import (
+            AgentBackgroundRunManager,
+        )
+
+        return AgentBackgroundRunManager
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 __all__ = [
     "AgentMessageChannel",
     "AgentMessageRecord",
+    "AgentBackgroundRunManager",
     "AgentRole",
     "AgentRunRecord",
     "AgentRunStatus",

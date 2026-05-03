@@ -21,6 +21,7 @@ from airunner.components.document_editor.workspace_shell_support import (
 from airunner.components.document_editor.terminal import (
     TerminalSessionManager,
 )
+from airunner.components.agents.runtime import AgentBackgroundRunManager
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from PySide6.QtWidgets import (
@@ -45,6 +46,7 @@ class DocumentEditorContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self._active_terminal_session_id = None
+        self._agent_run_manager = None
         self._terminal_session_manager = TerminalSessionManager()
         self._terminal_temp_files = {}
         self._workspace_panel_tabs = {}
@@ -219,6 +221,92 @@ class DocumentEditorContainerWidget(BaseWidget):
     def append_agent_activity(self, text: str) -> None:
         """Append an entry to the agent activity panel."""
         self._append_workspace_panel_text("agent-activity", text)
+
+    def bind_agent_run_manager(
+        self,
+        manager: AgentBackgroundRunManager | None,
+    ) -> None:
+        """Bind a background agent runner to the coding shell panels."""
+        current = getattr(self, "_agent_run_manager", None)
+        if current is manager:
+            return
+        if current is not None:
+            self._disconnect_agent_run_manager(current)
+        self._agent_run_manager = manager
+        if manager is None:
+            return
+        manager.runProgressUpdated.connect(self._on_agent_run_progress)
+        manager.runStatusUpdated.connect(self._on_agent_run_status)
+        manager.runMessageLogged.connect(self._on_agent_run_message)
+        manager.runFinished.connect(self._on_agent_run_finished)
+
+    def _disconnect_agent_run_manager(
+        self,
+        manager: AgentBackgroundRunManager,
+    ) -> None:
+        """Disconnect the current background runner from shell callbacks."""
+        try:
+            manager.runProgressUpdated.disconnect(self._on_agent_run_progress)
+        except Exception:
+            pass
+        try:
+            manager.runStatusUpdated.disconnect(self._on_agent_run_status)
+        except Exception:
+            pass
+        try:
+            manager.runMessageLogged.disconnect(self._on_agent_run_message)
+        except Exception:
+            pass
+        try:
+            manager.runFinished.disconnect(self._on_agent_run_finished)
+        except Exception:
+            pass
+
+    def _on_agent_run_progress(self, run_id: str, value: object) -> None:
+        """Append a progress update from the background run manager."""
+        self.append_agent_activity(
+            agent_activity_entry("Run progress", f"{run_id}: {value}")
+        )
+
+    def _on_agent_run_status(self, run_id: str, status: str) -> None:
+        """Append a status update from the background run manager."""
+        self.append_agent_activity(
+            agent_activity_entry("Run status", f"{run_id}: {status}")
+        )
+
+    def _on_agent_run_message(
+        self,
+        run_id: str,
+        channel: str,
+        message: str,
+    ) -> None:
+        """Append a channelled run message from the background manager."""
+        self.append_agent_activity(
+            agent_activity_entry(
+                f"Run {channel}",
+                f"{run_id}: {message}",
+            )
+        )
+
+    def _on_agent_run_finished(
+        self,
+        run_id: str,
+        payload: Dict,
+    ) -> None:
+        """Handle run completion and surface failures in the shell."""
+        result = payload.get("result", {}) if isinstance(payload, dict) else {}
+        status = result.get("status") or (
+            "failed" if payload.get("error") else "completed"
+        )
+        self.append_agent_activity(
+            agent_activity_entry("Run finished", f"{run_id}: {status}")
+        )
+        if payload.get("error"):
+            self.append_problem(
+                problem_entry(
+                    f"Agent run {run_id} failed: {payload['error']}"
+                )
+            )
 
     def _set_workspace_panel_text(self, panel_key: str, text: str) -> None:
         """Replace the contents of a text-based workspace panel."""

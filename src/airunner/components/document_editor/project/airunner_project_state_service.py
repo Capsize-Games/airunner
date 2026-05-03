@@ -3,12 +3,22 @@
 import json
 import os
 
-from airunner.components.agents.runtime import AgentMessageRecord
-from airunner.components.agents.runtime import AgentRunRecord
-from airunner.components.agents.runtime import AgentRunStatus
-from airunner.components.agents.runtime import AgentSessionRecord
-from airunner.components.agents.runtime import AgentTaskRecord
-from airunner.components.agents.runtime import AgentToolCallRecord
+from airunner.components.agents.runtime.agent_message_record import (
+    AgentMessageRecord,
+)
+from airunner.components.agents.runtime.agent_run_record import AgentRunRecord
+from airunner.components.agents.runtime.agent_run_status import (
+    AgentRunStatus,
+)
+from airunner.components.agents.runtime.agent_session_record import (
+    AgentSessionRecord,
+)
+from airunner.components.agents.runtime.agent_task_record import (
+    AgentTaskRecord,
+)
+from airunner.components.agents.runtime.agent_tool_call_record import (
+    AgentToolCallRecord,
+)
 from airunner.components.document_editor.project.airunner_project_paths import (
     PROJECT_DIR_NAME,
 )
