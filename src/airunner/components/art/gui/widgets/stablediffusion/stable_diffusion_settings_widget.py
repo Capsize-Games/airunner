@@ -130,8 +130,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if self._deferred_startup_loaded:
-            self.update_form()
+        self._finish_deferred_startup()
+        self.update_form()
 
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Finish heavy startup work after the main window is ready."""

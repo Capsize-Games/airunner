@@ -226,6 +226,11 @@ class LayerImageItem(DraggablePixmap):
                     )
             except Exception:
                 pass
+
+            try:
+                self.api.art.canvas.update_grid_info({})
+            except Exception:
+                pass
         else:
             # Cancel history transaction if no change
             try:

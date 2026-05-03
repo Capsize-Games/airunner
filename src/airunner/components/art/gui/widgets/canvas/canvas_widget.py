@@ -86,11 +86,18 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_UPDATE_GRID_INFO: self.update_grid_info,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.update_grid_info,
+            SignalCode.LAYER_SELECTION_CHANGED: (
+                self.on_layer_selection_changed_signal
+            ),
+            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: (
+                self.on_active_grid_area_updated_signal
+            ),
             SignalCode.SAVE_STATE: self.save_state,
         }
         self._initialized: bool = False
         self._splitters = ["splitter"]
         self._default_splitter_settings_applied = False
+        self._centered_canvas_restore_scheduled = False
         super().__init__(*args, **kwargs)
 
         # Configure default splitter sizes for splitter
@@ -200,10 +207,78 @@ class CanvasWidget(BaseWidget):
         """
         self.offset_x = data.get("offset_x", self.offset_x)
         self.offset_y = data.get("offset_y", self.offset_y)
+        self._update_status_labels()
+
+    @staticmethod
+    def _to_bool(value: Any) -> bool:
+        """Coerce persisted settings values into booleans."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+        return bool(value)
+
+    def _should_restore_centered_canvas(self) -> bool:
+        """Return whether startup should restore the centered viewport."""
+        centered_state = self.settings.value("canvas_is_centered", None)
+        if centered_state is not None:
+            return self._to_bool(centered_state)
+
+        raw_x = self.settings.value("canvas_offset_x", 0.0)
+        raw_y = self.settings.value("canvas_offset_y", 0.0)
+        try:
+            offset_x = float(raw_x) if raw_x is not None else 0.0
+            offset_y = float(raw_y) if raw_y is not None else 0.0
+        except (TypeError, ValueError):
+            return False
+
+        return abs(offset_x) < 1e-6 and abs(offset_y) < 1e-6
+
+    def _update_status_labels(self) -> None:
+        """Refresh the bottom status labels for view and active item."""
         zoom_level = round(self.grid_settings.zoom_level * 100, 2)
-        self.ui.grid_info.setText(
-            f"{self.offset_x}, {self.offset_y}, {zoom_level}%"
-        )
+        grid_info = getattr(self.ui, "grid_info", None)
+        if grid_info is not None:
+            grid_info.setText(
+                f"{self.offset_x}, {self.offset_y}, {zoom_level}%"
+            )
+
+        active_item_info = getattr(self.ui, "active_item_info", None)
+        if active_item_info is not None:
+            active_item_info.setText(self._get_active_item_status_text())
+
+    def _get_active_item_status_text(self) -> str:
+        """Return the status text for the active movable canvas item."""
+        tool = self.current_tool
+        if tool is CanvasToolName.ACTIVE_GRID_AREA:
+            return self._format_active_position(
+                "Grid",
+                self.active_grid_settings.pos_x,
+                self.active_grid_settings.pos_y,
+            )
+        if tool is CanvasToolName.MOVE:
+            return self._format_active_position(
+                "Layer",
+                self.drawing_pad_settings.x_pos,
+                self.drawing_pad_settings.y_pos,
+            )
+        return ""
+
+    @staticmethod
+    def _format_active_position(
+        label: str,
+        pos_x: Any,
+        pos_y: Any,
+    ) -> str:
+        """Return a compact active-item coordinate string."""
+        x_pos = int(pos_x) if pos_x is not None else 0
+        y_pos = int(pos_y) if pos_y is not None else 0
+        return f"{label}: {x_pos}, {y_pos}"
 
     @property
     def current_tool(self) -> Optional[CanvasToolName]:
@@ -272,6 +347,7 @@ class CanvasWidget(BaseWidget):
         """Handle splitter size changes by updating button states."""
         self.set_prompt_editor_button_checked()
         self.set_art_tools_button_checked()
+        self._schedule_centered_canvas_restore()
 
     def set_prompt_editor_button_checked(self) -> None:
         """Update prompt editor button checked state based on splitter size."""
@@ -485,8 +561,21 @@ class CanvasWidget(BaseWidget):
             self.api.art.canvas.tool_changed(tool, active)
             self._update_action_buttons(tool, active)
             self._update_cursor()
+            self._update_status_labels()
         finally:
             self._processing_tool_change = False
+
+    def on_layer_selection_changed_signal(self, message: Dict) -> None:
+        """Track layer selection updates and refresh the footer status."""
+        self._on_layer_selection_changed(message)
+        self._update_status_labels()
+
+    def on_active_grid_area_updated_signal(
+        self,
+        _message: Optional[Dict] = None,
+    ) -> None:
+        """Refresh active-item coordinates after grid-position changes."""
+        self._update_status_labels()
 
     def save_state(self) -> None:
         """Save the current widget state including splitter positions."""
@@ -564,6 +653,7 @@ class CanvasWidget(BaseWidget):
 
         self.set_prompt_editor_button_checked()
         self.set_art_tools_button_checked()
+        self._update_status_labels()
 
         if not self._initialized:
             self._initialized = True
@@ -592,6 +682,7 @@ class CanvasWidget(BaseWidget):
             self.load_splitter_settings(
                 default_maximize_config=default_canvas_splitter_config,
             )
+            self._schedule_centered_canvas_restore()
         else:
             # This case should ideally not happen if __init__ completed successfully.
             # Consider logging if a logger is available and configured for this class.
@@ -599,6 +690,43 @@ class CanvasWidget(BaseWidget):
                 "Error in CanvasWidget: UI not available when applying "
                 "default splitter settings."
             )
+
+    def _schedule_centered_canvas_restore(self) -> None:
+        """Defer centered-canvas sync until splitter layout changes settle."""
+        view = getattr(getattr(self, "ui", None), "canvas_container", None)
+        if view is None:
+            return
+        if not self._should_restore_centered_canvas():
+            return
+        if not (
+            getattr(view, "_is_restoring_state", False)
+            or getattr(view, "_needs_recenter_on_show", False)
+        ):
+            return
+        if self._centered_canvas_restore_scheduled:
+            return
+
+        self._centered_canvas_restore_scheduled = True
+        QTimer.singleShot(0, self._restore_centered_canvas_after_splitter)
+
+    def _restore_centered_canvas_after_splitter(self) -> None:
+        """Keep centered startup previews aligned with the final splitter size."""
+        self._centered_canvas_restore_scheduled = False
+        view = getattr(getattr(self, "ui", None), "canvas_container", None)
+        if view is None:
+            return
+        if not self._should_restore_centered_canvas():
+            return
+
+        if getattr(view, "_is_restoring_state", False):
+            if getattr(view, "_needs_recenter_on_show", False):
+                view._preview_centered_layout()
+                self.update_grid_info({})
+            return
+
+        if getattr(view, "_initialized", False):
+            view.on_recenter_grid_signal()
+            self.update_grid_info({})
 
     def _schedule_default_splitter_settings(self) -> None:
         """Apply splitter settings after the show event unwinds."""

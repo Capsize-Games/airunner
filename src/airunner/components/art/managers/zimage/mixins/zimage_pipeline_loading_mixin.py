@@ -34,6 +34,11 @@ from safetensors import safe_open
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.enums import SignalCode
 from airunner.components.art.utils.model_file_checker import ModelFileChecker
+from airunner.components.art.managers.zimage.zimage_bundle_requirements import (
+    detect_fp8_checkpoint,
+    get_active_zimage_load_mode,
+    get_missing_files_for_mode,
+)
 
 
 def _clear_gpu_memory() -> None:
@@ -52,6 +57,40 @@ class ZImagePipelineLoadingMixin:
     requirements for loading from single-file checkpoints, particularly
     the need to load the text encoder separately.
     """
+
+    def _check_and_trigger_download(self) -> tuple[bool, dict]:
+        """Check Z-Image files against the active runtime mode."""
+        version = getattr(self, "version", None)
+        pipeline_action = getattr(self, "pipeline_action", "txt2img")
+        if version != "Z-Image Turbo":
+            parent = getattr(super(), "_check_and_trigger_download", None)
+            return parent() if callable(parent) else (False, {})
+        model_path = Path(self.model_path)
+        load_mode = get_active_zimage_load_mode(model_path)
+        missing_files = get_missing_files_for_mode(model_path, load_mode)
+        if not missing_files:
+            return False, {}
+        repo_id = ModelFileChecker.get_repo_id_for_version(version, pipeline_action)
+        if repo_id is None:
+            return False, {"error": "Unable to resolve Z-Image download source"}
+        download_info = self._build_zimage_download_info(repo_id, missing_files)
+        self.emit_signal(SignalCode.ART_MODEL_DOWNLOAD_REQUIRED, download_info)
+        return True, download_info
+
+    def _build_zimage_download_info(
+        self,
+        repo_id: str,
+        missing_files: list[str],
+    ) -> dict:
+        """Build the Z-Image download payload for WorkerManager."""
+        return {
+            "repo_id": repo_id,
+            "model_path": self.model_path,
+            "missing_files": missing_files,
+            "version": self.version,
+            "pipeline_action": getattr(self, "pipeline_action", "txt2img"),
+            "image_request": getattr(self, "image_request", None),
+        }
 
     def _set_pipe(self, config_path: str, data: Dict):
         """Load Z-Image pipeline from model file.
@@ -178,33 +217,7 @@ class ZImagePipelineLoadingMixin:
         Returns:
             True if FP8 tensors are detected, otherwise False.
         """
-        name_hint = "fp8" in model_path.name.lower() or any(
-            marker in model_path.name.lower() for marker in ("e4m3", "e5m2")
-        )
-
-        if not model_path.is_file() or model_path.suffix != ".safetensors":
-            return name_hint
-
-        try:
-            with safe_open(model_path, framework="pt") as f:
-                has_scale = False
-                for i, key in enumerate(f.keys()):
-                    if "scale_weight" in key:
-                        has_scale = True
-                    tensor = f.get_tensor(key)
-                    if tensor.dtype in (
-                        torch.float8_e4m3fn,
-                        torch.float8_e5m2,
-                        getattr(torch, "float8_e4m3fnuz", None),
-                        getattr(torch, "float8_e5m2fnuz", None),
-                    ):
-                        return True
-                    if i >= 32:  # sample a small subset to avoid CPU blowups
-                        break
-                return name_hint or has_scale
-        except Exception as exc:  # pragma: no cover - defensive
-            self.logger.debug(f"FP8 detection failed for {model_path}: {exc}")
-            return name_hint
+        return detect_fp8_checkpoint(model_path)
 
     def _ensure_zimage_files_available(self) -> None:
         """Ensure Z-Image model files exist locally, otherwise trigger download.
@@ -212,26 +225,28 @@ class ZImagePipelineLoadingMixin:
         Checks for missing companion files (text_encoder, tokenizer, vae, scheduler)
         and triggers a download if any are missing or incomplete.
         """
-        # Get the model directory (parent of single file, or the dir itself)
         model_path = Path(self.model_path)
-        if model_path.is_file():
-            model_dir = model_path.parent
-        else:
-            model_dir = model_path
-        
-        should_download, download_info = ModelFileChecker.should_trigger_download(
-            model_path=str(model_dir),
-            model_type="art",
-            version="Z-Image Turbo",
-            pipeline_action="txt2img",
-        )
-        
-        if not should_download:
-            self.logger.info("All Z-Image model files present")
+        load_mode = get_active_zimage_load_mode(model_path)
+        if load_mode != "pretrained_directory" and not model_path.exists():
+            raise RuntimeError(f"Selected Z-Image checkpoint missing: {model_path}")
+
+        missing_files = get_missing_files_for_mode(model_path, load_mode)
+        if not missing_files:
+            self.logger.info(
+                "All Z-Image model files present for %s",
+                load_mode,
+            )
             return
-        
-        repo_id = download_info.get("repo_id")
-        missing_files = download_info.get("missing_files", [])
+
+        model_dir = model_path.parent if model_path.is_file() else model_path
+        repo_id = ModelFileChecker.get_repo_id_for_version(
+            "Z-Image Turbo",
+            "txt2img",
+        )
+        if repo_id is None:
+            raise RuntimeError(
+                "Could not resolve a download source for Z-Image Turbo"
+            )
         
         self.logger.info(
             f"Missing {len(missing_files)} Z-Image model files, triggering download from {repo_id}"

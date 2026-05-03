@@ -6,6 +6,8 @@ including layer visibility, deletion, reordering, and transaction management.
 
 from typing import List, Dict, Any, Iterable, Optional
 
+from PySide6.QtCore import QPointF
+
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import (
@@ -23,6 +25,10 @@ from airunner.components.model_management import (
 )
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
     LayerImageItem,
+)
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
 )
 from airunner.utils.image import pil_to_qimage, convert_binary_to_image
 
@@ -329,6 +335,45 @@ class CanvasLayerMixin:
         item.setZValue(data["order"])
         self.addItem(item)
         self._layer_items[layer_id] = item
+        self._position_new_layer_item(item, layer_id)
+
+    def _position_new_layer_item(self, item, layer_id: int) -> None:
+        """Seed a new layer item from its saved absolute position."""
+        absolute_pos = self._get_saved_layer_position(layer_id)
+
+        if not hasattr(self, "original_item_positions"):
+            self.original_item_positions = {}
+
+        self.original_item_positions[item] = QPointF(absolute_pos)
+        item.setPos(self._absolute_to_display_position(absolute_pos))
+
+    def _get_saved_layer_position(self, layer_id: int) -> QPointF:
+        """Return the saved absolute position for one layer."""
+        drawing_pad = DrawingPadSettings.objects.filter_by_first(
+            layer_id=layer_id
+        )
+        if drawing_pad is None:
+            return QPointF(0, 0)
+
+        pos_x = drawing_pad.x_pos if drawing_pad.x_pos is not None else 0
+        pos_y = drawing_pad.y_pos if drawing_pad.y_pos is not None else 0
+        return QPointF(float(pos_x), float(pos_y))
+
+    def _absolute_to_display_position(self, absolute_pos: QPointF) -> QPointF:
+        """Convert one absolute layer position into the current display position."""
+        views = self.views() if hasattr(self, "views") else []
+        if not views:
+            return QPointF(absolute_pos)
+
+        view = views[0]
+        manager = CanvasPositionManager()
+        view_state = ViewState(
+            canvas_offset=QPointF(getattr(view, "canvas_offset", QPointF(0, 0))),
+            grid_compensation=QPointF(
+                getattr(view, "_grid_compensation_offset", QPointF(0, 0))
+            ),
+        )
+        return manager.absolute_to_display(absolute_pos, view_state)
 
     def on_layer_operation_begin(self, data: Dict[str, Any]) -> None:
         """Begin layer operation transaction.

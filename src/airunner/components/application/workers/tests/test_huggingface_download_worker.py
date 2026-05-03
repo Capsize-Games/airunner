@@ -2,8 +2,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import torch
+from safetensors.torch import save_file
+
 from airunner.components.application.workers.huggingface_download_worker import (
     HuggingFaceDownloadWorker,
+)
+from airunner.components.data.bootstrap.unified_model_files import (
+    get_required_files_for_model,
 )
 
 
@@ -79,3 +85,61 @@ class TestHuggingFaceDownloadWorker:
             assert final_path.exists()
             assert final_path.read_bytes() == payload
             assert "model_index.json" in worker._completed_files
+
+    def test_prune_zimage_bootstrap_files_for_native_fp8_bundle(self, tmp_path):
+        worker = HuggingFaceDownloadWorker()
+        bundle_dir = _create_zimage_fp8_bundle(tmp_path)
+        bootstrap = get_required_files_for_model(
+            "art",
+            "Z-Image Turbo",
+            "Z-Image Turbo",
+            "txt2img",
+        )
+
+        pruned = worker._prune_zimage_bootstrap_files(bundle_dir, bootstrap)
+
+        assert "text_encoder/config.json" in pruned
+        assert "vae/diffusion_pytorch_model.safetensors" in pruned
+        assert "scheduler/scheduler_config.json" not in pruned
+        assert all(not name.startswith("transformer/") for name in pruned)
+
+    def test_prune_zimage_missing_files_for_native_fp8_bundle(self, tmp_path):
+        worker = HuggingFaceDownloadWorker()
+        bundle_dir = _create_zimage_fp8_bundle(tmp_path)
+        missing_files = [
+            "transformer/config.json",
+            "scheduler/scheduler_config.json",
+            "text_encoder/config.json",
+            "vae/diffusion_pytorch_model.safetensors",
+        ]
+
+        pruned = worker._prune_zimage_missing_files(bundle_dir, missing_files)
+
+        assert pruned == [
+            "text_encoder/config.json",
+            "vae/diffusion_pytorch_model.safetensors",
+        ]
+
+
+def _create_zimage_fp8_bundle(tmp_path: Path) -> Path:
+    bundle_dir = tmp_path / "txt2img"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(bundle_dir / "text_encoder" / "model.safetensors.index.json", {
+        "weight_map": {
+            "encoder.layers.0.weight": "model-00001-of-00003.safetensors",
+            "encoder.layers.1.weight": "model-00002-of-00003.safetensors",
+            "encoder.layers.2.weight": "model-00003-of-00003.safetensors",
+        }
+    })
+    _save_tensor(bundle_dir / "lean_fp8_checkpoint.safetensors")
+    return bundle_dir
+
+
+def _save_tensor(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    save_file({"weight": torch.zeros(1)}, str(path))
+
+
+def _write_json(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(__import__("json").dumps(data))

@@ -91,6 +91,9 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
         # API
         self.api = Mock()
         self.api.art.canvas.update_grid_info = Mock()
+        self.get_grid_info_payload = Mock(
+            return_value={"offset_x": 11.0, "offset_y": 22.0}
+        )
 
         # Methods to mock
         self.draw_grid = Mock()
@@ -370,10 +373,7 @@ class TestEventHandlerMixin:
         mixin.setTransform.assert_called_once()
         mixin.do_draw.assert_called_once()
         mixin.api.art.canvas.update_grid_info.assert_called_once_with(
-            {
-                "offset_x": mixin.canvas_offset_x,
-                "offset_y": mixin.canvas_offset_y,
-            }
+            {"offset_x": 11.0, "offset_y": 22.0}
         )
         event.accept.assert_called_once()
 

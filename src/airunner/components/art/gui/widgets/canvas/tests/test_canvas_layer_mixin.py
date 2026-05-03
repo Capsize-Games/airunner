@@ -7,6 +7,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from PIL import Image
 import io
+from PySide6.QtCore import QPointF
 
 from airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin import (
     CanvasLayerMixin,
@@ -27,7 +28,9 @@ class TestCanvasLayerMixin:
         mixin = CanvasLayerMixin()
         mixin._layer_items = {}
         mixin._pending_layer_images = {}
+        mixin.original_item_positions = {}
         mixin.addItem = MagicMock()
+        mixin.views = MagicMock(return_value=[])
         return mixin
 
     @pytest.fixture
@@ -58,6 +61,8 @@ class TestCanvasLayerMixin:
         # Mock DrawingPadSettings.objects.filter_by_first
         mock_drawing_pad = MagicMock()
         mock_drawing_pad.image = sample_image
+        mock_drawing_pad.x_pos = 0
+        mock_drawing_pad.y_pos = 0
 
         # Create mock Qt objects before the test
         mock_qimage = MagicMock()
@@ -95,7 +100,56 @@ class TestCanvasLayerMixin:
                             # Verify
                             mock_convert.assert_called_once_with(sample_image)
                             layer_mixin.addItem.assert_called_once()
+                            mock_item.setPos.assert_called_once_with(
+                                QPointF(0.0, 0.0)
+                            )
                             assert layer_id in layer_mixin._layer_items
+
+    def test_create_new_layer_item_uses_saved_absolute_position_with_view_transform(
+        self, layer_mixin, sample_layer_data, sample_image
+    ):
+        """New layer items should be positioned from saved absolute coords."""
+        layer_id = 1
+        mock_layer = MagicMock()
+        mock_layer.id = layer_id
+        mock_qimage = MagicMock()
+        mock_qimage.isNull.return_value = False
+        mock_item = MagicMock()
+        mock_drawing_pad = MagicMock()
+        mock_drawing_pad.image = sample_image
+        mock_drawing_pad.x_pos = 144
+        mock_drawing_pad.y_pos = 44
+        mock_view = MagicMock()
+        mock_view.canvas_offset = QPointF(128, 64)
+        mock_view._grid_compensation_offset = QPointF(16, 8)
+        layer_mixin.views = MagicMock(return_value=[mock_view])
+
+        with patch.object(CanvasLayer.objects, "get", return_value=mock_layer):
+            with patch.object(
+                DrawingPadSettings.objects,
+                "filter_by_first",
+                return_value=mock_drawing_pad,
+            ):
+                with patch(
+                    "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.convert_binary_to_image",
+                    return_value=Image.new("RGB", (100, 100), color="red"),
+                ):
+                    with patch(
+                        "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.pil_to_qimage",
+                        return_value=mock_qimage,
+                    ):
+                        with patch(
+                            "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.LayerImageItem",
+                            return_value=mock_item,
+                        ):
+                            layer_mixin._create_new_layer_item(
+                                layer_id, sample_layer_data
+                            )
+
+        mock_item.setPos.assert_called_once_with(QPointF(32.0, -12.0))
+        assert layer_mixin.original_item_positions[mock_item] == QPointF(
+            144.0, 44.0
+        )
 
     def test_create_new_layer_item_missing_layer(
         self, layer_mixin, sample_layer_data
@@ -288,6 +342,9 @@ class TestCanvasLayerMixin:
         mock_qimage = MagicMock()
         mock_qimage.isNull.return_value = False
         mock_item = MagicMock()
+        mock_drawing_pad = MagicMock()
+        mock_drawing_pad.x_pos = 0
+        mock_drawing_pad.y_pos = 0
 
         layer_mixin._pending_layer_images[layer_id] = pending_image
         layer_mixin._convert_and_cache_qimage = MagicMock(
@@ -298,6 +355,7 @@ class TestCanvasLayerMixin:
             with patch.object(
                 DrawingPadSettings.objects,
                 "filter_by_first",
+                return_value=mock_drawing_pad,
             ) as mock_filter:
                 with patch(
                     "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.LayerImageItem",
@@ -307,10 +365,11 @@ class TestCanvasLayerMixin:
                         layer_id, sample_layer_data
                     )
 
-        mock_filter.assert_not_called()
+        mock_filter.assert_called_once_with(layer_id=layer_id)
         layer_mixin._convert_and_cache_qimage.assert_called_once_with(
             pending_image
         )
+        mock_item.setPos.assert_called_once_with(QPointF(0.0, 0.0))
         assert layer_id in layer_mixin._layer_items
         assert layer_id not in layer_mixin._pending_layer_images
 

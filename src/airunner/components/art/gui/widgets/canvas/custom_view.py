@@ -176,6 +176,7 @@ class CustomGraphicsView(
         # Save center_pos (grid origin)
         self.settings.setValue("center_pos_x", self.center_pos.x())
         self.settings.setValue("center_pos_y", self.center_pos.y())
+        self.settings.setValue("canvas_is_centered", self.is_centered_view())
         self.logger.debug(
             f"[SAVE] Center pos saved: x={self.center_pos.x()}, y={self.center_pos.y()}"
         )
@@ -274,6 +275,68 @@ class CustomGraphicsView(
         target_x = viewport_center_x - item_center_x
         target_y = viewport_center_y - item_center_y
         return target_x, target_y
+
+    def get_recenter_anchor(self) -> QPointF:
+        """Return the stable canvas anchor used for viewport recentering."""
+        if self.center_pos != QPointF(0, 0):
+            return QPointF(self.center_pos)
+
+        pos_x = getattr(self.active_grid_settings, "pos_x", None)
+        pos_y = getattr(self.active_grid_settings, "pos_y", None)
+        if pos_x is not None and pos_y is not None:
+            anchor = QPointF(float(pos_x), float(pos_y))
+        else:
+            target_x, target_y = self.get_recentered_position(
+                self.application_settings.working_width,
+                self.application_settings.working_height,
+            )
+            anchor = QPointF(target_x, target_y)
+
+        self.center_pos = QPointF(anchor)
+        return anchor
+
+    def get_centered_total_offset(self) -> QPointF:
+        """Return the total offset that corresponds to a centered viewport."""
+        anchor = self.get_recenter_anchor()
+        target_x, target_y = self.get_recentered_position(
+            self.application_settings.working_width,
+            self.application_settings.working_height,
+        )
+        return QPointF(
+            anchor.x() - target_x,
+            anchor.y() - target_y,
+        )
+
+    def get_grid_info_payload(self) -> Dict[str, float]:
+        """Return viewport position data normalized to the centered view."""
+        centered_offset = self.get_centered_total_offset()
+        current_total_offset = QPointF(
+            self.canvas_offset.x() - self._grid_compensation_offset.x(),
+            self.canvas_offset.y() - self._grid_compensation_offset.y(),
+        )
+        return {
+            "offset_x": self._normalize_grid_info_value(
+                current_total_offset.x() - centered_offset.x()
+            ),
+            "offset_y": self._normalize_grid_info_value(
+                current_total_offset.y() - centered_offset.y()
+            ),
+        }
+
+    def is_centered_view(self) -> bool:
+        """Return whether the current viewport matches the centered view."""
+        payload = self.get_grid_info_payload()
+        return (
+            abs(payload["offset_x"]) < 1e-6
+            and abs(payload["offset_y"]) < 1e-6
+        )
+
+    @staticmethod
+    def _normalize_grid_info_value(value: float) -> float:
+        """Clamp floating-point noise so the HUD shows stable zeros."""
+        if abs(value) < 1e-6:
+            return 0.0
+        return value
 
     def on_mask_generator_worker_response_signal(self, message: dict):
         mask = message["mask"]

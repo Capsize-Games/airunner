@@ -419,6 +419,19 @@ class Ui_canvas(object):
 
         self.horizontalLayout_4.addWidget(self.grid_info)
 
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_2)
+
+        self.active_item_info = QLabel(self.layoutWidget)
+        self.active_item_info.setObjectName(u"active_item_info")
+        sizePolicy1.setHeightForWidth(self.active_item_info.sizePolicy().hasHeightForWidth())
+        self.active_item_info.setSizePolicy(sizePolicy1)
+        self.active_item_info.setFont(font)
+        self.active_item_info.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+
+        self.horizontalLayout_4.addWidget(self.active_item_info)
+
 
         self.gridLayout_3.addLayout(self.horizontalLayout_4, 2, 0, 1, 1)
 
@@ -528,5 +541,6 @@ class Ui_canvas(object):
         self.brush_color_button.setText("")
         self.canvas_container.setProperty(u"canvas_type", QCoreApplication.translate("canvas", u"brush", None))
         self.grid_info.setText(QCoreApplication.translate("canvas", u"TextLabel", None))
+        self.active_item_info.setText("")
     # retranslateUi
 

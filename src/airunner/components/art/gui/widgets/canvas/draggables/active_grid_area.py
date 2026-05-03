@@ -295,18 +295,16 @@ class ActiveGridArea(DraggablePixmap):
             # Verify the update worked by reading back from DB
             fresh_settings = self.active_grid_settings
 
-            # Keep the view's center position in sync so startup alignment
-            # logic preserves the manually positioned grid on next launch.
             view = None
             if self.scene() and self.scene().views():
                 view = self.scene().views()[0]
 
             if view is not None:
-                new_center = QPointF(
-                    float(fresh_settings.pos_x), float(fresh_settings.pos_y)
-                )
-                view.center_pos = new_center
                 view.save_canvas_offset()
 
             # Trigger mask regeneration and update signal
             self.api.art.canvas.generate_mask()
+            try:
+                self.api.art.active_grid_area_updated()
+            except Exception:
+                pass

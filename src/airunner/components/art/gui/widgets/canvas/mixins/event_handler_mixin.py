@@ -106,10 +106,7 @@ class EventHandlerMixin:
             self.canvas_offset -= delta
             self.last_pos = event.pos()
             self.api.art.canvas.update_grid_info(
-                {
-                    "offset_x": self.canvas_offset_x,
-                    "offset_y": self.canvas_offset_y,
-                }
+                self.get_grid_info_payload()
             )
             if not self._pan_update_timer.isActive():
                 self._pan_update_timer.start(1)
@@ -143,10 +140,7 @@ class EventHandlerMixin:
             self.setTransform(self.zoom_handler.on_zoom_level_changed())
             self.do_draw()
             self.api.art.canvas.update_grid_info(
-                {
-                    "offset_x": self.canvas_offset_x,
-                    "offset_y": self.canvas_offset_y,
-                }
+                self.get_grid_info_payload()
             )
             event.accept()
             return
@@ -245,7 +239,11 @@ class EventHandlerMixin:
             loaded_offset = QPointF(
                 self.canvas_offset.x(), self.canvas_offset.y()
             )
-            self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
+            centered_state = self.settings.value("canvas_is_centered", None)
+            if centered_state is None:
+                self._needs_recenter_on_show = (loaded_offset == QPointF(0, 0))
+            else:
+                self._needs_recenter_on_show = self._to_bool(centered_state)
 
             # Clear any cached positions since we're starting fresh
             if self.scene and hasattr(self.scene, "original_item_positions"):
@@ -323,6 +321,20 @@ class EventHandlerMixin:
 
                 # Redraw grid
                 self.draw_grid()
+
+    @staticmethod
+    def _to_bool(value) -> bool:
+        """Coerce QSettings values into booleans."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+        return bool(value)
 
     def _finish_state_restoration(self) -> None:
         """Called after delay to finish state restoration and re-enable resize compensation."""

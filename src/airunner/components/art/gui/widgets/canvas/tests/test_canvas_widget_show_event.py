@@ -38,6 +38,7 @@ def test_canvas_splitter_restore_does_not_process_events(monkeypatch):
     ui = Mock()
     widget = SimpleNamespace(
         load_splitter_settings=Mock(),
+        _schedule_centered_canvas_restore=Mock(),
         logger=logger,
         ui=ui,
     )
@@ -51,4 +52,74 @@ def test_canvas_splitter_restore_does_not_process_events(monkeypatch):
             "splitter": {"index_to_maximize": 1, "min_other_size": 50}
         },
     )
+    widget._schedule_centered_canvas_restore.assert_called_once_with()
     process_events.assert_not_called()
+
+
+def test_schedule_centered_canvas_restore_is_deferred(monkeypatch):
+    """Centered startup sync is queued after splitter changes settle."""
+    scheduled = []
+    widget = SimpleNamespace(
+        _centered_canvas_restore_scheduled=False,
+        _should_restore_centered_canvas=Mock(return_value=True),
+        _restore_centered_canvas_after_splitter=Mock(),
+        ui=SimpleNamespace(
+            canvas_container=SimpleNamespace(
+                _is_restoring_state=True,
+                _needs_recenter_on_show=True,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        module.QTimer,
+        "singleShot",
+        lambda delay, callback: scheduled.append((delay, callback)),
+    )
+
+    CanvasWidget._schedule_centered_canvas_restore(widget)
+
+    assert widget._centered_canvas_restore_scheduled is True
+    assert scheduled == [(0, widget._restore_centered_canvas_after_splitter)]
+
+
+def test_restore_centered_canvas_after_splitter_previews_when_restoring():
+    """Centered startup sync should refresh the preview during restore."""
+    view = SimpleNamespace(
+        _is_restoring_state=True,
+        _needs_recenter_on_show=True,
+        _preview_centered_layout=Mock(),
+    )
+    widget = SimpleNamespace(
+        _centered_canvas_restore_scheduled=True,
+        _should_restore_centered_canvas=Mock(return_value=True),
+        update_grid_info=Mock(),
+        ui=SimpleNamespace(canvas_container=view),
+    )
+
+    CanvasWidget._restore_centered_canvas_after_splitter(widget)
+
+    assert widget._centered_canvas_restore_scheduled is False
+    view._preview_centered_layout.assert_called_once_with()
+    widget.update_grid_info.assert_called_once_with({})
+
+
+def test_restore_centered_canvas_after_splitter_recenters_live_view():
+    """Centered startup sync should recenter once restore is complete."""
+    view = SimpleNamespace(
+        _is_restoring_state=False,
+        _initialized=True,
+        on_recenter_grid_signal=Mock(),
+    )
+    widget = SimpleNamespace(
+        _centered_canvas_restore_scheduled=True,
+        _should_restore_centered_canvas=Mock(return_value=True),
+        update_grid_info=Mock(),
+        ui=SimpleNamespace(canvas_container=view),
+    )
+
+    CanvasWidget._restore_centered_canvas_after_splitter(widget)
+
+    assert widget._centered_canvas_restore_scheduled is False
+    view.on_recenter_grid_signal.assert_called_once_with()
+    widget.update_grid_info.assert_called_once_with({})

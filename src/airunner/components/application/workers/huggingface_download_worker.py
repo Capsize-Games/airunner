@@ -25,6 +25,11 @@ from airunner.components.data.bootstrap.unified_model_files import (
 from airunner.components.data.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
+from airunner.components.art.managers.zimage.zimage_bundle_requirements import (
+    find_active_checkpoint,
+    get_active_zimage_load_mode,
+    get_downloadable_files_for_mode,
+)
 
 
 class HuggingFaceDownloadWorker(BaseDownloadWorker):
@@ -279,6 +284,17 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     f"No bootstrap data found for llm/{repo_id} - file sizes will be fetched from API"
                 )
 
+        if is_art_model and resolved_version == "Z-Image Turbo":
+            missing_files = self._prune_zimage_missing_files(
+                output_dir=model_path,
+                missing_files=missing_files,
+            )
+            if not missing_files:
+                bootstrap_files = self._prune_zimage_bootstrap_files(
+                    output_dir=model_path,
+                    bootstrap_files=full_bootstrap_data,
+                )
+
         if missing_files:
             # Use the explicitly provided missing files list
             # Look up expected sizes from bootstrap data
@@ -296,7 +312,8 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
                     self.logger.warning(f"Missing file {f}: no expected size found in bootstrap data")
                 bootstrap_files[f] = expected_size
         elif is_art_model:
-            bootstrap_files = full_bootstrap_data
+            if bootstrap_files is None:
+                bootstrap_files = full_bootstrap_data
 
             if bootstrap_files is None or len(bootstrap_files) == 0:
                 self.logger.error(
@@ -534,6 +551,58 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
             self._complete_signal,
             {"model_path": str(model_path), "repo_id": repo_id, "model_type": self._current_model_type, "pipeline_action": self._current_pipeline_action},
         )
+
+    def _prune_zimage_bootstrap_files(
+        self,
+        output_dir: Path,
+        bootstrap_files: dict | None,
+    ) -> dict | None:
+        """Return a lean bootstrap subset when an FP8 checkpoint already exists."""
+        if not bootstrap_files:
+            return bootstrap_files
+        checkpoint = find_active_checkpoint(output_dir)
+        if checkpoint is None:
+            return bootstrap_files
+        load_mode = get_active_zimage_load_mode(checkpoint)
+        downloadable = set(get_downloadable_files_for_mode(checkpoint, load_mode))
+        pruned = {
+            filename: size
+            for filename, size in bootstrap_files.items()
+            if filename in downloadable
+        }
+        self.logger.info(
+            "Pruned Z-Image bootstrap file set for %s from %d files to %d files",
+            load_mode,
+            len(bootstrap_files),
+            len(pruned),
+        )
+        return pruned
+
+    def _prune_zimage_missing_files(
+        self,
+        output_dir: Path,
+        missing_files: list | None,
+    ) -> list | None:
+        """Drop Z-Image missing files that are not needed for the active load mode."""
+        if not missing_files:
+            return missing_files
+        checkpoint = find_active_checkpoint(output_dir)
+        if checkpoint is None:
+            return missing_files
+        load_mode = get_active_zimage_load_mode(checkpoint)
+        downloadable = set(get_downloadable_files_for_mode(checkpoint, load_mode))
+        pruned = [
+            file_name for file_name in missing_files if file_name in downloadable
+        ]
+        dropped = sorted(set(missing_files) - set(pruned))
+        if dropped:
+            self.logger.info(
+                "Dropped %d unneeded Z-Image download files for %s: %s",
+                len(dropped),
+                load_mode,
+                dropped,
+            )
+        return pruned
 
     def _download_and_extract_zip(self, zip_url: str, output_dir: str):
         """Download and extract a ZIP file with progress tracking.

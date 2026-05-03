@@ -442,8 +442,8 @@ def test_showEvent_loads_offset_and_preserves_it():
     assert view._grid_compensation_offset.y() == 0.0
 
 
-def test_recenter_grid_resets_offsets_without_repositioning_items():
-    """Recenter should preserve image and active-grid absolute positions."""
+def test_recenter_grid_recenters_viewport_without_moving_items():
+    """Recenter should move the viewport, not rewrite item positions."""
     view = CustomGraphicsView()
     active, grid, app_settings = make_settings(
         pos_x=100, pos_y=150, working_width=512, working_height=512
@@ -463,12 +463,18 @@ def test_recenter_grid_resets_offsets_without_repositioning_items():
         fake_get_or_cache_settings, view
     )
 
+    mock_layer_item = Mock()
+    mock_layer_item.pos.return_value = QPointF(60, 95)
+    view.active_grid_area = None
     view.update_active_grid_settings = Mock()
-    view.recenter_layer_positions = Mock(return_value={})
+    view.update_active_grid_area_position = Mock()
     view.updateImagePositions = Mock()
+    view.update_drawing_pad_settings = Mock()
+    view.settings_mixin_shared_instance.invalidate_cached_setting_by_key = Mock()
 
     view.setProperty("canvas_type", "image")
     _ = view.scene
+    view.scene._layer_items = {1: mock_layer_item}
 
     # Stub scene methods
     if not hasattr(view.scene, "_refresh_layer_display"):
@@ -499,15 +505,198 @@ def test_recenter_grid_resets_offsets_without_repositioning_items():
     # Call recenter
     view.on_recenter_grid_signal()
 
-    # Check offsets were reset
-    assert view.canvas_offset.x() == 0.0
-    assert view.canvas_offset.y() == 0.0
-    assert view._grid_compensation_offset.x() == 0.0
-    assert view._grid_compensation_offset.y() == 0.0
+    # Check viewport was centered for the current viewport size.
+    assert view.canvas_offset == QPointF(-44, 106)
+    assert view._grid_compensation_offset == QPointF(0, 0)
+    assert view.center_pos == QPointF(100, 150)
+    assert view.get_grid_info_payload() == {"offset_x": 0.0, "offset_y": 0.0}
 
     view.update_active_grid_settings.assert_not_called()
-    view.recenter_layer_positions.assert_not_called()
-    view.updateImagePositions.assert_called_once_with()
+    view.update_drawing_pad_settings.assert_not_called()
+    view.updateImagePositions.assert_called_once()
+    positions = view.updateImagePositions.call_args.args[0]
+    assert positions[mock_layer_item] == QPointF(100, 150)
+
+
+def test_recenter_grid_uses_current_canvas_positions_when_cache_is_stale():
+    """Recenter should use current scene positions, not stale cache entries."""
+    view = CustomGraphicsView()
+    active, grid, app_settings = make_settings(
+        pos_x=144, pos_y=44, working_width=512, working_height=512
+    )
+
+    def fake_get_or_cache_settings(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    view._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings, view
+    )
+
+    mock_layer_item = Mock()
+    mock_layer_item.pos.return_value = QPointF(94, 44)
+    view.update_active_grid_settings = Mock()
+    view.update_active_grid_area_position = Mock()
+    view.updateImagePositions = Mock()
+    view.update_drawing_pad_settings = Mock()
+    view.settings_mixin_shared_instance.invalidate_cached_setting_by_key = Mock()
+
+    view.setProperty("canvas_type", "image")
+    _ = view.scene
+    view.scene._layer_items = {1: mock_layer_item}
+    view.scene.original_item_positions = {mock_layer_item: QPointF(80, 44)}
+
+    view.canvas_offset = QPointF(50, 0)
+    view._grid_compensation_offset = QPointF(0, 0)
+
+    from PySide6.QtCore import QSize
+
+    view.viewport().resize(QSize(800, 600))
+    view.initialized = True
+    view.api = SimpleNamespace(
+        art=SimpleNamespace(
+            canvas=SimpleNamespace(
+                update_grid_info=lambda data: None,
+                update_image_positions=lambda: None,
+            )
+        )
+    )
+
+    view.on_recenter_grid_signal()
+
+    assert view.canvas_offset == QPointF(0, 0)
+    assert view._grid_compensation_offset == QPointF(0, 0)
+    assert view.center_pos == QPointF(144, 44)
+    assert view.get_grid_info_payload() == {"offset_x": 0.0, "offset_y": 0.0}
+    view.update_active_grid_settings.assert_not_called()
+    view.update_drawing_pad_settings.assert_not_called()
+    view.updateImagePositions.assert_called_once()
+    positions = view.updateImagePositions.call_args.args[0]
+    assert positions[mock_layer_item] == QPointF(144, 44)
+
+
+def test_recenter_grid_uses_current_viewport_size_when_centering():
+    """Recenter should account for the current viewport size."""
+    view = CustomGraphicsView()
+    active, grid, app_settings = make_settings(
+        pos_x=144,
+        pos_y=44,
+        working_width=512,
+        working_height=512,
+    )
+
+    def fake_get_or_cache_settings(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    view._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings, view
+    )
+
+    mock_layer_item = Mock()
+    mock_layer_item.pos.return_value = QPointF(94, 44)
+    view.center_pos = QPointF(144, 44)
+    view.update_active_grid_settings = Mock()
+    view.update_active_grid_area_position = Mock()
+    view.updateImagePositions = Mock()
+
+    view.setProperty("canvas_type", "image")
+    _ = view.scene
+    view.scene._layer_items = {1: mock_layer_item}
+
+    view.canvas_offset = QPointF(50, 0)
+    view._grid_compensation_offset = QPointF(0, 0)
+
+    from PySide6.QtCore import QSize
+
+    view.viewport().resize(QSize(400, 600))
+    view.initialized = True
+    view.api = SimpleNamespace(
+        art=SimpleNamespace(
+            canvas=SimpleNamespace(
+                update_grid_info=lambda data: None,
+                update_image_positions=lambda: None,
+            )
+        )
+    )
+
+    view.on_recenter_grid_signal()
+
+    assert view.canvas_offset == QPointF(200, 0)
+    assert view._grid_compensation_offset == QPointF(0, 0)
+    assert view.get_grid_info_payload() == {"offset_x": 0.0, "offset_y": 0.0}
+    view.updateImagePositions.assert_called_once()
+    positions = view.updateImagePositions.call_args.args[0]
+    assert positions[mock_layer_item] == QPointF(144, 44)
+
+
+def test_recenter_grid_does_not_center_on_dragged_active_grid():
+    """Recenter should ignore a dragged active grid once a home anchor exists."""
+    view = CustomGraphicsView()
+    active, grid, app_settings = make_settings(
+        pos_x=986,
+        pos_y=222.5,
+        working_width=512,
+        working_height=512,
+    )
+
+    def fake_get_or_cache_settings(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    view._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings, view
+    )
+
+    view.center_pos = QPointF(144, 44)
+    view.update_active_grid_settings = Mock()
+    view.update_active_grid_area_position = Mock()
+    view.updateImagePositions = Mock()
+
+    view.setProperty("canvas_type", "image")
+    _ = view.scene
+
+    view.canvas_offset = QPointF(-986, -222.5)
+    view._grid_compensation_offset = QPointF(0, 0)
+
+    from PySide6.QtCore import QSize
+
+    view.viewport().resize(QSize(800, 600))
+    view.initialized = True
+    view.api = SimpleNamespace(
+        art=SimpleNamespace(
+            canvas=SimpleNamespace(
+                update_grid_info=lambda data: None,
+                update_image_positions=lambda: None,
+            )
+        )
+    )
+
+    view.on_recenter_grid_signal()
+
+    assert view.canvas_offset == QPointF(0, 0)
+    assert view._grid_compensation_offset == QPointF(0, 0)
+    assert view.center_pos == QPointF(144, 44)
+    assert view.get_grid_info_payload() == {"offset_x": 0.0, "offset_y": 0.0}
+    view.update_active_grid_settings.assert_not_called()
 
 
 def test_negligible_resize_skipped():

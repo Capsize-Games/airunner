@@ -63,8 +63,7 @@ class PanOffsetMixin:
         # Handle None values from mocked settings
         x = float(x) if x is not None else 0.0
         y = float(y) if y is not None else 0.0
-        final_offset = QPointF(x, y)
-        self.canvas_offset = final_offset
+        saved_offset = QPointF(x, y)
 
         # CustomGraphicsView resolves this method from PanOffsetMixin before
         # EventHandlerMixin, so deferred recenter logic has to live here.
@@ -72,8 +71,11 @@ class PanOffsetMixin:
             self._needs_recenter_on_show = False
             self.on_recenter_grid_signal()
         else:
+            self.canvas_offset = saved_offset
             self.update_active_grid_area_position()
             self.updateImagePositions()
+
+        final_offset = QPointF(self.canvas_offset)
 
         self.logger.debug(
             f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"

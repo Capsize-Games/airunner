@@ -56,9 +56,4 @@ class ZoomMixin:
         canvas = getattr(art, "canvas", None)
         if canvas is None:
             return
-        canvas.update_grid_info(
-            {
-                "offset_x": self.canvas_offset_x,
-                "offset_y": self.canvas_offset_y,
-            }
-        )
+        canvas.update_grid_info(self.get_grid_info_payload())

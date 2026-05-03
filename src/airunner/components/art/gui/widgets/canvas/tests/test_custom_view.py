@@ -182,6 +182,7 @@ class TestCanvasOffsetManagement:
             args[0][0] == "canvas_offset_y" and args[0][1] == 250.0
             for args in calls
         )
+        assert any(args[0][0] == "canvas_is_centered" for args in calls)
 
 
 class TestToolHandling:
@@ -300,6 +301,38 @@ class TestViewportEvents:
         mock_recenter.assert_called_once_with()
         custom_view.scene.show_event.assert_called_once_with()
 
+    def test_finish_state_restoration_keeps_preview_offset_for_recenter(
+        self, custom_view
+    ):
+        """Delayed recenter should use the previewed offset, not stale settings."""
+        _ = custom_view.scene
+        custom_view._is_restoring_state = True
+        custom_view._needs_recenter_on_show = True
+        custom_view.canvas_offset = QPointF(123.0, 456.0)
+        custom_view.settings.value = Mock(
+            side_effect=lambda key, default: 10.0 if "x" in key else 20.0
+        )
+        custom_view.scene.show_event = Mock()
+
+        observed_offset = None
+
+        def capture_recenter_call():
+            nonlocal observed_offset
+            observed_offset = QPointF(custom_view.canvas_offset)
+
+        with patch.object(
+            custom_view,
+            "on_recenter_grid_signal",
+            side_effect=capture_recenter_call,
+        ) as mock_recenter:
+            custom_view._finish_state_restoration()
+
+        assert custom_view._is_restoring_state is False
+        assert observed_offset == QPointF(123.0, 456.0)
+        assert custom_view.canvas_offset == QPointF(123.0, 456.0)
+        mock_recenter.assert_called_once_with()
+        custom_view.scene.show_event.assert_called_once_with()
+
     def test_resize_event_during_restoration(self, custom_view):
         """Test resizeEvent skips compensation during restoration."""
         custom_view._is_restoring_state = True
@@ -387,16 +420,16 @@ class TestSignalHandlers:
         custom_view.api = Mock()
         custom_view.api.art.canvas.update_grid_info = Mock()
         custom_view.zoom_handler.wheelEvent = Mock(return_value=Mock())
+        custom_view.get_grid_info_payload = Mock(
+            return_value={"offset_x": 11.0, "offset_y": 22.0}
+        )
 
         with patch.object(custom_view, "setTransform"):
             with patch.object(custom_view, "do_draw"):
                 custom_view.wheelEvent(Mock())
 
         custom_view.api.art.canvas.update_grid_info.assert_called_once_with(
-            {
-                "offset_x": custom_view.canvas_offset_x,
-                "offset_y": custom_view.canvas_offset_y,
-            }
+            {"offset_x": 11.0, "offset_y": 22.0}
         )
 
 
