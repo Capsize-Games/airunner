@@ -234,6 +234,48 @@ def test_streamed_text_skips_repeated_local_load_after_failure():
     worker.add_to_queue.assert_called_once()
 
 
+def test_streamed_text_skips_local_load_when_gui_has_daemon_capability():
+    daemon_client = object()
+    worker = SimpleNamespace(
+        application_settings=SimpleNamespace(tts_enabled=True),
+        tts_enabled=True,
+        logger=SimpleNamespace(debug=lambda *args, **kwargs: None),
+        refresh_api_reference=Mock(
+            return_value=SimpleNamespace(
+                daemon_client=daemon_client,
+                headless=False,
+            )
+        ),
+        _failed_model=None,
+        chatbot_voice_settings=SimpleNamespace(model_type="OpenVoice"),
+        tts=None,
+        do_interrupt=False,
+        add_to_queue=Mock(),
+        _load_tts=Mock(),
+        _daemon_client=lambda: None,
+        _active_tts_model=lambda: "OpenVoice",
+    )
+    worker._current_api = lambda: TTSGeneratorWorker._current_api(worker)
+    worker._has_daemon_tts_capability = lambda: (
+        TTSGeneratorWorker._has_daemon_tts_capability(worker)
+    )
+
+    TTSGeneratorWorker.on_llm_text_streamed_signal(
+        worker,
+        {
+            "response": SimpleNamespace(
+                action=LLMActionType.CHAT,
+                is_system_message=False,
+                is_end_of_message=False,
+                message="hello",
+            )
+        },
+    )
+
+    worker._load_tts.assert_not_called()
+    worker.add_to_queue.assert_called_once()
+
+
 def test_streamed_text_does_not_reload_local_tts_while_loading():
     worker = SimpleNamespace(
         application_settings=SimpleNamespace(tts_enabled=True),
@@ -439,6 +481,32 @@ def test_handle_message_preserves_word_boundaries_between_chunks():
     assert worker.tokens == []
 
 
+def test_handle_message_generates_earlier_for_daemon_backed_tts():
+    worker = SimpleNamespace(
+        do_interrupt=False,
+        tokens=[],
+        _sentence_buffer=[],
+        _generate=Mock(),
+        play_queue_started=False,
+        SENTENCE_BUFFER_SIZE=2,
+        MIN_WORDS_FOR_GENERATION=8,
+        DAEMON_MIN_WORDS_FOR_GENERATION=4,
+        _daemon_client=lambda: object(),
+    )
+
+    TTSGeneratorWorker.handle_message(
+        worker,
+        {
+            "message": "Hello! How are you today? I'm here",
+            "is_end_of_message": False,
+        },
+    )
+
+    worker._generate.assert_called_once_with("Hello! How are you today?")
+    assert worker.play_queue_started is True
+    assert worker.tokens == ["I'm here"]
+
+
 def test_load_tts_marks_model_failed_when_load_returns_false():
     worker = SimpleNamespace(
         tts_enabled=True,
@@ -522,6 +590,37 @@ def test_generate_falls_back_to_local_tts_after_daemon_error():
         "OpenVoice",
     )
     worker.tts.generate.assert_called_once()
+    worker.emit_signal.assert_called_once_with(
+        SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
+        {"message": audio},
+    )
+
+
+def test_generate_loads_local_tts_before_fallback_generation():
+    audio = [0.1, 0.2, 0.3]
+    tts = SimpleNamespace(generate=Mock(return_value=audio))
+    worker = SimpleNamespace(
+        do_interrupt=False,
+        logger=SimpleNamespace(debug=lambda *args, **kwargs: None),
+        chatbot_voice_settings=SimpleNamespace(model_type="OpenVoice"),
+        chatbot=SimpleNamespace(gender="male"),
+        tts=None,
+        emit_signal=Mock(),
+        _daemon_client=lambda: None,
+        _load_tts=Mock(),
+        _current_tts_status=lambda: ModelStatus.UNLOADED,
+        _failed_model=None,
+    )
+
+    def load_tts():
+        worker.tts = tts
+
+    worker._load_tts.side_effect = load_tts
+
+    TTSGeneratorWorker._generate(worker, "Hello there.")
+
+    worker._load_tts.assert_called_once_with()
+    tts.generate.assert_called_once()
     worker.emit_signal.assert_called_once_with(
         SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
         {"message": audio},

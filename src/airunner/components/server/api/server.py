@@ -207,16 +207,53 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         api = get_api()
         if not api:
             return False
-        
-        # Check via worker manager if available
-        if hasattr(api, '_worker_manager') and api._worker_manager:
-            worker = getattr(api._worker_manager, 'llm_generate_worker', None)
-            if worker:
-                manager = getattr(worker, 'model_manager', None)
-                if manager:
-                    # Check if chat_model is loaded
-                    return getattr(manager, '_chat_model', None) is not None
-        return False
+
+        return self._llm_loaded_from_balancer(api) or self._llm_loaded_from_worker(
+            api
+        )
+
+    @staticmethod
+    def _llm_loaded_from_balancer(api) -> bool:
+        """Return True when runtime state already reports one loaded LLM."""
+        from airunner.enums import ModelType
+
+        balancer = getattr(api, "model_load_balancer", None)
+        if balancer is None:
+            balancer = getattr(api, "_model_load_balancer", None)
+        if balancer is None:
+            return False
+        try:
+            loaded_models = balancer.get_loaded_models() or []
+        except Exception:
+            return False
+        return ModelType.LLM in loaded_models
+
+    @staticmethod
+    def _llm_loaded_from_worker(api) -> bool:
+        """Return True when the local worker already has an LLM ready."""
+        from airunner.enums import ModelStatus
+
+        worker_manager = getattr(api, "_worker_manager", None)
+        if not worker_manager:
+            return False
+
+        worker = getattr(worker_manager, "_llm_generate_worker", None)
+        if worker is None:
+            return False
+
+        status_getter = getattr(worker, "current_model_status", None)
+        if callable(status_getter):
+            try:
+                if status_getter() in (ModelStatus.LOADED, ModelStatus.READY):
+                    return True
+            except Exception:
+                pass
+
+        manager = getattr(worker, "_model_manager", None)
+        return bool(
+            manager is not None
+            and getattr(manager, "_chat_model", None) is not None
+        )
 
     def _ensure_llm_model_loaded(self) -> tuple[bool, str]:
         """Ensure LLM model is loaded, triggering load if necessary.

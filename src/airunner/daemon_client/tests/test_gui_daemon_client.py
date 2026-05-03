@@ -30,6 +30,7 @@ class FakeResponse:
         self._lines = lines or []
         self.content = content
         self.status_code = status_code
+        self.iter_lines_calls = []
 
     def __enter__(self):
         return self
@@ -44,7 +45,8 @@ class FakeResponse:
         if self.status_code >= 400:
             raise requests.HTTPError(f"HTTP {self.status_code}")
 
-    def iter_lines(self):
+    def iter_lines(self, *args, **kwargs):
+        self.iter_lines_calls.append((args, kwargs))
         return iter(self._lines)
 
 
@@ -83,6 +85,7 @@ class FakeSession:
         self.ready_state = ready_state
         self.stream_lines = stream_lines or []
         self.calls = []
+        self.last_stream_response = None
 
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
@@ -151,7 +154,9 @@ class FakeSession:
         if url.endswith("/api/v1/stt/transcribe"):
             return FakeResponse(payload={"text": "hello", "language": "en"})
         if url.endswith("/llm/generate"):
-            return FakeResponse(lines=self.stream_lines)
+            response = FakeResponse(lines=self.stream_lines)
+            self.last_stream_response = response
+            return response
         if url.endswith("/admin/interrupt"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
@@ -320,6 +325,9 @@ def test_stream_llm_request_posts_expected_payload_and_headers():
     assert kwargs["json"]["prompt"] == "Say hello"
     assert kwargs["json"]["conversation_id"] == 7
     assert kwargs["json"]["model_service"] == "local"
+    assert session.last_stream_response.iter_lines_calls == [
+        ((), {"chunk_size": 1})
+    ]
 
 
 def test_interrupt_requires_existing_connection():

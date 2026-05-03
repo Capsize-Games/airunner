@@ -508,7 +508,7 @@ class GuiDaemonClient:
             headers=headers,
             stream=True,
         ) as response:
-            for line in response.iter_lines():
+            for line in response.iter_lines(chunk_size=1):
                 if not line:
                     continue
                 yield json.loads(line.decode("utf-8"))

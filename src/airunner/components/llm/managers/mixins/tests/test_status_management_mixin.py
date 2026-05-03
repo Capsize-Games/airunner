@@ -221,7 +221,12 @@ class TestMarkModelLoadedApi:
             ModelType.LLM, ModelStatus.LOADED
         )
         mixin.emit_signal.assert_called_once_with(
-            SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True}
+            SignalCode.TOGGLE_LLM_SIGNAL,
+            {
+                "enabled": True,
+                "source": "llm_status_sync",
+                "sync_only": True,
+            },
         )
 
 
@@ -237,6 +242,14 @@ class TestMarkModelLoadedLocal:
 
         mixin.change_model_status.assert_called_once_with(
             ModelType.LLM, ModelStatus.LOADED
+        )
+        mixin.emit_signal.assert_called_once_with(
+            SignalCode.TOGGLE_LLM_SIGNAL,
+            {
+                "enabled": True,
+                "source": "llm_status_sync",
+                "sync_only": True,
+            },
         )
         mixin.load_conversation.assert_called_once()
 

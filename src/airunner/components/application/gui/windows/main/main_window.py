@@ -1352,6 +1352,10 @@ class MainWindow(
                     "enabled", not self.application_settings.llm_enabled
                 )
             )
+        if bool(data.get("sync_only", False)):
+            if bool(self.application_settings.llm_enabled) != bool(val):
+                self.update_application_settings(llm_enabled=bool(val))
+            return
         self._update_action_button(
             ModelType.LLM,
             None,
@@ -1906,9 +1910,10 @@ class MainWindow(
         local_status = status_getter()
         if local_status in (ModelStatus.LOADING, ModelStatus.LOADED):
             return local_status
-        if local_status is ModelStatus.UNLOADED and self._model_status.get(
-            ModelType.LLM
-        ) in (ModelStatus.LOADING, ModelStatus.LOADED):
+        if local_status in (None, ModelStatus.UNLOADED) and (
+            self._model_status.get(ModelType.LLM)
+            in (ModelStatus.LOADING, ModelStatus.LOADED)
+        ):
             return self._model_status[ModelType.LLM]
         return status
 

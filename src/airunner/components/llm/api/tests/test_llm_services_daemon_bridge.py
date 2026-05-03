@@ -140,6 +140,135 @@ def test_send_request_generates_request_id_for_daemon(monkeypatch):
     service.emit_signal.assert_not_called()
 
 
+def test_run_daemon_request_prewarms_tts_before_stream():
+    prewarm = MagicMock()
+    stream = MagicMock()
+    worker_manager = SimpleNamespace(
+        _start_tts_runtime_prewarm=prewarm,
+        application_settings=SimpleNamespace(tts_enabled=False),
+    )
+    service = SimpleNamespace(
+        _worker_manager=lambda: worker_manager,
+        _stream_daemon_request=stream,
+    )
+    client = SimpleNamespace(state=DaemonConnectionState.CONNECTED)
+    llm_request = LLMRequest()
+    llm_request.do_tts_reply = True
+
+    LLMAPIService._run_daemon_request_or_fallback(
+        service,
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+
+    prewarm.assert_called_once_with()
+    stream.assert_called_once_with(
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+def test_run_daemon_request_skips_tts_prewarm_when_disabled():
+    prewarm = MagicMock()
+    stream = MagicMock()
+    worker_manager = SimpleNamespace(
+        _start_tts_runtime_prewarm=prewarm,
+        application_settings=SimpleNamespace(tts_enabled=False),
+    )
+    service = SimpleNamespace(
+        _worker_manager=lambda: worker_manager,
+        _stream_daemon_request=stream,
+    )
+    client = SimpleNamespace(state=DaemonConnectionState.CONNECTED)
+    llm_request = LLMRequest()
+    llm_request.do_tts_reply = False
+
+    LLMAPIService._run_daemon_request_or_fallback(
+        service,
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+
+    prewarm.assert_not_called()
+    stream.assert_called_once_with(
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+def test_run_daemon_request_prewarms_tts_for_gui_streaming_when_enabled():
+    prewarm = MagicMock()
+    stream = MagicMock()
+    worker_manager = SimpleNamespace(
+        _start_tts_runtime_prewarm=prewarm,
+        application_settings=SimpleNamespace(tts_enabled=True),
+    )
+    service = SimpleNamespace(
+        _worker_manager=lambda: worker_manager,
+        _stream_daemon_request=stream,
+    )
+    client = SimpleNamespace(state=DaemonConnectionState.CONNECTED)
+    llm_request = LLMRequest()
+    llm_request.do_tts_reply = False
+
+    LLMAPIService._run_daemon_request_or_fallback(
+        service,
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+
+    prewarm.assert_called_once_with()
+    stream.assert_called_once_with(
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        None,
+        None,
+        None,
+    )
+
+
 def test_send_request_with_images_emits_signal_fallback():
     service = SimpleNamespace(
         logger=MagicMock(),
@@ -191,6 +320,58 @@ def test_interrupt_prefers_daemon_client():
 
     interrupt_llm.assert_called_once_with()
     service.emit_signal.assert_not_called()
+
+
+def test_send_llm_text_streamed_signal_fast_forwards_to_tts_worker():
+    worker = SimpleNamespace(on_llm_text_streamed_signal=MagicMock())
+    emitted = []
+    service = SimpleNamespace(
+        emit_signal=lambda code, data: emitted.append((code, data)),
+        _forward_tts_stream_signal=lambda data: LLMAPIService._forward_tts_stream_signal(
+            service,
+            data,
+        ),
+        _tts_stream_worker=lambda: worker,
+    )
+    response = LLMResponse(message="Hello", request_id="req-1")
+
+    LLMAPIService.send_llm_text_streamed_signal(service, response)
+
+    worker.on_llm_text_streamed_signal.assert_called_once()
+    assert emitted[0][0] == SignalCode.LLM_TEXT_STREAMED_SIGNAL
+    assert emitted[0][1]["_skip_worker_manager_tts"] is True
+
+
+def test_send_llm_thinking_signal_fast_forwards_to_tts_worker():
+    worker = SimpleNamespace(on_llm_thinking_signal=MagicMock())
+    emitted = []
+    service = SimpleNamespace(
+        emit_signal=lambda code, data: emitted.append((code, data)),
+        _thinking_signal_payload=lambda status, content, request_id=None: LLMAPIService._thinking_signal_payload(
+            service,
+            status,
+            content,
+            request_id,
+        ),
+        _forward_tts_thinking_signal=lambda data: LLMAPIService._forward_tts_thinking_signal(
+            service,
+            data,
+        ),
+        _tts_stream_worker=lambda: worker,
+    )
+
+    LLMAPIService.send_llm_thinking_signal(
+        service,
+        "started",
+        "",
+        "req-1",
+    )
+
+    worker.on_llm_thinking_signal.assert_called_once_with(
+        {"status": "started", "content": "", "request_id": "req-1"}
+    )
+    assert emitted[0][0] == SignalCode.LLM_THINKING_SIGNAL
+    assert emitted[0][1]["_skip_worker_manager_tts"] is True
 
 
 def test_stream_daemon_request_converts_thinking_to_ui_signal():

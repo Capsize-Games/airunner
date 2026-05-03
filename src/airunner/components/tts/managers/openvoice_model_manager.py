@@ -1,6 +1,7 @@
 from typing import Type, Optional
 from abc import ABCMeta
 import os
+from time import perf_counter
 import torch
 
 from airunner.components.llm.utils.language import detect_language
@@ -29,6 +30,7 @@ from airunner.enums import (
 )
 from airunner.components.tts.managers.tts_model_manager import TTSModelManager
 from airunner.components.tts.managers.tts_request import TTSRequest
+from airunner.components.tts.managers.tts_request import OpenVoiceTTSRequest
 from airunner.components.tts.managers.openvoice_runtime_helpers import (
     StreamingToneColorConverter,
     build_tone_color_converter,
@@ -150,6 +152,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Generate speech using OpenVoice and apply tone color conversion.
         """
+        generation_start = perf_counter()
         message = self._prepare_text(tts_request.message)
         lang = self.language_settings.bot_language
         if lang is None:
@@ -178,6 +181,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         noise_scale = (settings.noise_scale if settings.noise_scale is not None else 80) / 100.0
         noise_scale_w = (settings.noise_scale_w if settings.noise_scale_w is not None else 90) / 100.0
 
+        synthesis_start = perf_counter()
         self.model.tts_to_file(
             message,
             speaker_ids[speaker_id],
@@ -187,17 +191,27 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             noise_scale=noise_scale,
             noise_scale_w=noise_scale_w,
         )
+        synthesis_elapsed = perf_counter() - synthesis_start
 
         output_path = os.path.join(
             self.path_settings.tts_model_path,
             f"openvoice/{self._output_dir}/output_v2_{self.speaker_key}.wav",
         )
 
+        conversion_start = perf_counter()
         response = self.tone_color_converter.convert(
             audio_src_path=self.src_path,
             src_se=self.source_se,
             tgt_se=self._target_se,
             output_path=output_path,
+        )
+        conversion_elapsed = perf_counter() - conversion_start
+        self.logger.info(
+            "OpenVoice generate timings: tts_to_file=%.3fs "
+            "convert=%.3fs total=%.3fs",
+            synthesis_elapsed,
+            conversion_elapsed,
+            perf_counter() - generation_start,
         )
         return response
 
@@ -205,6 +219,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Load and initialize the OpenVoice model.
         """
+        load_start = perf_counter()
         current_status = self._model_status.get(
             ModelType.TTS,
             ModelStatus.UNLOADED,
@@ -234,9 +249,25 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 self.model.unload()
                 self.model = None
 
+            initialize_start = perf_counter()
             self._initialize()
+            initialize_elapsed = perf_counter() - initialize_start
+
+            model_start = perf_counter()
             self.model = TTS(language=self.language)
+            model_elapsed = perf_counter() - model_start
+
+            warm_start = perf_counter()
             self._warm_model_components()
+            warm_elapsed = perf_counter() - warm_start
+            self.logger.info(
+                "OpenVoice load timings: initialize=%.3fs "
+                "tts_init=%.3fs warm=%.3fs total=%.3fs",
+                initialize_elapsed,
+                model_elapsed,
+                warm_elapsed,
+                perf_counter() - load_start,
+            )
         except Exception:
             self.model = None
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
@@ -301,6 +332,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         reference_speaker_path: Optional[str] = None,
     ) -> None:
         """Load one cached or newly computed target speaker embedding."""
+        embedding_start = perf_counter()
         self._reference_speaker = expand_reference_speaker_path(
             reference_speaker_path
             or getattr(self.openvoice_settings, "reference_speaker_path", None)
@@ -318,6 +350,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 self.tone_color_converter,
                 target_dir=processed_target_dir(),
             )
+            self.logger.info(
+                "OpenVoice target speaker embedding ready in %.3fs",
+                perf_counter() - embedding_start,
+            )
         except Exception as e:
             torch_hub_cache_home = torch.hub.get_dir()
             self.api.tts.disable()
@@ -329,10 +365,29 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             raise OpenVoiceError("Target speaker extraction returned None.")
 
     def _warm_model_components(self) -> None:
-        """Force-load the lazy Melo and BERT components."""
+        """Force-load the lazy frontend and one full synthesis pass."""
         if self.model is None:
             return
         warm_melo_tts(self.model, self.language)
+        self._warm_inference_path()
+
+    def _warm_inference_path(self) -> None:
+        """Run one tiny synthesis so first user audio is already warm."""
+        start = perf_counter()
+        self.generate(
+            OpenVoiceTTSRequest(
+                message="Warm up.",
+                gender=getattr(
+                    getattr(self, "chatbot", None),
+                    "gender",
+                    "Male",
+                ),
+            )
+        )
+        self.logger.info(
+            "OpenVoice full warmup completed in %.3fs",
+            perf_counter() - start,
+        )
 
     def _check_and_trigger_download(self):
         """Check for missing OpenVoice model files and trigger download if needed.

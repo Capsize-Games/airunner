@@ -4,6 +4,7 @@ import base64
 from queue import Queue
 from types import SimpleNamespace
 
+import numpy as np
 from PIL import Image
 
 from airunner.components.art.managers.stablediffusion.image_response import (
@@ -353,6 +354,63 @@ class TestLocalFallbackTTSClient:
         assert unload_response.status == EnvelopeStatus.SUCCEEDED
         assert client.healthcheck().status == RuntimeHealthStatus.STOPPED
         assert cancel_response.status == EnvelopeStatus.CANCELLED
+
+    def test_invoke_returns_audio_payload_in_headless_mode(self):
+        manager = SimpleNamespace(
+            generate=lambda _request: np.array([0.0, 0.1], dtype=np.float32),
+            load=lambda: True,
+            tone_color_converter=SimpleNamespace(
+                hps=SimpleNamespace(
+                    data=SimpleNamespace(sampling_rate=24000)
+                )
+            ),
+        )
+        worker = SimpleNamespace(
+            tts=manager,
+            chatbot=SimpleNamespace(gender="Female"),
+            _current_tts_status=lambda: ModelStatus.LOADED,
+            _active_tts_model=lambda: "OpenVoice",
+        )
+        signal_source = SimpleNamespace(
+            _worker_manager=SimpleNamespace(tts_generator_worker=worker)
+        )
+        client = LocalFallbackTTSClient(signal_source=signal_source)
+
+        response = client.invoke(
+            RequestEnvelope(
+                request_id="req-tts-audio",
+                runtime=RuntimeKind.TTS,
+                action=RuntimeAction.INVOKE,
+                payload={"text": "hello there"},
+            )
+        )
+
+        assert response.status is EnvelopeStatus.SUCCEEDED
+        assert response.payload["accepted"] is True
+        assert base64.b64decode(response.payload["audio_b64"])[0:4] == b"RIFF"
+
+    def test_invoke_does_not_queue_playback_when_headless_audio_fails(self):
+        signal_source = FakeSignalSource(FakeMediator())
+        signal_source._worker_manager = SimpleNamespace(
+            tts_generator_worker=SimpleNamespace(
+                tts=SimpleNamespace(load=lambda: False),
+                _current_tts_status=lambda: None,
+                _active_tts_model=lambda: "OpenVoice",
+            )
+        )
+        client = LocalFallbackTTSClient(signal_source=signal_source)
+
+        response = client.invoke(
+            RequestEnvelope(
+                request_id="req-tts-audio-fail",
+                runtime=RuntimeKind.TTS,
+                action=RuntimeAction.INVOKE,
+                payload={"text": "hello there"},
+            )
+        )
+
+        assert response.status is EnvelopeStatus.FAILED
+        assert signal_source.emitted == []
 
 
 class TestLocalFallbackArtClient:

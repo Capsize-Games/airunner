@@ -300,6 +300,22 @@ class App(
             static_search_dirs.append(self.user_web_dir)
         return static_search_dirs
 
+    @property
+    def sounddevice_manager(self):
+        """Return the shared sound-device manager."""
+        if self._sounddevice_manager is None:
+            from airunner.utils.audio.sound_device_manager import (
+                SoundDeviceManager,
+            )
+
+            self._sounddevice_manager = SoundDeviceManager()
+        return self._sounddevice_manager
+
+    @sounddevice_manager.setter
+    def sounddevice_manager(self, value) -> None:
+        """Store the shared sound-device manager."""
+        self._sounddevice_manager = value
+
     def _init_attributes(
         self,
         no_splash: bool,
@@ -324,6 +340,7 @@ class App(
         self.model_load_balancer = None
         self._worker_manager = None
         self._model_load_balancer = None
+        self._sounddevice_manager = None
 
     def _register_signals(self) -> None:
         """Register signal handlers."""

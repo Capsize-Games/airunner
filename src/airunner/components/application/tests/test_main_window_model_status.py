@@ -48,6 +48,7 @@ def _make_window_stub():
             speech_to_text_button=_make_action(),
         ),
         application_settings=SimpleNamespace(
+            llm_enabled=False,
             tts_enabled=False,
             stt_enabled=False,
         ),
@@ -220,6 +221,20 @@ def test_optional_toggle_updates_preference_while_loading():
     )
 
 
+def test_sync_only_llm_toggle_skips_runtime_reload():
+    window = _make_window_stub()
+
+    MainWindow.on_toggle_llm(
+        window,
+        {"enabled": True, "sync_only": True},
+    )
+
+    window.update_application_settings.assert_called_once_with(
+        llm_enabled=True
+    )
+    window.emit_signal.assert_not_called()
+
+
 def test_initialize_widget_elements_marks_window_initialized():
     window = _make_window_stub()
     window.application_settings = SimpleNamespace(
@@ -348,6 +363,24 @@ def test_direct_failed_status_does_not_override_local_llm_loading():
     assert window._model_status[ModelType.LLM] is ModelStatus.LOADING
     window.logger.warning.assert_not_called()
     window.emit_signal.assert_not_called()
+
+
+def test_direct_failed_status_keeps_loaded_llm_when_status_unknown():
+    window = _make_window_stub()
+    window._model_status[ModelType.LLM] = ModelStatus.LOADED
+    window.worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: None
+        )
+    )
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {"model": ModelType.LLM, "status": ModelStatus.FAILED},
+    )
+
+    assert window._model_status[ModelType.LLM] is ModelStatus.LOADED
+    window.logger.warning.assert_not_called()
 
 
 def test_handoff_launcher_splash_defers_dismissal(monkeypatch):

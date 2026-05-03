@@ -61,7 +61,10 @@ def _worker_manager(client):
     manager._stt_audio_processor_worker = None
     manager._sd_worker = None
     manager._tts_generator_worker = None
+    manager._tts_generator_worker_import_error = None
+    manager._tts_vocalizer_worker = None
     manager._art_runtime_prewarm_started = False
+    manager._tts_runtime_prewarm_started = False
     manager._optional_runtime_enabled = lambda _model_type: True
     emitted = []
     manager.emit_signal = lambda code, data=None: emitted.append((code, data))
@@ -124,6 +127,48 @@ def test_sd_unload_signal_uses_daemon_runtime():
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             {"model": ModelType.SD, "status": ModelStatus.UNLOADED},
         )
+    ]
+
+
+def test_tts_generator_worker_uses_low_latency_sleep(monkeypatch):
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(client)
+    calls = []
+
+    def fake_create_worker(worker_class_, **kwargs):
+        calls.append((worker_class_.__name__, kwargs))
+        return object()
+
+    monkeypatch.setattr(
+        "airunner.components.application.gui.windows.main.worker_manager.create_worker",
+        fake_create_worker,
+    )
+
+    _worker = manager.tts_generator_worker
+
+    assert calls == [
+        ("TTSGeneratorWorker", {"sleep_time_in_ms": 1})
+    ]
+
+
+def test_tts_vocalizer_worker_uses_low_latency_sleep(monkeypatch):
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(client)
+    calls = []
+
+    def fake_create_worker(worker_class_, **kwargs):
+        calls.append((worker_class_.__name__, kwargs))
+        return object()
+
+    monkeypatch.setattr(
+        "airunner.components.application.gui.windows.main.worker_manager.create_worker",
+        fake_create_worker,
+    )
+
+    _worker = manager.tts_vocalizer_worker
+
+    assert calls == [
+        ("TTSVocalizerWorker", {"sleep_time_in_ms": 1})
     ]
 
 
@@ -272,6 +317,47 @@ def test_prewarm_art_runtime_uses_daemon_runtime():
     WorkerManager._prewarm_art_runtime(manager)
 
     assert client.calls == [("load", "art"), ("wait", "art", True)]
+    assert emitted == []
+
+
+def test_prewarm_tts_runtime_uses_daemon_runtime():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+    manager.logger = SimpleNamespace(debug=lambda *args, **kwargs: None)
+    manager._tts_runtime_route_metadata = lambda: {
+        "model_path": "/tmp/model.gguf",
+        "model_type": "openvoice",
+    }
+
+    WorkerManager._prewarm_tts_runtime(manager)
+
+    assert client.calls == [("load", "tts"), ("wait", "tts", True)]
+    assert client.request_kwargs == [
+        (
+            "load",
+            "tts",
+            {
+                "deployment_mode": "sidecar",
+                "metadata": {
+                    "model_path": "/tmp/model.gguf",
+                    "model_type": "openvoice",
+                },
+                "auto_start": False,
+                "timeout_seconds": 5.0,
+            },
+        )
+    ]
+    assert client.wait_kwargs == [
+        (
+            "tts",
+            True,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 90.0,
+            },
+        )
+    ]
     assert emitted == []
 
 
@@ -787,6 +873,87 @@ def test_llm_thinking_signal_forwards_to_tts_generator_worker():
     manager._tts_generator_worker.on_llm_thinking_signal.assert_called_once_with(
         {"status": "started", "request_id": "req-1"}
     )
+
+
+def test_llm_text_streamed_signal_forwards_to_tts_generator_worker():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    payload = {"response": object(), "request_id": "req-1"}
+    manager._tts_generator_worker = SimpleNamespace(
+        on_llm_text_streamed_signal=Mock()
+    )
+
+    WorkerManager.on_llm_text_streamed_signal(manager, payload)
+
+    manager._tts_generator_worker.on_llm_text_streamed_signal.assert_called_once_with(
+        payload
+    )
+
+
+def test_llm_text_streamed_signal_skips_headless_tts_worker():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    payload = {"response": object(), "request_id": "req-1"}
+    manager._current_gui_api = lambda: None
+    manager._tts_generator_worker = SimpleNamespace(
+        on_llm_text_streamed_signal=Mock()
+    )
+
+    WorkerManager.on_llm_text_streamed_signal(manager, payload)
+
+    manager._tts_generator_worker.on_llm_text_streamed_signal.assert_not_called()
+
+
+def test_llm_text_streamed_signal_skips_when_fast_path_already_handled():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    payload = {
+        "response": object(),
+        "request_id": "req-1",
+        "_skip_worker_manager_tts": True,
+    }
+    manager._tts_generator_worker = SimpleNamespace(
+        on_llm_text_streamed_signal=Mock()
+    )
+
+    WorkerManager.on_llm_text_streamed_signal(manager, payload)
+
+    manager._tts_generator_worker.on_llm_text_streamed_signal.assert_not_called()
+
+
+def test_llm_thinking_signal_skips_headless_tts_worker():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    manager._current_gui_api = lambda: None
+    manager._tts_generator_worker = SimpleNamespace(
+        on_llm_thinking_signal=Mock()
+    )
+
+    WorkerManager.on_llm_thinking_signal(
+        manager,
+        {"status": "started", "request_id": "req-1"},
+    )
+
+    manager._tts_generator_worker.on_llm_thinking_signal.assert_not_called()
+
+
+def test_llm_thinking_signal_skips_when_fast_path_already_handled():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    manager._tts_generator_worker = SimpleNamespace(
+        on_llm_thinking_signal=Mock()
+    )
+
+    WorkerManager.on_llm_thinking_signal(
+        manager,
+        {
+            "status": "started",
+            "request_id": "req-1",
+            "_skip_worker_manager_tts": True,
+        },
+    )
+
+    manager._tts_generator_worker.on_llm_thinking_signal.assert_not_called()
 
 
 def test_llm_load_failure_keeps_loaded_local_status():

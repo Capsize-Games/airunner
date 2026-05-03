@@ -535,8 +535,14 @@ class PygameWindow(
             )
 
         if AIRUNNER_TTS_ON:
-            self._tts_generator_worker = create_worker(TTSGeneratorWorker)
-            self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+            self._tts_generator_worker = create_worker(
+                TTSGeneratorWorker,
+                sleep_time_in_ms=1,
+            )
+            self._tts_vocalizer_worker = create_worker(
+                TTSVocalizerWorker,
+                sleep_time_in_ms=1,
+            )
 
         if AIRUNNER_LLM_ON:
             self._llm_generate_worker = create_worker(

@@ -291,7 +291,7 @@ extras_require["windows"] = build_aggregate_extra(
 
 setup(
     name="airunner",
-    version="5.6.1",
+    version="5.7.0",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=README,

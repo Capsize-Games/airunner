@@ -8,6 +8,7 @@ from glob import glob
 import numpy as np
 from pydub import AudioSegment
 import torchaudio
+from time import perf_counter
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -22,6 +23,7 @@ def _load_cached_speaker_embedding(se_path, device):
     """Load one cached speaker embedding when it exists."""
     if not os.path.exists(se_path):
         return None
+    start = perf_counter()
     try:
         embedding = torch.load(se_path, map_location=torch.device(device))
     except Exception as error:
@@ -29,7 +31,11 @@ def _load_cached_speaker_embedding(se_path, device):
             f"Failed to load cached speaker embedding {se_path}: {error}"
         )
         return None
-    logger.info(f"Reusing cached speaker embedding from {se_path}")
+    logger.info(
+        "Reusing cached speaker embedding from %s in %.3fs",
+        se_path,
+        perf_counter() - start,
+    )
     return embedding
 
 
@@ -130,6 +136,7 @@ def hash_numpy_array(audio_path):
 
 
 def get_se(audio_path, vc_model, target_dir="processed"):
+    start = perf_counter()
     version = vc_model.version
 
     audio_name = f"{os.path.basename(audio_path).rsplit('.', 1)[0]}_{version}_{hash_numpy_array(audio_path)}"
@@ -140,12 +147,20 @@ def get_se(audio_path, vc_model, target_dir="processed"):
         getattr(vc_model, "device", "cpu"),
     )
     if cached_embedding is not None:
+        logger.info(
+            "Speaker embedding cache hit for %s in %.3fs",
+            audio_name,
+            perf_counter() - start,
+        )
         return cached_embedding, audio_name
 
     try:
+        logger.info("Speaker embedding cache miss for %s", audio_name)
+        vad_start = perf_counter()
         wavs_folder = split_audio_vad(
             audio_path, target_dir=target_dir, audio_name=audio_name
         )
+        vad_elapsed = perf_counter() - vad_start
 
         audio_segs = glob(f"{wavs_folder}/*.wav")
         logger.info(
@@ -155,11 +170,20 @@ def get_se(audio_path, vc_model, target_dir="processed"):
             logger.error("No audio segments found for SE extraction!")
             raise NotImplementedError("No audio segments found!")
 
+        extract_start = perf_counter()
         se = vc_model.extract_se(audio_segs, se_save_path=se_path)
+        extract_elapsed = perf_counter() - extract_start
         if se is None:
             logger.error("vc_model.extract_se returned None!")
         else:
-            logger.info(f"Speaker embedding extracted and saved to {se_path}")
+            logger.info(
+                "Speaker embedding extracted and saved to %s "
+                "(vad=%.3fs extract=%.3fs total=%.3fs)",
+                se_path,
+                vad_elapsed,
+                extract_elapsed,
+                perf_counter() - start,
+            )
         return se, audio_name
     except Exception as e:
         logger.error(f"Exception in get_se: {e}", exc_info=True)

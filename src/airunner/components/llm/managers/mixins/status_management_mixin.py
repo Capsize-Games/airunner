@@ -165,16 +165,27 @@ class StatusManagementMixin:
         # Loading failed
         self._mark_model_failed()
 
+    def _emit_loaded_toggle_sync(self: "LLMModelManager") -> None:
+        """Sync the LLM enabled state without triggering another load."""
+        self.emit_signal(
+            SignalCode.TOGGLE_LLM_SIGNAL,
+            {
+                "enabled": True,
+                "source": "llm_status_sync",
+                "sync_only": True,
+            },
+        )
+
     def _mark_model_loaded_api(self: "LLMModelManager") -> None:
         """Mark model as successfully loaded in API mode."""
         self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-        self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
+        self._emit_loaded_toggle_sync()
         self._send_success_message(is_api=True)
 
     def _mark_model_loaded_local(self: "LLMModelManager") -> None:
         """Mark model as successfully loaded in local mode."""
         self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-        self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
+        self._emit_loaded_toggle_sync()
         self._send_success_message(is_api=False)
         self._handle_pending_conversation()
 

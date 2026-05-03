@@ -198,6 +198,9 @@ class SidecarTTSClient(RuntimeClient):
                         "text": invocation.text,
                         "voice": invocation.voice,
                         "speed": invocation.speed,
+                        "model": invocation.model,
+                        "model_type": invocation.metadata.get("model_type"),
+                        "request_id": request.request_id,
                     },
                     expect_json=False,
                 )

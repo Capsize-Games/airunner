@@ -50,8 +50,33 @@ class FakeRegistry:
         return self.client
 
 
+class FakeFallbackRegistry:
+    """Runtime registry double that falls back to local TTS."""
+
+    def __init__(self, client):
+        self.client = client
+
+    def resolve(self, runtime, provider, deployment_mode="default"):
+        assert runtime is RuntimeKind.TTS
+        assert provider == "local"
+        if deployment_mode == "sidecar":
+            raise KeyError("sidecar unavailable")
+        assert deployment_mode == "local_fallback"
+        return self.client
+
+
 def _request_for(client):
     return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(runtime_registry=FakeRegistry(client))))
+
+
+def _fallback_request_for(client):
+    return SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(
+                runtime_registry=FakeFallbackRegistry(client)
+            )
+        )
+    )
 
 
 def test_synthesize_speech_invokes_sidecar_runtime_client():
@@ -72,3 +97,23 @@ def test_synthesize_speech_invokes_sidecar_runtime_client():
     assert response.media_type == "audio/wav"
     assert chunk == b"wav-bytes"
     assert client.invocations[0].request_id == "tts-route-1"
+
+
+def test_synthesize_speech_falls_back_to_local_runtime_client():
+    from airunner.api.routes.tts import TTSRequest, synthesize_speech
+
+    client = FakeTTSRuntimeClient()
+
+    async def run_test():
+        response = await synthesize_speech(
+            TTSRequest(text="Speak this", request_id="tts-route-2"),
+            _fallback_request_for(client),
+        )
+        chunk = await response.body_iterator.__anext__()
+        return response, chunk
+
+    response, chunk = asyncio.run(run_test())
+
+    assert response.media_type == "audio/wav"
+    assert chunk == b"wav-bytes"
+    assert client.invocations[0].request_id == "tts-route-2"

@@ -15,6 +15,7 @@ from airunner.utils.application.create_worker import create_worker
 _OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS = 5.0
 _OPTIONAL_UNLOAD_REQUEST_TIMEOUT_SECONDS = 2.0
 _OPTIONAL_UNLOAD_WAIT_TIMEOUT_SECONDS = 5.0
+_STREAM_TTS_WORKER_SLEEP_MS = 1
 
 
 class WorkerManager(Worker):
@@ -109,6 +110,7 @@ class WorkerManager(Worker):
         self._model_scanner_worker = None
         self._background_removal_worker = None
         self._art_runtime_prewarm_started = False
+        self._tts_runtime_prewarm_started = False
         if self.logger:
             self.logger.debug(
                 f"WorkerManager initialized. Mediator ID: {id(self.mediator)}"
@@ -328,7 +330,10 @@ class WorkerManager(Worker):
                         )
                 return None
 
-            self._tts_generator_worker = create_worker(TTSGeneratorWorker)
+            self._tts_generator_worker = create_worker(
+                TTSGeneratorWorker,
+                sleep_time_in_ms=_STREAM_TTS_WORKER_SLEEP_MS,
+            )
         return self._tts_generator_worker
 
     @property
@@ -338,7 +343,10 @@ class WorkerManager(Worker):
                 TTSVocalizerWorker,
             )
 
-            self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+            self._tts_vocalizer_worker = create_worker(
+                TTSVocalizerWorker,
+                sleep_time_in_ms=_STREAM_TTS_WORKER_SLEEP_MS,
+            )
         return self._tts_vocalizer_worker
 
     @property
@@ -750,6 +758,57 @@ class WorkerManager(Worker):
             if self.logger:
                 self.logger.debug("Art runtime prewarm skipped: %s", exc)
         self._art_runtime_prewarm_started = False
+
+    def _start_tts_runtime_prewarm(self) -> None:
+        """Start the TTS sidecar before the first spoken reply."""
+        if self._tts_runtime_prewarm_started:
+            return
+        if self._daemon_client() is None:
+            return
+        if callable(getattr(self.logger, "info", None)):
+            self.logger.info("Starting TTS runtime prewarm")
+        self._tts_runtime_prewarm_started = True
+        thread = threading.Thread(
+            target=self._prewarm_tts_runtime,
+            name="airunner-tts-prewarm",
+            daemon=True,
+        )
+        thread.start()
+
+    def _prewarm_tts_runtime(self) -> None:
+        """Ensure sidecar-backed TTS is loaded before synthesis begins."""
+        from airunner.enums import ModelType
+
+        client = self._daemon_client()
+        if client is None:
+            self._tts_runtime_prewarm_started = False
+            return
+        try:
+            client.load_runtime(
+                "tts",
+                deployment_mode="sidecar",
+                metadata=self._tts_runtime_route_metadata(),
+                auto_start=False,
+                timeout_seconds=_OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS,
+            )
+            ready = client.wait_runtime_ready(
+                "tts",
+                loaded=True,
+                deployment_mode="sidecar",
+                auto_start=False,
+                timeout_seconds=self._runtime_wait_timeout_seconds(
+                    "load",
+                    ModelType.TTS,
+                ),
+            )
+            if ready:
+                if callable(getattr(self.logger, "info", None)):
+                    self.logger.info("TTS runtime prewarm completed")
+                return
+        except RuntimeError as exc:
+            if self.logger:
+                self.logger.debug("TTS runtime prewarm skipped: %s", exc)
+        self._tts_runtime_prewarm_started = False
 
     @staticmethod
     def _is_optional_runtime_unload(action: str, model_type) -> bool:
@@ -1254,6 +1313,12 @@ class WorkerManager(Worker):
 
         model_type = data.get("model") or data.get("model_type")
         status = data.get("status")
+
+        if model_type == ModelType.TTS:
+            if status in (ModelStatus.LOADED, ModelStatus.READY):
+                self._tts_runtime_prewarm_started = True
+            elif status in (ModelStatus.UNLOADED, ModelStatus.FAILED):
+                self._tts_runtime_prewarm_started = False
 
         if (
             model_type == ModelType.SAFETY_CHECKER
@@ -1978,6 +2043,7 @@ class WorkerManager(Worker):
     def on_disable_tts_signal(self, data):
         from airunner.enums import ModelType
 
+        self._tts_runtime_prewarm_started = False
         self._stop_tts_activity_immediately()
 
         if self._control_daemon_runtime_async(
@@ -2026,16 +2092,29 @@ class WorkerManager(Worker):
             )
 
     def on_llm_text_streamed_signal(self, data):
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.on_llm_text_streamed_signal(data)
+        if data and data.get("_skip_worker_manager_tts"):
+            return
+        worker = self._stream_tts_worker()
+        if worker is not None:
+            worker.on_llm_text_streamed_signal(data)
 
     def on_llm_thinking_signal(self, data):
-        if self.tts_generator_worker is not None:
-            self.tts_generator_worker.on_llm_thinking_signal(data)
+        if data and data.get("_skip_worker_manager_tts"):
+            return
+        worker = self._stream_tts_worker()
+        if worker is not None:
+            worker.on_llm_thinking_signal(data)
+
+    def _stream_tts_worker(self):
+        """Return the TTS worker only for GUI-owned streamed chat speech."""
+        if self._current_gui_api() is None:
+            return None
+        return self.tts_generator_worker
 
     def _reload_tts_model_manager(self, data):
         from airunner.enums import ModelType
 
+        self._tts_runtime_prewarm_started = False
         if getattr(self.application_settings, "tts_enabled", False):
             if self._control_daemon_runtime_async(
                 "tts",

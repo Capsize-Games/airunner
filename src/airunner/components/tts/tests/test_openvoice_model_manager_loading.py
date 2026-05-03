@@ -45,3 +45,30 @@ def test_load_warms_model_components(monkeypatch):
         ModelType.TTS,
         ModelStatus.LOADED,
     )
+
+
+def test_warm_model_components_runs_full_inference_warmup(monkeypatch):
+    warm_melo = Mock()
+    monkeypatch.setattr(
+        "airunner.components.tts.managers.openvoice_model_manager.warm_melo_tts",
+        warm_melo,
+    )
+
+    manager = SimpleNamespace(
+        model=SimpleNamespace(),
+        language=AvailableLanguage.EN,
+        chatbot=SimpleNamespace(gender="Female"),
+        generate=Mock(return_value=object()),
+        logger=SimpleNamespace(info=Mock()),
+        _warm_inference_path=lambda: OpenVoiceModelManager._warm_inference_path(
+            manager
+        ),
+    )
+
+    OpenVoiceModelManager._warm_model_components(manager)
+
+    warm_melo.assert_called_once_with(manager.model, AvailableLanguage.EN)
+    manager.generate.assert_called_once()
+    warmup_request = manager.generate.call_args.args[0]
+    assert warmup_request.message == "Warm up."
+    assert warmup_request.gender == "Female"

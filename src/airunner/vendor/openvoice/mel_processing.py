@@ -70,10 +70,10 @@ def spectrogram_torch(
         pad_mode="reflect",
         normalized=False,
         onesided=True,
-        return_complex=False,
+        return_complex=True,
     )
 
-    spec = torch.sqrt(spec.pow(2).sum(-1) + 1e-6)
+    spec = torch.sqrt(spec.abs().pow(2) + 1e-6)
     return spec
 
 
@@ -147,9 +147,9 @@ def spectrogram_torch_conv(
         pad_mode="reflect",
         normalized=False,
         onesided=True,
-        return_complex=False,
+        return_complex=True,
     )
-    assert torch.allclose(spec1, spec2, atol=1e-4)
+    assert torch.allclose(torch.view_as_real(spec1), spec2, atol=1e-4)
 
     spec = torch.sqrt(spec2.pow(2).sum(-1) + 1e-6)
     return spec
@@ -228,10 +228,10 @@ def mel_spectrogram_torch(
         pad_mode="reflect",
         normalized=False,
         onesided=True,
-        return_complex=False,
+        return_complex=True,
     )
 
-    spec = torch.sqrt(spec.pow(2).sum(-1) + 1e-6)
+    spec = torch.sqrt(spec.abs().pow(2) + 1e-6)
 
     spec = torch.matmul(mel_basis[fmax_dtype_device], spec)
     spec = spectral_normalize_torch(spec)

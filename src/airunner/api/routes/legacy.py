@@ -99,6 +99,7 @@ class LegacyLLMGenerateRequest(BaseModel):
     prompt: str
     action: str = "CHAT"
     stream: bool = True
+    do_tts_reply: bool = False
     system_prompt: Optional[str] = None
     search_hints: Optional[Dict[str, Any]] = None
     # Optional conversation identifiers used by UwUChat.
@@ -203,6 +204,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 prompt=prompt,
                 action=action,
                 llm_request=llm_request,
+                do_tts_reply=body.do_tts_reply,
                 request_id=request_id,
                 callback=collect_cb,
                 search_hints=body.search_hints,
@@ -309,6 +311,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 prompt=prompt,
                 action=action,
                 llm_request=llm_request,
+                do_tts_reply=body.do_tts_reply,
                 request_id=request_id,
                 callback=stream_cb,
                 search_hints=body.search_hints,

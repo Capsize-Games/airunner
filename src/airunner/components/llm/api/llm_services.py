@@ -206,6 +206,8 @@ class LLMAPIService(APIServiceBase):
                 )
             except Exception:
                 pass
+        if self._forward_tts_stream_signal(data):
+            data["_skip_worker_manager_tts"] = True
         self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
 
     def send_llm_thinking_signal(
@@ -217,12 +219,88 @@ class LLMAPIService(APIServiceBase):
         """Emit one thinking-status update for the chat UI."""
         self.emit_signal(
             SignalCode.LLM_THINKING_SIGNAL,
-            {
-                "status": status,
-                "content": content,
-                "request_id": request_id,
-            },
+            self._thinking_signal_payload(status, content, request_id),
         )
+
+    def _thinking_signal_payload(
+        self,
+        status: str,
+        content: str,
+        request_id: Optional[str] = None,
+    ) -> dict:
+        """Build one thinking-signal payload and fast-path TTS state."""
+        data = {
+            "status": status,
+            "content": content,
+            "request_id": request_id,
+        }
+        if self._forward_tts_thinking_signal(data):
+            data["_skip_worker_manager_tts"] = True
+        return data
+
+    def _forward_tts_stream_signal(self, data: dict) -> bool:
+        """Forward one streamed LLM chunk directly to the GUI TTS worker."""
+        worker = self._tts_stream_worker()
+        handler = getattr(worker, "on_llm_text_streamed_signal", None)
+        if not callable(handler):
+            return False
+        handler(dict(data))
+        return True
+
+    def _forward_tts_thinking_signal(self, data: dict) -> bool:
+        """Forward one thinking update directly to the GUI TTS worker."""
+        worker = self._tts_stream_worker()
+        handler = getattr(worker, "on_llm_thinking_signal", None)
+        if not callable(handler):
+            return False
+        handler(dict(data))
+        return True
+
+    def _tts_stream_worker(self):
+        """Return the live GUI TTS worker when one exists."""
+        worker_manager = self._worker_manager()
+        if worker_manager is None:
+            return None
+        resolver = getattr(worker_manager, "_stream_tts_worker", None)
+        if callable(resolver):
+            return resolver()
+        return getattr(worker_manager, "tts_generator_worker", None)
+
+    def _worker_manager(self):
+        """Return the GUI worker manager when one is available."""
+        resolved_api = LLMAPIService._resolve_api_instance()
+        for candidate in (
+            getattr(getattr(self, "api", None), "main_window", None),
+            getattr(
+                getattr(getattr(self, "api", None), "app", None),
+                "main_window",
+                None,
+            ),
+            getattr(resolved_api, "main_window", None),
+        ):
+            if candidate is None:
+                continue
+            worker_manager = getattr(candidate, "worker_manager", None)
+            if worker_manager is not None:
+                return worker_manager
+        return None
+
+    def _prewarm_tts_runtime_for_request(
+        self,
+        llm_request: LLMRequest,
+    ) -> None:
+        """Start sidecar TTS early when one daemon reply will be spoken."""
+        worker_manager = self._worker_manager()
+        if worker_manager is None:
+            return
+        app_settings = getattr(worker_manager, "application_settings", None)
+        if not getattr(llm_request, "do_tts_reply", False) and not bool(
+            getattr(app_settings, "tts_enabled", False)
+        ):
+            return
+        prewarm = getattr(worker_manager, "_start_tts_runtime_prewarm", None)
+        if callable(prewarm):
+            prewarm()
 
     def _send_request_via_daemon(
         self,
@@ -302,6 +380,7 @@ class LLMAPIService(APIServiceBase):
                 )
             return
 
+        LLMAPIService._prewarm_tts_runtime_for_request(self, llm_request)
         self._stream_daemon_request(
             client,
             prompt,

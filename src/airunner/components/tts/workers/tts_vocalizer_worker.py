@@ -21,8 +21,11 @@ class TTSVocalizerWorker(Worker):
 
     reader_mode_active = False
 
-    def __init__(self):
-        super().__init__()
+    def __init__(
+        self,
+        sleep_time_in_ms: int = AIRUNNER_SLEEP_TIME_IN_MS,
+    ):
+        super().__init__(sleep_time_in_ms=sleep_time_in_ms)
         self.queue = Queue()
         self.started = False
         self.do_interrupt = False
@@ -422,7 +425,9 @@ class TTSVocalizerWorker(Worker):
                 "Cannot write audio, output stream is None in worker."
             )
 
-        QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+        QThread.msleep(
+            getattr(self, "_sleep_time_in_ms", AIRUNNER_SLEEP_TIME_IN_MS)
+        )
 
     def handle_speech(self, generated_speech):
         self.logger.debug("Adding speech to stream...")

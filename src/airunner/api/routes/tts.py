@@ -19,6 +19,7 @@ from airunner.runtimes.base import RuntimeClient
 from airunner.runtimes.contracts import (
     RuntimeAction,
     RuntimeKind,
+    RuntimeMode,
     TTSInvocationRequest,
 )
 from airunner.runtimes.registry import RuntimeRegistry
@@ -72,15 +73,20 @@ def require_runtime_registry(request: Request) -> RuntimeRegistry:
 
 
 def resolve_tts_client(registry: RuntimeRegistry) -> RuntimeClient:
-    """Resolve the explicit sidecar TTS runtime client."""
-    try:
-        return registry.resolve(
-            RuntimeKind.TTS,
-            provider="local",
-            deployment_mode="sidecar",
-        )
-    except KeyError as exc:
-        raise HTTPException(status_code=503, detail="TTS runtime unavailable") from exc
+    """Resolve the preferred TTS runtime client for this process."""
+    for deployment_mode in (
+        RuntimeMode.SIDECAR.value,
+        RuntimeMode.LOCAL_FALLBACK.value,
+    ):
+        try:
+            return registry.resolve(
+                RuntimeKind.TTS,
+                provider="local",
+                deployment_mode=deployment_mode,
+            )
+        except KeyError:
+            continue
+    raise HTTPException(status_code=503, detail="TTS runtime unavailable")
 
 
 # ====================

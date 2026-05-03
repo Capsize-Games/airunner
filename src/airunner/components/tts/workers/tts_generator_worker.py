@@ -43,6 +43,7 @@ class TTSGeneratorWorker(Worker):
     # Sentence buffering configuration for better prosody
     SENTENCE_BUFFER_SIZE = 2  # Number of sentences to buffer before generating
     MIN_WORDS_FOR_GENERATION = 8  # Minimum words before generating (even with fewer sentences)
+    DAEMON_MIN_WORDS_FOR_GENERATION = 4
 
     def __init__(self, *args, **kwargs):
         self.tts = None
@@ -276,6 +277,31 @@ class TTSGeneratorWorker(Worker):
         """Return the currently selected TTS model name."""
         return AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
 
+    def _has_daemon_tts_capability(self) -> bool:
+        """Return whether GUI-owned streamed TTS should use the daemon path."""
+        current_api_getter = getattr(self, "_current_api", None)
+        if callable(current_api_getter):
+            api = current_api_getter()
+        else:
+            api = TTSGeneratorWorker._current_api(self)
+        if api is not None and getattr(api, "daemon_client", None) is not None:
+            return True
+
+        main_window_getter = getattr(
+            self,
+            "_main_window",
+            TTSGeneratorWorker._main_window,
+        )
+        main_window = main_window_getter()
+        if main_window is None:
+            return False
+
+        worker_manager = getattr(main_window, "worker_manager", None)
+        daemon_getter = getattr(worker_manager, "_daemon_client", None)
+        if callable(daemon_getter):
+            return daemon_getter() is not None
+        return False
+
     def _report_tts_load_error(self, error: Exception) -> None:
         """Surface one local TTS load failure to the application boundary."""
         api = self._current_api()
@@ -339,9 +365,12 @@ class TTSGeneratorWorker(Worker):
         active_model = self._active_tts_model()
         failed_local_model = (
             active_model is not None
-            and self._failed_model == active_model
+            and getattr(self, "_failed_model", None) == active_model
         )
-        if self._daemon_client() is None and not failed_local_model:
+        if (
+            not TTSGeneratorWorker._has_daemon_tts_capability(self)
+            and not failed_local_model
+        ):
             if not self.tts or self._current_tts_status() not in [
                 ModelStatus.LOADED,
                 ModelStatus.LOADING,
@@ -549,6 +578,10 @@ class TTSGeneratorWorker(Worker):
         def word_count(s):
             return len(s.split())
 
+        word_threshold = (
+            TTSGeneratorWorker._sentence_generation_word_threshold(self)
+        )
+
         if is_end_of_message:
             # End of message - flush any buffered sentences plus remaining text
             if self._sentence_buffer or text.strip():
@@ -594,7 +627,7 @@ class TTSGeneratorWorker(Worker):
                                 len(self._sentence_buffer)
                                 >= self.SENTENCE_BUFFER_SIZE
                                 or total_words
-                                >= self.MIN_WORDS_FOR_GENERATION
+                                >= word_threshold
                             )
 
                             if should_generate:
@@ -676,6 +709,22 @@ class TTSGeneratorWorker(Worker):
         preview = message if len(message) <= 200 else f"{message[:200]}..."
         log_info("TTS input (%d chars): %r", len(message), preview)
 
+    def _sentence_generation_word_threshold(self) -> int:
+        """Return the buffered-word threshold before generating speech."""
+        default_threshold = getattr(
+            self,
+            "MIN_WORDS_FOR_GENERATION",
+            TTSGeneratorWorker.MIN_WORDS_FOR_GENERATION,
+        )
+        daemon_client_getter = getattr(self, "_daemon_client", None)
+        if callable(daemon_client_getter) and daemon_client_getter() is not None:
+            return getattr(
+                self,
+                "DAEMON_MIN_WORDS_FOR_GENERATION",
+                TTSGeneratorWorker.DAEMON_MIN_WORDS_FOR_GENERATION,
+            )
+        return default_threshold
+
     def _generate(self, message):
         if self.do_interrupt:
             return
@@ -702,6 +751,24 @@ class TTSGeneratorWorker(Worker):
 
         response = None
         client = self._daemon_client()
+        failed_local_model = (
+            model is not None and getattr(self, "_failed_model", None) == model
+        )
+        current_tts_status_getter = getattr(self, "_current_tts_status", None)
+        current_tts_status = (
+            current_tts_status_getter()
+            if callable(current_tts_status_getter)
+            else TTSGeneratorWorker._current_tts_status(self)
+        )
+        if client is None and not failed_local_model:
+            needs_local_load = self.tts is None
+            if not needs_local_load and hasattr(self.tts, "load"):
+                needs_local_load = current_tts_status not in [
+                    ModelStatus.LOADED,
+                    ModelStatus.LOADING,
+                ]
+            if needs_local_load:
+                self._load_tts()
         if client is not None:
             response = self._generate_via_daemon(message, model)
 
