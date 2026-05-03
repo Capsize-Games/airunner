@@ -2,6 +2,7 @@
 
 import base64
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
@@ -10,8 +11,10 @@ from airunner.components.art.workers.sd_worker import SDWorker
 from airunner.enums import (
     EngineResponseCode,
     GeneratorSection,
+    ModelAction,
     ModelStatus,
     ModelType,
+    StableDiffusionVersion,
 )
 
 PNG_BYTES = base64.b64decode(
@@ -357,3 +360,39 @@ def test_unload_model_manager_clears_zimage_instance_and_signature():
     assert worker._current_model is None
     assert worker._current_version is None
     assert worker._current_pipeline is None
+
+
+def test_version_keeps_explicit_sdxl_request_when_sd_disabled():
+    worker = SimpleNamespace(
+        _version=StableDiffusionVersion.SDXL1_0,
+        application_settings=SimpleNamespace(sd_enabled=False),
+        generator_settings=SimpleNamespace(
+            version=StableDiffusionVersion.FLUX_SCHNELL.value
+        ),
+    )
+
+    assert SDWorker.version.fget(worker) is StableDiffusionVersion.SDXL1_0
+
+
+def test_on_model_status_changed_signal_ignores_non_sd_messages():
+    worker = SimpleNamespace(
+        _model_manager=None,
+        _SDWorker__requested_action=ModelAction.CLEAR,
+        on_unload_art_signal=Mock(),
+    )
+
+    SDWorker.on_model_status_changed_signal(
+        worker,
+        {"model": ModelType.STT, "status": ModelStatus.UNLOADED},
+    )
+
+    worker.on_unload_art_signal.assert_not_called()
+    assert worker._SDWorker__requested_action is ModelAction.CLEAR
+
+
+def test_start_worker_thread_skips_lookup_when_sd_disabled():
+    worker = SimpleNamespace(
+        application_settings=SimpleNamespace(sd_enabled=False),
+    )
+
+    SDWorker.start_worker_thread(worker)

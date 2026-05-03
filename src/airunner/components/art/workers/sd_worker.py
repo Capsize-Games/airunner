@@ -76,11 +76,19 @@ class SDWorker(Worker):
     def version(self) -> StableDiffusionVersion:
         version = self._version
         if version is StableDiffusionVersion.NONE:
-            version = StableDiffusionVersion(self.generator_settings.version)
+            try:
+                version = StableDiffusionVersion(
+                    self.generator_settings.version
+                )
+            except Exception:
+                return StableDiffusionVersion.NONE
         # Historical setting name: `sd_enabled`.
         # AIRunner's art worker now supports multiple backends (SDXL, Flux, Z-Image).
         # Disabling SD should not prevent non-SD generators (Flux/Z-Image) from running.
-        if not self.application_settings.sd_enabled:
+        if (
+            self._version is StableDiffusionVersion.NONE
+            and not self.application_settings.sd_enabled
+        ):
             if version in (
                 StableDiffusionVersion.FLUX_DEV,
                 StableDiffusionVersion.FLUX_SCHNELL,
@@ -550,14 +558,20 @@ class SDWorker(Worker):
             self.model_manager._load_scheduler(scheduler_name)
 
     def on_model_status_changed_signal(self, message: Dict):
-        if self.model_manager and message["model"] == ModelType.SD:
-            if self.__requested_action is ModelAction.CLEAR:
-                self.on_unload_art_signal()
-            self.__requested_action = ModelAction.NONE
+        if message.get("model") != ModelType.SD:
+            return
+        if self._model_manager is None:
+            return
+        if self.__requested_action is ModelAction.CLEAR:
+            self.on_unload_art_signal()
+        self.__requested_action = ModelAction.NONE
 
     def start_worker_thread(self):
-        if self.model_manager and self.application_settings.sd_enabled:
-            self.model_manager.load()
+        if not self.application_settings.sd_enabled:
+            return
+        model_manager = self.model_manager
+        if model_manager is not None:
+            model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
         if message is not None:
