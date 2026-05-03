@@ -10,9 +10,22 @@ from typing import Dict
 from airunner.components.document_editor.gui.templates.document_editor_container_ui import (
     Ui_document_editor_container,
 )
+from airunner.components.document_editor.workspace_shell_support import (
+    active_document_summary,
+    agent_activity_entry,
+    bottom_panel_definitions,
+    problem_entry,
+    side_panel_definitions,
+    workspace_roots_summary,
+)
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QMessageBox,
+    QPlainTextEdit,
+    QTabWidget,
+)
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import Qt
 from airunner.components.document_editor.gui.widgets.document_editor_widget import (
@@ -30,6 +43,8 @@ class DocumentEditorContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self._script_process = None
+        self._workspace_panel_tabs = {}
+        self._workspace_text_panels = {}
         # Track temporary files created for running unsaved buffers so they
         # can be removed after execution.
         self._temp_run_files = set()
@@ -103,9 +118,115 @@ class DocumentEditorContainerWidget(BaseWidget):
             self.ui.documents.currentChanged.connect(self._on_tab_changed)
         except Exception:
             pass
+        self._setup_workspace_shell()
 
     def handle_new_document_signal(self, data: Dict):
         self._new_tab()
+        self.append_agent_activity(
+            agent_activity_entry("Created document", "Untitled")
+        )
+
+    def _setup_workspace_shell(self) -> None:
+        """Wrap explorer and terminal surfaces in workspace shell tabs."""
+        self._workspace_side_tabs = self._build_workspace_tabs(
+            splitter=self.ui.splitter,
+            base_widget=self.ui.file_explorer,
+            base_key="explorer",
+            base_title="Explorer",
+            panel_definitions=side_panel_definitions(),
+            object_name="workspace_side_tabs",
+        )
+        self._workspace_bottom_tabs = self._build_workspace_tabs(
+            splitter=self.ui.vertical_splitter,
+            base_widget=self.ui.terminal,
+            base_key="terminal",
+            base_title="Terminal",
+            panel_definitions=bottom_panel_definitions(),
+            object_name="workspace_bottom_tabs",
+        )
+
+    def _build_workspace_tabs(
+        self,
+        splitter,
+        base_widget,
+        base_key: str,
+        base_title: str,
+        panel_definitions,
+        object_name: str,
+    ) -> QTabWidget:
+        """Create a tabbed workspace region around an existing widget."""
+        insert_index = splitter.indexOf(base_widget)
+        tab_widget = QTabWidget(splitter)
+        tab_widget.setObjectName(object_name)
+        tab_widget.addTab(base_widget, base_title)
+        self._workspace_panel_tabs[base_key] = (tab_widget, 0)
+        for panel in panel_definitions:
+            panel_widget = self._create_workspace_text_panel(
+                panel.placeholder
+            )
+            self._workspace_text_panels[panel.key] = panel_widget
+            tab_index = tab_widget.addTab(panel_widget, panel.title)
+            self._workspace_panel_tabs[panel.key] = (tab_widget, tab_index)
+        splitter.insertWidget(insert_index, tab_widget)
+        return tab_widget
+
+    def _create_workspace_text_panel(self, placeholder: str) -> QPlainTextEdit:
+        """Create a read-only workspace panel surface."""
+        panel = QPlainTextEdit(self)
+        panel.setReadOnly(True)
+        panel.setPlaceholderText(placeholder)
+        return panel
+
+    def activate_workspace_panel(self, panel_key: str) -> None:
+        """Activate a named workspace shell panel if it exists."""
+        tab_info = self._workspace_panel_tabs.get(panel_key)
+        if tab_info is None:
+            return
+        tab_widget, tab_index = tab_info
+        tab_widget.setCurrentIndex(tab_index)
+
+    def set_project_search_results(self, text: str) -> None:
+        """Replace the project search panel contents."""
+        self._set_workspace_panel_text("project-search", text)
+
+    def set_review_summary(self, text: str) -> None:
+        """Replace the review panel contents."""
+        self._set_workspace_panel_text("review", text)
+
+    def set_problems_text(self, text: str) -> None:
+        """Replace the problems panel contents."""
+        self._set_workspace_panel_text("problems", text)
+
+    def append_problem(self, text: str) -> None:
+        """Append a problem entry and focus the problems panel."""
+        self._append_workspace_panel_text("problems", text)
+        self.activate_workspace_panel("problems")
+
+    def set_agent_activity(self, text: str) -> None:
+        """Replace the agent activity panel contents."""
+        self._set_workspace_panel_text("agent-activity", text)
+
+    def append_agent_activity(self, text: str) -> None:
+        """Append an entry to the agent activity panel."""
+        self._append_workspace_panel_text("agent-activity", text)
+
+    def _set_workspace_panel_text(self, panel_key: str, text: str) -> None:
+        """Replace the contents of a text-based workspace panel."""
+        panel = self._workspace_text_panels.get(panel_key)
+        if panel is None:
+            return
+        panel.setPlainText(text)
+
+    def _append_workspace_panel_text(
+        self,
+        panel_key: str,
+        text: str,
+    ) -> None:
+        """Append a line to a text-based workspace panel."""
+        panel = self._workspace_text_panels.get(panel_key)
+        if panel is None:
+            return
+        panel.appendPlainText(text)
 
     def setup_tab_manager(self, *args, **kwargs):
         # Remove 'parent' from kwargs if present, since TabManagerMixin does not accept it
@@ -116,10 +237,23 @@ class DocumentEditorContainerWidget(BaseWidget):
         """Open a file in a new tab in the document editor tab widget."""
         file_path = data.get("file_path")
         self._open_file_tab(file_path)
+        if file_path:
+            self.append_agent_activity(
+                agent_activity_entry("Opened file", file_path)
+            )
 
     def set_workspace_roots(self, root_paths: list[str]) -> None:
         """Configure the embedded explorer for one or more workspace roots."""
         self.ui.file_explorer.configure_root_paths(root_paths)
+        self.set_project_search_results(
+            workspace_roots_summary(root_paths)
+        )
+        self.append_agent_activity(
+            agent_activity_entry(
+                "Configured workspace roots",
+                f"{len(root_paths)} root(s)",
+            )
+        )
 
     def run_script(self, data: Dict) -> None:
         document_path = data.get("document_path")
@@ -156,6 +290,10 @@ class DocumentEditorContainerWidget(BaseWidget):
                         pass
                 script_dir = os.path.dirname(document_path)
                 python_exe = sys.executable
+                self.activate_workspace_panel("terminal")
+                self.append_agent_activity(
+                    agent_activity_entry("Started run", document_path)
+                )
                 process.setProgram(python_exe)
                 process.setArguments([document_path])
                 process.setWorkingDirectory(script_dir)
@@ -432,14 +570,26 @@ class DocumentEditorContainerWidget(BaseWidget):
     def _append_process_output(self, process: QProcess) -> None:
         data = process.readAllStandardOutput().data().decode("utf-8")
         if data:
+            self.activate_workspace_panel("terminal")
             self.ui.terminal.appendPlainText(data)
         err = process.readAllStandardError().data().decode("utf-8")
         if err:
+            self.activate_workspace_panel("terminal")
             self.ui.terminal.appendPlainText(err)
 
     def _on_process_finished(
         self, exit_code: int, exit_status, temp_path: str | None = None
     ) -> None:
+        self.append_agent_activity(
+            agent_activity_entry(
+                "Finished run",
+                f"exit code {exit_code}",
+            )
+        )
+        if exit_code != 0:
+            self.append_problem(
+                problem_entry(f"Process finished with exit code {exit_code}")
+            )
         self.ui.terminal.appendPlainText(
             f"\n[Process finished with exit code {exit_code}]"
         )
@@ -464,6 +614,10 @@ class DocumentEditorContainerWidget(BaseWidget):
                 )
 
     def _on_process_error(self, error, temp_path: str | None = None) -> None:
+        self.append_agent_activity(
+            agent_activity_entry("Process error", str(error))
+        )
+        self.append_problem(problem_entry(f"Process error: {error}"))
         self.ui.terminal.appendPlainText(f"\n[Process error: {error}]")
         # If a temporary run file was used, attempt to clean it up
         if temp_path:
@@ -605,14 +759,18 @@ class DocumentEditorContainerWidget(BaseWidget):
                 f"=== ATTEMPTING TO NOTIFY ACTIVE DOCUMENT: {file_path} ==="
             )
 
+            normalized_path = (
+                os.path.abspath(file_path) if file_path else None
+            )
+            self.set_review_summary(
+                active_document_summary(normalized_path)
+            )
+
             # Store in shared settings cache so the agent can pick it up later
             shared_settings = getattr(
                 self, "settings_mixin_shared_instance", None
             )
             if shared_settings is not None:
-                normalized_path = (
-                    os.path.abspath(file_path) if file_path else None
-                )
                 if normalized_path:
                     shared_settings.set_cached_setting_by_key(
                         "active_document_path", normalized_path
