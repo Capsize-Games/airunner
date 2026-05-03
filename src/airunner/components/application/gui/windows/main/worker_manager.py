@@ -1318,8 +1318,20 @@ class WorkerManager(Worker):
     def on_application_main_window_loaded_signal(self, _data=None):
         """Warm optional runtimes once the main window is ready."""
         self._start_art_runtime_prewarm()
-        if getattr(self.application_settings, "tts_enabled", False):
-            self.on_enable_tts_signal({"source": "startup"})
+        if not getattr(self.application_settings, "tts_enabled", False):
+            return
+
+        client = self._daemon_client()
+        if client is not None:
+            is_available = getattr(client, "is_available", None)
+            if callable(is_available) and not is_available(timeout_seconds=0.2):
+                if self.logger:
+                    self.logger.debug(
+                        "Deferring startup TTS load until the daemon is reachable"
+                    )
+                return
+
+        self.on_enable_tts_signal({"source": "startup"})
 
     def on_art_model_changed(self, data):
         self._start_art_runtime_prewarm()

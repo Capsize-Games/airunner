@@ -44,10 +44,8 @@ def _make_window_stub():
         _restore_knowledgebase_after_startup=False,
         _runtime_preference_retry_after={},
         ui=SimpleNamespace(
-            actionToggle_Stable_Diffusion=_make_action(),
-            actionToggle_LLM=_make_action(),
-            actionToggle_Text_to_Speech=_make_action(),
-            actionToggle_Speech_to_Text=_make_action(),
+            text_to_speech_button=_make_action(),
+            speech_to_text_button=_make_action(),
         ),
         application_settings=SimpleNamespace(
             tts_enabled=False,
@@ -86,7 +84,7 @@ def test_tts_runtime_status_does_not_persist_user_preference():
 
     window.update_application_settings.assert_not_called()
     window.initialize_widget_elements.assert_not_called()
-    window.ui.actionToggle_Text_to_Speech.setDisabled.assert_called_once_with(
+    window.ui.text_to_speech_button.setDisabled.assert_called_once_with(
         False
     )
 
@@ -102,12 +100,12 @@ def test_stt_runtime_status_does_not_persist_user_preference():
 
     window.update_application_settings.assert_not_called()
     window.initialize_widget_elements.assert_not_called()
-    window.ui.actionToggle_Speech_to_Text.setDisabled.assert_called_once_with(
+    window.ui.speech_to_text_button.setDisabled.assert_called_once_with(
         False
     )
 
 
-def test_failed_tts_status_unchecks_action_without_persisting():
+def test_failed_tts_status_keeps_action_checked_state_for_retry():
     window = _make_window_stub()
 
     MainWindow.on_model_status_changed_signal(
@@ -116,9 +114,19 @@ def test_failed_tts_status_unchecks_action_without_persisting():
     )
 
     window.update_application_settings.assert_not_called()
-    window.ui.actionToggle_Text_to_Speech.setChecked.assert_called_once_with(
-        False
+    window.ui.text_to_speech_button.setChecked.assert_not_called()
+
+
+def test_failed_stt_status_keeps_action_checked_state_for_retry():
+    window = _make_window_stub()
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {"model": ModelType.STT, "status": ModelStatus.FAILED},
     )
+
+    window.update_application_settings.assert_not_called()
+    window.ui.speech_to_text_button.setChecked.assert_not_called()
 
 
 def test_loading_stt_status_keeps_action_enabled_for_cancel():
@@ -129,7 +137,7 @@ def test_loading_stt_status_keeps_action_enabled_for_cancel():
         {"model": ModelType.STT, "status": ModelStatus.LOADING},
     )
 
-    window.ui.actionToggle_Speech_to_Text.setDisabled.assert_called_once_with(
+    window.ui.speech_to_text_button.setDisabled.assert_called_once_with(
         False
     )
 
@@ -196,7 +204,7 @@ def test_optional_toggle_updates_preference_while_loading():
     MainWindow._update_action_button(
         window,
         ModelType.STT,
-        window.ui.actionToggle_Speech_to_Text,
+        window.ui.speech_to_text_button,
         False,
         object(),
         object(),
@@ -207,7 +215,7 @@ def test_optional_toggle_updates_preference_while_loading():
         stt_enabled=False
     )
     window.emit_signal.assert_not_called()
-    window.ui.actionToggle_Speech_to_Text.setChecked.assert_called_once_with(
+    window.ui.speech_to_text_button.setChecked.assert_called_once_with(
         False
     )
 
@@ -339,7 +347,6 @@ def test_direct_failed_status_does_not_override_local_llm_loading():
 
     assert window._model_status[ModelType.LLM] is ModelStatus.LOADING
     window.logger.warning.assert_not_called()
-    window.ui.actionToggle_LLM.setChecked.assert_not_called()
     window.emit_signal.assert_not_called()
 
 

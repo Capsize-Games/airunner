@@ -238,6 +238,22 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 
 **Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` / `airunner-civitai-download` from the command line.
 
+### Rebuilding Qt UI Files
+
+When you change any `.ui` file in a local clone, rebuild the generated
+`*_ui.py` files from the repo root with:
+
+```bash
+source venv/bin/activate
+python src/airunner/bin/build_ui.py
+```
+
+If you installed AIRunner's console scripts, `airunner-build-ui` runs the
+same rebuild.
+
+This rebuild also refreshes the Qt resources and generated stylesheet
+assets.
+
 ---
 
 ## 🖥️ Headless Server

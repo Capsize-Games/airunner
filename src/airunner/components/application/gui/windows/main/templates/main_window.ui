@@ -355,6 +355,96 @@
            </widget>
           </item>
           <item>
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="text_to_speech_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Text to Speech</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/speaker.svg</normaloff>:/light/icons/feather/light/speaker.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="speech_to_text_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Speech to Text</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/mic.svg</normaloff>:/light/icons/feather/light/mic.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line_2">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="settings_button">
             <property name="minimumSize">
              <size>
@@ -524,7 +614,7 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                  <widget class="QWidget" name="canvas_placeholder" native="true">
+                <widget class="QWidget" name="canvas_placeholder" native="true">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>0</horstretch>
@@ -611,7 +701,7 @@
      <x>0</x>
      <y>0</y>
      <width>1074</width>
-     <height>23</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="font">
@@ -747,40 +837,6 @@
    <addaction name="menuAbout"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QToolBar" name="model_toolbar">
-   <property name="windowTitle">
-    <string>toolBar_2</string>
-   </property>
-   <property name="layoutDirection">
-    <enum>Qt::LayoutDirection::RightToLeft</enum>
-   </property>
-   <property name="movable">
-    <bool>true</bool>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Orientation::Horizontal</enum>
-   </property>
-   <property name="iconSize">
-    <size>
-     <width>18</width>
-     <height>18</height>
-    </size>
-   </property>
-   <property name="floatable">
-    <bool>false</bool>
-   </property>
-   <attribute name="toolBarArea">
-    <enum>BottomToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
-   <addaction name="actionToggle_Speech_to_Text"/>
-   <addaction name="actionToggle_Text_to_Speech"/>
-   <addaction name="actionToggle_LLM"/>
-   <addaction name="separator"/>
-   <addaction name="actionToggle_Stable_Diffusion"/>
-  </widget>
   <action name="actionCopy">
    <property name="icon">
     <iconset resource="../../../../../../gui/resources/feather.qrc">
@@ -1087,24 +1143,6 @@
    <class>GeneratorForm</class>
    <extends>QWidget</extends>
    <header>airunner/components/llm/gui/widgets/generator_form/generator_form_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>CanvasWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/canvas/canvas_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>DocumentEditorContainerWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/document_editor/gui/widgets/document_editor_container_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>DocumentsWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/documents/gui/widgets/documents</header>
    <container>1</container>
   </customwidget>
   <customwidget>

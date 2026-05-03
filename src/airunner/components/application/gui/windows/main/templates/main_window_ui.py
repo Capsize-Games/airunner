@@ -16,9 +16,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
-    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
-    QSplitter, QStatusBar, QTabWidget, QToolBar,
+from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QMainWindow,
+    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QSpacerItem, QSplitter, QStatusBar, QTabWidget,
     QVBoxLayout, QWidget)
 
 from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeStageWidget
@@ -281,14 +281,50 @@ class Ui_MainWindow(object):
         self.knowledgebase_button.setMinimumSize(QSize(35, 35))
         self.knowledgebase_button.setMaximumSize(QSize(35, 35))
         self.knowledgebase_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon30 = QIcon()
-        icon30.addFile(u":/light/icons/feather/light/book.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.knowledgebase_button.setIcon(icon30)
+        icon28 = QIcon()
+        icon28.addFile(u":/light/icons/feather/light/book.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.knowledgebase_button.setIcon(icon28)
         self.knowledgebase_button.setIconSize(QSize(20, 20))
         self.knowledgebase_button.setCheckable(True)
         self.knowledgebase_button.setFlat(True)
 
         self.action_sidebar.addWidget(self.knowledgebase_button)
+
+        self.line = QFrame(self.actionsidebar)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.action_sidebar.addWidget(self.line)
+
+        self.text_to_speech_button = QPushButton(self.actionsidebar)
+        self.text_to_speech_button.setObjectName(u"text_to_speech_button")
+        self.text_to_speech_button.setMinimumSize(QSize(35, 35))
+        self.text_to_speech_button.setMaximumSize(QSize(35, 35))
+        self.text_to_speech_button.setIcon(icon15)
+        self.text_to_speech_button.setIconSize(QSize(20, 20))
+        self.text_to_speech_button.setCheckable(True)
+        self.text_to_speech_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.text_to_speech_button)
+
+        self.speech_to_text_button = QPushButton(self.actionsidebar)
+        self.speech_to_text_button.setObjectName(u"speech_to_text_button")
+        self.speech_to_text_button.setMinimumSize(QSize(35, 35))
+        self.speech_to_text_button.setMaximumSize(QSize(35, 35))
+        self.speech_to_text_button.setIcon(icon16)
+        self.speech_to_text_button.setIconSize(QSize(20, 20))
+        self.speech_to_text_button.setCheckable(True)
+        self.speech_to_text_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.speech_to_text_button)
+
+        self.line_2 = QFrame(self.actionsidebar)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.action_sidebar.addWidget(self.line_2)
 
         self.settings_button = QPushButton(self.actionsidebar)
         self.settings_button.setObjectName(u"settings_button")
@@ -399,7 +435,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1074, 23))
+        self.menubar.setGeometry(QRect(0, 0, 1074, 26))
         font1 = QFont()
         font1.setPointSize(11)
         self.menubar.setFont(font1)
@@ -434,14 +470,6 @@ class Ui_MainWindow(object):
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
-        self.model_toolbar = QToolBar(MainWindow)
-        self.model_toolbar.setObjectName(u"model_toolbar")
-        self.model_toolbar.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.model_toolbar.setMovable(True)
-        self.model_toolbar.setOrientation(Qt.Orientation.Horizontal)
-        self.model_toolbar.setIconSize(QSize(18, 18))
-        self.model_toolbar.setFloatable(False)
-        MainWindow.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.model_toolbar)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -494,11 +522,6 @@ class Ui_MainWindow(object):
         self.menuTools.addSeparator()
         self.menuStable_Diffusion.addAction(self.actionSafety_Checker)
         self.menuStable_Diffusion.addAction(self.actionDownload_Model)
-        self.model_toolbar.addAction(self.actionToggle_Speech_to_Text)
-        self.model_toolbar.addAction(self.actionToggle_Text_to_Speech)
-        self.model_toolbar.addAction(self.actionToggle_LLM)
-        self.model_toolbar.addSeparator()
-        self.model_toolbar.addAction(self.actionToggle_Stable_Diffusion)
 
         self.retranslateUi(MainWindow)
 
@@ -582,6 +605,14 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.knowledgebase_button.setText("")
 #if QT_CONFIG(tooltip)
+        self.text_to_speech_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Text to Speech", None))
+#endif // QT_CONFIG(tooltip)
+        self.text_to_speech_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.speech_to_text_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Speech to Text", None))
+#endif // QT_CONFIG(tooltip)
+        self.speech_to_text_button.setText("")
+#if QT_CONFIG(tooltip)
         self.settings_button.setToolTip(QCoreApplication.translate("MainWindow", u"Settings", None))
 #endif // QT_CONFIG(tooltip)
         self.settings_button.setText("")
@@ -598,6 +629,5 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.menuTools.setTitle(QCoreApplication.translate("MainWindow", u"Tools", None))
         self.menuStable_Diffusion.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
-        self.model_toolbar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar_2", None))
     # retranslateUi
 

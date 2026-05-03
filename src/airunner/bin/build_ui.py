@@ -89,3 +89,7 @@ def main():
     # Build QSS for both themes
     process_qss()
     build_all_theme_css()
+
+
+if __name__ == "__main__":
+    main()

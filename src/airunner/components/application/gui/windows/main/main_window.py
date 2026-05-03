@@ -68,7 +68,6 @@ from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
     GeneratorSection,
-    LLMActionType,
     ModelType,
     ModelStatus,
     TemplateName,
@@ -175,9 +174,6 @@ class MainWindow(
     _runtime_preference_retry_seconds = 5.0
     icons = [
         ("settings", "actionSettings"),
-        ("cpu", "actionToggle_LLM"),
-        ("mic", "actionToggle_Speech_to_Text"),
-        ("image", "actionToggle_Stable_Diffusion"),
         ("image", "menuArt"),
         ("message-circle", "menuChat"),
         ("refresh-cw", "actionReset_Settings_2"),
@@ -195,7 +191,6 @@ class MainWindow(
         ("book-open", "actionPrompt_Browser"),
         ("folder", "actionBrowse_AI_Runner_Path"),
         ("folder", "actionBrowse_Images_Path_2"),
-        ("speaker", "actionToggle_Text_to_Speech"),
         ("image", "menuStable_Diffusion"),
         ("activity", "actionStats"),
         ("zap", "actionRun_setup_wizard_2"),
@@ -210,6 +205,8 @@ class MainWindow(
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
+        ("speaker", "text_to_speech_button"),
+        ("mic", "speech_to_text_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
         ("file-text", "menuDocuments"),
@@ -548,17 +545,6 @@ class MainWindow(
     def on_actionRun_setup_wizard_2_triggered(self):
         self.show_setup_wizard()
 
-    @Slot(bool)
-    def on_actionToggle_Stable_Diffusion_toggled(self, val: bool):
-        self._update_action_button(
-            ModelType.SD,
-            self.ui.actionToggle_Stable_Diffusion,
-            val,
-            SignalCode.SD_LOAD_SIGNAL,
-            SignalCode.SD_UNLOAD_SIGNAL,
-            "sd_enabled",
-        )
-
     @Slot()
     def on_actionSettings_triggered(self):
         self._show_settings_window()
@@ -578,16 +564,12 @@ class MainWindow(
         widget.show()
 
     @Slot(bool)
-    def on_actionToggle_LLM_toggled(self, val: bool):
-        self.on_toggle_llm(val=val)
-
-    @Slot(bool)
-    def on_actionToggle_Speech_to_Text_toggled(self, val: bool):
+    def on_speech_to_text_button_toggled(self, val: bool):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
             val = not val
         self._update_action_button(
             ModelType.STT,
-            self.ui.actionToggle_Speech_to_Text,
+            getattr(self.ui, "speech_to_text_button", None),
             val,
             SignalCode.STT_LOAD_SIGNAL,
             SignalCode.STT_UNLOAD_SIGNAL,
@@ -595,7 +577,7 @@ class MainWindow(
         )
 
     @Slot(bool)
-    def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
+    def on_text_to_speech_button_toggled(self, val: bool):
         self.on_toggle_tts(val=val)
 
     @Slot(bool)
@@ -1160,7 +1142,6 @@ class MainWindow(
         self.ui.menuArt.hide()
 
         self.ui.center_widget.deleteLater()
-        self.ui.actionToggle_Stable_Diffusion.deleteLater()
         self.ui.menuImage.deleteLater()
         self.ui.menuFilters.deleteLater()
         self.ui.menuStable_Diffusion.deleteLater()
@@ -1187,24 +1168,21 @@ class MainWindow(
                     self.ui.center_tab_container.addTab(widget, plugin.name)
 
     def initialize_widget_elements(self):
-        for item in (
-            (self.ui.actionToggle_LLM, self.application_settings.llm_enabled),
+        for element, enabled in (
             (
-                self.ui.actionToggle_Text_to_Speech,
+                getattr(self.ui, "text_to_speech_button", None),
                 self.application_settings.tts_enabled,
             ),
             (
-                self.ui.actionToggle_Speech_to_Text,
+                getattr(self.ui, "speech_to_text_button", None),
                 self.application_settings.stt_enabled,
             ),
-            (
-                self.ui.actionToggle_Stable_Diffusion,
-                self.application_settings.sd_enabled,
-            ),
         ):
-            item[0].blockSignals(True)
-            item[0].setChecked(item[1] or False)
-            item[0].blockSignals(False)
+            if element is None:
+                continue
+            element.blockSignals(True)
+            element.setChecked(enabled or False)
+            element.blockSignals(False)
 
         # Initialize safety checker action if it exists
         if hasattr(self.ui, "actionSafety_Checker"):
@@ -1362,30 +1340,44 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_toggle_llm(self, data: Dict = None, val=None):
+    def on_toggle_llm(
+        self,
+        data: Optional[Dict] = None,
+        val: Optional[bool] = None,
+    ):
+        data = data or {}
         if val is None:
-            val = data.get(
-                "enabled", not self.application_settings.llm_enabled
+            val = bool(
+                data.get(
+                    "enabled", not self.application_settings.llm_enabled
+                )
             )
         self._update_action_button(
             ModelType.LLM,
-            self.ui.actionToggle_LLM,
-            val,
+            None,
+            bool(val),
             SignalCode.LLM_LOAD_SIGNAL,
             SignalCode.LLM_UNLOAD_SIGNAL,
             "llm_enabled",
             data,
         )
 
-    def on_toggle_tts(self, data: Dict = None, val=None):
+    def on_toggle_tts(
+        self,
+        data: Optional[Dict] = None,
+        val: Optional[bool] = None,
+    ):
+        data = data or {}
         if val is None:
-            val = data.get(
-                "enabled", not self.application_settings.tts_enabled
+            val = bool(
+                data.get(
+                    "enabled", not self.application_settings.tts_enabled
+                )
             )
         self._update_action_button(
             ModelType.TTS,
-            self.ui.actionToggle_Text_to_Speech,
-            val,
+            getattr(self.ui, "text_to_speech_button", None),
+            bool(val),
             SignalCode.TTS_ENABLE_SIGNAL,
             SignalCode.TTS_DISABLE_SIGNAL,
             "tts_enabled",
@@ -1399,14 +1391,16 @@ class MainWindow(
         val: bool,
         load_signal: SignalCode,
         unload_signal: SignalCode,
-        application_setting: str = None,
-        data: Dict = None,
+        application_setting: Optional[str] = None,
+        data: Optional[Dict] = None,
     ):
         is_loading = self._model_status[model_type] is ModelStatus.LOADING
         if is_loading and not self._allows_loading_toggle(model_type):
-            self._set_action_checked_state(element, not val)
+            if element is not None:
+                self._set_action_checked_state(element, not val)
             return
-        self._set_action_checked_state(element, val)
+        if element is not None:
+            self._set_action_checked_state(element, val)
         if application_setting:
             settings_data = {}
             settings_data[application_setting] = val
@@ -2068,36 +2062,26 @@ class MainWindow(
         if self._model_status[model] is status:
             return
         self._model_status[model] = status
-        failed_action = None
         if model is ModelType.SD:
-            self.ui.actionToggle_Stable_Diffusion.setDisabled(
-                status is ModelStatus.LOADING
-            )
             if status is ModelStatus.LOADED:
                 self.update_application_settings(sd_enabled=True)
-            elif status is ModelStatus.FAILED:
-                self.ui.actionToggle_Stable_Diffusion.setChecked(False)
             elif status is ModelStatus.UNLOADED:
                 self.update_application_settings(sd_enabled=False)
         elif model is ModelType.LLM:
-            self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
             if status is ModelStatus.LOADED:
                 self.update_application_settings(llm_enabled=True)
             elif status is ModelStatus.FAILED:
                 self.logger.warning("LLM failed to load")
-                self.ui.actionToggle_LLM.setChecked(False)
             elif status is ModelStatus.UNLOADED:
                 self.update_application_settings(llm_enabled=False)
         elif model is ModelType.TTS:
-            self.ui.actionToggle_Text_to_Speech.setDisabled(False)
-            if status is ModelStatus.FAILED:
-                failed_action = self.ui.actionToggle_Text_to_Speech
+            button = getattr(self.ui, "text_to_speech_button", None)
+            if button is not None:
+                button.setDisabled(False)
         elif model is ModelType.STT:
-            self.ui.actionToggle_Speech_to_Text.setDisabled(False)
-            if status is ModelStatus.FAILED:
-                failed_action = self.ui.actionToggle_Speech_to_Text
-        if failed_action is not None:
-            self._set_action_checked_state(failed_action, False)
+            button = getattr(self.ui, "speech_to_text_button", None)
+            if button is not None:
+                button.setDisabled(False)
         QApplication.processEvents()
 
     def _generate_drawingpad_mask(self):

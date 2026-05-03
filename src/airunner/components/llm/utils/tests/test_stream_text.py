@@ -16,3 +16,19 @@ def test_combine_stream_chunks_preserves_existing_spacing():
 def test_combine_stream_chunks_keeps_code_like_boundaries_tight():
     """Code-style punctuation should not gain extra spaces."""
     assert combine_stream_chunks(["print", "(", '"hi"', ")"]) == 'print("hi")'
+
+
+def test_combine_stream_chunks_inserts_space_after_sentence_punctuation():
+    """Sentence-ending punctuation should keep following text separate."""
+    assert (
+        combine_stream_chunks(["How are you?", "Let me know"])
+        == "How are you? Let me know"
+    )
+
+
+def test_combine_stream_chunks_inserts_spaces_around_emojis():
+    """Emoji chunk boundaries should remain readable in prose."""
+    assert (
+        combine_stream_chunks(["Computer!", "😊", "How can I help?"])
+        == "Computer! 😊 How can I help?"
+    )

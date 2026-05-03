@@ -12,12 +12,24 @@ from airunner.enums import ModelStatus, ModelType, SignalCode
 class FakeDaemonClient:
     """Minimal daemon client double for worker manager tests."""
 
-    def __init__(self, wait_results=None, request_errors=None):
+    def __init__(
+        self,
+        wait_results=None,
+        request_errors=None,
+        *,
+        available=True,
+    ):
         self.calls = []
         self.request_kwargs = []
         self.wait_kwargs = []
+        self.availability_checks = []
         self.wait_results = wait_results or {}
         self.request_errors = request_errors or {}
+        self.available = available
+
+    def is_available(self, *, timeout_seconds=0.2):
+        self.availability_checks.append(timeout_seconds)
+        return self.available
 
     def load_runtime(self, runtime_name, **kwargs):
         self.calls.append(("load", runtime_name))
@@ -281,8 +293,8 @@ def test_main_window_loaded_starts_art_prewarm():
     assert calls == [True]
 
 
-def test_main_window_loaded_starts_enabled_tts():
-    client = FakeDaemonClient()
+def test_main_window_loaded_starts_enabled_tts_when_daemon_available():
+    client = FakeDaemonClient(available=True)
     manager, _emitted = _worker_manager(client)
     calls = []
 
@@ -298,6 +310,27 @@ def test_main_window_loaded_starts_enabled_tts():
         WorkerManager.on_application_main_window_loaded_signal(manager, {})
 
     assert calls == ["art", ("tts", {"source": "startup"})]
+    assert client.availability_checks == [0.2]
+
+
+def test_main_window_loaded_defers_enabled_tts_until_daemon_available():
+    client = FakeDaemonClient(available=False)
+    manager, _emitted = _worker_manager(client)
+    calls = []
+
+    manager._start_art_runtime_prewarm = lambda: calls.append("art")
+    manager.on_enable_tts_signal = lambda data: calls.append(("tts", data))
+
+    with patch.object(
+        WorkerManager,
+        "application_settings",
+        new_callable=PropertyMock,
+        return_value=SimpleNamespace(tts_enabled=True),
+    ):
+        WorkerManager.on_application_main_window_loaded_signal(manager, {})
+
+    assert calls == ["art"]
+    assert client.availability_checks == [0.2]
 
 
 def test_tts_load_signal_passes_active_voice_metadata():
