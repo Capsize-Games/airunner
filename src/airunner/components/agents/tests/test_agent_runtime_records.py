@@ -1,6 +1,7 @@
 """Focused tests for persisted coding-agent runtime records."""
 
 from airunner.components.agents.runtime import AgentMessageChannel
+from airunner.components.agents.runtime import AgentHandoffRecord
 from airunner.components.agents.runtime import AgentMessageRecord
 from airunner.components.agents.runtime import AgentRole
 from airunner.components.agents.runtime import AgentRunRecord
@@ -95,3 +96,22 @@ def test_session_and_task_records_round_trip():
     assert restored_session.active_run_id == "run-1"
     assert restored_task.role is AgentRole.PLANNER
     assert restored_task.status is AgentTaskStatus.IN_PROGRESS
+
+
+def test_handoff_record_round_trips_between_roles():
+    """Handoff artifacts should round-trip cleanly between agent roles."""
+    handoff = AgentHandoffRecord(
+        session_id="session-1",
+        source_task_id="task-1",
+        target_task_id="task-2",
+        from_role=AgentRole.PLANNER,
+        to_role=AgentRole.CODER,
+        summary="Planner handed implementation details to the coder.",
+        artifact_paths=[".airunner/plans/runtime.md"],
+    )
+
+    restored = AgentHandoffRecord.from_dict(handoff.to_dict())
+
+    assert restored.from_role is AgentRole.PLANNER
+    assert restored.to_role is AgentRole.CODER
+    assert restored.artifact_paths == [".airunner/plans/runtime.md"]

@@ -1,6 +1,7 @@
 """Focused tests for .airunner project state persistence."""
 
 from airunner.components.agents.runtime import AgentMessageChannel
+from airunner.components.agents.runtime import AgentHandoffRecord
 from airunner.components.agents.runtime import AgentMessageRecord
 from airunner.components.agents.runtime import AgentRole
 from airunner.components.agents.runtime import AgentRunRecord
@@ -90,3 +91,29 @@ def test_project_state_service_persists_run_session_and_task_ledgers(
     assert [item.record_id for item in resumable_sessions] == [
         session.record_id
     ]
+
+
+def test_project_state_service_persists_agent_handoffs(tmp_path):
+    """Agent handoff artifacts should persist under the .airunner tree."""
+    project_service = AirunnerProjectService(str(tmp_path / "demo-project"))
+    project_service.initialize(project_name="Demo Project")
+    state_service = AirunnerProjectStateService(project_service)
+
+    handoff = AgentHandoffRecord(
+        session_id="session-1",
+        source_task_id="task-1",
+        target_task_id="task-2",
+        from_role=AgentRole.PLANNER,
+        to_role=AgentRole.REVIEWER,
+        summary="Review the planned edits before implementation.",
+        artifact_paths=[".airunner/plans/runtime.md"],
+    )
+
+    state_service.save_handoff(handoff)
+
+    restored = state_service.load_handoff(handoff.record_id)
+    listed = state_service.list_handoffs("session-1")
+
+    assert restored.to_role is AgentRole.REVIEWER
+    assert restored.artifact_paths == [".airunner/plans/runtime.md"]
+    assert [item.record_id for item in listed] == [handoff.record_id]

@@ -6,6 +6,9 @@ from airunner.components.agents.runtime.agent_message_channel import (
 from airunner.components.agents.runtime.agent_message_record import (
     AgentMessageRecord,
 )
+from airunner.components.agents.runtime.agent_handoff_record import (
+    AgentHandoffRecord,
+)
 from airunner.components.agents.runtime.agent_role import AgentRole
 from airunner.components.agents.runtime.agent_run_record import (
     AgentRunRecord,
@@ -35,12 +38,20 @@ def __getattr__(name: str):
         )
 
         return AgentBackgroundRunManager
+    if name == "AgentOrchestrationService":
+        from airunner.components.agents.runtime.agent_orchestration_service import (
+            AgentOrchestrationService,
+        )
+
+        return AgentOrchestrationService
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "AgentMessageChannel",
     "AgentMessageRecord",
     "AgentBackgroundRunManager",
+    "AgentHandoffRecord",
+    "AgentOrchestrationService",
     "AgentRole",
     "AgentRunRecord",
     "AgentRunStatus",

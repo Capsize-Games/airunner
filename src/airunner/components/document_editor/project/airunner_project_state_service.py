@@ -6,6 +6,9 @@ import os
 from airunner.components.agents.runtime.agent_message_record import (
     AgentMessageRecord,
 )
+from airunner.components.agents.runtime.agent_handoff_record import (
+    AgentHandoffRecord,
+)
 from airunner.components.agents.runtime.agent_run_record import AgentRunRecord
 from airunner.components.agents.runtime.agent_run_status import (
     AgentRunStatus,
@@ -73,6 +76,33 @@ class AirunnerProjectStateService:
         return AgentTaskRecord.from_dict(
             self._read_json(self._task_path(task_id))
         )
+
+    def save_handoff(self, handoff: AgentHandoffRecord) -> str:
+        """Persist one coding-agent handoff artifact."""
+        return self._write_json(
+            self._handoff_path(handoff.record_id),
+            handoff.to_dict(),
+        )
+
+    def load_handoff(self, handoff_id: str) -> AgentHandoffRecord:
+        """Load one coding-agent handoff artifact."""
+        return AgentHandoffRecord.from_dict(
+            self._read_json(self._handoff_path(handoff_id))
+        )
+
+    def list_handoffs(self, session_id: str | None = None) -> list[AgentHandoffRecord]:
+        """Return persisted handoffs, optionally filtered to one session."""
+        records: list[AgentHandoffRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("agents", "handoffs")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            handoff = AgentHandoffRecord.from_dict(self._read_json(rel_path))
+            if session_id and handoff.session_id != session_id:
+                continue
+            records.append(handoff)
+        return records
 
     def save_run(self, run: AgentRunRecord) -> str:
         """Persist one coding-agent run audit record."""
@@ -163,6 +193,11 @@ class AirunnerProjectStateService:
         """Return the relative audit path for a run record."""
         directory = os.path.join(self._project_dir("audit"), "runs")
         return os.path.join(directory, f"{run_id}.json")
+
+    def _handoff_path(self, handoff_id: str) -> str:
+        """Return the relative artifact path for a handoff record."""
+        directory = os.path.join(self._project_dir("agents"), "handoffs")
+        return os.path.join(directory, f"{handoff_id}.json")
 
     def _tool_call_path(self, tool_call_id: str) -> str:
         """Return the relative audit path for a tool-call record."""

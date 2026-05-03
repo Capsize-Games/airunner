@@ -72,7 +72,8 @@ Structured runtime data stays out of markdown.
 - `.airunner/audit/` will hold generated-write and command audit trails.
 - `.airunner/indexes/` will hold disposable search and symbol indexes.
 - `.airunner/terminal/` will hold persisted terminal-session metadata.
-- `.airunner/agents/` will hold machine-readable agent profiles and state.
+- `.airunner/agents/` will hold machine-readable agent profiles, handoff
+  artifacts, and collaboration state.
 
 ## Workspace Metadata
 
@@ -195,6 +196,7 @@ JSON is the machine-managed source of truth for operational metadata:
 - `.airunner/workspace.json` for workspace roots and project identity
 - `.airunner/settings.json` for trust and autonomy policy
 - `.airunner/tasks/` and `.airunner/sessions/` for task and session state
+- `.airunner/agents/` for machine-readable handoffs and role state
 - `.airunner/audit/` and `.airunner/terminal/` for structured execution logs
 
 This split keeps plans and notes diffable while allowing the runtime to store
