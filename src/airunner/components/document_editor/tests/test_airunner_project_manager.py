@@ -3,6 +3,9 @@
 from airunner.components.document_editor.project import (
     AirunnerProjectManager,
 )
+from airunner.components.document_editor.project import (
+    AirunnerPythonEnvironmentSelection,
+)
 from airunner.components.document_editor.project.airunner_project_paths import (
     PROJECT_DIR_NAME,
 )
@@ -79,3 +82,48 @@ def test_project_manager_flags_partial_metadata(tmp_path):
         "Repair or recreate the missing .airunner metadata before opening "
         "this coding workspace."
     ]
+
+
+def test_project_manager_creates_python_project_scaffold(tmp_path):
+    """Python project creation should scaffold a usable package layout."""
+    recents_path = tmp_path / "recent_workspaces.json"
+    project_path = tmp_path / "python-project"
+    manager = AirunnerProjectManager(str(recents_path))
+
+    result = manager.create_python_project(
+        str(project_path),
+        project_name="Python Project",
+        package_name="python_project",
+    )
+
+    assert result.ok
+    assert result.settings.bootstrap_profile == "python-package"
+    assert (project_path / "pyproject.toml").exists()
+    assert (project_path / "src" / "python_project" / "__init__.py").exists()
+    assert (project_path / "tests" / "test_python_project.py").exists()
+
+
+def test_project_manager_selects_python_environment(tmp_path):
+    """Python environment selection should persist after project creation."""
+    recents_path = tmp_path / "recent_workspaces.json"
+    project_path = tmp_path / "python-project"
+    manager = AirunnerProjectManager(str(recents_path))
+    manager.create_python_project(
+        str(project_path),
+        project_name="Python Project",
+    )
+
+    reopened = manager.select_python_environment(
+        str(project_path),
+        AirunnerPythonEnvironmentSelection(
+            manager="venv",
+            interpreter_path="/tmp/python-project/.venv/bin/python",
+            environment_path="/tmp/python-project/.venv",
+            python_version="3.13",
+            activate_command="source .venv/bin/activate",
+        ),
+    )
+
+    assert reopened.ok
+    assert reopened.settings.python_environment is not None
+    assert reopened.settings.python_environment.manager == "venv"

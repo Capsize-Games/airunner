@@ -18,6 +18,12 @@ from airunner.components.document_editor.project.airunner_project_policy_enforce
 from airunner.components.document_editor.project.airunner_project_policy_enforcer import (
     AirunnerProjectPolicyEnforcer,
 )
+from airunner.components.document_editor.project.airunner_python_environment_selection import (
+    AirunnerPythonEnvironmentSelection,
+)
+from airunner.components.document_editor.project.airunner_python_project_scaffolder import (
+    AirunnerPythonProjectScaffolder,
+)
 from airunner.components.document_editor.project.airunner_project_state_service import (
     AirunnerProjectStateService,
 )
@@ -44,6 +50,8 @@ __all__ = [
     "AirunnerProjectPolicyDecision",
     "AirunnerProjectPolicyEnforcer",
     "AirunnerProjectRoot",
+    "AirunnerPythonEnvironmentSelection",
+    "AirunnerPythonProjectScaffolder",
     "AirunnerProjectService",
     "AirunnerProjectStateService",
     "AirunnerProjectSettings",

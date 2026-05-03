@@ -13,6 +13,12 @@ from airunner.components.document_editor.project.airunner_project_paths import (
 from airunner.components.document_editor.project.airunner_project_service import (
     AirunnerProjectService,
 )
+from airunner.components.document_editor.project.airunner_python_environment_selection import (
+    AirunnerPythonEnvironmentSelection,
+)
+from airunner.components.document_editor.project.airunner_python_project_scaffolder import (
+    AirunnerPythonProjectScaffolder,
+)
 from airunner.components.document_editor.project.airunner_project_settings import (
     AirunnerProjectSettings,
 )
@@ -85,6 +91,52 @@ class AirunnerProjectManager:
                 [self._repair_message()],
             )
         return self._success_result(service, workspace.project_name)
+
+    def create_python_project(
+        self,
+        project_path: str,
+        project_name: str | None = None,
+        *,
+        additional_roots: list[str] | None = None,
+        settings: AirunnerProjectSettings | None = None,
+        package_name: str | None = None,
+        python_environment: AirunnerPythonEnvironmentSelection | None = None,
+    ) -> AirunnerProjectOpenResult:
+        """Create a coding project and scaffold a Python package layout."""
+        bootstrap_settings = (settings or AirunnerProjectSettings())
+        bootstrap_settings = bootstrap_settings.with_bootstrap_profile(
+            AirunnerPythonProjectScaffolder.bootstrap_profile
+        )
+        if python_environment is not None:
+            bootstrap_settings = bootstrap_settings.with_python_environment(
+                python_environment
+            )
+        result = self.create_project(
+            project_path,
+            project_name=project_name,
+            additional_roots=additional_roots,
+            settings=bootstrap_settings,
+        )
+        if not result.ok or result.service is None or result.workspace is None:
+            return result
+        AirunnerPythonProjectScaffolder(result.service).scaffold(
+            result.workspace.project_name,
+            package_name=package_name,
+        )
+        return self.open_project(project_path)
+
+    def select_python_environment(
+        self,
+        project_path: str,
+        python_environment: AirunnerPythonEnvironmentSelection,
+    ) -> AirunnerProjectOpenResult:
+        """Persist Python environment metadata for an existing project."""
+        result = self.open_project(project_path)
+        if not result.ok or result.service is None or result.settings is None:
+            return result
+        settings = result.settings.with_python_environment(python_environment)
+        result.service.save_settings(settings)
+        return self.open_project(project_path)
 
     def list_recent_projects(self) -> list[AirunnerRecentProjectEntry]:
         """Return persisted recent coding-project entries."""

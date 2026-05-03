@@ -10,6 +10,7 @@ from airunner.components.document_editor.project import (
     AirunnerProjectRoot,
     AirunnerProjectService,
     AirunnerProjectSettings,
+    AirunnerPythonEnvironmentSelection,
     AirunnerTrustLevel,
     AirunnerWorkspaceConfig,
 )
@@ -189,3 +190,23 @@ def test_project_service_delegates_file_operations(tmp_path):
         root_name=shared_root.name,
         recursive=True,
     ) == ["pkg/module.py"]
+
+
+def test_project_settings_round_trip_python_environment_metadata():
+    """Project settings should round-trip Python bootstrap metadata."""
+    settings = AirunnerProjectSettings(
+        bootstrap_profile="python-package",
+        python_environment=AirunnerPythonEnvironmentSelection(
+            manager="venv",
+            interpreter_path="/tmp/demo/.venv/bin/python",
+            environment_path="/tmp/demo/.venv",
+            python_version="3.13",
+            activate_command="source .venv/bin/activate",
+        ),
+    )
+
+    restored = AirunnerProjectSettings.from_dict(settings.to_dict())
+
+    assert restored.bootstrap_profile == "python-package"
+    assert restored.python_environment is not None
+    assert restored.python_environment.manager == "venv"
