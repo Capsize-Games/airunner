@@ -34,6 +34,9 @@ from airunner.components.llm.tools.multi_file_code_tool import (
 from airunner.components.llm.tools.project_operations_handler import (
     ProjectOperationsHandler,
 )
+from airunner.components.llm.tools.project_generated_write_review_handler import (
+    ProjectGeneratedWriteReviewHandler,
+)
 from airunner.components.llm.tools.project_runtime_tools_handler import (
     ProjectRuntimeToolsHandler,
 )
@@ -100,6 +103,7 @@ __all__ = [
     "TestResult",
     "MultiFileCodeSession",
     "MultiFileCodeTool",
+    "ProjectGeneratedWriteReviewHandler",
     "ProjectOperationsHandler",
     "ProjectRuntimeToolsHandler",
     "ProjectToolResult",

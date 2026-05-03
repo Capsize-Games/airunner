@@ -9,6 +9,9 @@ from airunner.components.agents.runtime.agent_message_record import (
 from airunner.components.agents.runtime.agent_handoff_record import (
     AgentHandoffRecord,
 )
+from airunner.components.agents.runtime.agent_generated_write_record import (
+    AgentGeneratedWriteRecord,
+)
 from airunner.components.agents.runtime.agent_run_record import AgentRunRecord
 from airunner.components.agents.runtime.agent_run_status import (
     AgentRunStatus,
@@ -102,6 +105,44 @@ class AirunnerProjectStateService:
             if session_id and handoff.session_id != session_id:
                 continue
             records.append(handoff)
+        return records
+
+    def save_generated_write(
+        self,
+        generated_write: AgentGeneratedWriteRecord,
+    ) -> str:
+        """Persist one generated-write audit record."""
+        return self._write_json(
+            self._generated_write_path(generated_write.record_id),
+            generated_write.to_dict(),
+        )
+
+    def load_generated_write(
+        self,
+        generated_write_id: str,
+    ) -> AgentGeneratedWriteRecord:
+        """Load one generated-write audit record."""
+        return AgentGeneratedWriteRecord.from_dict(
+            self._read_json(self._generated_write_path(generated_write_id))
+        )
+
+    def list_generated_writes(
+        self,
+        run_id: str | None = None,
+    ) -> list[AgentGeneratedWriteRecord]:
+        """Return generated-write audit records, optionally for one run."""
+        records: list[AgentGeneratedWriteRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("audit", "generated_writes")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            generated_write = AgentGeneratedWriteRecord.from_dict(
+                self._read_json(rel_path)
+            )
+            if run_id and generated_write.run_id != run_id:
+                continue
+            records.append(generated_write)
         return records
 
     def save_run(self, run: AgentRunRecord) -> str:
@@ -203,6 +244,14 @@ class AirunnerProjectStateService:
         """Return the relative audit path for a tool-call record."""
         directory = os.path.join(self._project_dir("audit"), "tool_calls")
         return os.path.join(directory, f"{tool_call_id}.json")
+
+    def _generated_write_path(self, generated_write_id: str) -> str:
+        """Return the relative audit path for a generated-write record."""
+        directory = os.path.join(
+            self._project_dir("audit"),
+            "generated_writes",
+        )
+        return os.path.join(directory, f"{generated_write_id}.json")
 
     def _write_markdown(
         self,

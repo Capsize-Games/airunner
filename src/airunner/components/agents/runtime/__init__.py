@@ -6,6 +6,9 @@ from airunner.components.agents.runtime.agent_message_channel import (
 from airunner.components.agents.runtime.agent_message_record import (
     AgentMessageRecord,
 )
+from airunner.components.agents.runtime.agent_generated_write_record import (
+    AgentGeneratedWriteRecord,
+)
 from airunner.components.agents.runtime.agent_handoff_record import (
     AgentHandoffRecord,
 )
@@ -50,6 +53,7 @@ __all__ = [
     "AgentMessageChannel",
     "AgentMessageRecord",
     "AgentBackgroundRunManager",
+    "AgentGeneratedWriteRecord",
     "AgentHandoffRecord",
     "AgentOrchestrationService",
     "AgentRole",

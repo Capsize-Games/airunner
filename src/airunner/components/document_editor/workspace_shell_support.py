@@ -79,6 +79,27 @@ def active_document_summary(file_path: str | None) -> str:
     return f"Active document:\n- {os.path.normpath(file_path)}"
 
 
+def generated_write_review_summary(
+    records: list[dict[str, object]],
+) -> str:
+    """Return a human-readable summary of generated writes for review."""
+    if not records:
+        return "No agent-generated writes recorded yet."
+    lines = ["Generated writes:"]
+    for record in records:
+        summary = str(record.get("summary") or record.get("record_id"))
+        record_id = record.get("record_id")
+        lines.append(f"- {summary} [id: {record_id}]")
+    return "\n".join(lines)
+
+
+def generated_write_review_text(summary: str, diff_text: str | None) -> str:
+    """Return review-panel text that combines a summary and diff preview."""
+    if not diff_text:
+        return summary
+    return f"{summary}\n\nDiff:\n{diff_text}"
+
+
 def agent_activity_entry(action: str, subject: str) -> str:
     """Return a one-line activity entry for the agent panel."""
     return f"{action}: {subject}"

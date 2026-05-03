@@ -1,6 +1,7 @@
 """Focused tests for .airunner project state persistence."""
 
 from airunner.components.agents.runtime import AgentMessageChannel
+from airunner.components.agents.runtime import AgentGeneratedWriteRecord
 from airunner.components.agents.runtime import AgentHandoffRecord
 from airunner.components.agents.runtime import AgentMessageRecord
 from airunner.components.agents.runtime import AgentRole
@@ -117,3 +118,34 @@ def test_project_state_service_persists_agent_handoffs(tmp_path):
     assert restored.to_role is AgentRole.REVIEWER
     assert restored.artifact_paths == [".airunner/plans/runtime.md"]
     assert [item.record_id for item in listed] == [handoff.record_id]
+
+
+def test_project_state_service_persists_generated_write_records(tmp_path):
+    """Generated-write audit records should persist under .airunner/audit."""
+    project_service = AirunnerProjectService(str(tmp_path / "demo-project"))
+    project_service.initialize(project_name="Demo Project")
+    state_service = AirunnerProjectStateService(project_service)
+
+    generated_write = AgentGeneratedWriteRecord(
+        operation="project_edit_file",
+        summary="Edited workspace:src/app.py (+1/-1 lines).",
+        run_id="run-1",
+        root_name="workspace",
+        rel_path="src/app.py",
+        target_root_name="workspace",
+        target_rel_path="src/app.py",
+        before_exists=True,
+        after_exists=True,
+        before_content="value = 1\n",
+        after_content="value = 2\n",
+        diff="--- workspace:src/app.py\n+++ workspace:src/app.py",
+    )
+
+    state_service.save_generated_write(generated_write)
+
+    restored = state_service.load_generated_write(generated_write.record_id)
+    listed = state_service.list_generated_writes("run-1")
+
+    assert restored.operation == "project_edit_file"
+    assert restored.after_content == "value = 2\n"
+    assert [item.record_id for item in listed] == [generated_write.record_id]

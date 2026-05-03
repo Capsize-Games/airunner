@@ -1,6 +1,9 @@
 """Project-aware file and search tools for coding agents."""
 
 from airunner.components.llm.core.tool_registry import ToolCategory, tool
+from airunner.components.llm.tools.project_generated_write_review_handler import (
+    ProjectGeneratedWriteReviewHandler,
+)
 from airunner.components.llm.tools.project_operations_handler import (
     ProjectOperationsHandler,
 )
@@ -12,6 +15,14 @@ def _handler(
 ) -> ProjectOperationsHandler:
     """Create a project-aware operations handler."""
     return ProjectOperationsHandler(project_path, run_id=run_id)
+
+
+def _review_handler(
+    project_path: str,
+    run_id: str | None = None,
+) -> ProjectGeneratedWriteReviewHandler:
+    """Create a project-aware generated-write review handler."""
+    return ProjectGeneratedWriteReviewHandler(project_path, run_id=run_id)
 
 
 @tool(
@@ -240,4 +251,65 @@ def project_delete_file(
         rel_path,
         root_name=root_name,
         backup=backup,
+    ).to_dict()
+
+
+@tool(
+    name="project_list_generated_writes",
+    category=ToolCategory.PROJECT,
+    description=(
+        "List recent agent-generated file writes for review, grouped by "
+        "their persisted audit summaries."
+    ),
+    keywords=["project", "review", "writes", "diff", "audit"],
+)
+def project_list_generated_writes(
+    project_path: str,
+    limit: int = 20,
+    run_id: str | None = None,
+) -> dict:
+    """List recent generated writes for review flows."""
+    return _review_handler(project_path, run_id).list_generated_writes(
+        limit=limit,
+        run_id=run_id,
+    ).to_dict()
+
+
+@tool(
+    name="project_get_generated_write_diff",
+    category=ToolCategory.PROJECT,
+    description=(
+        "Load the stored diff preview for one agent-generated write "
+        "audit record."
+    ),
+    keywords=["project", "review", "diff", "audit"],
+)
+def project_get_generated_write_diff(
+    project_path: str,
+    generated_write_id: str,
+    run_id: str | None = None,
+) -> dict:
+    """Return the stored diff for one generated write."""
+    return _review_handler(project_path, run_id).get_generated_write_diff(
+        generated_write_id
+    ).to_dict()
+
+
+@tool(
+    name="project_revert_generated_write",
+    category=ToolCategory.PROJECT,
+    description=(
+        "Revert one persisted agent-generated write using its stored "
+        "pre-change state."
+    ),
+    keywords=["project", "review", "revert", "rollback", "audit"],
+)
+def project_revert_generated_write(
+    project_path: str,
+    generated_write_id: str,
+    run_id: str | None = None,
+) -> dict:
+    """Revert one generated write from its persisted audit record."""
+    return _review_handler(project_path, run_id).revert_generated_write(
+        generated_write_id
     ).to_dict()

@@ -17,6 +17,7 @@ class ProjectToolResult:
     content: str | None = None
     files: list[dict[str, str]] = field(default_factory=list)
     matches: list[dict[str, Any]] = field(default_factory=list)
+    details: dict[str, Any] = field(default_factory=dict)
     audit_record_id: str | None = None
     error: str | None = None
 
@@ -32,6 +33,7 @@ class ProjectToolResult:
             "content": self.content,
             "files": list(self.files),
             "matches": list(self.matches),
+            "details": dict(self.details),
             "audit_record_id": self.audit_record_id,
             "error": self.error,
         }

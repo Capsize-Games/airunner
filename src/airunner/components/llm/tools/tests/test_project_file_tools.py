@@ -16,6 +16,10 @@ from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.components.llm.core.tool_registry import ToolRegistry
 from airunner.components.llm.tools.project_file_tools import (
     project_create_file,
+    project_edit_file,
+    project_get_generated_write_diff,
+    project_list_generated_writes,
+    project_revert_generated_write,
 )
 from airunner.components.llm.tools.project_operations_handler import (
     ProjectOperationsHandler,
@@ -127,6 +131,7 @@ def test_project_operations_handler_audits_writes_and_run_history(
 
     recorded = state_service.load_tool_call(created.audit_record_id)
     run_record = state_service.load_run(run.record_id)
+    generated_writes = state_service.list_generated_writes(run.record_id)
 
     assert created.success is True
     assert edited.success is True
@@ -143,6 +148,55 @@ def test_project_operations_handler_audits_writes_and_run_history(
         "project_delete_file",
     ]
     assert len(state_service.list_tool_calls()) == 5
+    assert len(generated_writes) == 5
+    assert any(item.operation == "project_patch_file" for item in generated_writes)
+
+
+def test_project_review_tools_show_diffs_and_revert_writes(tmp_path):
+    """Generated-write review tools should expose diffs and rollback."""
+    project_service, _ = _build_project(tmp_path)
+    state_service = AirunnerProjectStateService(project_service)
+    run = _build_run(state_service, str(project_service.project_path))
+
+    created = project_create_file(
+        str(project_service.project_path),
+        "notes/todo.md",
+        "- original\n",
+        run_id=run.record_id,
+    )
+    edited = project_edit_file(
+        str(project_service.project_path),
+        "notes/todo.md",
+        "- updated\n",
+        run_id=run.record_id,
+    )
+
+    listed = project_list_generated_writes(
+        str(project_service.project_path),
+        run_id=run.record_id,
+    )
+    diff = project_get_generated_write_diff(
+        str(project_service.project_path),
+        edited["details"]["generated_write_id"],
+        run_id=run.record_id,
+    )
+    reverted = project_revert_generated_write(
+        str(project_service.project_path),
+        edited["details"]["generated_write_id"],
+        run_id=run.record_id,
+    )
+
+    assert created["success"] is True
+    assert edited["success"] is True
+    assert listed["success"] is True
+    assert len(listed["details"]["generated_writes"]) == 2
+    assert diff["success"] is True
+    assert "+++ workspace:notes/todo.md" in diff["content"]
+    assert reverted["success"] is True
+    assert state_service.load_generated_write(
+        edited["details"]["generated_write_id"]
+    ).metadata["reverted_at"]
+    assert project_service.read_file("notes/todo.md") == "- original\n"
 
 
 def test_project_tools_are_registered_and_callable(tmp_path):
@@ -156,6 +210,9 @@ def test_project_tools_are_registered_and_callable(tmp_path):
         "project_patch_file",
         "project_rename_file",
         "project_delete_file",
+        "project_list_generated_writes",
+        "project_get_generated_write_diff",
+        "project_revert_generated_write",
     ]
 
     for tool_name in expected_tools:

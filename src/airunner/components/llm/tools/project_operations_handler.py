@@ -16,6 +16,9 @@ from airunner.components.document_editor.project.airunner_project_service import
 from airunner.components.document_editor.project.airunner_project_state_service import (
     AirunnerProjectStateService,
 )
+from airunner.components.llm.tools.project_generated_write_support import (
+    ProjectGeneratedWriteSupport,
+)
 from airunner.components.llm.tools.project_tool_result import (
     ProjectToolResult,
 )
@@ -31,6 +34,10 @@ class ProjectOperationsHandler:
                 "The target path is not an initialized .airunner project."
             )
         self.state_service = AirunnerProjectStateService(self.project_service)
+        self.generated_writes = ProjectGeneratedWriteSupport(
+            self.project_service,
+            self.state_service,
+        )
         self.run_id = run_id
 
     def list_files(
@@ -111,6 +118,7 @@ class ProjectOperationsHandler:
     ) -> ProjectToolResult:
         root = self._default_root(root_name)
         manager = self.project_service.get_workspace_manager(root)
+        before = self.generated_writes.snapshot(rel_path, root)
         if manager.exists(rel_path) and not overwrite:
             return self._error(
                 "project_create_file",
@@ -132,6 +140,7 @@ class ProjectOperationsHandler:
         return self._audited_result(
             "project_create_file",
             arguments,
+            generated_write={"before": before},
             root_name=root,
             rel_path=rel_path,
             abs_path=abs_path,
@@ -149,6 +158,7 @@ class ProjectOperationsHandler:
     ) -> ProjectToolResult:
         root = self._default_root(root_name)
         manager = self.project_service.get_workspace_manager(root)
+        before = self.generated_writes.snapshot(rel_path, root)
         if not manager.exists(rel_path):
             return self._error(
                 "project_edit_file",
@@ -170,6 +180,7 @@ class ProjectOperationsHandler:
         return self._audited_result(
             "project_edit_file",
             arguments,
+            generated_write={"before": before},
             root_name=root,
             rel_path=rel_path,
             abs_path=abs_path,
@@ -189,6 +200,7 @@ class ProjectOperationsHandler:
     ) -> ProjectToolResult:
         root = self._default_root(root_name)
         manager = self.project_service.get_workspace_manager(root)
+        before = self.generated_writes.snapshot(rel_path, root)
         if not manager.exists(rel_path):
             return self._error(
                 "project_patch_file",
@@ -222,6 +234,7 @@ class ProjectOperationsHandler:
         return self._audited_result(
             "project_patch_file",
             arguments,
+            generated_write={"before": before},
             root_name=root,
             rel_path=rel_path,
             abs_path=abs_path,
@@ -239,6 +252,7 @@ class ProjectOperationsHandler:
     ) -> ProjectToolResult:
         source_root = self._default_root(root_name)
         target_root = self._default_root(new_root_name or source_root)
+        before = self.generated_writes.snapshot(rel_path, source_root)
         try:
             abs_path = self._rename_path(
                 rel_path,
@@ -262,6 +276,11 @@ class ProjectOperationsHandler:
         return self._audited_result(
             "project_rename_file",
             arguments,
+            generated_write={
+                "before": before,
+                "after_root_name": target_root,
+                "after_rel_path": new_rel_path,
+            },
             root_name=target_root,
             rel_path=new_rel_path,
             abs_path=abs_path,
@@ -277,6 +296,7 @@ class ProjectOperationsHandler:
     ) -> ProjectToolResult:
         root = self._default_root(root_name)
         manager = self.project_service.get_workspace_manager(root)
+        before = self.generated_writes.snapshot(rel_path, root)
         if not manager.exists(rel_path):
             return self._error(
                 "project_delete_file",
@@ -294,6 +314,7 @@ class ProjectOperationsHandler:
         return self._audited_result(
             "project_delete_file",
             arguments,
+            generated_write={"before": before},
             root_name=root,
             rel_path=rel_path,
             abs_path=abs_path,
@@ -446,6 +467,7 @@ class ProjectOperationsHandler:
         self,
         tool_name: str,
         arguments: dict[str, object],
+        generated_write: dict[str, object] | None = None,
         **kwargs,
     ) -> ProjectToolResult:
         result = self._result(tool_name, True, **kwargs)
@@ -454,6 +476,16 @@ class ProjectOperationsHandler:
             arguments,
             result.to_dict(),
         )
+        if generated_write is not None:
+            result.details.update(
+                self.generated_writes.record_result_write(
+                    tool_name,
+                    result.audit_record_id,
+                    generated_write,
+                    result,
+                    run_id=self.run_id,
+                )
+            )
         return result
 
     def _record_tool_call(

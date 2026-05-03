@@ -1,6 +1,7 @@
 """Focused tests for persisted coding-agent runtime records."""
 
 from airunner.components.agents.runtime import AgentMessageChannel
+from airunner.components.agents.runtime import AgentGeneratedWriteRecord
 from airunner.components.agents.runtime import AgentHandoffRecord
 from airunner.components.agents.runtime import AgentMessageRecord
 from airunner.components.agents.runtime import AgentRole
@@ -115,3 +116,26 @@ def test_handoff_record_round_trips_between_roles():
     assert restored.from_role is AgentRole.PLANNER
     assert restored.to_role is AgentRole.CODER
     assert restored.artifact_paths == [".airunner/plans/runtime.md"]
+
+
+def test_generated_write_record_round_trips_for_review():
+    """Generated-write audit records should keep diff review data."""
+    record = AgentGeneratedWriteRecord(
+        operation="project_edit_file",
+        summary="Edited workspace:src/app.py (+1/-1 lines).",
+        root_name="workspace",
+        rel_path="src/app.py",
+        target_root_name="workspace",
+        target_rel_path="src/app.py",
+        before_exists=True,
+        after_exists=True,
+        before_content="value = 1\n",
+        after_content="value = 2\n",
+        diff="--- workspace:src/app.py\n+++ workspace:src/app.py",
+    )
+
+    restored = AgentGeneratedWriteRecord.from_dict(record.to_dict())
+
+    assert restored.operation == "project_edit_file"
+    assert restored.rel_path == "src/app.py"
+    assert "+++ workspace:src/app.py" in restored.diff
