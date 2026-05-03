@@ -19,6 +19,10 @@ This module provides a code editor widget for the AI Runner application, featuri
 - The widget is auto-wired to the UI via the `document_editor.ui` template.
 - Do not edit `*_ui.py` files directly. For UI changes, edit the `.ui` file and run `airunner-build-ui`.
 
+## Coding Projects
+- AIRunner coding workspaces now use a `.airunner/` project contract for multi-root metadata, trust settings, and future agent state.
+- See `docs/architecture/airunner_coding_project_contract.md` for the versioned storage layout and ownership rules.
+
 ## File Structure
 - `document_editor_widget.py`: Main implementation.
 - `templates/document_editor.ui`: UI template (edit here for layout changes).

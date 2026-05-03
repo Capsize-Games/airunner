@@ -19,6 +19,14 @@ from PySide6.QtWidgets import (
 from airunner.components.file_explorer.gui.templates.file_explorer_ui import (
     Ui_file_explorer,
 )
+from airunner.components.file_explorer.gui.widgets.multi_root_file_proxy_model import (
+    MultiRootFileProxyModel,
+)
+from airunner.components.file_explorer.project_root_visibility import (
+    common_parent_for_roots,
+    is_configured_root,
+    normalize_root_paths,
+)
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
@@ -41,6 +49,9 @@ class FileExplorerWidget(BaseWidget):
             path_to_display = None
         super().__init__(parent)
         self.model = QFileSystemModel(self)
+        self.proxy_model = MultiRootFileProxyModel(self)
+        self.proxy_model.setSourceModel(self.model)
+        self._root_paths: list[str] = []
 
         # Use path_to_display if provided, else self.user_web_dir, else current path
         root_path = (
@@ -48,24 +59,9 @@ class FileExplorerWidget(BaseWidget):
             if isinstance(path_to_display, str) and path_to_display
             else getattr(self, "user_web_dir", None) or QDir.currentPath()
         )
-
-        # If we have additional paths, find a common parent directory
-        if additional_paths:
-            all_paths = [root_path] + additional_paths
-            # Find common parent
-            common_parent = os.path.commonpath(
-                [os.path.dirname(p) for p in all_paths]
-            )
-            self.model.setRootPath(common_parent)
-            self.tree_view = self.ui.treeView
-            self.tree_view.setModel(self.model)
-            # Show the common parent so all directories are visible
-            self.tree_view.setRootIndex(self.model.index(common_parent))
-        else:
-            self.model.setRootPath(root_path)
-            self.tree_view = self.ui.treeView
-            self.tree_view.setModel(self.model)
-            self.tree_view.setRootIndex(self.model.index(root_path))
+        self.tree_view = self.ui.treeView
+        self.tree_view.setModel(self.proxy_model)
+        self.configure_root_paths([root_path] + (additional_paths or []))
 
         self.model.setFilter(
             QDir.Filter.NoDotAndDotDot
@@ -94,7 +90,8 @@ class FileExplorerWidget(BaseWidget):
         )
 
     def _on_item_double_clicked(self, index: QModelIndex):
-        file_path = self.model.filePath(index)
+        source_index = self.proxy_model.mapToSource(index)
+        file_path = self.model.filePath(source_index)
         file_info = QFileInfo(file_path)
         if file_info.isFile():
             self.emit_signal(
@@ -102,8 +99,33 @@ class FileExplorerWidget(BaseWidget):
             )
 
     def set_root_directory(self, path_str: str):
-        self.model.setRootPath(path_str)
-        self.tree_view.setRootIndex(self.model.index(path_str))
+        self.configure_root_paths([path_str])
+
+    def configure_root_paths(self, root_paths: List[str]) -> None:
+        """Configure the visible workspace roots for the explorer."""
+        self._root_paths = normalize_root_paths(root_paths)
+        common_parent = common_parent_for_roots(self._root_paths)
+        self.model.setRootPath(common_parent)
+        self.proxy_model.configure_roots(self._root_paths, common_parent)
+        source_index = self.model.index(common_parent)
+        proxy_index = self.proxy_model.mapFromSource(source_index)
+        self.tree_view.setRootIndex(proxy_index)
+        self._update_root_label()
+
+    def set_project_service(self, project_service) -> None:
+        """Configure the explorer from an AIRunner project service."""
+        self.configure_root_paths(
+            [project_service.resolve_root_path(root.name)
+             for root in project_service.list_roots()]
+        )
+
+    def _update_root_label(self) -> None:
+        """Refresh the label to reflect single-root or multi-root mode."""
+        root_count = len(self._root_paths)
+        if root_count <= 1:
+            self.ui.label.setText("Explorer")
+            return
+        self.ui.label.setText(f"Explorer ({root_count} roots)")
 
     def _show_context_menu(self, position: QPoint):
         index = self.tree_view.indexAt(position)
@@ -124,32 +146,43 @@ class FileExplorerWidget(BaseWidget):
 
         # If only one item is selected, show full context menu
         if len(selected_indexes) == 1:
-            file_path = self.model.filePath(index)
-            file_info = self.model.fileInfo(index)
+            source_index = self.proxy_model.mapToSource(index)
+            file_path = self.model.filePath(source_index)
+            file_info = self.model.fileInfo(source_index)
+            root_item = is_configured_root(file_path, self._root_paths)
 
             if file_info.isFile():
                 open_action = menu.addAction("Open")
                 open_action.triggered.connect(
                     lambda: self.emit_signal(
-                        SignalCode.FILE_EXPLORER_OPEN_FILE, file_path
+                        SignalCode.FILE_EXPLORER_OPEN_FILE,
+                        {"file_path": file_path},
                     )
                 )
 
-            rename_action = menu.addAction("Rename")
-            rename_action.triggered.connect(lambda: self._rename_item(index))
+            if not root_item:
+                rename_action = menu.addAction("Rename")
+                rename_action.triggered.connect(
+                    lambda: self._rename_item(index)
+                )
 
-            delete_action = menu.addAction("Delete")
-            delete_action.triggered.connect(
-                lambda: self._delete_items(selected_indexes)
-            )
+                delete_action = menu.addAction("Delete")
+                delete_action.triggered.connect(
+                    lambda: self._delete_items(selected_indexes)
+                )
         else:
             # Multiple items selected - show simplified menu
-            delete_action = menu.addAction(
-                f"Delete {len(selected_indexes)} items"
-            )
-            delete_action.triggered.connect(
-                lambda: self._delete_items(selected_indexes)
-            )
+            file_paths = [self._file_path_for_index(idx) for idx in selected_indexes]
+            if not any(
+                is_configured_root(path, self._root_paths)
+                for path in file_paths
+            ):
+                delete_action = menu.addAction(
+                    f"Delete {len(selected_indexes)} items"
+                )
+                delete_action.triggered.connect(
+                    lambda: self._delete_items(selected_indexes)
+                )
 
         menu.exec(self.tree_view.viewport().mapToGlobal(position))
 
@@ -166,8 +199,9 @@ class FileExplorerWidget(BaseWidget):
         dir_paths = []
 
         for index in indexes:
-            file_path = self.model.filePath(index)
-            if self.model.fileInfo(index).isDir():
+            source_index = self.proxy_model.mapToSource(index)
+            file_path = self.model.filePath(source_index)
+            if self.model.fileInfo(source_index).isDir():
                 dir_paths.append(file_path)
             else:
                 file_paths.append(file_path)
@@ -231,3 +265,7 @@ class FileExplorerWidget(BaseWidget):
             raise NotImplementedError(
                 "Only FILE_EXPLORER_OPEN_FILE is supported in connect_signal."
             )
+
+    def _file_path_for_index(self, index: QModelIndex) -> str:
+        """Return the source file path for a proxy index."""
+        return self.model.filePath(self.proxy_model.mapToSource(index))

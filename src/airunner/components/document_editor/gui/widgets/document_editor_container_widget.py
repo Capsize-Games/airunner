@@ -117,6 +117,10 @@ class DocumentEditorContainerWidget(BaseWidget):
         file_path = data.get("file_path")
         self._open_file_tab(file_path)
 
+    def set_workspace_roots(self, root_paths: list[str]) -> None:
+        """Configure the embedded explorer for one or more workspace roots."""
+        self.ui.file_explorer.configure_root_paths(root_paths)
+
     def run_script(self, data: Dict) -> None:
         document_path = data.get("document_path")
         temp_file_flag = bool(data.get("temp_file", False))
