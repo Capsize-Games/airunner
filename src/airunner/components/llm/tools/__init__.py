@@ -34,6 +34,9 @@ from airunner.components.llm.tools.multi_file_code_tool import (
 from airunner.components.llm.tools.project_operations_handler import (
     ProjectOperationsHandler,
 )
+from airunner.components.llm.tools.project_runtime_tools_handler import (
+    ProjectRuntimeToolsHandler,
+)
 from airunner.components.llm.tools.project_tool_result import (
     ProjectToolResult,
 )
@@ -63,6 +66,7 @@ from airunner.components.llm.tools import (
     # Phase 3: Code generation tools
     code_generation_tools,
     project_file_tools,
+    project_runtime_tools,
     # Document editor tools for interactive code/document editing
     document_editor_tools,
 )
@@ -97,6 +101,7 @@ __all__ = [
     "MultiFileCodeSession",
     "MultiFileCodeTool",
     "ProjectOperationsHandler",
+    "ProjectRuntimeToolsHandler",
     "ProjectToolResult",
     # Tool modules
     "image_tools",
@@ -118,6 +123,7 @@ __all__ = [
     "research_validation_tools",
     "qa_tools",
     "project_file_tools",
+    "project_runtime_tools",
     # Document editor tools
     "document_editor_tools",
     # Long-running project tools
