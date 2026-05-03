@@ -74,6 +74,7 @@ class WorkerManager(Worker):
             SignalCode.STT_UNLOAD_SIGNAL: self.on_stt_unload_signal,
             SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
             SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
+            SignalCode.LLM_THINKING_SIGNAL: self.on_llm_thinking_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
             SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
@@ -455,6 +456,7 @@ class WorkerManager(Worker):
             "tts",
             "load",
             ModelType.TTS,
+            route_metadata=self._tts_runtime_route_metadata(),
         ):
             return
         worker = self.tts_generator_worker
@@ -629,6 +631,10 @@ class WorkerManager(Worker):
         if app is None:
             return None
 
+        main_window = getattr(app, "main_window", None)
+        if main_window is not None:
+            return main_window
+
         # In headless mode we often run a QCoreApplication event loop, which
         # doesn't support QWidget APIs like activeWindow/topLevelWidgets.
         if not hasattr(app, "activeWindow") or not hasattr(app, "topLevelWidgets"):
@@ -648,15 +654,65 @@ class WorkerManager(Worker):
         # Fallback: some components expose the main window via settings API
         return getattr(self.api, "main_window", None)
 
-    def _daemon_client(self):
-        """Return the GUI daemon client when daemon-backed mode is active."""
+    @staticmethod
+    def _normalize_api_candidate(candidate):
+        """Return one app-like API object from a nested candidate."""
+        if candidate is None:
+            return None
+
+        root_api = getattr(candidate, "api", None)
+        if root_api is not None and getattr(candidate, "daemon_client", None) is None:
+            return root_api
+
+        app_api = getattr(getattr(candidate, "app", None), "api", None)
+        if app_api is not None and getattr(candidate, "daemon_client", None) is None:
+            return app_api
+        return candidate
+
+    def _current_gui_api(self):
+        """Return the best live GUI API reference for worker actions."""
+        candidates = []
         refresher = getattr(self, "refresh_api_reference", None)
         if callable(refresher):
-            refreshed_api = refresher()
-            if refreshed_api is not None:
-                self.api = refreshed_api
-        api = getattr(self, "api", None)
-        if api is None or getattr(api, "headless", False):
+            candidates.append(refresher())
+        candidates.append(getattr(self, "api", None))
+
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                candidates.append(getattr(app, "api", None))
+                candidates.append(getattr(app, "main_window", None))
+        except Exception:
+            pass
+
+        try:
+            from airunner.components.server.api.server import get_api
+
+            candidates.append(get_api(create_if_missing=False))
+        except Exception:
+            pass
+
+        fallback_api = None
+        for candidate in candidates:
+            candidate = self._normalize_api_candidate(candidate)
+            if candidate is None or getattr(candidate, "headless", False):
+                continue
+            if getattr(candidate, "daemon_client", None) is not None:
+                self.api = candidate
+                return candidate
+            if fallback_api is None:
+                fallback_api = candidate
+
+        if fallback_api is not None:
+            self.api = fallback_api
+        return fallback_api
+
+    def _daemon_client(self):
+        """Return the GUI daemon client when daemon-backed mode is active."""
+        api = self._current_gui_api()
+        if api is None:
             return None
         return getattr(api, "daemon_client", None)
 
@@ -836,6 +892,8 @@ class WorkerManager(Worker):
 
         worker = getattr(self, "_llm_generate_worker", None)
         if worker is None:
+            if action == "load":
+                return ModelStatus.UNLOADED
             return None
 
         current_model_status = getattr(worker, "current_model_status", None)
@@ -850,6 +908,8 @@ class WorkerManager(Worker):
         if action == "load" and status in (
             ModelStatus.LOADING,
             ModelStatus.LOADED,
+            ModelStatus.UNLOADED,
+            ModelStatus.FAILED,
         ):
             return status
 
@@ -905,6 +965,7 @@ class WorkerManager(Worker):
         runtime_name: str,
         action: str,
         model_type,
+        route_metadata: Dict | None = None,
     ) -> bool:
         """Run one daemon load or unload request and wait for its state."""
         loaded = action == "load"
@@ -916,10 +977,16 @@ class WorkerManager(Worker):
             action,
             model_type,
         )
+        deployment_mode = self._daemon_runtime_deployment_mode(
+            runtime_name,
+            model_type,
+        )
         runtime_method = client.load_runtime if loaded else client.unload_runtime
         try:
             runtime_method(
                 runtime_name,
+                deployment_mode=deployment_mode,
+                metadata=route_metadata,
                 auto_start=False,
                 timeout_seconds=action_timeout,
             )
@@ -939,6 +1006,7 @@ class WorkerManager(Worker):
         return client.wait_runtime_ready(
             runtime_name,
             loaded=loaded,
+            deployment_mode=deployment_mode,
             auto_start=False,
             timeout_seconds=wait_timeout,
         )
@@ -948,6 +1016,7 @@ class WorkerManager(Worker):
         runtime_name: str,
         action: str,
         model_type,
+        route_metadata: Dict | None = None,
         before_request=None,
         after_success=None,
     ) -> bool:
@@ -970,6 +1039,7 @@ class WorkerManager(Worker):
                 runtime_name,
                 action,
                 model_type,
+                route_metadata=route_metadata,
             )
             status = ModelStatus.LOADED
             if action == "unload":
@@ -1025,6 +1095,7 @@ class WorkerManager(Worker):
         runtime_name: str,
         action: str,
         model_type,
+        route_metadata: Dict | None = None,
         before_request=None,
         after_success=None,
     ) -> bool:
@@ -1036,6 +1107,7 @@ class WorkerManager(Worker):
             target=self._control_daemon_runtime,
             args=(runtime_name, action, model_type),
             kwargs={
+                "route_metadata": route_metadata,
                 "before_request": before_request,
                 "after_success": after_success,
             },
@@ -1043,6 +1115,36 @@ class WorkerManager(Worker):
         )
         thread.start()
         return True
+
+    def _tts_runtime_route_metadata(self) -> Dict[str, str]:
+        """Return the active TTS model settings for daemon control."""
+        metadata: Dict[str, str] = {}
+        voice_settings = getattr(self, "chatbot_voice_settings", None)
+        if voice_settings is not None:
+            model_type = getattr(voice_settings, "model_type", None)
+            if model_type:
+                metadata["model_type"] = str(model_type)
+        path_settings = getattr(self, "path_settings", None)
+        if path_settings is not None:
+            model_path = getattr(path_settings, "tts_model_path", None)
+            if model_path:
+                metadata["model_path"] = str(model_path)
+        return metadata
+
+    @staticmethod
+    def _daemon_runtime_deployment_mode(
+        runtime_name: str,
+        model_type,
+    ) -> str:
+        """Return the daemon deployment mode used for one runtime action."""
+        from airunner.enums import ModelType
+
+        if runtime_name in {"tts", "stt"} or model_type in {
+            ModelType.TTS,
+            ModelType.STT,
+        }:
+            return "sidecar"
+        return "default"
 
     def on_huggingface_download_complete(self, data: Dict):
         """Handle download completion and retry pending generation.
@@ -1214,8 +1316,10 @@ class WorkerManager(Worker):
             self.sd_worker.on_load_art_signal(data)
 
     def on_application_main_window_loaded_signal(self, _data=None):
-        """Warm the daemon-backed art runtime once the GUI is ready."""
+        """Warm optional runtimes once the main window is ready."""
         self._start_art_runtime_prewarm()
+        if getattr(self.application_settings, "tts_enabled", False):
+            self.on_enable_tts_signal({"source": "startup"})
 
     def on_art_model_changed(self, data):
         self._start_art_runtime_prewarm()
@@ -1913,7 +2017,21 @@ class WorkerManager(Worker):
         if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_llm_text_streamed_signal(data)
 
+    def on_llm_thinking_signal(self, data):
+        if self.tts_generator_worker is not None:
+            self.tts_generator_worker.on_llm_thinking_signal(data)
+
     def _reload_tts_model_manager(self, data):
+        from airunner.enums import ModelType
+
+        if getattr(self.application_settings, "tts_enabled", False):
+            if self._control_daemon_runtime_async(
+                "tts",
+                "load",
+                ModelType.TTS,
+                route_metadata=self._tts_runtime_route_metadata(),
+            ):
+                return
         if self.tts_generator_worker is not None:
             self.tts_generator_worker._reload_tts_model_manager(data)
 
@@ -2208,6 +2326,7 @@ class WorkerManager(Worker):
                 - callback: Callback to invoke after all downloads complete
         """
         import os
+        from PySide6.QtCore import QThread
         from PySide6.QtWidgets import QMessageBox, QDialog
         from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
             OpenVoiceLanguageDialog,
@@ -2263,25 +2382,38 @@ class WorkerManager(Worker):
         self._pending_download_callback = None  # Clear any pending STT/TTS callback
 
         main_window = self._get_main_window()
-        if not main_window:
-            if self.logger:
-                self.logger.error("Cannot show language dialog - no main window")
-            return
-
-        # Show language selection dialog FIRST
-        # This lets the user choose languages before any downloads start
-        dialog = OpenVoiceLanguageDialog(
-            parent=main_window,
-            missing_languages=missing_languages,
+        ui_thread = None
+        if main_window is not None and hasattr(main_window, "thread"):
+            ui_thread = main_window.thread()
+        ui_available = (
+            main_window is not None and ui_thread == QThread.currentThread()
         )
-        result = dialog.exec()
-        
-        if result != QDialog.Accepted:
+
+        if ui_available:
+            dialog = OpenVoiceLanguageDialog(
+                parent=main_window,
+                missing_languages=missing_languages,
+            )
+            result = dialog.exec()
+
+            if result != QDialog.Accepted:
+                if self.logger:
+                    self.logger.info(
+                        "User cancelled OpenVoice language selection"
+                    )
+                return
+
+            selected_languages = dialog.get_selected_languages()
+        else:
+            selected_languages = self._default_openvoice_languages(
+                missing_languages,
+            )
             if self.logger:
-                self.logger.info("User cancelled OpenVoice language selection")
-            return
-        
-        selected_languages = dialog.get_selected_languages()
+                self.logger.info(
+                    "OpenVoice download running without language dialog; "
+                    "selected=%s",
+                    selected_languages,
+                )
 
         # Build list of all models to download
         models_to_download = list(missing_core_models)  # Always download core models
@@ -2313,88 +2445,85 @@ class WorkerManager(Worker):
                 f"converter={needs_converter}, models={models_to_download}"
             )
 
-        # Create download dialog
+        # Create the progress dialog only when we are on the UI thread.
         try:
-            # Clean up any existing dialog and its signal handlers
-            if hasattr(self, "_download_dialog") and self._download_dialog:
-                # Unregister all signals connected to the old dialog
-                try:
-                    self.huggingface_download_worker.unregister(
-                        SignalCode.UPDATE_DOWNLOAD_LOG,
-                        self._download_dialog.on_log_updated,
-                    )
-                except Exception:
-                    pass
-                try:
-                    self.huggingface_download_worker.unregister(
-                        SignalCode.UPDATE_DOWNLOAD_PROGRESS,
-                        self._download_dialog.on_progress_updated,
-                    )
-                except Exception:
-                    pass
-                try:
-                    self.huggingface_download_worker.unregister(
-                        SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
-                        self._download_dialog.on_file_progress_updated,
-                    )
-                except Exception:
-                    pass
-                try:
-                    self.huggingface_download_worker.unregister(
-                        SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-                        self._download_dialog.on_download_complete,
-                    )
-                except Exception:
-                    pass
-                try:
-                    self.huggingface_download_worker.unregister(
-                        SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
-                        self._download_dialog.on_download_failed,
-                    )
-                except Exception:
-                    pass
-                self._download_dialog.close()
-                self._download_dialog = None
-
-            self._download_dialog = HuggingFaceDownloadDialog(
-                parent=main_window,
-                model_name=f"OpenVoice TTS ({total_downloads} items)",
-                model_path=os.path.join(
-                    self.path_settings.base_path, "text/models/tts"
-                ),
-                batch_mode=True,  # Batch mode: don't auto-close on each download
-            )
-
             # Track remaining downloads and callback
             self._openvoice_remaining_downloads = total_downloads
             self._openvoice_download_callback = callback
-
-            # Connect signals
-            self.huggingface_download_worker.register(
-                SignalCode.UPDATE_DOWNLOAD_LOG,
-                self._download_dialog.on_log_updated,
-            )
-            self.huggingface_download_worker.register(
-                SignalCode.UPDATE_DOWNLOAD_PROGRESS,
-                self._download_dialog.on_progress_updated,
-            )
-            self.huggingface_download_worker.register(
-                SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
-                self._download_dialog.on_file_progress_updated,
-            )
             self.huggingface_download_worker.register(
                 SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
                 self._on_openvoice_batch_download_complete,
             )
-            self.huggingface_download_worker.register(
-                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
-                self._download_dialog.on_download_failed,
-            )
 
-            # Show dialog
-            self._download_dialog.show()
-            self._download_dialog.raise_()
-            self._download_dialog.activateWindow()
+            if ui_available:
+                if hasattr(self, "_download_dialog") and self._download_dialog:
+                    try:
+                        self.huggingface_download_worker.unregister(
+                            SignalCode.UPDATE_DOWNLOAD_LOG,
+                            self._download_dialog.on_log_updated,
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        self.huggingface_download_worker.unregister(
+                            SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                            self._download_dialog.on_progress_updated,
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        self.huggingface_download_worker.unregister(
+                            SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                            self._download_dialog.on_file_progress_updated,
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        self.huggingface_download_worker.unregister(
+                            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                            self._download_dialog.on_download_complete,
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        self.huggingface_download_worker.unregister(
+                            SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                            self._download_dialog.on_download_failed,
+                        )
+                    except Exception:
+                        pass
+                    self._download_dialog.close()
+                    self._download_dialog = None
+
+                self._download_dialog = HuggingFaceDownloadDialog(
+                    parent=main_window,
+                    model_name=f"OpenVoice TTS ({total_downloads} items)",
+                    model_path=os.path.join(
+                        self.path_settings.base_path, "text/models/tts"
+                    ),
+                    batch_mode=True,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_LOG,
+                    self._download_dialog.on_log_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
+                    self._download_dialog.on_file_progress_updated,
+                )
+                self.huggingface_download_worker.register(
+                    SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
+                    self._download_dialog.on_download_failed,
+                )
+                self._download_dialog.show()
+                self._download_dialog.raise_()
+                self._download_dialog.activateWindow()
+            else:
+                self._download_dialog = None
 
             # Queue converter ZIP download first if needed
             if needs_converter:
@@ -2431,6 +2560,44 @@ class WorkerManager(Worker):
                 self.logger.error(
                     f"Error setting up OpenVoice batch download: {e}", exc_info=True
                 )
+
+    def _default_openvoice_languages(
+        self,
+        missing_languages: list[str],
+    ) -> list[str]:
+        """Return one best-effort language list for non-blocking bootstrap."""
+        language_name_map = {
+            "FR": "French",
+            "ES": "Spanish",
+            "SP": "Spanish",
+            "JP": "Japanese",
+            "ZH": "Chinese",
+            "ZH_MIX_EN": "Chinese",
+            "KR": "Korean",
+        }
+
+        configured_language = getattr(
+            self.language_settings,
+            "bot_language",
+            None,
+        ) or getattr(self.openvoice_settings, "language", None)
+
+        if (
+            configured_language is None
+            and getattr(self.application_settings, "use_detected_language", False)
+        ):
+            configured_language = getattr(
+                self.application_settings,
+                "detected_language",
+                None,
+            )
+
+        language_key = language_name_map.get(
+            str(configured_language or "").upper()
+        )
+        if language_key and language_key in missing_languages:
+            return [language_key]
+        return []
 
     def _on_openvoice_batch_download_complete(self, data: dict):
         """Handle completion of a single model in the OpenVoice batch download."""

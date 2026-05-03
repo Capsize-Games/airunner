@@ -3,9 +3,11 @@ import torch
 import os
 from g2p_en import G2p
 
-from airunner.components.application.api.api import API
-
 from transformers import AutoTokenizer, AutoModelForMaskedLM
+from airunner.vendor.melo.runtime_support import (
+    get_melo_logger,
+    resolve_tts_model_path,
+)
 
 
 class LanguageBase:
@@ -31,7 +33,7 @@ class LanguageBase:
         return unicodedata.normalize("NFKC", text)
 
     def __init__(self):
-        self.logger = API().logger
+        self.logger = get_melo_logger()
         self._tokenizer = None
         self._bert_model = None
         self._bert_tokenizer = None
@@ -55,7 +57,7 @@ class LanguageBase:
 
     @property
     def bert_model_path(self) -> str:
-        return API().paths[self.model_path_bert]
+        return resolve_tts_model_path(self.model_path_bert)
 
     @property
     def bert_model(self):
@@ -86,7 +88,7 @@ class LanguageBase:
 
     @property
     def model_id(self):
-        return API().paths[self.model_path]
+        return resolve_tts_model_path(self.model_path)
 
     @property
     def tokenizer(self):

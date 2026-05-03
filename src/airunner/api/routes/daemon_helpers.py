@@ -242,6 +242,7 @@ def invoke_runtime_action(
             runtime=runtime,
             action=action,
             provider=route_request.provider,
+            metadata=dict(route_request.metadata or {}),
         )
     )
     return ensure_success(response)

@@ -1,4 +1,5 @@
 import sounddevice as sd
+import inspect
 from typing import Optional
 from queue import Queue
 import numpy as np
@@ -9,6 +10,7 @@ from PySide6.QtCore import QThread
 from airunner.enums import TTSModel
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.components.application.workers.worker import Worker
+from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 
 class TTSVocalizerWorker(Worker):
@@ -25,6 +27,7 @@ class TTSVocalizerWorker(Worker):
         self.started = False
         self.do_interrupt = False
         self.accept_message = True
+        self._local_sounddevice_manager: Optional[SoundDeviceManager] = None
         self._model_samplerate: Optional[int] = (
             None  # Store the model's native sample rate
         )
@@ -37,7 +40,7 @@ class TTSVocalizerWorker(Worker):
 
     @property
     def is_espeak(self) -> bool:
-        return self.chatbot_voice_model_type == TTSModel.ESPEAK.value
+        return self.chatbot_voice_model_type == TTSModel.ESPEAK
 
     def on_interrupt_process_signal(self, data: dict = None):
         self.stop_stream()
@@ -58,17 +61,169 @@ class TTSVocalizerWorker(Worker):
         self.stop_stream()
         self.start_stream()
 
+    def _current_api(self):
+        """Return the freshest API reference available to this worker."""
+        candidates = []
+        refresher = getattr(self, "refresh_api_reference", None)
+        if callable(refresher):
+            candidates.append(refresher())
+        candidates.append(getattr(self, "api", None))
+
+        resolve_api = getattr(
+            self,
+            "_resolve_api_instance",
+            TTSVocalizerWorker._resolve_api_instance,
+        )
+        candidates.append(resolve_api())
+
+        main_window_getter = getattr(
+            self,
+            "_main_window",
+            TTSVocalizerWorker._main_window,
+        )
+        candidates.append(main_window_getter())
+
+        main_window_api_getter = getattr(
+            self,
+            "_main_window_api",
+            TTSVocalizerWorker._main_window_api,
+        )
+        candidates.append(main_window_api_getter())
+
+        fallback_api = None
+        for candidate in candidates:
+            candidate = TTSVocalizerWorker._normalize_api_candidate(candidate)
+            if candidate is None or getattr(candidate, "headless", False):
+                continue
+            if TTSVocalizerWorker._candidate_has_sounddevice_manager(
+                candidate
+            ):
+                self.api = candidate
+                return candidate
+            if fallback_api is None:
+                fallback_api = candidate
+
+        if fallback_api is not None:
+            self.api = fallback_api
+        return fallback_api
+
+    @staticmethod
+    def _normalize_api_candidate(candidate):
+        """Return one app-like API object from a nested candidate."""
+        if candidate is None:
+            return None
+
+        root_api = getattr(candidate, "api", None)
+        if root_api is not None and getattr(candidate, "daemon_client", None) is None:
+            return root_api
+
+        app_api = getattr(getattr(candidate, "app", None), "api", None)
+        if app_api is not None and getattr(candidate, "daemon_client", None) is None:
+            return app_api
+        return candidate
+
+    @staticmethod
+    def _candidate_has_sounddevice_manager(candidate) -> bool:
+        """Return whether one API-like object exposes sounddevice_manager."""
+        try:
+            return (
+                inspect.getattr_static(
+                    candidate,
+                    "sounddevice_manager",
+                    None,
+                )
+                is not None
+            )
+        except Exception:
+            return getattr(candidate, "sounddevice_manager", None) is not None
+
+    @staticmethod
+    def _resolve_api_instance():
+        """Resolve the live App/API object when worker init ran too early."""
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                return getattr(app, "api", None)
+        except Exception:
+            pass
+
+        try:
+            from airunner.components.server.api.server import get_api
+
+            return get_api(create_if_missing=False)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _main_window_api():
+        """Return the API exposed by the active GUI main window."""
+        main_window = TTSVocalizerWorker._main_window()
+        if main_window is None:
+            return None
+        return getattr(main_window, "api", None) or getattr(
+            getattr(main_window, "app", None),
+            "api",
+            None,
+        )
+
+    @staticmethod
+    def _main_window():
+        """Return the active GUI main window when one exists."""
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is None:
+                return None
+            return getattr(app, "main_window", None)
+        except Exception:
+            return None
+
+    def _fallback_sounddevice_manager(self):
+        """Return one local audio manager when no shared manager is usable."""
+        manager = getattr(self, "_local_sounddevice_manager", None)
+        if manager is None:
+            self.logger.warning(
+                "Falling back to a worker-local SoundDeviceManager for TTS playback"
+            )
+            manager = SoundDeviceManager()
+            self._local_sounddevice_manager = manager
+        return manager
+
+    def _sounddevice_manager(self):
+        """Return the sounddevice manager used for TTS playback."""
+        api = TTSVocalizerWorker._current_api(self)
+        if api is not None:
+            try:
+                manager = getattr(api, "sounddevice_manager", None)
+                if manager is not None:
+                    return manager
+            except Exception:
+                pass
+        return TTSVocalizerWorker._fallback_sounddevice_manager(self)
+
     def stop_stream(self):
         if self.is_espeak:
             return
         self.logger.info("Stopping TTS vocalizer stream...")
-        if self.api.sounddevice_manager.out_stream:
-            self.api.sounddevice_manager._stop_output_stream()
+        manager = TTSVocalizerWorker._sounddevice_manager(self)
+        if manager is not None and manager.out_stream:
+            manager._stop_output_stream()
 
     def start_stream(self, pitch: Optional[int] = None):
         if self.is_espeak:
             return
         self.logger.info("Starting TTS vocalizer stream...")
+        manager = TTSVocalizerWorker._sounddevice_manager(self)
+
+        if manager is None:
+            self.logger.error(
+                "TTS vocalizer API is missing sounddevice_manager"
+            )
+            self._stream_samplerate = None
+            return
 
         # Determine the model's native sample rate
         if self.chatbot_voice_model_type == TTSModel.OPENVOICE:
@@ -110,9 +265,7 @@ class TTSVocalizerWorker(Worker):
                 self.logger.error(
                     "Failed to initialize audio stream with both model and default sample rates."
                 )
-                self.api.sounddevice_manager.out_stream = (
-                    None  # Ensure stream is None
-                )
+                manager.out_stream = None
                 self._stream_samplerate = None
 
         except Exception as e:
@@ -120,7 +273,7 @@ class TTSVocalizerWorker(Worker):
                 f"Error querying device or starting audio stream: {e}"
             )
             # Use the manager's method to stop the stream
-            self.api.sounddevice_manager._stop_output_stream()
+            manager._stop_output_stream()
             self._stream_samplerate = None
 
     @property
@@ -133,13 +286,19 @@ class TTSVocalizerWorker(Worker):
         self.logger.info(
             f"Initializing TTS stream with samplerate: {samplerate}"
         )
+        manager = TTSVocalizerWorker._sounddevice_manager(self)
+        if manager is None:
+            self.logger.error(
+                "TTS vocalizer API is missing sounddevice_manager"
+            )
+            return False
         try:
-            self.api.sounddevice_manager.initialize_output_stream(
+            manager.initialize_output_stream(
                 samplerate=samplerate,
                 channels=1,
                 device_name=self.playback_device,
             )
-            if self.api.sounddevice_manager.out_stream:
+            if manager.out_stream:
                 self._stream_samplerate = (
                     samplerate  # Store the successful sample rate
                 )
@@ -162,14 +321,14 @@ class TTSVocalizerWorker(Worker):
                     f"PortAudioError initializing stream with samplerate {samplerate}: {e}"
                 )
             # Use the manager's method to stop the stream
-            self.api.sounddevice_manager._stop_output_stream()
+            manager._stop_output_stream()
             return False
         except Exception as e:
             self.logger.error(
                 f"Unexpected error initializing stream with samplerate {samplerate}: {e}"
             )
             # Use the manager's method to stop the stream
-            self.api.sounddevice_manager._stop_output_stream()
+            manager._stop_output_stream()
             return False
 
     def on_tts_generator_worker_add_to_stream_signal(self, response: dict):
@@ -183,14 +342,21 @@ class TTSVocalizerWorker(Worker):
             return
         if not self.accept_message or item is None:
             return
+        manager = TTSVocalizerWorker._sounddevice_manager(self)
+        if manager is None:
+            self.logger.error(
+                "TTS vocalizer API is missing sounddevice_manager"
+            )
+            return
         # Ensure stream is initialized
-        if self.api.sounddevice_manager.out_stream is None:
+        if manager.out_stream is None:
             self.logger.warning(
                 "Output stream is not initialized. Attempting to start."
             )
             self.start_stream()
+            manager = TTSVocalizerWorker._sounddevice_manager(self)
             # If still no stream after attempting to start, exit
-            if self.api.sounddevice_manager.out_stream is None:
+            if manager is None or manager.out_stream is None:
                 self.logger.error("Failed to start stream. Cannot play audio.")
                 return
 
@@ -231,17 +397,15 @@ class TTSVocalizerWorker(Worker):
 
         # Check if stream exists before write
         self.logger.debug(
-            f"Checking stream before write: stream exists = {self.api.sounddevice_manager.out_stream is not None}"
+            f"Checking stream before write: stream exists = {manager.out_stream is not None}"
         )
 
         # Write (potentially resampled) audio data
-        if self.api.sounddevice_manager.out_stream:
+        if manager.out_stream:
             self.logger.debug(
                 f"Attempting to write audio data with shape: {resampled_item.shape}, dtype: {resampled_item.dtype}"
             )
-            success = self.api.sounddevice_manager.write_to_output(
-                resampled_item
-            )
+            success = manager.write_to_output(resampled_item)
             self.logger.debug(f"write_to_output returned: {success}")
             if success:
                 self.started = True
@@ -251,7 +415,7 @@ class TTSVocalizerWorker(Worker):
                     "Failed to write to audio stream. Stream might be closed."
                 )
                 # Use the manager's method to stop the stream
-                self.api.sounddevice_manager._stop_output_stream()
+                manager._stop_output_stream()
                 self._stream_samplerate = None
         else:
             self.logger.warning(

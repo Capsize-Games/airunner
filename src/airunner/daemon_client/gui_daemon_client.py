@@ -440,6 +440,7 @@ class GuiDaemonClient:
         provider: str = "local",
         deployment_mode: str = "default",
         request_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
@@ -450,6 +451,7 @@ class GuiDaemonClient:
             provider=provider,
             deployment_mode=deployment_mode,
             request_id=request_id,
+            metadata=metadata,
             auto_start=auto_start,
             timeout_seconds=timeout_seconds,
         )
@@ -461,6 +463,7 @@ class GuiDaemonClient:
         provider: str = "local",
         deployment_mode: str = "default",
         request_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
@@ -471,6 +474,7 @@ class GuiDaemonClient:
             provider=provider,
             deployment_mode=deployment_mode,
             request_id=request_id,
+            metadata=metadata,
             auto_start=auto_start,
             timeout_seconds=timeout_seconds,
         )
@@ -692,6 +696,7 @@ class GuiDaemonClient:
         provider: str,
         deployment_mode: str,
         request_id: Optional[str],
+        metadata: Optional[Dict[str, Any]],
         auto_start: bool,
         timeout_seconds: Optional[float],
     ) -> Dict[str, Any]:
@@ -703,6 +708,7 @@ class GuiDaemonClient:
                 "provider": provider,
                 "deployment_mode": deployment_mode,
                 "request_id": request_id,
+                "metadata": metadata or {},
             },
             auto_start=auto_start,
             timeout_seconds=timeout_seconds,

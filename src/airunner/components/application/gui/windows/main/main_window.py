@@ -1874,7 +1874,7 @@ class MainWindow(
         self,
         daemon_status: ModelStatus,
     ) -> ModelStatus:
-        """Prefer a live local worker over an unloaded daemon summary."""
+        """Prefer live local worker state over non-ready daemon summaries."""
         if daemon_status in (ModelStatus.LOADED, ModelStatus.LOADING):
             return daemon_status
         worker_manager = getattr(self, "worker_manager", None)
@@ -1885,9 +1885,38 @@ class MainWindow(
         if not callable(status_getter):
             return daemon_status
         local_status = status_getter()
-        if local_status in (ModelStatus.LOADED, ModelStatus.LOADING):
+        if local_status in (
+            ModelStatus.LOADED,
+            ModelStatus.LOADING,
+            ModelStatus.FAILED,
+        ):
             return local_status
+        if daemon_status == ModelStatus.FAILED:
+            return ModelStatus.UNLOADED
         return daemon_status
+
+    def _normalize_direct_llm_status(
+        self,
+        status: ModelStatus,
+    ) -> ModelStatus:
+        """Ignore stale failed events while a local load is still healthy."""
+        if status is not ModelStatus.FAILED:
+            return status
+        worker_manager = getattr(self, "worker_manager", None)
+        worker = getattr(worker_manager, "_llm_generate_worker", None)
+        if worker is None:
+            return status
+        status_getter = getattr(worker, "current_model_status", None)
+        if not callable(status_getter):
+            return status
+        local_status = status_getter()
+        if local_status in (ModelStatus.LOADING, ModelStatus.LOADED):
+            return local_status
+        if local_status is ModelStatus.UNLOADED and self._model_status.get(
+            ModelType.LLM
+        ) in (ModelStatus.LOADING, ModelStatus.LOADED):
+            return self._model_status[ModelType.LLM]
+        return status
 
     @staticmethod
     def _model_status_from_runtime_summary(summary: dict) -> ModelStatus:
@@ -2034,6 +2063,8 @@ class MainWindow(
     def on_model_status_changed_signal(self, data):
         model = data["model"]
         status = data["status"]
+        if model is ModelType.LLM:
+            status = self._normalize_direct_llm_status(status)
         if self._model_status[model] is status:
             return
         self._model_status[model] = status

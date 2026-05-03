@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RuntimeRouteRequest(BaseModel):
@@ -13,3 +13,4 @@ class RuntimeRouteRequest(BaseModel):
     provider: str = "local"
     deployment_mode: str = "default"
     request_id: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)

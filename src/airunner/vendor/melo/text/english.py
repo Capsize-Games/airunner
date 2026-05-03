@@ -20,6 +20,7 @@ class English(LanguageBase):
 
     def __init__(self):
         super().__init__()
+        self._warned_missing_nltk_tagger = False
         self.arpa = {
             "AH0",
             "S",
@@ -148,6 +149,35 @@ class English(LanguageBase):
         text = expand_abbreviations(text)
         return text
 
+    def _g2p_phone_list(self, word: str):
+        """Return phonemes for one English word without hard NLTK reliance."""
+        normalized_word = re.sub(r"[^a-z']", "", word.lower())
+        if not normalized_word:
+            return [char for char in word if char.strip()]
+
+        try:
+            return list(filter(lambda p: p != " ", self._g2p(normalized_word)))
+        except LookupError:
+            if not self._warned_missing_nltk_tagger:
+                self.logger.warning(
+                    "NLTK tagger data unavailable for English g2p; "
+                    "using predictor fallback"
+                )
+                self._warned_missing_nltk_tagger = True
+
+        cmu = getattr(self._g2p, "cmu", {})
+        if normalized_word in cmu and cmu[normalized_word]:
+            return list(cmu[normalized_word][0])
+
+        homographs = getattr(self._g2p, "homograph2features", {})
+        if normalized_word in homographs:
+            pronunciation, _alt_pronunciation, _pos = homographs[
+                normalized_word
+            ]
+            return list(pronunciation)
+
+        return list(self._g2p.predict(normalized_word))
+
     def call(self, text, pad_start_end=True, tokenized=None):
         # Base case: if text is a single character or a word with no spaces and not in eng_dict, return as phone
         if isinstance(text, str) and (len(text.strip().split()) == 1):
@@ -173,7 +203,7 @@ class English(LanguageBase):
                     word2ph = [1] + word2ph + [1]
                 return phones, tones, word2ph
             # Fallback to g2p for OOV
-            phone_list = list(filter(lambda p: p != " ", self._g2p(w)))
+            phone_list = self._g2p_phone_list(w)
             phones = []
             tones = []
             for ph in phone_list:
@@ -212,7 +242,7 @@ class English(LanguageBase):
                 tones += tns
                 phone_len += len(phns)
             else:
-                phone_list = list(filter(lambda p: p != " ", self._g2p(w)))
+                phone_list = self._g2p_phone_list(w)
                 for ph in phone_list:
                     if ph in self.arpa:
                         ph, tn = self.refine_ph(ph)

@@ -1,29 +1,54 @@
-from airunner.enums import AvailableLanguage
-from airunner.vendor.melo.text.chinese import Chinese
-from airunner.vendor.melo.text.japanese import Japanese
-from airunner.vendor.melo.text.english import English
-from airunner.vendor.melo.text.chinese_mix import ChineseMix
-from airunner.vendor.melo.text.korean import Korean
-from airunner.vendor.melo.text.french import French
-from airunner.vendor.melo.text.spanish import Spanish
-from airunner.vendor.melo.text import cleaned_text_to_sequence
 import copy
+from importlib import import_module
+
+from airunner.enums import AvailableLanguage
+from airunner.vendor.melo.text import cleaned_text_to_sequence
 
 
 class Cleaner:
     def __init__(self):
         self.language_module_map = {
-            AvailableLanguage.ZH: Chinese,
-            AvailableLanguage.JP: Japanese,
-            AvailableLanguage.EN: English,
-            AvailableLanguage.ZH_MIX_EN: ChineseMix,
-            AvailableLanguage.KR: Korean,
-            AvailableLanguage.FR: French,
-            AvailableLanguage.SP: Spanish,
-            AvailableLanguage.ES: Spanish,
+            AvailableLanguage.ZH: (
+                "airunner.vendor.melo.text.chinese",
+                "Chinese",
+            ),
+            AvailableLanguage.JP: (
+                "airunner.vendor.melo.text.japanese",
+                "Japanese",
+            ),
+            AvailableLanguage.EN: (
+                "airunner.vendor.melo.text.english",
+                "English",
+            ),
+            AvailableLanguage.ZH_MIX_EN: (
+                "airunner.vendor.melo.text.chinese_mix",
+                "ChineseMix",
+            ),
+            AvailableLanguage.KR: (
+                "airunner.vendor.melo.text.korean",
+                "Korean",
+            ),
+            AvailableLanguage.FR: (
+                "airunner.vendor.melo.text.french",
+                "French",
+            ),
+            AvailableLanguage.SP: (
+                "airunner.vendor.melo.text.spanish",
+                "Spanish",
+            ),
+            AvailableLanguage.ES: (
+                "airunner.vendor.melo.text.spanish",
+                "Spanish",
+            ),
         }
         self._language_module = None
         self._language: AvailableLanguage = AvailableLanguage.EN
+
+    @staticmethod
+    def _resolve_language_module(module_path, class_name):
+        """Import one language module only when it is first needed."""
+        module = import_module(module_path)
+        return getattr(module, class_name)
 
     @property
     def language(self) -> AvailableLanguage:
@@ -41,7 +66,12 @@ class Cleaner:
             lang = self.language
             if lang not in self.language_module_map:
                 lang = AvailableLanguage.EN
-            self._language_module = self.language_module_map[lang]()
+            module_path, class_name = self.language_module_map[lang]
+            language_module = Cleaner._resolve_language_module(
+                module_path,
+                class_name,
+            )
+            self._language_module = language_module()
         return self._language_module
 
     @language_module.setter

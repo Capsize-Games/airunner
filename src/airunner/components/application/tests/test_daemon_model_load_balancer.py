@@ -114,6 +114,31 @@ def test_switch_to_non_art_mode_marks_failed_when_runtime_stays_unready():
     assert status_updates[-1] == (ModelType.LLM, ModelStatus.FAILED)
 
 
+def test_switch_to_non_art_mode_uses_worker_manager_runtime_control():
+    client = FakeDaemonClient(["SD"])
+    calls = []
+    worker_manager = SimpleNamespace(
+        _daemon_client=lambda: client,
+        _control_daemon_runtime=lambda runtime, action, model_type, route_metadata=None: calls.append(
+            (runtime, action, model_type, route_metadata)
+        ) or True,
+    )
+    status_updates = []
+    api = SimpleNamespace(
+        daemon_client=client,
+        headless=False,
+        change_model_status=lambda model, status: status_updates.append(
+            (model, status)
+        ),
+    )
+    balancer = ModelLoadBalancer(worker_manager=worker_manager, api=api)
+
+    balancer.switch_to_non_art_mode()
+
+    assert calls == [("llm", "load", ModelType.LLM, None)]
+    assert status_updates == []
+
+
 def test_daemon_client_uses_refreshed_api_reference():
     client = FakeDaemonClient()
     balancer, _status_updates = _balancer(None)

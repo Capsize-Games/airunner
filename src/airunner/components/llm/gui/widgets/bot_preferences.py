@@ -15,6 +15,7 @@ from airunner.settings import (
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
 )
+from airunner.enums import SignalCode
 
 
 class BotPreferencesWidget(BaseWidget):
@@ -264,6 +265,12 @@ class BotPreferencesWidget(BaseWidget):
         if voice_id is None:
             return
         self.update_chatbot("voice_id", voice_id)
+        voice = VoiceSettings.objects.get(pk=voice_id)
+        if voice is not None:
+            self.emit_signal(
+                SignalCode.TTS_MODEL_CHANGED,
+                {"voice_id": voice.id, "model": voice.model_type},
+            )
 
     @Slot()
     def on_reset_system_instructions_button_clicked(self):

@@ -1,7 +1,7 @@
 """Tests for daemon-backed WorkerManager lifecycle translation."""
 
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 from airunner.components.application.gui.windows.main.worker_manager import (
     WorkerManager,
@@ -14,11 +14,14 @@ class FakeDaemonClient:
 
     def __init__(self, wait_results=None, request_errors=None):
         self.calls = []
+        self.request_kwargs = []
+        self.wait_kwargs = []
         self.wait_results = wait_results or {}
         self.request_errors = request_errors or {}
 
     def load_runtime(self, runtime_name, **kwargs):
         self.calls.append(("load", runtime_name))
+        self.request_kwargs.append(("load", runtime_name, kwargs))
         error = self.request_errors.get(("load", runtime_name))
         if error is not None:
             raise RuntimeError(error)
@@ -26,6 +29,7 @@ class FakeDaemonClient:
 
     def unload_runtime(self, runtime_name, **kwargs):
         self.calls.append(("unload", runtime_name))
+        self.request_kwargs.append(("unload", runtime_name, kwargs))
         error = self.request_errors.get(("unload", runtime_name))
         if error is not None:
             raise RuntimeError(error)
@@ -33,6 +37,7 @@ class FakeDaemonClient:
 
     def wait_runtime_ready(self, runtime_name, *, loaded, **kwargs):
         self.calls.append(("wait", runtime_name, loaded))
+        self.wait_kwargs.append((runtime_name, loaded, kwargs))
         return self.wait_results.get((runtime_name, loaded), True)
 
 
@@ -123,6 +128,29 @@ def test_stt_load_signal_uses_daemon_runtime():
 
     assert FakeThread.started == [True]
     assert client.calls == [("load", "stt"), ("wait", "stt", True)]
+    assert client.request_kwargs == [
+        (
+            "load",
+            "stt",
+            {
+                "deployment_mode": "sidecar",
+                "metadata": None,
+                "auto_start": False,
+                "timeout_seconds": 5.0,
+            },
+        )
+    ]
+    assert client.wait_kwargs == [
+        (
+            "stt",
+            True,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 60.0,
+            },
+        )
+    ]
     assert emitted == [
         (
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
@@ -149,6 +177,29 @@ def test_stt_unload_signal_uses_daemon_runtime():
 
     assert FakeThread.started == [True]
     assert client.calls == [("unload", "stt"), ("wait", "stt", False)]
+    assert client.request_kwargs == [
+        (
+            "unload",
+            "stt",
+            {
+                "deployment_mode": "sidecar",
+                "metadata": None,
+                "auto_start": False,
+                "timeout_seconds": 2.0,
+            },
+        )
+    ]
+    assert client.wait_kwargs == [
+        (
+            "stt",
+            False,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 5.0,
+            },
+        )
+    ]
     assert emitted == [
         (SignalCode.STT_STOP_CAPTURE_SIGNAL, {}),
         (
@@ -171,7 +222,7 @@ def test_llm_load_signal_marks_failed_when_runtime_never_ready():
         ),
         (
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-            {"model": ModelType.LLM, "status": ModelStatus.FAILED},
+            {"model": ModelType.LLM, "status": ModelStatus.UNLOADED},
         ),
     ]
 
@@ -185,6 +236,20 @@ def test_daemon_client_uses_refreshed_api_reference():
     )
 
     assert WorkerManager._daemon_client(manager) is client
+
+
+def test_get_main_window_prefers_qt_main_window(monkeypatch):
+    main_window = object()
+    qt_app = SimpleNamespace(main_window=main_window)
+
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QApplication.instance",
+        lambda: qt_app,
+    )
+
+    manager, _emitted = _worker_manager(None)
+
+    assert WorkerManager._get_main_window(manager) is main_window
 
 
 def test_prewarm_art_runtime_uses_daemon_runtime():
@@ -202,11 +267,98 @@ def test_main_window_loaded_starts_art_prewarm():
     client = FakeDaemonClient()
     manager, _emitted = _worker_manager(client)
     calls = []
+
     manager._start_art_runtime_prewarm = lambda: calls.append(True)
 
-    WorkerManager.on_application_main_window_loaded_signal(manager, {})
+    with patch.object(
+        WorkerManager,
+        "application_settings",
+        new_callable=PropertyMock,
+        return_value=SimpleNamespace(tts_enabled=False),
+    ):
+        WorkerManager.on_application_main_window_loaded_signal(manager, {})
 
     assert calls == [True]
+
+
+def test_main_window_loaded_starts_enabled_tts():
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(client)
+    calls = []
+
+    manager._start_art_runtime_prewarm = lambda: calls.append("art")
+    manager.on_enable_tts_signal = lambda data: calls.append(("tts", data))
+
+    with patch.object(
+        WorkerManager,
+        "application_settings",
+        new_callable=PropertyMock,
+        return_value=SimpleNamespace(tts_enabled=True),
+    ):
+        WorkerManager.on_application_main_window_loaded_signal(manager, {})
+
+    assert calls == ["art", ("tts", {"source": "startup"})]
+
+
+def test_tts_load_signal_passes_active_voice_metadata():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ), patch.object(
+        WorkerManager,
+        "chatbot_voice_settings",
+        new_callable=PropertyMock,
+        return_value=SimpleNamespace(model_type="openvoice"),
+    ), patch.object(
+        WorkerManager,
+        "path_settings",
+        new_callable=PropertyMock,
+        return_value=SimpleNamespace(tts_model_path="/tmp/openvoice"),
+    ):
+        WorkerManager.on_enable_tts_signal(manager, {})
+
+    assert FakeThread.started == [True]
+    assert client.calls == [("load", "tts"), ("wait", "tts", True)]
+    assert client.request_kwargs == [
+        (
+            "load",
+            "tts",
+            {
+                "deployment_mode": "sidecar",
+                "metadata": {
+                    "model_type": "openvoice",
+                    "model_path": "/tmp/openvoice",
+                },
+                "auto_start": False,
+                "timeout_seconds": 5.0,
+            },
+        )
+    ]
+    assert client.wait_kwargs == [
+        (
+            "tts",
+            True,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 90.0,
+            },
+        )
+    ]
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.TTS, "status": ModelStatus.LOADING},
+        ),
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.TTS, "status": ModelStatus.LOADED},
+        ),
+    ]
 
 
 def test_tts_enable_signal_uses_background_daemon_runtime():
@@ -222,6 +374,22 @@ def test_tts_enable_signal_uses_background_daemon_runtime():
 
     assert FakeThread.started == [True]
     assert client.calls == [("load", "tts"), ("wait", "tts", True)]
+    assert client.request_kwargs[0][0:2] == ("load", "tts")
+    assert client.request_kwargs[0][2]["deployment_mode"] == "sidecar"
+    assert client.request_kwargs[0][2]["auto_start"] is False
+    assert client.request_kwargs[0][2]["timeout_seconds"] == 5.0
+    assert isinstance(client.request_kwargs[0][2]["metadata"], dict)
+    assert client.wait_kwargs == [
+        (
+            "tts",
+            True,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 90.0,
+            },
+        )
+    ]
     assert emitted == [
         (
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
@@ -247,6 +415,29 @@ def test_tts_disable_signal_uses_background_daemon_runtime():
 
     assert FakeThread.started == [True]
     assert client.calls == [("unload", "tts"), ("wait", "tts", False)]
+    assert client.request_kwargs == [
+        (
+            "unload",
+            "tts",
+            {
+                "deployment_mode": "sidecar",
+                "metadata": None,
+                "auto_start": False,
+                "timeout_seconds": 2.0,
+            },
+        )
+    ]
+    assert client.wait_kwargs == [
+        (
+            "tts",
+            False,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 5.0,
+            },
+        )
+    ]
     assert emitted == [
         (
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
@@ -546,6 +737,23 @@ def test_tts_disable_signal_queues_local_worker_request():
         },
         {"_message_type": "tts_disable", "data": {"source": "ui"}},
     ]
+
+
+def test_llm_thinking_signal_forwards_to_tts_generator_worker():
+    client = None
+    manager, _emitted = _worker_manager(client)
+    manager._tts_generator_worker = SimpleNamespace(
+        on_llm_thinking_signal=Mock()
+    )
+
+    WorkerManager.on_llm_thinking_signal(
+        manager,
+        {"status": "started", "request_id": "req-1"},
+    )
+
+    manager._tts_generator_worker.on_llm_thinking_signal.assert_called_once_with(
+        {"status": "started", "request_id": "req-1"}
+    )
 
 
 def test_llm_load_failure_keeps_loaded_local_status():

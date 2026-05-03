@@ -1830,6 +1830,36 @@ Based on the search results above, provide a clear, conversational answer to the
                     "request_id": request_id,
                 },
             )
+
+        def forward_stream_text(text_to_stream: str) -> None:
+            """Forward one raw chunk to the streaming callback."""
+            if not self._token_callback or not text_to_stream:
+                return
+            try:
+                self._token_callback(text_to_stream)
+            except Exception as callback_error:
+                self.logger.error(
+                    "Token callback failed: %s",
+                    callback_error,
+                    exc_info=True,
+                )
+
+        def store_visible_text(
+            text_to_stream: str,
+            *,
+            forward_to_callback: bool = True,
+        ) -> None:
+            """Persist one visible chunk and optionally forward it."""
+            nonlocal has_streamed_content
+            if not has_streamed_content:
+                text_to_stream = text_to_stream.lstrip()
+            if not text_to_stream:
+                return
+
+            streamed_content.append(text_to_stream)
+            has_streamed_content = True
+            if forward_to_callback:
+                forward_stream_text(text_to_stream)
         # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
         # suppress/buffer tokens. Some models can emit the *entire* answer inside <think> blocks;
         # suppressing thinking would then swallow all output for NDJSON clients.
@@ -1872,12 +1902,10 @@ Based on the search results above, provide a clear, conversational answer to the
                 if not text and not chunk_tool_calls and not reasoning_delta:
                     continue
 
-                streamed_content.append(text)
-                
                 # Debug: Log every chunk
                 # self.logger.debug(f"[THINKING] Chunk received: '{text[:50]}...' (in_thinking={in_thinking_block})")
 
-                if suppress_thinking_blocks and reasoning_delta:
+                if reasoning_delta:
                     if not thinking_started:
                         thinking_started = True
                         using_reasoning_deltas = True
@@ -1889,11 +1917,7 @@ Based on the search results above, provide a clear, conversational answer to the
                     if not text:
                         continue
 
-                if (
-                    suppress_thinking_blocks
-                    and using_reasoning_deltas
-                    and text
-                ):
+                if using_reasoning_deltas and text:
                     using_reasoning_deltas = False
                     final_thinking_content = "".join(thinking_content)
                     emit_thinking_signal(
@@ -1901,97 +1925,88 @@ Based on the search results above, provide a clear, conversational answer to the
                         final_thinking_content,
                     )
                     thinking_content = []
-                
-                if suppress_thinking_blocks:
-                    # Detect thinking block boundaries using format-agnostic helpers
-                    # Supports both <think>...</think> (Qwen3) and [THINK]...[/THINK] (Ministral 3)
-                    found_open, tag_format, _, after_think = detect_thinking_open_tag(text)
-                    if found_open and not thinking_started:
-                        in_thinking_block = True
-                        thinking_started = True
-                        thinking_tag_format = tag_format
-                        # Emit thinking started signal
-                        emit_thinking_signal("started", "")
 
-                        # Check if closing tag is also in this chunk (entire thinking block in one chunk)
-                        found_close, before_close, after_close = detect_thinking_close_tag(after_think, tag_format)
-                        if found_close:
-                            # Both tags in same chunk - extract thinking and remaining content
-                            if before_close:
-                                thinking_content.append(before_close)
-                                emit_thinking_signal(
-                                    "streaming",
-                                    before_close,
-                                )
+                found_open, tag_format, before_open, after_think = (
+                    detect_thinking_open_tag(text)
+                )
+                if found_open and not thinking_started:
+                    if not suppress_thinking_blocks:
+                        forward_stream_text(text)
+                    in_thinking_block = True
+                    thinking_started = True
+                    thinking_tag_format = tag_format
+                    emit_thinking_signal("started", "")
 
-                            # Mark thinking as complete
-                            in_thinking_block = False
-                            final_thinking_content = "".join(thinking_content)
+                    if before_open:
+                        store_visible_text(
+                            before_open,
+                            forward_to_callback=suppress_thinking_blocks,
+                        )
 
-                            emit_thinking_signal(
-                                "completed",
-                                final_thinking_content,
-                            )
-                            thinking_content = []
-
-                            # Stream any content after closing tag to the main callback
-                            if after_close and self._token_callback:
-                                try:
-                                    self._token_callback(after_close)
-                                except Exception as callback_error:
-                                    self.logger.error(
-                                        "Token callback failed: %s",
-                                        callback_error,
-                                        exc_info=True,
-                                    )
-                        elif after_think:
-                            # Only opening tag in this chunk, stream content to thinking
-                            thinking_content.append(after_think)
+                    found_close, before_close, after_close = (
+                        detect_thinking_close_tag(after_think, tag_format)
+                    )
+                    if found_close:
+                        if before_close:
+                            thinking_content.append(before_close)
                             emit_thinking_signal(
                                 "streaming",
-                                after_think,
+                                before_close,
                             )
-                        continue  # Skip normal processing for this chunk
 
-                    # If we're in a thinking block, emit thinking content
-                    if in_thinking_block:
-                        # Check for closing tag using the same format as the opening tag
-                        found_close, before_close, after_close = detect_thinking_close_tag(text, thinking_tag_format)
-                        if found_close:
-                            if before_close:
-                                thinking_content.append(before_close)
-                                emit_thinking_signal(
-                                    "streaming",
-                                    before_close,
-                                )
+                        in_thinking_block = False
+                        final_thinking_content = "".join(thinking_content)
+                        emit_thinking_signal(
+                            "completed",
+                            final_thinking_content,
+                        )
+                        thinking_content = []
 
-                            # Mark thinking as complete
-                            in_thinking_block = False
+                        if after_close:
+                            store_visible_text(
+                                after_close,
+                                forward_to_callback=suppress_thinking_blocks,
+                            )
+                    elif after_think:
+                        thinking_content.append(after_think)
+                        emit_thinking_signal(
+                            "streaming",
+                            after_think,
+                        )
+                    continue
 
-                            # Save thinking content for DB persistence BEFORE clearing the list
-                            final_thinking_content = "".join(thinking_content)
+                if in_thinking_block:
+                    if not suppress_thinking_blocks:
+                        forward_stream_text(text)
 
+                    found_close, before_close, after_close = (
+                        detect_thinking_close_tag(text, thinking_tag_format)
+                    )
+                    if found_close:
+                        if before_close:
+                            thinking_content.append(before_close)
                             emit_thinking_signal(
-                                "completed",
-                                final_thinking_content,
+                                "streaming",
+                                before_close,
                             )
-                            thinking_content = []
 
-                            # Stream any content after closing tag to the main callback
-                            if after_close and self._token_callback:
-                                try:
-                                    self._token_callback(after_close)
-                                except Exception as callback_error:
-                                    self.logger.error(
-                                        "Token callback failed: %s",
-                                        callback_error,
-                                        exc_info=True,
-                                    )
-                        else:
-                            # Stream thinking content to GUI
-                            emit_thinking_signal("streaming", text)
-                            thinking_content.append(text)
-                        continue  # Don't stream thinking to main callback
+                        in_thinking_block = False
+                        final_thinking_content = "".join(thinking_content)
+                        emit_thinking_signal(
+                            "completed",
+                            final_thinking_content,
+                        )
+                        thinking_content = []
+
+                        if after_close:
+                            store_visible_text(
+                                after_close,
+                                forward_to_callback=suppress_thinking_blocks,
+                            )
+                    else:
+                        emit_thinking_signal("streaming", text)
+                        thinking_content.append(text)
+                    continue
                 
                 text_to_stream = text
 
@@ -2066,27 +2081,7 @@ Based on the search results above, provide a clear, conversational answer to the
                             json_buffer = []
                             json_brace_depth = 0
                 
-                # Stream non-JSON content to GUI immediately
-                # Skip whitespace-only content to prevent creating empty assistant messages
-                if text_to_stream and self._token_callback:
-                    try:
-                        # Keep stripping leading whitespace until we find non-blank content
-                        # This handles cases where multiple chunks contain only whitespace
-                        if not has_streamed_content:
-                            text_to_stream = text_to_stream.lstrip()
-                            # Only mark as streamed if we have actual content after stripping
-                            if text_to_stream:
-                                has_streamed_content = True
-                        
-                        # Only call callback if we have content to stream
-                        if text_to_stream:
-                            self._token_callback(text_to_stream)
-                    except Exception as callback_error:
-                        self.logger.error(
-                            "Token callback failed: %s",
-                            callback_error,
-                            exc_info=True,
-                        )
+                store_visible_text(text_to_stream)
 
             if using_reasoning_deltas and thinking_content:
                 final_thinking_content = "".join(thinking_content)

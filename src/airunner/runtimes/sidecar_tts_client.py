@@ -72,7 +72,7 @@ class SidecarTTSClient(RuntimeClient):
         if request.action is RuntimeAction.STATUS:
             return self._status_response(request.request_id)
         if request.action is RuntimeAction.LOAD_MODEL:
-            return self._load_runtime(request.request_id)
+            return self._load_runtime(request)
         if request.action is RuntimeAction.UNLOAD_MODEL:
             return self._unload_runtime(request.request_id)
         if request.action is not RuntimeAction.INVOKE:
@@ -125,22 +125,41 @@ class SidecarTTSClient(RuntimeClient):
             metadata=health.metadata,
         )
 
-    def _load_runtime(self, request_id: str) -> ResponseEnvelope:
+    def _load_runtime(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Start the managed TTS daemon."""
         try:
-            self._ensure_launcher(self._settings)
+            settings = self._settings_for_control(request.metadata)
+            self._ensure_launcher(settings)
             self._launcher.start()
         except RuntimeError as exc:
             return self._failure_response(
-                request_id,
+                request.request_id,
                 "tts_load_failed",
                 str(exc),
             )
         return ResponseEnvelope(
-            request_id=request_id,
+            request_id=request.request_id,
             status=EnvelopeStatus.SUCCEEDED,
             payload={"model_status": "loaded"},
             metadata=self._metadata(),
+        )
+
+    def _settings_for_control(
+        self,
+        metadata: Optional[dict[str, Any]],
+    ) -> TTSDaemonRuntimeSettings:
+        """Return sidecar settings adjusted for one load request."""
+        metadata = metadata or {}
+        return replace(
+            self._base_settings,
+            tts_model_path=(
+                metadata.get("model_path")
+                or self._base_settings.tts_model_path
+            ),
+            tts_model_type=(
+                metadata.get("model_type")
+                or self._base_settings.tts_model_type
+            ),
         )
 
     def _unload_runtime(self, request_id: str) -> ResponseEnvelope:

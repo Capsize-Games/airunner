@@ -275,9 +275,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             tgt_se=self._target_se,
             output_path=output_path,
         )
-
-        if response is not None:
-            self.api.tts.add_to_stream(response)
+        return response
 
     def load(self, _target_model=None):
         """

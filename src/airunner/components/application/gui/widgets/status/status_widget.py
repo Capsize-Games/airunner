@@ -26,6 +26,8 @@ class StatusWidget(BaseWidget):
             SignalCode.SD_PIPELINE_LOADED_SIGNAL: self.set_sd_pipeline_label,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
+            SignalCode.TTS_MODEL_CHANGED: self.on_tts_model_changed,
+            SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
         }
         super().__init__(*args, **kwargs)
 
@@ -71,6 +73,7 @@ class StatusWidget(BaseWidget):
     def on_application_settings_changed(self):
         self.set_sd_status_text()
         self.set_llm_status_text()
+        self.set_tts_status_text()
 
     def set_sd_pipeline_label(self, data: Optional[Dict] = None):
         data = data or {}
@@ -85,6 +88,7 @@ class StatusWidget(BaseWidget):
         super().showEvent(event)
         self.set_sd_status_text()
         self.set_llm_status_text()
+        self.set_tts_status_text()
 
         if self.application_settings.sd_enabled:
             self.on_model_status_changed_signal(
@@ -169,13 +173,7 @@ class StatusWidget(BaseWidget):
         elif data["model"] == ModelType.TTS:
             element_name = "tts_status"
             tool_tip = "TTS"
-            model_type = None
-            if self.chatbot and self.chatbot.voice_id:
-                voice = VoiceSettings.objects.get(pk=self.chatbot.voice_id)
-                if voice:
-                    model_type = f"TTS ({voice.model_type})"
-            if model_type is not None:
-                getattr(self.ui, element_name).setText(model_type)
+            self.set_tts_status_text()
         elif data["model"] == ModelType.STT:
             element_name = "stt_status"
             tool_tip = "STT"
@@ -207,9 +205,29 @@ class StatusWidget(BaseWidget):
             except RuntimeError as e:
                 self.logger.warning(f"Error setting LLM status text: {e}")
 
+    def set_tts_status_text(self):
+        """Render the active TTS model name in the status bar."""
+        label = "TTS"
+        if self.chatbot and self.chatbot.voice_id:
+            voice = VoiceSettings.objects.get(pk=self.chatbot.voice_id)
+            if voice and getattr(voice, "model_type", None):
+                label = f"TTS ({voice.model_type})"
+        try:
+            self.ui.tts_status.setText(label)
+        except RuntimeError as e:
+            self.logger.warning(f"Error setting TTS status text: {e}")
+
     def on_llm_model_changed(self, data: Optional[Dict] = None):
         """Handle LLM model change signal to update status bar."""
         self.set_llm_status_text()
+
+    def on_tts_model_changed(self, data: Optional[Dict] = None):
+        """Handle TTS model change signal to update status bar."""
+        self.set_tts_status_text()
+
+    def on_chatbot_changed(self, data: Optional[Dict] = None):
+        """Refresh chatbot-scoped status labels when the active bot changes."""
+        self.set_tts_status_text()
 
     def on_model_status_changed_signal(self, data):
         self.update_model_status(data)

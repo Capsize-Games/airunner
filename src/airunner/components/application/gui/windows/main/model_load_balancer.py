@@ -48,6 +48,35 @@ class ModelLoadBalancer(MediatorMixin):
                 {"model": model_type, "status": status},
             )
 
+    def _worker_manager_daemon_client(self):
+        """Return the worker manager daemon client when available."""
+        manager = getattr(self, "worker_manager", None)
+        daemon_getter = getattr(manager, "_daemon_client", None)
+        if callable(daemon_getter):
+            return daemon_getter()
+        return None
+
+    def _worker_manager_runtime_control(self, action: str, model_type) -> bool:
+        """Delegate one daemon runtime action to WorkerManager when available."""
+        manager = getattr(self, "worker_manager", None)
+        controller = getattr(manager, "_control_daemon_runtime", None)
+        runtime_name = _RUNTIME_NAMES.get(model_type)
+        if runtime_name is None or not callable(controller):
+            return False
+        route_metadata = None
+        if action == "load" and model_type is ModelType.TTS:
+            metadata_getter = getattr(manager, "_tts_runtime_route_metadata", None)
+            if callable(metadata_getter):
+                route_metadata = metadata_getter()
+        return bool(
+            controller(
+                runtime_name,
+                action,
+                model_type,
+                route_metadata=route_metadata,
+            )
+        )
+
     def switch_to_art_mode(self):
         """
         Unload all non-art models (LLM, TTS, STT), load SD model.
@@ -176,6 +205,9 @@ class ModelLoadBalancer(MediatorMixin):
 
     def _daemon_client(self):
         """Return the GUI daemon client when daemon-backed control is active."""
+        worker_manager_client = self._worker_manager_daemon_client()
+        if worker_manager_client is not None:
+            return worker_manager_client
         refresher = getattr(self, "refresh_api_reference", None)
         if callable(refresher):
             refreshed_api = refresher()
@@ -218,6 +250,8 @@ class ModelLoadBalancer(MediatorMixin):
         if client is None:
             return
         for model_type in model_types:
+            if self._worker_manager_runtime_control("load", model_type):
+                continue
             runtime_name = _RUNTIME_NAMES.get(model_type)
             if runtime_name is None:
                 continue
@@ -242,6 +276,8 @@ class ModelLoadBalancer(MediatorMixin):
         if client is None:
             return
         for model_type in model_types:
+            if self._worker_manager_runtime_control("unload", model_type):
+                continue
             runtime_name = _RUNTIME_NAMES.get(model_type)
             if runtime_name is None:
                 continue

@@ -13,8 +13,8 @@ from airunner.vendor.melo.split_utils import split_sentence
 from airunner.vendor.melo.text.cleaner import Cleaner
 from airunner.vendor.melo import commons
 from airunner.vendor.melo.text import cleaned_text_to_sequence
-from airunner.components.application.api.api import API
 from airunner.enums import AvailableLanguage
+from airunner.vendor.melo.runtime_support import resolve_tts_model_path
 
 
 class TTS(nn.Module):
@@ -23,7 +23,6 @@ class TTS(nn.Module):
         language: AvailableLanguage = AvailableLanguage.EN,
     ):
         super().__init__()
-        self.api = API()
         self._language: AvailableLanguage = language
         self.language = language
         self._device: str = None
@@ -34,19 +33,27 @@ class TTS(nn.Module):
     @property
     def voice_model_paths(self) -> Dict:
         return {
-            AvailableLanguage.EN: self.api.paths[
+            AvailableLanguage.EN: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-English-v3"
-            ],
-            AvailableLanguage.FR: self.api.paths["myshell-ai/MeloTTS-French"],
-            AvailableLanguage.JP: self.api.paths[
+            ),
+            AvailableLanguage.FR: resolve_tts_model_path(
+                "myshell-ai/MeloTTS-French"
+            ),
+            AvailableLanguage.JP: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Japanese"
-            ],
-            AvailableLanguage.ES: self.api.paths["myshell-ai/MeloTTS-Spanish"],
-            AvailableLanguage.ZH: self.api.paths["myshell-ai/MeloTTS-Chinese"],
-            AvailableLanguage.ZH_MIX_EN: self.api.paths[
+            ),
+            AvailableLanguage.ES: resolve_tts_model_path(
+                "myshell-ai/MeloTTS-Spanish"
+            ),
+            AvailableLanguage.ZH: resolve_tts_model_path(
                 "myshell-ai/MeloTTS-Chinese"
-            ],
-            AvailableLanguage.KR: self.api.paths["myshell-ai/MeloTTS-Korean"],
+            ),
+            AvailableLanguage.ZH_MIX_EN: resolve_tts_model_path(
+                "myshell-ai/MeloTTS-Chinese"
+            ),
+            AvailableLanguage.KR: resolve_tts_model_path(
+                "myshell-ai/MeloTTS-Korean"
+            ),
         }
 
     @property

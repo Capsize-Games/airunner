@@ -110,6 +110,32 @@ def test_load_model_starts_launcher():
     assert response.status is EnvelopeStatus.SUCCEEDED
 
 
+def test_load_model_uses_request_metadata():
+    launcher = FakeLauncher(_settings())
+    client = SidecarTTSClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=FakeSession([]),
+    )
+
+    response = client.invoke(
+        RequestEnvelope(
+            request_id="tts-req-2",
+            runtime=RuntimeKind.TTS,
+            action=RuntimeAction.LOAD_MODEL,
+            metadata={
+                "model_type": "espeak",
+                "model_path": "/tmp/espeak",
+            },
+        )
+    )
+
+    assert client._settings.tts_model_type == "espeak"
+    assert client._settings.tts_model_path == "/tmp/espeak"
+    assert launcher.started == 1
+    assert response.status is EnvelopeStatus.SUCCEEDED
+
+
 def test_invoke_returns_base64_audio_payload():
     launcher = FakeLauncher(_settings())
     session = FakeSession([FakeResponse(content=b"wav-bytes")])

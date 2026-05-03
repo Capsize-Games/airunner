@@ -32,7 +32,7 @@ def _make_action() -> Mock:
 
 
 def _make_window_stub():
-    return SimpleNamespace(
+    window = SimpleNamespace(
         _model_status={
             ModelType.SD: ModelStatus.UNLOADED,
             ModelType.LLM: ModelStatus.UNLOADED,
@@ -70,6 +70,10 @@ def _make_window_stub():
             MainWindow._runtime_preference_retry_seconds
         ),
     )
+    window._normalize_direct_llm_status = lambda status: (
+        MainWindow._normalize_direct_llm_status(window, status)
+    )
+    return window
 
 
 def test_tts_runtime_status_does_not_persist_user_preference():
@@ -283,6 +287,60 @@ def test_daemon_status_prefers_loaded_local_llm_worker():
         main_window_module.SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
         {"model": ModelType.LLM, "status": ModelStatus.LOADED},
     )
+
+
+def test_daemon_failed_status_does_not_override_local_llm_state():
+    window = _make_window_stub()
+    window._daemon_status_refresh_inflight = True
+    window.worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.UNLOADED
+        )
+    )
+    window._sync_model_status_value = (
+        lambda model_type, status:
+        MainWindow._sync_model_status_value(window, model_type, status)
+    )
+    window._runtime_statuses_from_daemon_status = (
+        MainWindow._runtime_statuses_from_daemon_status
+    )
+    window._loaded_model_names_from_runtime_status = (
+        MainWindow._loaded_model_names_from_runtime_status
+    )
+    window._effective_llm_status = (
+        lambda status: MainWindow._effective_llm_status(window, status)
+    )
+    window._reconcile_optional_runtime_preferences = Mock()
+
+    MainWindow._on_daemon_runtime_status_ready(
+        window,
+        {
+            "runtimes": [
+                {"runtime": "llm", "status": "failed", "loaded": False}
+            ]
+        },
+    )
+
+    assert window._model_status[ModelType.LLM] == ModelStatus.UNLOADED
+
+
+def test_direct_failed_status_does_not_override_local_llm_loading():
+    window = _make_window_stub()
+    window.worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.LOADING
+        )
+    )
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {"model": ModelType.LLM, "status": ModelStatus.FAILED},
+    )
+
+    assert window._model_status[ModelType.LLM] is ModelStatus.LOADING
+    window.logger.warning.assert_not_called()
+    window.ui.actionToggle_LLM.setChecked.assert_not_called()
+    window.emit_signal.assert_not_called()
 
 
 def test_handoff_launcher_splash_defers_dismissal(monkeypatch):

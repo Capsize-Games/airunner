@@ -20,6 +20,7 @@ from airunner.components.tts.gui.widgets.open_voice_preferences_widget import (
     OpenVoicePreferencesWidget,
 )
 from airunner.enums import TTSModel
+from airunner.enums import SignalCode
 from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
 
 
@@ -67,6 +68,15 @@ class VoiceSettingsWidget(BaseWidget):
                 # set the current voice
                 self.ui.voice.setCurrentText(voice.name)
         self.ui.voice.blockSignals(False)
+
+    def _emit_tts_model_changed(self, voice) -> None:
+        """Notify listeners when the active TTS voice model changes."""
+        if voice is None:
+            return
+        self.emit_signal(
+            SignalCode.TTS_MODEL_CHANGED,
+            {"voice_id": voice.id, "model": voice.model_type},
+        )
 
     @Slot(str)
     def on_voice_currentTextChanged(self, text):
@@ -167,9 +177,9 @@ class VoiceSettingsWidget(BaseWidget):
     def update_voice_model(self, voice, model_type, layout):
         if voice.model_type != model_type:
             # Delete the old settings
-            if voice.model_type == TTSModel.ESPEAK:
+            if voice.model_type == TTSModel.ESPEAK.value:
                 EspeakSettings.objects.delete(voice.settings_id)
-            elif voice.model_type == TTSModel.OPENVOICE:
+            elif voice.model_type == TTSModel.OPENVOICE.value:
                 OpenVoiceSettings.objects.delete(voice.settings_id)
 
             # Create new settings
@@ -185,6 +195,10 @@ class VoiceSettingsWidget(BaseWidget):
             VoiceSettings.objects.update(
                 voice.id, settings_id=settings.id, model_type=model_type
             )
+            voice.settings_id = settings.id
+            voice.model_type = model_type
+            if self.chatbot and self.chatbot.voice_id == voice.id:
+                self._emit_tts_model_changed(voice)
 
         # Update the settings widget
         self.add_settings_widget(voice, layout)
