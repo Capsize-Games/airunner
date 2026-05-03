@@ -535,6 +535,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 
 - [Wiki](https://github.com/Capsize-Games/airunner/wiki)
 - [API Service Layer](src/airunner/components/application/api/README.md)
+- [Coding Agent Workspace Operator Guide](docs/coding_agent_workspace_operator_guide.md)
 - [ORM Models](src/airunner/components/data/models/README.md)
 
 ---

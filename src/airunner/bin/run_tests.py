@@ -33,6 +33,54 @@ import time
 from pathlib import Path
 
 
+def _component_targets(
+    base_path: Path,
+    component: str,
+) -> tuple[list[Path], str] | None:
+    """Resolve one component name or alias into pytest targets."""
+    alias_targets = {
+        "coding_workspace": [
+            base_path / "agents" / "tests" / "test_agent_runtime_records.py",
+            base_path
+            / "document_editor"
+            / "tests"
+            / "test_airunner_project_manager.py",
+            base_path
+            / "document_editor"
+            / "tests"
+            / "test_airunner_project_service.py",
+            base_path
+            / "document_editor"
+            / "tests"
+            / "test_airunner_project_context_index_service.py",
+            base_path
+            / "document_editor"
+            / "tests"
+            / "test_airunner_project_state_service.py",
+            base_path
+            / "document_editor"
+            / "tests"
+            / "test_workspace_shell_support.py",
+            base_path / "llm" / "tools" / "tests" / "test_project_file_tools.py",
+            base_path / "llm" / "tools" / "tests" / "test_project_runtime_tools.py",
+            base_path / "llm" / "tools" / "tests" / "test_project_context_tools.py",
+            base_path
+            / "llm"
+            / "tools"
+            / "tests"
+            / "test_coding_workspace_validation_flow.py",
+        ],
+    }
+    if component in alias_targets:
+        return alias_targets[component], (
+            f"Focused validation suite for {component}"
+        )
+    test_path = base_path / component / "tests"
+    if test_path.exists():
+        return [test_path], f"Safe unit tests for {component} component"
+    return None
+
+
 def _build_pytest_env(skip_gui: bool = False) -> dict[str, str]:
     """Return environment guards for pytest subprocesses."""
     env = {"AIRUNNER_TEST_NO_GUI_LAUNCH": "1"}
@@ -126,18 +174,19 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     base_path = Path("src/airunner/components")
 
     if component:
-        test_path = base_path / component / "tests"
-        if not test_path.exists():
+        resolved = _component_targets(base_path, component)
+        if resolved is None:
             print(
-                f"Error: Component '{component}' has no tests directory at {test_path}"
+                "Error: Component or alias "
+                f"'{component}' is not configured for test execution"
             )
             return 1
-        description = f"Safe unit tests for {component} component"
+        test_targets, description = resolved
     else:
-        test_path = base_path
+        test_targets = [base_path]
         description = "Safe unit tests (GUI suites excluded)"
 
-    cmd = ["pytest", str(test_path)]
+    cmd = ["pytest", *[str(path) for path in test_targets]]
 
     if verbose:
         cmd.append("-v")
