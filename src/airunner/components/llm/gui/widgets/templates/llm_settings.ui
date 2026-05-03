@@ -1232,7 +1232,7 @@
    <sender>quantization_dropdown</sender>
    <signal>currentIndexChanged(int)</signal>
    <receiver>llm_settings_widget</receiver>
-   <slot>on_quantization_changed(int)</slot>
+    <slot>handle_quantization_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>290</x>
@@ -1279,6 +1279,6 @@
   <slot>enable_manual_tools()</slot>
   <slot>enable_automatic_tools()</slot>
   <slot>toggle_use_cache(bool)</slot>
-  <slot>on_quantization_changed(int)</slot>
+  <slot>handle_quantization_changed(int)</slot>
  </slots>
 </ui>

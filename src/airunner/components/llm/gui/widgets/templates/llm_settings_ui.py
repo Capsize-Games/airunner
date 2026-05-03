@@ -538,7 +538,7 @@ class Ui_llm_settings_widget(object):
         self.pushButton.clicked.connect(llm_settings_widget.reset_settings_to_default_clicked)
         self.do_sample.toggled.connect(llm_settings_widget.do_sample_toggled)
         self.use_cache.clicked["bool"].connect(llm_settings_widget.toggle_use_cache)
-        self.quantization_dropdown.currentIndexChanged.connect(llm_settings_widget.on_quantization_changed)
+        self.quantization_dropdown.currentIndexChanged.connect(llm_settings_widget.handle_quantization_changed)
 
         QMetaObject.connectSlotsByName(llm_settings_widget)
     # setupUi

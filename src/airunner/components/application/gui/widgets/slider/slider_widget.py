@@ -34,7 +34,7 @@ class SliderWidget(BaseWidget):
         self._pending_update = None
         # Ensure signal connections
         self.ui.slider.valueChanged.connect(self.handle_slider_valueChanged)
-        self.ui.slider.sliderReleased.connect(self.on_slider_sliderReleased)
+        self.ui.slider.sliderReleased.connect(self.handle_slider_released)
         self.ui.slider_spinbox.valueChanged.connect(
             self.handle_spinbox_valueChanged
         )
@@ -43,7 +43,7 @@ class SliderWidget(BaseWidget):
         # clicks Generate before the 300ms debounce flushes to the DB.
         if hasattr(self.ui.slider_spinbox, "editingFinished"):
             self.ui.slider_spinbox.editingFinished.connect(
-                self.on_spinbox_editingFinished
+                self.handle_spinbox_editing_finished
             )
 
     @property
@@ -162,7 +162,7 @@ class SliderWidget(BaseWidget):
         # Do NOT call self.slider_callback here. Only update UI.
 
     @Slot()
-    def on_slider_sliderReleased(self):
+    def handle_slider_released(self):
         if self.is_loading:
             return
         # Slider release is already a natural debounce boundary.
@@ -197,7 +197,7 @@ class SliderWidget(BaseWidget):
         self.slider_callback(self.settings_property, slider_val)
 
     @Slot()
-    def on_spinbox_editingFinished(self):
+    def handle_spinbox_editing_finished(self):
         if self.is_loading:
             return
         if not self.settings_property:
