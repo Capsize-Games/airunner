@@ -104,6 +104,39 @@ class AirunnerProjectStateService:
         self.save_run(run)
         return run
 
+    def record_tool_call(
+        self,
+        tool_call: AgentToolCallRecord,
+        run_id: str | None = None,
+    ) -> str:
+        """Persist one tool-call audit record and optionally append it."""
+        self._write_json(
+            self._tool_call_path(tool_call.record_id),
+            tool_call.to_dict(),
+        )
+        if run_id:
+            self.append_tool_call(run_id, tool_call)
+        return tool_call.record_id
+
+    def load_tool_call(self, tool_call_id: str) -> AgentToolCallRecord:
+        """Load one persisted tool-call audit record."""
+        return AgentToolCallRecord.from_dict(
+            self._read_json(self._tool_call_path(tool_call_id))
+        )
+
+    def list_tool_calls(self) -> list[AgentToolCallRecord]:
+        """Return all persisted tool-call audit records."""
+        records: list[AgentToolCallRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("audit", "tool_calls")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            records.append(
+                AgentToolCallRecord.from_dict(self._read_json(rel_path))
+            )
+        return records
+
     def list_resumable_sessions(self) -> list[AgentSessionRecord]:
         """Return sessions that still need recovery after restart."""
         candidates: list[AgentSessionRecord] = []
@@ -130,6 +163,11 @@ class AirunnerProjectStateService:
         """Return the relative audit path for a run record."""
         directory = os.path.join(self._project_dir("audit"), "runs")
         return os.path.join(directory, f"{run_id}.json")
+
+    def _tool_call_path(self, tool_call_id: str) -> str:
+        """Return the relative audit path for a tool-call record."""
+        directory = os.path.join(self._project_dir("audit"), "tool_calls")
+        return os.path.join(directory, f"{tool_call_id}.json")
 
     def _write_markdown(
         self,
