@@ -2048,6 +2048,8 @@ class WorkerManager(Worker):
             self.tts_generator_worker._reload_tts_model_manager(data)
 
     def on_application_settings_changed_signal(self, data):
+        self._refresh_daemon_tts_for_reference_speaker_change(data)
+
         if self.tts_generator_worker is not None:
             self.tts_generator_worker.on_application_settings_changed_signal(
                 data
@@ -2057,6 +2059,36 @@ class WorkerManager(Worker):
             self.tts_vocalizer_worker.on_application_settings_changed_signal(
                 data
             )
+
+    def _refresh_daemon_tts_for_reference_speaker_change(self, data) -> None:
+        """Restart sidecar-backed TTS after one reference-speaker change."""
+        from airunner.enums import ModelType, TTSModel
+
+        if self._daemon_client() is None:
+            return
+        if not getattr(self.application_settings, "tts_enabled", False):
+            return
+        if not isinstance(data, dict):
+            return
+        if data.get("setting_name") != "openvoice_settings":
+            return
+        if data.get("column_name") != "reference_speaker_path":
+            return
+        if self.chatbot_voice_model_type != TTSModel.OPENVOICE:
+            return
+
+        self._control_daemon_runtime_async(
+            "tts",
+            "unload",
+            ModelType.TTS,
+            before_request=self._stop_tts_activity_immediately,
+            after_success=lambda: self._control_daemon_runtime_async(
+                "tts",
+                "load",
+                ModelType.TTS,
+                route_metadata=self._tts_runtime_route_metadata(),
+            ),
+        )
 
     def on_add_to_queue_signal(self, data):
         if self.tts_generator_worker is not None:

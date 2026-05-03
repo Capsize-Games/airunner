@@ -261,36 +261,58 @@ class SettingsPropertyMixin:
 
         return TTSModel(self.chatbot_voice_settings.model_type)
 
-    @property
-    def espeak_settings(self) -> Optional[Any]:
-        """Get eSpeak TTS engine settings."""
-        EspeakSettings = get_settings_model("EspeakSettings")
+    def _get_active_voice_settings(
+        self,
+        model_name: str,
+        expected_model_type: str,
+    ) -> Optional[Any]:
+        """Return the settings row for the active chatbot voice when valid."""
+        SettingsModel = get_settings_model(model_name)
         cached = self.settings_mixin_shared_instance.get_cached_setting(
-            EspeakSettings
+            SettingsModel
         )
+
+        voice_settings = None
+        if getattr(self.chatbot, "voice_id", None) is not None:
+            voice_settings = self.chatbot_voice_settings
+
+        settings_id = None
+        if (
+            voice_settings is not None
+            and voice_settings.model_type == expected_model_type
+        ):
+            settings_id = voice_settings.settings_id
+
         if cached is not None:
-            return cached
-        settings = EspeakSettings.objects.first()
+            if settings_id is None or getattr(cached, "id", None) == settings_id:
+                return cached
+
+        settings = None
+        if settings_id is not None:
+            settings = SettingsModel.objects.get(pk=settings_id)
         if settings is None:
-            settings = EspeakSettings.objects.create()
+            settings = SettingsModel.objects.first()
+        if settings is None:
+            settings = SettingsModel.objects.create()
+
         self.settings_mixin_shared_instance.set_cached_setting(
-            EspeakSettings, settings
+            SettingsModel,
+            settings,
         )
         return settings
 
     @property
+    def espeak_settings(self) -> Optional[Any]:
+        """Get eSpeak TTS engine settings."""
+        return self._get_active_voice_settings(
+            "EspeakSettings",
+            "eSpeak",
+        )
+
+    @property
     def openvoice_settings(self) -> Any:
         """Get OpenVoice TTS model settings."""
-        OpenVoiceSettings = get_settings_model("OpenVoiceSettings")
-        cached = self.settings_mixin_shared_instance.get_cached_setting(
-            OpenVoiceSettings
+        return self._get_active_voice_settings(
+            "OpenVoiceSettings",
+            "OpenVoice",
         )
-        if cached is not None:
-            return cached
-        settings = OpenVoiceSettings.objects.first()
-        if settings is None:
-            settings = OpenVoiceSettings.objects.create()
-        self.settings_mixin_shared_instance.set_cached_setting(
-            OpenVoiceSettings, settings
-        )
-        return settings

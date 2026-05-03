@@ -1,3 +1,5 @@
+import threading
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
@@ -6,7 +8,7 @@ from airunner.components.tts.gui.widgets.templates.open_voice_preferences_ui imp
     Ui_open_voice_preferences,
 )
 from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
-from airunner.enums import AvailableLanguage
+from airunner.enums import AvailableLanguage, TTSModel
 
 
 class OpenVoicePreferencesWidget(BaseWidget):
@@ -30,22 +32,71 @@ class OpenVoicePreferencesWidget(BaseWidget):
             self.tr("Audio Files (*.wav *.mp3 *.ogg);;All Files (*)"),
         )
         if file_path:
+            self.ui.voice_sample_path.blockSignals(True)
             self.ui.voice_sample_path.setText(file_path)
-            open_voice_settings = OpenVoiceSettings.objects.get(self._id)
-            if not open_voice_settings:
-                return
-            OpenVoiceSettings.objects.update(
-                self._id, reference_speaker_path=file_path
-            )
+            self.ui.voice_sample_path.blockSignals(False)
+            self._store_reference_speaker_path(file_path)
+            if self._should_precompute_in_background():
+                self._start_reference_speaker_precompute(file_path)
 
     @Slot(str)
     def on_voice_sample_path_textChanged(self, txt: str):
+        self._store_reference_speaker_path(txt)
+
+    def _store_reference_speaker_path(self, path: str) -> None:
+        """Persist one reference speaker path and notify the app."""
         open_voice_settings = OpenVoiceSettings.objects.get(self._id)
         if not open_voice_settings:
             return
-        if open_voice_settings.reference_speaker_path != txt:
+        if open_voice_settings.reference_speaker_path != path:
             OpenVoiceSettings.objects.update(
-                self._id, reference_speaker_path=txt
+                self._id, reference_speaker_path=path
+            )
+            self._item.reference_speaker_path = path
+            self._notify_api_or_app(
+                "openvoice_settings",
+                "reference_speaker_path",
+                path,
+            )
+
+    def _should_precompute_in_background(self) -> bool:
+        """Return True when no active OpenVoice runtime will warm itself."""
+        if not getattr(self.application_settings, "tts_enabled", False):
+            return True
+        return self.chatbot_voice_model_type != TTSModel.OPENVOICE
+
+    def _start_reference_speaker_precompute(self, file_path: str) -> None:
+        """Start one background precompute of the selected voice sample."""
+        model_path = getattr(self.path_settings, "tts_model_path", None)
+        if not model_path:
+            return
+
+        thread = threading.Thread(
+            target=self._precompute_reference_speaker,
+            args=(file_path, str(model_path)),
+            daemon=True,
+        )
+        thread.start()
+
+    def _precompute_reference_speaker(
+        self,
+        file_path: str,
+        model_path: str,
+    ) -> None:
+        """Best-effort background precompute for one selected sample."""
+        try:
+            from airunner.components.tts.managers.openvoice_model_manager import (
+                OpenVoiceModelManager,
+            )
+
+            OpenVoiceModelManager.precompute_reference_speaker(
+                file_path,
+                model_path,
+            )
+        except Exception as error:
+            self.logger.error(
+                "OpenVoice reference-speaker precompute failed: %s",
+                error,
             )
 
     def initialize_ui(self):

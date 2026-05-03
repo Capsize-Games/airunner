@@ -14,18 +14,11 @@ from airunner.settings import AIRUNNER_BASE_PATH
 torch.hub.set_dir(
     os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))
 )
-import librosa
 
-from airunner.vendor.openvoice.mel_processing import spectrogram_torch
-from airunner.vendor.openvoice import se_extractor
-from airunner.vendor.openvoice.api import (
-    OpenVoiceBaseClass,
-    ToneColorConverter,
-)
+from airunner.vendor.openvoice.api import ToneColorConverter
 from airunner.vendor.melo.api import TTS
 
 from airunner.settings import (
-    AIRUNNER_BASE_PATH,
     AIRUNNER_LOG_LEVEL,
 )
 from airunner.enums import (
@@ -36,74 +29,17 @@ from airunner.enums import (
 )
 from airunner.components.tts.managers.tts_model_manager import TTSModelManager
 from airunner.components.tts.managers.tts_request import TTSRequest
+from airunner.components.tts.managers.openvoice_runtime_helpers import (
+    StreamingToneColorConverter,
+    build_tone_color_converter,
+    default_openvoice_device,
+    ensure_reference_speaker_embedding,
+    expand_reference_speaker_path,
+    precompute_reference_speaker,
+    processed_target_dir,
+    warm_melo_tts,
+)
 from airunner.utils.application.get_logger import get_logger
-
-
-class StreamingToneColorConverter(ToneColorConverter):
-    """
-    Streaming implementation of ToneColorConverter.
-    """
-
-    def __init__(self, *args, **kwargs):
-        OpenVoiceBaseClass.__init__(self, *args, **kwargs)
-        self.version = getattr(self.hps, "_version_", "v1")
-        self.logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
-
-    def convert(
-        self,
-        audio_src_path,
-        src_se,
-        tgt_se,
-        output_path=None,
-        tau=0.3,
-        message="default",
-    ):
-        """
-        Convert audio tone color using the specified parameters.
-        """
-        hps = self.hps
-        try:
-            audio, sample_rate = librosa.load(
-                audio_src_path, sr=hps.data.sampling_rate
-            )
-        except ValueError as e:
-            print(f"Error: {e}")
-            return None
-
-        if audio is None or len(audio) == 0:
-            self.logger.error(
-                f"Loaded audio is empty for path: {audio_src_path}. Skipping conversion."
-            )
-            return None
-
-        audio = torch.tensor(audio).float()
-
-        with torch.no_grad():
-            y = torch.FloatTensor(audio).to(self.device).unsqueeze(0)
-            try:
-                spec = spectrogram_torch(
-                    y,
-                    hps.data.filter_length,
-                    hps.data.sampling_rate,
-                    hps.data.hop_length,
-                    hps.data.win_length,
-                    center=False,
-                ).to(self.device)
-            except RuntimeError as e:
-                self.logger.error(
-                    f"Runtime error during spectrogram computation: {e}"
-                )
-                return None
-            spec_lengths = torch.LongTensor([spec.size(-1)]).to(self.device)
-            audio = (
-                self.model.voice_conversion(
-                    spec, spec_lengths, sid_src=src_se, sid_tgt=tgt_se, tau=tau
-                )[0][0, 0]
-                .data.cpu()
-                .float()
-                .numpy()
-            )
-            return audio
 
 
 class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
@@ -115,16 +51,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self._target_se = None
         self._audio_name = None
-        self._skip_download_check = False  # Flag to skip download check after batch download
-        speaker_recording_path = ""
-        if self.openvoice_settings.reference_speaker_path is not None:
-            speaker_recording_path = os.path.expanduser(
-                os.path.join(self.openvoice_settings.reference_speaker_path)
-            )
-        else:
-            self.logger.error(
-                "Reference speaker path is None, unable to initialize"
-            )
+        self._skip_download_check = False
         self._checkpoint_converter_path: str = os.path.join(
             self.path_settings.tts_model_path,
             "openvoice/checkpoints_v2/converter",
@@ -136,7 +63,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.model: Optional[TTS] = None
         self.src_path: str = f"{self._output_dir}/tmp.wav"
         self._speed: float = 1.0
-        self._reference_speaker = speaker_recording_path
+        self._reference_speaker = expand_reference_speaker_path(
+            getattr(self.openvoice_settings, "reference_speaker_path", None)
+        )
         self._language: AvailableLanguage = (
             AvailableLanguage.EN
         )  # Use a private attribute
@@ -164,9 +93,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Return the appropriate device based on CUDA availability.
         """
-        use_cuda = torch.cuda.is_available()
-        card_index = 0
-        return f"cuda:{card_index}" if use_cuda else "cpu"
+        return default_openvoice_device()
 
     @property
     def tone_color_converter(self) -> StreamingToneColorConverter:
@@ -174,12 +101,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         Lazy-load the tone color converter.
         """
         if not self._tone_color_converter:
-            self._tone_color_converter = StreamingToneColorConverter(
-                f"{self._checkpoint_converter_path}/config.json",
+            self._tone_color_converter = build_tone_color_converter(
+                self._checkpoint_converter_path,
                 device=self.device,
-            )
-            self._tone_color_converter.load_ckpt(
-                f"{self._checkpoint_converter_path}/checkpoint.pth"
             )
         return self._tone_color_converter
 
@@ -281,21 +205,23 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Load and initialize the OpenVoice model.
         """
-        # Prevent re-entrancy - if already loading or loaded, skip
-        current_status = self._model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
+        current_status = self._model_status.get(
+            ModelType.TTS,
+            ModelStatus.UNLOADED,
+        )
         if current_status in [ModelStatus.LOADING, ModelStatus.LOADED]:
-            self.logger.debug(f"OpenVoice already in state {current_status}, skipping load")
+            self.logger.debug(
+                f"OpenVoice already in state {current_status}, skipping load"
+            )
             return True
-        
+
         self.logger.debug("Initializing OpenVoice")
 
-        # Skip download check if we just finished a batch download
         if self._skip_download_check:
             self._skip_download_check = False
             self.logger.info("Skipping download check after batch download")
         else:
-            # Check for missing files and trigger download if needed
-            should_download, download_info = self._check_and_trigger_download()
+            should_download, _download_info = self._check_and_trigger_download()
             if should_download:
                 self.logger.info(
                     "OpenVoice model files missing, download triggered"
@@ -303,13 +229,19 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 return False
 
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        
-        # Only unload if we have a model to unload (not on first load)
-        if self.model is not None:
+        try:
+            if self.model is not None:
+                self.model.unload()
+                self.model = None
+
+            self._initialize()
+            self.model = TTS(language=self.language)
+            self._warm_model_components()
+        except Exception:
             self.model = None
-            
-        self._initialize()
-        self.model = TTS(language=self.language)
+            self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
+            raise
+
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
         return True
 
@@ -341,6 +273,39 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         except FileExistsError:
             pass
 
+        self._load_target_speaker_embedding()
+
+    @classmethod
+    def precompute_reference_speaker(
+        cls,
+        reference_speaker_path: str,
+        tts_model_path: str,
+    ) -> bool:
+        """Best-effort precompute of one reference speaker embedding."""
+        return precompute_reference_speaker(
+            reference_speaker_path,
+            tts_model_path,
+        )
+
+    def reload_speaker_embeddings(
+        self,
+        reference_speaker_path: Optional[str] = None,
+    ) -> None:
+        """Reload the target speaker embedding after one path change."""
+        self._target_se = None
+        self._audio_name = None
+        self._load_target_speaker_embedding(reference_speaker_path)
+
+    def _load_target_speaker_embedding(
+        self,
+        reference_speaker_path: Optional[str] = None,
+    ) -> None:
+        """Load one cached or newly computed target speaker embedding."""
+        self._reference_speaker = expand_reference_speaker_path(
+            reference_speaker_path
+            or getattr(self.openvoice_settings, "reference_speaker_path", None)
+        )
+
         if self._reference_speaker is None:
             raise OpenVoiceError(
                 "Reference speaker is None, unable to initialize"
@@ -348,18 +313,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         try:
             self.logger.info(f"Loading {self._reference_speaker}")
-            target_dir = os.path.join(AIRUNNER_BASE_PATH, "processed")
-            if not os.path.exists(target_dir):
-                os.makedirs(target_dir, exist_ok=True)
-
-            # check if audio_path is valid
-            if not os.path.isfile(self._reference_speaker):
-                raise FileMissing(self._reference_speaker)
-
-            self._target_se, self._audio_name = se_extractor.get_se(
-                audio_path=self._reference_speaker,
-                vc_model=self.tone_color_converter,
-                target_dir=target_dir,
+            self._target_se, self._audio_name = ensure_reference_speaker_embedding(
+                self._reference_speaker,
+                self.tone_color_converter,
+                target_dir=processed_target_dir(),
             )
         except Exception as e:
             torch_hub_cache_home = torch.hub.get_dir()
@@ -370,6 +327,12 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         if self._target_se is None:
             raise OpenVoiceError("Target speaker extraction returned None.")
+
+    def _warm_model_components(self) -> None:
+        """Force-load the lazy Melo and BERT components."""
+        if self.model is None:
+            return
+        warm_melo_tts(self.model, self.language)
 
     def _check_and_trigger_download(self):
         """Check for missing OpenVoice model files and trigger download if needed.

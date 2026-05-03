@@ -101,13 +101,16 @@ def test_load_model_starts_launcher():
     client = SidecarTTSClient(
         settings=_settings(),
         launcher=launcher,
-        session=FakeSession([]),
+        session=FakeSession([FakeResponse(payload={"status": "ok"})]),
     )
 
     response = client.invoke(_request(RuntimeAction.LOAD_MODEL))
 
     assert launcher.started == 1
     assert response.status is EnvelopeStatus.SUCCEEDED
+    assert client._session.calls[0][1].endswith(
+        "/api/v1/daemon/runtimes/tts/load"
+    )
 
 
 def test_load_model_uses_request_metadata():
@@ -115,7 +118,7 @@ def test_load_model_uses_request_metadata():
     client = SidecarTTSClient(
         settings=_settings(),
         launcher=launcher,
-        session=FakeSession([]),
+        session=FakeSession([FakeResponse(payload={"status": "ok"})]),
     )
 
     response = client.invoke(
@@ -134,6 +137,26 @@ def test_load_model_uses_request_metadata():
     assert client._settings.tts_model_path == "/tmp/espeak"
     assert launcher.started == 1
     assert response.status is EnvelopeStatus.SUCCEEDED
+
+
+def test_load_model_warms_remote_local_fallback_runtime():
+    launcher = FakeLauncher(_settings())
+    session = FakeSession([FakeResponse(payload={"status": "ok"})])
+    client = SidecarTTSClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=session,
+    )
+
+    client.invoke(_request(RuntimeAction.LOAD_MODEL))
+
+    assert session.calls[0][0] == "POST"
+    assert session.calls[0][1].endswith(
+        "/api/v1/daemon/runtimes/tts/load"
+    )
+    payload = session.calls[0][2]["json"]
+    assert payload["provider"] == "local"
+    assert payload["deployment_mode"] == "local_fallback"
 
 
 def test_invoke_returns_base64_audio_payload():

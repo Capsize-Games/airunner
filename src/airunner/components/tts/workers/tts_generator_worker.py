@@ -438,9 +438,32 @@ class TTSGeneratorWorker(Worker):
     def on_application_settings_changed_signal(self, data):
         # Handle settings changes that require TTS model updates
         setting_name = data.get("setting_name", "") if data else ""
-        if setting_name == "openvoice_settings":
-            if self.tts:
-                self.tts.reload_speaker_embeddings()
+        column_name = data.get("column_name", "") if data else ""
+        value = data.get("val") if data else None
+        if value is None and data:
+            value = data.get("value")
+
+        if setting_name != "openvoice_settings":
+            return
+
+        if self._daemon_client() is not None:
+            return
+
+        if column_name != "reference_speaker_path":
+            return
+
+        if self.tts and hasattr(self.tts, "reload_speaker_embeddings"):
+            self.tts.reload_speaker_embeddings(reference_speaker_path=value)
+            return
+
+        if self._active_tts_model() != TTSModel.OPENVOICE.value:
+            return
+
+        self._initialize_tts_model_manager()
+        if self.tts and hasattr(self.tts, "reload_speaker_embeddings"):
+            self.tts.reload_speaker_embeddings(reference_speaker_path=value)
+            if self.tts_enabled:
+                self._load_tts()
 
     def _initialize_tts_model_manager(self):
         self.logger.info("Initializing TTS handler...")

@@ -131,6 +131,16 @@ class SidecarTTSClient(RuntimeClient):
             settings = self._settings_for_control(request.metadata)
             self._ensure_launcher(settings)
             self._launcher.start()
+            self._request(
+                "POST",
+                f"{self._launcher.endpoint}/api/v1/daemon/runtimes/tts/load",
+                json_payload={
+                    "provider": self.descriptor.provider,
+                    "deployment_mode": RuntimeMode.LOCAL_FALLBACK.value,
+                    "request_id": request.request_id,
+                    "metadata": dict(request.metadata or {}),
+                },
+            )
         except RuntimeError as exc:
             return self._failure_response(
                 request.request_id,

@@ -18,6 +18,21 @@ model = None
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
+def _load_cached_speaker_embedding(se_path, device):
+    """Load one cached speaker embedding when it exists."""
+    if not os.path.exists(se_path):
+        return None
+    try:
+        embedding = torch.load(se_path, map_location=torch.device(device))
+    except Exception as error:
+        logger.warning(
+            f"Failed to load cached speaker embedding {se_path}: {error}"
+        )
+        return None
+    logger.info(f"Reusing cached speaker embedding from {se_path}")
+    return embedding
+
+
 def split_audio_vad(audio_path, audio_name, target_dir, split_seconds=10.0):
     # Initialize Silero VAD model if not already done
     if not hasattr(split_audio_vad, "vad_model"):
@@ -119,6 +134,13 @@ def get_se(audio_path, vc_model, target_dir="processed"):
 
     audio_name = f"{os.path.basename(audio_path).rsplit('.', 1)[0]}_{version}_{hash_numpy_array(audio_path)}"
     se_path = os.path.join(target_dir, audio_name, "se.pth")
+
+    cached_embedding = _load_cached_speaker_embedding(
+        se_path,
+        getattr(vc_model, "device", "cpu"),
+    )
+    if cached_embedding is not None:
+        return cached_embedding, audio_name
 
     try:
         wavs_folder = split_audio_vad(
