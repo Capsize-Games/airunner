@@ -18,6 +18,9 @@ from airunner.components.document_editor.workspace_shell_support import (
     side_panel_definitions,
     workspace_roots_summary,
 )
+from airunner.components.document_editor.terminal import (
+    TerminalSessionManager,
+)
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from PySide6.QtWidgets import (
@@ -26,14 +29,13 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QTabWidget,
 )
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QKeySequence, QShortcut, QTextCursor
 from PySide6.QtCore import Qt
 from airunner.components.document_editor.gui.widgets.document_editor_widget import (
     DocumentEditorWidget,
 )
 import os
 import sys
-from PySide6.QtCore import QProcess
 
 
 class DocumentEditorContainerWidget(BaseWidget):
@@ -42,12 +44,11 @@ class DocumentEditorContainerWidget(BaseWidget):
     widget_class_ = Ui_document_editor_container
 
     def __init__(self, *args, **kwargs):
-        self._script_process = None
+        self._active_terminal_session_id = None
+        self._terminal_session_manager = TerminalSessionManager()
+        self._terminal_temp_files = {}
         self._workspace_panel_tabs = {}
         self._workspace_text_panels = {}
-        # Track temporary files created for running unsaved buffers so they
-        # can be removed after execution.
-        self._temp_run_files = set()
         self._splitters = ["vertical_splitter", "splitter"]
         self.signal_handlers = {
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
@@ -118,6 +119,15 @@ class DocumentEditorContainerWidget(BaseWidget):
             self.ui.documents.currentChanged.connect(self._on_tab_changed)
         except Exception:
             pass
+        self._terminal_session_manager.outputReceived.connect(
+            self._on_terminal_output
+        )
+        self._terminal_session_manager.sessionFinished.connect(
+            self._on_terminal_session_finished
+        )
+        self._terminal_session_manager.sessionError.connect(
+            self._on_terminal_session_error
+        )
         self._setup_workspace_shell()
 
     def handle_new_document_signal(self, data: Dict):
@@ -273,50 +283,24 @@ class DocumentEditorContainerWidget(BaseWidget):
         if os.path.exists(document_path) and os.path.isfile(document_path):
             suffix = os.path.splitext(document_path)[1].lower()
             if suffix in [".py"]:
-                # Ensure only one process at a time
-                if (
-                    hasattr(self, "_script_process")
-                    and self._script_process is not None
-                ):
-                    self._script_process.kill()
-                    self._script_process = None
                 self.ui.terminal.clear()
-                process = QProcess(self)
-                self._script_process = process
-                if temp_file_flag:
-                    try:
-                        self._temp_run_files.add(document_path)
-                    except Exception:
-                        pass
                 script_dir = os.path.dirname(document_path)
                 python_exe = sys.executable
                 self.activate_workspace_panel("terminal")
                 self.append_agent_activity(
                     agent_activity_entry("Started run", document_path)
                 )
-                process.setProgram(python_exe)
-                process.setArguments([document_path])
-                process.setWorkingDirectory(script_dir)
-                process.setProcessChannelMode(
-                    QProcess.ProcessChannelMode.MergedChannels
-                )
-                process.readyReadStandardOutput.connect(
-                    lambda: self._append_process_output(process)
-                )
-                process.readyReadStandardError.connect(
-                    lambda: self._append_process_output(process)
-                )
-                process.finished.connect(
-                    lambda code, status: self._on_process_finished(
-                        code, status, document_path if temp_file_flag else None
+                if self._active_terminal_session_id is not None:
+                    self.stop_terminal_session(
+                        self._active_terminal_session_id
                     )
+                self.start_terminal_session(
+                    [python_exe, document_path],
+                    working_directory=script_dir,
+                    temp_file_path=(
+                        document_path if temp_file_flag else None
+                    ),
                 )
-                process.errorOccurred.connect(
-                    lambda err: self._on_process_error(
-                        err, document_path if temp_file_flag else None
-                    )
-                )
-                process.start()
 
     def handle_open_research_document(self, data: Dict) -> None:
         """Open a research document in a locked (read-only) tab.
@@ -567,74 +551,156 @@ class DocumentEditorContainerWidget(BaseWidget):
                 except Exception as e:
                     self.logger.exception(f"Failed to stream to document: {e}")
 
-    def _append_process_output(self, process: QProcess) -> None:
-        data = process.readAllStandardOutput().data().decode("utf-8")
-        if data:
-            self.activate_workspace_panel("terminal")
-            self.ui.terminal.appendPlainText(data)
-        err = process.readAllStandardError().data().decode("utf-8")
-        if err:
-            self.activate_workspace_panel("terminal")
-            self.ui.terminal.appendPlainText(err)
+    def start_terminal_session(
+        self,
+        argv: list[str],
+        working_directory: str | None = None,
+        temp_file_path: str | None = None,
+    ) -> str | None:
+        """Start a PTY-backed terminal session and track it as active."""
+        try:
+            session_id = self._terminal_session_manager.start_session(
+                argv,
+                working_directory=working_directory,
+            )
+        except Exception as exc:
+            self._on_terminal_session_error("", str(exc))
+            return None
+        self._active_terminal_session_id = session_id
+        if temp_file_path:
+            self._terminal_temp_files[session_id] = temp_file_path
+        return session_id
 
-    def _on_process_finished(
-        self, exit_code: int, exit_status, temp_path: str | None = None
+    def run_terminal_command(
+        self,
+        command: str,
+        working_directory: str | None = None,
+    ) -> str | None:
+        """Run a shell command inside the integrated terminal."""
+        self.ui.terminal.clear()
+        self.activate_workspace_panel("terminal")
+        self.append_agent_activity(
+            agent_activity_entry("Started terminal command", command)
+        )
+        try:
+            session_id = self._terminal_session_manager.start_shell_session(
+                command,
+                working_directory=working_directory,
+            )
+        except Exception as exc:
+            self._on_terminal_session_error("", str(exc))
+            return None
+        self._active_terminal_session_id = session_id
+        return session_id
+
+    def send_terminal_input(
+        self,
+        text: str,
+        session_id: str | None = None,
+    ) -> bool:
+        """Send user or agent input to the active terminal session."""
+        target_session = session_id or self._active_terminal_session_id
+        if target_session is None:
+            return False
+        return self._terminal_session_manager.send_input(
+            target_session,
+            text,
+        )
+
+    def stop_terminal_session(
+        self,
+        session_id: str | None = None,
+    ) -> bool:
+        """Stop an active terminal session."""
+        target_session = session_id or self._active_terminal_session_id
+        if target_session is None:
+            return False
+        self.append_agent_activity(
+            agent_activity_entry("Stopped terminal session", target_session)
+        )
+        return self._terminal_session_manager.stop_session(target_session)
+
+    def terminal_session_output(
+        self,
+        session_id: str | None = None,
+    ) -> str:
+        """Return captured output for the active terminal session."""
+        target_session = session_id or self._active_terminal_session_id
+        if target_session is None:
+            return ""
+        return self._terminal_session_manager.session_output(
+            target_session
+        )
+
+    def _on_terminal_output(self, session_id: str, text: str) -> None:
+        """Append live PTY output for the active session to the UI."""
+        if session_id != self._active_terminal_session_id:
+            return
+        self.activate_workspace_panel("terminal")
+        self.ui.terminal.moveCursor(QTextCursor.End)
+        self.ui.terminal.insertPlainText(text)
+        self.ui.terminal.ensureCursorVisible()
+
+    def _on_terminal_session_finished(
+        self,
+        session_id: str,
+        exit_code: int,
     ) -> None:
+        """Handle terminal session completion and temp-file cleanup."""
         self.append_agent_activity(
             agent_activity_entry(
                 "Finished run",
-                f"exit code {exit_code}",
+                f"session {session_id} exit code {exit_code}",
             )
         )
         if exit_code != 0:
             self.append_problem(
-                problem_entry(f"Process finished with exit code {exit_code}")
+                problem_entry(
+                    f"Terminal session {session_id} exited with {exit_code}"
+                )
             )
-        self.ui.terminal.appendPlainText(
-            f"\n[Process finished with exit code {exit_code}]"
+        if session_id == self._active_terminal_session_id:
+            self.ui.terminal.moveCursor(QTextCursor.End)
+            self.ui.terminal.insertPlainText(
+                f"\n[Process finished with exit code {exit_code}]"
+            )
+            self.ui.terminal.ensureCursorVisible()
+            self._active_terminal_session_id = None
+        self._cleanup_terminal_temp_file(
+            self._terminal_temp_files.pop(session_id, None)
         )
-        self._script_process = None
-        # Cleanup temporary run file if one was used
-        if temp_path:
-            try:
-                if temp_path in self._temp_run_files:
-                    self._temp_run_files.discard(temp_path)
-                if os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                    except Exception:
-                        # Non-fatal: log and continue
-                        self.ui.terminal.appendPlainText(
-                            f"\n[Warning: failed to remove temp file {temp_path}]"
-                        )
-            except Exception:
-                # Don't block on cleanup failures; log to terminal
-                self.ui.terminal.appendPlainText(
-                    f"\n[Warning: failed during temp file cleanup for {temp_path}]"
-                )
 
-    def _on_process_error(self, error, temp_path: str | None = None) -> None:
-        self.append_agent_activity(
-            agent_activity_entry("Process error", str(error))
+    def _on_terminal_session_error(
+        self,
+        session_id: str,
+        error: str,
+    ) -> None:
+        """Handle terminal session errors and surface them in the UI."""
+        message = (
+            f"Session {session_id} error: {error}"
+            if session_id
+            else f"Terminal error: {error}"
         )
-        self.append_problem(problem_entry(f"Process error: {error}"))
-        self.ui.terminal.appendPlainText(f"\n[Process error: {error}]")
-        # If a temporary run file was used, attempt to clean it up
-        if temp_path:
-            try:
-                if temp_path in self._temp_run_files:
-                    self._temp_run_files.discard(temp_path)
-                if os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                    except Exception:
-                        self.ui.terminal.appendPlainText(
-                            f"\n[Warning: failed to remove temp file {temp_path}]"
-                        )
-            except Exception:
-                self.ui.terminal.appendPlainText(
-                    f"\n[Warning: failed during temp file cleanup for {temp_path}]"
-                )
+        self.append_agent_activity(agent_activity_entry("Process error", message))
+        self.append_problem(problem_entry(message))
+        if not session_id or session_id == self._active_terminal_session_id:
+            self.ui.terminal.moveCursor(QTextCursor.End)
+            self.ui.terminal.insertPlainText(f"\n[{message}]")
+            self.ui.terminal.ensureCursorVisible()
+
+    def _cleanup_terminal_temp_file(self, temp_path: str | None) -> None:
+        """Remove a temporary run file when its terminal session ends."""
+        if not temp_path:
+            return
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            self.ui.terminal.moveCursor(QTextCursor.End)
+            self.ui.terminal.insertPlainText(
+                f"\n[Warning: failed to remove temp file {temp_path}]"
+            )
+            self.ui.terminal.ensureCursorVisible()
 
     def _open_file_tab(self, file_path: str):
         if not file_path:

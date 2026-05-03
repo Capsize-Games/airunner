@@ -19,6 +19,10 @@ from airunner.components.document_editor.project import (
     AirunnerTrustLevel,
     AirunnerWorkspaceConfig,
 )
+from airunner.components.document_editor.terminal import (
+    TerminalSessionInfo,
+    TerminalSessionManager,
+)
 
 __all__ = [
     "AirunnerAutonomyMode",
@@ -30,5 +34,7 @@ __all__ = [
     "AirunnerRecentProjectEntry",
     "AirunnerTrustLevel",
     "AirunnerWorkspaceConfig",
+    "TerminalSessionInfo",
+    "TerminalSessionManager",
     "WorkspaceManager",
 ]

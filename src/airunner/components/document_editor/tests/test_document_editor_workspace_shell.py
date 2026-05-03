@@ -1,6 +1,7 @@
 """Focused tests for the coding workspace shell container."""
 
 import os
+import sys
 
 from PySide6.QtWidgets import QApplication, QTabWidget
 
@@ -31,4 +32,27 @@ def test_document_editor_container_builds_workspace_shell_tabs():
     assert widget._workspace_bottom_tabs.tabText(0) == "Terminal"
     assert widget._workspace_panel_tabs["project-search"][0] is widget._workspace_side_tabs
     assert widget._workspace_panel_tabs["problems"][0] is widget._workspace_bottom_tabs
+    widget.deleteLater()
+
+
+def test_run_script_starts_integrated_terminal_session(tmp_path):
+    """Running a Python document should delegate into the terminal manager."""
+    _get_app()
+    widget = DocumentEditorContainerWidget()
+    document_path = tmp_path / "demo.py"
+    document_path.write_text("print('hello')\n", encoding="utf-8")
+    captured = {}
+
+    def fake_start(argv, working_directory=None, temp_file_path=None):
+        captured["argv"] = argv
+        captured["working_directory"] = working_directory
+        captured["temp_file_path"] = temp_file_path
+        return "session-1"
+
+    widget.start_terminal_session = fake_start
+    widget.run_script({"document_path": str(document_path)})
+
+    assert captured["argv"] == [sys.executable, str(document_path)]
+    assert captured["working_directory"] == str(tmp_path)
+    assert captured["temp_file_path"] is None
     widget.deleteLater()
