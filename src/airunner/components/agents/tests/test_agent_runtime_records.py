@@ -139,3 +139,34 @@ def test_generated_write_record_round_trips_for_review():
     assert restored.operation == "project_edit_file"
     assert restored.rel_path == "src/app.py"
     assert "+++ workspace:src/app.py" in restored.diff
+
+
+def test_agent_run_record_compacts_older_history_into_summary():
+    """Run compaction should preserve recent history and summarize older work."""
+    run = AgentRunRecord(
+        session_id="session-1",
+        task_id="task-1",
+        role=AgentRole.CODER,
+    )
+    for index in range(5):
+        run.add_message(
+            AgentMessageRecord(
+                content=f"Message {index}",
+                channel=AgentMessageChannel.COMMENTARY,
+                role=AgentRole.CODER,
+            )
+        )
+        run.add_tool_call(
+            AgentToolCallRecord(
+                tool_name=f"tool_{index}",
+                arguments={"index": index},
+                output={"ok": True},
+            )
+        )
+
+    run.compact(max_messages=2, max_tool_calls=3)
+
+    assert len(run.messages) == 2
+    assert len(run.tool_calls) == 3
+    assert "Compacted 3 earlier messages" in run.summary
+    assert run.metadata["compaction"]["omitted_tool_calls"] == 2
