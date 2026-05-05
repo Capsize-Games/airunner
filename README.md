@@ -4,9 +4,13 @@
 Support development. Send crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
 ```
 
-## Your new favorite local AI platform
+## Local AI workflow workbench
 
-AI Runner is an all-in-one, offline-first desktop application, headless server, and Python library for local LLMs, TTS, STT, and image generation.
+AI Runner is an offline-first desktop application, headless server,
+and Python library for local AI workflows. Its primary goal is to
+produce durable deliverables such as research briefs and
+meeting-follow-up packs, with chat, speech, search, and coding acting
+as operators behind the scenes.
 
 
 <img src="./images/art_interface.png" alt="AI Runner Logo" />
@@ -18,16 +22,36 @@ AI Runner is an all-in-one, offline-first desktop application, headless server, 
 
 ---
 
+## What AIRunner Is For
+
+AI Runner is being positioned around two outcome-first workflows:
+
+- **Research Brief Builder**: Gather sources, capture evidence, and
+  produce a reviewable brief package with findings, citations, open
+  questions, and reusable artifacts.
+- **Meeting-to-Deliverables**: Turn meeting notes or transcripts into
+  decision logs, action items, follow-up drafts, and editable work
+  products.
+- **Hidden workflow operator**: Coding is still valuable, but it moves
+  behind the scenes. AIRunner can create helper projects under
+  `~/.local/share/airunner/Projects` when a workflow needs custom logic,
+  store what those helpers do, and reuse them later instead of treating
+  ad hoc scripts as the end product.
+
+The target workflow contracts for these two product wedges are captured
+in [docs/deliverable_workflows.md](./docs/deliverable_workflows.md).
+
 ## ✨ Key Features
 
 | Feature | Description |
 |---------|-------------|
-| **🗣️ Voice Chat** | Real-time conversations with LLMs using espeak or OpenVoice |
-| **🤖 Custom AI Agents** | Configurable personalities, moods, and RAG-enhanced knowledge |
+| **📚 Research Brief Builder** | Deep research workflow that collects sources, tracks evidence, and produces a structured brief package |
+| **📝 Meeting-to-Deliverables** | Converts meeting input into decisions, action items, follow-up drafts, and editable deliverables |
+| **🧰 Hidden Workflow Operator** | AIRunner can use tools, search, speech, and helper projects to finish a workflow without making generated code the end goal |
 | **🎨 Visual Workflows** | Drag-and-drop LangGraph workflow builder with runtime execution |
 | **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and FLUX models with drawing tools, LoRA, inpainting, and filters |
 | **🔒 Privacy First** | Runs locally with no external APIs by default, configurable guardrails |
-| **⚡ Fast Generation** | Uses GGUF and quantization for faster inference and lower VRAM usage |
+| **⚡ Local Runtime Stack** | Desktop app, headless server, and Python library for local LLM, TTS, STT, and workflow automation |
 
 ### 🌍 Language Support
 
@@ -534,6 +558,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 ## Documentation
 
 - [Wiki](https://github.com/Capsize-Games/airunner/wiki)
+- [Deliverable-First Workflows](docs/deliverable_workflows.md)
 - [API Service Layer](src/airunner/components/application/api/README.md)
 - [Coding Agent Workspace Operator Guide](docs/coding_agent_workspace_operator_guide.md)
 - [ORM Models](src/airunner/components/data/models/README.md)
