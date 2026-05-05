@@ -11,6 +11,10 @@ from airunner.components.agents.runtime import AgentSessionRecord
 from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.agents.runtime import AgentToolCallRecord
+from airunner.components.agents.runtime import ResearchEvidenceRecord
+from airunner.components.agents.runtime import ResearchReviewStatus
+from airunner.components.agents.runtime import ResearchRunRecord
+from airunner.components.agents.runtime import ResearchSourceRecord
 
 
 def test_agent_run_record_round_trips_nested_runtime_history():
@@ -170,3 +174,42 @@ def test_agent_run_record_compacts_older_history_into_summary():
     assert len(run.tool_calls) == 3
     assert "Compacted 3 earlier messages" in run.summary
     assert run.metadata["compaction"]["omitted_tool_calls"] == 2
+
+
+def test_research_records_round_trip_with_attribution():
+    """Research records should preserve statuses and source attribution."""
+    research_run = ResearchRunRecord(
+        topic="grid resilience",
+        query="energy grid resilience recent studies",
+        status=AgentRunStatus.RUNNING,
+    )
+    source = ResearchSourceRecord(
+        run_id=research_run.record_id,
+        url="https://example.com/report",
+        title="Grid Resilience Report",
+        status=ResearchReviewStatus.ACCEPTED,
+        authors=["Jane Doe"],
+    )
+    evidence = ResearchEvidenceRecord(
+        run_id=research_run.record_id,
+        fact_text="Reserve capacity increased by 12 percent.",
+        source_ids=[source.record_id],
+        status=ResearchReviewStatus.ACCEPTED,
+        evidence_kind="numeric_fact",
+        numeric_value="12",
+        numeric_unit="percent",
+        quote_text="Reserve capacity increased by 12 percent.",
+    )
+    research_run.add_source(source.record_id)
+    research_run.add_evidence(evidence.record_id)
+
+    restored_run = ResearchRunRecord.from_dict(research_run.to_dict())
+    restored_source = ResearchSourceRecord.from_dict(source.to_dict())
+    restored_evidence = ResearchEvidenceRecord.from_dict(evidence.to_dict())
+
+    assert restored_run.status is AgentRunStatus.RUNNING
+    assert restored_run.source_ids == [source.record_id]
+    assert restored_source.status is ResearchReviewStatus.ACCEPTED
+    assert restored_source.authors == ["Jane Doe"]
+    assert restored_evidence.source_ids == [source.record_id]
+    assert restored_evidence.numeric_value == "12"

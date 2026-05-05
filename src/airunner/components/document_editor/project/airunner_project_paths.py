@@ -21,6 +21,7 @@ PROJECT_DIRECTORIES = (
     "memory",
     "plans",
     "prompt_templates",
+    "research",
     "sessions",
     "tasks",
     "terminal",

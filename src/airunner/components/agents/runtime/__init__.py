@@ -19,6 +19,18 @@ from airunner.components.agents.runtime.agent_run_record import (
 from airunner.components.agents.runtime.agent_run_status import (
     AgentRunStatus,
 )
+from airunner.components.agents.runtime.research_evidence_record import (
+    ResearchEvidenceRecord,
+)
+from airunner.components.agents.runtime.research_review_status import (
+    ResearchReviewStatus,
+)
+from airunner.components.agents.runtime.research_run_record import (
+    ResearchRunRecord,
+)
+from airunner.components.agents.runtime.research_source_record import (
+    ResearchSourceRecord,
+)
 from airunner.components.agents.runtime.agent_session_record import (
     AgentSessionRecord,
 )
@@ -59,6 +71,10 @@ __all__ = [
     "AgentRole",
     "AgentRunRecord",
     "AgentRunStatus",
+    "ResearchEvidenceRecord",
+    "ResearchReviewStatus",
+    "ResearchRunRecord",
+    "ResearchSourceRecord",
     "AgentSessionRecord",
     "AgentTaskRecord",
     "AgentTaskStatus",

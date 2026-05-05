@@ -11,6 +11,10 @@ from airunner.components.agents.runtime import AgentSessionRecord
 from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.agents.runtime import AgentToolCallRecord
+from airunner.components.agents.runtime import ResearchEvidenceRecord
+from airunner.components.agents.runtime import ResearchReviewStatus
+from airunner.components.agents.runtime import ResearchRunRecord
+from airunner.components.agents.runtime import ResearchSourceRecord
 from airunner.components.document_editor.project import (
     AirunnerProjectService,
 )
@@ -149,3 +153,78 @@ def test_project_state_service_persists_generated_write_records(tmp_path):
     assert restored.operation == "project_edit_file"
     assert restored.after_content == "value = 2\n"
     assert [item.record_id for item in listed] == [generated_write.record_id]
+
+
+def test_project_state_service_persists_research_ledgers(tmp_path):
+    """Research runs, sources, and evidence should persist separately."""
+    project_service = AirunnerProjectService(str(tmp_path / "demo-project"))
+    project_service.initialize(project_name="Demo Project")
+    state_service = AirunnerProjectStateService(project_service)
+
+    research_run = ResearchRunRecord(
+        topic="grid resilience",
+        query="energy grid resilience recent studies",
+        status=AgentRunStatus.RUNNING,
+    )
+    state_service.save_research_run(research_run)
+
+    accepted_source = ResearchSourceRecord(
+        run_id=research_run.record_id,
+        url="https://example.com/accepted",
+        title="Accepted source",
+        status=ResearchReviewStatus.ACCEPTED,
+    )
+    rejected_source = ResearchSourceRecord(
+        run_id=research_run.record_id,
+        url="https://example.com/rejected",
+        title="Rejected source",
+        status=ResearchReviewStatus.REJECTED,
+        failure_reason="Duplicate reporting without primary data.",
+    )
+    state_service.save_research_source(accepted_source)
+    state_service.save_research_source(rejected_source)
+
+    evidence = ResearchEvidenceRecord(
+        run_id=research_run.record_id,
+        fact_text="Reserve capacity increased by 12 percent.",
+        source_ids=[accepted_source.record_id],
+        status=ResearchReviewStatus.ACCEPTED,
+        evidence_kind="numeric_fact",
+        numeric_value="12",
+        numeric_unit="percent",
+        quote_text="Reserve capacity increased by 12 percent.",
+    )
+    state_service.save_research_evidence(evidence)
+
+    restored_run = state_service.load_research_run(research_run.record_id)
+    restored_evidence = state_service.load_research_evidence(evidence.record_id)
+    accepted_sources = state_service.list_research_sources(
+        run_id=research_run.record_id,
+        status=ResearchReviewStatus.ACCEPTED,
+    )
+    rejected_sources = state_service.list_research_sources(
+        run_id=research_run.record_id,
+        status=ResearchReviewStatus.REJECTED,
+    )
+    accepted_evidence = state_service.list_research_evidence(
+        run_id=research_run.record_id,
+        status=ResearchReviewStatus.ACCEPTED,
+        source_id=accepted_source.record_id,
+    )
+
+    assert restored_run.source_ids == [
+        accepted_source.record_id,
+        rejected_source.record_id,
+    ]
+    assert restored_run.evidence_ids == [evidence.record_id]
+    assert restored_evidence.quote_text
+    assert restored_evidence.numeric_unit == "percent"
+    assert [item.record_id for item in accepted_sources] == [
+        accepted_source.record_id,
+    ]
+    assert [item.record_id for item in rejected_sources] == [
+        rejected_source.record_id,
+    ]
+    assert [item.record_id for item in accepted_evidence] == [
+        evidence.record_id,
+    ]

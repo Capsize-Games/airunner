@@ -1,14 +1,19 @@
-"""
-Research mode tools for information gathering and synthesis.
+"""Research mode tools for synthesis and durable evidence capture."""
 
-Provides tools for:
-- Web search and scraping
-- Source synthesis and combination
-- Citation formatting
-- Research organization
-"""
+from typing import Any, List
 
-from typing import List
+from airunner.components.agents.runtime import AgentRunStatus
+from airunner.components.agents.runtime import ResearchEvidenceRecord
+from airunner.components.agents.runtime import ResearchReviewStatus
+from airunner.components.agents.runtime import ResearchRunRecord
+from airunner.components.agents.runtime import ResearchSourceRecord
+from airunner.components.document_editor.project import AirunnerProjectService
+from airunner.components.document_editor.project import (
+    AirunnerProjectStateService,
+)
+from airunner.components.document_editor.project.airunner_active_project import (
+    get_active_project_path,
+)
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -19,6 +24,245 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 # Note: Web search and scraping tools are currently in web_tools.py
 # They will be migrated here in a future update, but for now we create
 # complementary research-specific tools
+
+
+def _resolve_research_project_path(project_path: str = "") -> str:
+    """Return the initialized project path for research state tools."""
+    resolved = project_path or get_active_project_path() or ""
+    if not resolved:
+        raise ValueError(
+            "Research tools require an active or explicit project path."
+        )
+    project_service = AirunnerProjectService(resolved)
+    if not project_service.exists():
+        raise ValueError("Research tools require an initialized project.")
+    return project_service.project_path
+
+
+def _research_state_service(
+    project_path: str = "",
+) -> AirunnerProjectStateService:
+    """Return the project-state service used by research tools."""
+    project_service = AirunnerProjectService(
+        _resolve_research_project_path(project_path)
+    )
+    return AirunnerProjectStateService(project_service)
+
+
+def _review_status(status: str = "") -> ResearchReviewStatus | None:
+    """Return the normalized research review status filter."""
+    if not status:
+        return None
+    return ResearchReviewStatus(status)
+
+
+def _source_payload(source: ResearchSourceRecord) -> dict[str, Any]:
+    """Return a compact tool payload for one research source."""
+    return {
+        "source_id": source.record_id,
+        "title": source.title,
+        "url": source.url,
+        "status": source.status.value,
+        "excerpt": source.excerpt,
+        "authors": list(source.authors),
+        "failure_reason": source.failure_reason,
+    }
+
+
+def _evidence_match_blob(
+    evidence: ResearchEvidenceRecord,
+    sources: list[ResearchSourceRecord],
+) -> str:
+    """Return searchable text for one evidence record and its sources."""
+    source_text = "\n".join(
+        f"{source.title}\n{source.url}\n{source.excerpt}" for source in sources
+    )
+    metadata_text = "\n".join(
+        str(value) for value in evidence.metadata.values()
+    )
+    return "\n".join(
+        [
+            evidence.fact_text,
+            evidence.quote_text,
+            evidence.numeric_value,
+            evidence.numeric_unit,
+            evidence.confidence,
+            source_text,
+            metadata_text,
+        ]
+    ).lower()
+
+
+def _evidence_payload(
+    evidence: ResearchEvidenceRecord,
+    sources: list[ResearchSourceRecord],
+) -> dict[str, Any]:
+    """Return a compact tool payload for one evidence match."""
+    return {
+        "evidence_id": evidence.record_id,
+        "run_id": evidence.run_id,
+        "status": evidence.status.value,
+        "evidence_kind": evidence.evidence_kind,
+        "confidence": evidence.confidence,
+        "fact_text": evidence.fact_text,
+        "quote_text": evidence.quote_text,
+        "numeric_value": evidence.numeric_value,
+        "numeric_unit": evidence.numeric_unit,
+        "source_ids": list(evidence.source_ids),
+        "sources": [_source_payload(source) for source in sources],
+    }
+
+
+@tool(
+    name="start_research_run",
+    category=ToolCategory.RESEARCH,
+    description=(
+        "Create a durable research run ledger inside the active AIRunner "
+        "project before collecting sources or evidence."
+    ),
+)
+def start_research_run(
+    topic: str,
+    query: str = "",
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Create one research run for durable source and evidence capture."""
+    state_service = _research_state_service(project_path)
+    research_run = ResearchRunRecord(
+        topic=topic,
+        query=query,
+        status=AgentRunStatus.RUNNING,
+    )
+    state_service.save_research_run(research_run)
+    return {
+        "research_run_id": research_run.record_id,
+        "topic": research_run.topic,
+        "status": research_run.status.value,
+        "project_path": state_service.project_service.project_path,
+    }
+
+
+@tool(
+    name="record_research_source",
+    category=ToolCategory.RESEARCH,
+    description=(
+        "Persist one accepted, rejected, or unresolved source with "
+        "metadata for a research run."
+    ),
+)
+def record_research_source(
+    research_run_id: str,
+    url: str,
+    title: str = "",
+    status: str = "unresolved",
+    source_type: str = "web",
+    excerpt: str = "",
+    authors: List[str] | None = None,
+    published_at: str = "",
+    failure_reason: str = "",
+    source_notes: str = "",
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Persist one research source under the active AIRunner project."""
+    state_service = _research_state_service(project_path)
+    source = ResearchSourceRecord(
+        run_id=research_run_id,
+        url=url,
+        title=title,
+        status=ResearchReviewStatus(status),
+        source_type=source_type,
+        excerpt=excerpt,
+        authors=list(authors or []),
+        published_at=published_at,
+        failure_reason=failure_reason,
+        metadata={"source_notes": source_notes} if source_notes else {},
+    )
+    state_service.save_research_source(source)
+    return _source_payload(source) | {"research_run_id": research_run_id}
+
+
+@tool(
+    name="record_research_evidence",
+    category=ToolCategory.RESEARCH,
+    description=(
+        "Persist one research fact, quote, or numeric finding with "
+        "source attribution and review status."
+    ),
+)
+def record_research_evidence(
+    research_run_id: str,
+    fact_text: str,
+    source_ids: List[str],
+    status: str = "unresolved",
+    evidence_kind: str = "claim",
+    confidence: str = "medium",
+    quote_text: str = "",
+    numeric_value: str = "",
+    numeric_unit: str = "",
+    notes: str = "",
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Persist one attributed evidence record for later synthesis."""
+    state_service = _research_state_service(project_path)
+    evidence = ResearchEvidenceRecord(
+        run_id=research_run_id,
+        fact_text=fact_text,
+        source_ids=list(source_ids),
+        status=ResearchReviewStatus(status),
+        evidence_kind=evidence_kind,
+        confidence=confidence,
+        quote_text=quote_text,
+        numeric_value=numeric_value,
+        numeric_unit=numeric_unit,
+        metadata={"notes": notes} if notes else {},
+    )
+    state_service.save_research_evidence(evidence)
+    sources = [
+        state_service.load_research_source(source_id)
+        for source_id in evidence.source_ids
+    ]
+    return _evidence_payload(evidence, sources)
+
+
+@tool(
+    name="search_research_evidence",
+    category=ToolCategory.RESEARCH,
+    description=(
+        "Search persisted research evidence and source metadata for later "
+        "synthesis or review."
+    ),
+)
+def search_research_evidence(
+    query: str,
+    research_run_id: str = "",
+    status: str = "",
+    limit: int = 5,
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Return evidence matches from the persisted research ledger."""
+    state_service = _research_state_service(project_path)
+    records = state_service.list_research_evidence(
+        run_id=research_run_id or None,
+        status=_review_status(status),
+    )
+    terms = [term for term in query.lower().split() if term.strip()]
+    scored_matches: list[tuple[int, dict[str, Any]]] = []
+    for evidence in records:
+        sources = [
+            state_service.load_research_source(source_id)
+            for source_id in evidence.source_ids
+        ]
+        blob = _evidence_match_blob(evidence, sources)
+        score = sum(1 for term in terms if term in blob) if terms else 1
+        if score <= 0:
+            continue
+        scored_matches.append((score, _evidence_payload(evidence, sources)))
+    scored_matches.sort(key=lambda item: item[0], reverse=True)
+    return {
+        "query": query,
+        "match_count": len(scored_matches[:limit]),
+        "matches": [payload for _score, payload in scored_matches[:limit]],
+    }
 
 
 @tool(
