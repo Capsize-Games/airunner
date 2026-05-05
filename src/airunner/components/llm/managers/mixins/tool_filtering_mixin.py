@@ -202,20 +202,31 @@ class ToolFilteringMixin:
         )
 
         tool_choice = None
+        supports_forced_choice = bool(
+            getattr(self, "supports_function_calling", False)
+        )
         if force_tool:
             tool_choice = {
                 "type": "function",
                 "function": {"name": force_tool},
             }
             self.logger.info("[TOOL FILTER] Forcing tool: %s", force_tool)
-        elif action == LLMActionType.PERFORM_RAG_SEARCH:
+        elif (
+            supports_forced_choice
+            and action == LLMActionType.PERFORM_RAG_SEARCH
+        ):
             tool_choice = "any"
-        elif action == LLMActionType.CODE:
+        elif supports_forced_choice and action == LLMActionType.CODE:
             tool_choice = "any"
-        elif tool_categories and (
+        elif supports_forced_choice and tool_categories and (
             "search" in tool_categories or "research" in tool_categories
         ):
             tool_choice = "any"
+        elif action == LLMActionType.CODE:
+            self.logger.info(
+                "[TOOL FILTER] Leaving code tool_choice unset for model "
+                "without reliable forced function calling"
+            )
 
         self._workflow_manager.update_tools(
             filtered_tools,

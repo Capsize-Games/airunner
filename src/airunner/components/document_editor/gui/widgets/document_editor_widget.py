@@ -28,6 +28,7 @@ from PySide6.QtCore import (
     QSize,
     QRegularExpression,
     QFileInfo,
+    QFileSystemWatcher,
     QTimer,
     Slot,
 )
@@ -335,9 +336,17 @@ class DocumentEditorWidget(BaseWidget):
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._perform_autosave)
+        self._file_watcher = QFileSystemWatcher(self)
+        self._file_watcher.fileChanged.connect(self._on_watched_path_changed)
+        self._file_watcher.directoryChanged.connect(
+            self._on_watched_path_changed
+        )
         self._logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         # Track modification state reliably via the document's signal
         self._modified = False
+        self._external_reload_scheduled = False
+        self._last_disk_state: Optional[tuple[int, int]] = None
+        self._pending_external_disk_state: Optional[tuple[int, int]] = None
         try:
             self.editor.document().modificationChanged.connect(
                 self._on_modification_changed
@@ -458,8 +467,97 @@ class DocumentEditorWidget(BaseWidget):
             self._logger.debug(
                 "Document modificationChanged -> %s", self._modified
             )
+            if not self._modified and self._pending_external_disk_state:
+                self._schedule_external_reload()
         except Exception:
             self._logger.exception("Error in _on_modification_changed handler")
+
+    def _current_disk_state(
+        self,
+        file_path: Optional[str] = None,
+    ) -> Optional[tuple[int, int]]:
+        """Return the current mtime/size tuple for a file on disk."""
+        path = file_path or self.current_file_path
+        if not path:
+            return None
+        try:
+            stat_result = os.stat(path)
+        except OSError:
+            return None
+        return stat_result.st_mtime_ns, stat_result.st_size
+
+    def _refresh_file_watch_paths(self) -> None:
+        """Watch the current file and its parent directory for changes."""
+        current_paths = [
+            *self._file_watcher.files(),
+            *self._file_watcher.directories(),
+        ]
+        if current_paths:
+            try:
+                self._file_watcher.removePaths(current_paths)
+            except Exception:
+                self._logger.exception("Failed to clear file watch paths")
+
+        if not self.current_file_path:
+            return
+
+        watch_paths = []
+        if os.path.isfile(self.current_file_path):
+            watch_paths.append(self.current_file_path)
+        directory_path = os.path.dirname(self.current_file_path) or "."
+        if os.path.isdir(directory_path):
+            watch_paths.append(directory_path)
+        if not watch_paths:
+            return
+        try:
+            self._file_watcher.addPaths(watch_paths)
+        except Exception:
+            self._logger.exception(
+                "Failed to watch document paths for %s",
+                self.current_file_path,
+            )
+
+    def _update_disk_state(self, file_path: Optional[str] = None) -> None:
+        """Record the current on-disk state after a load or save."""
+        self._last_disk_state = self._current_disk_state(file_path)
+        self._pending_external_disk_state = None
+
+    @Slot(str)
+    def _on_watched_path_changed(self, _path: str) -> None:
+        """Debounce external file-system changes for the active document."""
+        self._schedule_external_reload()
+
+    def _schedule_external_reload(self) -> None:
+        """Schedule a single external reload check on the next event turn."""
+        if self._external_reload_scheduled or not self.current_file_path:
+            return
+        self._external_reload_scheduled = True
+        QTimer.singleShot(25, self._sync_external_file_change)
+
+    def _sync_external_file_change(self) -> None:
+        """Reload the document when the on-disk file changed externally."""
+        self._external_reload_scheduled = False
+        if not self.current_file_path:
+            return
+
+        self._refresh_file_watch_paths()
+        current_state = self._current_disk_state()
+        if current_state is None or current_state == self._last_disk_state:
+            return
+
+        if self.is_modified():
+            self._pending_external_disk_state = current_state
+            self._logger.info(
+                "External file change detected for modified document: %s",
+                self.current_file_path,
+            )
+            return
+
+        if self.load_file(self.current_file_path, show_error_dialog=False):
+            self._logger.info(
+                "Reloaded document after external change: %s",
+                self.current_file_path,
+            )
 
     def _clear_modified(self):
         """Clear both the QTextDocument's modified flag and the internal flag."""
@@ -515,7 +613,11 @@ class DocumentEditorWidget(BaseWidget):
                 self.current_file_path,
             )
 
-    def load_file(self, file_path: str) -> bool:
+    def load_file(
+        self,
+        file_path: str,
+        show_error_dialog: bool = True,
+    ) -> bool:
         self.current_file_path = file_path
         try:
             # Use python file operations with advisory locking when available
@@ -540,12 +642,16 @@ class DocumentEditorWidget(BaseWidget):
                                 file_path,
                             )
             except FileNotFoundError:
-                QMessageBox.warning(
-                    self, "Error", f"File not found: {file_path}"
-                )
+                if show_error_dialog:
+                    QMessageBox.warning(
+                        self, "Error", f"File not found: {file_path}"
+                    )
                 return False
             except Exception as ex:
-                QMessageBox.warning(self, "Error", f"Cannot open file: {ex}")
+                if show_error_dialog:
+                    QMessageBox.warning(
+                        self, "Error", f"Cannot open file: {ex}"
+                    )
                 return False
 
             self.editor.setPlainText(data or "")
@@ -557,11 +663,14 @@ class DocumentEditorWidget(BaseWidget):
             except Exception:
                 pass
             self.update_syntax_highlighter(file_path)
+            self._update_disk_state(file_path)
+            self._refresh_file_watch_paths()
             return True
         except Exception as e:
-            QMessageBox.warning(
-                self, "Error", f"Error loading file {file_path}: {e}"
-            )
+            if show_error_dialog:
+                QMessageBox.warning(
+                    self, "Error", f"Error loading file {file_path}: {e}"
+                )
             return False
 
     def update_syntax_highlighter(self, file_path: str):
@@ -637,6 +746,8 @@ class DocumentEditorWidget(BaseWidget):
                 # Atomically replace target
                 os.replace(tmp_name, path)
                 written = True
+                self._update_disk_state(path)
+                self._refresh_file_watch_paths()
             finally:
                 # Cleanup temp file if not replaced
                 if not written and os.path.exists(tmp_name):

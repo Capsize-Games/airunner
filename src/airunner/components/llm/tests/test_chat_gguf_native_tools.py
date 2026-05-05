@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from airunner.components.llm.adapters.chat_gguf import (
     ChatGGUF,
@@ -17,16 +17,40 @@ from airunner.components.llm.tools.system_tools import get_current_datetime
 
 
 class FakeLlama:
-    def __init__(self, response=None, stream_chunks=None):
+    def __init__(
+        self,
+        response=None,
+        stream_chunks=None,
+        completion_response=None,
+        completion_responses=None,
+        completion_chunks=None,
+    ):
         self.response = response or {"choices": [{"message": {"content": ""}}]}
         self.stream_chunks = stream_chunks or []
         self.calls = []
+        self.completion_response = completion_response or {
+            "choices": [{"text": ""}]
+        }
+        self.completion_responses = list(completion_responses or [])
+        self.completion_chunks = completion_chunks or []
+        self.completion_calls = []
 
     def create_chat_completion(self, **kwargs):
         self.calls.append(kwargs)
         if kwargs.get("stream"):
             return iter(self.stream_chunks)
         return self.response
+
+    def create_completion(self, **kwargs):
+        self.completion_calls.append(kwargs)
+        if kwargs.get("stream"):
+            return iter(self.completion_chunks)
+        if self.completion_responses:
+            index = len(self.completion_calls) - 1
+            if index < len(self.completion_responses):
+                return self.completion_responses[index]
+            return self.completion_responses[-1]
+        return self.completion_response
 
 
 def _build_chat_gguf(fake_llama, model_path="/tmp/fake.gguf"):
@@ -113,6 +137,38 @@ class TestChatGGUFNativeTools:
         assert (
             message.additional_kwargs["thinking_content"]
             == 'User says "hello".'
+        )
+
+    def test_generate_uses_visible_gpt_oss_commentary_without_final(self):
+        fake_llama = FakeLlama(
+            response={
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                "<|channel|>analysis<|message|>Need to "
+                                "inspect the workspace.<|end|>"
+                                "<|start|>assistant<|channel|>commentary"
+                                "<|message|>I will inspect the workspace "
+                                "first.<|return|>"
+                            )
+                        }
+                    }
+                ]
+            }
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+
+        result = chat_model._generate([HumanMessage(content="hello")])
+
+        message = result.generations[0].message
+        assert message.content == "I will inspect the workspace first."
+        assert (
+            message.additional_kwargs["thinking_content"]
+            == "Need to inspect the workspace."
         )
 
     def test_stream_normalizes_gpt_oss_channel_response(self):
@@ -299,7 +355,10 @@ class TestChatGGUFNativeTools:
         )
         chat_model = _build_chat_gguf(fake_llama)
         tool_choice = {"type": "function", "function": {"name": "get_current_datetime"}}
-        chat_model.bind_tools([get_current_datetime], tool_choice=tool_choice)
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice=tool_choice,
+        )
 
         result = chat_model._generate([HumanMessage(content="what time is it?")])
 
@@ -313,7 +372,10 @@ class TestChatGGUFNativeTools:
     def test_convert_messages_skips_xml_tool_prompt_for_native_tools(self):
         fake_llama = FakeLlama()
         chat_model = _build_chat_gguf(fake_llama)
-        chat_model.bind_tools([get_current_datetime], tool_choice="auto")
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="auto",
+        )
 
         messages = chat_model._convert_messages(
             [
@@ -324,6 +386,350 @@ class TestChatGGUFNativeTools:
 
         assert len(messages) == 2
         assert "<tools>" not in messages[0]["content"]
+
+    def test_bind_tools_returns_isolated_model_copy(self):
+        fake_llama = FakeLlama()
+        chat_model = _build_chat_gguf(fake_llama)
+
+        def echo_tool(text: str) -> str:
+            """Return the provided text."""
+            return text
+
+        bound_time = chat_model.bind_tools([get_current_datetime])
+        bound_echo = chat_model.bind_tools([echo_tool])
+
+        assert bound_time is not chat_model
+        assert bound_echo is not chat_model
+        assert bound_time is not bound_echo
+        assert chat_model.tools is None
+        assert bound_time._llama is chat_model._llama
+        assert bound_echo._llama is chat_model._llama
+        assert (
+            bound_time.tools[0]["function"]["name"]
+            == "get_current_datetime"
+        )
+        assert bound_echo.tools[0]["function"]["name"] == "echo_tool"
+
+    def test_generate_uses_raw_harmony_completion_for_gpt_oss_mode(self):
+        fake_llama = FakeLlama(
+            completion_response={
+                "choices": [
+                    {
+                        "text": (
+                            "<|channel|>analysis<|message|>Need to use "
+                            "function get_current_datetime.<|end|>"
+                            "<|start|>assistant<|channel|>commentary "
+                            "to=functions.get_current_datetime "
+                            "<|constrain|>json<|message|>{}"
+                        )
+                    }
+                ]
+            }
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools([get_current_datetime])
+
+        result = chat_model._generate(
+            [
+                SystemMessage(content="You are a helpful assistant."),
+                HumanMessage(content="what time is it?"),
+            ]
+        )
+
+        call_kwargs = fake_llama.completion_calls[0]
+        assert not fake_llama.calls
+        assert "<|start|>developer<|message|>" in call_kwargs["prompt"]
+        assert "namespace functions" in call_kwargs["prompt"]
+        assert "Valid channels: analysis, commentary, final" in (
+            call_kwargs["prompt"]
+        )
+        message = result.generations[0].message
+        assert message.tool_calls[0]["name"] == "get_current_datetime"
+        assert message.tool_calls[0]["args"] == {}
+        assert message.content == ""
+        assert "Need to use function get_current_datetime." in (
+            message.additional_kwargs["thinking_content"]
+        )
+
+    def test_stream_uses_raw_harmony_completion_for_gpt_oss_mode(self):
+        fake_llama = FakeLlama(
+            completion_chunks=[
+                {
+                    "choices": [
+                        {
+                            "text": (
+                                "<|channel|>analysis<|message|>Need to use "
+                                "function get_current_datetime.<|end|>"
+                                "<|start|>assistant<|channel|>commentary "
+                            )
+                        }
+                    ]
+                },
+                {
+                    "choices": [
+                        {
+                            "text": (
+                                "to=functions.get_current_datetime "
+                                "<|constrain|>json<|message|>{}"
+                            )
+                        }
+                    ]
+                },
+            ]
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools([get_current_datetime])
+
+        chunks = list(chat_model._stream([HumanMessage(content="what time is it?")]))
+
+        assert fake_llama.completion_calls[0]["stream"] is True
+        assert chunks[-1].message.tool_calls[0]["name"] == "get_current_datetime"
+        assert chunks[-1].message.tool_calls[0]["args"] == {}
+
+    def test_convert_messages_preserves_gpt_oss_tool_history(self):
+        fake_llama = FakeLlama()
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools([get_current_datetime])
+
+        assistant = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_1",
+                    "name": "get_current_datetime",
+                    "args": {},
+                    "type": "tool_call",
+                }
+            ],
+            additional_kwargs={
+                "thinking_content": "Need to call the clock tool.",
+            },
+        )
+        tool_message = ToolMessage(
+            content='{"timestamp": "2026-05-04T10:40:00"}',
+            tool_call_id="call_1",
+            name="get_current_datetime",
+        )
+
+        converted = chat_model._convert_messages(
+            [HumanMessage(content="what time is it?"), assistant, tool_message]
+        )
+
+        assert converted[0]["role"] == "system"
+        assert "namespace functions" in converted[0]["content"]
+        assert converted[1]["role"] == "user"
+        assert converted[2]["role"] == "assistant"
+        assert converted[2]["content"] == "Need to call the clock tool."
+        assert converted[2]["tool_calls"][0]["function"]["name"] == (
+            "get_current_datetime"
+        )
+        assert converted[2]["tool_calls"][0]["function"]["arguments"] == (
+            "{}"
+        )
+        assert converted[3]["role"] == "tool"
+        assert converted[3]["tool_call_id"] == "call_1"
+
+    def test_raw_harmony_prompt_preserves_gpt_oss_tool_history(self):
+        fake_llama = FakeLlama()
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools([get_current_datetime])
+
+        assistant = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_1",
+                    "name": "get_current_datetime",
+                    "args": {},
+                    "type": "tool_call",
+                }
+            ],
+            additional_kwargs={
+                "thinking_content": "Need to call the clock tool.",
+            },
+        )
+        tool_message = ToolMessage(
+            content='{"timestamp": "2026-05-04T10:40:00"}',
+            tool_call_id="call_1",
+            name="get_current_datetime",
+        )
+
+        prompt = chat_model._render_gpt_oss_harmony_prompt(
+            [
+                SystemMessage(content="You are a helpful assistant."),
+                HumanMessage(content="what time is it?"),
+                assistant,
+                tool_message,
+            ]
+        )
+
+        assert "<|start|>assistant<|channel|>analysis<|message|>" in prompt
+        assert "Need to call the clock tool." in prompt
+        assert "to=functions.get_current_datetime" in prompt
+        assert "<|start|>tool to=functions.get_current_datetime" in prompt
+        assert '{"timestamp": "2026-05-04T10:40:00"}' in prompt
+
+    def test_raw_harmony_prompt_prefills_forced_gpt_oss_tool_call(self):
+        fake_llama = FakeLlama()
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="get_current_datetime",
+        )
+
+        prompt = chat_model._render_gpt_oss_harmony_prompt(
+            [HumanMessage(content="what time is it?")]
+        )
+
+        assert prompt.endswith(
+            "<|start|>assistant to=functions.get_current_datetime"
+            "<|channel|>commentary<|constrain|>json<|message|>"
+        )
+
+    def test_generate_parses_gpt_oss_commentary_tool_call(self):
+        fake_llama = FakeLlama(
+            response={
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                "<|channel|>analysis<|message|>Need to use "
+                                "function get_current_datetime.<|end|>"
+                                "<|start|>assistant<|channel|>commentary "
+                                "to=functions.get_current_datetime"
+                                "<|constrain|>json<|message|>{}"
+                                "<|call|>"
+                            ),
+                        }
+                    }
+                ]
+            }
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+
+        result = chat_model._generate([HumanMessage(content="what time is it?")])
+
+        message = result.generations[0].message
+        assert message.content == ""
+        assert message.tool_calls[0]["name"] == "get_current_datetime"
+        assert message.tool_calls[0]["args"] == {}
+        assert (
+            "Need to use function get_current_datetime."
+            in message.additional_kwargs["thinking_content"]
+        )
+
+    def test_generate_parses_prefilled_gpt_oss_tool_call_body(self):
+        fake_llama = FakeLlama(completion_response={"choices": [{"text": "{}"}]})
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="get_current_datetime",
+        )
+
+        result = chat_model._generate([HumanMessage(content="what time is it?")])
+
+        message = result.generations[0].message
+        assert message.content == ""
+        assert message.tool_calls[0]["name"] == "get_current_datetime"
+        assert message.tool_calls[0]["args"] == {}
+        assert fake_llama.completion_calls[0]["prompt"].endswith(
+            "<|start|>assistant to=functions.get_current_datetime"
+            "<|channel|>commentary<|constrain|>json<|message|>"
+        )
+
+    def test_generate_continues_incomplete_prefilled_gpt_oss_tool_call(self):
+        def echo_tool(text: str) -> str:
+            """Return the provided text."""
+            return text
+
+        fake_llama = FakeLlama(
+            completion_responses=[
+                {"choices": [{"text": '{"text":"hello'}]},
+                {"choices": [{"text": ' world"}'}]},
+            ]
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools(
+            [echo_tool],
+            tool_choice="echo_tool",
+        )
+
+        result = chat_model._generate([HumanMessage(content="echo hello")])
+
+        message = result.generations[0].message
+        assert len(fake_llama.completion_calls) == 2
+        assert message.content == ""
+        assert message.tool_calls[0]["name"] == "echo_tool"
+        assert message.tool_calls[0]["args"] == {"text": "hello world"}
+        assert fake_llama.completion_calls[1]["prompt"].endswith(
+            '{"text":"hello'
+        )
+
+    def test_generate_suppresses_malformed_prefilled_gpt_oss_tool_payload(
+        self,
+    ):
+        fake_llama = FakeLlama(
+            completion_responses=[
+                {
+                    "choices": [
+                        {
+                            "text": (
+                                '{"file_path":"src/mazes/__main__.py",'
+                                '"content":"print'
+                            )
+                        }
+                    ]
+                },
+                {"choices": [{"text": ""}]},
+            ]
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.tool_calling_mode = "react"
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="get_current_datetime",
+        )
+
+        result = chat_model._generate([HumanMessage(content="write the file")])
+
+        message = result.generations[0].message
+        assert len(fake_llama.completion_calls) == 2
+        assert message.content == ""
+        assert message.tool_calls == []
 
     def test_stream_parses_native_tool_call_deltas(self):
         fake_llama = FakeLlama(
@@ -366,7 +772,7 @@ class TestChatGGUFNativeTools:
             ]
         )
         chat_model = _build_chat_gguf(fake_llama)
-        chat_model.bind_tools(
+        chat_model = chat_model.bind_tools(
             [get_current_datetime],
             tool_choice={"type": "function", "function": {"name": "get_current_datetime"}},
         )
@@ -375,6 +781,47 @@ class TestChatGGUFNativeTools:
 
         call_kwargs = fake_llama.calls[0]
         assert call_kwargs["tools"]
+        assert chunks[-1].message.tool_calls[0]["name"] == "get_current_datetime"
+        assert chunks[-1].message.tool_calls[0]["args"] == {}
+
+    def test_stream_parses_gpt_oss_commentary_tool_call(self):
+        fake_llama = FakeLlama(
+            stream_chunks=[
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "content": (
+                                    "<|channel|>analysis<|message|>Need to use "
+                                    "function get_current_datetime.<|end|>"
+                                    "<|start|>assistant<|channel|>commentary "
+                                )
+                            }
+                        }
+                    ]
+                },
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "content": (
+                                    "to=functions.get_current_datetime"
+                                    "<|constrain|>json<|message|>{}"
+                                    "<|call|>"
+                                )
+                            }
+                        }
+                    ]
+                },
+            ]
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+
+        chunks = list(chat_model._stream([HumanMessage(content="what time is it?")]))
+
         assert chunks[-1].message.tool_calls[0]["name"] == "get_current_datetime"
         assert chunks[-1].message.tool_calls[0]["args"] == {}
 

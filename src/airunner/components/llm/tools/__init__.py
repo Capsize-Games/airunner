@@ -31,6 +31,21 @@ from airunner.components.llm.tools.multi_file_code_tool import (
     MultiFileCodeSession,
     MultiFileCodeTool,
 )
+from airunner.components.llm.tools.project_operations_handler import (
+    ProjectOperationsHandler,
+)
+from airunner.components.llm.tools.project_generated_write_review_handler import (
+    ProjectGeneratedWriteReviewHandler,
+)
+from airunner.components.llm.tools.project_context_index_handler import (
+    ProjectContextIndexHandler,
+)
+from airunner.components.llm.tools.project_runtime_tools_handler import (
+    ProjectRuntimeToolsHandler,
+)
+from airunner.components.llm.tools.project_tool_result import (
+    ProjectToolResult,
+)
 
 # Import all tool modules to trigger registration
 from airunner.components.llm.tools import (
@@ -56,6 +71,9 @@ from airunner.components.llm.tools import (
     qa_tools,
     # Phase 3: Code generation tools
     code_generation_tools,
+    project_context_tools,
+    project_file_tools,
+    project_runtime_tools,
     # Document editor tools for interactive code/document editing
     document_editor_tools,
 )
@@ -89,6 +107,11 @@ __all__ = [
     "TestResult",
     "MultiFileCodeSession",
     "MultiFileCodeTool",
+    "ProjectContextIndexHandler",
+    "ProjectGeneratedWriteReviewHandler",
+    "ProjectOperationsHandler",
+    "ProjectRuntimeToolsHandler",
+    "ProjectToolResult",
     # Tool modules
     "image_tools",
     "system_tools",
@@ -108,6 +131,9 @@ __all__ = [
     "research_tools",
     "research_validation_tools",
     "qa_tools",
+    "project_context_tools",
+    "project_file_tools",
+    "project_runtime_tools",
     # Document editor tools
     "document_editor_tools",
     # Long-running project tools

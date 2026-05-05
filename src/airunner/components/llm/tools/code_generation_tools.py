@@ -21,6 +21,9 @@ from airunner.components.llm.tools.test_runner import TestRunner
 from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,
 )
+from airunner.components.document_editor.project.airunner_active_project import (
+    get_active_project_path,
+)
 from airunner.enums import CodeOperationType
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -37,6 +40,10 @@ _test_runner: Optional[TestRunner] = None
 
 def _get_default_code_directory() -> str:
     """Get the default code directory from PathSettings database or fallback."""
+    active_project_path = get_active_project_path()
+    if active_project_path:
+        return active_project_path
+
     try:
         from airunner.components.settings.data.path_settings import PathSettings
         path_settings = PathSettings.objects.first()
@@ -150,9 +157,9 @@ def _normalize_content(content: str) -> str:
     category=ToolCategory.CODE,
     description=(
         "Create a new code file with the specified content. "
-        "REQUIRES an active coding workflow - call start_workflow first! "
         "Automatically creates parent directories if needed. "
-        "Use for generating new Python modules, scripts, or configuration files."
+        "Use directly when you know the target file content, including "
+        "new Python modules, scripts, or configuration files."
     ),
     allowed_callers=["code_execution"],  # Can be called from code sandbox
     input_examples=[
@@ -209,9 +216,9 @@ def create_code_file(
     category=ToolCategory.CODE,
     description=(
         "Replace the entire content of an existing code file. "
-        "REQUIRES an active coding workflow - call start_workflow first! "
         "Creates a backup before editing. "
-        "Use for major refactoring or complete file rewrites."
+        "Use directly for major refactoring or complete file rewrites "
+        "once the new content is known."
     ),
     allowed_callers=["code_execution"],  # Can be called from code sandbox
     input_examples=[
@@ -487,10 +494,11 @@ def list_workspace_files(
 
     """
     try:
+        normalized_pattern = (pattern or "").strip() or "**/*"
         handler = _get_code_handler(workspace_path)
         result = handler.execute(
             operation=CodeOperationType.LIST,
-            rel_path=pattern,  # pattern is passed as rel_path
+            rel_path=normalized_pattern,
         )
 
         if result.success and result.content:

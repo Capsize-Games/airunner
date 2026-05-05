@@ -118,6 +118,32 @@ class TestCodeAgent:
         assert result["programming_language"] == "java"
         assert result["task_type"] == "explain"
 
+    def test_analyze_code_request_does_not_match_go_in_algorithm(self):
+        """Language detection should not match substrings inside words."""
+        from langchain_core.messages import HumanMessage
+
+        mock_model = Mock()
+        agent = CodeAgent(chat_model=mock_model)
+
+        state = CodeState(
+            messages=[
+                HumanMessage(
+                    content=(
+                        "Create a maze generator using the perfect tree "
+                        "algorithm."
+                    )
+                )
+            ],
+            programming_language="",
+            task_type="",
+            execution_context={},
+        )
+
+        result = agent._analyze_code_request(state)
+
+        assert result["programming_language"] == "unknown"
+        assert result["task_type"] == "write"
+
     def test_execution_context_file_ops_allowed(self):
         """Test execution context allows file ops for write tasks."""
         from langchain_core.messages import HumanMessage

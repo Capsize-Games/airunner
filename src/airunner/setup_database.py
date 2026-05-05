@@ -7,7 +7,8 @@ from alembic import command
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.orm import sessionmaker
 
 from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
@@ -174,6 +175,53 @@ def _database_is_at_head(
         return False
 
 
+def _core_startup_models() -> tuple[type[object], ...]:
+    """Return singleton models required for safe GUI startup."""
+    from airunner.components.settings.data.application_settings import (
+        ApplicationSettings,
+    )
+    from airunner.components.settings.data.path_settings import PathSettings
+
+    return (PathSettings, ApplicationSettings)
+
+
+def _ensure_startup_rows(engine) -> None:
+    """Create default singleton rows required during startup."""
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        created = False
+        for model in _core_startup_models():
+            if session.query(model).first() is None:
+                session.add(model())
+                created = True
+        if created:
+            session.commit()
+
+
+def _repair_application_schema(target_db_url: str) -> None:
+    """Ensure core application tables exist even on pristine databases."""
+    from airunner.components.application import data as application_data
+    from airunner.components.data.models.base import Base
+
+    engine = create_engine(target_db_url)
+    try:
+        existing_tables = set(inspect(engine).get_table_names())
+        missing_tables = [
+            model.__table__
+            for model in application_data.classes
+            if model.__tablename__ not in existing_tables
+        ]
+        if missing_tables:
+            Base.metadata.create_all(
+                bind=engine,
+                tables=missing_tables,
+                checkfirst=True,
+            )
+        _ensure_startup_rows(engine)
+    finally:
+        engine.dispose()
+
+
 def setup_database(db_url: str | None = None):
     target_db_url = db_url or _default_db_url()
     _ensure_sqlite_parent_dir(target_db_url)
@@ -213,6 +261,7 @@ def setup_database(db_url: str | None = None):
             version_locations,
             base,
         ):
+            _repair_application_schema(target_db_url)
             if _use_setup_cache():
                 _COMPLETED_SETUP_URLS.add(target_db_url)
             return
@@ -260,6 +309,8 @@ def setup_database(db_url: str | None = None):
                 os.environ.pop("AIRUNNER_MIGRATION_RUNNING", None)
             else:
                 os.environ["AIRUNNER_MIGRATION_RUNNING"] = old_flag
+
+        _repair_application_schema(target_db_url)
 
         if _use_setup_cache():
             _COMPLETED_SETUP_URLS.add(target_db_url)

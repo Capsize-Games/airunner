@@ -3,6 +3,8 @@
 import pytest
 import tempfile
 
+import airunner.components.llm.tools.code_generation_tools as code_generation_tools
+
 from airunner.components.llm.tools.code_generation_tools import (
     create_code_file,
     edit_code_file,
@@ -103,6 +105,11 @@ def test_list_workspace_files(temp_workspace):
     assert "file2.py" in result
     assert "readme.txt" not in result
 
+    result = list_workspace_files("", workspace_path=temp_workspace)
+    assert "file1.py" in result
+    assert "file2.py" in result
+    assert "readme.txt" in result
+
 
 def test_delete_code_file(temp_workspace):
     """Test deleting a code file."""
@@ -158,3 +165,17 @@ def test_create_file_with_subdirectory(temp_workspace):
     # Verify it exists
     content = read_code_file("src/module.py", workspace_path=temp_workspace)
     assert content == code
+
+
+def test_default_code_directory_prefers_active_project(
+    monkeypatch,
+    temp_workspace,
+):
+    """Test active project path is used before the global code folder."""
+    monkeypatch.setattr(
+        code_generation_tools,
+        "get_active_project_path",
+        lambda: temp_workspace,
+    )
+
+    assert code_generation_tools._get_default_code_directory() == temp_workspace

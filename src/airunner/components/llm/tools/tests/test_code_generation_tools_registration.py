@@ -68,3 +68,13 @@ def test_code_tools_by_category():
     assert "create_code_file" in tool_names
     assert "validate_code" in tool_names
     assert "run_tests" in tool_names
+
+
+def test_mutating_code_tools_do_not_claim_workflow_prerequisite():
+    """Mutating code tools should not advertise a fake prerequisite."""
+    for tool_name in ("create_code_file", "edit_code_file"):
+        tool_info = ToolRegistry._tools[tool_name]
+        assert "start_workflow" not in tool_info.description
+        assert "REQUIRES an active coding workflow" not in (
+            tool_info.description
+        )

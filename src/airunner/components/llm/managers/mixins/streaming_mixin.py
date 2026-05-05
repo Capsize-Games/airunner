@@ -14,6 +14,10 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
 
+DEFAULT_WORKFLOW_RECURSION_LIMIT = 20
+CODE_WORKFLOW_RECURSION_LIMIT = 40
+
+
 class StreamingMixin:
     """Manages workflow execution and streaming."""
 
@@ -275,9 +279,21 @@ class StreamingMixin:
         Returns:
             Configuration dictionary
         """
+        recursion_limit = DEFAULT_WORKFLOW_RECURSION_LIMIT
+        llm_request = getattr(self, "llm_request", None)
+        tool_categories = getattr(llm_request, "tool_categories", None) or []
+        normalized_categories = {
+            str(category).upper() for category in tool_categories if category
+        }
+        mode_override = str(
+            getattr(llm_request, "mode_override", "") or ""
+        ).lower()
+        if "CODE" in normalized_categories or mode_override == "code":
+            recursion_limit = CODE_WORKFLOW_RECURSION_LIMIT
+
         return {
             "configurable": {"thread_id": self._thread_id},
-            "recursion_limit": 20,  # Prevent runaway tool loops
+            "recursion_limit": recursion_limit,
         }
 
     def _create_multimodal_message(

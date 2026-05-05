@@ -302,6 +302,9 @@ class ToolRegistry:
                 "airunner.components.llm.tools.research_rag_tools",
                 "airunner.components.llm.tools.qa_tools",
                 "airunner.components.llm.tools.code_generation_tools",
+                "airunner.components.llm.tools.project_file_tools",
+                "airunner.components.llm.tools.project_context_tools",
+                "airunner.components.llm.tools.project_runtime_tools",
                 # Document editor tools for code/document editing
                 "airunner.components.llm.tools.document_editor_tools",
                 # Advanced tool use features

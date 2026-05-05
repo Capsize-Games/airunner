@@ -36,11 +36,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
         self.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
-            self.on_download_complete,
+            self.handle_download_complete,
         )
         self.register(
             SignalCode.HUGGINGFACE_DOWNLOAD_FAILED,
-            self.on_download_failed,
+            self.handle_download_failed,
         )
         self.register(
             SignalCode.LLM_QUANTIZATION_PROGRESS,
@@ -56,7 +56,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         )
         self.register(
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
-            self.on_main_window_loaded_signal,
+            self.handle_main_window_loaded,
         )
 
     def _finish_deferred_startup(self) -> None:
@@ -84,7 +84,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             "Preferred precision to use when loading compatible local models."
         )
         self._runtime_precision_dropdown.currentIndexChanged.connect(
-            self.on_runtime_precision_changed
+            self.handle_runtime_precision_changed
         )
 
         self.ui.quantization_layout.addWidget(self._runtime_precision_label)
@@ -393,7 +393,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         )
 
     @Slot(dict)
-    def on_download_complete(self, data):
+    def handle_download_complete(self, data):
         """Handle download completion."""
         model_path = data.get("model_path", "")
 
@@ -406,7 +406,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             self._update_quantize_button_state()
 
     @Slot(dict)
-    def on_download_failed(self, data):
+    def handle_download_failed(self, data):
         """Handle download failure."""
         error = data.get("error", "Unknown error")
         # Only log - the download dialog handles user-facing error display
@@ -491,7 +491,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     def showEvent(self, event):
         super().showEvent(event)
 
-    def on_main_window_loaded_signal(self, _data=None) -> None:
+    def handle_main_window_loaded(self, _data=None) -> None:
         """Finish expensive settings setup after startup completes."""
         self._finish_deferred_startup()
 
@@ -744,7 +744,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         dropdown.blockSignals(False)
 
     @Slot(int)
-    def on_runtime_precision_changed(self, index: int) -> None:
+    def handle_runtime_precision_changed(self, index: int) -> None:
         """Persist one runtime-precision selection from the settings panel."""
         dropdown = getattr(self, "_runtime_precision_dropdown", None)
         if dropdown is None or index < 0:
@@ -792,7 +792,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             return "bfloat16"
 
     @Slot(int)
-    def on_quantization_changed(self, index: int):
+    def handle_quantization_changed(self, index: int):
         """Handle quantization selection change - always use GGUF."""
         # GGUF-only mode: ignore index, always use 0 (GGUF)
         quantization_bits = 0

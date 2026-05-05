@@ -3,6 +3,7 @@
 from unittest.mock import Mock, patch
 import pytest
 from langchain_core.messages import AIMessage
+from langgraph.errors import GraphRecursionError
 
 from airunner.components.llm.managers.mixins.generation_mixin import (
     GenerationMixin,
@@ -364,6 +365,27 @@ class TestHandleGenerationError:
         call_args = mixin.api.llm.send_llm_text_streamed_signal.call_args[0][0]
         assert call_args.node_id is None
 
+    def test_handles_graph_recursion_error(self, mixin, llm_request):
+        """Should convert recursion failures into a controlled user message."""
+        exc = GraphRecursionError("Recursion limit of 20 reached")
+
+        result = mixin._handle_generation_error(exc, llm_request)
+
+        assert "repeating tool calls" in result
+        assert "recursion limit" in result
+        call_args = mixin.api.llm.send_llm_text_streamed_signal.call_args[0][0]
+        assert call_args.message == result
+
+    def test_handles_graph_recursion_error_after_mutating_tool(self, mixin, llm_request):
+        """Should not claim no changes were applied after a write tool ran."""
+        mixin._workflow_manager._executed_tools = ["edit_code_file"]
+        exc = GraphRecursionError("Recursion limit of 20 reached")
+
+        result = mixin._handle_generation_error(exc, llm_request)
+
+        assert "Changes may already exist" in result
+        assert "No changes were applied" not in result
+
 
 class TestExtractFinalResponse:
     """Tests for _extract_final_response method."""
@@ -427,6 +449,37 @@ class TestExtractFinalResponse:
 
         assert extracted == "Hi there!"
 
+    def test_uses_gpt_oss_commentary_when_final_is_missing(self, mixin):
+        """Should surface visible commentary when GPT-OSS omits final."""
+        ai_msg = AIMessage(
+            content=(
+                "<|channel|>analysis<|message|>Need to inspect files."
+                "<|end|><|start|>assistant"
+                "<|channel|>commentary<|message|>I will inspect the "
+                "workspace first.<|return|>"
+            )
+        )
+        result = {"messages": [ai_msg]}
+
+        extracted = mixin._extract_final_response(result)
+
+        assert extracted == "I will inspect the workspace first."
+
+    def test_hides_gpt_oss_analysis_only_content(self, mixin):
+        """Should not leak raw Harmony markup when only analysis is present."""
+        ai_msg = AIMessage(
+            content=(
+                "<|channel|>analysis<|message|>"
+                "It seems the workspace is empty."
+                "<|return|>"
+            )
+        )
+        result = {"messages": [ai_msg]}
+
+        extracted = mixin._extract_final_response(result)
+
+        assert extracted == ""
+
     def test_filters_non_ai_messages(self, mixin):
         """Should filter out non-AIMessage types."""
         from langchain_core.messages import HumanMessage
@@ -458,6 +511,24 @@ class TestExtractFinalResponse:
 
         assert extracted == ""
 
+    def test_returns_empty_for_tool_only_ai_message(self, mixin):
+        """Should return empty when the model only emitted tool calls."""
+        ai_msg = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "tool-call-1",
+                    "name": "create_code_file",
+                    "args": {},
+                }
+            ],
+        )
+        result = {"messages": [ai_msg]}
+
+        extracted = mixin._extract_final_response(result)
+
+        assert extracted == ""
+
 
 class TestDoGenerate:
     """Tests for _do_generate method."""
@@ -475,6 +546,9 @@ class TestDoGenerate:
         )
 
         assert result["response"] == "Test response"
+        first_call = mixin.api.llm.send_llm_text_streamed_signal.call_args_list[0]
+        assert first_call[0][0].message == "Test response"
+        assert first_call[0][0].is_end_of_message is False
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_reloads_model_on_path_mismatch(self, mock_torch, mixin):
@@ -576,6 +650,102 @@ class TestDoGenerate:
         calls = mixin.api.llm.send_llm_text_streamed_signal.call_args_list
         end_calls = [c for c in calls if c[0][0].is_end_of_message is True]
         assert len(end_calls) > 0
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_emits_fallback_for_tool_only_empty_response(
+        self,
+        mock_torch,
+        mixin,
+        llm_request,
+    ):
+        """Should surface a visible fallback for empty tool-only replies."""
+        mock_torch.cuda.is_available.return_value = False
+        mixin._workflow_manager.stream.return_value = [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-call-1",
+                        "name": "create_code_file",
+                        "args": {},
+                    }
+                ],
+            )
+        ]
+        mixin._workflow_manager.get_executed_tools.return_value = []
+
+        result = mixin._do_generate(
+            "Create code",
+            LLMActionType.CODE,
+            llm_request=llm_request,
+        )
+
+        assert "tool-based response" in result["response"]
+        first_call = mixin.api.llm.send_llm_text_streamed_signal.call_args_list[0]
+        assert "tool-based response" in first_call[0][0].message
+        assert first_call[0][0].is_end_of_message is False
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_emits_fallback_using_executed_tool_metadata(
+        self,
+        mock_torch,
+        mixin,
+        llm_request,
+    ):
+        """Should mention executed tools from final AI metadata."""
+        mock_torch.cuda.is_available.return_value = False
+        mixin._workflow_manager.stream.return_value = [
+            AIMessage(
+                content=(
+                    "<|channel|>analysis<|message|>Need to answer."
+                    "<|return|>"
+                ),
+                additional_kwargs={
+                    "executed_tools": ["create_code_file", "edit_code_file"]
+                },
+            )
+        ]
+        mixin._workflow_manager.get_executed_tools.return_value = []
+
+        result = mixin._do_generate(
+            "Create code",
+            LLMActionType.CODE,
+            llm_request=llm_request,
+        )
+
+        assert "create_code_file" in result["response"]
+        assert "edit_code_file" in result["response"]
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_reports_read_only_tool_fallback_without_claiming_changes(
+        self,
+        mock_torch,
+        mixin,
+        llm_request,
+    ):
+        """Should state that inspection happened without file edits."""
+        mock_torch.cuda.is_available.return_value = False
+        mixin._workflow_manager.stream.return_value = [
+            AIMessage(
+                content=(
+                    "<|channel|>analysis<|message|>Need to answer."
+                    "<|return|>"
+                ),
+                additional_kwargs={
+                    "executed_tools": ["list_workspace_files", "read_code_file"]
+                },
+            )
+        ]
+        mixin._workflow_manager.get_executed_tools.return_value = []
+
+        result = mixin._do_generate(
+            "Create code",
+            LLMActionType.CODE,
+            llm_request=llm_request,
+        )
+
+        assert "read-only tools" in result["response"]
+        assert "did not apply any code changes" in result["response"]
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_returns_error_when_no_workflow_manager(self, mock_torch, mixin):

@@ -70,7 +70,7 @@ def test_create_from_settings_keeps_ollama_provider_routing():
 
 
 def test_create_from_settings_passes_reasoning_effort_to_gguf_model():
-    """GPT-OSS reasoning effort should flow into GGUF model creation."""
+    """GPT-OSS runtime config should flow into GGUF model creation."""
     llm_settings = SimpleNamespace(
         use_local_llm=True,
         enable_thinking=True,
@@ -109,3 +109,4 @@ def test_create_from_settings_passes_reasoning_effort_to_gguf_model():
 
     assert result == "gguf-model"
     assert mock_create_gguf.call_args.kwargs["reasoning_effort"] == "low"
+    assert mock_create_gguf.call_args.kwargs["tool_calling_mode"] == "react"
