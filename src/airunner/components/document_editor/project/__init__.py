@@ -29,6 +29,14 @@ from airunner.components.document_editor.project.airunner_project_context_index_
     AirunnerProjectContextIndexEntry,
     AirunnerProjectContextIndexService,
 )
+from airunner.components.document_editor.project.airunner_project_prompt_service import (
+    AirunnerProjectPromptService,
+    AirunnerProjectPromptTemplate,
+    active_project_prompt_service,
+)
+from airunner.components.document_editor.project.airunner_python_environment_service import (
+    AirunnerPythonEnvironmentService,
+)
 from airunner.components.document_editor.project.airunner_python_workflow_service import (
     AirunnerPythonWorkflowService,
 )
@@ -61,6 +69,10 @@ __all__ = [
     "AirunnerProjectContextIndex",
     "AirunnerProjectContextIndexEntry",
     "AirunnerProjectContextIndexService",
+    "AirunnerProjectPromptService",
+    "AirunnerProjectPromptTemplate",
+    "active_project_prompt_service",
+    "AirunnerPythonEnvironmentService",
     "AirunnerPythonEnvironmentSelection",
     "AirunnerPythonProjectScaffolder",
     "AirunnerPythonWorkflowService",

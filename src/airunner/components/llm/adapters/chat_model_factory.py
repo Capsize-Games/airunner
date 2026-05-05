@@ -67,6 +67,7 @@ class ChatModelFactory:
         flash_attn: bool = True,
         enable_thinking: bool = True,
         reasoning_effort: str = "medium",
+        tool_calling_mode: str = "native",
         chat_format: Optional[str] = None,
         use_yarn: bool = False,  # Disabled by default - requires more VRAM
         yarn_orig_ctx: int = 32768,  # Qwen3 native context
@@ -93,6 +94,7 @@ class ChatModelFactory:
             flash_attn: Use flash attention to reduce VRAM usage
             enable_thinking: Enable thinking mode (Qwen3-style)
             reasoning_effort: GPT-OSS reasoning effort (low, medium, high)
+            tool_calling_mode: Tool calling strategy (native, json, react)
             chat_format: Optional llama.cpp chat format override
             use_yarn: Enable YaRN for extended context (requires more VRAM)
             yarn_orig_ctx: Original context length for YaRN scaling
@@ -119,6 +121,7 @@ class ChatModelFactory:
             flash_attn=flash_attn,
             enable_thinking=enable_thinking,
             reasoning_effort=reasoning_effort,
+            tool_calling_mode=tool_calling_mode,
             chat_format=chat_format,
             use_yarn=use_yarn,
             yarn_orig_ctx=yarn_orig_ctx,
@@ -400,6 +403,13 @@ class ChatModelFactory:
                             resolved_model_id,
                         )
                     )
+                    model_info = (
+                        LLMProviderConfig.get_model_info(
+                            "local",
+                            resolved_model_id,
+                        )
+                        or {}
+                    )
                     enable_thinking = get_enable_thinking(
                         db_settings,
                         llm_settings,
@@ -414,6 +424,10 @@ class ChatModelFactory:
                             model_path=gguf_path,
                             enable_thinking=enable_thinking,
                             reasoning_effort=reasoning_effort,
+                            tool_calling_mode=model_info.get(
+                                "tool_calling_mode",
+                                "native",
+                            ),
                             **params
                         )
                     except UnsupportedGGUFArchitectureError as e:

@@ -16,19 +16,136 @@ from typing import Any, Dict, List, Optional
 
 import torch
 from langchain_core.messages import AIMessage
+from langgraph.errors import GraphRecursionError
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.utils.gpt_oss_parser import (
     has_gpt_oss_markup,
+    looks_like_tool_argument_payload,
     parse_gpt_oss_response,
 )
 from airunner.components.llm.utils.stream_text import prepare_stream_chunk
 from airunner.enums import LLMActionType, ModelStatus, ModelType, SignalCode
 
 
+READ_ONLY_CODE_TOOLS = {
+    "list_workspace_files",
+    "read_code_file",
+    "get_document_content",
+    "get_document_info",
+    "search_document",
+    "goto_document_line",
+    "validate_code",
+    "run_tests",
+    "lint_code",
+    "analyze_code_complexity",
+    "execute_python",
+}
+
+MUTATING_CODE_TOOLS = {
+    "create_code_file",
+    "edit_code_file",
+    "delete_code_file",
+    "format_code_file",
+    "format_code",
+    "edit_document_lines",
+    "insert_document_lines",
+    "delete_document_lines",
+    "replace_in_document",
+    "save_document",
+}
+
+
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
+
+    def _emit_visible_response(
+        self,
+        llm_request: Optional[Any],
+        message: str,
+        complete_response: List[str],
+        sequence_counter: List[int],
+    ) -> None:
+        """Emit one visible response chunk when streaming produced none."""
+        if not message or complete_response[0]:
+            return
+        complete_response[0] = message
+        sequence_counter[0] += 1
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=message,
+                is_end_of_message=False,
+                is_first_message=(sequence_counter[0] == 1),
+                sequence_number=sequence_counter[0],
+                request_id=getattr(self, "_current_request_id", None),
+            )
+        )
+
+    def _fallback_response_for_empty_result(
+        self,
+        result: Dict[str, Any],
+        executed_tools: List[str],
+    ) -> str:
+        """Return a visible fallback when the model produced no final text."""
+        messages = []
+        if isinstance(result, dict):
+            messages = result.get("raw_messages") or result.get("messages")
+        ai_messages = [
+            message
+            for message in messages or []
+            if isinstance(message, AIMessage)
+        ]
+
+        effective_executed_tools = list(executed_tools)
+        if not effective_executed_tools:
+            for message in ai_messages:
+                extra_tools = (
+                    (message.additional_kwargs or {}).get("executed_tools")
+                )
+                if isinstance(extra_tools, (list, tuple, set)):
+                    effective_executed_tools.extend(
+                        str(tool_name)
+                        for tool_name in extra_tools
+                        if tool_name
+                    )
+
+        if effective_executed_tools:
+            tool_summary = ", ".join(dict.fromkeys(effective_executed_tools))
+            normalized_tools = set(effective_executed_tools)
+            if (
+                not normalized_tools & MUTATING_CODE_TOOLS
+                and normalized_tools <= READ_ONLY_CODE_TOOLS
+            ):
+                return (
+                    "The model inspected the workspace with read-only tools "
+                    f"({tool_summary}) but did not apply any code changes."
+                )
+            if not normalized_tools & MUTATING_CODE_TOOLS:
+                return (
+                    "The model used non-mutating tools "
+                    f"({tool_summary}) but did not apply any code changes."
+                )
+            return (
+                "The request completed tool actions "
+                f"({tool_summary}), but the model did not provide a final "
+                "reply."
+            )
+
+        if any(getattr(message, "tool_calls", None) for message in ai_messages):
+            return (
+                "The model attempted a tool-based response but did not "
+                "produce a final reply. No changes were applied."
+            )
+
+        if ai_messages:
+            return (
+                "The model produced an empty reply for this request. "
+                "No changes were applied."
+            )
+
+        return ""
 
     def _sync_request_scope_to_workflow_manager(self) -> None:
         """Propagate the active request ID to workflow-scoped emitters."""
@@ -36,6 +153,11 @@ class GenerationMixin:
             return
 
         request_id = getattr(self, "_current_request_id", None)
+        setattr(
+            self._workflow_manager,
+            "llm_request",
+            getattr(self, "llm_request", None),
+        )
         if hasattr(self._workflow_manager, "set_request_id"):
             self._workflow_manager.set_request_id(request_id)
             return
@@ -257,7 +379,25 @@ class GenerationMixin:
         print(f"[ERROR HANDLER] Full traceback:", flush=True)
         traceback.print_exc()
         # Ensure we capture the full exception message
-        error_message = f"Error: {str(exc) if exc else 'Unknown error'}"
+        if isinstance(exc, GraphRecursionError):
+            executed_tools = list(
+                getattr(self._workflow_manager, "_executed_tools", []) or []
+            )
+            if any(tool in MUTATING_CODE_TOOLS for tool in executed_tools):
+                error_message = (
+                    "Error: The request hit the workflow recursion limit "
+                    "after applying some tool actions. Changes may already "
+                    "exist in the workspace, but the model did not finish "
+                    "verification."
+                )
+            else:
+                error_message = (
+                    "Error: The request got stuck repeating tool calls "
+                    "without making progress and hit the workflow recursion "
+                    "limit. No changes were applied."
+                )
+        else:
+            error_message = f"Error: {str(exc) if exc else 'Unknown error'}"
         print(
             f"[ERROR HANDLER] Error message to send: {error_message}",
             flush=True,
@@ -292,20 +432,34 @@ class GenerationMixin:
         )
 
         if len(final_messages) > 0:
-            final_content = final_messages[-1].content or ""
-            if final_content:
+            saw_gpt_oss_markup = False
+            for message in reversed(final_messages):
+                final_content = message.content or ""
+                if not final_content:
+                    continue
+                if looks_like_tool_argument_payload(final_content):
+                    continue
                 if has_gpt_oss_markup(final_content):
+                    saw_gpt_oss_markup = True
                     parsed = parse_gpt_oss_response(final_content)
                     if parsed.content:
                         return parsed.content
-                # If the model is using ReAct format, extract only the response
-                # before "Action:" to avoid showing tool calls to the user
+                    continue
                 if "\nAction:" in final_content:
-                    # Extract everything before the first "Action:"
                     response_part = final_content.split("\nAction:")[0].strip()
                     if response_part:
                         return response_part
+                    continue
                 return final_content
+
+            if saw_gpt_oss_markup:
+                self.logger.info(
+                    "GPT-OSS response had no visible final content"
+                )
+                return ""
+
+            self.logger.info("Final AIMessage was empty")
+            return ""
 
         self.logger.info("No final AIMessage found in generation result")
 
@@ -559,6 +713,7 @@ class GenerationMixin:
                 )
 
             result_messages = []
+            raw_messages = []
             for message in self._workflow_manager.stream(
                 prompt, generation_kwargs, images=images
             ):
@@ -568,6 +723,7 @@ class GenerationMixin:
                         "Stream interrupted - breaking out of generation"
                     )
                     break
+                raw_messages.append(message)
                 # Only keep messages that are final responses (no tool_calls)
                 # Tool-calling messages are intermediate workflow states
                 has_tool_calls = getattr(message, "tool_calls", None)
@@ -580,7 +736,10 @@ class GenerationMixin:
                     result_messages.append(message)
 
             # Convert streamed messages to result format
-            result = {"messages": result_messages}
+            result = {
+                "messages": result_messages,
+                "raw_messages": raw_messages,
+            }
 
             if self._interrupted:
                 interrupt_msg = self._handle_interrupted_generation(
@@ -597,10 +756,6 @@ class GenerationMixin:
             self._interrupted = False
             if hasattr(self._workflow_manager, "set_interrupted"):
                 self._workflow_manager.set_interrupted(False)
-
-        final_response = self._extract_final_response(result)
-        if final_response:
-            complete_response[0] = final_response
 
         # Best-effort: extract provider token usage from the final AI message.
         prompt_tokens = None
@@ -641,7 +796,31 @@ class GenerationMixin:
         # Get list of tools that were executed during workflow
         executed_tools = []
         if hasattr(self._workflow_manager, "get_executed_tools"):
-            executed_tools = self._workflow_manager.get_executed_tools()
+            raw_executed_tools = self._workflow_manager.get_executed_tools()
+            if isinstance(raw_executed_tools, (list, tuple, set)):
+                executed_tools = list(raw_executed_tools)
+
+        final_response = self._extract_final_response(result)
+        if final_response:
+            self._emit_visible_response(
+                llm_request,
+                final_response,
+                complete_response,
+                sequence_counter,
+            )
+            complete_response[0] = final_response
+
+        if not complete_response[0]:
+            fallback_response = self._fallback_response_for_empty_result(
+                result,
+                executed_tools,
+            )
+            self._emit_visible_response(
+                llm_request,
+                fallback_response,
+                complete_response,
+                sequence_counter,
+            )
             
         sequence_counter[0] += 1
         if not getattr(self, "_current_request_id", None):

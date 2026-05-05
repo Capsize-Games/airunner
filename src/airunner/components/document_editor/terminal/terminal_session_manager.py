@@ -1,6 +1,7 @@
 """PTY-backed terminal session manager for the coding workspace."""
 
 from dataclasses import dataclass, field
+import errno
 import os
 import pty
 import select
@@ -149,6 +150,8 @@ class TerminalSessionManager(QObject):
                 try:
                     chunk = os.read(session.master_fd, 4096)
                 except OSError as exc:
+                    if self._is_normal_pty_eof(exc):
+                        break
                     self.sessionError.emit(session_id, str(exc))
                     break
                 if chunk:
@@ -163,6 +166,10 @@ class TerminalSessionManager(QObject):
             session.exit_code = exit_code
         self._close_master_fd(session)
         self.sessionFinished.emit(session_id, exit_code)
+
+    def _is_normal_pty_eof(self, error: OSError) -> bool:
+        """Return whether one PTY read error is normal Linux EOF."""
+        return os.name != "nt" and error.errno == errno.EIO
 
     def _close_master_fd(self, session: TerminalSessionInfo) -> None:
         """Close the PTY master file descriptor for a session."""

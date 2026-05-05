@@ -7,6 +7,7 @@ import pytest
 from airunner.components.document_editor.project import (
     AirunnerAutonomyMode,
     AirunnerProjectPolicyEnforcer,
+    AirunnerProjectPromptService,
     AirunnerProjectRoot,
     AirunnerProjectService,
     AirunnerProjectSettings,
@@ -16,6 +17,8 @@ from airunner.components.document_editor.project import (
     AirunnerWorkspaceConfig,
 )
 from airunner.components.document_editor.project.airunner_project_paths import (
+    INSTRUCTIONS_FILE,
+    PROMPT_TEMPLATES_DIR,
     SETTINGS_FILE,
     WORKSPACE_FILE,
     required_project_directories,
@@ -95,8 +98,29 @@ def test_project_service_initializes_airunner_layout(tmp_path):
     assert settings.autonomy_mode == AirunnerAutonomyMode.REVIEW_FIRST
     assert (project_path / WORKSPACE_FILE).exists()
     assert (project_path / SETTINGS_FILE).exists()
+    assert (project_path / INSTRUCTIONS_FILE).exists()
+    assert (project_path / PROMPT_TEMPLATES_DIR).is_dir()
     for path in required_project_directories():
         assert (project_path / path).is_dir()
+
+
+def test_project_service_bootstraps_prompt_files(tmp_path):
+    """Projects should include default instructions and prompt templates."""
+    project_path = tmp_path / "prompt-project"
+    service = AirunnerProjectService(str(project_path))
+    service.initialize(
+        project_name="Prompt Project",
+        settings=AirunnerProjectSettings(bootstrap_profile="python-package"),
+    )
+
+    prompts = AirunnerProjectPromptService(service)
+    templates = prompts.prompt_templates()
+
+    assert "Python" in prompts.instructions_text()
+    assert {template.command_name for template in templates} == {
+        "implement",
+        "review",
+    }
 
 
 def test_project_service_resolves_multiple_roots(tmp_path):

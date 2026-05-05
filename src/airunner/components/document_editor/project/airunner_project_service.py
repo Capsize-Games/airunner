@@ -54,6 +54,7 @@ class AirunnerProjectService:
         self._ensure_layout(workspace)
         self.save_workspace(workspace)
         self.save_settings(project_settings)
+        self._ensure_prompt_defaults(project_settings)
         return self.load_workspace(), self.load_settings()
 
     def load_workspace(self) -> AirunnerWorkspaceConfig:
@@ -267,6 +268,19 @@ class AirunnerProjectService:
             os.makedirs(os.path.join(self.project_path, path), exist_ok=True)
         for root in workspace.roots:
             os.makedirs(self._resolve_stored_path(root.path), exist_ok=True)
+
+    def _ensure_prompt_defaults(
+        self,
+        settings: AirunnerProjectSettings,
+    ) -> None:
+        """Ensure prompt-related defaults exist for this project."""
+        from airunner.components.document_editor.project.airunner_project_prompt_service import (
+            AirunnerProjectPromptService,
+        )
+
+        AirunnerProjectPromptService(self).ensure_defaults(
+            settings.bootstrap_profile
+        )
 
     def _read_json(self, rel_path: str) -> dict:
         """Read a JSON file relative to the project root."""

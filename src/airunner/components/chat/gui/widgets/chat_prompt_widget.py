@@ -29,10 +29,19 @@ from langchain_core.messages.utils import count_tokens_approximately
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
 )
+from airunner.components.chat.gui.widgets.chat_request_mode import (
+    ChatRequestMode,
+    chat_request_modes,
+    get_chat_request_mode,
+)
 from airunner.components.chat.gui.widgets.image_attachment_widget import (
     ImageAttachmentWidget,
 )
+from airunner.components.document_editor.project import (
+    active_project_prompt_service,
+)
 from airunner.components.llm.data.conversation import Conversation
+from airunner.components.llm.coding_prompt_profile import load_coding_prompt
 from airunner.enums import (
     SignalCode,
     LLMActionType,
@@ -54,12 +63,18 @@ from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
     SLASH_COMMANDS,
 )
+from airunner.utils.settings import get_qsettings
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.utils.image import convert_binary_to_image
 
 
 # MIME type used by ImageWidget for drag operations
 IMAGE_METADATA_MIME_TYPE = "application/x-qt-image-metadata"
+REQUEST_MODE_PROMPT_KEYS = {
+    "ask": "code-ask",
+    "plan": "code-plan",
+    "agent": "code-agent",
+}
 
 
 class ChatPromptWidget(BaseWidget):
@@ -144,6 +159,7 @@ class ChatPromptWidget(BaseWidget):
         self._attachments_spacer: Optional[QSpacerItem] = None
         self._startup_controls_loaded = False
         self._model_dropdown_line_edit = None
+        self._request_mode_key = self._load_request_mode_key()
         
         # Default plain chat input to CHAT mode. Tool routing still happens
         # per-request via auto selection when the prompt needs it.
@@ -159,6 +175,7 @@ class ChatPromptWidget(BaseWidget):
             self.ui.thinking_checkbox.setChecked(enable_thinking)
             self.ui.thinking_checkbox.blockSignals(False)
 
+        self._create_request_mode_dropdown()
         self._create_reasoning_effort_dropdown()
         
         self._prompt_shortcuts_configured = False
@@ -380,7 +397,7 @@ class ChatPromptWidget(BaseWidget):
             f"do_generate called with prompt: "
             f"{prompt[:100] if prompt else 'None'}..."
         )
-        slash_command, actual_prompt, action_override = (
+        slash_command, cleaned_prompt, action_override, slash_is_template = (
             self._parse_slash_command(prompt)
         )
         self.logger.info(
@@ -389,7 +406,30 @@ class ChatPromptWidget(BaseWidget):
             slash_command,
             action_override,
         )
-        action = action_override if action_override else self.action
+        request_mode = None
+        action = self.action
+        request_prompt = cleaned_prompt
+        if slash_command is not None:
+            request_prompt = self._slash_command_request_prompt(
+                cleaned_prompt,
+                slash_command,
+            )
+            if slash_is_template:
+                request_mode = self._selected_request_mode()
+                action = request_mode.action
+                request_prompt = self._request_mode_prompt(
+                    request_prompt,
+                    request_mode,
+                )
+            else:
+                action = action_override if action_override else self.action
+        else:
+            request_mode = self._selected_request_mode()
+            action = request_mode.action
+            request_prompt = self._request_mode_prompt(
+                cleaned_prompt,
+                request_mode,
+            )
         self.logger.info(f"Final action: {action}")
 
         conversation_id = self._ensure_conversation_context()
@@ -404,7 +444,7 @@ class ChatPromptWidget(BaseWidget):
 
         if hasattr(self.ui, "conversation"):
             self.ui.conversation.append_user_message_for_request(
-                actual_prompt,
+                cleaned_prompt,
                 request_id=request_id,
             )
             QApplication.processEvents()
@@ -412,10 +452,11 @@ class ChatPromptWidget(BaseWidget):
         QTimer.singleShot(
             0,
             lambda: self._submit_generation_request(
-                actual_prompt=actual_prompt,
+                actual_prompt=request_prompt,
                 action=action,
                 conversation_id=conversation_id,
                 request_id=request_id,
+                request_mode=request_mode,
                 slash_command=slash_command,
             ),
         )
@@ -432,6 +473,7 @@ class ChatPromptWidget(BaseWidget):
         action: LLMActionType,
         conversation_id: int,
         request_id: str,
+        request_mode: Optional[ChatRequestMode],
         slash_command: Optional[str],
     ) -> None:
         """Run the heavier generation setup after the UI has a paint turn."""
@@ -468,6 +510,12 @@ class ChatPromptWidget(BaseWidget):
         llm_request = LLMRequest.for_action(action)
         llm_request.enable_thinking = self._is_thinking_enabled_for_request()
         llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
+        if request_mode is not None:
+            llm_request.use_mode_routing = request_mode.use_mode_routing
+            llm_request.mode_override = request_mode.mode_override
+        system_prompt = self._request_system_prompt(request_mode)
+        if system_prompt:
+            llm_request.system_prompt = system_prompt
         
         # Set force_tool if slash command specifies one
         if force_tool:
@@ -633,10 +681,127 @@ class ChatPromptWidget(BaseWidget):
             return
         self._startup_controls_loaded = True
         self._hide_footer_controls_moved_to_settings()
+        self._populate_request_mode_dropdown()
         self._populate_model_dropdown()
         self._populate_reasoning_effort_dropdown()
         if hasattr(self.ui, "thinking_checkbox"):
             self._update_thinking_checkbox_visibility()
+
+    def _load_request_mode_key(self) -> str:
+        """Return the persisted chat request mode selection."""
+
+        qsettings = get_qsettings()
+        qsettings.beginGroup("chat_prompt")
+        value = qsettings.value("request_mode", "ask", type=str)
+        qsettings.endGroup()
+        return get_chat_request_mode(value).key
+
+    def _save_request_mode_key(self, key: str) -> None:
+        """Persist the selected chat request mode."""
+
+        qsettings = get_qsettings()
+        qsettings.beginGroup("chat_prompt")
+        qsettings.setValue("request_mode", key)
+        qsettings.endGroup()
+
+    def _create_request_mode_dropdown(self) -> None:
+        """Add the Ask, Plan, and Agent mode selector to the footer."""
+
+        if hasattr(self.ui, "request_mode_dropdown"):
+            return
+
+        dropdown = QComboBox(self.ui.footer_container)
+        dropdown.setObjectName("request_mode_dropdown")
+        dropdown.setMinimumHeight(30)
+        dropdown.setMinimumWidth(92)
+        dropdown.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        dropdown.setToolTip(
+            "Choose how AIRunner should handle the next request"
+        )
+        model_index = self.ui.horizontalLayout_2.indexOf(
+            self.ui.model_dropdown
+        )
+        self.ui.horizontalLayout_2.insertWidget(model_index, dropdown)
+        dropdown.currentIndexChanged.connect(self.on_request_mode_changed)
+        self.ui.request_mode_dropdown = dropdown
+
+    def _populate_request_mode_dropdown(self) -> None:
+        """Populate the visible chat request mode selector."""
+
+        if not hasattr(self.ui, "request_mode_dropdown"):
+            return
+
+        dropdown = self.ui.request_mode_dropdown
+        dropdown.blockSignals(True)
+        dropdown.clear()
+        for mode in chat_request_modes():
+            dropdown.addItem(mode.label, mode.key)
+        for index in range(dropdown.count()):
+            if dropdown.itemData(index) == self._request_mode_key:
+                dropdown.setCurrentIndex(index)
+                break
+        dropdown.setToolTip(self._selected_request_mode().tooltip)
+        dropdown.blockSignals(False)
+
+    def _selected_request_mode(self) -> ChatRequestMode:
+        """Return the currently selected visible request mode."""
+
+        if not hasattr(self.ui, "request_mode_dropdown"):
+            return get_chat_request_mode(self._request_mode_key)
+        mode_key = self.ui.request_mode_dropdown.currentData()
+        return get_chat_request_mode(mode_key or self._request_mode_key)
+
+    def _apply_prompt_prefix(self, prompt: str, prefix: str) -> str:
+        """Return the request prompt with one optional hidden prefix."""
+
+        if not prefix:
+            return prompt
+        return f"{prefix}{prompt}"
+
+    def _slash_command_request_prompt(
+        self,
+        prompt: str,
+        slash_command: Optional[str],
+    ) -> str:
+        """Return the request prompt for a slash-command request."""
+
+        if not slash_command:
+            return prompt
+        template = getattr(self, "_project_slash_templates", {}).get(
+            slash_command
+        )
+        if template is not None:
+            parts = [template.prompt.strip(), prompt.strip()]
+            return "\n\n".join(part for part in parts if part)
+        prefix = SLASH_COMMANDS.get(slash_command, {}).get(
+            "prompt_prefix",
+            "",
+        )
+        return self._apply_prompt_prefix(prompt, str(prefix or ""))
+
+    def _request_mode_prompt(
+        self,
+        prompt: str,
+        request_mode: ChatRequestMode,
+    ) -> str:
+        """Return the request prompt for the selected footer mode."""
+
+        return self._apply_prompt_prefix(prompt, request_mode.prompt_prefix)
+
+    @Slot(int)
+    def on_request_mode_changed(self, index: int) -> None:
+        """Persist and describe the currently selected request mode."""
+
+        if index < 0 or not hasattr(self.ui, "request_mode_dropdown"):
+            return
+        mode = get_chat_request_mode(
+            self.ui.request_mode_dropdown.itemData(index)
+        )
+        self._request_mode_key = mode.key
+        self._save_request_mode_key(mode.key)
+        self.ui.request_mode_dropdown.setToolTip(mode.tooltip)
 
     def _create_reasoning_effort_dropdown(self) -> None:
         """Add a compact GPT-OSS reasoning selector to the footer."""
@@ -701,8 +866,13 @@ class ChatPromptWidget(BaseWidget):
         """Highlight the slash command prefix (if any) in the prompt."""
         command = None
         if prompt.startswith("/"):
+            self._refresh_slash_commands_data()
             candidate = prompt[1:].split(" ")[0]
-            if candidate in SLASH_COMMANDS:
+            if candidate in SLASH_COMMANDS or candidate in getattr(
+                self,
+                "_project_slash_templates",
+                {},
+            ):
                 command = candidate
         highlight = command is not None
         prompt_widget = self.ui.prompt
@@ -741,13 +911,7 @@ class ChatPromptWidget(BaseWidget):
 
     def _setup_slash_command_completer(self) -> None:
         """Setup slash command popup for autocomplete."""
-        # Build command data with descriptions
-        self._slash_commands_data = []
-        for cmd, config in SLASH_COMMANDS.items():
-            self._slash_commands_data.append({
-                "command": f"/{cmd}",
-                "description": config.get("description", ""),
-            })
+        self._refresh_slash_commands_data()
         
         # Create popup list widget - use ToolTip type so it doesn't steal focus
         self._slash_popup = QListWidget()
@@ -790,6 +954,7 @@ class ChatPromptWidget(BaseWidget):
 
     def _populate_slash_popup(self, filter_text: str = "") -> None:
         """Populate the popup with matching commands."""
+        self._refresh_slash_commands_data()
         self._slash_popup.clear()
         
         filter_lower = filter_text.lower()
@@ -927,27 +1092,35 @@ class ChatPromptWidget(BaseWidget):
         # The popup will auto-hide if text no longer matches
         return False
 
-    def _parse_slash_command(self, prompt: str) -> Tuple[Optional[str], str, Optional[LLMActionType]]:
+    def _parse_slash_command(
+        self,
+        prompt: str,
+    ) -> Tuple[Optional[str], str, Optional[LLMActionType], bool]:
         """Parse a slash command from the prompt.
         
         Args:
             prompt: The full prompt text
             
         Returns:
-            Tuple of (command_name, remaining_prompt, action_type_override)
+            Tuple of (command_name, remaining_prompt,
+            action_type_override, is_project_template)
             - command_name: The slash command (e.g., "deepsearch") or None
             - remaining_prompt: The prompt with the command stripped
             - action_type_override: Optional LLMActionType to use instead of AUTO
         """
         if not prompt.startswith("/"):
-            return None, prompt, None
+            return None, prompt, None, False
         
         parts = prompt[1:].split(" ", 1)
         command = parts[0].lower()
+        self._refresh_slash_commands_data()
+        if command in getattr(self, "_project_slash_templates", {}):
+            remaining = parts[1].strip() if len(parts) > 1 else ""
+            return command, remaining, None, True
         
         if command not in SLASH_COMMANDS:
             # Unknown command, treat as regular prompt
-            return None, prompt, None
+            return None, prompt, None, False
         
         # Get remaining prompt (everything after the command)
         remaining = parts[1].strip() if len(parts) > 1 else ""
@@ -962,7 +1135,56 @@ class ChatPromptWidget(BaseWidget):
             except KeyError:
                 self.logger.warning(f"Unknown action type in slash command: {action_name}")
         
-        return command, remaining, action_override
+        return command, remaining, action_override, False
+
+    def _refresh_slash_commands_data(self) -> None:
+        """Merge built-in slash commands with project prompt templates."""
+        self._project_slash_templates = {}
+        self._slash_commands_data = []
+        for cmd, config in SLASH_COMMANDS.items():
+            self._slash_commands_data.append(
+                {
+                    "command": f"/{cmd}",
+                    "description": config.get("description", ""),
+                }
+            )
+        prompt_service = active_project_prompt_service()
+        if prompt_service is None:
+            return
+        for template in prompt_service.prompt_templates():
+            if template.command_name in SLASH_COMMANDS:
+                continue
+            self._project_slash_templates[template.command_name] = template
+            self._slash_commands_data.append(
+                {
+                    "command": f"/{template.command_name}",
+                    "description": template.description,
+                }
+            )
+
+    def _request_system_prompt(
+        self,
+        request_mode: Optional[ChatRequestMode],
+    ) -> Optional[str]:
+        """Return the system prompt override for one visible request mode."""
+        if request_mode is None:
+            return None
+        profile_key = REQUEST_MODE_PROMPT_KEYS.get(request_mode.key)
+        if profile_key is None:
+            return None
+        prompt_service = active_project_prompt_service()
+        if request_mode.key == "ask" and prompt_service is None:
+            return None
+        prompt = load_coding_prompt(profile_key)
+        if request_mode.key != "agent" or prompt_service is None:
+            return prompt
+        instructions = prompt_service.instructions_text()
+        if not instructions:
+            return prompt
+        return (
+            f"{prompt}\n\n## Project Instructions\n"
+            f"{instructions}"
+        )
 
     def _update_token_count_label(self, prompt: str) -> None:
         """Refresh the token count label with the latest approximation."""

@@ -8,13 +8,18 @@ to specialized subgraphs based on intent classification.
 from typing import Any, Optional, Annotated
 from typing_extensions import TypedDict
 
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage
 from langgraph.graph import START, END, StateGraph, add_messages
 
 from airunner.components.llm.managers.mode_router import (
     UserIntent,
     intent_classifier_node,
     route_by_intent,
+)
+from airunner.components.llm.utils.gpt_oss_parser import (
+    has_gpt_oss_markup,
+    looks_like_tool_argument_payload,
+    parse_gpt_oss_response,
 )
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -206,13 +211,58 @@ class ParentGraphBuilder:
             logger.warning("No subgraph result, returning empty response")
             return {}
 
-        # Extract messages from subgraph result
-        result_messages = subgraph_result.get("messages", [])
+        result_messages = self._terminal_subgraph_messages(subgraph_result)
 
         logger.info(f"Compiled response with {len(result_messages)} messages")
 
         # Messages are automatically merged via add_messages reducer
         return {"messages": result_messages}
+
+    def _terminal_subgraph_messages(self, subgraph_result: dict) -> list:
+        """Return only the terminal assistant response from a subgraph."""
+        result_messages = subgraph_result.get("messages", [])
+        ai_messages = [
+            message
+            for message in result_messages
+            if message.__class__.__name__ == "AIMessage"
+        ]
+        visible_ai_messages = [
+            message
+            for message in ai_messages
+            if self._is_visible_final_ai_message(message)
+        ]
+        if visible_ai_messages:
+            return [visible_ai_messages[-1]]
+        non_tool_ai_messages = [
+            message
+            for message in ai_messages
+            if self._is_safe_terminal_ai_message(message)
+        ]
+        if non_tool_ai_messages:
+            return [non_tool_ai_messages[-1]]
+        if result_messages:
+            return [result_messages[-1]]
+        return []
+
+    def _is_safe_terminal_ai_message(self, message: BaseMessage) -> bool:
+        """Return True when one AI message is safe to surface."""
+        if not isinstance(message, AIMessage):
+            return False
+        if getattr(message, "tool_calls", None):
+            return False
+        content = str(message.content or "").strip()
+        if not content:
+            return False
+        if looks_like_tool_argument_payload(content):
+            return False
+        if has_gpt_oss_markup(content):
+            parsed = parse_gpt_oss_response(content)
+            return bool(parsed.content)
+        return True
+
+    def _is_visible_final_ai_message(self, message: BaseMessage) -> bool:
+        """Return True when one AI message contains user-visible content."""
+        return self._is_safe_terminal_ai_message(message)
 
     def build(self) -> StateGraph:
         """

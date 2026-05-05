@@ -5,9 +5,18 @@ FileExplorerWidget for browsing and managing files/directories. Emits a signal w
 """
 
 from typing import Optional, List
+import hashlib
 import os
 import shutil
-from PySide6.QtCore import QDir, QFileInfo, QModelIndex, Qt, QPoint
+from PySide6.QtCore import (
+    QDir,
+    QFileInfo,
+    QModelIndex,
+    QPoint,
+    QItemSelectionModel,
+    QTimer,
+    Qt,
+)
 from PySide6.QtWidgets import (
     QWidget,
     QFileSystemModel,
@@ -52,6 +61,7 @@ class FileExplorerWidget(BaseWidget):
         self.proxy_model = MultiRootFileProxyModel(self)
         self.proxy_model.setSourceModel(self.model)
         self._root_paths: list[str] = []
+        self._session_project_path: str | None = None
 
         # Use path_to_display if provided, else self.user_web_dir, else current path
         root_path = (
@@ -61,12 +71,20 @@ class FileExplorerWidget(BaseWidget):
         )
         self.tree_view = self.ui.treeView
         self.tree_view.setModel(self.proxy_model)
+        self.tree_view.expanded.connect(self._persist_tree_state)
+        self.tree_view.collapsed.connect(self._persist_tree_state)
+        selection_model = self.tree_view.selectionModel()
+        if selection_model is not None:
+            selection_model.selectionChanged.connect(
+                self._persist_tree_state
+            )
         self.configure_root_paths([root_path] + (additional_paths or []))
 
         self.model.setFilter(
             QDir.Filter.NoDotAndDotDot
             | QDir.Filter.AllDirs
             | QDir.Filter.Files
+            | QDir.Filter.Hidden
         )
         self.tree_view.setAnimated(False)
         self.tree_view.setIndentation(20)
@@ -114,10 +132,24 @@ class FileExplorerWidget(BaseWidget):
 
     def set_project_service(self, project_service) -> None:
         """Configure the explorer from an AIRunner project service."""
+        self._session_project_path = os.path.abspath(
+            project_service.project_path
+        )
         self.configure_root_paths(
             [project_service.resolve_root_path(root.name)
              for root in project_service.list_roots()]
         )
+
+    def save_state(self):
+        """Persist splitter state and project explorer layout."""
+        super().save_state()
+        self._persist_tree_state()
+
+    def restore_state(self):
+        """Restore splitter state and project explorer layout."""
+        super().restore_state()
+        if self._session_project_path:
+            QTimer.singleShot(0, self._restore_tree_state)
 
     def _update_root_label(self) -> None:
         """Refresh the label to reflect single-root or multi-root mode."""
@@ -269,3 +301,101 @@ class FileExplorerWidget(BaseWidget):
     def _file_path_for_index(self, index: QModelIndex) -> str:
         """Return the source file path for a proxy index."""
         return self.model.filePath(self.proxy_model.mapToSource(index))
+
+    def _session_group(self) -> str | None:
+        """Return the settings group used for the active project tree."""
+        if not self._session_project_path:
+            return None
+        project_path = os.path.abspath(self._session_project_path)
+        session_id = hashlib.sha1(project_path.encode("utf-8")).hexdigest()
+        return f"coding_workspace/project_sessions/{session_id}/explorer"
+
+    def _persist_tree_state(self, *_args) -> None:
+        """Store expanded folders and the selected path for one project."""
+        group = self._session_group()
+        if group is None:
+            return
+        self.settings.beginGroup(group)
+        self.settings.setValue("expanded_paths", self._expanded_paths())
+        self.settings.setValue("selected_path", self._selected_path() or "")
+        self.settings.endGroup()
+        self.settings.sync()
+
+    def _restore_tree_state(self) -> None:
+        """Restore expanded folders and the selected path."""
+        group = self._session_group()
+        if group is None:
+            return
+        self.settings.beginGroup(group)
+        expanded_paths = self._list_setting("expanded_paths")
+        selected_path = self.settings.value("selected_path", "", type=str)
+        self.settings.endGroup()
+        for path in expanded_paths:
+            index = self._proxy_index_for_path(path)
+            if index.isValid():
+                self.tree_view.expand(index)
+        self._restore_selected_path(selected_path)
+
+    def _list_setting(self, key: str) -> list[str]:
+        """Return one list-valued setting as normalized strings."""
+        value = self.settings.value(key, [])
+        if isinstance(value, str):
+            return [value] if value else []
+        return [str(item) for item in value or [] if item]
+
+    def _expanded_paths(self) -> list[str]:
+        """Return absolute paths for currently expanded directories."""
+        paths: list[str] = []
+        self._collect_expanded_paths(self.tree_view.rootIndex(), paths)
+        return paths
+
+    def _collect_expanded_paths(
+        self,
+        parent: QModelIndex,
+        paths: list[str],
+    ) -> None:
+        """Collect expanded directory paths below one tree index."""
+        row_count = self.proxy_model.rowCount(parent)
+        for row in range(row_count):
+            index = self.proxy_model.index(row, 0, parent)
+            if not index.isValid():
+                continue
+            source_index = self.proxy_model.mapToSource(index)
+            if not self.model.fileInfo(source_index).isDir():
+                continue
+            if self.tree_view.isExpanded(index):
+                paths.append(self.model.filePath(source_index))
+                self._collect_expanded_paths(index, paths)
+
+    def _selected_path(self) -> str | None:
+        """Return the current file-system selection path."""
+        current = self.tree_view.currentIndex()
+        if current.isValid():
+            return self._file_path_for_index(current)
+        return None
+
+    def _proxy_index_for_path(self, file_path: str) -> QModelIndex:
+        """Return the proxy index for one absolute file-system path."""
+        source_index = self.model.index(file_path)
+        return self.proxy_model.mapFromSource(source_index)
+
+    def _restore_selected_path(self, file_path: str) -> None:
+        """Select one file-system path in the visible tree."""
+        if not file_path:
+            return
+        index = self._proxy_index_for_path(file_path)
+        if not index.isValid():
+            return
+        parent = index.parent()
+        while parent.isValid():
+            self.tree_view.expand(parent)
+            parent = parent.parent()
+        selection_model = self.tree_view.selectionModel()
+        if selection_model is None:
+            return
+        selection_model.setCurrentIndex(
+            index,
+            QItemSelectionModel.ClearAndSelect
+            | QItemSelectionModel.Rows,
+        )
+        self.tree_view.scrollTo(index)

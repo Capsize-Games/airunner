@@ -41,6 +41,7 @@ def _make_window_stub():
         },
         _post_startup_status_refresh_requested=False,
         _pending_startup_button_name=None,
+        _startup_project_restore_attempted=False,
         _restore_knowledgebase_after_startup=False,
         _runtime_preference_retry_after={},
         ui=SimpleNamespace(
@@ -57,6 +58,7 @@ def _make_window_stub():
         initialize_widget_elements=Mock(),
         logger=Mock(),
         refresh_api_reference=Mock(return_value=None),
+        _restore_last_coding_project=Mock(),
         _set_action_checked_state=MainWindow._set_action_checked_state,
         _allows_loading_toggle=MainWindow._allows_loading_toggle,
         _optional_runtime_preference_specs=(
@@ -271,7 +273,39 @@ def test_on_main_window_loaded_signal_refreshes_daemon_status_once():
     MainWindow.on_main_window_loaded_signal(window)
     MainWindow.on_main_window_loaded_signal(window)
 
+    assert window._restore_last_coding_project.call_count == 2
     window._refresh_model_status_from_daemon.assert_called_once_with()
+
+
+def test_restore_last_coding_project_reopens_saved_workspace(
+    tmp_path,
+    monkeypatch,
+):
+    project_path = tmp_path / "demo-project"
+    project_path.mkdir()
+    result = SimpleNamespace(ok=True)
+    project_manager = SimpleNamespace(open_project=Mock(return_value=result))
+    window = _make_window_stub()
+    window._project_manager = Mock(return_value=project_manager)
+    window._activate_coding_project = Mock()
+
+    monkeypatch.setattr(
+        main_window_module,
+        "get_active_project_path",
+        lambda: str(project_path),
+    )
+    clear_project = Mock()
+    monkeypatch.setattr(
+        main_window_module,
+        "set_active_project_path",
+        clear_project,
+    )
+
+    MainWindow._restore_last_coding_project(window)
+
+    project_manager.open_project.assert_called_once_with(str(project_path))
+    window._activate_coding_project.assert_called_once_with(result)
+    clear_project.assert_not_called()
 
 
 def test_daemon_status_prefers_loaded_local_llm_worker():

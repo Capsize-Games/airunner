@@ -7,12 +7,16 @@ Provides a place to host the DocumentEditorWidget and manage document-level acti
 """
 
 from typing import Dict
+import hashlib
 from airunner.components.document_editor.gui.templates.document_editor_container_ui import (
     Ui_document_editor_container,
 )
 from airunner.components.document_editor.project import (
     AirunnerProjectService,
     AirunnerPythonWorkflowService,
+)
+from airunner.components.document_editor.project.airunner_active_project import (
+    set_active_project_path,
 )
 from airunner.components.document_editor.workspace_shell_support import (
     active_document_summary,
@@ -52,6 +56,8 @@ class DocumentEditorContainerWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self._active_terminal_session_id = None
         self._agent_run_manager = None
+        self._project_service = None
+        self._restoring_project_session = False
         self._terminal_session_manager = TerminalSessionManager()
         self._terminal_temp_files = {}
         self._workspace_panel_tabs = {}
@@ -65,6 +71,7 @@ class DocumentEditorContainerWidget(BaseWidget):
             SignalCode.UNLOCK_RESEARCH_DOCUMENT: self.handle_unlock_research_document,
             SignalCode.UPDATE_DOCUMENT_CONTENT: self.handle_update_document_content,
             SignalCode.STREAM_TO_DOCUMENT: self.handle_stream_to_document,
+            SignalCode.SAVE_STATE: self.save_state,
         }
         super().__init__(*args, **kwargs)
         # Register a Ctrl+W shortcut at the container level so closing a
@@ -136,6 +143,7 @@ class DocumentEditorContainerWidget(BaseWidget):
             self._on_terminal_session_error
         )
         self._setup_workspace_shell()
+        self._show_workspace_welcome()
 
     def handle_new_document_signal(self, data: Dict):
         self._new_tab()
@@ -161,6 +169,42 @@ class DocumentEditorContainerWidget(BaseWidget):
             panel_definitions=bottom_panel_definitions(),
             object_name="workspace_bottom_tabs",
         )
+
+    def _welcome_search_text(self) -> str:
+        """Return the initial coding workspace guidance."""
+
+        return (
+            "No coding project is open yet.\n\n"
+            "Use Documents > New Project... to create a starter Python "
+            "workspace, or Documents > Open Project... to load an existing "
+            "folder with .airunner metadata."
+        )
+
+    def _welcome_problems_text(self) -> str:
+        """Return the initial problems-panel guidance."""
+
+        return (
+            "Project checks will appear here after you open a coding "
+            "workspace.\n\n"
+            "Start with a small Python CLI project so AIRunner can edit "
+            "files, run tests, and review changes in one place."
+        )
+
+    def _welcome_activity_text(self) -> str:
+        """Return the initial agent-activity guidance."""
+
+        return (
+            "Agent activity will appear here.\n\n"
+            "Pick Ask for Q&A, Plan for implementation planning, or Agent "
+            "to let the coding workflow inspect and modify the project."
+        )
+
+    def _show_workspace_welcome(self) -> None:
+        """Seed workspace panels with a first-run welcome state."""
+
+        self.set_project_search_results(self._welcome_search_text())
+        self.set_problems_text(self._welcome_problems_text())
+        self.set_agent_activity(self._welcome_activity_text())
 
     def _build_workspace_tabs(
         self,
@@ -345,6 +389,166 @@ class DocumentEditorContainerWidget(BaseWidget):
                 agent_activity_entry("Opened file", file_path)
             )
 
+    def load_project(
+        self,
+        project_service: AirunnerProjectService,
+    ) -> bool:
+        """Load an AIRunner project into the embedded workspace shell."""
+
+        self._project_service = project_service
+        set_active_project_path(project_service.project_path)
+        root_paths = [
+            project_service.resolve_root_path(root.name)
+            for root in project_service.list_roots()
+        ]
+        self.ui.file_explorer.set_project_service(project_service)
+        self.set_workspace_roots(root_paths)
+        restored = self._restore_project_session()
+        self.ui.file_explorer.restore_state()
+        return restored
+
+    def new_document(self) -> None:
+        """Create a new untitled document tab."""
+
+        self._new_tab()
+
+    def open_file(self, file_path: str) -> None:
+        """Open one file in a document tab."""
+
+        self._open_file_tab(file_path)
+
+    def save_current_document(self) -> bool:
+        """Save the active document tab."""
+
+        editor = self._current_editor()
+        if editor is None:
+            return False
+        return self._save_tab(editor)
+
+    def save_current_document_as(self) -> bool:
+        """Save the active document tab to a new path."""
+
+        editor = self._current_editor()
+        if editor is None:
+            return False
+        return bool(self._save_as_tab(editor))
+
+    def _current_editor(self) -> DocumentEditorWidget | None:
+        """Return the active document editor widget if one exists."""
+
+        current = self.ui.documents.currentWidget()
+        if isinstance(current, DocumentEditorWidget):
+            return current
+        return None
+
+    def _editor_file_path(self, editor) -> str | None:
+        """Return the saved file path for one editor widget."""
+        if editor is None:
+            return None
+        if hasattr(editor, "file_path") and callable(editor.file_path):
+            try:
+                return editor.file_path()
+            except Exception:
+                return None
+        return getattr(editor, "current_file_path", None) or getattr(
+            editor,
+            "file_path",
+            None,
+        )
+
+    def save_state(self):
+        """Persist splitter state and project workspace session data."""
+        super().save_state()
+        self.ui.file_explorer.save_state()
+        self._save_project_session()
+
+    def _project_session_group(self) -> str | None:
+        """Return the settings group used for the active project."""
+        if self._project_service is None:
+            return None
+        project_path = os.path.abspath(self._project_service.project_path)
+        session_id = hashlib.sha1(project_path.encode("utf-8")).hexdigest()
+        return f"coding_workspace/project_sessions/{session_id}"
+
+    def _save_project_session(self) -> None:
+        """Persist open document tabs for the active project."""
+        if self._restoring_project_session:
+            return
+        group = self._project_session_group()
+        if group is None:
+            return
+        self.settings.beginGroup(group)
+        self.settings.setValue("open_files", self._open_document_paths())
+        self.settings.setValue("current_file", self._current_document_path())
+        self.settings.endGroup()
+        self.settings.sync()
+
+    def _open_document_paths(self) -> list[str]:
+        """Return saved document paths for all open file-backed tabs."""
+        paths: list[str] = []
+        for index in range(self.ui.documents.count()):
+            file_path = self._editor_file_path(self.ui.documents.widget(index))
+            if file_path and os.path.isfile(file_path):
+                paths.append(os.path.abspath(file_path))
+        return paths
+
+    def _current_document_path(self) -> str:
+        """Return the active saved file path for the current tab."""
+        file_path = self._editor_file_path(self._current_editor())
+        if not file_path:
+            return ""
+        return os.path.abspath(file_path)
+
+    def _restore_project_session(self) -> bool:
+        """Restore open files and the active tab for one project."""
+        group = self._project_session_group()
+        if group is None:
+            return False
+        self.settings.beginGroup(group)
+        open_files = self._list_project_setting("open_files")
+        current_file = self.settings.value("current_file", "", type=str)
+        self.settings.endGroup()
+        if not open_files:
+            return False
+        restored = False
+        self._restoring_project_session = True
+        try:
+            for file_path in open_files:
+                if self._restorable_project_file(file_path):
+                    self._open_file_tab(file_path)
+                    restored = True
+            self._focus_document_path(current_file)
+        finally:
+            self._restoring_project_session = False
+        self._save_project_session()
+        return restored
+
+    def _list_project_setting(self, key: str) -> list[str]:
+        """Return one list-valued project-session setting."""
+        value = self.settings.value(key, [])
+        if isinstance(value, str):
+            return [value] if value else []
+        return [str(item) for item in value or [] if item]
+
+    def _restorable_project_file(self, file_path: str) -> bool:
+        """Return whether one saved path still belongs to this project."""
+        if not file_path or not os.path.isfile(file_path):
+            return False
+        if self._project_service is None:
+            return False
+        return self._project_service.contains_path(file_path)
+
+    def _focus_document_path(self, file_path: str) -> None:
+        """Activate one already-open editor tab by its saved path."""
+        if not file_path:
+            return
+        target = os.path.abspath(file_path)
+        for index in range(self.ui.documents.count()):
+            candidate = self._editor_file_path(self.ui.documents.widget(index))
+            if candidate and os.path.abspath(candidate) == target:
+                self.ui.documents.setCurrentIndex(index)
+                return
+
     def set_workspace_roots(self, root_paths: list[str]) -> None:
         """Configure the embedded explorer for one or more workspace roots."""
         self.ui.file_explorer.configure_root_paths(root_paths)
@@ -366,48 +570,116 @@ class DocumentEditorContainerWidget(BaseWidget):
         """Refresh the problems panel with Python workflow guidance."""
         if not root_paths:
             return
-        project_service = AirunnerProjectService(root_paths[0])
+        project_service = self._project_service
+        if project_service is None:
+            project_service = AirunnerProjectService(root_paths[0])
         if not project_service.exists():
             return
         summary = AirunnerPythonWorkflowService(project_service).summary()
         self.set_problems_text(python_workflow_summary(summary))
 
     def run_script(self, data: Dict) -> None:
-        document_path = data.get("document_path")
-        temp_file_flag = bool(data.get("temp_file", False))
-        # Defensive: if no document_path provided (e.g., unsaved new doc),
-        # warn the user and abort instead of passing None to os.path
-        if not document_path:
-            try:
-                QMessageBox.warning(
-                    self,
-                    "Run Error",
-                    "No file to run. Please save the document before running.",
-                )
-            except Exception:
-                pass
+        payload = self._script_run_payload(data)
+        if payload is None:
             return
-        if os.path.exists(document_path) and os.path.isfile(document_path):
-            suffix = os.path.splitext(document_path)[1].lower()
-            if suffix in [".py"]:
-                self.ui.terminal.clear()
-                script_dir = os.path.dirname(document_path)
-                python_exe = sys.executable
-                self.activate_workspace_panel("terminal")
-                self.append_agent_activity(
-                    agent_activity_entry("Started run", document_path)
-                )
-                if self._active_terminal_session_id is not None:
-                    self.stop_terminal_session(
-                        self._active_terminal_session_id
-                    )
-                self.start_terminal_session(
-                    [python_exe, document_path],
-                    working_directory=script_dir,
-                    temp_file_path=(
-                        document_path if temp_file_flag else None
-                    ),
-                )
+        document_path, temp_file_path = payload
+        self._prepare_script_run(document_path)
+        try:
+            command = self._project_python_run_command(document_path)
+        except Exception as exc:
+            self._on_terminal_session_error("", str(exc))
+            return
+        if command is None:
+            self.start_terminal_session(
+                [sys.executable, document_path],
+                working_directory=os.path.dirname(document_path),
+                temp_file_path=temp_file_path,
+            )
+            return
+        command_text, working_directory = command
+        self._start_shell_session(
+            command_text,
+            working_directory,
+            temp_file_path,
+        )
+
+    def _script_run_payload(
+        self,
+        data: Dict,
+    ) -> tuple[str, str | None] | None:
+        """Return the validated script path and optional temp file path."""
+        document_path = data.get("document_path")
+        if not document_path:
+            self._warn_missing_run_target()
+            return None
+        if not os.path.isfile(document_path):
+            return None
+        if os.path.splitext(document_path)[1].lower() != ".py":
+            return None
+        temp_file = document_path if bool(data.get("temp_file", False)) else None
+        return document_path, temp_file
+
+    def _warn_missing_run_target(self) -> None:
+        """Warn when the user tries to run an unsaved document."""
+        try:
+            QMessageBox.warning(
+                self,
+                "Run Error",
+                "No file to run. Please save the document before running.",
+            )
+        except Exception:
+            return
+
+    def _prepare_script_run(self, document_path: str) -> None:
+        """Reset the terminal UI and track a new script run."""
+        self.ui.terminal.clear()
+        self.activate_workspace_panel("terminal")
+        self.append_agent_activity(
+            agent_activity_entry("Started run", document_path)
+        )
+        if self._active_terminal_session_id is not None:
+            self.stop_terminal_session(self._active_terminal_session_id)
+
+    def _project_python_run_command(
+        self,
+        document_path: str,
+    ) -> tuple[str, str] | None:
+        """Return the resolved project Python command for one script."""
+        project_service = self._project_service
+        if project_service is None:
+            return None
+        ownership = project_service.project_relative_path(document_path)
+        if ownership is None:
+            return None
+        root_name, rel_path = ownership
+        workflows = AirunnerPythonWorkflowService(project_service)
+        context = workflows.context(
+            root_name,
+            os.path.dirname(rel_path),
+            ensure_environment=True,
+        )
+        self._refresh_python_workflow_summary([project_service.project_path])
+        return workflows.build_run_command(context, document_path), context.working_directory
+
+    def _start_shell_session(
+        self,
+        command: str,
+        working_directory: str,
+        temp_file_path: str | None,
+    ) -> str | None:
+        """Start a shell-backed terminal session and track temp files."""
+        try:
+            session_id = self._terminal_session_manager.start_shell_session(
+                command,
+                working_directory=working_directory,
+            )
+        except Exception as exc:
+            self._on_terminal_session_error("", str(exc))
+            return None
+        self._active_terminal_session_id = session_id
+        if temp_file_path:
+            self._terminal_temp_files[session_id] = temp_file_path
+        return session_id
 
     def handle_open_research_document(self, data: Dict) -> None:
         """Open a research document in a locked (read-only) tab.
@@ -791,6 +1063,7 @@ class DocumentEditorContainerWidget(BaseWidget):
         self.append_agent_activity(agent_activity_entry("Process error", message))
         self.append_problem(problem_entry(message))
         if not session_id or session_id == self._active_terminal_session_id:
+            self.activate_workspace_panel("terminal")
             self.ui.terminal.moveCursor(QTextCursor.End)
             self.ui.terminal.insertPlainText(f"\n[{message}]")
             self.ui.terminal.ensureCursorVisible()
@@ -836,6 +1109,7 @@ class DocumentEditorContainerWidget(BaseWidget):
                 try:
                     if os.path.abspath(candidate) == target:
                         self.ui.documents.setCurrentIndex(i)
+                        self._save_project_session()
                         return
                 except Exception:
                     # ignore path normalization errors and continue
@@ -863,6 +1137,7 @@ class DocumentEditorContainerWidget(BaseWidget):
                 editor.editor.setFocus()
         except Exception:
             pass
+        self._save_project_session()
 
     def _new_tab(self):
         editor = DocumentEditorWidget()
@@ -895,6 +1170,7 @@ class DocumentEditorContainerWidget(BaseWidget):
                     "No active tab (index < 0), clearing active document"
                 )
                 self._notify_active_document(None)
+                self._save_project_session()
                 return
             w = self.ui.documents.widget(index)
             if w is None:
@@ -902,12 +1178,14 @@ class DocumentEditorContainerWidget(BaseWidget):
                     "Tab widget is None, clearing active document"
                 )
                 self._notify_active_document(None)
+                self._save_project_session()
                 return
 
             # Get the file path for this tab
             file_path = getattr(w, "current_file_path", None)
             self.logger.info(f"Tab widget file_path: {file_path}")
             self._notify_active_document(file_path)
+            self._save_project_session()
 
             if hasattr(w, "editor"):
                 try:
@@ -1050,41 +1328,23 @@ class DocumentEditorContainerWidget(BaseWidget):
     def _save_tab(self, editor):
         # Use the DocumentEditorWidget API for saving
         # Resolve file path using available API (method or attributes)
-        if hasattr(editor, "file_path") and callable(
-            getattr(editor, "file_path")
-        ):
-            try:
-                file_path = editor.file_path()
-            except Exception:
-                file_path = None
-        else:
-            file_path = getattr(editor, "current_file_path", None) or getattr(
-                editor, "file_path", None
-            )
+        file_path = self._editor_file_path(editor)
 
         if hasattr(editor, "save_file"):
             if not file_path:
                 return self._save_as_tab(editor)
-            editor.save_file()
+            saved = bool(editor.save_file())
             idx = self.ui.documents.indexOf(editor)
             if idx != -1:
                 # compute fresh file path for tab label
-                label_path = None
-                if hasattr(editor, "file_path") and callable(
-                    getattr(editor, "file_path")
-                ):
-                    try:
-                        label_path = editor.file_path()
-                    except Exception:
-                        label_path = None
-                else:
-                    label_path = getattr(
-                        editor, "current_file_path", None
-                    ) or getattr(editor, "file_path", None)
+                label_path = self._editor_file_path(editor)
                 if label_path:
                     self.ui.documents.setTabText(
                         idx, os.path.basename(label_path)
                     )
+            if saved:
+                self._save_project_session()
+            return saved
         else:
             # fallback for legacy
             if not file_path:
@@ -1099,6 +1359,8 @@ class DocumentEditorContainerWidget(BaseWidget):
                 self.ui.documents.setTabText(
                     idx, os.path.basename(path_to_write)
                 )
+            self._save_project_session()
+            return True
 
     def _save_as_tab(self, editor):
         # Use the DocumentEditorWidget API for save-as
@@ -1185,23 +1447,7 @@ class DocumentEditorContainerWidget(BaseWidget):
         # Update tab label using a safe path lookup (method vs attribute)
         idx = self.ui.documents.indexOf(editor)
         if idx != -1:
-            label_path = None
-            try:
-                if hasattr(editor, "file_path") and callable(
-                    getattr(editor, "file_path")
-                ):
-                    try:
-                        label_path = editor.file_path()
-                    except Exception:
-                        label_path = None
-                else:
-                    label_path = getattr(
-                        editor, "current_file_path", None
-                    ) or getattr(editor, "file_path", None)
-            except Exception:
-                label_path = getattr(
-                    editor, "current_file_path", None
-                ) or getattr(editor, "file_path", None)
+            label_path = self._editor_file_path(editor)
 
             if not label_path:
                 label_path = file_path
@@ -1213,6 +1459,7 @@ class DocumentEditorContainerWidget(BaseWidget):
                     )
                 except Exception:
                     pass
+        self._save_project_session()
         return True
 
     def _reopen_tab(self, file_path):
@@ -1311,6 +1558,7 @@ class DocumentEditorContainerWidget(BaseWidget):
         # Remove the tab and schedule the widget for deletion
         self.ui.documents.removeTab(index)
         widget.deleteLater()
+        self._save_project_session()
 
     def _on_close_shortcut(self) -> None:
         """Handle Ctrl+W: close the currently active document tab using the

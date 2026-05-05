@@ -7,11 +7,17 @@ import os
 from airunner.components.document_editor.project.airunner_project_open_result import (
     AirunnerProjectOpenResult,
 )
+from airunner.components.document_editor.project.airunner_project_prompt_service import (
+    AirunnerProjectPromptService,
+)
 from airunner.components.document_editor.project.airunner_project_paths import (
     PROJECT_DIR_NAME,
 )
 from airunner.components.document_editor.project.airunner_project_service import (
     AirunnerProjectService,
+)
+from airunner.components.document_editor.project.airunner_python_environment_service import (
+    AirunnerPythonEnvironmentService,
 )
 from airunner.components.document_editor.project.airunner_python_environment_selection import (
     AirunnerPythonEnvironmentSelection,
@@ -61,6 +67,7 @@ class AirunnerProjectManager:
             additional_roots=additional_roots,
             settings=settings,
         )
+        self._ensure_prompt_defaults(service)
         return self._success_result(service, workspace.project_name)
 
     def open_project(self, project_path: str) -> AirunnerProjectOpenResult:
@@ -90,6 +97,7 @@ class AirunnerProjectManager:
                 ["The .airunner metadata is incomplete."],
                 [self._repair_message()],
             )
+        self._ensure_prompt_defaults(service)
         return self._success_result(service, workspace.project_name)
 
     def create_python_project(
@@ -123,6 +131,7 @@ class AirunnerProjectManager:
             result.workspace.project_name,
             package_name=package_name,
         )
+        AirunnerPythonEnvironmentService(result.service).ensure_environment()
         return self.open_project(project_path)
 
     def select_python_environment(
@@ -223,6 +232,16 @@ class AirunnerProjectManager:
             project_path=project_path,
             errors=errors,
             recovery_suggestions=recovery_suggestions,
+        )
+
+    def _ensure_prompt_defaults(
+        self,
+        service: AirunnerProjectService,
+    ) -> None:
+        """Backfill default prompt files for new or upgraded projects."""
+        settings = service.load_settings()
+        AirunnerProjectPromptService(service).ensure_defaults(
+            settings.bootstrap_profile
         )
 
     def _repair_message(self) -> str:

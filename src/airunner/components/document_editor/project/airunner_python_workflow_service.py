@@ -10,6 +10,9 @@ import subprocess
 from airunner.components.document_editor.project.airunner_project_service import (
     AirunnerProjectService,
 )
+from airunner.components.document_editor.project.airunner_python_environment_service import (
+    AirunnerPythonEnvironmentService,
+)
 from airunner.components.document_editor.project.airunner_python_environment_selection import (
     AirunnerPythonEnvironmentSelection,
 )
@@ -114,6 +117,15 @@ class AirunnerPythonWorkflowService:
         command = f"{self._python_executable(context)} -m pip install -e .[dev]"
         return self._apply_activation(context, command)
 
+    def build_run_command(
+        self,
+        context: AirunnerPythonWorkflowContext,
+        script_path: str,
+    ) -> str:
+        """Build a Python run command for one script."""
+        command = f"{self._python_executable(context)} {shlex.quote(script_path)}"
+        return self._apply_activation(context, command)
+
     def quality_report(
         self,
         *,
@@ -142,8 +154,16 @@ class AirunnerPythonWorkflowService:
         self,
         root_name: str | None,
         rel_working_directory: str,
+        *,
+        ensure_environment: bool = False,
     ) -> AirunnerPythonWorkflowContext:
         root = root_name or self.project_service.load_workspace().primary_root
+        settings = self.project_service.load_settings()
+        environment = settings.python_environment
+        if ensure_environment:
+            environment = AirunnerPythonEnvironmentService(
+                self.project_service
+            ).ensure_environment()
         return AirunnerPythonWorkflowContext(
             root_name=root,
             root_path=self.project_service.resolve_root_path(root),
@@ -151,8 +171,8 @@ class AirunnerPythonWorkflowService:
                 rel_working_directory or ".",
                 root,
             ),
-            bootstrap_profile=self.project_service.load_settings().bootstrap_profile,
-            python_environment=self.project_service.load_settings().python_environment,
+            bootstrap_profile=settings.bootstrap_profile,
+            python_environment=environment,
         )
 
     def _python_executable(

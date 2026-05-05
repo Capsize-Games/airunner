@@ -94,7 +94,10 @@ class WorkflowBuildingMixin:
         """
         from airunner.components.llm.agents import AuthorAgent
 
-        return AuthorAgent(chat_model=self._chat_model).compile()
+        return AuthorAgent(
+            chat_model=self._chat_model,
+            system_prompt=self._mode_prompt("author"),
+        ).compile()
 
     def _build_code_subgraph(self):
         """Build code agent subgraph.
@@ -104,7 +107,19 @@ class WorkflowBuildingMixin:
         """
         from airunner.components.llm.agents import CodeAgent
 
-        return CodeAgent(chat_model=self._chat_model).compile()
+        return CodeAgent(
+            chat_model=self._chat_model,
+            system_prompt=self._mode_prompt("code"),
+            tool_event_callback=self._record_mode_tool_use,
+        ).compile()
+
+    def _record_mode_tool_use(self, tool_names: list[str]) -> None:
+        """Track tools executed by specialized mode subgraphs."""
+        if not hasattr(self, "_executed_tools"):
+            return
+        for tool_name in tool_names:
+            if tool_name:
+                self._executed_tools.append(tool_name)
 
     def _build_research_subgraph(self):
         """Build research agent subgraph.
@@ -114,7 +129,10 @@ class WorkflowBuildingMixin:
         """
         from airunner.components.llm.agents import ResearchAgent
 
-        return ResearchAgent(chat_model=self._chat_model).compile()
+        return ResearchAgent(
+            chat_model=self._chat_model,
+            system_prompt=self._mode_prompt("research"),
+        ).compile()
 
     def _build_qa_subgraph(self):
         """Build QA agent subgraph.
@@ -124,7 +142,19 @@ class WorkflowBuildingMixin:
         """
         from airunner.components.llm.agents import QAAgent
 
-        return QAAgent(chat_model=self._chat_model).compile()
+        return QAAgent(
+            chat_model=self._chat_model,
+            system_prompt=self._mode_prompt("qa"),
+        ).compile()
+
+    def _mode_prompt(self, mode_name: str) -> str | None:
+        """Return the request prompt when a mode is explicitly forced."""
+        if getattr(self, "_mode_override", None) != mode_name:
+            return None
+        prompt = getattr(self, "_system_prompt", None)
+        if not isinstance(prompt, str) or not prompt.strip():
+            return None
+        return prompt
 
     def _build_general_subgraph(self):
         """Build general/fallback subgraph.

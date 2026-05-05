@@ -3,6 +3,8 @@
 import sys
 import time
 
+from PySide6.QtCore import QCoreApplication
+
 from airunner.components.document_editor.terminal import (
     TerminalSessionManager,
 )
@@ -67,3 +69,24 @@ def test_terminal_session_manager_stops_long_running_process():
     assert manager.stop_session(session_id, timeout=0.2)
     _wait_for(lambda: not manager.get_session(session_id).is_running)
     assert manager.get_session(session_id).exit_code is not None
+
+
+def test_terminal_session_manager_ignores_clean_pty_eof():
+    """Clean process exit should not emit a PTY error signal."""
+    app = QCoreApplication.instance() or QCoreApplication([])
+    manager = TerminalSessionManager()
+    errors = []
+    manager.sessionError.connect(lambda _sid, error: errors.append(error))
+    session_id = manager.start_session(
+        [sys.executable, "-c", "print('done')"]
+    )
+
+    _wait_for(
+        lambda: manager.get_session(session_id) is not None
+        and not manager.get_session(session_id).is_running,
+    )
+    for _ in range(20):
+        app.processEvents()
+        time.sleep(0.01)
+
+    assert errors == []
