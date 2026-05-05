@@ -29,6 +29,12 @@ from airunner.components.document_editor.project.airunner_project_context_index_
     AirunnerProjectContextIndexEntry,
     AirunnerProjectContextIndexService,
 )
+from airunner.components.document_editor.project.airunner_helper_project_record import (
+    AirunnerHelperProjectRecord,
+)
+from airunner.components.document_editor.project.airunner_helper_project_registry_service import (
+    AirunnerHelperProjectRegistryService,
+)
 from airunner.components.document_editor.project.airunner_project_prompt_service import (
     AirunnerProjectPromptService,
     AirunnerProjectPromptTemplate,
@@ -69,6 +75,8 @@ __all__ = [
     "AirunnerProjectContextIndex",
     "AirunnerProjectContextIndexEntry",
     "AirunnerProjectContextIndexService",
+    "AirunnerHelperProjectRecord",
+    "AirunnerHelperProjectRegistryService",
     "AirunnerProjectPromptService",
     "AirunnerProjectPromptTemplate",
     "active_project_prompt_service",

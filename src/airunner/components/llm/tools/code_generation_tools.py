@@ -24,6 +24,12 @@ from airunner.components.document_editor.workspace_manager import (
 from airunner.components.document_editor.project.airunner_active_project import (
     get_active_project_path,
 )
+from airunner.components.document_editor.project.airunner_helper_project_record import (
+    AirunnerHelperProjectRecord,
+)
+from airunner.components.document_editor.project.airunner_helper_project_registry_service import (
+    AirunnerHelperProjectRegistryService,
+)
 from airunner.enums import CodeOperationType
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
@@ -150,6 +156,11 @@ def _normalize_content(content: str) -> str:
     content = content.replace("\r", "\n")
     
     return content
+
+
+def _helper_project_registry() -> AirunnerHelperProjectRegistryService:
+    """Return the helper-project registry service."""
+    return AirunnerHelperProjectRegistryService()
 
 
 @tool(
@@ -556,3 +567,110 @@ def delete_code_file(
     except Exception as e:
         logger.error(f"Error deleting file {file_path}: {e}")
         return f"Error: {str(e)}"
+
+
+@tool(
+    name="register_helper_project",
+    category=ToolCategory.WORKFLOW,
+    description=(
+        "Register a workflow-generated helper project under "
+        "~/.local/share/airunner/Projects with reusable metadata and "
+        "input/output contracts."
+    ),
+    input_examples=[
+        {
+            "project_path": (
+                "~/.local/share/airunner/Projects/brief-table-extractor"
+            ),
+            "name": "brief-table-extractor",
+            "description": "Extracts comparison tables from research notes",
+            "workflow_kind": "research-brief",
+            "input_contract": "Research notes markdown",
+            "output_contract": "JSON table rows",
+            "origin_artifact": "brief-package",
+            "tags": ["research", "tables"],
+        }
+    ],
+)
+def register_helper_project(
+    project_path: str,
+    name: str,
+    description: str,
+    workflow_kind: str,
+    input_contract: str,
+    output_contract: str,
+    origin_artifact: str = "",
+    reuse_notes: str = "",
+    tags: Optional[list[str]] = None,
+) -> str:
+    """Persist reusable metadata for one workflow helper project."""
+    try:
+        record = AirunnerHelperProjectRecord(
+            name=name,
+            description=description,
+            workflow_kind=workflow_kind,
+            input_contract=input_contract,
+            output_contract=output_contract,
+            origin_artifact=origin_artifact,
+            reuse_notes=reuse_notes,
+            tags=tuple(tags or []),
+        )
+        saved = _helper_project_registry().register_project(
+            project_path,
+            record,
+        )
+        return (
+            f"Registered helper project: {saved.name}\n"
+            f"Path: {project_path}\n"
+            f"Workflow: {saved.workflow_kind}"
+        )
+    except Exception as e:
+        logger.error(
+            "Error registering helper project %s: %s",
+            project_path,
+            e,
+        )
+        return f"Error: {str(e)}"
+
+
+@tool(
+    name="search_helper_projects",
+    category=ToolCategory.WORKFLOW,
+    description=(
+        "Search helper-project metadata under ~/.local/share/airunner/"
+        "Projects before creating new workflow-generated code."
+    ),
+    input_examples=[
+        {"query": "research tables", "workflow_kind": "research-brief"},
+        {"query": "follow-up email", "workflow_kind": "meeting"},
+    ],
+)
+def search_helper_projects(
+    query: str,
+    workflow_kind: Optional[str] = None,
+    limit: int = 5,
+) -> str:
+    """Return helper projects that may be reusable for the workflow."""
+    try:
+        matches = _helper_project_registry().search_projects(
+            query,
+            workflow_kind=workflow_kind,
+            limit=limit,
+        )
+    except Exception as e:
+        logger.error("Error searching helper projects: %s", e)
+        return f"Error: {str(e)}"
+
+    if not matches:
+        return "No helper projects matched the query."
+
+    lines = ["Matching helper projects:"]
+    for project_path, record in matches:
+        lines.append(f"- {record.name} ({project_path})")
+        lines.append(f"  Workflow: {record.workflow_kind}")
+        lines.append(f"  Description: {record.description}")
+        if record.reuse_notes:
+            lines.append(f"  Reuse: {record.reuse_notes}")
+        if record.tags:
+            lines.append(f"  Tags: {', '.join(record.tags)}")
+    return "\n".join(lines)

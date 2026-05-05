@@ -4,11 +4,14 @@ import pytest
 import tempfile
 
 import airunner.components.llm.tools.code_generation_tools as code_generation_tools
+from airunner.components.document_editor.project import AirunnerProjectService
 
 from airunner.components.llm.tools.code_generation_tools import (
     create_code_file,
     edit_code_file,
     read_code_file,
+    register_helper_project,
+    search_helper_projects,
     validate_code,
     format_code_file,
     list_workspace_files,
@@ -179,3 +182,36 @@ def test_default_code_directory_prefers_active_project(
     )
 
     assert code_generation_tools._get_default_code_directory() == temp_workspace
+
+
+def test_register_and_search_helper_projects(tmp_path, monkeypatch):
+    """Helper project tools should persist and search reusable metadata."""
+    projects_root = tmp_path / "Projects"
+    project_path = projects_root / "brief-table-extractor"
+    AirunnerProjectService(str(project_path)).initialize(
+        project_name="brief-table-extractor"
+    )
+    monkeypatch.setattr(
+        code_generation_tools,
+        "_helper_project_registry",
+        lambda: code_generation_tools.AirunnerHelperProjectRegistryService(
+            str(projects_root)
+        ),
+    )
+
+    register_result = register_helper_project(
+        str(project_path),
+        name="brief-table-extractor",
+        description="Extracts research comparison tables",
+        workflow_kind="research-brief",
+        input_contract="Brief markdown",
+        output_contract="JSON rows",
+        tags=["research", "tables"],
+    )
+    search_result = search_helper_projects(
+        "research tables",
+        workflow_kind="research-brief",
+    )
+
+    assert "Registered helper project" in register_result
+    assert "brief-table-extractor" in search_result

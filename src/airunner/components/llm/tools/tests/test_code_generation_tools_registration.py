@@ -78,3 +78,10 @@ def test_mutating_code_tools_do_not_claim_workflow_prerequisite():
         assert "REQUIRES an active coding workflow" not in (
             tool_info.description
         )
+
+
+def test_helper_project_workflow_tools_are_registered():
+    """Helper-project workflow tools should be available to agents."""
+    for tool_name in ("register_helper_project", "search_helper_projects"):
+        assert tool_name in ToolRegistry._tools
+        assert ToolRegistry._tools[tool_name].category == ToolCategory.WORKFLOW

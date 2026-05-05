@@ -5,6 +5,7 @@ import os
 PROJECT_DIR_NAME = ".airunner"
 WORKSPACE_FILE = os.path.join(PROJECT_DIR_NAME, "workspace.json")
 SETTINGS_FILE = os.path.join(PROJECT_DIR_NAME, "settings.json")
+HELPER_PROJECT_FILE = os.path.join(PROJECT_DIR_NAME, "helper_project.json")
 INSTRUCTIONS_FILE = os.path.join(
     PROJECT_DIR_NAME,
     "airunner-instructions.md",
