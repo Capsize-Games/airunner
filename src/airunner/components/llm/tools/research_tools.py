@@ -3,6 +3,7 @@
 from typing import Any, List
 
 from airunner.components.agents.runtime import AgentRunStatus
+from airunner.components.agents.runtime import ResearchBriefRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
 from airunner.components.agents.runtime import ResearchReviewStatus
 from airunner.components.agents.runtime import ResearchRunRecord
@@ -111,6 +112,64 @@ def _evidence_payload(
         "source_ids": list(evidence.source_ids),
         "sources": [_source_payload(source) for source in sources],
     }
+
+
+def _confidence_weight(confidence: str) -> float:
+    """Return a numeric weight for one evidence confidence label."""
+    weights = {"high": 1.0, "medium": 0.7, "low": 0.4}
+    return weights.get(confidence.lower(), 0.5)
+
+
+def _brief_summary(
+    title: str,
+    source_count: int,
+    supported_findings: list[str],
+    open_questions: list[str],
+    coverage_score: float,
+    confidence_score: float,
+) -> str:
+    """Return a deterministic executive summary for one brief."""
+    summary = (
+        f"{title} uses {source_count} recorded sources and "
+        f"{len(supported_findings)} supported findings. Coverage is "
+        f"{coverage_score:.2f} and confidence is {confidence_score:.2f}."
+    )
+    if supported_findings:
+        summary += f" Strongest supported finding: {supported_findings[0]}"
+    if open_questions:
+        summary += f" Open question: {open_questions[0]}"
+    return summary
+
+
+def _brief_markdown(brief: ResearchBriefRecord) -> str:
+    """Render one research brief package as stable markdown."""
+    lines = [
+        f"# {brief.title}",
+        "",
+        "## Executive Summary",
+        "",
+        brief.executive_summary,
+        "",
+        "## Coverage",
+        "",
+        f"- Coverage score: {brief.coverage_score:.2f}",
+        f"- Confidence score: {brief.confidence_score:.2f}",
+        "",
+        "## Supported Findings",
+        "",
+    ]
+    findings = brief.supported_findings or ["No supported findings yet."]
+    for finding in findings:
+        lines.append(f"- {finding}")
+    lines.extend(["", "## Open Questions", ""])
+    questions = brief.open_questions or ["No open questions recorded."]
+    for question in questions:
+        lines.append(f"- {question}")
+    lines.extend(["", "## Weak Evidence", ""])
+    weak_ids = brief.weak_evidence_ids or ["No weak evidence recorded."]
+    for evidence_id in weak_ids:
+        lines.append(f"- {evidence_id}")
+    return "\n".join(lines)
 
 
 @tool(
@@ -262,6 +321,93 @@ def search_research_evidence(
         "query": query,
         "match_count": len(scored_matches[:limit]),
         "matches": [payload for _score, payload in scored_matches[:limit]],
+    }
+
+
+@tool(
+    name="generate_research_brief_package",
+    category=ToolCategory.RESEARCH,
+    description=(
+        "Generate a structured research brief package from stored evidence, "
+        "including summary, supported findings, open questions, scoring, "
+        "and exportable artifacts."
+    ),
+)
+def generate_research_brief_package(
+    research_run_id: str,
+    title: str = "",
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Create one stable brief package from a persisted research run."""
+    state_service = _research_state_service(project_path)
+    research_run = state_service.load_research_run(research_run_id)
+    sources = state_service.list_research_sources(run_id=research_run_id)
+    accepted = state_service.list_research_evidence(
+        run_id=research_run_id,
+        status=ResearchReviewStatus.ACCEPTED,
+    )
+    unresolved = state_service.list_research_evidence(
+        run_id=research_run_id,
+        status=ResearchReviewStatus.UNRESOLVED,
+    )
+    rejected = state_service.list_research_evidence(
+        run_id=research_run_id,
+        status=ResearchReviewStatus.REJECTED,
+    )
+    supported_findings = [item.fact_text for item in accepted]
+    open_questions = [item.fact_text for item in unresolved]
+    weak_evidence_ids = [
+        item.record_id
+        for item in accepted
+        if _confidence_weight(item.confidence) < 0.7
+    ] + [item.record_id for item in unresolved + rejected]
+    total_evidence = len(accepted) + len(unresolved) + len(rejected)
+    coverage_score = round(len(accepted) / max(total_evidence, 1), 2)
+    confidence_total = sum(
+        _confidence_weight(item.confidence) for item in accepted
+    )
+    confidence_score = round(confidence_total / max(len(accepted), 1), 2)
+    brief_title = title or f"Research Brief: {research_run.topic}"
+    summary = _brief_summary(
+        brief_title,
+        len(sources),
+        supported_findings,
+        open_questions,
+        coverage_score,
+        confidence_score,
+    )
+    brief = ResearchBriefRecord(
+        run_id=research_run_id,
+        title=brief_title,
+        executive_summary=summary,
+        supported_findings=supported_findings,
+        open_questions=open_questions,
+        weak_evidence_ids=weak_evidence_ids,
+        coverage_score=coverage_score,
+        confidence_score=confidence_score,
+        metadata={
+            "source_count": len(sources),
+            "accepted_evidence_count": len(accepted),
+            "unresolved_evidence_count": len(unresolved),
+            "rejected_evidence_count": len(rejected),
+        },
+    )
+    json_path = state_service._research_brief_path(brief.record_id)
+    markdown_path = state_service.write_research_brief_markdown(
+        brief.record_id,
+        _brief_markdown(brief),
+    )
+    brief.artifact_paths = [json_path, markdown_path]
+    state_service.save_research_brief(brief)
+    return {
+        "brief_id": brief.record_id,
+        "research_run_id": research_run_id,
+        "title": brief.title,
+        "coverage_score": brief.coverage_score,
+        "confidence_score": brief.confidence_score,
+        "supported_findings_count": len(brief.supported_findings),
+        "open_questions_count": len(brief.open_questions),
+        "artifact_paths": list(brief.artifact_paths),
     }
 
 

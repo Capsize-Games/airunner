@@ -12,6 +12,7 @@ from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.agents.runtime import AgentToolCallRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
+from airunner.components.agents.runtime import ResearchBriefRecord
 from airunner.components.agents.runtime import ResearchReviewStatus
 from airunner.components.agents.runtime import ResearchRunRecord
 from airunner.components.agents.runtime import ResearchSourceRecord
@@ -228,3 +229,37 @@ def test_project_state_service_persists_research_ledgers(tmp_path):
     assert [item.record_id for item in accepted_evidence] == [
         evidence.record_id,
     ]
+
+
+def test_project_state_service_persists_research_brief_artifacts(tmp_path):
+    """Research brief ledgers should persist alongside markdown exports."""
+    project_service = AirunnerProjectService(str(tmp_path / "demo-project"))
+    project_service.initialize(project_name="Demo Project")
+    state_service = AirunnerProjectStateService(project_service)
+
+    brief = ResearchBriefRecord(
+        run_id="run-1",
+        title="Research Brief: Grid Resilience",
+        executive_summary="Coverage is 0.75 and confidence is 0.80.",
+        supported_findings=["Reserve capacity increased by 12 percent."],
+        open_questions=["How durable is the increase beyond 2026?"],
+        weak_evidence_ids=["evidence-2"],
+        coverage_score=0.75,
+        confidence_score=0.8,
+    )
+    markdown_path = state_service.write_research_brief_markdown(
+        brief.record_id,
+        "# Research Brief\n",
+    )
+    brief.artifact_paths = [
+        f".airunner/research/briefs/{brief.record_id}.json",
+        markdown_path,
+    ]
+    state_service.save_research_brief(brief)
+
+    restored = state_service.load_research_brief(brief.record_id)
+    listed = state_service.list_research_briefs("run-1")
+
+    assert restored.title == "Research Brief: Grid Resilience"
+    assert restored.artifact_paths[1].endswith(".md")
+    assert [item.record_id for item in listed] == [brief.record_id]

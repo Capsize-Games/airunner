@@ -12,6 +12,7 @@ from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.agents.runtime import AgentToolCallRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
+from airunner.components.agents.runtime import ResearchBriefRecord
 from airunner.components.agents.runtime import ResearchReviewStatus
 from airunner.components.agents.runtime import ResearchRunRecord
 from airunner.components.agents.runtime import ResearchSourceRecord
@@ -213,3 +214,27 @@ def test_research_records_round_trip_with_attribution():
     assert restored_source.authors == ["Jane Doe"]
     assert restored_evidence.source_ids == [source.record_id]
     assert restored_evidence.numeric_value == "12"
+
+
+def test_research_brief_record_round_trips_export_bundle():
+    """Research brief records should preserve export artifact metadata."""
+    brief = ResearchBriefRecord(
+        run_id="run-1",
+        title="Research Brief: Grid Resilience",
+        executive_summary="Coverage is 0.75 and confidence is 0.80.",
+        supported_findings=["Reserve capacity increased by 12 percent."],
+        open_questions=["How durable is the increase beyond 2026?"],
+        weak_evidence_ids=["evidence-2"],
+        coverage_score=0.75,
+        confidence_score=0.8,
+        artifact_paths=[
+            ".airunner/research/briefs/brief-1.json",
+            ".airunner/research/briefs/brief-1.md",
+        ],
+    )
+
+    restored = ResearchBriefRecord.from_dict(brief.to_dict())
+
+    assert restored.title == "Research Brief: Grid Resilience"
+    assert restored.coverage_score == 0.75
+    assert restored.artifact_paths[1].endswith("brief-1.md")

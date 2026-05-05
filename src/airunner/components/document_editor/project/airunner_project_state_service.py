@@ -19,6 +19,9 @@ from airunner.components.agents.runtime.agent_run_status import (
 from airunner.components.agents.runtime.research_evidence_record import (
     ResearchEvidenceRecord,
 )
+from airunner.components.agents.runtime.research_brief_record import (
+    ResearchBriefRecord,
+)
 from airunner.components.agents.runtime.research_review_status import (
     ResearchReviewStatus,
 )
@@ -283,6 +286,51 @@ class AirunnerProjectStateService:
             records.append(evidence)
         return records
 
+    def save_research_brief(self, brief: ResearchBriefRecord) -> str:
+        """Persist one research brief package ledger file."""
+        return self._write_json(
+            self._research_brief_path(brief.record_id),
+            brief.to_dict(),
+        )
+
+    def load_research_brief(self, brief_id: str) -> ResearchBriefRecord:
+        """Load one research brief package ledger file."""
+        return ResearchBriefRecord.from_dict(
+            self._read_json(self._research_brief_path(brief_id))
+        )
+
+    def list_research_briefs(
+        self,
+        run_id: str | None = None,
+    ) -> list[ResearchBriefRecord]:
+        """Return research brief packages, optionally for one run."""
+        records: list[ResearchBriefRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("research", "briefs")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            brief = ResearchBriefRecord.from_dict(self._read_json(rel_path))
+            if run_id and brief.run_id != run_id:
+                continue
+            records.append(brief)
+        return records
+
+    def write_research_brief_markdown(
+        self,
+        brief_id: str,
+        content: str,
+    ) -> str:
+        """Write one exportable markdown artifact for a research brief."""
+        rel_path = self._research_brief_markdown_path(brief_id)
+        self._workspace_manager.write_file(
+            rel_path,
+            self._markdown_content(content),
+            backup=True,
+            create_dirs=True,
+        )
+        return rel_path
+
     def append_message(
         self,
         run_id: str,
@@ -379,6 +427,16 @@ class AirunnerProjectStateService:
         """Return the relative ledger path for a research evidence file."""
         directory = os.path.join(self._project_dir("research"), "evidence")
         return os.path.join(directory, f"{evidence_id}.json")
+
+    def _research_brief_path(self, brief_id: str) -> str:
+        """Return the relative ledger path for a research brief record."""
+        directory = os.path.join(self._project_dir("research"), "briefs")
+        return os.path.join(directory, f"{brief_id}.json")
+
+    def _research_brief_markdown_path(self, brief_id: str) -> str:
+        """Return the relative markdown artifact path for a brief package."""
+        directory = os.path.join(self._project_dir("research"), "briefs")
+        return os.path.join(directory, f"{brief_id}.md")
 
     def _handoff_path(self, handoff_id: str) -> str:
         """Return the relative artifact path for a handoff record."""

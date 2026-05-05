@@ -22,6 +22,9 @@ from airunner.components.agents.runtime.agent_run_status import (
 from airunner.components.agents.runtime.research_evidence_record import (
     ResearchEvidenceRecord,
 )
+from airunner.components.agents.runtime.research_brief_record import (
+    ResearchBriefRecord,
+)
 from airunner.components.agents.runtime.research_review_status import (
     ResearchReviewStatus,
 )
@@ -71,6 +74,7 @@ __all__ = [
     "AgentRole",
     "AgentRunRecord",
     "AgentRunStatus",
+    "ResearchBriefRecord",
     "ResearchEvidenceRecord",
     "ResearchReviewStatus",
     "ResearchRunRecord",

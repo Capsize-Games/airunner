@@ -3,6 +3,7 @@
 from airunner.components.document_editor.project import AirunnerProjectService
 from airunner.components.document_editor.project import AirunnerProjectStateService
 from airunner.components.llm.tools.research_tools import (
+    generate_research_brief_package,
     record_research_evidence,
     record_research_source,
     search_research_evidence,
@@ -96,3 +97,57 @@ def test_search_research_evidence_returns_attributed_matches(tmp_path):
     assert results["matches"][0]["sources"][0]["title"] == (
         "Grid Resilience Report"
     )
+
+
+def test_generate_research_brief_package_exports_artifacts(tmp_path):
+    """Brief generation should export stable markdown and JSON artifacts."""
+    project_path = tmp_path / "research-project"
+    project_service = AirunnerProjectService(str(project_path))
+    project_service.initialize(project_name="Research Project")
+    state_service = AirunnerProjectStateService(project_service)
+
+    started = start_research_run(
+        topic="grid resilience",
+        query="energy grid resilience recent studies",
+        project_path=str(project_path),
+    )
+    source = record_research_source(
+        research_run_id=started["research_run_id"],
+        url="https://example.com/report",
+        title="Grid Resilience Report",
+        status="accepted",
+        excerpt="Reserve capacity increased by 12 percent.",
+        project_path=str(project_path),
+    )
+    record_research_evidence(
+        research_run_id=started["research_run_id"],
+        fact_text="Reserve capacity increased by 12 percent.",
+        source_ids=[source["source_id"]],
+        status="accepted",
+        evidence_kind="numeric_fact",
+        confidence="high",
+        numeric_value="12",
+        numeric_unit="percent",
+        project_path=str(project_path),
+    )
+    record_research_evidence(
+        research_run_id=started["research_run_id"],
+        fact_text="Will the increase continue beyond 2026?",
+        source_ids=[source["source_id"]],
+        status="unresolved",
+        evidence_kind="question",
+        project_path=str(project_path),
+    )
+
+    brief = generate_research_brief_package(
+        research_run_id=started["research_run_id"],
+        project_path=str(project_path),
+    )
+    restored = state_service.load_research_brief(brief["brief_id"])
+    markdown = project_service.read_file(restored.artifact_paths[1])
+
+    assert brief["supported_findings_count"] == 1
+    assert brief["open_questions_count"] == 1
+    assert restored.coverage_score == 0.5
+    assert restored.confidence_score == 1.0
+    assert markdown.startswith("# Research Brief: grid resilience")
