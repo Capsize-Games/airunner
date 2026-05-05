@@ -14,6 +14,8 @@ from airunner.components.agents.runtime import AgentToolCallRecord
 from airunner.components.agents.runtime import MeetingDeliverableRecord
 from airunner.components.agents.runtime import MeetingItemRecord
 from airunner.components.agents.runtime import MeetingItemStatus
+from airunner.components.agents.runtime import MeetingReviewRecord
+from airunner.components.agents.runtime import MeetingReviewStatus
 from airunner.components.agents.runtime import MeetingRunRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
 from airunner.components.agents.runtime import ResearchBriefRecord
@@ -267,6 +269,17 @@ def test_meeting_records_round_trip_structured_state():
         decision_log=["- Ship on Friday."],
         follow_up_points=["- Bob to confirm release checklist"],
         unresolved_items=["- Timeline risk remains tentative"],
+        source_item_ids=[item.record_id],
+    )
+    review = MeetingReviewRecord(
+        run_id=meeting_run.record_id,
+        deliverable_id=deliverable.record_id,
+        reviewer_notes="Correct the release owner before approval.",
+        review_status=MeetingReviewStatus.NEEDS_REVISION,
+        flagged_item_ids=[item.record_id],
+        correction_records=[
+            {"item_id": item.record_id, "changes": {"owner": "Bob"}}
+        ],
     )
 
     restored_run = MeetingRunRecord.from_dict(meeting_run.to_dict())
@@ -274,8 +287,12 @@ def test_meeting_records_round_trip_structured_state():
     restored_deliverable = MeetingDeliverableRecord.from_dict(
         deliverable.to_dict()
     )
+    restored_review = MeetingReviewRecord.from_dict(review.to_dict())
 
     assert restored_run.participants == ["Alice", "Bob"]
     assert restored_item.status is MeetingItemStatus.CONFIRMED
     assert restored_item.source_excerpt == "Alice: We ship Friday."
     assert restored_deliverable.decision_log == ["- Ship on Friday."]
+    assert restored_deliverable.source_item_ids == [item.record_id]
+    assert restored_review.review_status is MeetingReviewStatus.NEEDS_REVISION
+    assert restored_review.flagged_item_ids == [item.record_id]

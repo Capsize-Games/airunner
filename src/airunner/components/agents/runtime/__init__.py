@@ -9,6 +9,12 @@ from airunner.components.agents.runtime.meeting_deliverable_record import (
 from airunner.components.agents.runtime.meeting_item_record import (
     MeetingItemRecord,
 )
+from airunner.components.agents.runtime.meeting_review_record import (
+    MeetingReviewRecord,
+)
+from airunner.components.agents.runtime.meeting_review_status import (
+    MeetingReviewStatus,
+)
 from airunner.components.agents.runtime.meeting_item_status import (
     MeetingItemStatus,
 )
@@ -84,6 +90,8 @@ __all__ = [
     "AgentHandoffRecord",
     "MeetingDeliverableRecord",
     "MeetingItemRecord",
+    "MeetingReviewRecord",
+    "MeetingReviewStatus",
     "MeetingItemStatus",
     "MeetingRunRecord",
     "AgentOrchestrationService",

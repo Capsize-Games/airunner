@@ -18,6 +18,12 @@ from airunner.components.agents.runtime.meeting_deliverable_record import (
 from airunner.components.agents.runtime.meeting_item_record import (
     MeetingItemRecord,
 )
+from airunner.components.agents.runtime.meeting_review_record import (
+    MeetingReviewRecord,
+)
+from airunner.components.agents.runtime.meeting_review_status import (
+    MeetingReviewStatus,
+)
 from airunner.components.agents.runtime.meeting_item_status import (
     MeetingItemStatus,
 )
@@ -439,6 +445,46 @@ class AirunnerProjectStateService:
             records.append(deliverable)
         return records
 
+    def save_meeting_review(self, review: MeetingReviewRecord) -> str:
+        """Persist one meeting review pass and attach it to the pack."""
+        self._write_json(
+            self._meeting_review_path(review.record_id),
+            review.to_dict(),
+        )
+        self._append_meeting_review(
+            review.deliverable_id,
+            review.record_id,
+            review.review_status,
+            review.approved_item_ids,
+        )
+        return review.record_id
+
+    def load_meeting_review(self, review_id: str) -> MeetingReviewRecord:
+        """Load one persisted meeting review record."""
+        return MeetingReviewRecord.from_dict(
+            self._read_json(self._meeting_review_path(review_id))
+        )
+
+    def list_meeting_reviews(
+        self,
+        deliverable_id: str | None = None,
+        status: MeetingReviewStatus | None = None,
+    ) -> list[MeetingReviewRecord]:
+        """Return meeting review passes, optionally filtered."""
+        records: list[MeetingReviewRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("meetings", "reviews")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            review = MeetingReviewRecord.from_dict(self._read_json(rel_path))
+            if deliverable_id and review.deliverable_id != deliverable_id:
+                continue
+            if status and review.review_status != status:
+                continue
+            records.append(review)
+        return records
+
     def write_meeting_artifact_markdown(
         self,
         artifact_name: str,
@@ -446,6 +492,21 @@ class AirunnerProjectStateService:
     ) -> str:
         """Write one exportable markdown artifact for a meeting pack."""
         rel_path = self._meeting_artifact_path(artifact_name)
+        self._workspace_manager.write_file(
+            rel_path,
+            self._markdown_content(content),
+            backup=True,
+            create_dirs=True,
+        )
+        return rel_path
+
+    def write_meeting_review_markdown(
+        self,
+        review_id: str,
+        content: str,
+    ) -> str:
+        """Write one markdown review artifact for a meeting pack."""
+        rel_path = self._meeting_review_markdown_path(review_id)
         self._workspace_manager.write_file(
             rel_path,
             self._markdown_content(content),
@@ -576,10 +637,20 @@ class AirunnerProjectStateService:
         directory = os.path.join(self._project_dir("meetings"), "packs")
         return os.path.join(directory, f"{deliverable_id}.json")
 
+    def _meeting_review_path(self, review_id: str) -> str:
+        """Return the relative ledger path for one meeting review."""
+        directory = os.path.join(self._project_dir("meetings"), "reviews")
+        return os.path.join(directory, f"{review_id}.json")
+
     def _meeting_artifact_path(self, artifact_name: str) -> str:
         """Return the relative markdown artifact path for meeting exports."""
         directory = os.path.join(self._project_dir("meetings"), "packs")
         return os.path.join(directory, artifact_name)
+
+    def _meeting_review_markdown_path(self, review_id: str) -> str:
+        """Return the relative markdown artifact path for a review pass."""
+        directory = os.path.join(self._project_dir("meetings"), "reviews")
+        return os.path.join(directory, f"{review_id}.md")
 
     def _handoff_path(self, handoff_id: str) -> str:
         """Return the relative artifact path for a handoff record."""
@@ -689,3 +760,19 @@ class AirunnerProjectStateService:
         meeting_run = self.load_meeting_run(run_id)
         meeting_run.add_deliverable(deliverable_id)
         self.save_meeting_run(meeting_run)
+
+    def _append_meeting_review(
+        self,
+        deliverable_id: str,
+        review_id: str,
+        review_status: MeetingReviewStatus,
+        approved_item_ids: list[str],
+    ) -> None:
+        """Attach one review pass to its meeting deliverable pack."""
+        deliverable = self.load_meeting_deliverable(deliverable_id)
+        deliverable.mark_review(
+            review_id,
+            review_status,
+            approved_item_ids,
+        )
+        self.save_meeting_deliverable(deliverable)

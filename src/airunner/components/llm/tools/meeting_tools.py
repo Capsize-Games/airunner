@@ -5,6 +5,8 @@ from typing import Any
 from airunner.components.agents.runtime import MeetingDeliverableRecord
 from airunner.components.agents.runtime import MeetingItemRecord
 from airunner.components.agents.runtime import MeetingItemStatus
+from airunner.components.agents.runtime import MeetingReviewRecord
+from airunner.components.agents.runtime import MeetingReviewStatus
 from airunner.components.agents.runtime import MeetingRunRecord
 from airunner.components.document_editor.project import AirunnerProjectService
 from airunner.components.document_editor.project import (
@@ -76,6 +78,135 @@ def _item_line(item: MeetingItemRecord) -> str:
     if item.status != MeetingItemStatus.CONFIRMED:
         bits.append(f"status: {item.status.value}")
     return "- " + " | ".join(bits)
+
+
+def _meeting_review_payload(review: MeetingReviewRecord) -> dict[str, Any]:
+    """Return a compact payload for one meeting review pass."""
+    return {
+        "review_id": review.record_id,
+        "deliverable_id": review.deliverable_id,
+        "meeting_run_id": review.run_id,
+        "review_status": review.review_status.value,
+        "flagged_item_ids": list(review.flagged_item_ids),
+        "approved_item_ids": list(review.approved_item_ids),
+        "correction_count": len(review.correction_records),
+        "artifact_paths": list(review.artifact_paths),
+    }
+
+
+def _low_confidence_or_conflicting(item: MeetingItemRecord) -> bool:
+    """Return whether a meeting item must be reviewed before approval."""
+    if item.confidence.lower() == "low":
+        return True
+    return item.status in {
+        MeetingItemStatus.TENTATIVE,
+        MeetingItemStatus.CONFLICTING,
+        MeetingItemStatus.UNRESOLVED,
+    }
+
+
+def _review_item_payload(item: MeetingItemRecord) -> dict[str, Any]:
+    """Return a review-focused payload with source traceability."""
+    payload = _meeting_item_payload(item)
+    payload["requires_review"] = _low_confidence_or_conflicting(item)
+    payload["note"] = item.metadata.get("note", "")
+    return payload
+
+
+def _review_markdown(
+    deliverable: MeetingDeliverableRecord,
+    flagged_items: list[MeetingItemRecord],
+    corrections: list[dict[str, Any]],
+    reviewer_notes: str,
+    review_status: MeetingReviewStatus,
+) -> str:
+    """Render one markdown review report with source traceability."""
+    lines = [
+        f"# Review: {deliverable.title}",
+        "",
+        f"Status: {review_status.value}",
+        "",
+        "## Flagged Items",
+        "",
+    ]
+    if not flagged_items:
+        lines.append("- No flagged items remain.")
+    for item in flagged_items:
+        lines.append(_item_line(item))
+        lines.append(f"  Source: {item.source_excerpt}")
+    lines.extend(["", "## Corrections", ""])
+    if not corrections:
+        lines.append("- No corrections applied.")
+    for correction in corrections:
+        lines.append(
+            "- "
+            f"{correction['item_id']}: {correction['changes']}"
+        )
+    lines.extend(["", "## Reviewer Notes", ""])
+    lines.append(reviewer_notes or "No reviewer notes provided.")
+    return "\n".join(lines)
+
+
+def _resolve_deliverable(
+    state_service: AirunnerProjectStateService,
+    meeting_run_id: str,
+    deliverable_id: str = "",
+) -> MeetingDeliverableRecord:
+    """Return the requested meeting pack or the latest one for the run."""
+    if deliverable_id:
+        return state_service.load_meeting_deliverable(deliverable_id)
+    deliverables = state_service.list_meeting_deliverables(run_id=meeting_run_id)
+    if not deliverables:
+        raise ValueError(
+            "Review requires an existing meeting deliverable pack."
+        )
+    deliverables.sort(key=lambda item: item.created_at)
+    return deliverables[-1]
+
+
+def _apply_meeting_item_corrections(
+    state_service: AirunnerProjectStateService,
+    corrections: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Apply correction payloads to persisted meeting items."""
+    applied: list[dict[str, Any]] = []
+    editable_fields = {
+        "item_kind",
+        "summary",
+        "source_excerpt",
+        "status",
+        "confidence",
+        "speaker",
+        "owner",
+        "due_date",
+    }
+    for correction in corrections:
+        item_id = correction.get("item_id", "")
+        if not item_id:
+            continue
+        item = state_service.load_meeting_item(item_id)
+        changes: dict[str, Any] = {}
+        for field_name in editable_fields:
+            if field_name not in correction:
+                continue
+            value = correction[field_name]
+            if field_name == "status":
+                value = MeetingItemStatus(value)
+            setattr(item, field_name, value)
+            changes[field_name] = (
+                value.value if isinstance(value, MeetingItemStatus) else value
+            )
+        note = correction.get("note", "")
+        if note:
+            history = list(item.metadata.get("corrections", []))
+            history.append(note)
+            item.metadata["corrections"] = history
+            changes["note"] = note
+        if not changes:
+            continue
+        state_service.save_meeting_item(item)
+        applied.append({"item_id": item_id, "changes": changes})
+    return applied
 
 
 def _deliverable_markdown(
@@ -285,6 +416,7 @@ def generate_meeting_deliverable_pack(
         decision_log=decisions,
         follow_up_points=follow_up_points,
         unresolved_items=unresolved_items,
+        source_item_ids=[item.record_id for item in items],
         metadata={
             "meeting_title": meeting_run.title,
             "confirmed_decisions": len(decisions),
@@ -311,5 +443,116 @@ def generate_meeting_deliverable_pack(
         "action_item_count": len(deliverable.action_items),
         "decision_count": len(deliverable.decision_log),
         "unresolved_count": len(deliverable.unresolved_items),
+        "review_status": deliverable.review_status.value,
         "artifact_paths": list(deliverable.artifact_paths),
+    }
+
+
+@tool(
+    name="get_meeting_review_queue",
+    category=ToolCategory.WORKFLOW,
+    description=(
+        "Show low-confidence or conflicting meeting items that still need "
+        "review before a deliverable pack can be accepted."
+    ),
+)
+def get_meeting_review_queue(
+    meeting_run_id: str,
+    deliverable_id: str = "",
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Return flagged meeting items and current deliverable review state."""
+    state_service = _meeting_state_service(project_path)
+    deliverable = _resolve_deliverable(
+        state_service,
+        meeting_run_id,
+        deliverable_id,
+    )
+    item_ids = deliverable.source_item_ids or []
+    items = [state_service.load_meeting_item(item_id) for item_id in item_ids]
+    flagged = [item for item in items if _low_confidence_or_conflicting(item)]
+    return {
+        "meeting_run_id": meeting_run_id,
+        "deliverable_id": deliverable.record_id,
+        "review_status": deliverable.review_status.value,
+        "flagged_count": len(flagged),
+        "flagged_items": [_review_item_payload(item) for item in flagged],
+        "approved_item_ids": list(deliverable.approved_item_ids),
+    }
+
+
+@tool(
+    name="review_meeting_deliverable_pack",
+    category=ToolCategory.WORKFLOW,
+    description=(
+        "Apply reviewer corrections to a meeting pack and persist approval "
+        "state with source traceability."
+    ),
+)
+def review_meeting_deliverable_pack(
+    meeting_run_id: str,
+    deliverable_id: str = "",
+    reviewer_notes: str = "",
+    approve: bool = False,
+    corrections: list[dict[str, Any]] | None = None,
+    project_path: str = "",
+) -> dict[str, Any]:
+    """Persist one review pass for a meeting deliverable pack."""
+    state_service = _meeting_state_service(project_path)
+    deliverable = _resolve_deliverable(
+        state_service,
+        meeting_run_id,
+        deliverable_id,
+    )
+    applied_corrections = _apply_meeting_item_corrections(
+        state_service,
+        list(corrections or []),
+    )
+    items = [
+        state_service.load_meeting_item(item_id)
+        for item_id in deliverable.source_item_ids
+    ]
+    flagged_items = [item for item in items if _low_confidence_or_conflicting(item)]
+    approved_item_ids = [
+        item.record_id for item in items if item.record_id not in {
+            flagged.record_id for flagged in flagged_items
+        }
+    ]
+    if flagged_items:
+        review_status = MeetingReviewStatus.NEEDS_REVISION
+    elif approve:
+        review_status = MeetingReviewStatus.APPROVED
+    else:
+        review_status = MeetingReviewStatus.PENDING
+    review = MeetingReviewRecord(
+        run_id=meeting_run_id,
+        deliverable_id=deliverable.record_id,
+        reviewer_notes=reviewer_notes,
+        review_status=review_status,
+        flagged_item_ids=[item.record_id for item in flagged_items],
+        approved_item_ids=approved_item_ids,
+        correction_records=applied_corrections,
+        metadata={
+            "deliverable_title": deliverable.title,
+            "requested_approval": approve,
+        },
+    )
+    review_markdown = _review_markdown(
+        deliverable,
+        flagged_items,
+        applied_corrections,
+        reviewer_notes,
+        review_status,
+    )
+    review.artifact_paths = [
+        state_service._meeting_review_path(review.record_id),
+        state_service.write_meeting_review_markdown(
+            review.record_id,
+            review_markdown,
+        ),
+    ]
+    state_service.save_meeting_review(review)
+    return {
+        **_meeting_review_payload(review),
+        "flagged_items": [_review_item_payload(item) for item in flagged_items],
     }

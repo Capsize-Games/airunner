@@ -14,6 +14,8 @@ from airunner.components.agents.runtime import AgentToolCallRecord
 from airunner.components.agents.runtime import MeetingDeliverableRecord
 from airunner.components.agents.runtime import MeetingItemRecord
 from airunner.components.agents.runtime import MeetingItemStatus
+from airunner.components.agents.runtime import MeetingReviewRecord
+from airunner.components.agents.runtime import MeetingReviewStatus
 from airunner.components.agents.runtime import MeetingRunRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
 from airunner.components.agents.runtime import ResearchBriefRecord
@@ -313,12 +315,30 @@ def test_project_state_service_persists_meeting_ledgers(tmp_path):
         decision_log=["- Ship on Friday."],
         follow_up_points=["- Bob confirms release checklist."],
         unresolved_items=["- Bob confirms release checklist."],
+        source_item_ids=[decision.record_id, action_item.record_id],
         artifact_paths=[
             f".airunner/meetings/packs/{meeting_run.record_id}.json",
             markdown_path,
         ],
     )
     state_service.save_meeting_deliverable(deliverable)
+    review_markdown = state_service.write_meeting_review_markdown(
+        "review-1",
+        "# Review\n",
+    )
+    review = MeetingReviewRecord(
+        run_id=meeting_run.record_id,
+        deliverable_id=deliverable.record_id,
+        reviewer_notes="Resolve the tentative action item.",
+        review_status=MeetingReviewStatus.NEEDS_REVISION,
+        flagged_item_ids=[action_item.record_id],
+        approved_item_ids=[decision.record_id],
+        artifact_paths=[
+            ".airunner/meetings/reviews/review-1.json",
+            review_markdown,
+        ],
+    )
+    state_service.save_meeting_review(review)
 
     restored_run = state_service.load_meeting_run(meeting_run.record_id)
     tentative_items = state_service.list_meeting_items(
@@ -328,9 +348,18 @@ def test_project_state_service_persists_meeting_ledgers(tmp_path):
     restored_pack = state_service.load_meeting_deliverable(
         deliverable.record_id
     )
+    restored_review = state_service.load_meeting_review(review.record_id)
+    listed_reviews = state_service.list_meeting_reviews(
+        deliverable_id=deliverable.record_id,
+        status=MeetingReviewStatus.NEEDS_REVISION,
+    )
 
     assert restored_run.item_ids == [decision.record_id, action_item.record_id]
     assert [item.record_id for item in tentative_items] == [
         action_item.record_id,
     ]
     assert restored_pack.artifact_paths[1].endswith("meeting-pack.md")
+    assert restored_pack.review_status is MeetingReviewStatus.NEEDS_REVISION
+    assert restored_pack.review_ids == [review.record_id]
+    assert restored_review.artifact_paths[1].endswith("review-1.md")
+    assert [item.record_id for item in listed_reviews] == [review.record_id]
