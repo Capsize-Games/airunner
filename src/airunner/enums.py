@@ -55,6 +55,7 @@ class SignalCode(Enum):
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
     OPEN_RESEARCH_DOCUMENT = "open_research_document_signal"
+    OPEN_MEETING_DOCUMENT = "open_meeting_document_signal"
     UNLOCK_RESEARCH_DOCUMENT = "unlock_research_document_signal"
     UPDATE_DOCUMENT_CONTENT = "update_document_content_signal"
     STREAM_TO_DOCUMENT = "stream_to_document_signal"

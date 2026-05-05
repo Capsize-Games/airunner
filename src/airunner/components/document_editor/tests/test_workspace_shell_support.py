@@ -5,6 +5,7 @@ from airunner.components.document_editor.workspace_shell_support import (
     bottom_panel_definitions,
     generated_write_review_summary,
     generated_write_review_text,
+    meeting_workflow_summary,
     python_diagnostics_summary,
     python_workflow_summary,
     side_panel_definitions,
@@ -98,3 +99,22 @@ def test_python_diagnostics_summary_renders_counts():
     assert "Python diagnostics:" in summary
     assert "- files checked: 2" in summary
     assert "- quality report: 2 issue(s)" in summary
+
+
+def test_meeting_workflow_summary_lists_commands_and_status():
+    """Meeting workflow summaries should surface chat and review state."""
+    summary = meeting_workflow_summary(
+        {
+            "commands": ["meeting-pack", "meeting-review"],
+            "meeting_run_count": 2,
+            "deliverable_count": 1,
+            "review_required_count": 1,
+            "latest_deliverable_title": "Meeting Pack: Weekly sync",
+            "latest_review_status": "needs_revision",
+        }
+    )
+
+    assert "Meeting workflow:" in summary
+    assert "/meeting-pack" in summary
+    assert "- packs needing review: 1" in summary
+    assert "Meeting Pack: Weekly sync (needs_revision)" in summary

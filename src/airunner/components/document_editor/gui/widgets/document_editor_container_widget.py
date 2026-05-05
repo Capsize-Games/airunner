@@ -12,7 +12,9 @@ from airunner.components.document_editor.gui.templates.document_editor_container
     Ui_document_editor_container,
 )
 from airunner.components.document_editor.project import (
+    AirunnerProjectPromptService,
     AirunnerProjectService,
+    AirunnerProjectStateService,
     AirunnerPythonWorkflowService,
 )
 from airunner.components.document_editor.project.airunner_active_project import (
@@ -22,6 +24,7 @@ from airunner.components.document_editor.workspace_shell_support import (
     active_document_summary,
     agent_activity_entry,
     bottom_panel_definitions,
+    meeting_workflow_summary,
     python_workflow_summary,
     problem_entry,
     side_panel_definitions,
@@ -67,6 +70,7 @@ class DocumentEditorContainerWidget(BaseWidget):
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
             SignalCode.RUN_SCRIPT: self.run_script,
             SignalCode.NEW_DOCUMENT: self.handle_new_document_signal,
+            SignalCode.OPEN_MEETING_DOCUMENT: self.handle_open_meeting_document,
             SignalCode.OPEN_RESEARCH_DOCUMENT: self.handle_open_research_document,
             SignalCode.UNLOCK_RESEARCH_DOCUMENT: self.handle_unlock_research_document,
             SignalCode.UPDATE_DOCUMENT_CONTENT: self.handle_update_document_content,
@@ -575,8 +579,63 @@ class DocumentEditorContainerWidget(BaseWidget):
             project_service = AirunnerProjectService(root_paths[0])
         if not project_service.exists():
             return
-        summary = AirunnerPythonWorkflowService(project_service).summary()
-        self.set_problems_text(python_workflow_summary(summary))
+        python_text = python_workflow_summary(
+            AirunnerPythonWorkflowService(project_service).summary()
+        )
+        meeting_text = self._meeting_workflow_text(project_service)
+        self.set_problems_text(
+            "\n\n".join(text for text in (python_text, meeting_text) if text)
+        )
+
+    def _meeting_workflow_text(
+        self,
+        project_service: AirunnerProjectService,
+    ) -> str:
+        """Return a document-editor summary of meeting workflow state."""
+        state_service = AirunnerProjectStateService(project_service)
+        prompt_service = AirunnerProjectPromptService(project_service)
+        deliverables = state_service.list_meeting_deliverables()
+        latest = self._latest_meeting_deliverable(deliverables)
+        return meeting_workflow_summary(
+            {
+                "commands": self._meeting_template_commands(prompt_service),
+                "meeting_run_count": len(state_service.list_meeting_runs()),
+                "deliverable_count": len(deliverables),
+                "review_required_count": self._review_required_count(
+                    deliverables
+                ),
+                "latest_deliverable_title": getattr(latest, "title", ""),
+                "latest_review_status": (
+                    latest.review_status.value if latest else ""
+                ),
+            }
+        )
+
+    def _meeting_template_commands(
+        self,
+        prompt_service: AirunnerProjectPromptService,
+    ) -> list[str]:
+        """Return the project slash commands reserved for meeting workflows."""
+        templates = prompt_service.prompt_templates()
+        return [
+            template.command_name
+            for template in templates
+            if template.command_name.startswith("meeting")
+        ]
+
+    def _latest_meeting_deliverable(self, deliverables):
+        """Return the latest meeting deliverable pack, if any."""
+        if not deliverables:
+            return None
+        return max(deliverables, key=lambda item: item.created_at)
+
+    def _review_required_count(self, deliverables) -> int:
+        """Return the number of meeting packs that still need review."""
+        return sum(
+            1
+            for deliverable in deliverables
+            if deliverable.review_status.value != "approved"
+        )
 
     def run_script(self, data: Dict) -> None:
         payload = self._script_run_payload(data)
@@ -682,14 +741,15 @@ class DocumentEditorContainerWidget(BaseWidget):
         return session_id
 
     def handle_open_research_document(self, data: Dict) -> None:
-        """Open a research document in a locked (read-only) tab.
+        """Open a research document in a locked (read-only) tab."""
+        self._open_locked_document(data)
 
-        Args:
-            data: Dict containing:
-                - path: str - File path to open
-                - title: str - Optional tab title (defaults to filename)
-                - locked: bool - Whether to lock the document (defaults to True)
-        """
+    def handle_open_meeting_document(self, data: Dict) -> None:
+        """Open one meeting workflow artifact in a locked tab."""
+        self._open_locked_document(data)
+
+    def _open_locked_document(self, data: Dict) -> None:
+        """Open one locked workspace artifact in the document editor."""
         file_path = data.get("path")
         if not file_path:
             return

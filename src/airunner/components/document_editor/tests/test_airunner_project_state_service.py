@@ -341,6 +341,7 @@ def test_project_state_service_persists_meeting_ledgers(tmp_path):
     state_service.save_meeting_review(review)
 
     restored_run = state_service.load_meeting_run(meeting_run.record_id)
+    listed_runs = state_service.list_meeting_runs()
     tentative_items = state_service.list_meeting_items(
         run_id=meeting_run.record_id,
         status=MeetingItemStatus.TENTATIVE,
@@ -355,6 +356,7 @@ def test_project_state_service_persists_meeting_ledgers(tmp_path):
     )
 
     assert restored_run.item_ids == [decision.record_id, action_item.record_id]
+    assert [item.record_id for item in listed_runs] == [meeting_run.record_id]
     assert [item.record_id for item in tentative_items] == [
         action_item.record_id,
     ]

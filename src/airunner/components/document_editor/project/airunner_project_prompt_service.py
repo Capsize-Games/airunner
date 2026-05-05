@@ -47,6 +47,14 @@ class AirunnerProjectPromptService:
             os.path.join(PROMPT_TEMPLATES_DIR, "review.prompt.md"),
             self._review_template(),
         )
+        self._ensure_file(
+            os.path.join(PROMPT_TEMPLATES_DIR, "meeting-pack.prompt.md"),
+            self._meeting_pack_template(),
+        )
+        self._ensure_file(
+            os.path.join(PROMPT_TEMPLATES_DIR, "meeting-review.prompt.md"),
+            self._meeting_review_template(),
+        )
 
     def instructions_text(self) -> str:
         """Return the project instruction markdown body."""
@@ -141,6 +149,13 @@ class AirunnerProjectPromptService:
             "- Preserve existing conventions unless the task requires a "
             "change.\n"
             "- Validate modified behavior before declaring the task done.\n"
+            "\n## Meeting Workflows\n"
+            "- Use /meeting-pack to turn meeting notes or transcripts into "
+            "deliverable packs.\n"
+            "- Use /meeting-review to inspect flagged items, apply "
+            "corrections, and approve packs.\n"
+            "- Keep meeting artifacts under .airunner/meetings and open "
+            "generated markdown in the document editor for review.\n"
             f"{python_block}"
         )
 
@@ -163,6 +178,32 @@ class AirunnerProjectPromptService:
             "---\n"
             "Review the relevant files with a code-review mindset. Prioritize "
             "concrete bugs, regressions, risky assumptions, and missing tests.\n"
+        )
+
+    def _meeting_pack_template(self) -> str:
+        """Return the default meeting-pack workflow template."""
+        return (
+            "---\n"
+            "description: Turn meeting input into a deliverable pack\n"
+            "---\n"
+            "Treat this as a meeting-to-deliverables workflow in the active "
+            "AIRunner project. Start or update a meeting run, record the "
+            "structured decisions, tasks, risks, deadlines, and open "
+            "questions, generate the meeting pack, open the pack in the "
+            "document editor, and call out unresolved items that still need "
+            "review.\n"
+        )
+
+    def _meeting_review_template(self) -> str:
+        """Return the default meeting-review workflow template."""
+        return (
+            "---\n"
+            "description: Review and approve the latest meeting pack\n"
+            "---\n"
+            "Inspect the latest meeting deliverable pack, surface the flagged "
+            "or low-confidence items, apply any user corrections, persist the "
+            "review result, open the review artifact in the document editor, "
+            "and report whether the pack is approved or still needs revision.\n"
         )
 
 

@@ -117,8 +117,11 @@ def test_project_service_bootstraps_prompt_files(tmp_path):
     templates = prompts.prompt_templates()
 
     assert "Python" in prompts.instructions_text()
+    assert "Meeting Workflows" in prompts.instructions_text()
     assert {template.command_name for template in templates} == {
         "implement",
+        "meeting-pack",
+        "meeting-review",
         "review",
     }
 

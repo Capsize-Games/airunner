@@ -296,6 +296,8 @@ class ToolRegistry:
                 "airunner.components.llm.tools.generation_tools",
                 "airunner.components.llm.tools.author_tools",
                 "airunner.components.llm.tools.code_tools",
+                "airunner.components.llm.tools.meeting_tools",
+                "airunner.components.llm.tools.meeting_document_tools",
                 "airunner.components.llm.tools.research_tools",
                 "airunner.components.llm.tools.research_document_tools",
                 "airunner.components.llm.tools.research_validation_tools",

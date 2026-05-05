@@ -362,6 +362,17 @@ class AirunnerProjectStateService:
             self._read_json(self._meeting_run_path(run_id))
         )
 
+    def list_meeting_runs(self) -> list[MeetingRunRecord]:
+        """Return all persisted meeting ingestion runs."""
+        records: list[MeetingRunRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("meetings", "runs")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            records.append(MeetingRunRecord.from_dict(self._read_json(rel_path)))
+        return records
+
     def save_meeting_item(self, item: MeetingItemRecord) -> str:
         """Persist one extracted meeting item and attach it to its run."""
         self._write_json(
