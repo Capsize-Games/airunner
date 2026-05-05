@@ -11,6 +11,10 @@ from airunner.components.agents.runtime import AgentSessionRecord
 from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.agents.runtime import AgentToolCallRecord
+from airunner.components.agents.runtime import MeetingDeliverableRecord
+from airunner.components.agents.runtime import MeetingItemRecord
+from airunner.components.agents.runtime import MeetingItemStatus
+from airunner.components.agents.runtime import MeetingRunRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
 from airunner.components.agents.runtime import ResearchBriefRecord
 from airunner.components.agents.runtime import ResearchReviewStatus
@@ -263,3 +267,70 @@ def test_project_state_service_persists_research_brief_artifacts(tmp_path):
     assert restored.title == "Research Brief: Grid Resilience"
     assert restored.artifact_paths[1].endswith(".md")
     assert [item.record_id for item in listed] == [brief.record_id]
+
+
+def test_project_state_service_persists_meeting_ledgers(tmp_path):
+    """Meeting runs, items, and deliverables should persist separately."""
+    project_service = AirunnerProjectService(str(tmp_path / "demo-project"))
+    project_service.initialize(project_name="Demo Project")
+    state_service = AirunnerProjectStateService(project_service)
+
+    meeting_run = MeetingRunRecord(
+        title="Weekly sync",
+        raw_input="Alice: We ship Friday.",
+        normalized_input="Alice: We ship Friday.",
+        participants=["Alice", "Bob"],
+    )
+    state_service.save_meeting_run(meeting_run)
+    decision = MeetingItemRecord(
+        run_id=meeting_run.record_id,
+        item_kind="decision",
+        summary="Ship on Friday.",
+        source_excerpt="Alice: We ship Friday.",
+        status=MeetingItemStatus.CONFIRMED,
+        speaker="Alice",
+    )
+    action_item = MeetingItemRecord(
+        run_id=meeting_run.record_id,
+        item_kind="action_item",
+        summary="Bob confirms release checklist.",
+        source_excerpt="Bob: I will confirm the release checklist.",
+        status=MeetingItemStatus.TENTATIVE,
+        owner="Bob",
+        due_date="2026-05-06",
+    )
+    state_service.save_meeting_item(decision)
+    state_service.save_meeting_item(action_item)
+
+    markdown_path = state_service.write_meeting_artifact_markdown(
+        "meeting-pack.md",
+        "# Meeting Pack\n",
+    )
+    deliverable = MeetingDeliverableRecord(
+        run_id=meeting_run.record_id,
+        title="Meeting Pack: Weekly sync",
+        action_items=["- Bob confirms release checklist."],
+        decision_log=["- Ship on Friday."],
+        follow_up_points=["- Bob confirms release checklist."],
+        unresolved_items=["- Bob confirms release checklist."],
+        artifact_paths=[
+            f".airunner/meetings/packs/{meeting_run.record_id}.json",
+            markdown_path,
+        ],
+    )
+    state_service.save_meeting_deliverable(deliverable)
+
+    restored_run = state_service.load_meeting_run(meeting_run.record_id)
+    tentative_items = state_service.list_meeting_items(
+        run_id=meeting_run.record_id,
+        status=MeetingItemStatus.TENTATIVE,
+    )
+    restored_pack = state_service.load_meeting_deliverable(
+        deliverable.record_id
+    )
+
+    assert restored_run.item_ids == [decision.record_id, action_item.record_id]
+    assert [item.record_id for item in tentative_items] == [
+        action_item.record_id,
+    ]
+    assert restored_pack.artifact_paths[1].endswith("meeting-pack.md")

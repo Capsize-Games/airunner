@@ -19,6 +19,7 @@ PROJECT_DIRECTORIES = (
     "audit",
     "indexes",
     "memory",
+    "meetings",
     "plans",
     "prompt_templates",
     "research",

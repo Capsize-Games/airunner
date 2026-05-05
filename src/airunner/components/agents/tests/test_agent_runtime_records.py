@@ -11,6 +11,10 @@ from airunner.components.agents.runtime import AgentSessionRecord
 from airunner.components.agents.runtime import AgentTaskRecord
 from airunner.components.agents.runtime import AgentTaskStatus
 from airunner.components.agents.runtime import AgentToolCallRecord
+from airunner.components.agents.runtime import MeetingDeliverableRecord
+from airunner.components.agents.runtime import MeetingItemRecord
+from airunner.components.agents.runtime import MeetingItemStatus
+from airunner.components.agents.runtime import MeetingRunRecord
 from airunner.components.agents.runtime import ResearchEvidenceRecord
 from airunner.components.agents.runtime import ResearchBriefRecord
 from airunner.components.agents.runtime import ResearchReviewStatus
@@ -238,3 +242,40 @@ def test_research_brief_record_round_trips_export_bundle():
     assert restored.title == "Research Brief: Grid Resilience"
     assert restored.coverage_score == 0.75
     assert restored.artifact_paths[1].endswith("brief-1.md")
+
+
+def test_meeting_records_round_trip_structured_state():
+    """Meeting records should preserve normalized inputs and outputs."""
+    meeting_run = MeetingRunRecord(
+        title="Weekly sync",
+        raw_input="Alice: We ship Friday.",
+        normalized_input="Alice: We ship Friday.",
+        participants=["Alice", "Bob"],
+    )
+    item = MeetingItemRecord(
+        run_id=meeting_run.record_id,
+        item_kind="decision",
+        summary="Ship on Friday.",
+        source_excerpt="Alice: We ship Friday.",
+        status=MeetingItemStatus.CONFIRMED,
+        speaker="Alice",
+    )
+    deliverable = MeetingDeliverableRecord(
+        run_id=meeting_run.record_id,
+        title="Meeting Pack: Weekly sync",
+        action_items=["- Bob to confirm release checklist"],
+        decision_log=["- Ship on Friday."],
+        follow_up_points=["- Bob to confirm release checklist"],
+        unresolved_items=["- Timeline risk remains tentative"],
+    )
+
+    restored_run = MeetingRunRecord.from_dict(meeting_run.to_dict())
+    restored_item = MeetingItemRecord.from_dict(item.to_dict())
+    restored_deliverable = MeetingDeliverableRecord.from_dict(
+        deliverable.to_dict()
+    )
+
+    assert restored_run.participants == ["Alice", "Bob"]
+    assert restored_item.status is MeetingItemStatus.CONFIRMED
+    assert restored_item.source_excerpt == "Alice: We ship Friday."
+    assert restored_deliverable.decision_log == ["- Ship on Friday."]

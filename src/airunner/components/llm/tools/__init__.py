@@ -64,6 +64,7 @@ from airunner.components.llm.tools import (
     # Phase 2: Mode-specific tools
     author_tools,
     code_tools,
+    meeting_tools,
     research_tools,
     research_document_tools,  # CRITICAL: Document creation tools for Deep Research
     research_validation_tools,  # URL, content, and temporal validation for research
@@ -128,6 +129,7 @@ __all__ = [
     # Phase 2: Mode-specific tools
     "author_tools",
     "code_tools",
+    "meeting_tools",
     "research_tools",
     "research_validation_tools",
     "qa_tools",

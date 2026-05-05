@@ -12,6 +12,18 @@ from airunner.components.agents.runtime.agent_handoff_record import (
 from airunner.components.agents.runtime.agent_generated_write_record import (
     AgentGeneratedWriteRecord,
 )
+from airunner.components.agents.runtime.meeting_deliverable_record import (
+    MeetingDeliverableRecord,
+)
+from airunner.components.agents.runtime.meeting_item_record import (
+    MeetingItemRecord,
+)
+from airunner.components.agents.runtime.meeting_item_status import (
+    MeetingItemStatus,
+)
+from airunner.components.agents.runtime.meeting_run_record import (
+    MeetingRunRecord,
+)
 from airunner.components.agents.runtime.agent_run_record import AgentRunRecord
 from airunner.components.agents.runtime.agent_run_status import (
     AgentRunStatus,
@@ -331,6 +343,117 @@ class AirunnerProjectStateService:
         )
         return rel_path
 
+    def save_meeting_run(self, meeting_run: MeetingRunRecord) -> str:
+        """Persist one meeting ingestion ledger file."""
+        return self._write_json(
+            self._meeting_run_path(meeting_run.record_id),
+            meeting_run.to_dict(),
+        )
+
+    def load_meeting_run(self, run_id: str) -> MeetingRunRecord:
+        """Load one meeting ingestion ledger file."""
+        return MeetingRunRecord.from_dict(
+            self._read_json(self._meeting_run_path(run_id))
+        )
+
+    def save_meeting_item(self, item: MeetingItemRecord) -> str:
+        """Persist one extracted meeting item and attach it to its run."""
+        self._write_json(
+            self._meeting_item_path(item.record_id),
+            item.to_dict(),
+        )
+        if item.run_id:
+            self._append_meeting_item(item.run_id, item.record_id)
+        return item.record_id
+
+    def load_meeting_item(self, item_id: str) -> MeetingItemRecord:
+        """Load one extracted meeting item ledger file."""
+        return MeetingItemRecord.from_dict(
+            self._read_json(self._meeting_item_path(item_id))
+        )
+
+    def list_meeting_items(
+        self,
+        run_id: str | None = None,
+        item_kind: str | None = None,
+        status: MeetingItemStatus | None = None,
+    ) -> list[MeetingItemRecord]:
+        """Return extracted meeting items with optional filters."""
+        records: list[MeetingItemRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("meetings", "items")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            item = MeetingItemRecord.from_dict(self._read_json(rel_path))
+            if run_id and item.run_id != run_id:
+                continue
+            if item_kind and item.item_kind != item_kind:
+                continue
+            if status and item.status != status:
+                continue
+            records.append(item)
+        return records
+
+    def save_meeting_deliverable(
+        self,
+        deliverable: MeetingDeliverableRecord,
+    ) -> str:
+        """Persist one meeting deliverable pack and attach it to its run."""
+        self._write_json(
+            self._meeting_deliverable_path(deliverable.record_id),
+            deliverable.to_dict(),
+        )
+        if deliverable.run_id:
+            self._append_meeting_deliverable(
+                deliverable.run_id,
+                deliverable.record_id,
+            )
+        return deliverable.record_id
+
+    def load_meeting_deliverable(
+        self,
+        deliverable_id: str,
+    ) -> MeetingDeliverableRecord:
+        """Load one meeting deliverable pack ledger file."""
+        return MeetingDeliverableRecord.from_dict(
+            self._read_json(self._meeting_deliverable_path(deliverable_id))
+        )
+
+    def list_meeting_deliverables(
+        self,
+        run_id: str | None = None,
+    ) -> list[MeetingDeliverableRecord]:
+        """Return meeting deliverable packs, optionally by run."""
+        records: list[MeetingDeliverableRecord] = []
+        for rel_path in self._workspace_manager.list_files(
+            self._project_dir(os.path.join("meetings", "packs")),
+            pattern="*.json",
+            recursive=False,
+        ):
+            deliverable = MeetingDeliverableRecord.from_dict(
+                self._read_json(rel_path)
+            )
+            if run_id and deliverable.run_id != run_id:
+                continue
+            records.append(deliverable)
+        return records
+
+    def write_meeting_artifact_markdown(
+        self,
+        artifact_name: str,
+        content: str,
+    ) -> str:
+        """Write one exportable markdown artifact for a meeting pack."""
+        rel_path = self._meeting_artifact_path(artifact_name)
+        self._workspace_manager.write_file(
+            rel_path,
+            self._markdown_content(content),
+            backup=True,
+            create_dirs=True,
+        )
+        return rel_path
+
     def append_message(
         self,
         run_id: str,
@@ -438,6 +561,26 @@ class AirunnerProjectStateService:
         directory = os.path.join(self._project_dir("research"), "briefs")
         return os.path.join(directory, f"{brief_id}.md")
 
+    def _meeting_run_path(self, run_id: str) -> str:
+        """Return the relative ledger path for a meeting run."""
+        directory = os.path.join(self._project_dir("meetings"), "runs")
+        return os.path.join(directory, f"{run_id}.json")
+
+    def _meeting_item_path(self, item_id: str) -> str:
+        """Return the relative ledger path for a meeting item."""
+        directory = os.path.join(self._project_dir("meetings"), "items")
+        return os.path.join(directory, f"{item_id}.json")
+
+    def _meeting_deliverable_path(self, deliverable_id: str) -> str:
+        """Return the relative ledger path for a meeting pack."""
+        directory = os.path.join(self._project_dir("meetings"), "packs")
+        return os.path.join(directory, f"{deliverable_id}.json")
+
+    def _meeting_artifact_path(self, artifact_name: str) -> str:
+        """Return the relative markdown artifact path for meeting exports."""
+        directory = os.path.join(self._project_dir("meetings"), "packs")
+        return os.path.join(directory, artifact_name)
+
     def _handoff_path(self, handoff_id: str) -> str:
         """Return the relative artifact path for a handoff record."""
         directory = os.path.join(self._project_dir("agents"), "handoffs")
@@ -530,3 +673,19 @@ class AirunnerProjectStateService:
         research_run = self.load_research_run(run_id)
         research_run.add_evidence(evidence_id)
         self.save_research_run(research_run)
+
+    def _append_meeting_item(self, run_id: str, item_id: str) -> None:
+        """Attach one meeting item identifier to its run."""
+        meeting_run = self.load_meeting_run(run_id)
+        meeting_run.add_item(item_id)
+        self.save_meeting_run(meeting_run)
+
+    def _append_meeting_deliverable(
+        self,
+        run_id: str,
+        deliverable_id: str,
+    ) -> None:
+        """Attach one deliverable identifier to its meeting run."""
+        meeting_run = self.load_meeting_run(run_id)
+        meeting_run.add_deliverable(deliverable_id)
+        self.save_meeting_run(meeting_run)

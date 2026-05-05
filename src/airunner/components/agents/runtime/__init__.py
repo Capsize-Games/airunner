@@ -3,6 +3,18 @@
 from airunner.components.agents.runtime.agent_message_channel import (
     AgentMessageChannel,
 )
+from airunner.components.agents.runtime.meeting_deliverable_record import (
+    MeetingDeliverableRecord,
+)
+from airunner.components.agents.runtime.meeting_item_record import (
+    MeetingItemRecord,
+)
+from airunner.components.agents.runtime.meeting_item_status import (
+    MeetingItemStatus,
+)
+from airunner.components.agents.runtime.meeting_run_record import (
+    MeetingRunRecord,
+)
 from airunner.components.agents.runtime.agent_message_record import (
     AgentMessageRecord,
 )
@@ -70,6 +82,10 @@ __all__ = [
     "AgentBackgroundRunManager",
     "AgentGeneratedWriteRecord",
     "AgentHandoffRecord",
+    "MeetingDeliverableRecord",
+    "MeetingItemRecord",
+    "MeetingItemStatus",
+    "MeetingRunRecord",
     "AgentOrchestrationService",
     "AgentRole",
     "AgentRunRecord",
