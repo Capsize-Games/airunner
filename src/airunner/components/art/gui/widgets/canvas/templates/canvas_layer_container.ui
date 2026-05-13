@@ -84,7 +84,7 @@
        </property>
        <property name="icon">
         <iconset resource="../../../../../../gui/resources/feather.qrc">
-         <normaloff>:/dark/icons/feather/dark/plus.svg</normaloff>:/dark/icons/feather/dark/plus.svg</iconset>
+         <normaloff>:/light/icons/lucide/light/layers-plus.svg</normaloff>:/light/icons/lucide/light/layers-plus.svg</iconset>
        </property>
       </widget>
      </item>
@@ -138,14 +138,14 @@
      <item>
       <widget class="QPushButton" name="merge_visible_layers">
        <property name="toolTip">
-        <string>Merge visible</string>
+        <string>Merge visible layers</string>
        </property>
        <property name="text">
         <string/>
        </property>
        <property name="icon">
         <iconset resource="../../../../../../gui/resources/feather.qrc">
-         <normaloff>:/dark/icons/feather/dark/arrow-down.svg</normaloff>:/dark/icons/feather/dark/arrow-down.svg</iconset>
+         <normaloff>:/light/icons/lucide/light/layers-2.svg</normaloff>:/light/icons/lucide/light/layers-2.svg</iconset>
        </property>
       </widget>
      </item>
@@ -162,7 +162,7 @@
        </property>
        <property name="icon">
         <iconset resource="../../../../../../gui/resources/feather.qrc">
-         <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
+         <normaloff>:/light/icons/lucide/light/square-x.svg</normaloff>:/light/icons/lucide/light/square-x.svg</iconset>
        </property>
       </widget>
      </item>

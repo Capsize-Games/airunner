@@ -4,8 +4,8 @@ from typing import Optional, Union
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import Slot, Qt
-from PySide6.QtWidgets import QFileDialog, QGraphicsScene
-from PySide6.QtGui import QPixmap, QImage, QPen, QPainter
+from PySide6.QtWidgets import QFileDialog
+from PySide6.QtGui import QPainter
 
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
@@ -27,11 +27,9 @@ from airunner.components.art.gui.widgets.canvas.simple_image_scene import (
 class InputImage(BaseWidget):
     widget_class_ = Ui_input_image
     icons = [
-        ("link", "link_to_grid_image_button"),
-        ("lock", "lock_input_image_button"),
-        ("refresh-ccw", "refresh_button"),
+        ("pin", "pin_image"),
+        ("grid-3x3", "grid_image"),
         ("folder", "import_button"),
-        ("trash-2", "delete_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -148,7 +146,7 @@ class InputImage(BaseWidget):
         if self.settings_key == "outpaint_settings":
             self.load_image_from_settings()
 
-    def update_current_settings(self, key, value):
+    def _apply_current_settings_value(self, key, value) -> None:
         if self.settings_key == "controlnet_settings":
             self.update_controlnet_settings(**{key: value})
         elif self.settings_key == "image_to_image_settings":
@@ -158,20 +156,66 @@ class InputImage(BaseWidget):
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(**{key: value})
 
+    def update_current_settings(self, key, value):
+        self._apply_current_settings_value(key, value)
+
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
-        # If lock_input_image changed programmatically, ensure the scene honors it
         if key == "lock_input_image":
-            try:
-                if self._scene and hasattr(self._scene, "use_generated_image"):
-                    self._scene.use_generated_image = (
-                        self.use_generated_image and not bool(value)
-                    )
-            except Exception:
-                # Defensive: don't let UI updates raise
-                pass
+            self._update_scene_lock_state(bool(value))
+
+    def _update_scene_lock_state(self, locked: bool) -> None:
+        try:
+            if self._scene and hasattr(self._scene, "use_generated_image"):
+                self._scene.use_generated_image = (
+                    self.use_generated_image and not locked
+                )
+        except Exception:
+            pass
+
+    def _sync_pin_button_state(self) -> None:
+        self.ui.pin_image.blockSignals(True)
+        self.ui.pin_image.setChecked(
+            bool(getattr(self.current_settings, "lock_input_image", False))
+        )
+        self.ui.pin_image.blockSignals(False)
+
+    def should_follow_grid_updates(self) -> bool:
+        """Return whether the widget should mirror the live grid image."""
+        return not bool(
+            getattr(self.current_settings, "lock_input_image", False)
+        )
+
+    def _link_to_grid_image(
+        self,
+        force_load: bool = False,
+        sync_settings: bool = True,
+    ) -> None:
+        self.load_image_from_grid(
+            forced=force_load,
+            sync_settings=sync_settings,
+        )
+
+    def _sync_input_source(
+        self,
+        force_grid_load: bool = False,
+        sync_settings: bool = True,
+    ) -> None:
+        is_locked = not self.should_follow_grid_updates()
+        self._sync_pin_button_state()
+        self._update_scene_lock_state(is_locked)
+        if is_locked:
+            self.load_image_from_settings()
+            return
+        self._link_to_grid_image(
+            force_load=force_grid_load,
+            sync_settings=sync_settings,
+        )
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.ui.grid_image.setVisible(
+            self.settings_key == "image_to_image_settings"
+        )
         if self.settings_key == "controlnet_settings":
             self.ui.strength_slider_widget.hide()
             self.ui.controlnet_settings.show()
@@ -191,62 +235,56 @@ class InputImage(BaseWidget):
             if self.is_mask:
                 self.ui.import_button.hide()
 
-        self.ui.link_to_grid_image_button.blockSignals(True)
-        self.ui.lock_input_image_button.blockSignals(True)
-        self.ui.link_to_grid_image_button.setChecked(
-            self.current_settings.use_grid_image_as_input
-        )
-        self.ui.lock_input_image_button.setChecked(
-            self.current_settings.lock_input_image or False
-        )
-        self.ui.link_to_grid_image_button.blockSignals(False)
-        self.ui.lock_input_image_button.blockSignals(False)
-
-        # Ensure the scene reflects the current lock state when the widget is shown.
-        try:
-            if self._scene and hasattr(self._scene, "use_generated_image"):
-                self._scene.use_generated_image = (
-                    self.use_generated_image
-                    and not getattr(
-                        self.current_settings, "lock_input_image", False
-                    )
-                )
-        except Exception:
-            pass
-        if self.current_settings.use_grid_image_as_input:
-            self.load_image_from_grid()
-            return
-
-        self.load_image_from_settings()
+        self._sync_input_source(sync_settings=False)
 
     @Slot(bool)
-    def on_lock_input_image_button_toggled(self, val: bool):
+    def on_pin_image_toggled(self, val: bool):
         if val:
             self._capture_current_input_image()
-        self.update_current_settings("lock_input_image", val)
-        # Immediately update the scene so generated images are ignored when locked.
-        try:
-            if self._scene and hasattr(self._scene, "use_generated_image"):
-                self._scene.use_generated_image = (
-                    self.use_generated_image and not val
-                )
-        except Exception:
-            pass
+            self.update_current_settings("lock_input_image", True)
+            self._update_scene_lock_state(True)
+            return
+
+        self.update_current_settings("lock_input_image", False)
+        self._update_scene_lock_state(False)
+        self._link_to_grid_image(force_load=True)
+
+    @Slot()
+    def on_grid_image_clicked(self):
+        if self.settings_key != "image_to_image_settings":
+            return
+
+        self.load_image_from_grid(forced=True)
 
     def _capture_current_input_image(self) -> None:
         """Persist the current visible source image before locking it."""
         if self.is_mask:
             return
 
-        image = self._get_lock_source_image()
+        displayed_image = self._get_displayed_image()
+        image = displayed_image or self._get_lock_source_image()
         if image is None:
             return
 
-        self.load_image_from_object(image)
-        self.update_current_settings(
+        if displayed_image is None:
+            self.load_image_from_object(image)
+        self._apply_current_settings_value(
             "image",
             convert_image_to_binary(image),
         )
+
+    def _get_displayed_image(self) -> Optional[Image.Image]:
+        """Return the currently displayed preview image when available."""
+        if self._scene is None:
+            return None
+
+        if self._use_simple_scene and hasattr(self._scene, "get_image"):
+            return self._scene.get_image()
+
+        try:
+            return self._scene.current_active_image
+        except Exception:
+            return None
 
     def _get_lock_source_image(self) -> Optional[Image.Image]:
         """Return the image that should be frozen by the lock button."""
@@ -259,22 +297,8 @@ class InputImage(BaseWidget):
         return self.drawing_pad_image
 
     @Slot()
-    def on_refresh_button_clicked(self):
-        self.load_image_from_grid(forced=True)
-
-    @Slot(bool)
-    def on_link_to_grid_image_button_toggled(self, val: bool):
-        self.update_current_settings("use_grid_image_as_input", val)
-        if val is True:
-            self.load_image_from_grid()
-
-    @Slot()
     def on_import_button_clicked(self):
         self.import_image()
-
-    @Slot()
-    def on_delete_button_clicked(self):
-        self.delete_image()
 
     def import_image(self):
         self._import_path, _ = QFileDialog.getOpenFileName(
@@ -288,20 +312,17 @@ class InputImage(BaseWidget):
         self.load_image(os.path.abspath(self._import_path))
 
     def load_image(self, file_path: str):
-        # Use the facehuggershield user override if available to allow this explicit user action.
+        # Allow this explicit user action even when darklock is active.
         try:
             from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
                 RestrictOSAccess,
             )
 
             ros = RestrictOSAccess()
-            # Allow only the selected file for this thread while importing
             with ros.user_override(paths=[file_path]):
                 image = Image.open(file_path)
         except Exception as e:
-            # Fallback to normal operation if darklock is not available or fails
             try:
-                # Try to log the exception if possible
                 print(
                     f"Darklock user_override failed, falling back to normal operation: {e}"
                 )
@@ -315,13 +336,17 @@ class InputImage(BaseWidget):
                 "image", convert_image_to_binary(image)
             )
 
-    def load_image_from_grid(self, forced: bool = False):
+    def load_image_from_grid(
+        self,
+        forced: bool = False,
+        sync_settings: bool = True,
+    ) -> None:
         """Load the current grid image into this input image panel.
-        
+
         Args:
             forced: If True, load regardless of lock/link settings.
+            sync_settings: When False, refresh only the preview scene.
         """
-        # Clear settings cache to ensure fresh data
         settings_property_name = None
         if self.settings_key == "image_to_image_settings":
             settings_property_name = "image_to_image_settings"
@@ -342,30 +367,43 @@ class InputImage(BaseWidget):
                 except Exception:
                     pass
 
-        # Check lock and link flags
         current_settings = self.current_settings
         if not forced and current_settings.lock_input_image:
             return
-        if not forced and not current_settings.use_grid_image_as_input:
+        if not forced and not self.should_follow_grid_updates():
             return
 
-        # Avoid redundant updates if content is identical
         grid_image = self.drawing_pad_settings.image
         if (
-            not forced
+            sync_settings
+            and not forced
             and getattr(self.current_settings, "image", None) is not None
             and grid_image == getattr(self.current_settings, "image", None)
         ):
             return
 
-        self.update_current_settings("image", grid_image)
+        if sync_settings:
+            self.update_current_settings("image", grid_image)
         if grid_image:
             image = convert_binary_to_image(grid_image)
             self.load_image_from_object(image)
+            return
+
+        self._clear_scene_image()
+
+    def _clear_scene_image(self) -> None:
+        """Clear the displayed preview image from the scene."""
+        if self._scene:
+            if self._use_simple_scene:
+                self._scene.clear_image()
+            else:
+                self._scene.clear()
+            return
+
+        self.ui.image_container.setScene(None)
 
     def load_image_from_settings(self):
         """Load image from current settings into the scene."""
-        # Check if image is locked and scene already has content
         is_locked = getattr(self.current_settings, "lock_input_image", False)
         has_content = False
         if self._scene:
@@ -373,9 +411,8 @@ class InputImage(BaseWidget):
                 has_content = self._scene.has_image()
             else:
                 has_content = getattr(self._scene, "item", None) is not None
-        
+
         if is_locked and has_content:
-            # User has locked the input image and there's already content
             return
 
         if self.settings_key == "outpaint_settings":
@@ -395,17 +432,11 @@ class InputImage(BaseWidget):
         if image is not None:
             self.load_image_from_object(image)
         else:
-            if self._scene:
-                if self._use_simple_scene:
-                    self._scene.clear_image()
-                else:
-                    self._scene.clear()
-            else:
-                self.ui.image_container.setScene(None)
+            self._clear_scene_image()
 
     def load_image_from_object(self, image: Image.Image):
         """Load a PIL image into the scene.
-        
+
         Args:
             image: PIL Image to display.
         """
@@ -418,10 +449,8 @@ class InputImage(BaseWidget):
             return
 
         if self._use_simple_scene:
-            # Simple path: just set the image directly
             self._scene.set_image(image)
         else:
-            # Complex path for InputImageScene (mask drawing support)
             try:
                 self._scene._add_image_to_scene(
                     image=image, is_outpaint=False, generated=False
@@ -431,16 +460,13 @@ class InputImage(BaseWidget):
                 self._scene.image = qimage
                 self._scene.initialize_image(image)
 
-            # For input image scenes, ensure item is at origin
             if self._scene.item is not None:
                 self._scene.item.setPos(0, 0)
 
-            # Adjust scene rect to the item bounds if present
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
                 rect = self._scene.item.sceneBoundingRect()
                 self._scene.setSceneRect(rect)
 
-        # Force view updates
         self._scene.update()
         for view in self._scene.views():
             view.viewport().update()
@@ -448,17 +474,3 @@ class InputImage(BaseWidget):
 
         self.fit_image_to_view()
         self.update()
-
-    def delete_image(self):
-        if self.settings_key == "outpaint_settings" and self.is_mask:
-            self.update_drawing_pad_settings(mask=None)
-        else:
-            self.update_current_settings("image", None)
-
-        if self._scene:
-            if self._use_simple_scene:
-                self._scene.clear_image()
-            else:
-                self._scene.clear()
-        else:
-            self.ui.image_container.setScene(None)

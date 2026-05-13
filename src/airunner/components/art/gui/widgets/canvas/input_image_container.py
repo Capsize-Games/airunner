@@ -40,47 +40,21 @@ class InputImageContainer(BaseWidget):
 
     def _do_grid_refresh(self):
         try:
-            # Respect lock_input_image: if locked, do not auto-load from grid
             if (
                 self.input_image
-                and getattr(
-                    self.input_image.current_settings,
-                    "use_grid_image_as_input",
-                    False,
-                )
-                and not getattr(
-                    self.input_image.current_settings,
-                    "lock_input_image",
-                    False,
-                )
+                and self.input_image.should_follow_grid_updates()
             ):
                 self.input_image.load_image_from_grid()
 
             if (
                 self.generated_image
-                and getattr(
-                    self.generated_image.current_settings,
-                    "use_grid_image_as_input",
-                    False,
-                )
-                and not getattr(
-                    self.generated_image.current_settings,
-                    "lock_input_image",
-                    False,
-                )
+                and self.generated_image.should_follow_grid_updates()
             ):
                 self.generated_image.load_image_from_grid()
 
             if (
                 self.mask_image
-                and getattr(
-                    self.mask_image.current_settings,
-                    "use_grid_image_as_input",
-                    False,
-                )
-                and not getattr(
-                    self.mask_image.current_settings, "lock_input_image", False
-                )
+                and self.mask_image.should_follow_grid_updates()
             ):
                 self.mask_image.load_image_from_grid()
         except Exception:
@@ -93,6 +67,10 @@ class InputImageContainer(BaseWidget):
         if self.input_image is None:
             self.input_image = InputImage(settings_key=self.settings_key)
             self.ui.tabWidget.addTab(self.input_image, "Input Image")
+            if settings_key == "image_to_image_settings":
+                # hide the tab for image-to-image since it only has one 
+                # image and the tab UI is redundant
+                self.ui.tabWidget.tabBar().setVisible(False)
 
         if (
             self.generated_image is None

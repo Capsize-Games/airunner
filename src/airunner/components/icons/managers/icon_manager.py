@@ -1,6 +1,7 @@
 import os
 from typing import List, Tuple
 from PySide6 import QtGui
+from PySide6.QtCore import QFile
 from PySide6.QtGui import QIcon, QPixmap
 
 from airunner.enums import TemplateName
@@ -9,6 +10,8 @@ from airunner.utils.settings import get_qsettings
 
 class IconManager:
     """A class to manage icons for the application."""
+
+    resource_sets = ("lucide", "feather")
 
     def __init__(self, icons: List[Tuple[str, str]], ui: object):
         """Initialize the IconManager with a list of icons and a UI object."""
@@ -19,34 +22,48 @@ class IconManager:
                 "widget": getattr(ui, icon[1]),
             }
 
+    def _resolve_icon_path(self, icon_name: str, theme: str) -> str:
+        if icon_name.startswith(":/"):
+            return icon_name
+
+        icon_set = None
+        resolved_name = icon_name
+        if ":" in icon_name:
+            icon_set, resolved_name = icon_name.split(":", 1)
+
+        resource_sets = (icon_set,) if icon_set else self.resource_sets
+        for resource_set in resource_sets:
+            path = (
+                f":/{theme}/icons/{resource_set}/{theme}/"
+                f"{resolved_name}.svg"
+            )
+            if QFile.exists(path):
+                return path
+        return ""
+
     def get_icon(self, icon_name, theme) -> QIcon:
         """Get the icon for the given name and theme."""
         key = f"{icon_name}_{theme}"
         if key not in self.icon_cache:
-            self.icon_cache[key] = QIcon(
-                QPixmap(f":/{theme}/icons/feather/{theme}/{icon_name}.svg")
-            )
+            icon_path = self._resolve_icon_path(icon_name, theme)
+            self.icon_cache[key] = QIcon(QPixmap(icon_path))
         return self.icon_cache[key]
 
     def update_icons(self, theme):
         """Update the icons for the given theme."""
-        # icon_cache may contain both metadata dicts (created in __init__)
-        # and QIcon instances (created by get_icon). Only process the
-        # metadata dict entries which contain the widget and icon name.
         for key, data in self.icon_cache.items():
             if not isinstance(data, dict):
-                # Skip cached QIcon or unexpected entries
                 continue
             icon_name = data["icon_name"]
             widget = data["widget"]
+            icon_path = self._resolve_icon_path(icon_name, theme)
             icon = QtGui.QIcon()
-            icon.addPixmap(
-                QtGui.QPixmap(
-                    f":/{theme}/icons/feather/{theme}/{icon_name}.svg"
-                ),
-                QtGui.QIcon.Mode.Normal,
-                QtGui.QIcon.State.Off,
-            )
+            if icon_path:
+                icon.addPixmap(
+                    QtGui.QPixmap(icon_path),
+                    QtGui.QIcon.Mode.Normal,
+                    QtGui.QIcon.State.Off,
+                )
             widget.setIcon(icon)
 
     def set_icons(self):

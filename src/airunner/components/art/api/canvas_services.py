@@ -187,16 +187,27 @@ class CanvasAPIService(APIServiceBase):
         ):
             section = GeneratorSection.OUTPAINT
 
-        controlnet_enabled = (
-            self.controlnet_settings.enabled
-            and self.controlnet_settings.image is not None
-        )
-
         is_img2img = section is GeneratorSection.IMG2IMG
         is_outpaint = section is GeneratorSection.OUTPAINT
         is_inpaint = section is GeneratorSection.INPAINT
 
         generator_settings = self.generator_settings
+
+        controlnet_image = None
+        if self.controlnet_settings.enabled:
+            controlnet_binary_image = self.controlnet_settings.image
+            if controlnet_binary_image is not None:
+                controlnet_image = convert_binary_to_image(
+                    controlnet_binary_image
+                )
+                controlnet_image = controlnet_image.convert("RGB")
+            else:
+                controlnet_image = self.controlnet_image
+
+        controlnet_enabled = (
+            self.controlnet_settings.enabled
+            and controlnet_image is not None
+        )
 
         # Determine strength based on whether we are doing img2img or txt2img
         if controlnet_enabled:
@@ -256,12 +267,6 @@ class CanvasAPIService(APIServiceBase):
         if binary_image is not None:
             image = convert_binary_to_image(binary_image)
             image = image.convert("RGB")
-
-        controlnet_image = None
-        if controlnet_enabled:
-            controlnet_binary_image = self.controlnet_settings.image
-            controlnet_image = convert_binary_to_image(controlnet_binary_image)
-            controlnet_image = controlnet_image.convert("RGB")
 
         custom_path = self.generator_settings.custom_path
         if type(custom_path) is tuple:

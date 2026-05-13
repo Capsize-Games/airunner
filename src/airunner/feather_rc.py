@@ -1,12 +1,11 @@
-"""Compatibility wrapper for legacy resource imports.
+"""Compatibility wrapper for legacy Qt resource imports.
 
-This module exists so older imports of ``airunner.feather_rc`` continue to
-work after the resource compiler started emitting assets into
-``airunner.gui.resources.feather_rc``.  The generated file under
-``airunner/gui/resources`` is the canonical output produced by
-``airunner-build-ui``; here we simply re-export everything so Qt's resource
-registration stays consistent for callers that still import the legacy
-module path.
+The UI layer still imports ``airunner.feather_rc`` for compatibility, even
+though the standard SVG asset set registered by the compiled resource module
+is now sourced from Lucide. The generated file under
+``airunner/gui/resources`` remains the canonical output produced by the UI
+build step; this wrapper simply re-exports it so existing imports keep
+working unchanged.
 """
 
 from airunner.gui.resources.feather_rc import *  # noqa: F401,F403

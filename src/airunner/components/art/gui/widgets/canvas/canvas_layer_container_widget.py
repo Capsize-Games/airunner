@@ -26,10 +26,11 @@ from airunner.enums import SignalCode
 class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     widget_class_ = Ui_canvas_layer_container
     icons = [
-        ("plus", "add_layer"),
+        ("layers-plus", "add_layer"),
         ("chevron-up", "move_layer_up"),
         ("chevron-down", "move_layer_down"),
-        ("trash-2", "delete_layer"),
+        ("layers-2", "merge_visible_layers"),
+        ("square-x", "delete_layer"),
     ]
 
     def __init__(self, *args, **kwargs):

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to convert light SVG icons to dark versions
+# Script to convert light SVG icons to dark versions.
 
 # Create dark directory if it doesn't exist
 mkdir -p ./dark
@@ -32,4 +32,4 @@ for svg_file in ./light/*.svg; do
     fi
 done
 
-echo "All Feather icons have been converted for dark theme."
+echo "All icons have been converted for dark theme."
