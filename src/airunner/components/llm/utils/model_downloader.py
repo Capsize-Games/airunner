@@ -62,23 +62,8 @@ class HuggingFaceDownloader(
             "params.json",
             "special_tokens_map.json",  # BF16 version has this
         ],
-        "flux": [
-            # Flux/Stable Diffusion models need all config files
-            "model_index.json",
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder_2/config.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer/merges.txt",
-            "tokenizer/vocab.json",
-            "tokenizer_2/tokenizer_config.json",
-            "tokenizer_2/merges.txt",
-            "tokenizer_2/vocab.json",
-            "transformer/config.json",
-            "vae/config.json",
-        ],
         "art": [
-            # Generic art model files (FLUX)
+            # Generic art model files
             "model_index.json",
             "scheduler/scheduler_config.json",
             "text_encoder/config.json",

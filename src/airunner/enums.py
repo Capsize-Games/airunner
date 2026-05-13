@@ -218,7 +218,6 @@ class SignalCode(Enum):
     CIVITAI_DOWNLOAD_COMPLETE = "civitai_download_complete"
     CIVITAI_DOWNLOAD_FAILED = "civitai_download_failed"
     CANCEL_CIVITAI_DOWNLOAD = "cancel_civitai_download"
-    FLUX_MODEL_DOWNLOAD_REQUIRED = "flux_model_download_required"
     ART_MODEL_DOWNLOAD_REQUIRED = "art_model_download_required"
     CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
     LOG_LOGGED_SIGNAL = "log_logged_signal"
@@ -465,7 +464,6 @@ class CanvasToolName(Enum):
 
 class ImageGenerator(Enum):
     STABLEDIFFUSION = "stablediffusion"
-    FLUX = "flux"
     ZIMAGE = "zimage"
 
 
@@ -484,10 +482,26 @@ class StableDiffusionVersion(Enum):
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
     X4_UPSCALER = "x4-upscaler"
-    FLUX_DEV = "FLUX.1-dev"
-    FLUX_SCHNELL = "Flux.1 S"
     Z_IMAGE_TURBO = "Z-Image Turbo"
     Z_IMAGE_BASE = "Z-Image Base"
+
+
+DEFAULT_IMAGE_GENERATOR = ImageGenerator.ZIMAGE
+DEFAULT_ART_VERSION = StableDiffusionVersion.Z_IMAGE_TURBO
+
+
+def normalize_image_generator_name(value: str | None) -> str:
+    """Return a supported image generator name."""
+    if value in {item.value for item in ImageGenerator}:
+        return str(value)
+    return DEFAULT_IMAGE_GENERATOR.value
+
+
+def normalize_art_version(value: str | None) -> str:
+    """Return a supported art version."""
+    if value in {item.value for item in StableDiffusionVersion}:
+        return str(value)
+    return DEFAULT_ART_VERSION.value
 
 
 class Language(Enum):

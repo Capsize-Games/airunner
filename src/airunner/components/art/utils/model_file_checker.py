@@ -2,7 +2,7 @@
 
 This module provides functionality to verify that all required files for a
 model are present on disk, and to initiate downloads for missing files.
-Supports all model types: Art (SD, SDXL, FLUX), LLM, STT (Whisper), TTS (OpenVoice).
+Supports all model types: Art (SD, SDXL, Z-Image), LLM, STT (Whisper), TTS (OpenVoice).
 """
 
 import os
@@ -21,7 +21,7 @@ class ModelFileChecker:
     """Check for missing model files and coordinate downloads.
 
     Supports all model types:
-    - art: Stable Diffusion and Flux
+    - art: Stable Diffusion and Z-Image
     - llm: Language models (Llama, Qwen, etc.)
     - stt: Speech-to-text models (Whisper)
     - tts_openvoice: OpenVoice TTS models
@@ -39,7 +39,8 @@ class ModelFileChecker:
         Args:
             model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id or version name)
-            version: Model version (for art models like "SDXL 1.0" and "Flux.1 S")
+            version: Model version (for art models like "SDXL 1.0" and
+                "Z-Image Turbo")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -66,7 +67,8 @@ class ModelFileChecker:
             model_path: Path to the model directory or GGUF file
             model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
+            version: Model version (for art models like "Z-Image Turbo",
+                "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:
@@ -211,15 +213,19 @@ class ModelFileChecker:
         """Get HuggingFace repo ID for a given model version.
 
         Args:
-            version: Model version (e.g., "SDXL 1.0", "Flux.1 S", "Safety Checker")
+            version: Model version (e.g., "SDXL 1.0", "Z-Image Turbo",
+                "Safety Checker")
             pipeline_action: Pipeline action (e.g., "txt2img", "inpaint", "safety_checker")
 
         Returns:
             HuggingFace repo ID if found, otherwise None
 
         Examples:
-            >>> ModelFileChecker.get_repo_id_for_version("Flux.1 S", "txt2img")
-            "black-forest-labs/FLUX.1-schnell"
+            >>> ModelFileChecker.get_repo_id_for_version(
+            ...     "Z-Image Turbo",
+            ...     "txt2img",
+            ... )
+            "Tongyi-MAI/Z-Image-Turbo"
             >>> ModelFileChecker.get_repo_id_for_version("Safety Checker", "safety_checker")
             "CompVis/stable-diffusion-safety-checker"
         """
@@ -249,7 +255,8 @@ class ModelFileChecker:
             model_path: Path to the model
             model_type: Type of model (art, llm, stt, tts_openvoice)
             model_id: Model identifier (repo_id for non-art models)
-            version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
+            version: Model version (for art models like "Z-Image Turbo",
+                "SDXL 1.0")
             pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
         Returns:

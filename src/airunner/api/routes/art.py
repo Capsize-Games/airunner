@@ -100,7 +100,7 @@ class ModelInfo(BaseModel):
     id: str
     name: str
     loaded: bool
-    type: str  # flux, etc
+    type: str  # zimage, stablediffusion, etc
 
 
 class LocalArtModel(BaseModel):
@@ -365,7 +365,7 @@ def _resolve_art_model_path(model_version: Optional[str] = None) -> str:
                     return custom_path
 
             # Prefer the caller-provided version (e.g., resolved from local models)
-            # so we don't accidentally mix a default version (Flux) with a Z-Image model path.
+            # so we don't accidentally mix a default version with a different model path.
             version = (model_version or "").strip()
             action = "txt2img"
             if settings is not None:
@@ -407,7 +407,8 @@ def _resolve_art_model_version() -> str:
         return configured
 
     # Determine model base directory for validation + auto-detection.
-    # This avoids defaulting to Flux when only SDXL/Z-Image models are installed.
+    # This avoids defaulting to an unavailable model when only local art
+    # models are installed.
     try:
         from airunner.components.data.session_manager import session_scope
 
@@ -442,8 +443,6 @@ def _resolve_art_model_version() -> str:
     preferred_versions = [
         StableDiffusionVersion.Z_IMAGE_TURBO.value,
         StableDiffusionVersion.SDXL1_0.value,
-        StableDiffusionVersion.FLUX_SCHNELL.value,
-        StableDiffusionVersion.FLUX_DEV.value,
     ]
 
     def _has_any_pipeline(version_dir: Path) -> bool:

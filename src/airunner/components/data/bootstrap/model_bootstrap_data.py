@@ -36,17 +36,6 @@ ai_art_models = [
         "is_default": True,
     },
     {
-        "name": "Flux.1 S",
-        "path": "black-forest-labs/FLUX.1-schnell",
-        "branch": "main",
-        "version": "Flux.1 S",
-        "category": "flux",
-        "pipeline_action": "txt2img",
-        "enabled": True,
-        "model_type": "art",
-        "is_default": True,
-    },
-    {
         "name": "Z-Image Turbo",
         "path": "Tongyi-MAI/Z-Image-Turbo",
         "branch": "main",

@@ -49,7 +49,7 @@ in [docs/deliverable_workflows.md](./docs/deliverable_workflows.md).
 | **📝 Meeting-to-Deliverables** | Converts meeting input into decisions, action items, follow-up drafts, and editable deliverables |
 | **🧰 Hidden Workflow Operator** | AIRunner can use tools, search, speech, and helper projects to finish a workflow without making generated code the end goal |
 | **🎨 Visual Workflows** | Drag-and-drop LangGraph workflow builder with runtime execution |
-| **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and FLUX models with drawing tools, LoRA, inpainting, and filters |
+| **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and Z-Image models with drawing tools, LoRA, inpainting, and filters |
 | **🔒 Privacy First** | Runs locally with no external APIs by default, configurable guardrails |
 | **⚡ Local Runtime Stack** | Desktop app, headless server, and Python library for local LLM, TTS, STT, and workflow automation |
 
@@ -238,7 +238,7 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | **LLM (default)** | Llama 3.1 8B Instruct (4bit) | ~4 GB |
 | **Image** | Stable Diffusion 1.5 | ~2 GB |
 | **Image** | SDXL 1.0 | ~6 GB |
-| **Image** | FLUX.1 Dev/Schnell (GGUF) | 8-12 GB |
+| **Image** | Z-Image Turbo | ~12 GB |
 | **TTS** | OpenVoice | 654 MB |
 | **STT** | Whisper Tiny | 155 MB |
 

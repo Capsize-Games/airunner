@@ -21,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add FlowMatchEulerDiscreteScheduler for FLUX and Z-Image models."""
+    """Add FlowMatchEulerDiscreteScheduler for flow-match art models."""
     # Check if scheduler already exists
     conn = op.get_bind()
     result = conn.execute(

@@ -57,17 +57,6 @@ IMAGE_GENERATOR_CAPABILITIES: Dict[str, ImageGeneratorCapabilities] = {
             "Use second_prompt for background/atmosphere details."
         ),
     ),
-    ImageGenerator.FLUX.value: ImageGeneratorCapabilities(
-        supports_negative_prompt=False,  # FLUX doesn't use negative prompts effectively
-        supports_second_prompt=True,
-        supports_second_negative_prompt=False,
-        default_width=1024,
-        default_height=1024,
-        prompt_guidance=(
-            "FLUX is a high-quality model that doesn't use negative prompts. "
-            "Focus on detailed positive descriptions. Use second_prompt for style/atmosphere."
-        ),
-    ),
     ImageGenerator.ZIMAGE.value: ImageGeneratorCapabilities(
         supports_negative_prompt=False,  # Z-Image doesn't use negative prompts
         supports_second_prompt=False,  # Single prompt model
@@ -87,7 +76,7 @@ def get_generator_capabilities(generator_name: str) -> ImageGeneratorCapabilitie
     Get capabilities for an image generator.
     
     Args:
-        generator_name: Name of the generator (flux, stablediffusion, zimage)
+        generator_name: Name of the generator (stablediffusion, zimage)
         
     Returns:
         Capabilities dataclass for the generator

@@ -148,7 +148,7 @@ and built with a custom script (see the following list).
   ```
 - Example:
   ```
-  feat: Add support for FLUX image generation
+  feat: Add support for Z-Image generation
 
-  Added support for FLUX models in the image generation pipeline.
+  Added support for Z-Image models in the image generation pipeline.
   ```

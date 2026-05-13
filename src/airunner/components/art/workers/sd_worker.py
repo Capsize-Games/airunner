@@ -13,9 +13,6 @@ from airunner.components.art.managers.stablediffusion.sdxl_model_manager import 
 from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
     X4UpscaleManager,
 )
-from airunner.components.art.managers.flux.flux_model_manager import (
-    FluxModelManager,
-)
 from airunner.components.art.managers.zimage.zimage_model_manager import (
     ZImageModelManager,
 )
@@ -38,7 +35,7 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 )
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.generator_settings import GeneratorSettings
-from airunner.enums import StableDiffusionVersion
+from airunner.enums import StableDiffusionVersion, normalize_art_version
 from airunner.components.application.exceptions import PipeNotLoadedException
 from airunner.utils.image import convert_image_to_binary
 
@@ -52,7 +49,6 @@ class SDWorker(Worker):
     def __init__(self, image_export_worker):
         self.image_export_worker = image_export_worker
         self._sdxl: Optional[SDXLModelManager] = None
-        self._flux: Optional[FluxModelManager] = None
         self._zimage: Optional[ZImageModelManager] = None
         self._sd: Optional[SDModelManager] = None
         self._sdxl: Optional[SDXLModelManager] = None
@@ -78,22 +74,17 @@ class SDWorker(Worker):
     def version(self) -> StableDiffusionVersion:
         version = self._version
         if version is StableDiffusionVersion.NONE:
-            try:
-                version = StableDiffusionVersion(
-                    self.generator_settings.version
-                )
-            except Exception:
-                return StableDiffusionVersion.NONE
+            version = StableDiffusionVersion(
+                normalize_art_version(self.generator_settings.version)
+            )
         # Historical setting name: `sd_enabled`.
-        # AIRunner's art worker now supports multiple backends (SDXL, Flux, Z-Image).
-        # Disabling SD should not prevent non-SD generators (Flux/Z-Image) from running.
+        # AIRunner's art worker now supports multiple backends (SDXL, Z-Image).
+        # Disabling SD should not prevent Z-Image from running.
         if (
             self._version is StableDiffusionVersion.NONE
             and not self.application_settings.sd_enabled
         ):
             if version in (
-                StableDiffusionVersion.FLUX_DEV,
-                StableDiffusionVersion.FLUX_SCHNELL,
                 StableDiffusionVersion.Z_IMAGE_TURBO,
                 StableDiffusionVersion.Z_IMAGE_BASE,
             ):
@@ -113,15 +104,10 @@ class SDWorker(Worker):
             if self._model_manager is None:
                 # IMPORTANT: Use self.version (which can be set from an incoming ImageRequest)
                 # rather than generator_settings.version, otherwise headless API requests
-                # can incorrectly route to the wrong model manager (e.g., Flux).
+                # can incorrectly route to the wrong model manager.
                 version = self.version
 
                 if version in (
-                    StableDiffusionVersion.FLUX_DEV,
-                    StableDiffusionVersion.FLUX_SCHNELL,
-                ):
-                    self._model_manager = self.flux
-                elif version in (
                     StableDiffusionVersion.Z_IMAGE_TURBO,
                     StableDiffusionVersion.Z_IMAGE_BASE,
                 ):
@@ -145,13 +131,6 @@ class SDWorker(Worker):
     def model_manager(self, value):
         with self._model_manager_lock:
             self._model_manager = value
-
-    @property
-    def flux(self):
-        if self._flux is None:
-            self._flux = FluxModelManager()
-            self._flux.image_export_worker = self.image_export_worker
-        return self._flux
 
     @property
     def zimage(self):
@@ -451,14 +430,7 @@ class SDWorker(Worker):
 
             # Clear the specific manager reference to allow garbage collection
             # Without this, the manager stays in memory even after unload()
-            if manager_ref is self._flux:
-                self.logger.info(">>> Unloading FLUX model manager")
-                self._flux.image_export_worker.stop()
-                del self._flux.image_export_worker
-                self._flux.image_export_worker = None
-                del self._flux
-                self._flux = None
-            elif manager_ref is self._sd:
+            if manager_ref is self._sd:
                 self.logger.info(">>> Unloading SD model manager")
                 self._sd.image_export_worker.stop()
                 del self._sd.image_export_worker

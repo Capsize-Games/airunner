@@ -210,7 +210,7 @@ def bake_gguf_model(model: torch.nn.Module) -> torch.nn.Module:
         Same model (modified in-place) for chaining
 
     Example:
-        >>> model = load_flux_transformer(state_dict)
+        >>> model.load_state_dict(state_dict, strict=False)
         >>> bake_gguf_model(model)  # Dequantize before inference
         >>> output = model(input_latents)
     """
@@ -243,7 +243,7 @@ def load_gguf_state_dict(
         State dict with ParameterGGUF tensors
 
     Example:
-        >>> state_dict = load_gguf_state_dict("flux_q4_k_s.gguf")
+        >>> state_dict = load_gguf_state_dict("art_model_q4_k_s.gguf")
         >>> model.load_state_dict(state_dict, strict=False)
         >>> bake_gguf_model(model)
     """

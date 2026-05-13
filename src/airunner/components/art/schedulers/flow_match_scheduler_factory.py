@@ -1,6 +1,6 @@
 """Flow Match Scheduler Factory.
 
-Creates flow-matching schedulers (for FLUX and Z-Image models) with the
+Creates flow-matching schedulers (for Z-Image models) with the
 appropriate configuration based on display name.
 
 Flow-matching models use a different mathematical formulation than DDPM/DDIM

@@ -146,11 +146,15 @@ class DownloadModelsDialog(MediatorMixin, SettingsMixin, QDialog):
         
     def _add_sd_group(self, layout: QVBoxLayout) -> None:
         """Add Stable Diffusion model selection group."""
-        group = QGroupBox("Stable Diffusion Models")
+        group = QGroupBox("Art Models")
         group_layout = QVBoxLayout(group)
         
         # Get unique SD versions from model bootstrap data
-        sd_models = [m for m in model_bootstrap_data if m.get("category") in ("stablediffusion", "flux", "zimage")]
+        sd_models = [
+            m
+            for m in model_bootstrap_data
+            if m.get("category") in ("stablediffusion", "zimage")
+        ]
         
         for model in sd_models:
             key = f"sd_{model['path']}"

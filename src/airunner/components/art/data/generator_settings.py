@@ -11,6 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from airunner.components.data.models.base import BaseModel
+from airunner.enums import DEFAULT_ART_VERSION, DEFAULT_IMAGE_GENERATOR
 from airunner.settings import (
     AIRUNNER_SD_DEFAULT_VAE_PATH,
     AIRUNNER_DEFAULT_SCHEDULER,
@@ -21,7 +22,10 @@ class GeneratorSettings(BaseModel):
     __tablename__ = "generator_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     pipeline_action = Column(String, default="txt2img")
-    generator_name = Column(String, default="flux")
+    generator_name = Column(
+        String,
+        default=DEFAULT_IMAGE_GENERATOR.value,
+    )
     quality_effects = Column(String, default="")
     image_preset = Column(String, default="")
     prompt = Column(String, default="")
@@ -37,7 +41,7 @@ class GeneratorSettings(BaseModel):
     scheduler = Column(String, default=AIRUNNER_DEFAULT_SCHEDULER)
     variation = Column(Boolean, default=False)
     use_prompt_builder = Column(Boolean, default=False)
-    version = Column(String, default="Flux.1 S")
+    version = Column(String, default=DEFAULT_ART_VERSION.value)
     is_preset = Column(Boolean, default=False)
     use_compel = Column(Boolean, default=True)
 

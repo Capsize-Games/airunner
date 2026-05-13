@@ -1,14 +1,14 @@
 """Model scanner worker for discovering art models in the filesystem.
 
 This worker scans the model directory structure to find and register AI models
-for image generation (FLUX, Z-Image, Stable Diffusion, etc.).
+for image generation (Z-Image, Stable Diffusion, etc.).
 
 Directory structure expected:
     {base_path}/art/models/{version}/{pipeline_action}/{model_file_or_folder}
 
 Example:
     ~/.local/share/airunner/art/models/Z-Image Turbo/txt2img/model.safetensors
-    ~/.local/share/airunner/art/models/FLUX.1-dev/txt2img/flux-dev/
+    ~/.local/share/airunner/art/models/SDXL 1.0/txt2img/model.safetensors
 """
 
 import os
@@ -26,8 +26,6 @@ from airunner.components.application.workers.worker import Worker
 
 # Mapping from version names to ImageGenerator categories
 VERSION_TO_CATEGORY: dict[str, str] = {
-    StableDiffusionVersion.FLUX_DEV.value: ImageGenerator.FLUX.value,
-    StableDiffusionVersion.FLUX_SCHNELL.value: ImageGenerator.FLUX.value,
     StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
     StableDiffusionVersion.Z_IMAGE_BASE.value: ImageGenerator.ZIMAGE.value,
     StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
@@ -51,13 +49,13 @@ def get_category_for_version(version: str) -> str:
     """Get the ImageGenerator category for a given version name.
 
     Args:
-        version: The version folder name (e.g., 'Z-Image Turbo', 'FLUX.1-dev')
+        version: The version folder name (e.g., 'Z-Image Turbo', 'SDXL 1.0')
 
     Returns:
-        The category string (e.g., 'zimage', 'flux', 'stablediffusion').
-        Defaults to 'flux' for unknown versions.
+        The category string (e.g., 'zimage', 'stablediffusion').
+        Defaults to 'stablediffusion' for unknown versions.
     """
-    return VERSION_TO_CATEGORY.get(version, ImageGenerator.FLUX.value)
+    return VERSION_TO_CATEGORY.get(version, ImageGenerator.STABLEDIFFUSION.value)
 
 
 @dataclass
@@ -134,7 +132,7 @@ class ModelScannerWorker(Worker, PipelineMixin):
         if not base_path.exists():
             return models
 
-        # Iterate through version folders (e.g., "Z-Image Turbo", "FLUX.1-dev")
+        # Iterate through version folders (e.g., "Z-Image Turbo", "SDXL 1.0")
         for version_dir in self._iter_directories(base_path):
             if not self.running:
                 break

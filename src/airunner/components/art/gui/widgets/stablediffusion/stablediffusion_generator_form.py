@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.application.data import ShortcutKeys
 from airunner.enums import (
+    normalize_art_version,
     SignalCode,
     GeneratorSection,
     ModelStatus,
@@ -139,7 +140,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         app = QApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._stop_worker_thread)
-        self._sd_version: str = self.generator_settings.version
+        self._sd_version = normalize_art_version(
+            self.generator_settings.version
+        )
         self._toggle_sdxl_form_elements()
         self.ui.infinite_images_button.blockSignals(True)
         self.ui.infinite_images_button.setChecked(
@@ -162,11 +165,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def uses_negative_prompt(self) -> bool:
         """Check if the current model version uses negative prompts.
 
-        FLUX and Z-Image models don't use negative prompts.
+        Z-Image models don't use negative prompts.
         """
         no_negative_prompt_versions = (
-            StableDiffusionVersion.FLUX_DEV.value,
-            StableDiffusionVersion.FLUX_SCHNELL.value,
             StableDiffusionVersion.Z_IMAGE_TURBO.value,
             StableDiffusionVersion.Z_IMAGE_BASE.value,
         )
@@ -176,11 +177,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def supports_compel(self) -> bool:
         """Check if the current model version supports compel (additional prompts).
 
-        FLUX and Z-Image models don't support compel.
+        Z-Image models don't support compel.
         """
         no_compel_versions = (
-            StableDiffusionVersion.FLUX_DEV.value,
-            StableDiffusionVersion.FLUX_SCHNELL.value,
             StableDiffusionVersion.Z_IMAGE_TURBO.value,
             StableDiffusionVersion.Z_IMAGE_BASE.value,
         )
@@ -336,7 +335,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if column in ("use_compel",):
             self._toggle_compel_form_elements(val)
         elif column in ("sd_version", "version"):
-            self._sd_version = val
+            self._sd_version = normalize_art_version(val)
             self._toggle_sdxl_form_elements()
 
     def _toggle_compel_form_elements(self, value: bool):
@@ -368,7 +367,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def _toggle_negative_prompt_visibility(self):
         """Show/hide negative prompt based on whether the model uses it.
 
-        FLUX and Z-Image models don't use negative prompts.
+        Z-Image models don't use negative prompts.
         """
         if self.uses_negative_prompt:
             self.ui.layoutWidget1.show()
@@ -378,8 +377,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def _toggle_add_prompt_button_visibility(self):
         """Show/hide add prompt button based on whether the model supports compel.
 
-        FLUX and Z-Image models don't support compel, so the add prompt button
-        should be hidden for these models.
+        Z-Image models don't support compel, so the add prompt button should
+        be hidden for these models.
         """
         if self.supports_compel:
             self.ui.add_prompt_button.show()

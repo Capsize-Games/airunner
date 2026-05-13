@@ -51,7 +51,7 @@ class ZImageGenerationMixin:
         """Prepare pipeline initialization parameters with Z-Image optimizations.
 
         Z-Image uses a single text encoder (Qwen2.5-VL or similar LLM) instead
-        of dual CLIP/T5 encoders like FLUX.
+        of dual-encoder text stacks.
         """
         data = super()._prepare_pipe_data()
 
@@ -194,7 +194,7 @@ class ZImageGenerationMixin:
     def _unload_pipe(self):
         """Z-Image-specific pipeline unload.
 
-        Similar to FLUX, Z-Image uses 'transformer' not 'unet', so we must
+        Z-Image uses a `transformer` instead of a `unet`, so we must
         explicitly delete it along with the text encoder.
         
         CRITICAL: When using bitsandbytes quantization with device_map="auto",
@@ -338,7 +338,7 @@ class ZImageGenerationMixin:
         """Run pipeline inference with cleanup between generations.
         
         Z-Image uses a single text encoder (Qwen-based), so memory management
-        is simpler than FLUX which has dual encoders.
+        is simpler than dual-encoder image pipelines.
         """
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=torch.bfloat16, enabled=True

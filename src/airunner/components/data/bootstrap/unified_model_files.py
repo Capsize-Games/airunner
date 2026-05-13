@@ -1,7 +1,7 @@
 """Unified model file requirements for all AI Runner model types.
 
 This module consolidates file requirements from:
-- Art models (SD, SDXL, FLUX, ControlNet)
+- Art models (SD, SDXL, Z-Image, ControlNet)
 - LLM models (Llama, Qwen, etc.)
 - STT models (Whisper)
 - TTS models (OpenVoice)
@@ -46,7 +46,8 @@ def get_required_files_for_model(
     Args:
         model_type: Type of model (art, llm, stt, tts_openvoice)
         model_id: Model identifier (repo_id or version name)
-        version: Model version (for art models like "Flux.1 S", "SDXL 1.0")
+        version: Model version (for art models like "Z-Image Turbo" and
+            "SDXL 1.0")
         pipeline_action: Pipeline action (for art models like "txt2img", "inpaint")
 
     Returns:
@@ -54,7 +55,12 @@ def get_required_files_for_model(
         For other models: List of required file paths, or None if not found
 
     Examples:
-        >>> get_required_files_for_model("art", "Flux.1 S", "SDXL 1.0", "txt2img")
+        >>> get_required_files_for_model(
+        ...     "art",
+        ...     "Z-Image Turbo",
+        ...     "Z-Image Turbo",
+        ...     "txt2img",
+        ... )
         {"scheduler/scheduler_config.json": 479, ...}
         >>> get_required_files_for_model("stt", "openai/whisper-tiny")
         ["config.json", "model.safetensors", ...]

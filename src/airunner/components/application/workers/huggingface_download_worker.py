@@ -121,10 +121,11 @@ class HuggingFaceDownloadWorker(BaseDownloadWorker):
         """Download model files from HuggingFace or direct URL.
 
         Args:
-            repo_id: HuggingFace repository ID (e.g., "black-forest-labs/FLUX.1-dev")
-            model_type: Type of model (llm, flux, gguf, openvoice_zip, etc.)
+            repo_id: HuggingFace repository ID (e.g., "Tongyi-MAI/Z-Image-Turbo")
+            model_type: Type of model (llm, art, gguf, openvoice_zip, etc.)
             output_dir: Directory to save the model
-            version: Version name for bootstrap data lookup (e.g., "SDXL 1.0", "Flux.1 S")
+            version: Version name for bootstrap data lookup (e.g.,
+                "SDXL 1.0", "Z-Image Turbo")
             pipeline_action: Pipeline action (txt2img, inpaint, etc.)
             missing_files: Specific list of files to download (if provided, only these files will be downloaded)
             gguf_filename: For GGUF downloads, the specific .gguf file to download

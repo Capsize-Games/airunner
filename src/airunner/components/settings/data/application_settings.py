@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean
 
 from airunner.components.data.models.base import BaseModel
 from airunner.enums import (
+    DEFAULT_IMAGE_GENERATOR,
     ImageGenerator,
     GeneratorSection,
     CanvasToolName,
@@ -41,7 +42,10 @@ class ApplicationSettings(BaseModel):
     working_width = Column(Integer, default=1024)
     working_height = Column(Integer, default=1024)
     current_llm_generator = Column(String, default="causallm")
-    current_image_generator = Column(String, default=ImageGenerator.FLUX.value)
+    current_image_generator = Column(
+        String,
+        default=DEFAULT_IMAGE_GENERATOR.value,
+    )
     generator_section = Column(String, default=GeneratorSection.TXT2IMG.value)
     hf_api_key_read_key = Column(String, default="")
     hf_api_key_write_key = Column(String, default="")

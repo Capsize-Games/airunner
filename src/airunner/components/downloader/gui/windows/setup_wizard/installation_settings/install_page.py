@@ -52,7 +52,8 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
 )
 
 
-# Note: SD 1.5 ControlNet support has been deprecated in favor of FLUX models
+# Note: SD 1.5 ControlNet support has been deprecated in favor of
+# newer art models.
 CONTROLNET_PATHS = []
 controlnet_processor_files = [
     "150_16_swin_l_oneformer_coco_100ep.pth",

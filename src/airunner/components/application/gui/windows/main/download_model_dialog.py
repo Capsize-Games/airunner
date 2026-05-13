@@ -35,8 +35,6 @@ from airunner.utils.application import get_logger
 CIVITAI_BASE_MODEL_MAP: Dict[str, str] = {
     "ZImageTurbo": "Z-Image Turbo",
     "ZImageBase": "Z-Image Base",
-    "Flux.1 D": "Flux.1 D",
-    "Flux.1 S": "Flux.1 S",
     "SDXL 1.0": "SDXL 1.0",
     "SDXL Turbo": "SDXL Turbo",
     "SDXL Lightning": "SDXL Lightning",

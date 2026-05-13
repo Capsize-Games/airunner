@@ -1,4 +1,9 @@
-from airunner.enums import ImageGenerator, GeneratorSection
+from airunner.enums import (
+    DEFAULT_IMAGE_GENERATOR,
+    GeneratorSection,
+    ImageGenerator,
+    normalize_image_generator_name,
+)
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.image_generator_preferences.templates.image_generator_preferences_ui import (
     Ui_image_generator_preferences,
@@ -10,10 +15,19 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._ensure_supported_generator()
 
         self.initialize_categories()
         self.initialize_pipeline()
         self.initialize_action()
+
+    def _ensure_supported_generator(self) -> None:
+        """Normalize legacy image generator selections."""
+        generator = normalize_image_generator_name(
+            self.application_settings.current_image_generator
+        )
+        if generator != self.application_settings.current_image_generator:
+            self.update_application_settings(current_image_generator=generator)
 
     def initialize_categories(self):
         self.ui.category.blockSignals(True)
@@ -48,7 +62,7 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
     def stablediffusion_toggled(self, val):
         if val:
             self.update_application_settings(
-                current_image_generator=ImageGenerator.FLUX.value
+                current_image_generator=ImageGenerator.STABLEDIFFUSION.value
             )
             self.update_application_settings(
                 generator_section=GeneratorSection.TXT2IMG.value

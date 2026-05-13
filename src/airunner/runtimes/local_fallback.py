@@ -81,7 +81,9 @@ def _resolve_art_request_version(metadata: dict[str, Any]) -> str:
     version = str(metadata.get("version") or "").strip()
     if version:
         return version
-    return "Flux.1 S"
+    from airunner.enums import DEFAULT_ART_VERSION
+
+    return DEFAULT_ART_VERSION.value
 
 
 def _resolve_art_request_scheduler(metadata: dict[str, Any]) -> str:

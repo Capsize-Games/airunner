@@ -53,13 +53,6 @@ art_pipline_data = [
     },
     {
         "pipeline_action": "txt2img",
-        "version": "Flux.1 S",
-        "category": "flux",
-        "classname": "transformers.AutoFeatureExtractor",
-        "default": False,
-    },
-    {
-        "pipeline_action": "txt2img",
         "version": "Z-Image Turbo",
         "category": "zimage",
         "classname": "diffusers.ZImagePipeline",

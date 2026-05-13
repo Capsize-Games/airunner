@@ -61,7 +61,7 @@ class ChooseModelsPage(BaseWizard):
 
         # Make the groupBox act as a checkable 'Stable Diffusion' group
         try:
-            self.ui.groupBox.setTitle("Stable Diffusion")
+            self.ui.groupBox.setTitle("Art Models")
             self.ui.groupBox.setCheckable(True)
             self.ui.groupBox.setChecked(True)
             try:
@@ -222,54 +222,58 @@ class ChooseModelsPage(BaseWizard):
                     version_group
                 )
 
-        # Add FLUX version group (no ControlNet support yet, just core files)
+        # Add Z-Image version groups (core files only).
         from PySide6.QtWidgets import QGroupBox
 
-        flux_group = QGroupBox(self)
-        flux_layout = QVBoxLayout(flux_group)
+        zimage_versions = [
+            model["version"]
+            for model in self.models
+            if model.get("category") == "zimage"
+        ]
+        for version in sorted(set(zimage_versions)):
+            zimage_group = QGroupBox(self)
+            zimage_layout = QVBoxLayout(zimage_group)
 
-        flux_master_flag = "sd_FLUX"
-        self.models_enabled[flux_master_flag] = True
-        flux_group.setTitle("FLUX")
-        flux_group.setCheckable(True)
-        flux_group.setChecked(True)
+            master_flag = f"sd_{version}"
+            self.models_enabled[master_flag] = True
+            zimage_group.setTitle(version)
+            zimage_group.setCheckable(True)
+            zimage_group.setChecked(True)
 
-        # Core files checkbox for FLUX
-        flux_core_chk = QCheckBox("Core files", self)
-        flux_core_flag = "core_FLUX"
-        self.models_enabled[flux_core_flag] = True
-        flux_core_chk.setChecked(True)
-        flux_core_chk.toggled.connect(
-            lambda val, flag=flux_core_flag: self._core_version_toggled(
-                flag, val
+            core_chk = QCheckBox("Core files", self)
+            core_flag = f"core_{version}"
+            self.models_enabled[core_flag] = True
+            core_chk.setChecked(True)
+            core_chk.toggled.connect(
+                lambda val, flag=core_flag: self._core_version_toggled(
+                    flag, val
+                )
             )
-        )
-        flux_layout.addWidget(flux_core_chk)
+            zimage_layout.addWidget(core_chk)
 
-        # Wire the FLUX group's toggled signal
-        def _on_flux_master_toggled(
-            val,
-            core_w=flux_core_chk,
-            flag=flux_master_flag,
-        ):
-            core_w.setEnabled(bool(val))
-            self.models_enabled[flag] = bool(val)
-            flux_core_flag_key = "core_FLUX"
-            if not val:
-                self.models_enabled[flux_core_flag_key] = False
-                core_w.setChecked(False)
-            else:
-                self.models_enabled.setdefault(flux_core_flag_key, True)
-            self.update_total_size_label()
+            def _on_art_master_toggled(
+                val,
+                core_w=core_chk,
+                flag=master_flag,
+                core_flag_key=core_flag,
+            ):
+                core_w.setEnabled(bool(val))
+                self.models_enabled[flag] = bool(val)
+                if not val:
+                    self.models_enabled[core_flag_key] = False
+                    core_w.setChecked(False)
+                else:
+                    self.models_enabled.setdefault(core_flag_key, True)
+                self.update_total_size_label()
 
-        flux_group.toggled.connect(_on_flux_master_toggled)
+            zimage_group.toggled.connect(_on_art_master_toggled)
 
-        # Add the FLUX group to the top-level inner scroll area's layout
-        try:
-            top_inner_layout.addWidget(flux_group)
-        except Exception:
-            # fallback: add directly if top scroll area wasn't created
-            self.ui.stable_diffusion_layout.layout().addWidget(flux_group)
+            try:
+                top_inner_layout.addWidget(zimage_group)
+            except Exception:
+                self.ui.stable_diffusion_layout.layout().addWidget(
+                    zimage_group
+                )
 
         # final spacer inside the stable diffusion group
         spacer = QSpacerItem(
@@ -345,15 +349,34 @@ class ChooseModelsPage(BaseWizard):
         mistral_size = 5.8 * 1024 * 1024
         whisper_size = 144.5 * 1024
         embedding_model_size = 1.3 * 1024 * 1024
-        # FLUX models are ~23GB total (transformer ~10GB, text encoders ~10GB, vae ~3GB)
-        flux_core_size = 23 * 1024 * 1024
+        zimage_core_sizes = {}
+        try:
+            from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
+                SD_FILE_BOOTSTRAP_DATA,
+            )
+
+            for model in self.models:
+                if model.get("category") != "zimage":
+                    continue
+                version = model.get("version")
+                files = SD_FILE_BOOTSTRAP_DATA.get(version, {}).get(
+                    "txt2img",
+                    {},
+                )
+                zimage_core_sizes[version] = sum(
+                    size
+                    for size in files.values()
+                    if isinstance(size, int)
+                )
+        except Exception:
+            zimage_core_sizes = {}
 
         total_bytes = 0
 
         if self.models_enabled.get("stable_diffusion", False):
-            # FLUX core files
-            if self.models_enabled.get("core_FLUX", False):
-                total_bytes += flux_core_size
+            for version, size in zimage_core_sizes.items():
+                if self.models_enabled.get(f"core_{version}", False):
+                    total_bytes += size
 
             # controlnet models grouped by version
             from collections import defaultdict

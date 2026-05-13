@@ -9,7 +9,7 @@ from airunner.components.art.utils.model_file_checker import ModelFileChecker
 class TestModelFileChecker:
     """Test suite for ModelFileChecker utility."""
 
-    _ART_VERSION = "Flux.1 S"
+    _ART_VERSION = "Z-Image Turbo"
     _LLM_MODEL_ID = "Qwen/Qwen3-8B-GGUF"
     _STT_MODEL_ID = "Systran/faster-distil-whisper-large-v3"
     _TTS_MODEL_ID = "myshell-ai/MeloTTS-English"
@@ -209,8 +209,8 @@ class TestUnifiedModelFiles:
 
         files = get_required_files_for_model(
             model_type="art",
-            model_id="Flux.1 S",
-            version="Flux.1 S",
+            model_id="Z-Image Turbo",
+            version="Z-Image Turbo",
             pipeline_action="txt2img",
         )
 

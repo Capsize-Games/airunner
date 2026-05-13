@@ -581,7 +581,7 @@ class BaseDiffusersModelManager(
         except Exception as e:
             self.logger.debug(f"Could not get list of adapters from pipeline: {e}")
         
-        # Also check transformer directly if it has peft_config (for Z-Image, FLUX, etc.)
+        # Also check transformer directly if it has peft_config.
         if not available_adapters and hasattr(self._pipe, 'transformer'):
             transformer = self._pipe.transformer
             if hasattr(transformer, 'peft_config') and transformer.peft_config:

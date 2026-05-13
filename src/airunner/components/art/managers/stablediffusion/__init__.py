@@ -3,8 +3,6 @@ __all__ = [
     "DownloadCivitAI",
     "DownloadHuggingface",
     "DownloadWorker",
-    "FluxModelManager",
-    "flux_model_manager",
     "ImageResponse",
     "PromptWeightBridge",
     "StableDiffusionModelManager",
@@ -20,14 +18,6 @@ def __getattr__(name):
         from .download_huggingface import DownloadHuggingface
 
         return DownloadHuggingface
-    elif name == "FluxModelManager":
-        from ..flux.flux_model_manager import FluxModelManager
-
-        return FluxModelManager
-    elif name == "flux_model_manager":
-        from ..flux import flux_model_manager
-
-        return flux_model_manager
     elif name == "ImageResponse":
         from .image_response import ImageResponse
 

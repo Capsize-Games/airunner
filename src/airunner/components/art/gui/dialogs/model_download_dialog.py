@@ -173,12 +173,6 @@ class ModelDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
         self.ui.log_display.append("\n✓ Download complete!")
         self.ui.progress_bar.setValue(1000)
 
-        # For FLUX models, mention quantization
-        if "FLUX" in self.model_name.upper():
-            self.ui.log_display.append(
-                "Model will be quantized to 4-bit on first load for maximum efficiency."
-            )
-
         self.ui.log_display.append(
             "Closing dialog and proceeding with model setup..."
         )

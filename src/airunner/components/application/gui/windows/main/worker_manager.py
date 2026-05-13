@@ -532,8 +532,8 @@ class WorkerManager(Worker):
                 f"WorkerManager: Starting download for {repo_id} ({len(missing_files)} missing files)"
             )
 
-        # Determine model type for download worker
-        # All art models (SDXL, FLUX, SD) use "art" type for bootstrap data lookup
+        # Determine model type for download worker.
+        # All art models use "art" type for bootstrap data lookup.
         model_type = "art"
 
         # Determine output directory (parent of model file for single-file models, or model_path for repos)

@@ -100,7 +100,7 @@ def test_generate_image_via_daemon_publishes_canvas_and_worker_response():
         prompt="A mountain",
         negative_prompt="",
         model_path="/tmp/art-model",
-        version="Flux.1 S",
+        version="Z-Image Turbo",
         scheduler="DDIM",
         generator_section=GeneratorSection.TXT2IMG,
     )
@@ -361,7 +361,6 @@ def test_unload_model_manager_clears_zimage_instance_and_signature():
     )
     worker = FakeWorker(
         _model_manager=manager,
-        _flux=None,
         _sd=None,
         _sdxl=None,
         _zimage=manager,
@@ -394,7 +393,7 @@ def test_version_keeps_explicit_sdxl_request_when_sd_disabled():
         _version=StableDiffusionVersion.SDXL1_0,
         application_settings=SimpleNamespace(sd_enabled=False),
         generator_settings=SimpleNamespace(
-            version=StableDiffusionVersion.FLUX_SCHNELL.value
+            version=StableDiffusionVersion.Z_IMAGE_TURBO.value
         ),
     )
 

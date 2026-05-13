@@ -58,7 +58,7 @@ def detect_model_dtype_from_config(model_path: str) -> Optional[str]:
         except (json.JSONDecodeError, IOError) as e:
             logger.debug(f"Failed to read model_index.json: {e}")
     
-    # Check for config_index.json (FLUX format)
+    # Check for config_index.json (alternate diffusers format)
     config_index = path / "config_index.json"
     if config_index.exists():
         try:
@@ -71,7 +71,7 @@ def detect_model_dtype_from_config(model_path: str) -> Optional[str]:
         except (json.JSONDecodeError, IOError) as e:
             logger.debug(f"Failed to read config_index.json: {e}")
     
-    # Check transformer config (common in FLUX/Diffusers models)
+    # Check transformer config (common in modern diffusers models)
     transformer_config = path / "transformer" / "config.json"
     if transformer_config.exists():
         try:

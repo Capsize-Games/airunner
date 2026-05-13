@@ -22,11 +22,14 @@ from airunner.utils.vram_utils import (
 from airunner.utils.model_dtype_utils import detect_model_dtype
 from airunner.components.art.data.schedulers import Schedulers
 from airunner.enums import (
+    DEFAULT_IMAGE_GENERATOR,
     SignalCode,
     GeneratorSection,
     ImageGenerator,
     StableDiffusionVersion,
     Scheduler,
+    normalize_art_version,
+    normalize_image_generator_name,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import (
@@ -44,18 +47,14 @@ import threading
 import os
 
 
-# Versions that use FlowMatchEulerDiscreteScheduler (FLUX and Z-Image)
+# Versions that use FlowMatchEulerDiscreteScheduler (Z-Image)
 FLOW_MATCH_VERSIONS = (
-    StableDiffusionVersion.FLUX_DEV.value,
-    StableDiffusionVersion.FLUX_SCHNELL.value,
     StableDiffusionVersion.Z_IMAGE_TURBO.value,
     StableDiffusionVersion.Z_IMAGE_BASE.value,
 )
 
 # Mapping from version to generator_name
 VERSION_TO_GENERATOR: dict[str, str] = {
-    StableDiffusionVersion.FLUX_DEV.value: ImageGenerator.FLUX.value,
-    StableDiffusionVersion.FLUX_SCHNELL.value: ImageGenerator.FLUX.value,
     StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
     StableDiffusionVersion.Z_IMAGE_BASE.value: ImageGenerator.ZIMAGE.value,
     StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
@@ -65,7 +64,7 @@ VERSION_TO_GENERATOR: dict[str, str] = {
     StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
 }
 
-# All flow-match scheduler options (for FLUX/Z-Image dropdown)
+# All flow-match scheduler options for Z-Image.
 # Only includes schedulers that work correctly with flow-match models
 FLOW_MATCH_SCHEDULERS = (
     Scheduler.FLOW_MATCH_EULER.value,
@@ -85,14 +84,6 @@ VERSION_CONSTRAINTS = {
         "guidance_scale_max": 5.0,
         "steps_max": 50,
     },
-    StableDiffusionVersion.FLUX_DEV.value: {
-        "guidance_scale_max": 3.5,
-        "steps_max": 50,
-    },
-    StableDiffusionVersion.FLUX_SCHNELL.value: {
-        "guidance_scale_max": 3.5,
-        "steps_max": 4,
-    },
 }
 
 
@@ -105,6 +96,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
         }
         super().__init__(*args, **kwargs)
+        self._ensure_supported_generator_defaults()
         self._deferred_startup_loaded = False
         self._version: str = ""
         self._versions: List[str] = []
@@ -114,6 +106,27 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.custom_model.setText(self.generator_settings.custom_path)
         self.ui.custom_model.blockSignals(False)
         PipelineMixin.__init__(self)
+
+    def _ensure_supported_generator_defaults(self) -> None:
+        """Normalize legacy art settings to supported values."""
+        version = normalize_art_version(self.generator_settings.version)
+        generator_name = VERSION_TO_GENERATOR.get(
+            version,
+            normalize_image_generator_name(
+                getattr(self.generator_settings, "generator_name", "")
+            ),
+        )
+        updates = {}
+        if version != self.generator_settings.version:
+            updates["version"] = version
+        if generator_name != getattr(
+            self.generator_settings,
+            "generator_name",
+            "",
+        ):
+            updates["generator_name"] = generator_name
+        if updates:
+            self.update_generator_settings(**updates)
 
     def _finish_deferred_startup(self) -> None:
         """Load expensive combobox state after the widget is first shown."""
@@ -162,11 +175,17 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             )
 
         try:
+            generator_name = VERSION_TO_GENERATOR.get(
+                normalize_art_version(self.generator_settings.version),
+                normalize_image_generator_name(
+                    self.generator_settings.generator_name
+                ),
+            )
             self.ui.seed_widget.setProperty(
                 "generator_section", self.generator_settings.pipeline_action
             )
             self.ui.seed_widget.setProperty(
-                "generator_name", ImageGenerator.FLUX.value
+                "generator_name", generator_name
             )
             self.ui.ddim_eta_slider_widget.hide()
             self.ui.frames_slider_widget.hide()
@@ -201,7 +220,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def _toggle_compel_visibility(self):
         """Show/hide Compel checkbox based on whether the model supports it.
 
-        FLUX and Z-Image models don't support Compel prompt weighting.
+        Z-Image models don't support Compel prompt weighting.
         """
         version = self.generator_settings.version
         if version in FLOW_MATCH_VERSIONS:
@@ -213,13 +232,13 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         """Update UI elements based on the current version.
         
         This handles:
-        - Showing/hiding pipeline dropdown (FLUX/Z-Image don't have inpaint/outpaint)
+        - Showing/hiding pipeline dropdown (Z-Image doesn't have inpaint/outpaint)
         - Updating guidance scale and steps constraints
         - Updating scheduler dropdown
         """
         version = self.generator_settings.version
         
-        # Hide pipeline dropdown for FLUX/Z-Image (they only support txt2img currently)
+        # Hide pipeline dropdown for Z-Image (txt2img only).
         if version in FLOW_MATCH_VERSIONS:
             self.ui.groupBox_3.hide()  # Pipeline groupbox
         else:
@@ -462,7 +481,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         prev_pipeline = self.generator_settings.pipeline_action
         prev_model = self.generator_settings.model
         # Determine the generator_name for this version
-        generator_name = VERSION_TO_GENERATOR.get(val, ImageGenerator.FLUX.value)
+        generator_name = VERSION_TO_GENERATOR.get(
+            val,
+            normalize_image_generator_name(
+                self.generator_settings.generator_name
+            ),
+        )
         # First update version and generator_name in settings
         self.update_generator_settings(version=val, generator_name=generator_name)
         self.api.widget_element_changed("sd_version", "version", val)
@@ -642,11 +666,8 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def schedulers(self):
         """Get schedulers filtered by version.
         
-        FLUX and Z-Image models support multiple flow-match schedulers:
+        Z-Image models support multiple flow-match schedulers:
         - Flow Match Euler (default)
-        - Flow Match Euler Karras (Karras sigma schedule)
-        - Flow Match Euler Stochastic (SDE-like behavior)
-        - Flow Match Heun (2nd order, higher quality)
         - Flow Match LCM (Latent Consistency)
         
         Other versions support all non-flow-match schedulers.
@@ -655,7 +676,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         version = self.generator_settings.version
         
         if version in FLOW_MATCH_VERSIONS:
-            # Return all flow-match scheduler variants for FLUX/Z-Image
+            # Return all flow-match scheduler variants for Z-Image.
             return [
                 s for s in all_schedulers 
                 if s.display_name in FLOW_MATCH_SCHEDULERS
@@ -718,9 +739,9 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         Available options (when applicable):
         - 4-bit: Lowest memory, uses BitsAndBytes NF4 quantization
         - 8-bit: Low memory, uses BitsAndBytes 8-bit quantization  
-              NOTE: Not available for Z-Image/FLUX on <=16GB cards (requires >20GB)
+              NOTE: Not available for Z-Image on <=16GB cards (requires >20GB)
         - FP8: 8-bit float, good quality with low memory (requires Hopper/Ada GPU)
-              NOTE: Not available for Z-Image/FLUX (text encoder incompatible)
+              NOTE: Not available for Z-Image (text encoder incompatible)
         - BF16 (bfloat16): Best quality/speed balance, recommended for most models
         - FP16 (float16): Lower memory usage, good compatibility
         - FP32 (float32): Highest precision but uses most memory
@@ -747,20 +768,24 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             except Exception:
                 pass
         
-        # Filter precision options for Z-Image/FLUX based on VRAM
+        # Filter precision options for Z-Image based on VRAM.
         version = self.generator_settings.version
         is_large_model = version in FLOW_MATCH_VERSIONS
         
         if is_large_model:
-            # FP8 is not supported for Z-Image/FLUX (text encoder doesn't support it)
+            # FP8 is not supported for Z-Image.
             if "float8" in available_precisions:
                 available_precisions.remove("float8")
             
-            # 8-bit requires >20GB VRAM for Z-Image/FLUX models
+            # 8-bit requires >20GB VRAM for Z-Image models.
             # On 16GB cards, 8-bit still uses ~14GB leaving no room for VAE decode
             if available_vram_gb <= 20 and "8bit" in available_precisions:
                 available_precisions.remove("8bit")
-                self.logger.debug(f"Removed 8-bit option: {available_vram_gb:.1f}GB VRAM insufficient for Z-Image/FLUX")
+                self.logger.debug(
+                    "Removed 8-bit option: %.1fGB VRAM insufficient "
+                    "for Z-Image",
+                    available_vram_gb,
+                )
         
         # Precision options ordered from lowest memory to highest
         # Only include options that are valid for this model
@@ -792,7 +817,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         
         # If current dtype is not available, pick the best available option
         if current_dtype not in available_precisions:
-            # For Z-Image/FLUX on low VRAM, default to 4-bit
+            # For Z-Image on low VRAM, default to 4-bit.
             if is_large_model and available_vram_gb <= 20 and "4bit" in available_precisions:
                 new_dtype = "4bit"
             elif native_dtype in available_precisions:

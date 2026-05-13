@@ -4,13 +4,17 @@ from dataclasses import dataclass, asdict
 from PIL import Image
 
 from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
-from airunner.enums import GeneratorSection
+from airunner.enums import (
+    DEFAULT_ART_VERSION,
+    DEFAULT_IMAGE_GENERATOR,
+    GeneratorSection,
+)
 
 
 @dataclass
 class ImageRequest:
     pipeline_action: str = ""
-    generator_name: str = "flux"
+    generator_name: str = DEFAULT_IMAGE_GENERATOR.value
     prompt: str = ""
     negative_prompt: str = ""
     second_prompt: str = ""
@@ -19,7 +23,7 @@ class ImageRequest:
     model_path: str = ""
     custom_path: str = ""
     scheduler: str = AIRUNNER_DEFAULT_SCHEDULER
-    version: str = "Flux.1 S"
+    version: str = DEFAULT_ART_VERSION.value
     use_compel: bool = True
     steps: int = 20
     ddim_eta: float = 0.5
