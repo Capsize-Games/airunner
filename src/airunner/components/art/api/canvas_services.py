@@ -12,6 +12,7 @@ from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
+from airunner.enums import normalize_art_version
 from airunner.enums import GeneratorSection, SignalCode
 from PySide6.QtCore import QPoint
 from airunner.components.art.managers.stablediffusion.image_response import (
@@ -284,7 +285,7 @@ class CanvasAPIService(APIServiceBase):
             random_seed=generator_settings.random_seed,
             model_path=model_path,
             scheduler=scheduler,
-            version=generator_settings.version,
+            version=normalize_art_version(generator_settings.version),
             use_compel=generator_settings.use_compel,
             steps=generator_settings.steps,
             ddim_eta=generator_settings.ddim_eta,

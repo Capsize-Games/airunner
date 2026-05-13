@@ -58,13 +58,6 @@ art_pipline_data = [
         "classname": "diffusers.ZImagePipeline",
         "default": False,
     },
-    {
-        "pipeline_action": "txt2img",
-        "version": "Z-Image Base",
-        "category": "zimage",
-        "classname": "diffusers.ZImagePipeline",
-        "default": False,
-    },
 ]
 
 llm_pipeline_data = [

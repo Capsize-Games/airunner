@@ -169,7 +169,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         """
         no_negative_prompt_versions = (
             StableDiffusionVersion.Z_IMAGE_TURBO.value,
-            StableDiffusionVersion.Z_IMAGE_BASE.value,
         )
         return self._sd_version not in no_negative_prompt_versions
 
@@ -181,7 +180,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         """
         no_compel_versions = (
             StableDiffusionVersion.Z_IMAGE_TURBO.value,
-            StableDiffusionVersion.Z_IMAGE_BASE.value,
         )
         return self._sd_version not in no_compel_versions
 

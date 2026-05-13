@@ -50,13 +50,11 @@ import os
 # Versions that use FlowMatchEulerDiscreteScheduler (Z-Image)
 FLOW_MATCH_VERSIONS = (
     StableDiffusionVersion.Z_IMAGE_TURBO.value,
-    StableDiffusionVersion.Z_IMAGE_BASE.value,
 )
 
 # Mapping from version to generator_name
 VERSION_TO_GENERATOR: dict[str, str] = {
     StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
-    StableDiffusionVersion.Z_IMAGE_BASE.value: ImageGenerator.ZIMAGE.value,
     StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.SDXL_TURBO.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
@@ -79,10 +77,6 @@ VERSION_CONSTRAINTS = {
     StableDiffusionVersion.Z_IMAGE_TURBO.value: {
         "guidance_scale_max": 5.0,
         "steps_max": 20,
-    },
-    StableDiffusionVersion.Z_IMAGE_BASE.value: {
-        "guidance_scale_max": 5.0,
-        "steps_max": 50,
     },
 }
 

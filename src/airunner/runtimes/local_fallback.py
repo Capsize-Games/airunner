@@ -78,9 +78,11 @@ def _build_art_service() -> Any:
 
 def _resolve_art_request_version(metadata: dict[str, Any]) -> str:
     """Return the model version carried by one art invocation."""
+    from airunner.enums import normalize_art_version
+
     version = str(metadata.get("version") or "").strip()
     if version:
-        return version
+        return normalize_art_version(version)
     from airunner.enums import DEFAULT_ART_VERSION
 
     return DEFAULT_ART_VERSION.value

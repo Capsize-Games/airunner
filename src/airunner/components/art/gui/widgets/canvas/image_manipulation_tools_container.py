@@ -4,13 +4,12 @@ from airunner.components.art.gui.widgets.canvas.templates.image_manipulation_too
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.enums import StableDiffusionVersion
+from airunner.enums import StableDiffusionVersion, normalize_art_version
 
 
 # Versions that don't support ControlNet or Inpaint
 _NO_CONTROLNET_INPAINT_VERSIONS = (
     StableDiffusionVersion.Z_IMAGE_TURBO.value,
-    StableDiffusionVersion.Z_IMAGE_BASE.value,
 )
 
 
@@ -39,7 +38,9 @@ class ImageManipulationToolsContainer(BaseWidget):
 
     def _check_version_and_update_tabs(self):
         """Check if version changed and update tab visibility accordingly."""
-        current_version = self.generator_settings.version
+        current_version = normalize_art_version(
+            self.generator_settings.version
+        )
         if current_version != self._last_version:
             self._last_version = current_version
             self._update_tab_visibility()
@@ -51,7 +52,9 @@ class ImageManipulationToolsContainer(BaseWidget):
         so those tabs should be hidden when Z-Image is selected.
         """
         tab_widget = self.ui.image_manipulation_tools_tab_container
-        current_version = self.generator_settings.version
+        current_version = normalize_art_version(
+            self.generator_settings.version
+        )
         should_hide = current_version in _NO_CONTROLNET_INPAINT_VERSIONS
         
         # Store references to removed tabs so they can be restored
@@ -76,7 +79,9 @@ class ImageManipulationToolsContainer(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         # Update tab visibility based on current model version
-        self._last_version = self.generator_settings.version
+        self._last_version = normalize_art_version(
+            self.generator_settings.version
+        )
         self._update_tab_visibility()
         
         # Start the version check timer

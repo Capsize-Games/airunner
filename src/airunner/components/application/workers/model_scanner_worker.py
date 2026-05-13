@@ -27,13 +27,14 @@ from airunner.components.application.workers.worker import Worker
 # Mapping from version names to ImageGenerator categories
 VERSION_TO_CATEGORY: dict[str, str] = {
     StableDiffusionVersion.Z_IMAGE_TURBO.value: ImageGenerator.ZIMAGE.value,
-    StableDiffusionVersion.Z_IMAGE_BASE.value: ImageGenerator.ZIMAGE.value,
     StableDiffusionVersion.SDXL1_0.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.SDXL_TURBO.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.SDXL_LIGHTNING.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.SDXL_HYPER.value: ImageGenerator.STABLEDIFFUSION.value,
     StableDiffusionVersion.X4_UPSCALER.value: ImageGenerator.STABLEDIFFUSION.value,
 }
+
+SUPPORTED_ZIMAGE_VERSIONS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
 
 # Valid model file extensions
 MODEL_EXTENSIONS = (".ckpt", ".safetensors", ".gguf")
@@ -56,6 +57,13 @@ def get_category_for_version(version: str) -> str:
         Defaults to 'stablediffusion' for unknown versions.
     """
     return VERSION_TO_CATEGORY.get(version, ImageGenerator.STABLEDIFFUSION.value)
+
+
+def is_supported_model_version(version: str) -> bool:
+    """Return whether one scanned art version is still supported."""
+    if version.startswith("Z-Image"):
+        return version in SUPPORTED_ZIMAGE_VERSIONS
+    return True
 
 
 @dataclass
@@ -137,6 +145,12 @@ class ModelScannerWorker(Worker, PipelineMixin):
             if not self.running:
                 break
             version_name = version_dir.name
+            if not is_supported_model_version(version_name):
+                self.logger.debug(
+                    "Skipping unsupported art version: %s",
+                    version_name,
+                )
+                continue
             self.logger.debug(f"Scanning version: {version_name}")
 
             # Iterate through pipeline action folders (e.g., "txt2img", "inpaint")

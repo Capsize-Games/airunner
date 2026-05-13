@@ -86,7 +86,6 @@ class SDWorker(Worker):
         ):
             if version in (
                 StableDiffusionVersion.Z_IMAGE_TURBO,
-                StableDiffusionVersion.Z_IMAGE_BASE,
             ):
                 return version
             return StableDiffusionVersion.NONE
@@ -109,7 +108,6 @@ class SDWorker(Worker):
 
                 if version in (
                     StableDiffusionVersion.Z_IMAGE_TURBO,
-                    StableDiffusionVersion.Z_IMAGE_BASE,
                 ):
                     self._model_manager = self.zimage
                 elif version in (
@@ -300,9 +298,10 @@ class SDWorker(Worker):
             pass
 
         if image_request is not None:
-            version = image_request.version
+            version = normalize_art_version(image_request.version)
+            image_request.version = version
         else:
-            version = settings.version
+            version = normalize_art_version(settings.version)
             data["image_request"] = ImageRequest(
                 pipeline_action=settings.pipeline_action,
                 generator_name=settings.generator_name,
@@ -313,7 +312,7 @@ class SDWorker(Worker):
                 random_seed=settings.random_seed,
                 model_path=model_path,
                 scheduler=settings.scheduler,
-                version=settings.version,
+                version=version,
                 use_compel=settings.use_compel,
                 steps=settings.steps,
                 ddim_eta=settings.ddim_eta,

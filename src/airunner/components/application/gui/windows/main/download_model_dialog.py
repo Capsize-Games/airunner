@@ -26,6 +26,7 @@ from airunner.components.application.workers.qt_civitai_workers import (
 from airunner.components.application.utils.model_persistence import (
     persist_trigger_words,
 )
+from airunner.enums import StableDiffusionVersion
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -34,12 +35,13 @@ from airunner.utils.application import get_logger
 # CivitAI may use different naming conventions than airunner expects.
 CIVITAI_BASE_MODEL_MAP: Dict[str, str] = {
     "ZImageTurbo": "Z-Image Turbo",
-    "ZImageBase": "Z-Image Base",
     "SDXL 1.0": "SDXL 1.0",
     "SDXL Turbo": "SDXL Turbo",
     "SDXL Lightning": "SDXL Lightning",
     "SDXL Hyper": "SDXL Hyper",
 }
+
+SUPPORTED_ZIMAGE_BASE_MODELS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
 
 
 class DownloadModelDialog(QDialog):
@@ -515,6 +517,19 @@ class DownloadModelDialog(QDialog):
         # Normalize CivitAI base model names to airunner version folder names
         raw_base_model = version.get("baseModel", "checkpoint")
         base_model = self._normalize_base_model(raw_base_model)
+        if (
+            base_model.startswith("Z-Image")
+            and base_model not in SUPPORTED_ZIMAGE_BASE_MODELS
+        ):
+            QMessageBox.warning(
+                self,
+                "Unsupported Model",
+                (
+                    f"{base_model} is not supported. AIRunner currently "
+                    "supports Z-Image Turbo and SDXL art models only."
+                ),
+            )
+            return
         model_type = version.get(
             "type", self.model_info.get("type", "checkpoint")
         )

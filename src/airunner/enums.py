@@ -483,7 +483,6 @@ class StableDiffusionVersion(Enum):
     SDXL_HYPER = "SDXL Hyper"
     X4_UPSCALER = "x4-upscaler"
     Z_IMAGE_TURBO = "Z-Image Turbo"
-    Z_IMAGE_BASE = "Z-Image Base"
 
 
 DEFAULT_IMAGE_GENERATOR = ImageGenerator.ZIMAGE
