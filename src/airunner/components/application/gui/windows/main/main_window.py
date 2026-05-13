@@ -100,7 +100,6 @@ from airunner.components.update.gui.windows.update.update_window import (
     UpdateWindow,
 )
 from airunner.components.icons.managers.icon_manager import IconManager
-from airunner.components.plugins.plugin_loader import PluginLoader
 
 
 # Utility functions moved from deleted agent.actions
@@ -1103,13 +1102,6 @@ class MainWindow(
         self.settings_window = None
         self.hide_center_tab_header()
 
-        phase_started_at = time.perf_counter()
-        self._load_plugins()
-        self.logger.info(
-            "MainWindow startup phase post_init_plugins completed in %.2fs",
-            time.perf_counter() - phase_started_at,
-        )
-
         self.ui.main_window_splitter.splitterMoved.connect(
             self.on_splitter_changed_sizes
         )
@@ -1161,22 +1153,6 @@ class MainWindow(
             action = getattr(self.ui, attr, None)
             if action is not None:
                 action.deleteLater()
-
-    def _load_plugins(self):
-        base_path = self.path_settings.base_path
-        path = os.path.join(base_path, "plugins")
-        plugin_loader = PluginLoader(plugin_dir=path)
-        plugins = plugin_loader.load_plugins()
-
-        if len(plugins) > 0:
-            self.logger.info("Loading plugins")
-            for plugin in plugins:
-                if hasattr(plugin, "get_widget"):
-                    self.logger.info(
-                        "Skipping plugin widget '%s' because the center-tab "
-                        "container was removed.",
-                        plugin.name,
-                    )
 
     def initialize_widget_elements(self):
         for element, enabled in (

@@ -2,10 +2,10 @@ import os
 
 from contextlib import contextmanager
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy import create_engine
 from sqlalchemy import pool
 
 from airunner.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+from airunner.utils.db.engine import create_configured_engine
 
 
 def _db_url() -> str:
@@ -102,7 +102,10 @@ def _ensure_tenant_ready(tenant: str) -> None:
     from airunner.setup_database import setup_database
 
     # Create schema in the base DB (public search_path).
-    base_engine = create_engine(db_url, poolclass=pool.NullPool)
+    base_engine = create_configured_engine(
+        db_url,
+        poolclass=pool.NullPool,
+    )
     with base_engine.begin() as conn:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {tenant}"))
 
@@ -150,7 +153,10 @@ def _get_engine(tenant: str):
         if pool_recycle > 0:
             engine_kwargs["pool_recycle"] = pool_recycle
 
-        _engines[engine_key] = create_engine(db_url, **engine_kwargs)
+        _engines[engine_key] = create_configured_engine(
+            db_url,
+            **engine_kwargs,
+        )
 
     return _engines[engine_key]
 

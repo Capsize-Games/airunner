@@ -7,11 +7,12 @@ from alembic import command
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from pathlib import Path
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 
 from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+from airunner.utils.db.engine import create_configured_engine
 
 
 _SETUP_LOCK = threading.Lock()
@@ -145,7 +146,7 @@ def _cached_expected_migration_heads(
 
 def _current_database_heads(target_db_url: str) -> tuple[str, ...]:
     """Return the sorted migration heads currently recorded in the DB."""
-    engine = create_engine(target_db_url)
+    engine = create_configured_engine(target_db_url)
     try:
         with engine.connect() as connection:
             context = MigrationContext.configure(connection)
@@ -203,7 +204,7 @@ def _repair_application_schema(target_db_url: str) -> None:
     from airunner.components.application import data as application_data
     from airunner.components.data.models.base import Base
 
-    engine = create_engine(target_db_url)
+    engine = create_configured_engine(target_db_url)
     try:
         existing_tables = set(inspect(engine).get_table_names())
         missing_tables = [

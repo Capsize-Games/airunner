@@ -18,7 +18,6 @@ from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.workers.mixins import (
     RAGIndexingMixin,
     QuantizationMixin,
@@ -48,7 +47,6 @@ class LLMGenerateWorker(
 
     def __init__(self):
         """Initialize worker with signal handlers and state."""
-        self.context_manager = ContextManager()
         self._model_manager: Optional[LLMModelManager] = None
         self._model_manager_lock = threading.Lock()
         self._interrupted = False
@@ -514,9 +512,7 @@ class LLMGenerateWorker(
             self._load_documents_into_rag(llm_request.rag_files)
 
         try:
-            result = manager.handle_request(
-                message, self.context_manager.all_contexts()
-            )
+            result = manager.handle_request(message, {})
         except Exception as e:
             self._pending_llm_request = None
             # In headless API mode, unhandled exceptions would otherwise leave

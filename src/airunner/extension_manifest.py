@@ -1,4 +1,4 @@
-"""Manifest helpers for external plugins and extensions."""
+"""Manifest helpers for external extensions."""
 
 from __future__ import annotations
 
@@ -13,12 +13,11 @@ from typing import Optional
 LOGGER = logging.getLogger(__name__)
 MANIFEST_FILENAME = "airunner-extension.json"
 EXTENSION_ALLOWLIST_ENV = "AIRUNNER_ENABLED_EXTENSIONS"
-PLUGIN_ALLOWLIST_ENV = "AIRUNNER_ENABLED_PLUGINS"
 
 
 @dataclass(frozen=True)
 class ExtensionManifest:
-    """Validated metadata for an external extension or plugin."""
+    """Validated metadata for one external extension."""
 
     extension_id: str
     name: str

@@ -222,7 +222,6 @@ extras_require = {
         OPENVOICE_TW_REQUIREMENTS,
         GRUUT_SUPPORT_REQUIREMENTS,
     ),
-    "rabbitmq": ["pika"],
     "openvoice": OPENVOICE_REQUIREMENTS,
     "melotts": MELOTTS_REQUIREMENTS,
     "openvoice_cn": OPENVOICE_CN_REQUIREMENTS,
@@ -256,7 +255,6 @@ extras_require["all"] = build_aggregate_extra(
     "search",
     "computer_use",
     "nvidia",
-    "rabbitmq",
     "linux",
 )
 extras_require["all_dev"] = build_aggregate_extra("all", "development")
@@ -274,7 +272,6 @@ extras_require["windows"] = build_aggregate_extra(
     "search",
     "computer_use",
     "nvidia",
-    "rabbitmq",
 )
 
 

@@ -10,6 +10,7 @@ from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
 )
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
@@ -60,6 +61,7 @@ from airunner.components.documents.data.models.zimfile import ZimFile
 classes = [
     ActiveGridSettings,
     ApplicationSettings,
+    CanvasLayer,
     ControlnetSettings,
     ImageToImageSettings,
     OutpaintSettings,

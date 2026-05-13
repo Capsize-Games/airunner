@@ -1,14 +1,8 @@
-import json
-
 from typing import Callable, Dict, Optional
 
 from airunner.enums import SignalCode
 from airunner.utils.application import get_logger
 from airunner.utils.application.signal_mediator import SignalMediator
-from airunner.components.messaging.backends.rabbitmq_backend import (
-    RabbitMQBackend,
-)
-from airunner.settings import AIRUNNER_MESSAGE_BACKEND
 
 
 class MediatorMixin:
@@ -28,26 +22,13 @@ class MediatorMixin:
     ):
         """
         Initialize the mixin with an optional SignalMediator instance.
-        :param mediator: Custom SignalMediator instance (e.g., with RabbitMQ backend).
+        :param mediator: Custom SignalMediator instance.
         """
         if type(mediator) is not SignalMediator:
             mediator = None
 
-        message_backend = message_backend or json.loads(
-            AIRUNNER_MESSAGE_BACKEND or "{}"
-        )
-
         if not mediator:
-            backend = None
-            if message_backend:
-                backend_name = message_backend.pop("type", None)
-
-                available_backends = {"rabbitmq": RabbitMQBackend}
-
-                if backend_name in available_backends:
-                    available_backends[backend_name](**message_backend)
-
-            mediator = SignalMediator(backend=backend)
+            mediator = SignalMediator()
 
         self.mediator = mediator
 

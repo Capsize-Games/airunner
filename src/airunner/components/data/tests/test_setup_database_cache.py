@@ -33,7 +33,7 @@ def test_setup_database_skips_repeated_upgrade(
     setup_database_module.setup_database(db_url)
     setup_database_module.setup_database(db_url)
 
-    assert calls == [(db_url, "head")]
+    assert calls == [(db_url, "heads")]
 
 
 def test_setup_database_migrates_new_urls(
@@ -58,7 +58,7 @@ def test_setup_database_migrates_new_urls(
     setup_database_module.setup_database(first_url)
     setup_database_module.setup_database(second_url)
 
-    assert calls == [(first_url, "head"), (second_url, "head")]
+    assert calls == [(first_url, "heads"), (second_url, "heads")]
 
 
 def test_setup_database_skips_upgrade_when_db_is_current(

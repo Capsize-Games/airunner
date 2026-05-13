@@ -246,7 +246,7 @@ class SignalMediator(metaclass=SingletonMeta):
     def __init__(self, backend: Optional[object] = None):
         """
         Initialize the SignalMediator with an optional backend.
-        :param backend: Custom backend for signal handling (e.g., RabbitMQ).
+        :param backend: Custom backend for signal handling.
         """
         self.backend = backend
         self.signals = {} if backend is None else None
