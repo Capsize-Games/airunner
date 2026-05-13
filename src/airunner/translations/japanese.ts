@@ -4701,34 +4701,6 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
     </message>
 </context>
 <context>
-    <name>vision_setup</name>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="14"/>
-        <source>Form</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="26"/>
-        <source>Vision Models</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="33"/>
-        <source>This model is used for processing images from your camera feed. That content is used to enhance your conversations with chatbots. You can skip this step if you do not intend to use this feature.</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="64"/>
-        <source>Download Controlnet Models</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="71"/>
-        <source>Cancel</source>
-        <translation></translation>
-    </message>
-</context>
-<context>
     <name>voice_settings</name>
     <message>
         <location filename="../gui/widgets/tts/templates/voice_settings.ui" line="14"/>

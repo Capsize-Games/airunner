@@ -115,10 +115,11 @@ def test_cancel_runtime_uses_explicit_sidecar_stt_route():
     response = asyncio.run(
         cancel_runtime(
             "stt",
-            RuntimeRouteRequest(request_id="sidecar-cancel-1"),
+            RuntimeRouteRequest(
+                request_id="sidecar-cancel-1",
+                deployment_mode="sidecar",
+            ),
             _request_for(FakeRegistry(client)),
-            provider="local",
-            deployment_mode="sidecar",
         )
     )
 

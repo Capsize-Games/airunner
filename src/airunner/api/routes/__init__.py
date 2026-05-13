@@ -8,7 +8,6 @@ from airunner.api.routes import (
 	llm,
 	stt,
 	tts,
-	vision,
 )
 
 __all__ = [
@@ -19,5 +18,4 @@ __all__ = [
 	"llm",
 	"stt",
 	"tts",
-	"vision",
 ]

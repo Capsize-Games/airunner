@@ -17,7 +17,7 @@ import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
-from airunner.api.routes import art, daemon, health, llm, stt, tts, vision
+from airunner.api.routes import art, daemon, health, llm, stt, tts
 from airunner.api.routes import legacy as legacy_routes
 from airunner.components.llm.core.extensions_loader import load_extensions
 from airunner.components.data.tenant import set_tenant_key, reset_tenant_key
@@ -249,13 +249,9 @@ def create_app(
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
     app.include_router(tts.router, prefix="/api/v1/tts", tags=["tts"])
     app.include_router(stt.router, prefix="/api/v1/stt", tags=["stt"])
-    app.include_router(vision.router, prefix="/api/v1/vision", tags=["vision"])
 
     # Legacy compatibility endpoints for existing clients.
     app.include_router(legacy_routes.router, tags=["legacy"])
-
-    # Legacy routes for backwards compatibility.
-    app.include_router(vision.router, prefix="/vision", tags=["vision-legacy"])
 
     # Explicitly enabled extensions can register additional routers/middleware.
     try:

@@ -199,7 +199,7 @@ class TestAutonomousControlTools(BaseTestCase):
     @patch("psutil.virtual_memory")
     @patch("psutil.disk_usage")
     def test_monitor_system_health_tool_creation(
-        self, mock_disk, mock_mem, mock_cpu
+        self, mock_disk, mock_mem, _mock_cpu
     ):
         """Test that monitor_system_health_tool creates a callable tool."""
         # Mock memory
@@ -215,7 +215,7 @@ class TestAutonomousControlTools(BaseTestCase):
     @patch("psutil.virtual_memory")
     @patch("psutil.disk_usage")
     def test_monitor_system_health_returns_metrics(
-        self, mock_disk, mock_mem, mock_cpu
+        self, mock_disk, mock_mem, _mock_cpu
     ):
         """Test that monitor_system_health returns valid metrics."""
         # Mock memory

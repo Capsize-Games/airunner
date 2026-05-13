@@ -5,11 +5,9 @@ Tests BM25 search functionality, fallback search, and tool indexing.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
 
 from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
-    ToolInfo,
     ToolCategory,
     tool,
 )
@@ -27,8 +25,8 @@ def clear_registry():
     ToolRegistry.clear()
 
 
-@pytest.fixture
-def sample_tools():
+@pytest.fixture(name="sample_tools")
+def _sample_tools():
     """Register sample tools for testing."""
     @tool(
         name="test_search_web",
@@ -77,10 +75,11 @@ def sample_tools():
     }
 
 
+@pytest.mark.usefixtures("sample_tools")
 class TestToolSearchEngine:
     """Tests for ToolSearchEngine class."""
 
-    def test_init_indexes_deferred_tools(self, sample_tools):
+    def test_init_indexes_deferred_tools(self):
         """Engine should index only deferred tools by default."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -92,7 +91,7 @@ class TestToolSearchEngine:
         assert "test_immediate_tool" not in tool_names
         assert "test_search_web" in tool_names
 
-    def test_init_with_immediate(self, sample_tools):
+    def test_init_with_immediate(self):
         """Engine can optionally include immediate tools."""
         engine = ToolSearchEngine(include_immediate=True)
         
@@ -102,7 +101,7 @@ class TestToolSearchEngine:
         tool_names = [t.name for t in engine._tools]
         assert "test_immediate_tool" in tool_names
 
-    def test_search_finds_relevant_tools(self, sample_tools):
+    def test_search_finds_relevant_tools(self):
         """Search should return relevant tools based on query."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -113,7 +112,7 @@ class TestToolSearchEngine:
         result_names = [t.name for t in results]
         assert "test_search_web" in result_names
 
-    def test_search_respects_limit(self, sample_tools):
+    def test_search_respects_limit(self):
         """Search should respect the limit parameter."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -121,7 +120,7 @@ class TestToolSearchEngine:
         
         assert len(results) <= 1
 
-    def test_search_with_keywords(self, sample_tools):
+    def test_search_with_keywords(self):
         """Search should match on keywords."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -131,7 +130,7 @@ class TestToolSearchEngine:
         result_names = [t.name for t in results]
         assert "test_generate_image" in result_names
 
-    def test_search_empty_query(self, sample_tools):
+    def test_search_empty_query(self):
         """Search with empty query should return empty results."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -139,7 +138,7 @@ class TestToolSearchEngine:
         
         assert results == []
 
-    def test_search_no_matches(self, sample_tools):
+    def test_search_no_matches(self):
         """Search with unrelated query should return empty results."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -149,7 +148,7 @@ class TestToolSearchEngine:
         # May return empty or low-scoring results
         assert len(results) >= 0
 
-    def test_tokenize(self, sample_tools):
+    def test_tokenize(self):
         """Tokenizer should lowercase and split on non-alphanumeric."""
         engine = ToolSearchEngine()
         
@@ -162,7 +161,7 @@ class TestToolSearchEngine:
         # Should be lowercase
         assert "Search" not in tokens
 
-    def test_refresh_updates_index(self, sample_tools):
+    def test_refresh_updates_index(self):
         """Refresh should update the index with new tools."""
         engine = ToolSearchEngine(include_immediate=False)
         initial_count = len(engine._tools)
@@ -182,7 +181,7 @@ class TestToolSearchEngine:
         
         assert len(engine._tools) == initial_count + 1
 
-    def test_fallback_search_without_bm25(self, sample_tools):
+    def test_fallback_search_without_bm25(self):
         """Engine should work without rank_bm25 installed."""
         engine = ToolSearchEngine(include_immediate=False)
         
@@ -196,10 +195,11 @@ class TestToolSearchEngine:
         assert "test_search_web" in result_names
 
 
+@pytest.mark.usefixtures("sample_tools")
 class TestGetToolSearchEngine:
     """Tests for the get_tool_search_engine singleton."""
 
-    def test_returns_same_instance(self, sample_tools):
+    def test_returns_same_instance(self):
         """Should return same instance for same parameters."""
         # Reset global
         import airunner.components.llm.core.tool_search as module
@@ -210,7 +210,7 @@ class TestGetToolSearchEngine:
         
         assert engine1 is engine2
 
-    def test_creates_new_for_different_params(self, sample_tools):
+    def test_creates_new_for_different_params(self):
         """Should create new instance for different parameters."""
         import airunner.components.llm.core.tool_search as module
         module._search_engine = None

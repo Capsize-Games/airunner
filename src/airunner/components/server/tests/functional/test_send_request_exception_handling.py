@@ -1,7 +1,5 @@
 import json
 import time
-import socket
-from http.client import HTTPConnection
 
 import pytest
 import requests
@@ -24,10 +22,28 @@ class FakeAPI:
 def wait_for_server(server_thread, timeout=5.0):
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if getattr(server_thread, "server", None) is not None:
+        server = getattr(server_thread, "server", None)
+        if server is not None and getattr(server, "started", False):
             return True
         time.sleep(0.01)
     return False
+
+
+def get_bound_port(server_thread) -> int:
+    """Return the bound uvicorn port for a running server thread."""
+    server = getattr(server_thread, "server", None)
+    if server is None:
+        raise RuntimeError("Server is not available")
+
+    listeners = getattr(server, "servers", [])
+    if not listeners:
+        raise RuntimeError("Server listeners are not available")
+
+    sockets = getattr(listeners[0], "sockets", [])
+    if not sockets:
+        raise RuntimeError("Server sockets are not available")
+
+    return sockets[0].getsockname()[1]
 
 
 def test_send_request_exception_returns_ndjson_error():
@@ -38,7 +54,7 @@ def test_send_request_exception_returns_ndjson_error():
 
     try:
         assert wait_for_server(server_thread), "Server failed to start"
-        port = server_thread.server.server_address[1]
+        port = get_bound_port(server_thread)
 
         payload = {
             "prompt": "Will cause send_request to raise",
@@ -48,7 +64,7 @@ def test_send_request_exception_returns_ndjson_error():
         }
 
         response = requests.post(
-            f"http://127.0.0.1:{port}/llm",
+            f"http://127.0.0.1:{port}/llm/generate",
             json=payload,
             timeout=(1, 5),
             stream=True,
@@ -73,24 +89,5 @@ def test_send_request_exception_returns_ndjson_error():
         ), "Error message missing"
 
     finally:
-        # Attempt a best-effort shutdown. Closing the server socket unblocks the
-        # accept()/select() in the server thread so it can exit. This is more
-        # reliable in tests than server.shutdown() which sometimes waits.
-        try:
-            if getattr(server_thread, "server", None):
-                try:
-                    sock = getattr(server_thread.server, "socket", None)
-                    if sock:
-                        try:
-                            sock.shutdown(socket.SHUT_RDWR)
-                        except Exception:
-                            pass
-                        try:
-                            sock.close()
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        server_thread.stop()
         server_thread.join(timeout=2.0)

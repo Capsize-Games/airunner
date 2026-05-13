@@ -483,7 +483,6 @@ class GenerationMixin:
         prompt: str,
         action: LLMActionType,
         system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None,
         llm_request: Optional[Any] = None,
         do_tts_reply: bool = True,
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
@@ -495,7 +494,6 @@ class GenerationMixin:
             prompt: The input prompt
             action: The LLM action type
             system_prompt: Optional system prompt override
-            rag_system_prompt: Optional RAG system prompt
             llm_request: Optional LLM request object
             do_tts_reply: Whether to enable TTS reply
             extra_context: Optional extra context dictionary

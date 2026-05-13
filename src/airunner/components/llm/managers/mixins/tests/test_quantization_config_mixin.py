@@ -314,7 +314,12 @@ class TestInjectQuantizationConfig:
     )
     @patch("json.load")
     @patch("json.dump")
-    def test_injects_config_into_json(self, mock_dump, mock_load, mock_file):
+    def test_injects_config_into_json(
+        self,
+        mock_dump,
+        mock_load,
+        _mock_file,
+    ):
         """Should inject quantization config into config.json."""
         mixin = TestableQuantizationMixin()
         mock_load.return_value = {"model_type": "llama"}
