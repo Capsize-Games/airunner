@@ -13,7 +13,7 @@ This mixin provides:
 CONTEXT INCLUSION RULES:
 - Mood: Only for CHAT, APPLICATION_COMMAND (conversational actions)
 - Datetime: Only for CHAT, APPLICATION_COMMAND, CALENDAR (context-needing actions)
-- UI Section: Only for CHAT, APPLICATION_COMMAND, CODE, GENERATE_IMAGE, FILE_INTERACTION
+- UI Section: Only for CHAT, APPLICATION_COMMAND, GENERATE_IMAGE, FILE_INTERACTION
 - Personality: Only for CHAT, APPLICATION_COMMAND (conversational actions)
 - Memory Instructions: Only for CHAT, APPLICATION_COMMAND (can record/recall)
 - Style Guidelines: Only for CHAT (conversational tone)
@@ -46,7 +46,6 @@ DATETIME_ACTIONS: Set[LLMActionType] = {
 UI_CONTEXT_ACTIONS: Set[LLMActionType] = {
     LLMActionType.CHAT,
     LLMActionType.APPLICATION_COMMAND,
-    LLMActionType.CODE,
     LLMActionType.GENERATE_IMAGE,
     LLMActionType.FILE_INTERACTION,
     LLMActionType.WORKFLOW_INTERACTION,
@@ -486,12 +485,6 @@ class SystemPromptMixin:
             base_prompt += self._get_force_tool_instruction(force_tool)
             return base_prompt
         
-        # For coding workflow mode, use focused coding prompt
-        if force_tool == "start_workflow" and action == LLMActionType.CODE:
-            base_prompt = self._build_system_prompt_for_action(action)
-            base_prompt += self._get_force_tool_instruction(force_tool)
-            return base_prompt
-        
         # Use context-aware base prompt instead of full system_prompt
         base_prompt = self._build_system_prompt_for_action(action)
         
@@ -521,18 +514,10 @@ class SystemPromptMixin:
 
         elif action == LLMActionType.CODE:
             base_prompt += (
-                "\n\nMode: CODE"
-                "\n\nYou are a software engineer. For code requests, act directly and efficiently."
-                "\n\n**PRIMARY TOOLS** (use these for most tasks):"
-                "\n- `create_code_file(file_path, content)` - Create new files"
-                "\n- `edit_code_file(file_path, edits)` - Modify existing files"  
-                "\n- `read_code_file(file_path)` - Read file contents"
-                "\n- `execute_python(code)` - Run Python code"
-                "\n- `run_tests(test_path)` - Run tests"
-                "\n\n**IMPORTANT**: For simple requests like 'create a file' or 'write a class',"
-                "\njust use create_code_file directly. Don't overthink it."
-                "\n\nFor complex multi-step projects, you may optionally use workflow tools:"
-                "\n- `start_workflow`, `add_todo_item`, `complete_todo_item`"
+                "\n\nMode: CHAT COMPATIBILITY"
+                "\nThe dedicated coding mode has been removed. "
+                "Respond directly without code-specific instructions or "
+                "code-only tool assumptions."
             )
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
@@ -675,31 +660,27 @@ class SystemPromptMixin:
         Returns:
             System prompt instruction forcing the tool use
         """
-        # Special workflow instructions for start_workflow (coding mode)
         if tool_name == "start_workflow":
             return (
-                "\n\n**CODING WORKFLOW MODE ACTIVATED**"
-                "\n\nYou MUST use the structured coding workflow. Do NOT answer directly."
+                "\n\n**STRUCTURED WORKFLOW MODE ACTIVATED**"
+                "\n\nYou MUST use the workflow tools to manage this task."
                 "\n"
                 "\n**YOUR FIRST ACTION:**"
-                "\nCall `start_workflow` with:"
-                "\n```json"
-                '\n{"tool": "start_workflow", "arguments": {"workflow_type": "coding", "task_description": "<user\'s request>"}}'
-                "\n```"
+                "\nCall `start_workflow` with the workflow type that best "
+                "matches the request:"
+                "\n- `research` for multi-source investigation"
+                "\n- `writing` for drafting or revision"
+                "\n- `math` for multi-step problem solving"
+                "\n- `simple` when explicit workflow tracking is unnecessary"
                 "\n"
                 "\n**THEN FOLLOW THE WORKFLOW:**"
-                "\n1. DISCOVERY: Search codebase, understand requirements, take notes"
-                "\n2. PLANNING: Create design doc, break into TODO items with `add_todo_item`"
-                "\n3. EXECUTION: For each TODO - write test, write code, validate_code, run test"
-                "\n4. REVIEW: Run all tests, refactor if needed"
+                "\n1. DISCOVERY: Gather context and take notes"
+                "\n2. PLANNING: Create TODO items with `add_todo_item`"
+                "\n3. EXECUTION: Start and complete TODO items one at a time"
+                "\n4. REVIEW: Check the result and transition to complete"
                 "\n"
-                "\n**ALWAYS VALIDATE CODE:** After creating or editing a file, call `validate_code(filepath)` to check for syntax errors!"
-                "\n"
-                "\n**CODE FILE LOCATION:** `$HOME/.local/share/airunner/code/`"
-                "\nUse `create_code_file` to write files to this directory."
-                "\n"
-                "\n**CRITICAL: You MUST call `start_workflow` FIRST. Do NOT skip this step.**"
-                "\n**Do NOT just provide code in your response - use the workflow tools.**"
+                "\n**CRITICAL: You MUST call `start_workflow` FIRST and "
+                "follow the returned next step.**"
             )
         
         # Special workflow instructions for deep research

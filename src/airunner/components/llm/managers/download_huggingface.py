@@ -56,6 +56,7 @@ class DownloadHuggingFaceModel(Worker):
             missing_files: Optional list of specific files to download
             gguf_filename: For GGUF downloads, the specific .gguf file to download
         """
+        del setup_quantization, quantization_bits
         resolved_download = LLMProviderConfig.resolve_download_target(
             "local",
             repo_id=repo_id,
@@ -78,8 +79,6 @@ class DownloadHuggingFaceModel(Worker):
             repo_id = resolved_repo_id
             model_type = "gguf"
             gguf_filename = resolved_gguf_filename
-            setup_quantization = False
-            quantization_bits = 0
             missing_files = None
 
         if output_dir is None and model_type in {"llm", "gguf", "ministral3"}:

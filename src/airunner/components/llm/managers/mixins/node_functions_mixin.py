@@ -426,13 +426,13 @@ CRITICAL: You called {tool_name} twice. The workflow is already active!
 
 DO NOT call {tool_name} again. Instead, call the NEXT tool in the sequence.
 
-For a coding workflow, the typical sequence is:
+For a structured workflow, the typical sequence is:
 1. start_workflow (DONE - you already did this)
 2. transition_phase('planning', 'reason') 
 3. add_todo_item('title', 'description')
 4. transition_phase('execution', 'reason')
 5. start_todo_item('todo_id')
-6. create_code_file(path, content) or other code tools
+6. use the task tools needed for that TODO
 7. complete_todo_item('todo_id')
 8. transition_phase('complete', 'All done')
 
@@ -757,7 +757,7 @@ Based on the search results above, provide a clear, conversational answer to the
 
         Some tools (like update_mood) are status-only and don't need a response.
         Other tools (like scrape_website) return data that needs interpretation.
-        Task-completing tools (like create_code_file) should go to force_response.
+        Task-completing tools should go to force_response.
 
         CRITICAL: Check for potential duplicate tool calls BEFORE routing back to model.
         If we detect the model will likely call the same tool again, route to force_response.
@@ -792,10 +792,8 @@ Based on the search results above, provide a clear, conversational answer to the
         # Task-completing tools - route to force_response, not model
         # This prevents the model from making more tool calls after the task is done
         TASK_COMPLETING_TOOLS = {
-            "create_code_file",       # Code was written - present it to user
-            "write_file",             # File was written - present result
-            "execute_python",         # Code was executed - present output
-            "complete_todo_item",     # Workflow item completed
+            "write_file",          # File was written - present result
+            "complete_todo_item",  # Workflow item completed
         }
 
         # Check the most recent tool message to see what tool was called
@@ -1647,9 +1645,7 @@ Based on the search results above, provide a clear, conversational answer to the
             # These tools produce output that should be presented to the user,
             # NOT followed by more tool calls
             TASK_COMPLETING_TOOLS = {
-                "create_code_file",  # Code was written - present it to user
                 "write_file",        # File was written - present result
-                "execute_python",    # Code was executed - present output
                 "complete_todo_item",  # Workflow item completed
             }
             

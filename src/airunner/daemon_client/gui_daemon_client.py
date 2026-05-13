@@ -785,8 +785,6 @@ class GuiDaemonClient:
             "ephemeral_conversation": llm_request.ephemeral_conversation,
             "enable_thinking": llm_request.enable_thinking,
             "model": llm_request.model,
-            "use_mode_routing": llm_request.use_mode_routing,
-            "mode_override": llm_request.mode_override,
             "force_tool": llm_request.force_tool,
             "include_mood": llm_request.include_mood,
             "include_datetime": llm_request.include_datetime,

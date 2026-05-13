@@ -6,9 +6,6 @@ from unittest.mock import Mock
 from PySide6.QtCore import QEvent, Qt
 
 from airunner.components.chat.gui.widgets import chat_prompt_widget as module
-from airunner.components.chat.gui.widgets.chat_request_mode import (
-    get_chat_request_mode,
-)
 from airunner.components.chat.gui.widgets.chat_prompt_widget import (
     ChatPromptWidget,
 )
@@ -115,10 +112,7 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
         _update_token_tracking_labels=Mock(),
         _collect_images_for_llm=lambda: [],
         _is_model_vision_capable=lambda: False,
-        _selected_request_mode=lambda: get_chat_request_mode("ask"),
         _slash_command_request_prompt=lambda prompt, _slash: prompt,
-        _request_mode_prompt=lambda prompt, _mode: prompt,
-        _request_system_prompt=lambda _mode: None,
         logger=Mock(),
         enable_send_button=Mock(),
         disable_send_button=Mock(),
@@ -182,7 +176,6 @@ def test_submit_generation_request_runs_probe_after_ui_append():
         _is_thinking_enabled_for_request=(
             lambda: ChatPromptWidget._is_thinking_enabled_for_request(widget)
         ),
-        _request_system_prompt=lambda _mode: None,
         logger=Mock(),
         _tokens_sent_last=0,
         _tokens_sent_total=0,
@@ -196,7 +189,6 @@ def test_submit_generation_request_runs_probe_after_ui_append():
         action=LLMActionType.APPLICATION_COMMAND,
         conversation_id=1,
         request_id="req-1",
-        request_mode=None,
         slash_command=None,
     )
 
@@ -307,52 +299,6 @@ def test_chat_prompt_uses_chat_action_by_default():
     assert ChatPromptWidget.action.fget(widget) is LLMActionType.CHAT
 
 
-def test_request_mode_helpers_use_qsettings(monkeypatch):
-    """Request mode persistence should read and write through QSettings."""
-
-    class FakeSettings:
-        def __init__(self):
-            self.values = {"request_mode": "plan"}
-            self.group = None
-
-        def beginGroup(self, group):
-            self.group = group
-
-        def value(self, key, default=None, type=None):
-            return self.values.get(key, default)
-
-        def setValue(self, key, value):
-            self.values[key] = value
-
-        def endGroup(self):
-            self.group = None
-
-    settings = FakeSettings()
-    widget = SimpleNamespace()
-
-    monkeypatch.setattr(module, "get_qsettings", lambda: settings)
-
-    mode_key = ChatPromptWidget._load_request_mode_key(widget)
-    ChatPromptWidget._save_request_mode_key(widget, "agent")
-
-    assert mode_key == "plan"
-    assert settings.values["request_mode"] == "agent"
-
-
-def test_request_system_prompt_returns_base_prompt(monkeypatch):
-    """Request modes should return their base coding prompt."""
-    widget = SimpleNamespace()
-
-    monkeypatch.setattr(module, "load_coding_prompt", lambda _key: "Base prompt")
-
-    prompt = ChatPromptWidget._request_system_prompt(
-        widget,
-        get_chat_request_mode("agent"),
-    )
-
-    assert prompt == "Base prompt"
-
-
 def test_refresh_slash_commands_keeps_required_search_commands():
     """Search, deepsearch, and news should remain available."""
     widget = SimpleNamespace()
@@ -367,50 +313,3 @@ def test_refresh_slash_commands_keeps_required_search_commands():
     assert "/image" not in commands
     assert "/code" not in commands
     assert "/clear" not in commands
-
-
-def test_submit_generation_request_sets_request_mode_system_prompt():
-    """Request-mode prompts should flow into the generated llm_request."""
-    widget = SimpleNamespace(
-        api=SimpleNamespace(
-            model_load_balancer=SimpleNamespace(
-                get_loaded_models=lambda: [],
-                switch_to_non_art_mode=Mock(),
-            ),
-            llm=SimpleNamespace(send_request=Mock()),
-        ),
-        ui=SimpleNamespace(
-            thinking_checkbox=SimpleNamespace(isChecked=lambda: True),
-        ),
-        llm_generator_settings=SimpleNamespace(enable_thinking=False),
-        start_progress_bar=Mock(),
-        _estimate_token_count=lambda _prompt: 1,
-        _update_token_tracking_labels=Mock(),
-        _collect_images_for_llm=lambda: [],
-        _is_model_vision_capable=lambda: False,
-        _model_supports_reasoning_effort=lambda: False,
-        _get_reasoning_effort_for_request=lambda: None,
-        _is_thinking_enabled_for_request=(
-            lambda: ChatPromptWidget._is_thinking_enabled_for_request(widget)
-        ),
-        _request_system_prompt=lambda _mode: "Plan prompt",
-        logger=Mock(),
-        _tokens_sent_last=0,
-        _tokens_sent_total=0,
-        _tokens_received_last=0,
-        _current_response_tokens=0,
-    )
-
-    ChatPromptWidget._submit_generation_request(
-        widget,
-        actual_prompt="Plan this task",
-        action=LLMActionType.CODE,
-        conversation_id=1,
-        request_id="req-plan",
-        request_mode=get_chat_request_mode("plan"),
-        slash_command=None,
-    )
-
-    llm_request = widget.api.llm.send_request.call_args.kwargs["llm_request"]
-    assert llm_request.system_prompt == "Plan prompt"
-    assert llm_request.mode_override == "code"

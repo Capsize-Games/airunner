@@ -94,6 +94,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Load and initialize the Espeak engine.
         """
+        del target_model
         # If already loading or loaded, don't attempt to reinitialize
         if self.status in [ModelStatus.LOADING, ModelStatus.LOADED]:
             self.logger.debug(

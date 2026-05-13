@@ -745,7 +745,7 @@ class TestDoGenerate:
         )
 
         assert "read-only tools" in result["response"]
-        assert "did not apply any code changes" in result["response"]
+        assert "did not make any changes" in result["response"]
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_returns_error_when_no_workflow_manager(self, mock_torch, mixin):

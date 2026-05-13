@@ -114,6 +114,7 @@ class NextDiT(nn.Module):
         dtype=None,
     ):
         super().__init__()
+        del image_model
         axes_dims = axes_dims or [16, 56, 56]
         axes_lens = axes_lens or [1, 512, 512]
 

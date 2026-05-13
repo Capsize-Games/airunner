@@ -49,23 +49,6 @@ class AgentTemplate:
 
 # Predefined agent templates
 AGENT_TEMPLATES: Dict[str, AgentTemplate] = {
-    "coding": AgentTemplate(
-        name="coding",
-        description="Expert coding assistant for software development",
-        system_prompt=(
-            "You are an expert software engineer specialized in writing clean, "
-            "maintainable code. You follow best practices, write comprehensive "
-            "tests, and provide clear documentation. You understand multiple "
-            "programming languages and frameworks."
-        ),
-        tools=[
-            "read_file",
-            "write_file",
-            "list_directory",
-            "search_files",
-            "run_command",
-        ],
-    ),
     "research": AgentTemplate(
         name="research",
         description="Research assistant for finding and analyzing information",

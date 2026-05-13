@@ -295,15 +295,11 @@ class ToolRegistry:
                 "airunner.components.llm.tools.mood_tools",
                 "airunner.components.llm.tools.generation_tools",
                 "airunner.components.llm.tools.author_tools",
-                "airunner.components.llm.tools.code_tools",
                 "airunner.components.llm.tools.research_validation_tools",
                 "airunner.components.llm.tools.research_rag_tools",
                 "airunner.components.llm.tools.qa_tools",
                 # Advanced tool use features
                 "airunner.components.llm.tools.tool_search_tool",
-                "airunner.components.llm.tools.code_execution_tool",
-                # Dynamic tool creation
-                "airunner.components.llm.tools.dynamic_tool_tools",
                 # Workflow management tools
                 "airunner.components.llm.agents.workflow_tools",
             ]

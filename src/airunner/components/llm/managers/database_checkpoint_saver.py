@@ -74,6 +74,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         Returns:
             Updated configuration with checkpoint ID
         """
+        del new_versions
         try:
             # In stateless mode, don't persist checkpoints
             if self.stateless:
@@ -201,17 +202,6 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         Returns:
             The requested checkpoint tuple, or None if not found.
         """
-        return self.get(config)
-
-    def get(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
-        """Retrieve a checkpoint from the database.
-
-        Args:
-            config: Runtime configuration
-
-        Returns:
-        Checkpoint tuple or None if not found
-        """
         try:
             # In stateless mode, always return None (fresh start)
             if self.stateless:
@@ -255,7 +245,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
             if not messages:
                 with open("/tmp/checkpoint_debug.log", "a") as f:
-                    f.write(f"[GET] ❌ No messages - starting fresh\n")
+                    f.write("[GET] ❌ No messages - starting fresh\n")
                 return None
 
             with open("/tmp/checkpoint_debug.log", "a") as f:
@@ -263,23 +253,23 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     f"[GET] ✅ Building checkpoint from DB: {len(messages)} messages\n"
                 )
 
-            # Build checkpoint with proper UUID
-            checkpoint = Checkpoint(
-                v=1,
-                id=str(uuid.uuid4()),
-                ts="",
-                channel_values={
+            checkpoint: Checkpoint = {
+                "v": 1,
+                "id": str(uuid.uuid4()),
+                "ts": "",
+                "channel_values": {
                     "messages": messages,
                 },
-                channel_versions={},
-                versions_seen={},
-            )
+                "channel_versions": {},
+                "versions_seen": {},
+                "updated_channels": None,
+            }
 
-            metadata = CheckpointMetadata(
-                source="database",
-                step=len(messages),
-                writes={},
-            )
+            metadata: CheckpointMetadata = {
+                "source": "update",
+                "step": len(messages),
+                "parents": {},
+            }
 
             return CheckpointTuple(
                 config=config,
@@ -294,11 +284,26 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             )
             return None
 
+    def get(self, config: RunnableConfig) -> Optional[Checkpoint]:
+        """Retrieve a checkpoint payload from the database.
+
+        Args:
+            config: Runtime configuration
+
+        Returns:
+            Checkpoint data or None if not found
+        """
+        checkpoint_tuple = self.get_tuple(config)
+        if checkpoint_tuple is None:
+            return None
+        return checkpoint_tuple.checkpoint
+
     def put_writes(
         self,
         config: RunnableConfig,
         writes: Sequence[Tuple[str, Any]],
         task_id: str,
+        task_path: str = "",
     ) -> None:
         """Store intermediate writes from graph execution.
 
@@ -307,12 +312,13 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             writes: Sequence of (channel, value) writes to store
             task_id: Unique identifier for the task
         """
+        del config, writes, task_id, task_path
         # For our simple implementation, we don't need to store intermediate writes
         # The final state will be saved via put()
 
     def list(
         self,
-        config: RunnableConfig,
+        config: Optional[RunnableConfig],
         *,
         filter: Optional[Dict[str, Any]] = None,
         before: Optional[RunnableConfig] = None,
@@ -329,6 +335,10 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         Yields:
             Checkpoint tuples
         """
+        del before
+
+        if config is None:
+            return
         # For now, just return the current checkpoint if it exists
         current = self.get_tuple(config)
         if current:

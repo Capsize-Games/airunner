@@ -346,7 +346,6 @@ class LLMProviderConfig:
         "qwen3:30b-a3b",
         "qwen3:32b",
         "qwen3-coder:30b-a3b",
-        "gemma2",
         "codellama",
         "custom",
     ]

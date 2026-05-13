@@ -24,7 +24,6 @@ from sqlalchemy import (
     String,
     Text,
     DateTime,
-    Boolean,
     ForeignKey,
     Float,
     JSON,

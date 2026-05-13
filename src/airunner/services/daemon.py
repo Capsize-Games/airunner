@@ -117,6 +117,7 @@ class AIRunnerDaemon:
 
     def _handle_shutdown_signal(self, signum, frame):
         """Handle shutdown signals (SIGTERM, SIGINT)."""
+        del frame
         logger.info(
             f"Received signal {signum}, initiating graceful shutdown..."
         )
@@ -125,6 +126,7 @@ class AIRunnerDaemon:
 
     def _handle_reload_signal(self, signum, frame):
         """Handle reload signal (SIGHUP) - reload configuration."""
+        del signum, frame
         logger.info("Received SIGHUP, reloading configuration...")
         self.config = DaemonConfig(self.config.config_path)
         logger.info("Configuration reloaded")

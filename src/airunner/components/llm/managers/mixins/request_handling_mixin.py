@@ -87,7 +87,6 @@ class RequestHandlingMixin:
         self.load()
 
         request_tool_defaults = self._request_tool_defaults(data)
-        self._refresh_workflow_manager_for_mode_request(llm_request)
 
         if llm_request and not llm_request.use_memory:
             self.logger.info(
@@ -193,49 +192,6 @@ class RequestHandlingMixin:
         if isinstance(language, str) and language.strip():
             defaults["language"] = language.strip()
         return defaults
-
-    def _refresh_workflow_manager_for_mode_request(
-        self,
-        llm_request: Any,
-    ) -> None:
-        """Rebuild the workflow manager when mode-routing settings change."""
-        if not llm_request:
-            return
-        if not (
-            getattr(llm_request, "use_mode_routing", False)
-            or getattr(llm_request, "mode_override", None)
-        ):
-            return
-
-        use_mode_routing = getattr(llm_request, "use_mode_routing", False)
-        mode_override = getattr(llm_request, "mode_override", None)
-        needs_rebuild = self._workflow_manager is None
-        if self._workflow_manager:
-            current_mode_routing = getattr(
-                self._workflow_manager,
-                "_use_mode_routing",
-                False,
-            )
-            current_mode_override = getattr(
-                self._workflow_manager,
-                "_mode_override",
-                None,
-            )
-            if (
-                current_mode_routing != use_mode_routing
-                or current_mode_override != mode_override
-            ):
-                needs_rebuild = True
-                self.logger.info(
-                    "Mode routing settings changed: use_mode_routing=%s, "
-                    "mode_override=%s - rebuilding workflow manager",
-                    use_mode_routing,
-                    mode_override,
-                )
-
-        if needs_rebuild:
-            self._unload_workflow_manager()
-            self._load_workflow_manager()
 
     def _prepare_request_tooling(
         self,

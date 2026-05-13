@@ -10,9 +10,6 @@ from openevals.llm import create_llm_as_judge
 
 from airunner.components.agents.agent_registry import AgentRegistry
 from airunner.components.agents.agent_router import AgentRouter
-from airunner.components.agents.expert_agents.code_agent import (
-    CodeExpertAgent,
-)
 from airunner.components.agents.expert_agents.research_agent import (
     ResearchExpertAgent,
 )
@@ -76,11 +73,9 @@ class AgentSystemEvaluator:
         self.router = AgentRouter(self.registry)
 
         # Register all expert agents
-        self.code_agent = CodeExpertAgent()
         self.research_agent = ResearchExpertAgent()
         self.creative_agent = CreativeExpertAgent()
 
-        self.registry.register(self.code_agent)
         self.registry.register(self.research_agent)
         self.registry.register(self.creative_agent)
 
@@ -106,11 +101,6 @@ def evaluator():
 # Test cases with reference outputs
 test_cases = [
     {
-        "task": "Write a Python function to calculate fibonacci numbers",
-        "expected_agent_type": "code",
-        "expected_agent_name": "code_expert",
-    },
-    {
         "task": "Research the latest advances in quantum computing",
         "expected_agent_type": "research",
         "expected_agent_name": "research_expert",
@@ -119,11 +109,6 @@ test_cases = [
         "task": "Write a creative short story about time travel",
         "expected_agent_type": "creative",
         "expected_agent_name": "creative_expert",
-    },
-    {
-        "task": "Refactor this slow Python loop into idiomatic code",
-        "expected_agent_type": "code",
-        "expected_agent_name": "code_expert",
     },
     {
         "task": "Summarize the main findings of this technical article",
@@ -276,9 +261,9 @@ async def test_multi_agent_collaboration_quality(evaluator):
     complex_tasks = [
         {
             "task": (
-                "Research Python best practices and then write example code"
+                "Research Python best practices and then write a blog post"
             ),
-            "required_agents": ["research_expert", "code_expert"],
+            "required_agents": ["research_expert", "creative_expert"],
         },
         {
             "task": (

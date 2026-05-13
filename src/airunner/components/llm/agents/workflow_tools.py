@@ -50,8 +50,7 @@ def reset_workflow_state() -> None:
 
 
 def is_workflow_active() -> bool:
-    """Check if a coding workflow is currently active.
-        """
+    """Check if a structured workflow is currently active."""
     global _current_workflow_state
     if _current_workflow_state is None:
         return False
@@ -80,7 +79,7 @@ def require_workflow(tool_name: str) -> str:
 
 
 def require_execution_phase(tool_name: str) -> str:
-    """Check if we're in a valid state for code creation.
+    """Check if we're in a valid state for task execution.
     
     Previously this was strict about requiring EXECUTION phase with an active TODO.
     Now it's relaxed to allow the model more freedom - the workflow instructions
@@ -102,13 +101,20 @@ def require_execution_phase(tool_name: str) -> str:
     category=ToolCategory.WORKFLOW,
     description=(
         "Start a predefined workflow for complex multi-step tasks. "
-        "Use 'coding' for TDD development, 'research' for comprehensive research, "
-        "'writing' for documents, 'math' for problem solving, 'simple' for no workflow."
+        "Use 'research' for comprehensive research, 'writing' for "
+        "documents, 'math' for problem solving, and 'simple' when "
+        "explicit workflow tracking is unnecessary."
     ),
-    keywords=["workflow", "start", "begin", "coding", "research", "writing", "math"],
+    keywords=["workflow", "start", "begin", "research", "writing", "math"],
     input_examples=[
-        {"workflow_type": "coding", "task_description": "Write a Python hello world function"},
-        {"workflow_type": "research", "task_description": "Research best practices for API design"},
+        {
+            "workflow_type": "research",
+            "task_description": "Research best practices for API design",
+        },
+        {
+            "workflow_type": "writing",
+            "task_description": "Draft a release summary for the latest build",
+        },
     ],
 )
 def start_workflow(
@@ -119,14 +125,13 @@ def start_workflow(
     
     Use this at the beginning of complex tasks that benefit from
     structured execution. Available workflow types:
-    - "coding": For code development with TDD (discovery → planning → execution → review)
     - "research": For comprehensive research (gather → analyze → synthesize → write)
     - "writing": For creative/technical writing
     - "math": For mathematical problem solving
     - "simple": For tasks that don't need structured workflow
     
     Args:
-        workflow_type: One of "coding", "research", "writing", "math", "simple"
+        workflow_type: One of "research", "writing", "math", "simple"
         task_description: Brief description of what you're trying to accomplish
             """
     state = get_current_state()
@@ -144,7 +149,7 @@ DO NOT call start_workflow again! Instead, continue with the next step:
 
 If in DISCOVERY phase → call: transition_phase('planning', 'Moving to planning')
 If in PLANNING phase  → call: add_todo_item('title', 'description')
-If in EXECUTION phase → call: start_todo_item('todo_id') then use code tools
+If in EXECUTION phase → call: start_todo_item('todo_id') then do the work
 If in REVIEW phase    → call: transition_phase('complete', 'All done')
 
 Original task: {state.artifacts.get('task_description', task_description)}
@@ -154,11 +159,25 @@ YOUR NEXT ACTION: Continue the workflow from the {current_phase} phase."""
     try:
         wf_type = WorkflowType(workflow_type)
     except ValueError:
-        return f"Unknown workflow type '{workflow_type}'. Use: coding, research, writing, math, or simple"
+        return (
+            f"Unknown workflow type '{workflow_type}'. Use: research, "
+            "writing, math, or simple"
+        )
+
+    if wf_type == WorkflowType.CODING:
+        return (
+            "The dedicated coding workflow is no longer available. "
+            "Use 'simple' for direct task execution or choose "
+            "'research', 'writing', or 'math' when structured workflow "
+            "tracking still helps."
+        )
     
     if wf_type == WorkflowType.SIMPLE:
         state.workflow_type = WorkflowType.SIMPLE
-        return "Simple mode - no structured workflow. Proceed with the task directly."
+        return (
+            "Simple mode - no structured workflow. Proceed with the "
+            "task directly."
+        )
     
     workflow_def = get_workflow(wf_type)
     if not workflow_def:
@@ -169,41 +188,6 @@ YOUR NEXT ACTION: Continue the workflow from the {current_phase} phase."""
     state.current_phase = workflow_def.initial_phase
     state.phase_step = 0
     state.artifacts["task_description"] = task_description
-    
-    # Return detailed workflow instructions based on type
-    if wf_type == WorkflowType.CODING:
-        return f"""✓ CODING WORKFLOW STARTED
-Task: {task_description}
-
-════════════════════════════════════════════════════════════════════════════════
-YOU ARE NOW IN: DISCOVERY PHASE
-════════════════════════════════════════════════════════════════════════════════
-
-**IMMEDIATE NEXT ACTION (do this NOW):**
-Since this is a simple task, you can skip discovery and go straight to planning.
-
-Call this tool NOW:
-  transition_phase('planning', 'Task is simple, moving to planning')
-
-════════════════════════════════════════════════════════════════════════════════
-WORKFLOW OVERVIEW (for reference)
-════════════════════════════════════════════════════════════════════════════════
-
-Phase 1: DISCOVERY → transition_phase('planning', 'reason')
-Phase 2: PLANNING  → add_todo_item() then transition_phase('execution', 'reason')  
-Phase 3: EXECUTION → start_todo_item() → create_code_file() → validate_code() → complete_todo_item()
-Phase 4: REVIEW    → transition_phase('complete', 'All done')
-
-**RULES:**
-- You CANNOT call create_code_file until you are in EXECUTION phase
-- You CANNOT be in EXECUTION phase until you have TODO items
-- You CANNOT work on a TODO until you call start_todo_item()
-- ALWAYS call validate_code after create_code_file to check for syntax errors
-- If validate_code shows errors, fix them with edit_code_file before completing
-
-════════════════════════════════════════════════════════════════════════════════
-YOUR NEXT TOOL CALL: transition_phase('planning', 'Task is simple')
-════════════════════════════════════════════════════════════════════════════════"""
     
     # Default workflow info for other types
     phase_def = workflow_def.get_phase(state.current_phase)
@@ -444,11 +428,13 @@ def add_todo_item(
 Phase: {todo.phase.value if todo.phase else 'none'}
 Dependencies: {', '.join(dep_list) if dep_list else 'none'}
 
-NEXT STEP: Before you can use create_code_file, you must:
-1. Call: transition_phase('execution', 'Ready to implement')
+NEXT STEP: Before you can begin execution, you must:
+1. Call: transition_phase('execution', 'Ready to work')
 2. Then call: start_todo_item(todo_id='{todo.id}')
+3. Then use the tools needed to complete that TODO
 
-Do NOT call create_code_file until you have done both steps above."""
+Do NOT begin execution until you have done the phase transition and
+started the TODO."""
 
 
 @tool(

@@ -39,6 +39,7 @@ class TimestepEmbedder(nn.Module):
         dtype=None,
     ):
         super().__init__()
+        del operations
         
         self.mlp = nn.Sequential(
             nn.Linear(

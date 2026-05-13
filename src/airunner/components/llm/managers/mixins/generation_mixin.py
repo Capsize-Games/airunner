@@ -29,9 +29,13 @@ from airunner.components.llm.utils.stream_text import prepare_stream_chunk
 from airunner.enums import LLMActionType, ModelStatus, ModelType, SignalCode
 
 
-READ_ONLY_CODE_TOOLS = {
+READ_ONLY_TASK_TOOLS = {
     "list_workspace_files",
     "read_code_file",
+    "read_file",
+    "search_files",
+    "grep_search",
+    "semantic_search",
     "get_document_content",
     "get_document_info",
     "search_document",
@@ -43,12 +47,15 @@ READ_ONLY_CODE_TOOLS = {
     "execute_python",
 }
 
-MUTATING_CODE_TOOLS = {
+MUTATING_TASK_TOOLS = {
     "create_code_file",
     "edit_code_file",
     "delete_code_file",
     "format_code_file",
     "format_code",
+    "write_file",
+    "edit_file",
+    "delete_file",
     "edit_document_lines",
     "insert_document_lines",
     "delete_document_lines",
@@ -115,17 +122,17 @@ class GenerationMixin:
             tool_summary = ", ".join(dict.fromkeys(effective_executed_tools))
             normalized_tools = set(effective_executed_tools)
             if (
-                not normalized_tools & MUTATING_CODE_TOOLS
-                and normalized_tools <= READ_ONLY_CODE_TOOLS
+                not normalized_tools & MUTATING_TASK_TOOLS
+                and normalized_tools <= READ_ONLY_TASK_TOOLS
             ):
                 return (
                     "The model inspected the workspace with read-only tools "
-                    f"({tool_summary}) but did not apply any code changes."
+                    f"({tool_summary}) but did not make any changes."
                 )
-            if not normalized_tools & MUTATING_CODE_TOOLS:
+            if not normalized_tools & MUTATING_TASK_TOOLS:
                 return (
                     "The model used non-mutating tools "
-                    f"({tool_summary}) but did not apply any code changes."
+                    f"({tool_summary}) but did not make any changes."
                 )
             return (
                 "The request completed tool actions "
@@ -380,10 +387,16 @@ class GenerationMixin:
         traceback.print_exc()
         # Ensure we capture the full exception message
         if isinstance(exc, GraphRecursionError):
-            executed_tools = list(
-                getattr(self._workflow_manager, "_executed_tools", []) or []
+            executed_tools_value = getattr(
+                self._workflow_manager,
+                "_executed_tools",
+                [],
             )
-            if any(tool in MUTATING_CODE_TOOLS for tool in executed_tools):
+            if isinstance(executed_tools_value, (list, tuple, set)):
+                executed_tools = list(executed_tools_value)
+            else:
+                executed_tools = []
+            if any(tool in MUTATING_TASK_TOOLS for tool in executed_tools):
                 error_message = (
                     "Error: The request hit the workflow recursion limit "
                     "after applying some tool actions. Changes may already "

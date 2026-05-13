@@ -77,8 +77,6 @@ class WorkflowManager(
         tools: Optional[List[Callable]] = None,
         max_history_tokens: int = 8000,
         conversation_id: Optional[int] = None,
-        use_mode_routing: bool = False,
-        mode_override: Optional[str] = None,
         llm_settings: Optional[Any] = None,
         chatbot: Optional[Any] = None,
         signal_emitter: Optional[Any] = None,
@@ -93,9 +91,6 @@ class WorkflowManager(
             tools: List of LangChain tools
             max_history_tokens: Maximum tokens for conversation history trimming
             conversation_id: Optional conversation ID for persistence
-            use_mode_routing: Enable mode-based routing
-                (author/code/research/qa/general)
-            mode_override: Force specific mode instead of auto-classification
             llm_settings: LLM settings for configuration (e.g., mood tracking)
             chatbot: Chatbot instance for settings (e.g., use_mood)
             signal_emitter: Object with emit_signal method (e.g., LLMModelManager)
@@ -131,8 +126,6 @@ class WorkflowManager(
         self._compiled_workflow = None
         self._token_callback: Optional[Callable[[str], None]] = None
         self._interrupted = False
-        self._use_mode_routing = use_mode_routing
-        self._mode_override = mode_override
         self._executed_tools: list[str] = (
             []
         )  # Track tools called in current invocation

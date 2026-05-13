@@ -144,7 +144,7 @@ class ToolExecutionMixin:
 
         return result_state
 
-    def _get_next_workflow_tool(self, current_tool: str) -> str | None:
+    def _get_next_workflow_tool(self, _current_tool: str) -> str | None:
         """Get the next required tool in the coding workflow sequence.
         
         Previously enforced strict tool ordering, but this caused issues when

@@ -137,6 +137,7 @@ class TensorCoreFP8Layout:
         Returns:
             Tuple of (quantized_tensor, layout_params)
         """
+        del stochastic_rounding
         orig_dtype = tensor.dtype
         
         if isinstance(scale, str) and scale == "recalculate":
@@ -299,6 +300,7 @@ class QuantizedTensor(torch.Tensor):
         """
         Tensor unflattening protocol for proper device movement.
         """
+        del outer_size, outer_stride
         layout_type = ctx["layout_type"]
         layout_params = dict(ctx["non_tensor_params"])
         

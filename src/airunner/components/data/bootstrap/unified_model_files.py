@@ -20,9 +20,6 @@ from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
 from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
-from airunner.components.art.data.bootstrap.rmbg_bootstrap_data import (
-    RMBG_FILES,
-)
 
 
 # Unified model file bootstrap data
@@ -31,7 +28,6 @@ UNIFIED_MODEL_FILES = {
     "llm": LLM_FILE_BOOTSTRAP_DATA,
     "stt": WHISPER_FILES,
     "tts_openvoice": OPENVOICE_FILES,
-    "rmbg": RMBG_FILES,
 }
 
 
@@ -91,10 +87,6 @@ def get_required_files_for_model(
 
     # STT models (Whisper) use repo_id lookup
     elif model_type == "stt":
-        return data.get(model_id)
-
-    # RMBG background removal models use repo_id lookup
-    elif model_type == "rmbg":
         return data.get(model_id)
 
     # TTS OpenVoice models use repo_id lookup with nested structure

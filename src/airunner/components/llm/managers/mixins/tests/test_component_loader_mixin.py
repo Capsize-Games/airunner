@@ -207,8 +207,6 @@ class TestLoadWorkflowManager:
             tools=None,
             max_history_tokens=8000,
             conversation_id=None,
-            use_mode_routing=False,
-            mode_override=None,
             llm_settings=loader.llm_settings,
             chatbot=None,
             signal_emitter=loader,

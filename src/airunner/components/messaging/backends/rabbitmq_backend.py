@@ -40,7 +40,8 @@ class RabbitMQBackend:
         self.handlers[queue_name] = handler
         self.channel.queue_declare(queue=queue_name)
 
-        def callback(ch, method, properties, body):
+        def callback(_channel, method, properties, body):
+            del method, properties
             handler(body)
 
         self.channel.basic_consume(

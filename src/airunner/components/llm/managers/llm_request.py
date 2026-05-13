@@ -89,12 +89,6 @@ class LLMRequest:
     # This is consumed by the model manager to set llm_generator_settings.dtype
     # before loading; it must NOT be passed through to transformers generate().
     dtype: Optional[str] = None  # auto | 4bit | 8bit | 32bit
-    use_mode_routing: bool = (
-        False  # Enable mode-based routing (author/code/research/qa/general)
-    )
-    mode_override: Optional[str] = (
-        None  # Force specific mode instead of auto-classification
-    )
     force_tool: Optional[str] = (
         None  # Force a specific tool to be called (from slash commands)
     )
@@ -343,23 +337,17 @@ class LLMRequest:
             )
 
         elif action == LLMActionType.CODE:
-            # Code: Precise, structured, with thinking enabled
-            # Enable CODE and WORKFLOW tools for TDD workflow
-            # Qwen3 thinking mode: temp=0.6, top_p=0.95, top_k=20
-            # max_new_tokens=32768 per Qwen3 docs for adequate thinking + tool calls
+            # Compatibility fallback: dedicated code mode was removed.
+            # Keep a deterministic chat profile without code-only tools.
             return cls(
-                do_sample=True,  # Required for Qwen3 thinking mode
-                temperature=0.6,  # Qwen3 thinking mode recommended
-                repetition_penalty=1.05,  # Light penalty (code can repeat patterns)
-                no_repeat_ngram_size=0,  # Allow code patterns
-                max_new_tokens=32768,  # Qwen3 recommended for thinking + code
-                top_k=20,  # Qwen3 recommended
-                top_p=0.95,  # Qwen3 thinking mode recommended
-                tool_categories=[
-                    "CODE",
-                    "WORKFLOW",
-                    "SYSTEM",  # For file operations
-                ],
+                do_sample=True,
+                temperature=0.6,
+                repetition_penalty=1.1,
+                no_repeat_ngram_size=2,
+                max_new_tokens=8192,
+                top_k=20,
+                top_p=0.8,
+                tool_categories=None,
             )
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:

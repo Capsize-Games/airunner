@@ -11,6 +11,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 class GridGraphicsItem(SettingsMixin, QGraphicsItem):
     def __init__(self, view, center_point: QPointF):
         super().__init__()
+        del center_point
         self.view = view
         self.setZValue(-100)
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, False)

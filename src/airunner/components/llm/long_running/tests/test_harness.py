@@ -70,8 +70,8 @@ class TestLongRunningHarness:
     def test_register_sub_agent(self, harness):
         """Test registering a sub-agent."""
         mock_sub_agent = MagicMock()
-        harness.register_sub_agent("code", mock_sub_agent)
-        assert "code" in harness._sub_agents
+        harness.register_sub_agent("research", mock_sub_agent)
+        assert "research" in harness._sub_agents
 
     def test_get_project_status_not_found(self, harness):
         """Test getting status of non-existent project."""
@@ -233,14 +233,14 @@ class TestSubAgentIntegration:
     def test_sub_agents_passed_to_session_agent(self):
         """Test that sub-agents are passed to session agent."""
         mock_model = MockChatModel()
-        mock_code_agent = MagicMock()
+        mock_research_agent = MagicMock()
 
         harness = LongRunningHarness(
             chat_model=mock_model,
-            sub_agents={"code": mock_code_agent},
+            sub_agents={"research": mock_research_agent},
         )
 
-        assert "code" in harness._sub_agents
+        assert "research" in harness._sub_agents
 
 
 class TestResumeProject:

@@ -1333,6 +1333,7 @@ class MainWindow(
         # Note: show_path functionality removed with old agent system
         # path = getattr(self.path_settings, name)
         # TODO: Implement file browser opening if needed
+        del name, default_path
         pass
 
     def on_toggle_fullscreen_signal(self):

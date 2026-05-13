@@ -262,6 +262,7 @@ class NativePipelineWrapper:
         Returns:
             Generated images (format depends on output_type and return_dict)
         """
+        del prompt_2, negative_prompt_2
         # Diffusers-compatible callbacks: honor callback_on_step_end if provided
         callback_on_step_end = kwargs.pop("callback_on_step_end", None)
         step_callback = callback_on_step_end or callback

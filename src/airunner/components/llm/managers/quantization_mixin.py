@@ -188,6 +188,7 @@ class QuantizationMixin:
         Args:
             base_model_path: Path to the full precision model
         """
+        del base_model_path
         self.logger.info(
             "Skipping pre-quantization - BitsAndBytes uses runtime quantization"
         )

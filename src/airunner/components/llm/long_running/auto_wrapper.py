@@ -289,10 +289,10 @@ class AutoHarnessWrapper:
             return f"Research and provide information about: {feature.name}"
 
         elif analysis.task_type == TaskType.CODING_PROJECT:
-            # For coding tasks, include context
+            # Legacy coding-project values degrade to generic task execution.
             return (
-                f"Context: {original_prompt}\n\n"
-                f"Focus on this specific task: {feature.description}"
+                f"As part of '{original_prompt}', complete this step: "
+                f"{feature.description}"
             )
 
         else:
@@ -375,7 +375,7 @@ class AutoHarnessWrapper:
         # Add task type prefix
         prefix_map = {
             TaskType.MULTI_RESEARCH: "research",
-            TaskType.CODING_PROJECT: "code",
+            TaskType.CODING_PROJECT: "task",
             TaskType.MULTI_STEP: "task",
             TaskType.COMPLEX_ANALYSIS: "analysis",
         }

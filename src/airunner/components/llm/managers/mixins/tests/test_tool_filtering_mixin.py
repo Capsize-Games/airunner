@@ -32,8 +32,8 @@ def test_code_requests_leave_tool_choice_unset_without_native_support():
     )
 
 
-def test_code_requests_force_tool_choice_when_supported():
-    """Native function-calling models may still force a code tool turn."""
+def test_code_requests_do_not_force_tool_choice_when_supported():
+    """Legacy code actions no longer force a code-only tool turn."""
     mixin = _DummyToolFilteringMixin(supports_function_calling=True)
     tools = [Mock(name="create_code_file")]
     mixin._tool_manager.get_tools_by_categories.return_value = tools
@@ -42,5 +42,5 @@ def test_code_requests_force_tool_choice_when_supported():
 
     mixin._workflow_manager.update_tools.assert_called_once_with(
         tools,
-        tool_choice="any",
+        tool_choice=None,
     )

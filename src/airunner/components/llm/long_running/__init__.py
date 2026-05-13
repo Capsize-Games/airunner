@@ -53,9 +53,7 @@ from airunner.components.llm.long_running.session_agent import SessionAgent
 from airunner.components.llm.long_running.harness import LongRunningHarness
 from airunner.components.llm.long_running.sub_agents import (
     BaseSubAgent,
-    CodeSubAgent,
     ResearchSubAgent,
-    TestingSubAgent,
     DocumentationSubAgent,
     create_sub_agents,
 )
@@ -89,9 +87,7 @@ __all__ = [
     "LongRunningHarness",
     # Sub-agents
     "BaseSubAgent",
-    "CodeSubAgent",
     "ResearchSubAgent",
-    "TestingSubAgent",
     "DocumentationSubAgent",
     "create_sub_agents",
     # Auto-wrapping

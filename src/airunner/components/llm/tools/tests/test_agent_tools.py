@@ -84,7 +84,7 @@ class TestCreateAgent:
         # Arrange
         mock_template_exists.return_value = False
         mock_template = Mock()
-        mock_template.name = "coding"
+        mock_template.name = "research"
         mock_list_templates.return_value = [mock_template]
 
         # Act
@@ -96,7 +96,7 @@ class TestCreateAgent:
 
         # Assert
         assert "Error: Template 'invalid_template' not found" in result
-        assert "coding" in result
+        assert "research" in result
 
     @patch("airunner.components.llm.tools.agent_tools.session_scope")
     @patch("airunner.components.llm.tools.agent_tools.template_exists")
@@ -142,9 +142,9 @@ class TestCreateAgent:
         # Arrange
         mock_template_exists.return_value = True
         mock_template = Mock()
-        mock_template.system_prompt = "You are a coding expert."
-        mock_template.tools = ["execute_python", "search_web"]
-        mock_template.description = "Coding assistant"
+        mock_template.system_prompt = "You are a research expert."
+        mock_template.tools = ["search_web", "scrape_website"]
+        mock_template.description = "Research assistant"
         mock_get_template.return_value = mock_template
 
         mock_session = MagicMock()
@@ -160,13 +160,13 @@ class TestCreateAgent:
 
         # Act - provide empty system_prompt to use template default
         result = create_agent(
-            name="coding_agent", system_prompt="", template="coding"
+            name="research_agent", system_prompt="", template="research"
         )
 
         # Assert
-        assert "Created agent 'coding_agent'" in result
+        assert "Created agent 'research_agent'" in result
         assert "(ID: 2)" in result
-        assert "coding" in result
+        assert "research" in result
         mock_session.add.assert_called_once()
 
     @patch("airunner.components.llm.tools.agent_tools.AgentConfig")
@@ -371,7 +371,7 @@ class TestListAgents:
         mock_agent1.id = 1
         mock_agent1.name = "agent1"
         mock_agent1.is_active = True
-        mock_agent1.template = "coding"
+        mock_agent1.template = "research"
         mock_agent1.tool_list = ["tool1", "tool2"]
         mock_agent1.description = "First agent"
 
@@ -395,7 +395,7 @@ class TestListAgents:
 
         # Assert
         assert "Available agents:" in result
-        assert "[1] agent1 (active) - coding template - 2 tools" in result
+        assert "[1] agent1 (active) - research template - 2 tools" in result
         assert "First agent" in result
         assert "[2] agent2 (active) - research template - 1 tools" in result
 
@@ -450,9 +450,9 @@ class TestListAgents:
 
         mock_agent = Mock()
         mock_agent.id = 1
-        mock_agent.name = "coding_agent"
+        mock_agent.name = "research_agent"
         mock_agent.is_active = True
-        mock_agent.template = "coding"
+        mock_agent.template = "research"
         mock_agent.tool_list = ["tool1"]
         mock_agent.description = None
 
@@ -461,10 +461,10 @@ class TestListAgents:
         mock_query.order_by.return_value.all.return_value = [mock_agent]
 
         # Act
-        result = list_agents(template="coding")
+        result = list_agents(template="research")
 
         # Assert
-        assert "[1] coding_agent (active) - coding template" in result
+        assert "[1] research_agent (active) - research template" in result
         # Verify filter was called with template
         assert mock_query.filter.call_count >= 1
 
@@ -610,26 +610,25 @@ class TestListAgentTemplates:
         """Test successfully listing agent templates."""
         # Arrange
         mock_template1 = Mock()
-        mock_template1.name = "coding"
-        mock_template1.description = "Programming and code assistance"
-        mock_template1.tools = ["execute_python", "search_web", "rag_search"]
-        mock_template1.system_prompt = (
-            "You are an expert programmer who helps write clean, "
-            "efficient code with best practices."
-        )
-
-        mock_template2 = Mock()
-        mock_template2.name = "research"
-        mock_template2.description = "Research and information gathering"
-        mock_template2.tools = [
+        mock_template1.name = "research"
+        mock_template1.description = "Research and information gathering"
+        mock_template1.tools = [
             "search_web",
             "scrape_website",
             "rag_search",
-            "save_to_knowledge_base",
         ]
+        mock_template1.system_prompt = (
+            "You are a research assistant who helps find and organize "
+            "information effectively."
+        )
+
+        mock_template2 = Mock()
+        mock_template2.name = "creative"
+        mock_template2.description = "Creative writing and content generation"
+        mock_template2.tools = ["generate_image", "write_file", "read_file"]
         mock_template2.system_prompt = (
-            "You are a research assistant who helps find and "
-            "organize information effectively."
+            "You are a creative writing specialist who produces engaging "
+            "content."
         )
 
         mock_list_templates.return_value = [mock_template1, mock_template2]
@@ -639,15 +638,12 @@ class TestListAgentTemplates:
 
         # Assert
         assert "Available agent templates:" in result
-        assert "coding:" in result
-        assert "Programming and code assistance" in result
-        assert "execute_python, search_web, rag_search" in result
         assert "research:" in result
         assert "Research and information gathering" in result
-        assert (
-            "search_web, scrape_website, rag_search, save_to_knowledge_base"
-            in result
-        )
+        assert "search_web, scrape_website, rag_search" in result
+        assert "creative:" in result
+        assert "Creative writing and content generation" in result
+        assert "generate_image, write_file, read_file" in result
 
     @patch("airunner.components.llm.tools.agent_tools.list_templates")
     def test_list_agent_templates_no_templates(self, mock_list_templates):

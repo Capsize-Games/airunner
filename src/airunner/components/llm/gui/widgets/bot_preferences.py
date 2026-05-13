@@ -11,15 +11,6 @@ from airunner.components.llm.gui.widgets.document_widget import DocumentWidget
 from airunner.components.llm.gui.widgets.templates.bot_preferences_ui import (
     Ui_bot_preferences,
 )
-from airunner.components.llm.coding_prompt_profile import (
-    coding_prompt_profiles,
-    get_coding_prompt_profile,
-    load_coding_prompt,
-    load_selected_coding_prompt_profile,
-    reset_coding_prompt,
-    save_coding_prompt,
-    save_selected_coding_prompt_profile,
-)
 from airunner.settings import (
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
@@ -93,12 +84,8 @@ class BotPreferencesWidget(BaseWidget):
         )
 
     def system_instructions_changed(self):
-        agent_type = self._selected_agent_type_key()
         prompt = self.ui.system_instructions.toPlainText()
-        if agent_type == "chatbot":
-            self.update_chatbot("system_instructions", prompt)
-            return
-        save_coding_prompt(agent_type, prompt)
+        self.update_chatbot("system_instructions", prompt)
 
     def toggle_use_names(self, val):
         self.update_chatbot("assign_names", val)
@@ -110,11 +97,6 @@ class BotPreferencesWidget(BaseWidget):
         self.update_chatbot("use_guardrails", val)
 
     def toggle_use_system_instructions(self, val):
-        if self._selected_agent_type_key() != "chatbot":
-            self.ui.system_instructions_groupbox.blockSignals(True)
-            self.ui.system_instructions_groupbox.setChecked(True)
-            self.ui.system_instructions_groupbox.blockSignals(False)
-            return
         self.update_chatbot("use_system_instructions", val)
 
     def create_new_chatbot_clicked(self):
@@ -180,7 +162,6 @@ class BotPreferencesWidget(BaseWidget):
     @Slot(bool)
     def agent_type_changed(self, val: str):
         del val
-        save_selected_coding_prompt_profile(self._selected_agent_type_key())
         self.load_form_elements()
 
     @Slot(bool)
@@ -296,14 +277,8 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot()
     def on_reset_system_instructions_button_clicked(self):
-        agent_type = self._selected_agent_type_key()
-        if agent_type == "chatbot":
-            self.ui.system_instructions.setPlainText(
-                AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT
-            )
-            return
         self.ui.system_instructions.setPlainText(
-            reset_coding_prompt(agent_type)
+            AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT
         )
 
     @Slot()
@@ -313,16 +288,13 @@ class BotPreferencesWidget(BaseWidget):
         )
 
     def _configure_agent_type_dropdown(self) -> None:
-        """Populate the agent-type dropdown with coding prompt roles."""
+        """Populate the agent-type dropdown with the supported profile."""
         dropdown = self.ui.comboBox
-        selected_key = load_selected_coding_prompt_profile()
         dropdown.blockSignals(True)
         dropdown.clear()
         dropdown.addItem("Chatbot", "chatbot")
-        for profile in coding_prompt_profiles():
-            dropdown.addItem(profile.label, profile.key)
-        index = dropdown.findData(selected_key)
-        dropdown.setCurrentIndex(index if index >= 0 else 0)
+        dropdown.setCurrentIndex(0)
+        dropdown.setEnabled(False)
         dropdown.blockSignals(False)
 
     def _selected_agent_type_key(self) -> str:
@@ -332,30 +304,19 @@ class BotPreferencesWidget(BaseWidget):
 
     def _load_system_prompt_editor(self) -> None:
         """Load the prompt text shown in the system prompt editor."""
-        agent_type = self._selected_agent_type_key()
-        if agent_type == "chatbot":
-            self.ui.system_instructions_groupbox.setCheckable(True)
-            self.ui.system_instructions_groupbox.setChecked(
-                self.chatbot.use_system_instructions
-            )
-            self.ui.system_instructions_groupbox.setTitle(
-                "System Instructions"
-            )
-            self.ui.system_instructions.setPlainText(
-                self.chatbot.system_instructions
-            )
-            return
-        profile = get_coding_prompt_profile(agent_type)
-        self.ui.system_instructions_groupbox.setCheckable(False)
-        self.ui.system_instructions_groupbox.setChecked(True)
-        self.ui.system_instructions_groupbox.setTitle(
-            f"{profile.label} Prompt"
+        self.ui.system_instructions_groupbox.setCheckable(True)
+        self.ui.system_instructions_groupbox.setChecked(
+            self.chatbot.use_system_instructions
         )
-        self.ui.system_instructions.setPlainText(load_coding_prompt(agent_type))
+        self.ui.system_instructions_groupbox.setTitle(
+            "System Instructions"
+        )
+        self.ui.system_instructions.setPlainText(
+            self.chatbot.system_instructions
+        )
 
     def _apply_agent_type_state(self) -> None:
         """Enable chatbot fields only when the chatbot profile is selected."""
-        enabled = self._selected_agent_type_key() == "chatbot"
         widget_names = [
             "saved_chatbots",
             "create_new_button",
@@ -372,4 +333,4 @@ class BotPreferencesWidget(BaseWidget):
         for name in widget_names:
             widget = getattr(self.ui, name, None)
             if widget is not None:
-                widget.setEnabled(enabled)
+                widget.setEnabled(True)

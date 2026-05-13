@@ -2053,9 +2053,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "include_style": "include_style",
             "include_memory": "include_memory",
             "include_ui_context": "include_ui_context",
-            # Mode-based routing / override options
-            "use_mode_routing": "use_mode_routing",
-            "mode_override": "mode_override",
         }
         excluded = {
             "prompt",

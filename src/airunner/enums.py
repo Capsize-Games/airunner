@@ -49,7 +49,6 @@ class CodeOperationType(Enum):
 
 
 class SignalCode(Enum):
-    REMOVE_BACKGROUND = "remove_background_signal"
     IMAGE_EXPORTED = "image_exported_signal"
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     NEW_DOCUMENT = "new_document_signal"
@@ -199,7 +198,6 @@ class SignalCode(Enum):
     LLM_GGUF_CONVERSION_PROGRESS = "llm_gguf_conversion_progress"
     LLM_GGUF_CONVERSION_COMPLETE = "llm_gguf_conversion_complete"
     LLM_GGUF_CONVERSION_FAILED = "llm_gguf_conversion_failed"
-    FARA_MODEL_DOWNLOAD_REQUIRED = "fara_model_download_required"
     HUGGINGFACE_DOWNLOAD_WORKER_READY = "huggingface_download_worker_ready"
     HUGGINGFACE_DOWNLOAD_COMPLETE = "huggingface_download_complete"
     HUGGINGFACE_DOWNLOAD_FAILED = "huggingface_download_failed"
@@ -232,13 +230,6 @@ class SignalCode(Enum):
     SAFETY_CHECKER_UNLOAD_SIGNAL = "safety_checker_unload_signal"
     SAFETY_CHECKER_FILTER_REQUEST = "safety_checker_filter_request"
     SAFETY_CHECKER_FILTER_COMPLETE = "safety_checker_filter_complete"
-
-    # Fara (Computer Use Agent) signals
-    FARA_LOAD_SIGNAL = "fara_load_signal"
-    FARA_UNLOAD_SIGNAL = "fara_unload_signal"
-    FARA_ACTION_EXECUTED = "fara_action_executed_signal"
-    FARA_TASK_COMPLETE = "fara_task_complete_signal"
-    FARA_CRITICAL_POINT = "fara_critical_point_signal"
 
     BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
 
@@ -442,9 +433,6 @@ class LLMActionType(Enum):
     WORKFLOW_INTERACTION = "workflow_interaction"
 
     DEEP_RESEARCH = "deep_research"
-
-    USE_COMPUTER = "use_computer"
-
 
 class CanvasToolName(Enum):
     ACTIVE_GRID_AREA = "active_grid_area"

@@ -407,7 +407,6 @@ QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
 #   - tool: The tool name to force (or None for special behavior)
 #   - description: Human-readable description shown in autocomplete
 #   - action: Optional LLMActionType override (defaults to APPLICATION_COMMAND)
-#   - request_mode: Optional visible request mode to apply for the command
 #   - prompt_prefix: Optional prefix to prepend to user's message
 RETIRED_SLASH_COMMANDS = frozenset(
     {

@@ -30,6 +30,7 @@ class ExternalConditionStoppingCriteria(StoppingCriteria):
         Returns:
             bool: True if generation should stop, False otherwise
         """
+        del input_ids, scores, kwargs
         result = self.external_condition_callable()
         # Only log when True to avoid spam
         if result:

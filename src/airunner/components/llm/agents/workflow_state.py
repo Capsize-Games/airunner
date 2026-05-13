@@ -1,7 +1,7 @@
 """Workflow state machine for structured agent execution.
 
 This module provides a state machine that enables:
-1. Predefined workflows (coding, research, writing, math)
+1. Predefined workflows (legacy coding, research, writing, math)
 2. Dynamic workflows created by the LLM at runtime
 3. Phase-based execution with explicit transitions
 4. TODO list management integrated into the workflow
@@ -20,7 +20,7 @@ from datetime import datetime
 class WorkflowType(Enum):
     """Types of workflows the agent can execute."""
     
-    CODING = "coding"
+    CODING = "coding"  # Legacy compatibility value
     RESEARCH = "research"
     WRITING = "writing"
     MATH = "math"
@@ -268,35 +268,43 @@ class WorkflowState:
 CODING_WORKFLOW = WorkflowDefinition(
     workflow_type=WorkflowType.CODING,
     name="Coding Workflow",
-    description="Structured workflow for code development with TDD",
+    description="Legacy structured implementation workflow",
     phases=[
         PhaseDefinition(
             name=Phase.DISCOVERY,
             description="Understand the task and gather context",
-            required_steps=["understand_task", "search_codebase", "take_notes"],
-            allowed_tools=["semantic_search", "read_file", "grep_search", "record_knowledge"],
+            required_steps=["understand_task", "gather_context", "take_notes"],
+            allowed_tools=[
+                "semantic_search",
+                "read_file",
+                "grep_search",
+                "record_knowledge",
+            ],
         ),
         PhaseDefinition(
             name=Phase.PLANNING,
-            description="Review notes, create design doc, and TODO list",
-            required_steps=["review_notes", "create_design", "create_todos"],
-            allowed_tools=["recall_knowledge", "create_document", "manage_todos"],
+            description="Review notes, create a plan, and define TODOs",
+            required_steps=["review_notes", "create_plan", "create_todos"],
+            allowed_tools=["recall_knowledge", "manage_todos"],
         ),
         PhaseDefinition(
             name=Phase.EXECUTION,
-            description="Execute TODO items: write tests, write code, validate, verify",
-            required_steps=["write_test", "write_code", "validate_code", "run_test", "verify"],
+            description="Execute TODO items and verify the result",
+            required_steps=["implement_task", "verify_result"],
             allowed_tools=[
-                "write_file", "edit_file", "run_tests", "run_command",
-                "read_file", "manage_todos", "validate_code", "lint_code",
-                "create_code_file", "edit_code_file"
+                "write_file",
+                "edit_file",
+                "run_tests",
+                "run_command",
+                "read_file",
+                "manage_todos",
             ],
             exit_conditions=["all_todos_complete", "all_tests_pass"],
         ),
         PhaseDefinition(
             name=Phase.REVIEW,
-            description="Review changes and refactor if needed",
-            required_steps=["review_changes", "refactor_if_needed"],
+            description="Review changes and confirm the deliverable",
+            required_steps=["review_changes", "confirm_outcome"],
             allowed_tools=["read_file", "edit_file", "run_tests"],
         ),
         PhaseDefinition(

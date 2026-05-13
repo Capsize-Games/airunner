@@ -55,7 +55,7 @@ class TestAnalyzeTask:
             "Refactor the authentication module and add unit tests"
         )
         assert analysis.should_use_harness
-        assert analysis.task_type == TaskType.CODING_PROJECT
+        assert analysis.task_type == TaskType.MULTI_STEP
 
     def test_single_coding_keyword_low_confidence(self):
         """Single coding keyword should have lower confidence."""
@@ -148,10 +148,10 @@ class TestTaskTypeDetection:
             assert analysis.task_type == TaskType.MULTI_RESEARCH
 
     def test_coding_type(self):
-        """Coding tasks get CODING_PROJECT type."""
+        """Implementation-style tasks now degrade to MULTI_STEP."""
         analysis = analyze_task("Build and deploy a REST API with tests")
         if analysis.should_use_harness:
-            assert analysis.task_type == TaskType.CODING_PROJECT
+            assert analysis.task_type == TaskType.MULTI_STEP
 
     def test_analysis_type(self):
         """Analysis tasks get COMPLEX_ANALYSIS type."""

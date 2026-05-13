@@ -17,7 +17,6 @@ from explicit planning and tracking.
 ### When to Use Structured Workflows
 
 **USE a workflow for:**
-- Code development (especially with tests)
 - Research tasks requiring multiple sources
 - Writing tasks with multiple sections
 - Multi-step mathematical problems
@@ -30,19 +29,15 @@ from explicit planning and tracking.
 
 ### Available Workflows
 
-1. **coding**: Discovery → Planning → Execution → Review
-   - Best for: Bug fixes, new features, refactoring
-   - Emphasizes: Test-driven development, incremental progress
-
-2. **research**: Discovery → Planning → Execution → Review  
+1. **research**: Discovery → Planning → Execution → Review
    - Best for: Deep research, fact-finding, analysis
    - Emphasizes: Source gathering, synthesis, citations
 
-3. **writing**: Discovery → Planning → Execution → Review
+2. **writing**: Discovery → Planning → Execution → Review
    - Best for: Documents, articles, creative writing
    - Emphasizes: Outlining, drafting, revision
 
-4. **math**: Discovery → Planning → Execution → Review
+3. **math**: Discovery → Planning → Execution → Review
    - Best for: Complex calculations, proofs
    - Emphasizes: Step-by-step solving, verification
 
@@ -104,51 +99,6 @@ create_custom_workflow(
 5. **Handle failures**: If a step fails, update TODO status and decide whether to retry or skip
 """
 
-CODING_WORKFLOW_PROMPT = """
-## Coding Workflow Guidelines
-
-You are executing a CODING workflow. Follow this pattern:
-
-### Discovery Phase
-1. Understand what needs to be built/fixed
-2. Search the codebase for relevant files
-3. Read existing code to understand patterns
-4. Take notes on findings: store_artifact("notes", findings)
-
-### Planning Phase  
-1. Review your notes
-2. Create a design document: store_artifact("design", design)
-3. Break down into TODOs, each TODO should be:
-   - Small enough to complete in one step
-   - Testable independently
-   - Clear about what file(s) to modify
-
-Example TODO breakdown for "Add user authentication":
-```
-add_todo_item("Write auth service tests", "Test login, logout, token validation")
-add_todo_item("Implement auth service", "Create AuthService class", dependencies="todo_1")
-add_todo_item("Write API endpoint tests", "Test /login and /logout endpoints", dependencies="todo_2")
-add_todo_item("Implement API endpoints", "Add routes and handlers", dependencies="todo_3")
-add_todo_item("Integration test", "Test full auth flow", dependencies="todo_4")
-```
-
-### Execution Phase (TDD Loop)
-For each TODO:
-1. start_todo_item(todo_id)
-2. Write the test FIRST (if applicable)
-3. Run test - should FAIL (red)
-4. Write minimal code to pass
-5. Run test - should PASS (green)
-6. Refactor if needed
-7. complete_todo_item(todo_id, summary)
-
-### Review Phase
-1. Run all tests
-2. Review code for quality issues
-3. Check for edge cases
-4. Refactor if beneficial
-"""
-
 RESEARCH_WORKFLOW_PROMPT = """
 ## Research Workflow Guidelines
 
@@ -188,13 +138,12 @@ def get_workflow_prompt(workflow_type: str) -> str:
     """Get the appropriate workflow prompt for a workflow type.
     
     Args:
-        workflow_type: One of "coding", "research", "writing", "math", "dynamic"
+      workflow_type: One of "research", "writing", "math", "dynamic"
         
     Returns:
         System prompt addition for the workflow
     """
     prompts = {
-        "coding": CODING_WORKFLOW_PROMPT,
         "research": RESEARCH_WORKFLOW_PROMPT,
         # Add more as needed
     }

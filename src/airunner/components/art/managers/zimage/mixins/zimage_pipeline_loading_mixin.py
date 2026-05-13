@@ -356,25 +356,6 @@ class ZImagePipelineLoadingMixin:
         )
         if text_encoder is None:
             raise RuntimeError("Failed to load text encoder")
-            load_kwargs = {
-                "local_files_only": True,
-            }
-            if text_encoder_bnb_config is not None:
-                load_kwargs["quantization_config"] = text_encoder_bnb_config
-                load_kwargs["device_map"] = "auto"
-                # Apply max_memory to prevent accelerate from using all VRAM
-                if max_memory_for_models is not None:
-                    load_kwargs["max_memory"] = max_memory_for_models
-            else:
-                load_kwargs["torch_dtype"] = model_dtype
-            text_encoder = AutoModelForCausalLM.from_pretrained(
-                str(text_encoder_path),
-                **load_kwargs,
-            )
-            tokenizer = AutoTokenizer.from_pretrained(
-                str(tokenizer_path),
-                local_files_only=True,
-            )
         # text encoder loaded via helper
         
         # Load VAE (delegated to helper)

@@ -1,7 +1,6 @@
 import os
 import re
 from sqlalchemy import Column, Integer, String, event
-from sqlalchemy.orm import validates
 
 from airunner.components.data.models.base import BaseModel
 from airunner.settings import AIRUNNER_BASE_PATH

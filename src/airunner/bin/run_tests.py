@@ -56,12 +56,6 @@ def _component_targets(
             / "gui"
             / "widgets"
             / "tests"
-            / "test_chat_request_mode.py",
-            base_path
-            / "chat"
-            / "gui"
-            / "widgets"
-            / "tests"
             / "test_conversation_widget_streaming.py",
         ],
         "documents": [

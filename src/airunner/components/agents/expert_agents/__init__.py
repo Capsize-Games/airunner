@@ -1,8 +1,5 @@
 """Expert agents for specialized tasks."""
 
-from airunner.components.agents.expert_agents.code_agent import (
-    CodeExpertAgent,
-)
 from airunner.components.agents.expert_agents.research_agent import (
     ResearchExpertAgent,
 )
@@ -11,7 +8,6 @@ from airunner.components.agents.expert_agents.creative_agent import (
 )
 
 __all__ = [
-    "CodeExpertAgent",
     "ResearchExpertAgent",
     "CreativeExpertAgent",
 ]

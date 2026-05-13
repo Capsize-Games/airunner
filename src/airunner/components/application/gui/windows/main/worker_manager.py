@@ -21,7 +21,6 @@ _STREAM_TTS_WORKER_SLEEP_MS = 1
 class WorkerManager(Worker):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
@@ -80,9 +79,6 @@ class WorkerManager(Worker):
             SignalCode.TTS_QUEUE_SIGNAL: self.on_add_to_queue_signal,
             SignalCode.PLAYBACK_DEVICE_CHANGED: self.on_playback_device_changed_signal,
             SignalCode.IMAGE_EXPORTED: self.on_image_exported_signal,
-            SignalCode.FARA_LOAD_SIGNAL: self.on_fara_load_signal,
-            SignalCode.FARA_UNLOAD_SIGNAL: self.on_fara_unload_signal,
-            SignalCode.FARA_MODEL_DOWNLOAD_REQUIRED: self.on_fara_model_download_required_signal,
             SignalCode.START_HUGGINGFACE_DOWNLOAD: self.on_start_huggingface_download_signal,
             SignalCode.START_OPENVOICE_BATCH_DOWNLOAD: self.on_start_openvoice_batch_download_signal,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_application_main_window_loaded_signal,
@@ -91,7 +87,6 @@ class WorkerManager(Worker):
         self._mask_generator_worker = None
         self._sd_worker = None
         self._safety_checker_worker = None
-        self._fara_worker = None
         self._pending_generation_request = None
         self._download_dialog = (
             None  # Store dialog reference to prevent garbage collection
@@ -106,7 +101,6 @@ class WorkerManager(Worker):
         self._huggingface_download_worker = None
         self._image_export_worker = None
         self._model_scanner_worker = None
-        self._background_removal_worker = None
         self._art_runtime_prewarm_started = False
         self._tts_runtime_prewarm_started = False
         if self.logger:
@@ -115,81 +109,6 @@ class WorkerManager(Worker):
             )
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
-
-    def on_remove_background_signal(self, data: Dict):
-        """Handle RMBG background removal request from the canvas.
-
-        Requirements:
-        - If no canvas image exists, show an alert popup.
-        - If an image exists, run RMBG-2.0 (downloading model files if missing).
-        """
-
-        from PySide6.QtWidgets import QMessageBox
-
-        # Resolve the currently selected layer and its image bytes.
-        layer_id = None
-        try:
-            layer_id = self._get_current_selected_layer_id()
-        except Exception:
-            layer_id = None
-
-        # If no layer is selected, fall back to the first layer (by order).
-        if layer_id is None:
-            try:
-                from airunner.components.art.data.canvas_layer import CanvasLayer
-
-                layers = CanvasLayer.objects.order_by("order").all() or []
-                if layers:
-                    layer_id = getattr(layers[0], "id", None)
-            except Exception:
-                layer_id = None
-
-        image_binary = None
-        try:
-            from airunner.components.art.data.drawingpad_settings import (
-                DrawingPadSettings,
-            )
-
-            if layer_id is not None:
-                drawing_pad = DrawingPadSettings.objects.filter_by_first(
-                    layer_id=layer_id
-                )
-                image_binary = getattr(drawing_pad, "image", None)
-            else:
-                # Fallback: best-effort read (may be global settings)
-                image_binary = getattr(self.drawing_pad_settings, "image", None)
-        except Exception:
-            image_binary = None
-
-        if not image_binary:
-            main_window = self._get_main_window()
-            if main_window is not None:
-                QMessageBox.information(
-                    main_window,
-                    "No Image",
-                    "Please import or generate an image first.",
-                )
-            return
-
-        # Lazily create worker to keep WorkerManager responsive.
-        if self._background_removal_worker is None:
-            from airunner.components.art.workers.background_removal_worker import (
-                BackgroundRemovalWorker,
-            )
-
-            self._background_removal_worker = create_worker(
-                BackgroundRemovalWorker
-            )
-
-        self._background_removal_worker.add_to_queue(
-            {
-                "action": "remove_background",
-                "data": {
-                    "layer_id": layer_id,
-                    "image": image_binary,
-                },
-            }
-        )
 
     def handle_message(self, message: Dict):
         if self.logger:
@@ -202,10 +121,6 @@ class WorkerManager(Worker):
             if request_type == "llm_generate":
                 if self.llm_generate_worker is not None:
                     self.llm_generate_worker.on_llm_request_signal(data)
-            elif request_type == "fara_generate":
-                # Route USE_COMPUTER requests to Fara worker
-                if self.fara_worker is not None:
-                    self.fara_worker.on_fara_request_signal(data)
             elif request_type == "image_auto_generate":
                 if self.sd_worker is not None:
                     self.sd_worker.on_start_auto_image_generation_signal(data)
@@ -358,16 +273,6 @@ class WorkerManager(Worker):
         return self._llm_generate_worker
 
     @property
-    def fara_worker(self):
-        if self._fara_worker is None:
-            from airunner.components.llm.workers.fara_worker import (
-                FaraWorker,
-            )
-
-            self._fara_worker = create_worker(FaraWorker)
-        return self._fara_worker
-
-    @property
     def document_worker(self):
         if self._document_worker is None:
             from airunner.components.documents.workers.document_worker import (
@@ -395,46 +300,21 @@ class WorkerManager(Worker):
                 f"WorkerManager::on_llm_request_signal CALLED with data keys: {list(data.keys())}"
             )
 
-        # Check if this is a USE_COMPUTER action - route to Fara worker
-        from airunner.enums import LLMActionType
-
-        request_data = data.get("request_data", {})
-        action = request_data.get("action")
-
-        # Handle both enum and string action values
-        is_use_computer = False
-        if action is LLMActionType.USE_COMPUTER:
-            is_use_computer = True
-        elif isinstance(action, str) and action.lower() == "use_computer":
-            is_use_computer = True
-
-        if is_use_computer:
+        worker = self.llm_generate_worker
+        if worker is not None:
             if self.logger:
-                self.logger.info("USE_COMPUTER action detected - routing to Fara worker")
-            # First unload all other models, then route to Fara
-            self.emit_signal(SignalCode.FARA_LOAD_SIGNAL, {})
-            self.add_to_queue(
-                {
-                    "data": data,
-                    "request_type": "fara_generate",
-                }
-            )
-        else:
-            worker = self.llm_generate_worker
-            if worker is not None:
-                if self.logger:
-                    self.logger.info(
-                        "WorkerManager::on_llm_request_signal forwarding directly to llm_generate_worker"
-                    )
-                worker.on_llm_request_signal(data)
-                return
+                self.logger.info(
+                    "WorkerManager::on_llm_request_signal forwarding directly to llm_generate_worker"
+                )
+            worker.on_llm_request_signal(data)
+            return
 
-            self.add_to_queue(
-                {
-                    "data": data,
-                    "request_type": "llm_generate",
-                }
-            )
+        self.add_to_queue(
+            {
+                "data": data,
+                "request_type": "llm_generate",
+            }
+        )
 
     def on_start_auto_image_generation_signal(self, data: Dict):
         self.add_to_queue(
@@ -1554,86 +1434,6 @@ class WorkerManager(Worker):
             }
         )
 
-    def on_fara_load_signal(self, data: Dict):
-        """Handle FARA load signal.
-
-        Unloads all other models (LLM, SD, TTS, STT) before loading Fara
-        to ensure sufficient VRAM is available.
-
-        Args:
-            data: Signal data dictionary
-        """
-        if self.logger:
-            self.logger.info("FARA_LOAD_SIGNAL received - unloading all models first")
-
-        # Unload regular LLM if loaded
-        if self._llm_generate_worker is not None:
-            try:
-                self.llm_generate_worker.unload_llm()
-                if self.logger:
-                    self.logger.info("Unloaded regular LLM model")
-            except Exception as e:
-                if self.logger:
-                    self.logger.warning(f"Error unloading LLM: {e}")
-
-        # Unload SD/art model if loaded
-        if self._sd_worker is not None:
-            try:
-                self.sd_worker.on_unload_art_signal()
-                if self.logger:
-                    self.logger.info("Unloaded art/SD model")
-            except Exception as e:
-                if self.logger:
-                    self.logger.warning(f"Error unloading SD: {e}")
-
-        # Unload TTS if loaded
-        if self.tts_generator_worker is not None:
-            try:
-                self.tts_generator_worker.unload()
-                if self.logger:
-                    self.logger.info("Unloaded TTS model")
-            except Exception as e:
-                if self.logger:
-                    self.logger.warning(f"Error unloading TTS: {e}")
-
-        # Unload STT if loaded
-        if self._stt_audio_processor_worker is not None:
-            try:
-                self.stt_audio_processor_worker.unload()
-                if self.logger:
-                    self.logger.info("Unloaded STT model")
-            except Exception as e:
-                if self.logger:
-                    self.logger.warning(f"Error unloading STT: {e}")
-
-        # Now load Fara
-        if self.fara_worker is not None:
-            self.fara_worker.load(data)
-
-    def on_fara_unload_signal(self, data: Dict):
-        """Handle FARA unload signal.
-
-        Args:
-            data: Signal data dictionary
-        """
-        if self.logger:
-            self.logger.info("FARA_UNLOAD_SIGNAL received")
-
-        if self._fara_worker is not None:
-            self.fara_worker.unload(data)
-
-    def on_fara_model_download_required_signal(self, data: Dict):
-        """Handle FARA model download required signal.
-
-        Args:
-            data: Signal data dictionary with model_path, model_name, repo_id
-        """
-        if self.logger:
-            self.logger.info(f"FARA_MODEL_DOWNLOAD_REQUIRED received: {data}")
-
-        if self._fara_worker is not None:
-            self.fara_worker.on_fara_model_download_required_signal(data)
-
     def _llm_model_change_requires_runtime_reload(self, data) -> bool:
         """Return True when a model-change notification should unload."""
         if not isinstance(data, dict):
@@ -2447,7 +2247,6 @@ class WorkerManager(Worker):
         from airunner.components.tts.data.bootstrap.openvoice_languages import (
             OPENVOICE_CORE_MODELS,
             OPENVOICE_LANGUAGE_MODELS,
-            get_models_for_languages,
         )
         from airunner.components.llm.gui.windows.huggingface_download_dialog import (
             HuggingFaceDownloadDialog,

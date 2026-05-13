@@ -31,6 +31,7 @@ def get_lat_lon(
     Returns:
         dict: Dictionary with keys 'lat', 'lon', and 'row'. Values are float or None.
     """
+    del country_code
     path_settings = PathSettings.objects.first()
     path = os.path.join(
         path_settings.base_path, "map", "2024_Gaz_zcta_national.txt"

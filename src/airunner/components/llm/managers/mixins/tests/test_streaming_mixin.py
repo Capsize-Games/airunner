@@ -4,7 +4,6 @@ from types import SimpleNamespace
 
 
 from airunner.components.llm.managers.mixins.streaming_mixin import (
-    CODE_WORKFLOW_RECURSION_LIMIT,
     DEFAULT_WORKFLOW_RECURSION_LIMIT,
     StreamingMixin,
 )
@@ -28,14 +27,13 @@ def test_create_config_uses_default_recursion_limit():
     assert config["recursion_limit"] == DEFAULT_WORKFLOW_RECURSION_LIMIT
 
 
-def test_create_config_uses_higher_recursion_limit_for_code_tools():
-    """Code requests should get extra graph budget for validation turns."""
+def test_create_config_uses_default_limit_for_legacy_code_requests():
+    """Legacy code requests should now use the default recursion limit."""
     mixin = TestableStreamingMixin()
     mixin.llm_request = SimpleNamespace(
         tool_categories=["CODE", "WORKFLOW", "SYSTEM"],
-        mode_override=None,
     )
 
     config = mixin._create_config()
 
-    assert config["recursion_limit"] == CODE_WORKFLOW_RECURSION_LIMIT
+    assert config["recursion_limit"] == DEFAULT_WORKFLOW_RECURSION_LIMIT

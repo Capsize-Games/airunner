@@ -1,8 +1,8 @@
 """Agent management tools for ToolRegistry.
 
 This module provides tools for creating, configuring, and managing custom AI
-agents. Agents can be created with different templates (coding, research,
-creative) and configured with specific system prompts and tools.
+agents. Agents can be created with different templates (research,
+creative, custom) and configured with specific system prompts and tools.
 
 Tools:
     - create_agent: Create a new custom AI agent
@@ -13,17 +13,17 @@ Tools:
     - list_agent_templates: List available agent templates
 
 Examples:
-    >>> # Create a coding agent
+    >>> # Create a research agent
     >>> create_agent(
-    ...     name="code_helper",
-    ...     system_prompt="You are a Python expert.",
-    ...     template="coding"
+    ...     name="research_helper",
+    ...     system_prompt="You are a research analyst.",
+    ...     template="research"
     ... )
-    "Created agent 'code_helper' (ID: 1) using template 'coding' with 3 tools"
+    "Created agent 'research_helper' (ID: 1) using template 'research' with 5 tools"
 
     >>> # List all agents
     >>> list_agents()
-    "Available agents:\\n  [1] code_helper (active) - coding template - 3 tools"
+    "Available agents:\\n  [1] research_helper (active) - research template - 5 tools"
 """
 
 import json
@@ -44,8 +44,8 @@ from airunner.components.data.session_manager import session_scope
     category=ToolCategory.SYSTEM,
     description=(
         "Create a new custom AI agent with specified name, system prompt, "
-        "and available tools. Optionally use a template (coding, research, "
-        "creative) to pre-configure the agent."
+        "and available tools. Optionally use a template (research, "
+        "creative, custom) to pre-configure the agent."
     ),
     requires_api=False,
 )
@@ -60,25 +60,25 @@ def create_agent(
 
     This tool allows creating specialized AI agents with custom system prompts,
     descriptions, and tool access. Agents can be created from templates
-    (coding, research, creative) or fully customized.
+    (research, creative) or fully customized.
 
     Args:
         name: Unique agent name identifier (required)
         system_prompt: Custom system prompt for the agent (required)
         description: Description of agent purpose (optional)
         tools: List of tool names available to agent (optional)
-        template: Template category - coding, research, creative,
-            or custom. Defaults to "custom"
+        template: Template category - research, creative, or custom.
+            Defaults to "custom"
 
 
     Examples:
-        >>> # Create a coding agent with template
+        >>> # Create a research agent with template
         >>> create_agent(
-        ...     name="python_expert",
-        ...     system_prompt="You are a Python programming expert.",
-        ...     template="coding"
+        ...     name="research_expert",
+        ...     system_prompt="You analyze sources carefully.",
+        ...     template="research"
         ... )
-        "Created agent 'python_expert' (ID: 1) using template 'coding' with 3 tools"
+        "Created agent 'research_expert' (ID: 1) using template 'research' with 5 tools"
 
         >>> # Create a custom agent with specific tools
         >>> create_agent(
@@ -192,7 +192,7 @@ def configure_agent(
         >>> configure_agent(
         ...     agent_id=1,
         ...     system_prompt="You are an expert Python developer.",
-        ...     tools=["execute_python", "search_web"]
+        ...     tools=["search_web", "scrape_website"]
         ... )
         "Updated agent 'python_guru' (ID: 1): system_prompt, tools (2 items)"
 
@@ -285,15 +285,15 @@ def list_agents(
     Examples:
         >>> # List all active agents
         >>> list_agents()
-        "Available agents:\\n  [1] python_expert (active) - coding template - 3 tools\\n      Python programming expert"
+        "Available agents:\\n  [1] research_expert (active) - research template - 5 tools\\n      Research analyst"
 
         >>> # List all agents including inactive
         >>> list_agents(active_only=False)
-        "Available agents:\\n  [1] python_expert (active) - coding template - 3 tools\\n  [2] old_bot (inactive) - custom template - 0 tools"
+        "Available agents:\\n  [1] research_expert (active) - research template - 5 tools\\n  [2] old_bot (inactive) - custom template - 0 tools"
 
         >>> # List agents by template
-        >>> list_agents(template="coding")
-        "Available agents:\\n  [1] python_expert (active) - coding template - 3 tools"
+        >>> list_agents(template="research")
+        "Available agents:\\n  [1] research_expert (active) - research template - 5 tools"
 
     Note:
         - Agents are ordered by creation date (newest first)
@@ -402,7 +402,7 @@ def get_agent(agent_id: int) -> str:
     Examples:
         >>> # Get agent details
         >>> get_agent(agent_id=1)
-        '{\\n  "id": 1,\\n  "name": "python_expert",\\n  "description": "Python programming expert",\\n  "system_prompt": "You are a Python expert.",\\n  "template": "coding",\\n  "tools": ["execute_python", "search_web", "rag_search"],\\n  "is_active": true,\\n  "created_at": "2025-11-01T10:00:00"\\n}'
+        '{\\n  "id": 1,\\n  "name": "research_expert",\\n  "description": "Research analyst",\\n  "system_prompt": "You are a research expert.",\\n  "template": "research",\\n  "tools": ["search_web", "scrape_website", "rag_search"],\\n  "is_active": true,\\n  "created_at": "2025-11-01T10:00:00"\\n}'
 
     Note:
         - Returns complete agent configuration
@@ -445,10 +445,10 @@ def list_agent_templates() -> str:
     Examples:
         >>> # List all templates
         >>> list_agent_templates()
-        "Available agent templates:\\n\\ncoding:\\n  Description: Programming and code assistance\\n  Tools: execute_python, search_web, rag_search\\n  System Prompt: You are an expert programmer who helps write clean, efficient code...\\n\\nresearch:\\n  Description: Research and information gathering\\n  Tools: search_web, scrape_website, rag_search, save_to_knowledge_base\\n  System Prompt: You are a research assistant who helps find and organize information..."
+        "Available agent templates:\\n\\nresearch:\\n  Description: Research and information gathering\\n  Tools: search_web, scrape_website, rag_search, save_to_knowledge_base\\n  System Prompt: You are a research assistant who helps find and organize information..."
 
     Note:
-        - Templates include: coding, research, creative
+        - Templates include: research, creative, custom
         - Each template has pre-configured tools and prompts
         - Templates can be customized when creating agents
         - System prompts are truncated to 100 characters

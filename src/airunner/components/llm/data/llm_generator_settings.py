@@ -49,9 +49,6 @@ class LLMGeneratorSettings(BaseModel):
     model_id = Column(String, nullable=True)  # Provider config model ID (e.g., "qwen3-8b")
     auto_extract_knowledge = Column(Boolean, default=True)
 
-    # Mode-based routing settings
-    use_mode_routing = Column(Boolean, default=False)
-    mode_override = Column(String, nullable=True)
     enable_trajectory_logging = Column(Boolean, default=False)
 
     # Qwen3 thinking mode (enables <think>...</think> reasoning)

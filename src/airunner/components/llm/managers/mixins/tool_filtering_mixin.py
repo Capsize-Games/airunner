@@ -216,16 +216,14 @@ class ToolFilteringMixin:
             and action == LLMActionType.PERFORM_RAG_SEARCH
         ):
             tool_choice = "any"
-        elif supports_forced_choice and action == LLMActionType.CODE:
-            tool_choice = "any"
         elif supports_forced_choice and tool_categories and (
             "search" in tool_categories or "research" in tool_categories
         ):
             tool_choice = "any"
         elif action == LLMActionType.CODE:
             self.logger.info(
-                "[TOOL FILTER] Leaving code tool_choice unset for model "
-                "without reliable forced function calling"
+                "[TOOL FILTER] CODE action uses generic fallback handling; "
+                "leaving tool_choice unset"
             )
 
         self._workflow_manager.update_tools(

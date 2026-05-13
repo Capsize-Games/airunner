@@ -5,7 +5,6 @@ Long-Running Harness for better coherency and progress tracking.
 
 The harness is automatically applied for:
 - Multi-step tasks (e.g., "research 5 papers", "implement these features")
-- Complex coding tasks (e.g., "refactor this module", "add tests for X")
 - Research projects (e.g., "investigate X and write a report")
 - Any task with explicit multiple items or steps
 
@@ -24,7 +23,7 @@ class TaskType(Enum):
 
     SIMPLE = "simple"  # No harness needed
     MULTI_RESEARCH = "multi_research"  # Multiple research topics
-    CODING_PROJECT = "coding_project"  # Code implementation/refactoring
+    CODING_PROJECT = "coding_project"  # Legacy compatibility value
     MULTI_STEP = "multi_step"  # Explicit numbered/listed steps
     COMPLEX_ANALYSIS = "complex_analysis"  # Deep analysis tasks
 
@@ -54,7 +53,7 @@ MULTI_ITEM_PATTERNS = [
     r"[-•]\s*.+(?:\n[-•]\s*.+)+",
 ]
 
-# Keywords indicating coding projects
+# Legacy implementation keywords
 CODING_PROJECT_KEYWORDS = [
     "implement",
     "refactor",
@@ -173,10 +172,12 @@ def analyze_task(prompt: str) -> TaskAnalysis:
     
     if coding_score >= 2:
         confidence = max(confidence, 0.7)
-        reasons.append(f"Multiple coding keywords ({coding_score})")
+        reasons.append(
+            f"Multiple implementation keywords ({coding_score})"
+        )
     elif coding_score == 1:
         confidence = max(confidence, 0.4)
-        reasons.append("Single coding keyword")
+        reasons.append("Single implementation keyword")
 
     # Check for multi-step keywords
     for kw in MULTI_STEP_KEYWORDS:
@@ -272,8 +273,8 @@ def _determine_task_type(
     if any("research" in r.lower() for r in reasons):
         return TaskType.MULTI_RESEARCH
 
-    if any("coding" in r.lower() for r in reasons):
-        return TaskType.CODING_PROJECT
+    if any("implementation" in r.lower() for r in reasons):
+        return TaskType.MULTI_STEP
 
     if any("multi-step" in r.lower() for r in reasons):
         return TaskType.MULTI_STEP
@@ -285,7 +286,7 @@ def _determine_task_type(
     if "research" in prompt_lower or "paper" in prompt_lower:
         return TaskType.MULTI_RESEARCH
     if any(kw in prompt_lower for kw in CODING_PROJECT_KEYWORDS[:5]):
-        return TaskType.CODING_PROJECT
+        return TaskType.MULTI_STEP
 
     return TaskType.MULTI_STEP
 

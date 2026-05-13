@@ -3,9 +3,7 @@
 This module provides specialized sub-agents that handle specific types
 of work within long-running projects:
 
-- CodeSubAgent: Code writing, debugging, testing
 - ResearchSubAgent: Information gathering, synthesis
-- TestingSubAgent: Test creation, validation
 - DocumentationSubAgent: Writing docs, comments
 
 Sub-agents can be more focused and use specialized tools/prompts
@@ -146,63 +144,6 @@ Report what you did and the results."""
             }
 
 
-class CodeSubAgent(BaseSubAgent):
-    """Specialized agent for coding tasks.
-
-    Handles:
-    - Writing new code
-    - Debugging existing code
-    - Code refactoring
-    - Unit test creation
-    - Code execution and validation
-    """
-
-    def __init__(self, chat_model: Any, tools: Optional[List[Any]] = None):
-        """Initialize code sub-agent."""
-        super().__init__(
-            chat_model=chat_model,
-            tools=tools,
-            name="CodeSubAgent",
-            description="Expert code writing and debugging",
-        )
-
-    def _get_default_tools(self) -> List[Any]:
-        """Get CODE-category tools."""
-        code_tools = ToolRegistry.get_by_category(ToolCategory.CODE)
-        return [tool.func for tool in code_tools]
-
-    def _get_system_prompt(self) -> str:
-        """Get code-focused system prompt."""
-        return """You are an expert software engineer specializing in writing high-quality code.
-
-CAPABILITIES:
-- Write clean, well-documented code in any language
-- Debug and fix complex issues
-- Create comprehensive unit tests
-- Refactor code for maintainability
-- Execute and validate code safely
-
-BEST PRACTICES:
-- Follow language-specific conventions
-- Write clear, descriptive comments
-- Handle errors gracefully
-- Use meaningful variable/function names
-- Keep functions small and focused
-- Write tests alongside code
-
-PROCESS:
-1. Understand the requirement completely
-2. Plan the implementation
-3. Write the code incrementally
-4. Test each component
-5. Refactor if needed
-6. Verify all requirements met
-
-Always prefer simple, readable code over clever solutions.
-Always handle edge cases and errors.
-Always validate your work before declaring completion."""
-
-
 class ResearchSubAgent(BaseSubAgent):
     """Specialized agent for research tasks.
 
@@ -257,64 +198,6 @@ PROCESS:
 Always be thorough but focused.
 Always distinguish facts from opinions.
 Always provide source attribution."""
-
-
-class TestingSubAgent(BaseSubAgent):
-    """Specialized agent for testing tasks.
-
-    Handles:
-    - Unit test creation
-    - Integration test design
-    - Test execution
-    - Coverage analysis
-    - Bug reproduction
-    """
-
-    def __init__(self, chat_model: Any, tools: Optional[List[Any]] = None):
-        """Initialize testing sub-agent."""
-        super().__init__(
-            chat_model=chat_model,
-            tools=tools,
-            name="TestingSubAgent",
-            description="Comprehensive testing and validation",
-        )
-
-    def _get_default_tools(self) -> List[Any]:
-        """Get testing-relevant tools."""
-        code_tools = ToolRegistry.get_by_category(ToolCategory.CODE)
-        return [tool.func for tool in code_tools]
-
-    def _get_system_prompt(self) -> str:
-        """Get testing-focused system prompt."""
-        return """You are an expert QA engineer specializing in comprehensive software testing.
-
-CAPABILITIES:
-- Write thorough unit tests
-- Design integration tests
-- Create end-to-end test scenarios
-- Analyze test coverage
-- Identify edge cases and bugs
-
-BEST PRACTICES:
-- Test both happy paths and edge cases
-- Use descriptive test names
-- Keep tests independent
-- Mock external dependencies
-- Aim for high coverage
-- Document test purpose
-
-TEST CATEGORIES:
-1. Unit tests: Individual functions/methods
-2. Integration tests: Component interactions
-3. End-to-end tests: Full user workflows
-4. Edge case tests: Boundary conditions
-5. Error handling tests: Failure scenarios
-
-Always ensure tests are:
-- Fast to run
-- Reliable (no flaky tests)
-- Readable and maintainable
-- Independent of each other"""
 
 
 class DocumentationSubAgent(BaseSubAgent):
@@ -387,14 +270,16 @@ def create_sub_agents(
     Returns:
         Dict mapping category names to sub-agent instances
     """
+    research_agent = ResearchSubAgent(chat_model)
+    documentation_agent = DocumentationSubAgent(chat_model)
+
     return {
-        "functional": CodeSubAgent(chat_model),
-        "code": CodeSubAgent(chat_model),
-        "research": ResearchSubAgent(chat_model),
-        "integration": ResearchSubAgent(chat_model),  # Research for APIs
-        "testing": TestingSubAgent(chat_model),
-        "documentation": DocumentationSubAgent(chat_model),
-        "ui": CodeSubAgent(chat_model),  # UI is still code
-        "performance": CodeSubAgent(chat_model),
-        "security": CodeSubAgent(chat_model),
+        "functional": documentation_agent,
+        "research": research_agent,
+        "integration": research_agent,
+        "testing": documentation_agent,
+        "documentation": documentation_agent,
+        "ui": documentation_agent,
+        "performance": research_agent,
+        "security": research_agent,
     }

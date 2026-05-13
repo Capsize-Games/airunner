@@ -126,10 +126,9 @@ class LongRunningHarness:
         """Register a specialized sub-agent for a feature category.
 
         Sub-agents handle specific types of work:
-        - "code": Code writing, debugging, testing
         - "research": Information gathering, synthesis
         - "documentation": Writing docs, comments
-        - "testing": Test creation, validation
+        - "testing": Validation and verification support
 
         Args:
             category: Feature category this agent handles

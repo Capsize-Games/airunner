@@ -9,7 +9,6 @@ from airunner.components.agents.expert_agent import (
 from airunner.components.agents.agent_registry import AgentRegistry
 from airunner.components.agents.agent_router import AgentRouter
 from airunner.components.agents.expert_agents import (
-    CodeExpertAgent,
     ResearchExpertAgent,
     CreativeExpertAgent,
 )
@@ -117,11 +116,7 @@ class TestAgentRegistry:
     @pytest.fixture
     def sample_agents(self):
         """Create sample agents for testing."""
-        return [
-            CodeExpertAgent(),
-            ResearchExpertAgent(),
-            CreativeExpertAgent(),
-        ]
+        return [ResearchExpertAgent(), CreativeExpertAgent()]
 
     def test_registry_initialization(self, registry):
         """Test registry initialization."""
@@ -165,7 +160,7 @@ class TestAgentRegistry:
             registry.register(agent)
 
         agent_names = registry.list_agents()
-        assert len(agent_names) == 3
+        assert len(agent_names) == 2
         assert all(agent.name in agent_names for agent in sample_agents)
 
     def test_list_agents_by_capability(self, registry, sample_agents):
@@ -173,20 +168,20 @@ class TestAgentRegistry:
         for agent in sample_agents:
             registry.register(agent)
 
-        code_agents = registry.list_agents_by_capability("code_generation")
-        assert "code_expert" in code_agents
-        assert len(code_agents) == 1
+        research_agents = registry.list_agents_by_capability(
+            "information_retrieval"
+        )
+        assert "research_expert" in research_agents
+        assert len(research_agents) == 1
 
     def test_find_agents_for_task(self, registry, sample_agents):
         """Test finding agents for a task."""
         for agent in sample_agents:
             registry.register(agent)
 
-        results = registry.find_agents_for_task(
-            "Write a Python function to sort a list"
-        )
+        results = registry.find_agents_for_task("Find information about Python")
         assert len(results) > 0
-        assert results[0][0] == "code_expert"
+        assert results[0][0] == "research_expert"
         assert results[0][1] > 0.0
 
     def test_find_agents_with_min_score(self, registry, sample_agents):
@@ -222,7 +217,7 @@ class TestAgentRegistry:
         for agent in sample_agents:
             registry.register(agent)
 
-        assert len(registry) == 3
+        assert len(registry) == 2
         registry.clear()
         assert len(registry) == 0
 
@@ -234,7 +229,6 @@ class TestAgentRouter:
     def registry(self):
         """Create registry with sample agents."""
         reg = AgentRegistry()
-        reg.register(CodeExpertAgent())
         reg.register(ResearchExpertAgent())
         reg.register(CreativeExpertAgent())
         return reg
@@ -243,16 +237,6 @@ class TestAgentRouter:
     def router(self, registry):
         """Create router with populated registry."""
         return AgentRouter(registry)
-
-    @pytest.mark.anyio
-    async def test_route_code_task(self, router):
-        """Test routing a code task."""
-        result = await router.route_task(
-            "Write a function to sort a list", min_score=0.05
-        )
-
-        assert result["success"] is True
-        assert "code_expert" in result["agents_used"]
 
     @pytest.mark.asyncio
     async def test_route_research_task(self, router):
@@ -301,18 +285,9 @@ class TestAgentRouter:
     async def test_route_task_max_agents(self, router):
         """Test routing with max agents limit."""
         result = await router.route_task(
-            "Write code to schedule events",  # Could match multiple
+            "Research time travel themes and write a blog post",
             max_agents=2,
             min_score=0.05,
-        )
-
-    @pytest.mark.asyncio
-    async def test_route_task_max_agents(self, router):
-        """Test routing with max agents limit."""
-        result = await router.route_task(
-            "Write code to schedule events",  # Could match multiple
-            max_agents=2,
-            min_score=0.1,
         )
 
         assert result["success"] is True
@@ -346,26 +321,6 @@ class TestAgentRouter:
 
 class TestExpertAgents:
     """Integration tests for specific expert agents."""
-
-    @pytest.mark.asyncio
-    async def test_code_agent_generate_code(self):
-        """Test code agent code generation."""
-        agent = CodeExpertAgent()
-        result = await agent.execute_task(
-            "Write a function to calculate fibonacci"
-        )
-
-        assert result["success"] is True
-        assert result["result"]["action"] == "generate_code"
-
-    @pytest.mark.asyncio
-    async def test_code_agent_review_code(self):
-        """Test code agent code review."""
-        agent = CodeExpertAgent()
-        result = await agent.execute_task("Review this code for issues")
-
-        assert result["success"] is True
-        assert result["result"]["action"] == "review_code"
 
     @pytest.mark.asyncio
     async def test_research_agent_search(self):
@@ -411,7 +366,6 @@ class TestEndToEndAgentSystem:
     def full_system(self):
         """Set up complete agent system."""
         registry = AgentRegistry()
-        registry.register(CodeExpertAgent())
         registry.register(ResearchExpertAgent())
         registry.register(CreativeExpertAgent())
         router = AgentRouter(registry)
@@ -424,7 +378,6 @@ class TestEndToEndAgentSystem:
 
         # Test various tasks get routed correctly
         tasks = [
-            ("Write a Python function", "code_expert"),
             ("Research quantum computing", "research_expert"),
             ("Write a creative story", "creative_expert"),
         ]
@@ -465,12 +418,10 @@ class TestEndToEndAgentSystem:
 
         # Find all agents that can help with writing
         agents = registry.find_agents_for_task(
-            "Write something", min_score=0.05
+            "Research and write about quantum computing", min_score=0.05
         )
 
         assert len(agents) > 0
-        # Both creative and code agents should match
         agent_names = [name for name, score in agents]
-        assert any(
-            "creative" in name or "code" in name for name in agent_names
-        )
+        assert "creative_expert" in agent_names
+        assert "research_expert" in agent_names

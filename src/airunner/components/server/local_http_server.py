@@ -158,6 +158,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
     def send_error(self, code, message=None, explain=None):
         # Minimal error info: no file paths, no stack traces
+        del message, explain
         short_messages = {
             403: "Forbidden",
             404: "Not Found",

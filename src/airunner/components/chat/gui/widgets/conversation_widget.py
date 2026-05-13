@@ -700,6 +700,7 @@ class ConversationWidget(BaseWidget):
 
     def set_conversation_widgets(self, messages, skip_scroll: bool = False):
         """Replace per-message widgets with a single HTML conversation view."""
+        del skip_scroll
         # Ensure every message has a unique integer 'id' and correct role/is_bot
         messages = self._assign_message_ids(messages)
         for msg in messages:
