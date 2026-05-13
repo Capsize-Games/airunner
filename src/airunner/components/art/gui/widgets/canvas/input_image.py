@@ -187,17 +187,9 @@ class InputImage(BaseWidget):
         else:
             self.ui.mask_blur_slider_widget.hide()
 
-        self.ui.EnableSwitch.toggled.connect(self.enabled_toggled)
-
         if self.settings_key == "outpaint_settings":
             if self.is_mask:
                 self.ui.import_button.hide()
-
-        self.ui.EnableSwitch.blockSignals(True)
-        self.ui.EnableSwitch.checked = self.current_settings.enabled
-        self.ui.EnableSwitch.setChecked(self.current_settings.enabled)
-        self.ui.EnableSwitch.dPtr.animate(self.current_settings.enabled)
-        self.ui.EnableSwitch.blockSignals(False)
 
         self.ui.link_to_grid_image_button.blockSignals(True)
         self.ui.lock_input_image_button.blockSignals(True)
@@ -226,10 +218,6 @@ class InputImage(BaseWidget):
             return
 
         self.load_image_from_settings()
-
-    @Slot(bool)
-    def enabled_toggled(self, val):
-        self.update_current_settings("enabled", val)
 
     @Slot(bool)
     def on_lock_input_image_button_toggled(self, val: bool):

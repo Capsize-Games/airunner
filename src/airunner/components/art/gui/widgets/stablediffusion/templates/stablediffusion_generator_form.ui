@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>568</width>
-    <height>825</height>
+    <width>598</width>
+    <height>831</height>
    </rect>
   </property>
   <property name="font">
@@ -71,8 +71,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>568</width>
-           <height>775</height>
+           <width>598</width>
+           <height>781</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout">
@@ -235,7 +235,7 @@
             </widget>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="0">
            <widget class="QWidget" name="sdxl_settings_container" native="true">
             <layout class="QVBoxLayout" name="sdxl_settings">
              <property name="leftMargin">
@@ -357,6 +357,24 @@
             </layout>
            </widget>
           </item>
+          <item row="1" column="0">
+           <layout class="QGridLayout" name="image_mode">
+            <item row="1" column="0">
+             <widget class="InputImageContainer" name="image_to_image_settings" native="true">
+              <property name="settings_key" stdset="0">
+               <string>image_to_image_settings</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="InputImageContainer" name="inpaint_settings" native="true">
+              <property name="settings_key" stdset="0">
+               <string>outpaint_settings</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </widget>
        </widget>
@@ -375,6 +393,37 @@
         <property name="bottomMargin">
          <number>10</number>
         </property>
+        <item>
+         <widget class="QComboBox" name="image_mode_combobox">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>Text→Image</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Image→Image</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Inpaint</string>
+           </property>
+          </item>
+         </widget>
+        </item>
         <item>
          <widget class="QProgressBar" name="progress_bar">
           <property name="sizePolicy">
@@ -473,6 +522,12 @@
    <class>SliderWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/application/gui/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>InputImageContainer</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/art/gui/widgets/canvas/input_image_container</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

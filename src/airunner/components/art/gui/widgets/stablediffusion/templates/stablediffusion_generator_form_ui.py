@@ -15,19 +15,20 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
-    QLabel, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
+    QHBoxLayout, QLabel, QPlainTextEdit, QProgressBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QSplitter, QVBoxLayout, QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.art.gui.widgets.canvas.input_image_container import InputImageContainer
 import airunner.feather_rc
 
 class Ui_stablediffusion_generator_form(object):
     def setupUi(self, stablediffusion_generator_form):
         if not stablediffusion_generator_form.objectName():
             stablediffusion_generator_form.setObjectName(u"stablediffusion_generator_form")
-        stablediffusion_generator_form.resize(568, 825)
+        stablediffusion_generator_form.resize(598, 831)
         font = QFont()
         font.setPointSize(8)
         stablediffusion_generator_form.setFont(font)
@@ -49,7 +50,7 @@ class Ui_stablediffusion_generator_form(object):
         self.stable_diffusion_generator_form.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 568, 775))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 598, 781))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -193,7 +194,22 @@ class Ui_stablediffusion_generator_form(object):
         self.sdxl_settings.addLayout(self.horizontalLayout_14)
 
 
-        self.gridLayout.addWidget(self.sdxl_settings_container, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.sdxl_settings_container, 2, 0, 1, 1)
+
+        self.image_mode = QGridLayout()
+        self.image_mode.setObjectName(u"image_mode")
+        self.image_to_image_settings = InputImageContainer(self.scrollAreaWidgetContents)
+        self.image_to_image_settings.setObjectName(u"image_to_image_settings")
+
+        self.image_mode.addWidget(self.image_to_image_settings, 1, 0, 1, 1)
+
+        self.inpaint_settings = InputImageContainer(self.scrollAreaWidgetContents)
+        self.inpaint_settings.setObjectName(u"inpaint_settings")
+
+        self.image_mode.addWidget(self.inpaint_settings, 0, 0, 1, 1)
+
+
+        self.gridLayout.addLayout(self.image_mode, 1, 0, 1, 1)
 
         self.stable_diffusion_generator_form.setWidget(self.scrollAreaWidgetContents)
 
@@ -202,6 +218,16 @@ class Ui_stablediffusion_generator_form(object):
         self.horizontalLayout_7 = QHBoxLayout()
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.horizontalLayout_7.setContentsMargins(10, 10, 10, 10)
+        self.image_mode_combobox = QComboBox(self.generator_form_tabs)
+        self.image_mode_combobox.addItem("")
+        self.image_mode_combobox.addItem("")
+        self.image_mode_combobox.addItem("")
+        self.image_mode_combobox.setObjectName(u"image_mode_combobox")
+        self.image_mode_combobox.setMinimumSize(QSize(120, 30))
+        self.image_mode_combobox.setMaximumSize(QSize(120, 16777215))
+
+        self.horizontalLayout_7.addWidget(self.image_mode_combobox)
+
         self.progress_bar = QProgressBar(self.generator_form_tabs)
         self.progress_bar.setObjectName(u"progress_bar")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -280,6 +306,12 @@ class Ui_stablediffusion_generator_form(object):
         self.infinite_images_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Toggle infinite image generation", None))
 #endif // QT_CONFIG(tooltip)
         self.infinite_images_button.setText("")
+        self.image_to_image_settings.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_generator_form", u"image_to_image_settings", None))
+        self.inpaint_settings.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_generator_form", u"outpaint_settings", None))
+        self.image_mode_combobox.setItemText(0, QCoreApplication.translate("stablediffusion_generator_form", u"Text\u2192Image", None))
+        self.image_mode_combobox.setItemText(1, QCoreApplication.translate("stablediffusion_generator_form", u"Image\u2192Image", None))
+        self.image_mode_combobox.setItemText(2, QCoreApplication.translate("stablediffusion_generator_form", u"Inpaint", None))
+
 #if QT_CONFIG(tooltip)
         self.generate_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Generate image", None))
 #endif // QT_CONFIG(tooltip)

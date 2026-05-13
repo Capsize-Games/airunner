@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (QApplication, QGraphicsView, QGridLayout, QHBoxLa
     QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
-from airunner.components.application.gui.widgets.switch_widget.switch_widget import SwitchWidget
 from airunner.components.art.gui.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
 import airunner.feather_rc
 
@@ -43,7 +42,7 @@ class Ui_input_image(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 565, 1024))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 457))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
@@ -52,7 +51,7 @@ class Ui_input_image(object):
         self.image_container.setObjectName(u"image_container")
         sizePolicy.setHeightForWidth(self.image_container.sizePolicy().hasHeightForWidth())
         self.image_container.setSizePolicy(sizePolicy)
-        self.image_container.setMinimumSize(QSize(1024, 1024))
+        self.image_container.setMinimumSize(QSize(0, 0))
 
         self.gridLayout_2.addWidget(self.image_container, 0, 0, 1, 1)
 
@@ -145,13 +144,6 @@ class Ui_input_image(object):
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
-
-        self.EnableSwitch = SwitchWidget(input_image)
-        self.EnableSwitch.setObjectName(u"EnableSwitch")
-        self.EnableSwitch.setMinimumSize(QSize(45, 20))
-        self.EnableSwitch.setMaximumSize(QSize(45, 20))
-
-        self.horizontalLayout.addWidget(self.EnableSwitch)
 
         self.import_button = QPushButton(input_image)
         self.import_button.setObjectName(u"import_button")

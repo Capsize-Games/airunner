@@ -33,7 +33,6 @@ from airunner.components.art.gui.widgets.stablediffusion.prompt_container_widget
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class SaveGeneratorSettingsWorker(
@@ -149,8 +148,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
             else False
         )
         self.ui.infinite_images_button.blockSignals(False)
-        settings = get_qsettings()
         self._set_progress_bar_idle()
+        self._initialize_image_mode()
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -186,6 +185,101 @@ class StableDiffusionGeneratorForm(BaseWidget):
             StableDiffusionVersion.Z_IMAGE_BASE.value,
         )
         return self._sd_version not in no_compel_versions
+
+    @Slot()
+    def on_image_mode_combobox_currentIndexChanged(self):
+        index = self.ui.image_mode_combobox.currentIndex()
+        if index == 0:
+            self._enable_text_to_image_mode()
+        elif index == 1:
+            self._enable_image_to_image_mode()
+        elif index == 2:
+            self._enable_inpaint_mode()
+
+    def _initialize_image_mode(self) -> None:
+        if self.outpaint_settings.enabled:
+            index = 2
+            self._set_image_mode_widgets(False, True)
+            self._set_input_mode_state(False, True, emit_signal=False)
+        elif self.image_to_image_settings.enabled:
+            index = 1
+            self._set_image_mode_widgets(True, False)
+            self._set_input_mode_state(True, False, emit_signal=False)
+        else:
+            index = 0
+            self._set_image_mode_widgets(False, False)
+            self._set_input_mode_state(False, False, emit_signal=False)
+
+        self.ui.image_mode_combobox.blockSignals(True)
+        self.ui.image_mode_combobox.setCurrentIndex(index)
+        self.ui.image_mode_combobox.blockSignals(False)
+
+    def _set_image_mode_widgets(
+        self,
+        show_image_to_image: bool,
+        show_inpaint: bool,
+    ) -> None:
+        self.ui.image_to_image_settings.setVisible(show_image_to_image)
+        self.ui.inpaint_settings.setVisible(show_inpaint)
+
+    def _set_input_mode_state(
+        self,
+        image_to_image_enabled: bool,
+        inpaint_enabled: bool,
+        emit_signal: bool = True,
+    ) -> None:
+        image_updated = self._update_input_mode_enabled(
+            "image_to_image_settings", image_to_image_enabled
+        )
+        inpaint_updated = self._update_input_mode_enabled(
+            "outpaint_settings", inpaint_enabled
+        )
+        if emit_signal:
+            self._emit_input_mode_change(
+                "image_to_image_settings",
+                image_to_image_enabled,
+                image_updated,
+            )
+            self._emit_input_mode_change(
+                "outpaint_settings",
+                inpaint_enabled,
+                inpaint_updated,
+            )
+
+    def _update_input_mode_enabled(
+        self, settings_key: str, enabled: bool
+    ) -> bool:
+        current_enabled = getattr(getattr(self, settings_key), "enabled", False)
+        if current_enabled == enabled:
+            return False
+        if settings_key == "image_to_image_settings":
+            self.update_image_to_image_settings(enabled=enabled)
+        else:
+            self.update_outpaint_settings(enabled=enabled)
+        return True
+
+    def _emit_input_mode_change(
+        self, settings_key: str, enabled: bool, changed: bool
+    ) -> None:
+        if not changed:
+            return
+        self.api.art.canvas.input_image_changed(
+            settings_key,
+            "enabled",
+            enabled,
+        )
+
+    def _enable_text_to_image_mode(self):
+        self._set_image_mode_widgets(False, False)
+        self._set_input_mode_state(False, False)
+
+    def _enable_image_to_image_mode(self):
+        self._set_image_mode_widgets(True, False)
+        self._set_input_mode_state(True, False)
+
+    def _enable_inpaint_mode(self):
+        self._set_image_mode_widgets(False, True)
+        self._set_input_mode_state(False, True)
 
     @Slot()
     def on_generate_button_clicked(self):

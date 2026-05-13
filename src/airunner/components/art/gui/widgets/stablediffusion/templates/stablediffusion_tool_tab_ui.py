@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePoli
 from airunner.components.art.gui.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.components.art.gui.widgets.canvas.batch_container import BatchContainer
 from airunner.components.art.gui.widgets.canvas.canvas_layer_container_widget import CanvasLayerContainerWidget
-from airunner.components.art.gui.widgets.canvas.image_manipulation_tools_container import ImageManipulationToolsContainer
 from airunner.components.art.gui.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.components.art.gui.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.components.art.gui.widgets.lora.lora_container_widget import LoraContainerWidget
@@ -71,9 +70,6 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.canvas_layer_container = CanvasLayerContainerWidget(self.layer_tab_splitter)
         self.canvas_layer_container.setObjectName(u"canvas_layer_container")
         self.layer_tab_splitter.addWidget(self.canvas_layer_container)
-        self.image_manipulation_tools_container = ImageManipulationToolsContainer(self.layer_tab_splitter)
-        self.image_manipulation_tools_container.setObjectName(u"image_manipulation_tools_container")
-        self.layer_tab_splitter.addWidget(self.image_manipulation_tools_container)
 
         self.gridLayout_5.addWidget(self.layer_tab_splitter, 0, 0, 1, 1)
 

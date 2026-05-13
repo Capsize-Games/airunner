@@ -45,8 +45,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>565</width>
-        <height>1024</height>
+        <width>579</width>
+        <height>497</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -75,8 +75,8 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>1024</width>
-           <height>1024</height>
+           <width>0</width>
+           <height>0</height>
           </size>
          </property>
         </widget>
@@ -89,19 +89,19 @@
     <widget class="QWidget" name="verticalWidget" native="true">
      <layout class="QGridLayout" name="gridLayout">
       <property name="leftMargin">
-       <number>10</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
-       <number>10</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>10</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
-       <number>10</number>
+       <number>0</number>
       </property>
       <property name="spacing">
-       <number>10</number>
+       <number>0</number>
       </property>
       <item row="0" column="0">
        <widget class="SliderWidget" name="strength_slider_widget" native="true">
@@ -298,22 +298,6 @@
       </spacer>
      </item>
      <item>
-      <widget class="SwitchWidget" name="EnableSwitch" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>45</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>45</width>
-         <height>20</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QPushButton" name="import_button">
        <property name="minimumSize">
         <size>
@@ -386,12 +370,6 @@
    <class>ControlnetSettingsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/art/gui/widgets/controlnet/controlnet_settings_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SwitchWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/application/gui/widgets/switch_widget/switch_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
