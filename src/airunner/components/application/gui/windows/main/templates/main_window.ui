@@ -210,53 +210,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="document_editor_button">
-            <property name="minimumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="baseSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="toolTip">
-             <string>Document Editor</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Orientation::Vertical</enum>
@@ -643,28 +596,6 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="document_editor_tab">
-              <attribute name="title">
-               <string>Document Editor</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="QWidget" name="document_editor_placeholder" native="true"/>
-               </item>
-              </layout>
-             </widget>
             </widget>
            </item>
           </layout>
@@ -742,22 +673,9 @@
      <addaction name="actionNew_Conversation"/>
      <addaction name="actionDelete_conversation"/>
     </widget>
-    <widget class="QMenu" name="menuDocuments">
-     <property name="title">
-      <string>Documents</string>
-     </property>
-     <property name="icon">
-      <iconset resource="../../../../../../gui/resources/feather.qrc">
-       <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
-     </property>
-     <addaction name="actionNew_File"/>
-     <addaction name="actionSave_File"/>
-    </widget>
     <addaction name="menuArt"/>
     <addaction name="separator"/>
     <addaction name="menuChat"/>
-    <addaction name="separator"/>
-    <addaction name="menuDocuments"/>
     <addaction name="separator"/>
     <addaction name="actionReset_Settings_2"/>
     <addaction name="separator"/>
@@ -794,7 +712,7 @@
     <addaction name="actionBug_report"/>
     <addaction name="actionReport_vulnerability"/>
     <addaction name="separator"/>
-    <addaction name="actionDiscord"/>
+    <addaction name="actionDiscussions"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -1100,22 +1018,13 @@
     <string>Delete conversation</string>
    </property>
   </action>
-  <action name="actionDiscord">
+  <action name="actionDiscussions">
    <property name="icon">
     <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
    </property>
    <property name="text">
-    <string>Discord</string>
-   </property>
-  </action>
-  <action name="actionSave_As">
-   <property name="icon">
-    <iconset resource="../../../../../../gui/resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Save As</string>
+    <string>Discussions</string>
    </property>
   </action>
   <action name="actionDownload_Model">
@@ -1125,16 +1034,6 @@
    </property>
    <property name="text">
     <string>Download Model</string>
-   </property>
-  </action>
-  <action name="actionNew_File">
-   <property name="text">
-    <string>New File</string>
-   </property>
-  </action>
-  <action name="actionSave_File">
-   <property name="text">
-    <string>Save File</string>
    </property>
   </action>
  </widget>

@@ -418,7 +418,6 @@ class UISection(Enum):
     """
     HOME = "home"
     ART = "art"  # Image generation and canvas manipulation
-    DOCUMENT_EDITOR = "document_editor"  # Code/document editing
     UNKNOWN = "unknown"
 
     @classmethod
@@ -434,7 +433,6 @@ class UISection(Enum):
         mapping = {
             "home_button": cls.HOME,
             "art_editor_button": cls.ART,
-            "document_editor_button": cls.DOCUMENT_EDITOR,
         }
         return mapping.get(button_name, cls.UNKNOWN)
 
@@ -451,12 +449,6 @@ class UISection(Enum):
                 "They can generate images, manipulate them on a canvas, use drawing tools, "
                 "apply filters, and work with layers. Relevant tools include image generation, "
                 "canvas operations (clear, save, load), and drawing tools."
-            ),
-            UISection.DOCUMENT_EDITOR: (
-                "The user is in the DOCUMENT EDITOR section with a code/text editor. "
-                "They can create, edit, and run Python scripts or other text documents. "
-                "The editor supports syntax highlighting, line numbers, and script execution. "
-                "Relevant tools include code generation, file operations, and code validation."
             ),
             UISection.UNKNOWN: "",
         }

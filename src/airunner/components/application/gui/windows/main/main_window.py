@@ -45,7 +45,6 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
     QApplication,
-    QFileDialog,
     QMainWindow,
     QMessageBox,
     QMenu,
@@ -56,7 +55,7 @@ from airunner.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
     AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
     AIRUNNER_STATUS_NORMAL_COLOR_DARK,
-    AIRUNNER_DISCORD_URL,
+    AIRUNNER_DISCUSSIONS_URL,
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ART_ENABLED,
@@ -89,10 +88,6 @@ from airunner.components.application.gui.windows.main.ai_model_mixin import (
 )
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
-)
-from airunner.components.document_editor.project.airunner_active_project import (
-    get_active_project_path,
-    set_active_project_path,
 )
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
@@ -201,12 +196,10 @@ class MainWindow(
         ("zap", "actionRun_setup_wizard_2"),
         ("external-link", "actionBug_report"),
         ("external-link", "actionReport_vulnerability"),
-        ("message-square", "actionDiscord"),
+        ("message-square", "actionDiscussions"),
         ("download", "actionImport_image"),
         ("upload", "actionExport_image_button"),
-        ("save", "actionSave_As"),
         ("image", "art_editor_button"),
-        ("file-text", "document_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
@@ -214,7 +207,6 @@ class MainWindow(
         ("mic", "speech_to_text_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
-        ("file-text", "menuDocuments"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -225,7 +217,6 @@ class MainWindow(
         self._post_startup_status_refresh_requested = False
         self._state_restored = None
         self._pending_startup_button_name = None
-        self._startup_project_restore_attempted = False
         self._restore_knowledgebase_after_startup = False
         self._daemon_status_refresh_inflight = False
         self._runtime_preference_retry_after = {}
@@ -375,27 +366,10 @@ class MainWindow(
                 lambda: self._set_current_button_and_tab(button_name),
             )
 
-        self._restore_last_coding_project()
-
         if self._post_startup_status_refresh_requested:
             return
         self._post_startup_status_refresh_requested = True
         self._refresh_model_status_from_daemon()
-
-    def _restore_last_coding_project(self) -> None:
-        """Reopen the last active coding project once on startup."""
-        if self._startup_project_restore_attempted:
-            return
-        self._startup_project_restore_attempted = True
-        project_path = get_active_project_path()
-        if not project_path or not os.path.isdir(project_path):
-            set_active_project_path(None)
-            return
-        result = self._project_manager().open_project(project_path)
-        if not result.ok:
-            set_active_project_path(None)
-            return
-        self._activate_coding_project(result)
 
     def _schedule_main_window_loaded_signal(self) -> None:
         """Schedule the post-startup signal once after the window is shown."""
@@ -435,44 +409,6 @@ class MainWindow(
             self.ui.main_window_splitter.sizes()[panel_id] > 0
         )
         self.ui.knowledgebase_button.blockSignals(False)
-
-    @Slot()
-    def on_actionNew_File_triggered(self):
-        widget = self._coding_workspace(activate=True)
-        if widget is not None:
-            widget.new_document()
-            return
-        self.api.document.new_document()
-
-    @Slot()
-    def on_actionNew_Project_triggered(self):
-        project_path = QFileDialog.getExistingDirectory(
-            self,
-            "Create Coding Project",
-        )
-        if project_path:
-            self._create_project_at_path(project_path)
-
-    @Slot()
-    def on_actionOpen_Project_triggered(self):
-        project_path = QFileDialog.getExistingDirectory(
-            self,
-            "Open Coding Project",
-        )
-        if project_path:
-            self._open_project_path(project_path)
-
-    @Slot()
-    def on_actionSave_File_triggered(self):
-        widget = self._coding_workspace(activate=False)
-        if widget is not None:
-            widget.save_current_document()
-
-    @Slot()
-    def on_actionSave_As_triggered(self):
-        widget = self._coding_workspace(activate=False)
-        if widget is not None:
-            widget.save_current_document_as()
 
     @Slot()
     def on_actionQuit_triggered(self):
@@ -582,9 +518,9 @@ class MainWindow(
         webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
 
     @Slot()
-    def on_actionDiscord_triggered(self):
-        if AIRUNNER_DISCORD_URL:
-            webbrowser.open(AIRUNNER_DISCORD_URL)
+    def on_actionDiscussions_triggered(self):
+        if AIRUNNER_DISCUSSIONS_URL:
+            webbrowser.open(AIRUNNER_DISCUSSIONS_URL)
 
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
@@ -730,247 +666,6 @@ class MainWindow(
         self.actionPrivacySettings.triggered.connect(self._show_privacy_settings)
         self.ui.menuTools.addAction(self.actionPrivacySettings)
 
-    def _add_coding_project_menu_items(self) -> None:
-        """Add coding project actions to the Documents menu."""
-
-        if hasattr(self, "actionNew_Project"):
-            return
-
-        self.actionNew_Project = QAction("New Project...", self)
-        self.actionNew_Project.triggered.connect(
-            self.on_actionNew_Project_triggered
-        )
-        self.actionOpen_Project = QAction("Open Project...", self)
-        self.actionOpen_Project.triggered.connect(
-            self.on_actionOpen_Project_triggered
-        )
-        self._recent_projects_menu = QMenu("Recent Projects", self)
-        self._recent_projects_menu.aboutToShow.connect(
-            self._populate_recent_projects_menu
-        )
-
-        recent_action = self.ui.menuDocuments.insertMenu(
-            self.ui.actionNew_File,
-            self._recent_projects_menu,
-        )
-        self.ui.menuDocuments.insertAction(
-            recent_action,
-            self.actionOpen_Project,
-        )
-        self.ui.menuDocuments.insertAction(
-            self.actionOpen_Project,
-            self.actionNew_Project,
-        )
-        self.ui.menuDocuments.insertSeparator(self.ui.actionNew_File)
-
-    def _populate_recent_projects_menu(self) -> None:
-        """Refresh the recent coding-project submenu."""
-
-        menu = getattr(self, "_recent_projects_menu", None)
-        if menu is None:
-            return
-        menu.clear()
-        recent_projects = self._project_manager().list_recent_projects()
-        for entry in recent_projects[:10]:
-            title = entry.project_name or os.path.basename(entry.path)
-            action = menu.addAction(title)
-            action.setToolTip(entry.path)
-            action.triggered.connect(
-                partial(self._open_project_path, entry.path)
-            )
-        if menu.actions():
-            return
-        empty_action = menu.addAction("No recent projects")
-        empty_action.setEnabled(False)
-
-    def _project_manager(self):
-        """Return the cached coding project manager."""
-
-        if hasattr(self, "_coding_project_manager"):
-            return self._coding_project_manager
-        from airunner.components.document_editor.project import (
-            AirunnerProjectManager,
-        )
-
-        self._coding_project_manager = AirunnerProjectManager()
-        return self._coding_project_manager
-
-    def _project_name_for_path(self, project_path: str) -> str:
-        """Derive a display name for one coding project path."""
-
-        project_name = os.path.basename(os.path.abspath(project_path))
-        return project_name or "AIRunner Project"
-
-    def _directory_has_files(self, project_path: str) -> bool:
-        """Return True when the chosen directory already has user files."""
-
-        try:
-            return any(name != ".airunner" for name in os.listdir(project_path))
-        except OSError:
-            return True
-
-    def _project_settings_for_access(self, full_access: bool):
-        """Build project settings for one creation flow."""
-
-        from airunner.components.document_editor.project import (
-            AirunnerAutonomyMode,
-            AirunnerProjectSettings,
-            AirunnerTrustLevel,
-        )
-
-        if full_access:
-            return AirunnerProjectSettings(
-                trust_level=AirunnerTrustLevel.TRUSTED,
-                autonomy_mode=AirunnerAutonomyMode.FULL_AUTONOMY,
-            )
-        return AirunnerProjectSettings()
-
-    def _prompt_project_access(self, project_path: str) -> Optional[bool]:
-        """Ask whether a new coding project should be fully trusted."""
-
-        answer = QMessageBox.question(
-            self,
-            "Project Access",
-            (
-                f"Grant full coding-agent access for\n{project_path}\n\n"
-                "Yes keeps file edits, commands, and background runs "
-                "fully enabled. No keeps review-first protections."
-            ),
-            QMessageBox.StandardButton.Yes
-            | QMessageBox.StandardButton.No
-            | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Yes,
-        )
-        if answer == QMessageBox.StandardButton.Cancel:
-            return None
-        return answer == QMessageBox.StandardButton.Yes
-
-    def _create_project_result(self, project_path: str, settings):
-        """Create a new coding project for the chosen directory."""
-
-        manager = self._project_manager()
-        project_name = self._project_name_for_path(project_path)
-        if self._directory_has_files(project_path):
-            return manager.create_project(
-                project_path,
-                project_name=project_name,
-                settings=settings,
-            )
-        return manager.create_python_project(
-            project_path,
-            project_name=project_name,
-            settings=settings,
-        )
-
-    def _create_project_at_path(self, project_path: str) -> None:
-        """Create or initialize one coding project and load it."""
-
-        full_access = self._prompt_project_access(project_path)
-        if full_access is None:
-            return
-        settings = self._project_settings_for_access(full_access)
-        result = self._create_project_result(project_path, settings)
-        if result.ok:
-            self._activate_coding_project(result)
-            return
-        self._show_project_error("Create Project", result)
-
-    def _missing_project_metadata(self, result) -> bool:
-        """Return True when a folder can be initialized as a project."""
-
-        return any(
-            "not an AIRunner coding project yet" in error
-            for error in getattr(result, "errors", [])
-        )
-
-    def _open_project_path(self, project_path: str) -> None:
-        """Open a coding project or offer to initialize the folder."""
-
-        result = self._project_manager().open_project(project_path)
-        if result.ok:
-            self._activate_coding_project(result)
-            return
-        if self._missing_project_metadata(result):
-            self._offer_project_initialization(project_path)
-            return
-        self._show_project_error("Open Project", result)
-
-    def _offer_project_initialization(self, project_path: str) -> None:
-        """Offer to initialize a plain folder as a coding project."""
-
-        answer = QMessageBox.question(
-            self,
-            "Initialize Coding Project",
-            (
-                f"{project_path}\n\n"
-                "This folder does not have AIRunner project metadata yet. "
-                "Initialize it now?"
-            ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-        if answer == QMessageBox.StandardButton.Yes:
-            self._create_project_at_path(project_path)
-
-    def _show_project_error(self, title: str, result) -> None:
-        """Display a project open or creation failure."""
-
-        details = []
-        for error in getattr(result, "errors", []):
-            details.append(error)
-        for suggestion in getattr(result, "recovery_suggestions", []):
-            details.append(suggestion)
-        message = "\n\n".join(details) if details else "Unknown project error."
-        QMessageBox.warning(self, title, message)
-
-    def _project_title(self, result) -> str:
-        """Return a display title for one project result."""
-
-        workspace = getattr(result, "workspace", None)
-        if workspace is not None and getattr(workspace, "project_name", None):
-            return workspace.project_name
-        return self._project_name_for_path(result.project_path)
-
-    def _project_policy_summary(self, result) -> str:
-        """Return a short trust and autonomy summary for the shell."""
-
-        settings = getattr(result, "settings", None)
-        if settings is None:
-            return ""
-        return (
-            "Project policy: "
-            f"{settings.trust_level.value} / {settings.autonomy_mode.value}"
-        )
-
-    def _preferred_project_file(self, project_path: str) -> Optional[str]:
-        """Return one useful project file to open after activation."""
-
-        for relative_path in ("README.md", "pyproject.toml"):
-            candidate = os.path.join(project_path, relative_path)
-            if os.path.isfile(candidate):
-                return candidate
-        return None
-
-    def _activate_coding_project(self, result) -> None:
-        """Switch to the coding workspace and load the chosen project."""
-
-        widget = self._coding_workspace(activate=True)
-        if widget is None or result.service is None:
-            return
-        restored = widget.load_project(result.service)
-        widget.append_agent_activity(
-            f"Opened project: {self._project_title(result)}"
-        )
-        policy = self._project_policy_summary(result)
-        if policy:
-            widget.append_agent_activity(policy)
-        preferred_file = self._preferred_project_file(result.project_path)
-        if not restored and preferred_file is not None:
-            widget.open_file(preferred_file)
-        self.statusBar().showMessage(
-            f"Coding project ready: {self._project_title(result)}",
-            5000,
-        )
     
     def _show_privacy_settings(self):
         """Show the Privacy Settings dialog."""
@@ -1107,30 +802,6 @@ class MainWindow(
             )
             return
 
-        if button_name == "document_editor_button":
-            from airunner.components.document_editor.gui.widgets.document_editor_container_widget import (
-                DocumentEditorContainerWidget,
-            )
-
-            self._attach_lazy_widget(
-                "document_editor_tab",
-                "gridLayout",
-                "widget",
-                "document_editor_placeholder",
-                "widget",
-                DocumentEditorContainerWidget,
-            )
-            return
-
-    def _coding_workspace(self, activate: bool):
-        """Return the embedded coding workspace shell if it is available."""
-
-        if activate:
-            self._set_current_button_and_tab("document_editor_button")
-        else:
-            self._ensure_lazy_tab_loaded("document_editor_button")
-        return getattr(self.ui, "widget", None)
-
     def _ensure_knowledgebase_loaded(self) -> None:
         """Create the documents pane only when it is actually shown."""
         from airunner.components.documents.gui.widgets.documents import (
@@ -1151,7 +822,6 @@ class MainWindow(
         return {
             "home_button": self.ui.home_tab,
             "art_editor_button": self.ui.art_tab,
-            "document_editor_button": self.ui.document_editor_tab,
         }
 
     def _restore_tab(self):
@@ -1171,7 +841,6 @@ class MainWindow(
         buttons = {
             0: "home_button",
             1: "art_editor_button",
-            2: "document_editor_button",
         }
 
         if saved_index in buttons:
@@ -1209,10 +878,6 @@ class MainWindow(
     @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("art_editor_button")
-
-    @Slot(bool)
-    def on_document_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("document_editor_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
@@ -1334,9 +999,6 @@ class MainWindow(
 
         # Add Download Models menu item to Tools menu
         self._add_download_models_menu_item()
-
-        # Add coding project actions to the Documents menu
-        self._add_coding_project_menu_items()
 
         self.icon_manager = IconManager(self.icons, self.ui)
 
@@ -1560,12 +1222,11 @@ class MainWindow(
 
     @Slot()
     def _on_ctrl_n_pressed(self):
-        """Create a new art or document item for the active workspace."""
+        """Create a new art document for the canvas workspace."""
         current_active_tab_index = self.current_active_tab_index
         if current_active_tab_index == 1:
             self.api.art.canvas.new_document()
-            return
-        self.on_actionNew_File_triggered()
+        return
 
     def on_save_stablediffusion_prompt_signal(self, data: Dict):
         self.create_saved_prompt(

@@ -2432,7 +2432,6 @@ class ChatPromptWidget(BaseWidget):
         index_to_section = {
             0: "home_button",
             1: "art_editor_button",
-            2: "document_editor_button",
         }
         return index_to_section.get(index, "home_button")
 

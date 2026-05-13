@@ -25,9 +25,6 @@ if TYPE_CHECKING:
     from airunner.components.art.managers.stablediffusion.image_request import (
         ImageRequest,
     )
-    from airunner.components.document_editor.api.document_editor_service import (
-        DocumentEditorService,
-    )
     from airunner.components.llm.api.llm_services import LLMAPIService
     from airunner.components.stt.api.stt_services import STTAPIService
     from airunner.components.tts.api.tts_services import TTSAPIService
@@ -155,7 +152,6 @@ class API(App):
         self._initialized = True
         self._llm_service = None
         self._art_service = None
-        self._document_service = None
         self._tts_service = None
         self._stt_service = None
         self._sounddevice_manager = None
@@ -206,21 +202,6 @@ class API(App):
     @art.setter
     def art(self, value: ARTAPIService) -> None:
         self._art_service = value
-
-    @property
-    def document(self) -> DocumentEditorService:
-        """Return the cached document service."""
-        if self._document_service is None:
-            from airunner.components.document_editor.api.document_editor_service import (
-                DocumentEditorService,
-            )
-
-            self._document_service = DocumentEditorService()
-        return self._document_service
-
-    @document.setter
-    def document(self, value: DocumentEditorService) -> None:
-        self._document_service = value
 
     @property
     def tts(self) -> TTSAPIService:
