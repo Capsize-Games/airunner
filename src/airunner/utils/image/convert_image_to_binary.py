@@ -22,7 +22,7 @@ def _release_buffer(buf: io.BytesIO):
         _PNG_BUFFER_POOL.append(buf)
 
 
-def convert_image_to_binary(image: Image) -> Optional[bytes]:
+def convert_image_to_binary(image: Image.Image) -> Optional[bytes]:
     if image is None:
         raise ValueError("Image is None")
     if not isinstance(image, Image.Image):

@@ -354,19 +354,8 @@ class SystemPromptMixin:
         )
 
     def _get_ui_section_context(self) -> Optional[str]:
-        """Get UI section context for the system prompt.
-        
-        Returns:
-            UI context string or None if no context available
-        """
-        try:
-            from airunner.components.application.context import get_ui_context_tracker
-            tracker = get_ui_context_tracker()
-            context = tracker.get_full_context()
-            return context if context else None
-        except Exception:
-            # Fail silently if context tracker is not available
-            return None
+        """UI context injection is disabled after the home/art split removal."""
+        return None
 
     @property
     def system_prompt(self) -> str:

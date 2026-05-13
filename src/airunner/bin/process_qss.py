@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -32,12 +33,20 @@ def build_ui(path):
 def generate_resources():
     print("Generating resources.py")
     here = os.path.dirname(os.path.abspath(__file__))
+    target = os.path.join(here, "..", "gui", "resources", "feather_rc.py")
+    qrc = os.path.join(here, "..", "gui", "resources", "feather.qrc")
+    executable = shutil.which("pyside6-rcc") or shutil.which("pyrcc6")
+    if executable is None:
+        if os.path.exists(target):
+            print("Skipping resource generation; no Qt resource compiler found")
+            return
+        raise FileNotFoundError("No Qt resource compiler found")
     subprocess.run(
         [
-            "pyside6-rcc",
+            executable,
             "-o",
-            os.path.join(here, "..", "gui", "resources", "feather_rc.py"),
-            os.path.join(here, "..", "gui", "resources", "feather.qrc"),
+            target,
+            qrc,
         ],
         cwd=str(Path(__file__).parent.parent),
     )
@@ -182,14 +191,8 @@ def write_css_variables(variables, out_path):
 
 def build_all_theme_css():
     styles_dir = Path(__file__).parent.parent / "gui" / "styles"
-    # Output directories for both home_stage and conversations
+    # Output directories for generated runtime CSS consumers
     output_targets = [
-        Path(__file__).parent.parent
-        / "components"
-        / "home_stage"
-        / "gui"
-        / "static"
-        / "css",
         Path(__file__).parent.parent
         / "components"
         / "chat"

@@ -1,15 +1,3 @@
-"""Application context management module.
+"""Legacy application-context package kept for import compatibility."""
 
-Provides services for tracking application state that the LLM
-needs to be aware of, including UI section context.
-"""
-
-from airunner.components.application.context.ui_context_tracker import (
-    UIContextTracker,
-    get_ui_context_tracker,
-)
-
-__all__ = [
-    "UIContextTracker",
-    "get_ui_context_tracker",
-]
+__all__: list[str] = []

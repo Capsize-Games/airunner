@@ -810,15 +810,21 @@ QWizardPage QPushButton:pressed {
 }
 
 #actionsidebar {
-    border-right: 1px solid #334155;
+    border-right: 1px solid #6c6c6c;
 }
 
-#actionsidebar QPushButton {
+#actionsidebar_right {
+    border-left: 1px solid #6c6c6c;
+}
+
+#actionsidebar QPushButton,
+#actionsidebar_right QPushButton {
     border: 1px solid transparent;
 }
 
-#actionsidebar QPushButton:checked {
-    border: 1px solid #7c3aed;
+#actionsidebar QPushButton:checked ,
+#actionsidebar_right QPushButton:checked {
+    border: 1px solid #00fff7;
 }
 
 #documents_header {

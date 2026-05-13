@@ -40,13 +40,20 @@ def _make_window_stub():
             ModelType.STT: ModelStatus.UNLOADED,
         },
         _post_startup_status_refresh_requested=False,
-        _pending_startup_button_name=None,
-        _startup_project_restore_attempted=False,
-        _restore_knowledgebase_after_startup=False,
+        _restore_sidebar_page_after_startup=None,
         _runtime_preference_retry_after={},
+        _documents_sidebar_index=0,
+        _stats_sidebar_index=1,
         ui=SimpleNamespace(
             text_to_speech_button=_make_action(),
             speech_to_text_button=_make_action(),
+            sidebar_tab=SimpleNamespace(
+                currentIndex=Mock(return_value=0),
+                setCurrentIndex=Mock(),
+            ),
+            main_window_splitter=SimpleNamespace(sizes=lambda: [0, 0, 0]),
+            knowledgebase_button=_make_action(),
+            stats_button=_make_action(),
         ),
         application_settings=SimpleNamespace(
             llm_enabled=False,
@@ -58,7 +65,9 @@ def _make_window_stub():
         initialize_widget_elements=Mock(),
         logger=Mock(),
         refresh_api_reference=Mock(return_value=None),
-        _restore_last_coding_project=Mock(),
+        _ensure_canvas_loaded=Mock(),
+        _ensure_sidebar_page_loaded=Mock(),
+        _sync_sidebar_button_states=Mock(),
         _set_action_checked_state=MainWindow._set_action_checked_state,
         _allows_loading_toggle=MainWindow._allows_loading_toggle,
         _optional_runtime_preference_specs=(
@@ -273,7 +282,34 @@ def test_on_main_window_loaded_signal_refreshes_daemon_status_once():
     MainWindow.on_main_window_loaded_signal(window)
     MainWindow.on_main_window_loaded_signal(window)
 
+    window._ensure_canvas_loaded.assert_called()
     window._refresh_model_status_from_daemon.assert_called_once_with()
+
+
+def test_on_main_window_loaded_signal_restores_saved_sidebar_page():
+    window = _make_window_stub()
+    window._restore_sidebar_page_after_startup = 1
+    window._refresh_model_status_from_daemon = Mock()
+
+    MainWindow.on_main_window_loaded_signal(window)
+
+    window._ensure_sidebar_page_loaded.assert_called_once_with(1)
+    window.ui.sidebar_tab.setCurrentIndex.assert_called_once_with(1)
+    window._sync_sidebar_button_states.assert_called_once_with()
+    assert window._restore_sidebar_page_after_startup is None
+
+
+def test_sidebar_buttons_reflect_active_sidebar_page():
+    window = _make_window_stub()
+    window.ui.main_window_splitter = SimpleNamespace(sizes=lambda: [50, 500, 240])
+    window._sidebar_is_visible = lambda: True
+    window.ui.sidebar_tab.currentIndex = Mock(return_value=1)
+
+    MainWindow.set_knowledgebase_button_checked(window)
+    MainWindow.set_stats_button_checked(window)
+
+    window.ui.knowledgebase_button.setChecked.assert_called_once_with(False)
+    window.ui.stats_button.setChecked.assert_called_once_with(True)
 
 
 def test_daemon_status_prefers_loaded_local_llm_worker():
@@ -395,7 +431,7 @@ def test_handoff_launcher_splash_defers_dismissal(monkeypatch):
     window.raise_ = Mock()
     window.activateWindow = Mock()
     callbacks: list[object] = []
-    app = object()
+    app = QApplication.instance()
     dismiss_splash = Mock()
 
     monkeypatch.setattr(

@@ -64,6 +64,7 @@ class DocumentsWidget(BaseWidget):
             SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
         }
         super().__init__(*args, **kwargs)
+        self.knowledgeBasePanelWidget = self.ui.knowledge_base_panel_widget
         self.setup_file_explorer()
         self.kiwix_widget = KiwixWidget()
         self.setup_kiwix_widget()

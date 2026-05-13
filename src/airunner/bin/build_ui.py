@@ -13,10 +13,20 @@ The function will run using the venv python interpreter
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
 from airunner.bin.process_qss import build_all_theme_css, generate_resources, process_qss
+
+
+def _find_uic_executable() -> str:
+    """Return the available Qt UI compiler executable."""
+    for candidate in ("pyside6-uic", "pyuic6"):
+        executable = shutil.which(candidate)
+        if executable:
+            return executable
+    raise FileNotFoundError("No Qt UI compiler found")
 
 
 def adjust_resource_imports(input_file, output_file):
@@ -34,6 +44,14 @@ def adjust_resource_imports(input_file, output_file):
         with open(input_file, "r") as file:
             content = file.read()
         adjusted_content = re.sub(pattern, replacement, content)
+        adjusted_content = adjusted_content.replace(
+            "from PyQt6 import QtCore, QtGui, QtWidgets",
+            "from PySide6 import QtCore, QtGui, QtWidgets",
+        )
+        adjusted_content = adjusted_content.replace(
+            "from PyQt6 import QtCore, QtGui",
+            "from PySide6 import QtCore, QtGui",
+        )
         with open(output_file, "w") as file:
             file.write(adjusted_content)
     except (IOError, OSError) as e:
@@ -43,6 +61,7 @@ def adjust_resource_imports(input_file, output_file):
 def build_ui():
     """Builds all UI files in the project if needed."""
     base_path = Path(__file__).parent.parent
+    uic_executable = _find_uic_executable()
     print(f"Base path: {base_path}")
     ui_files = list(base_path.glob("**/*.ui"))
     print(f"Found {len(ui_files)} .ui files")
@@ -58,7 +77,7 @@ def build_ui():
             print(f"Building {ui_file_py} from {ui_file}")
             result = subprocess.run(
                 [
-                    "pyside6-uic",
+                    uic_executable,
                     "-o",
                     str(ui_file_py),
                     str(ui_file),

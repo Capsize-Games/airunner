@@ -222,8 +222,8 @@ AIRUNNER_DEFAULT_SCHEDULER = os.environ.get(
 AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get(
     "AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG", 3
 )
-AIRUNNER_DISCORD_URL = os.environ.get(
-    "AIRUNNER_DISCORD_URL", "https://discord.gg/PUVDDCJ7gz"
+AIRUNNER_DISCUSSIONS_URL = os.environ.get(
+    "AIRUNNER_DISCUSSIONS_URL", "https://github.com/orgs/Capsize-Games/discussions"
 )
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 10)
 

@@ -462,8 +462,8 @@
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="890"/>
-        <source>Discord</source>
-        <translation></translation>
+        <source>Discussions</source>
+        <translation>ディスカッション</translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="899"/>

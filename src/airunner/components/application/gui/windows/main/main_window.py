@@ -7,8 +7,8 @@ from functools import partial
 from typing import Dict, Optional
 
 from airunner.components.about.gui.windows.about.about import AboutWindow
-from airunner.components.application.gui.widgets.stats.stats_widget import (
-    StatsWidget,
+from airunner.components.model_management.gui.model_status_widget import (
+    ModelStatusWidget,
 )
 from airunner.components.application.gui.widgets.status.status_widget import (
     StatusWidget,
@@ -45,6 +45,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
     QApplication,
+    QGridLayout,
     QMainWindow,
     QMessageBox,
     QMenu,
@@ -143,7 +144,9 @@ def show_path(path: str) -> None:
     system = platform.system()
     try:
         if system == "Windows":
-            os.startfile(path)
+            startfile = getattr(os, "startfile", None)
+            if callable(startfile):
+                startfile(path)
         elif system == "Darwin":  # macOS
             subprocess.run(["open", path])
         else:  # Linux
@@ -172,6 +175,8 @@ class MainWindow(
     _window_title = f"AI Runner"
     _daemon_status_request_timeout_seconds = 0.75
     _runtime_preference_retry_seconds = 5.0
+    _documents_sidebar_index = 0
+    _stats_sidebar_index = 1
     icons = [
         ("settings", "actionSettings"),
         ("image", "menuArt"),
@@ -192,21 +197,19 @@ class MainWindow(
         ("folder", "actionBrowse_AI_Runner_Path"),
         ("folder", "actionBrowse_Images_Path_2"),
         ("image", "menuStable_Diffusion"),
-        ("activity", "actionStats"),
         ("zap", "actionRun_setup_wizard_2"),
         ("external-link", "actionBug_report"),
         ("external-link", "actionReport_vulnerability"),
         ("message-square", "actionDiscussions"),
         ("download", "actionImport_image"),
         ("upload", "actionExport_image_button"),
-        ("image", "art_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
-        ("home", "home_button"),
         ("speaker", "text_to_speech_button"),
         ("mic", "speech_to_text_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
+        ("activity", "stats_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -216,8 +219,7 @@ class MainWindow(
         self._launcher_splash_dismissed = False
         self._post_startup_status_refresh_requested = False
         self._state_restored = None
-        self._pending_startup_button_name = None
-        self._restore_knowledgebase_after_startup = False
+        self._restore_sidebar_page_after_startup = None
         self._daemon_status_refresh_inflight = False
         self._runtime_preference_retry_after = {}
         self.ui = self.ui_class_()
@@ -234,7 +236,6 @@ class MainWindow(
         self.tqdm_callback_triggered = False
         self.action = GeneratorSection.TXT2IMG.value
         self.progress_bar_started = False
-        self.window = None
         self.canvas = None
         self.models = None
         self.client = None
@@ -348,23 +349,22 @@ class MainWindow(
 
     @Slot(bool)
     def on_knowledgebase_button_toggled(self, val: bool):
-        if val:
-            self._ensure_knowledgebase_loaded()
-        self._toggle_splitter_section(val, 2, self.ui.main_window_splitter, 50)
+        self._toggle_sidebar_page(self._documents_sidebar_index, val)
+
+    @Slot(bool)
+    def on_stats_button_toggled(self, val: bool):
+        self._toggle_sidebar_page(self._stats_sidebar_index, val)
 
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Restore deferred startup UI once the main window is visible."""
-        if self._restore_knowledgebase_after_startup:
-            self._restore_knowledgebase_after_startup = False
-            self._ensure_knowledgebase_loaded()
+        self._ensure_canvas_loaded()
 
-        if self._pending_startup_button_name:
-            button_name = self._pending_startup_button_name
-            self._pending_startup_button_name = None
-            QTimer.singleShot(
-                0,
-                lambda: self._set_current_button_and_tab(button_name),
-            )
+        if self._restore_sidebar_page_after_startup is not None:
+            page_index = int(self._restore_sidebar_page_after_startup)
+            self._restore_sidebar_page_after_startup = None
+            self._ensure_sidebar_page_loaded(page_index)
+            self.ui.sidebar_tab.setCurrentIndex(page_index)
+            self._sync_sidebar_button_states()
 
         if self._post_startup_status_refresh_requested:
             return
@@ -392,8 +392,76 @@ class MainWindow(
         api.main_window_loaded(self)
 
     def on_splitter_changed_sizes(self):
+        if self._sidebar_is_visible():
+            self._ensure_sidebar_page_loaded(self.ui.sidebar_tab.currentIndex())
         self.set_chat_button_checked()
         self.set_knowledgebase_button_checked()
+        self.set_stats_button_checked()
+
+    def on_sidebar_tab_current_changed(self, index: int) -> None:
+        """Persist the active sidebar page and refresh toggle state."""
+        self._store_active_sidebar_tab_index(index)
+        self.set_knowledgebase_button_checked()
+        self.set_stats_button_checked()
+
+    def _sidebar_is_visible(self) -> bool:
+        """Return True when the right sidebar splitter area is visible."""
+        sizes = self.ui.main_window_splitter.sizes()
+        return len(sizes) > 2 and sizes[2] > 0
+
+    def _saved_sidebar_tab_index(self) -> int:
+        """Return the persisted sidebar page index."""
+        self.qsettings.beginGroup("window_settings")
+        index = self.qsettings.value("active_sidebar_tab_index", 0, type=int)
+        self.qsettings.endGroup()
+        return self._stats_sidebar_index if index == 1 else 0
+
+    def _store_active_sidebar_tab_index(self, index: int) -> None:
+        """Persist the current sidebar page index."""
+        self.qsettings.beginGroup("window_settings")
+        self.qsettings.setValue(
+            "active_sidebar_tab_index",
+            self._stats_sidebar_index if index == 1 else 0,
+        )
+        self.qsettings.endGroup()
+        self.qsettings.sync()
+
+    def _ensure_sidebar_page_loaded(self, page_index: int) -> None:
+        """Load sidebar content lazily for the requested page."""
+        if page_index == self._documents_sidebar_index:
+            self._ensure_knowledgebase_loaded()
+        elif page_index == self._stats_sidebar_index:
+            self._ensure_stats_loaded()
+
+    def _toggle_sidebar_page(self, page_index: int, visible: bool) -> None:
+        """Switch or hide the VS Code style right sidebar page."""
+        if visible:
+            self._ensure_sidebar_page_loaded(page_index)
+            self.ui.sidebar_tab.setCurrentIndex(page_index)
+            if not self._sidebar_is_visible():
+                self._toggle_splitter_section(
+                    True,
+                    2,
+                    self.ui.main_window_splitter,
+                    50,
+                )
+        elif (
+            self._sidebar_is_visible()
+            and self.ui.sidebar_tab.currentIndex() == page_index
+        ):
+            self._toggle_splitter_section(
+                False,
+                2,
+                self.ui.main_window_splitter,
+                50,
+            )
+
+        self._sync_sidebar_button_states()
+
+    def _sync_sidebar_button_states(self) -> None:
+        """Update the right-sidebar toggle buttons from current sidebar state."""
+        self.set_knowledgebase_button_checked()
+        self.set_stats_button_checked()
 
     def set_chat_button_checked(self):
         self.ui.chat_button.blockSignals(True)
@@ -403,12 +471,22 @@ class MainWindow(
         self.ui.chat_button.blockSignals(False)
 
     def set_knowledgebase_button_checked(self):
-        panel_id = 2
         self.ui.knowledgebase_button.blockSignals(True)
         self.ui.knowledgebase_button.setChecked(
-            self.ui.main_window_splitter.sizes()[panel_id] > 0
+            self._sidebar_is_visible()
+            and self.ui.sidebar_tab.currentIndex()
+            == self._documents_sidebar_index
         )
         self.ui.knowledgebase_button.blockSignals(False)
+    
+    def set_stats_button_checked(self):
+        self.ui.stats_button.blockSignals(True)
+        self.ui.stats_button.setChecked(
+            self._sidebar_is_visible()
+            and self.ui.sidebar_tab.currentIndex()
+            == self._stats_sidebar_index
+        )
+        self.ui.stats_button.blockSignals(False)
 
     @Slot()
     def on_actionQuit_triggered(self):
@@ -550,12 +628,6 @@ class MainWindow(
     def on_actionPrompt_Browser_triggered(self):
         PromptBrowser()
 
-    @Slot()
-    def on_actionStats_triggered(self):
-        widget = StatsWidget()
-        # display in a window
-        widget.show()
-
     @Slot(bool)
     def on_speech_to_text_button_toggled(self, val: bool):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
@@ -586,7 +658,7 @@ class MainWindow(
 
             if show_warning:
                 confirmed, do_not_show_again = show_nsfw_warning_dialog(
-                    self, show_again_default=show_warning
+                    self, show_again_default=bool(show_warning)
                 )
 
                 # Save the "do not show again" preference
@@ -742,145 +814,94 @@ class MainWindow(
         self.api.llm.converation_deleted(current_conversation.id)
 
     def _set_tab_index(self, tab_widget):
-        index = self.ui.center_tab_container.indexOf(tab_widget)
-        # Get current window settings first
-        current_settings = self.window_settings
-        # Update only the active_main_tab_index, keeping other values unchanged
-        updated_settings = {
-            "is_maximized": current_settings.is_maximized,
-            "is_fullscreen": current_settings.is_fullscreen,
-            "width": current_settings.width,
-            "height": current_settings.height,
-            "x_pos": current_settings.x_pos,
-            "y_pos": current_settings.y_pos,
-            "active_main_tab_index": index,
-        }
-        self.window_settings = updated_settings
-        self.ui.center_tab_container.setCurrentIndex(index)
+        """Legacy compatibility stub for removed center-tab navigation."""
+        del tab_widget
 
     def _attach_lazy_widget(
         self,
         parent_attr,
-        layout_attr,
         widget_attr,
-        placeholder_attr,
         object_name,
         factory,
+        placeholder_attr=None,
     ):
         widget = getattr(self.ui, widget_attr, None)
         if widget is not None:
             return widget
 
-        layout = getattr(self.ui, layout_attr)
-        widget = factory(getattr(self.ui, parent_attr))
-        widget.setObjectName(object_name)
-        layout.addWidget(widget, 0, 0, 1, 1)
+        parent = getattr(self.ui, parent_attr)
+        layout = parent.layout()
+        if layout is None:
+            layout = QGridLayout(parent)
+            layout.setContentsMargins(0, 0, 0, 0)
 
-        placeholder = getattr(self.ui, placeholder_attr, None)
+        widget = factory(parent)
+        widget.setObjectName(object_name)
+
+        if placeholder_attr is not None:
+            placeholder = getattr(self.ui, placeholder_attr, None)
+        else:
+            placeholder = None
         if placeholder is not None:
             layout.removeWidget(placeholder)
             placeholder.deleteLater()
-            setattr(self.ui, placeholder_attr, None)
+            if placeholder_attr is not None:
+                setattr(self.ui, placeholder_attr, None)
 
+        layout.addWidget(widget, 0, 0, 1, 1)
         setattr(self.ui, widget_attr, widget)
         return widget
 
-    def _ensure_lazy_tab_loaded(self, button_name: str) -> None:
-        """Create heavyweight tab content only when the tab is opened."""
-        if button_name == "art_editor_button":
-            from airunner.components.art.gui.widgets.canvas.canvas_widget import (
-                CanvasWidget,
-            )
+    def _ensure_canvas_loaded(self) -> None:
+        """Create the main canvas once after the window is shown."""
+        from airunner.components.art.gui.widgets.canvas.canvas_widget import (
+            CanvasWidget,
+        )
 
-            self.canvas = self._attach_lazy_widget(
-                "art_tab",
-                "gridLayout_2",
-                "canvas",
-                "canvas_placeholder",
-                "canvas",
-                CanvasWidget,
-            )
-            return
+        self.canvas = self._attach_lazy_widget(
+            "center_tab_container",
+            "canvas",
+            "canvas",
+            CanvasWidget,
+            placeholder_attr="canvas_placeholder",
+        )
 
     def _ensure_knowledgebase_loaded(self) -> None:
-        """Create the documents pane only when it is actually shown."""
+        """Create the documents sidebar page only when it is shown."""
         from airunner.components.documents.gui.widgets.documents import (
             DocumentsWidget,
         )
 
         self._attach_lazy_widget(
-            "knowledgebase",
-            "gridLayout_7",
-            "documents",
             "documents_placeholder",
             "documents",
+            "documents",
             DocumentsWidget,
+        )
+    
+    def _ensure_stats_loaded(self) -> None:
+        """Create the stats sidebar page only when it is shown."""
+        self._attach_lazy_widget(
+            "stats_placeholder",
+            "model_status_widget",
+            "model_status_widget",
+            ModelStatusWidget,
         )
 
     @property
     def buttons(self) -> Dict:
-        return {
-            "home_button": self.ui.home_tab,
-            "art_editor_button": self.ui.art_tab,
-        }
+        return {}
 
     def _restore_tab(self):
-        """
-        Restore the last active tab based on the saved index in QSettings.
-        """
-        # Read the saved tab index directly from QSettings to avoid getter issues
-        # from airunner.utils.settings import get_qsettings
-
-        # settings = get_qsettings()
-        # settings.beginGroup("window_settings")
-        # saved_index = settings.value("active_main_tab_index", 0, type=int)
-        # settings.endGroup()
-
-        saved_index = self.window_settings.active_main_tab_index
-
-        buttons = {
-            0: "home_button",
-            1: "art_editor_button",
-        }
-
-        if saved_index in buttons:
-            button_name = buttons[saved_index]
-            if saved_index == 0:
-                self.ui.center_tab_container.setCurrentIndex(saved_index)
-                getattr(self.ui, button_name).setChecked(True)
-            else:
-                self._pending_startup_button_name = button_name
-        else:
-            self.ui.center_tab_container.setCurrentIndex(0)
-            self.ui.home_button.setChecked(True)
+        """Center-tab restoration was removed with the home/art split."""
 
     def _set_current_button_and_tab(self, button_name: str):
-        """
-        Set the current button and tab based on the button name and tab widget.
-        Also emits SECTION_CHANGED signal to notify LLM of UI context change.
-        """
-        buttons = self.buttons.keys()
-        for btn in buttons:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(btn == button_name)
-            getattr(self.ui, btn).blockSignals(False)
-        self._ensure_lazy_tab_loaded(button_name)
-        tab_widget = self.buttons[button_name]
-        self._set_tab_index(tab_widget)
-        
-        # Emit section changed signal with button name for LLM context
-        self.emit_signal(SignalCode.SECTION_CHANGED, {"section": button_name})
-
-    @Slot(bool)
-    def on_home_button_toggled(self, active: bool):
-        self._set_current_button_and_tab("home_button")
-
-    @Slot(bool)
-    def on_art_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("art_editor_button")
+        """Center-tab switching was removed with the home/art split."""
+        del button_name
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
+        del val
         self._show_settings_window()
 
     def _show_settings_window(self):
@@ -898,11 +919,12 @@ class MainWindow(
             self,
             "Reset Settings",
             "Are you sure you want to reset all settings to their default values?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.reset_settings()
             self.restart()
 
@@ -925,16 +947,26 @@ class MainWindow(
 
     def toggle_window_visibility(self):
         """Toggle window visibility and update the menu text."""
+        toggle_visibility_action = getattr(
+            self,
+            "toggle_visibility_action",
+            None,
+        )
+        tray_icon = getattr(self, "tray_icon", None)
+        tray_menu = getattr(self, "tray_menu", None)
         if self.isVisible():
             self.hide()
-            self.toggle_visibility_action.setText("Show Window")
+            if toggle_visibility_action is not None:
+                toggle_visibility_action.setText("Show Window")
         else:
             self.showNormal()
             self.activateWindow()  # Ensure window gets focus when showing
-            self.toggle_visibility_action.setText("Hide Window")
+            if toggle_visibility_action is not None:
+                toggle_visibility_action.setText("Hide Window")
 
         # Update the tray menu so it reflects the current state immediately
-        self.tray_icon.setContextMenu(self.tray_menu)
+        if tray_icon is not None and tray_menu is not None:
+            tray_icon.setContextMenu(tray_menu)
 
     def handle_single_click(self):
         """Handle single-click on the tray icon."""
@@ -977,7 +1009,7 @@ class MainWindow(
             f.write(message)
 
     def on_theme_changed_signal(self, data: Dict):
-        template = data.get("template", TemplateName.DARK)
+        template = data.get("template")
         self.set_stylesheet(
             template=template,
         )
@@ -1005,12 +1037,10 @@ class MainWindow(
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
 
-        # Restore last active tab index from QSettings
-        self._restore_tab()
-
-        # Store active tab index on tab change
-        self.ui.center_tab_container.currentChanged.connect(
-            self._store_active_tab_index
+        sidebar_page_index = self._saved_sidebar_tab_index()
+        self.ui.sidebar_tab.setCurrentIndex(sidebar_page_index)
+        self.ui.sidebar_tab.currentChanged.connect(
+            self.on_sidebar_tab_current_changed
         )
         self.logger.info(
             "MainWindow startup phase startup_state_prep completed in %.2fs",
@@ -1047,9 +1077,8 @@ class MainWindow(
             namespace="MainWindow",
         )
 
-        splitter_sizes = self.ui.main_window_splitter.sizes()
-        if len(splitter_sizes) > 2 and splitter_sizes[2] > 0:
-            self._restore_knowledgebase_after_startup = True
+        if self._sidebar_is_visible():
+            self._restore_sidebar_page_after_startup = sidebar_page_index
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -1086,6 +1115,7 @@ class MainWindow(
         )
         self.set_chat_button_checked()
         self.set_knowledgebase_button_checked()
+        self.set_stats_button_checked()
 
         # Keyboard shortcut: Ctrl+N -> placeholder handler using QAction
         try:
@@ -1108,24 +1138,29 @@ class MainWindow(
         )
 
     def _disable_aiart_gui_elements(self):
-        self.ui.center_widget.hide()
-        self.ui.menuImage.hide()
-        self.ui.menuFilters.hide()
-        self.ui.menuStable_Diffusion.hide()
-        self.ui.menuArt.hide()
+        for attr in (
+            "center_widget",
+            "menuFilters",
+            "menuStable_Diffusion",
+            "menuArt",
+        ):
+            widget = getattr(self.ui, attr, None)
+            if widget is None:
+                continue
+            widget.hide()
+            widget.deleteLater()
 
-        self.ui.center_widget.deleteLater()
-        self.ui.menuImage.deleteLater()
-        self.ui.menuFilters.deleteLater()
-        self.ui.menuStable_Diffusion.deleteLater()
-        self.ui.actionBrowse_AI_Runner_Path.deleteLater()
-        self.ui.actionBrowse_Images_Path_2.deleteLater()
-        self.ui.actionArt.deleteLater()
-        self.ui.menuArt.deleteLater()
-        self.ui.actionCut.deleteLater()
-        self.ui.actionCopy.deleteLater()
-        self.ui.actionPaste.deleteLater()
-        self.ui.actionPrompt_Browser.deleteLater()
+        for attr in (
+            "actionBrowse_AI_Runner_Path",
+            "actionBrowse_Images_Path_2",
+            "actionCut",
+            "actionCopy",
+            "actionPaste",
+            "actionPrompt_Browser",
+        ):
+            action = getattr(self.ui, attr, None)
+            if action is not None:
+                action.deleteLater()
 
     def _load_plugins(self):
         base_path = self.path_settings.base_path
@@ -1137,8 +1172,11 @@ class MainWindow(
             self.logger.info("Loading plugins")
             for plugin in plugins:
                 if hasattr(plugin, "get_widget"):
-                    widget = plugin.get_widget()
-                    self.ui.center_tab_container.addTab(widget, plugin.name)
+                    self.logger.info(
+                        "Skipping plugin widget '%s' because the center-tab "
+                        "container was removed.",
+                        plugin.name,
+                    )
 
     def initialize_widget_elements(self):
         for element, enabled in (
@@ -1212,21 +1250,17 @@ class MainWindow(
                 return shortcutkey.text
         return ""
 
-    @property
-    def current_active_tab_index(self) -> int:
-        """Get the current active main tab index from QSettings."""
-        self.qsettings.beginGroup("window_settings")
-        index = self.qsettings.value("active_main_tab_index", 0, type=int)
-        self.qsettings.endGroup()
-        return index
-
     @Slot()
     def _on_ctrl_n_pressed(self):
-        """Create a new art document for the canvas workspace."""
-        current_active_tab_index = self.current_active_tab_index
-        if current_active_tab_index == 1:
-            self.api.art.canvas.new_document()
-        return
+        """Create a new art document for the always-visible canvas."""
+        if not self.api or not hasattr(self.api, "art"):
+            return
+        canvas = getattr(self.api.art, "canvas", None)
+        if canvas is None:
+            self._ensure_canvas_loaded()
+            canvas = getattr(self.api.art, "canvas", None)
+        if canvas is not None:
+            canvas.new_document()
 
     def on_save_stablediffusion_prompt_signal(self, data: Dict):
         self.create_saved_prompt(
@@ -1420,7 +1454,11 @@ class MainWindow(
 
         self.qsettings.setValue(
             "active_main_tab_index",
-            self.ui.center_tab_container.currentIndex(),
+            0,
+        )
+        self.qsettings.setValue(
+            "active_sidebar_tab_index",
+            self.ui.sidebar_tab.currentIndex(),
         )
         self.qsettings.endGroup()
         
@@ -1431,10 +1469,12 @@ class MainWindow(
 
         # Save canvas offset for all canvas views
         try:
-            if hasattr(self.ui, "image_canvas"):
-                self.ui.image_canvas.save_canvas_offset()
-            if hasattr(self.ui, "brush_canvas"):
-                self.ui.brush_canvas.save_canvas_offset()
+            image_canvas = getattr(self.ui, "image_canvas", None)
+            if image_canvas is not None:
+                image_canvas.save_canvas_offset()
+            brush_canvas = getattr(self.ui, "brush_canvas", None)
+            if brush_canvas is not None:
+                brush_canvas.save_canvas_offset()
         except Exception:
             self.logger.exception("Failed to save canvas offset")
 
@@ -1445,10 +1485,14 @@ class MainWindow(
         self.qsettings.beginGroup("window_settings")
         is_maximized = self.qsettings.value("is_maximized", False, type=bool)
         is_fullscreen = self.qsettings.value("is_fullscreen", False, type=bool)
-        width = self.qsettings.value("width", 1024, type=int)
-        height = self.qsettings.value("height", 768, type=int)
-        x_pos = self.qsettings.value("x_pos", 100, type=int)
-        y_pos = self.qsettings.value("y_pos", 100, type=int)
+        width_value = self.qsettings.value("width", 1024, type=int)
+        height_value = self.qsettings.value("height", 768, type=int)
+        x_pos_value = self.qsettings.value("x_pos", 100, type=int)
+        y_pos_value = self.qsettings.value("y_pos", 100, type=int)
+        width = width_value if isinstance(width_value, int) else 1024
+        height = height_value if isinstance(height_value, int) else 768
+        x_pos = x_pos_value if isinstance(x_pos_value, int) else 100
+        y_pos = y_pos_value if isinstance(y_pos_value, int) else 100
         screen_name = self.qsettings.value("screen_name", None, type=str)
         self.qsettings.endGroup()
 
@@ -1553,7 +1597,9 @@ class MainWindow(
 
     ###### Window handlers ######
     def on_toggle_tool_signal(self, data: Dict):
-        self.toggle_tool(data["tool"], data["active"])
+        toggle_tool = getattr(self, "toggle_tool", None)
+        if callable(toggle_tool):
+            toggle_tool(data["tool"], data["active"])
 
     def on_retranslate_ui_signal(self):
         self.ui.retranslateUi(self)
@@ -1582,7 +1628,7 @@ class MainWindow(
         api = self.refresh_api_reference() or getattr(self, "api", None)
         app = QApplication.instance()
         splash = getattr(api, "splash", None)
-        if not api or not splash or app is None:
+        if not api or not splash or not isinstance(app, QApplication):
             return
 
         from airunner.app_mixins.ui_runtime_mixin import UIRuntimeMixin
@@ -1609,10 +1655,18 @@ class MainWindow(
         super().showEvent(event)
         self._handoff_launcher_splash()
         # Make sure we update the menu text whenever the window is shown
-        if hasattr(self, "toggle_visibility_action"):
-            self.toggle_visibility_action.setText("Hide Window")
+        toggle_visibility_action = getattr(
+            self,
+            "toggle_visibility_action",
+            None,
+        )
+        tray_icon = getattr(self, "tray_icon", None)
+        tray_menu = getattr(self, "tray_menu", None)
+        if toggle_visibility_action is not None:
+            toggle_visibility_action.setText("Hide Window")
             # Update the tray menu so it reflects the current state immediately
-            self.tray_icon.setContextMenu(self.tray_menu)
+            if tray_icon is not None and tray_menu is not None:
+                tray_icon.setContextMenu(tray_menu)
 
         self.logger.debug("showEvent called, initializing window")
         self._initialize_window()
@@ -1773,7 +1827,9 @@ class MainWindow(
         self.api.clear_prompts()
 
     def new_batch(self, index, image, data):
-        self.generator_tab_widget.new_batch(index, image, data)
+        new_batch = getattr(self.generator_tab_widget, "new_batch", None)
+        if callable(new_batch):
+            new_batch(index, image, data)
 
     def _refresh_model_status_from_daemon(self) -> None:
         """Refresh GUI model status from daemon lifecycle state."""
@@ -2066,28 +2122,21 @@ class MainWindow(
 
     def display_missing_models_error(self, data):
         msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle(data.get("title", "Error: Missing models"))
         msg_box.setText(data.get("message", "Something went wrong"))
         msg_box.exec()
 
     def on_status_error_signal(self, data):
         msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle(data.get("title", "Error"))
         msg_box.setText(data.get("message", "Something went wrong"))
         msg_box.exec()
 
     def hide_center_tab_header(self):
-        """Hide the tab bar for center_tab_container so tabs are not visible."""
-        if hasattr(self.ui, "center_tab_container"):
-            tab_widget = self.ui.center_tab_container
+        """Hide the right-sidebar tab bar so it behaves like VS Code."""
+        tab_widget = getattr(self.ui, "sidebar_tab", None)
+        if tab_widget is not None:
             tab_bar = tab_widget.tabBar()
             tab_bar.hide()
-
-    def _store_active_tab_index(self, index: int) -> None:
-        """Store the active main tab index in QSettings."""
-        self.qsettings.beginGroup("window_settings")
-        self.qsettings.setValue("active_main_tab_index", index)
-        self.qsettings.endGroup()
-        self.qsettings.sync()

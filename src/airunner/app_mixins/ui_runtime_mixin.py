@@ -21,7 +21,7 @@ from PySide6.QtWidgets import QApplication
 from airunner.components.splash_screen.splash_screen import SplashScreen
 from airunner.enums import SignalCode
 from airunner.qt_runtime_env import configure_early_qt_environment
-from airunner.settings import AIRUNNER_DISCORD_URL
+from airunner.settings import AIRUNNER_BUG_REPORT_LINK
 from airunner.settings import MATHJAX_VERSION
 from airunner.settings import QTWEBENGINE_REMOTE_DEBUGGING
 from airunner.utils.settings import get_qsettings
@@ -527,7 +527,7 @@ class UIRuntimeMixin:
             sys.exit(
                 "\n                An error occurred while initializing the "
                 "application.\n                Please report this issue on "
-                f"GitHub or Discord {AIRUNNER_DISCORD_URL}."
+                f"GitHub {AIRUNNER_BUG_REPORT_LINK}."
             )
 
     def quit(self):

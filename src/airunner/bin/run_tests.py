@@ -33,12 +33,45 @@ import time
 from pathlib import Path
 
 
+def _pytest_command(*args: str) -> list[str]:
+    """Build a pytest command bound to the active Python interpreter."""
+    return [sys.executable, "-m", "pytest", *args]
+
+
 def _component_targets(
     base_path: Path,
     component: str,
 ) -> tuple[list[Path], str] | None:
     """Resolve one component name or alias into pytest targets."""
     alias_targets = {
+        "chat": [
+            base_path
+            / "chat"
+            / "gui"
+            / "widgets"
+            / "tests"
+            / "test_chat_prompt_widget_show_event.py",
+            base_path
+            / "chat"
+            / "gui"
+            / "widgets"
+            / "tests"
+            / "test_chat_request_mode.py",
+            base_path
+            / "chat"
+            / "gui"
+            / "widgets"
+            / "tests"
+            / "test_conversation_widget_streaming.py",
+        ],
+        "documents": [
+            base_path
+            / "documents"
+            / "gui"
+            / "widgets"
+            / "tests"
+            / "test_knowledge_base_panel_widget.py",
+        ],
         "coding_workspace": [
             base_path / "agents" / "tests" / "test_agent_runtime_records.py",
             base_path
@@ -186,7 +219,9 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         test_targets = [base_path]
         description = "Safe unit tests (GUI suites excluded)"
 
-    cmd = ["pytest", *[str(path) for path in test_targets]]
+    include_gui_tests = component in {"chat", "documents"}
+
+    cmd = _pytest_command(*[str(path) for path in test_targets])
 
     if verbose:
         cmd.append("-v")
@@ -199,13 +234,21 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
             "-m",
-            "not gui and not eval and not benchmark and not integration",
+            (
+                "not eval and not benchmark and not integration"
+                if include_gui_tests
+                else "not gui and not eval and not benchmark and not integration"
+            ),
             "--ignore=src/airunner/components/eval",  # Exclude eval tests
             "--ignore=src/airunner/components/server/tests/functional",
         ]
     )
 
-    return run_command(cmd, description, env=_build_pytest_env(skip_gui=True))
+    return run_command(
+        cmd,
+        description,
+        env=_build_pytest_env(skip_gui=not include_gui_tests),
+    )
 
 
 def run_eval_tests(
@@ -238,9 +281,9 @@ def run_eval_tests(
         if not test_target.exists():
             print(f"Error: Test file not found at {test_target}")
             return 1
-        cmd = ["pytest", str(test_target)]
+        cmd = _pytest_command(str(test_target))
     else:
-        cmd = ["pytest", str(test_path)]
+        cmd = _pytest_command(str(test_path))
 
     if verbose:
         cmd.append("-v")
@@ -275,12 +318,11 @@ def run_eval_tests(
 def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe llama.cpp runtime smoke suite."""
     test_path = Path("src/airunner/api/tests")
-    cmd = [
-        "pytest",
+    cmd = _pytest_command(
         str(test_path),
         "-m",
         "llm_runtime_smoke",
-    ]
+    )
 
     if verbose:
         cmd.append("-v")
@@ -298,12 +340,11 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
 def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe STT runtime smoke suite."""
     test_path = Path("src/airunner/api/tests")
-    cmd = [
-        "pytest",
+    cmd = _pytest_command(
         str(test_path),
         "-m",
         "stt_runtime_smoke",
-    ]
+    )
 
     if verbose:
         cmd.append("-v")
@@ -321,12 +362,11 @@ def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
 def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe art runtime smoke suite."""
     test_path = Path("src/airunner/api/tests")
-    cmd = [
-        "pytest",
+    cmd = _pytest_command(
         str(test_path),
         "-m",
         "art_runtime_smoke",
-    ]
+    )
 
     if verbose:
         cmd.append("-v")
@@ -344,12 +384,11 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
 def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe TTS runtime smoke suite."""
     test_path = Path("src/airunner/api/tests")
-    cmd = [
-        "pytest",
+    cmd = _pytest_command(
         str(test_path),
         "-m",
         "tts_runtime_smoke",
-    ]
+    )
 
     if verbose:
         cmd.append("-v")

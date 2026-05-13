@@ -64,6 +64,15 @@ def test_chat_prompt_splitter_restore_does_not_process_events(monkeypatch):
     process_events.assert_not_called()
 
 
+def test_resolve_initial_section_defaults_to_canvas(monkeypatch):
+    """The chat widget should treat the single center pane as art/canvas."""
+    monkeypatch.setattr(module, "AIRUNNER_ART_ENABLED", True)
+
+    assert ChatPromptWidget._resolve_initial_section(SimpleNamespace()) == (
+        "art_editor_button"
+    )
+
+
 def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
     """The prompt clears and the user bubble appears before load probes."""
     call_order = []

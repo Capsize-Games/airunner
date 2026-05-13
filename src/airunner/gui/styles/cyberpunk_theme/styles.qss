@@ -813,11 +813,17 @@ QWizardPage QPushButton:pressed {
     border-right: 1px solid #6c6c6c;
 }
 
-#actionsidebar QPushButton {
+#actionsidebar_right {
+    border-left: 1px solid #6c6c6c;
+}
+
+#actionsidebar QPushButton,
+#actionsidebar_right QPushButton {
     border: 1px solid transparent;
 }
 
-#actionsidebar QPushButton:checked {
+#actionsidebar QPushButton:checked ,
+#actionsidebar_right QPushButton:checked {
     border: 1px solid #00fff7;
 }
 

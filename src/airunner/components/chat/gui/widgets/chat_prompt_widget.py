@@ -2432,17 +2432,10 @@ class ChatPromptWidget(BaseWidget):
             self._active_section = section
 
     def _resolve_initial_section(self) -> Optional[str]:
-        """Determine active section from persisted window settings."""
-        try:
-            index = self.window_settings.active_main_tab_index
-        except Exception:
-            return None
-
-        index_to_section = {
-            0: "home_button",
-            1: "art_editor_button",
-        }
-        return index_to_section.get(index, "home_button")
+        """Return the single remaining center-section identifier."""
+        if AIRUNNER_ART_ENABLED:
+            return "art_editor_button"
+        return None
 
     # =========================================================================
     # Image Attachment Methods
@@ -2674,12 +2667,8 @@ class ChatPromptWidget(BaseWidget):
         return image
 
     def _is_art_tab_active(self) -> bool:
-        """Return True when the main window art tab is currently active."""
-        if self._active_section:
-            return self._active_section == "art_editor_button"
-
-        self._active_section = self._resolve_initial_section()
-        return self._active_section == "art_editor_button"
+        """Return True when the always-visible center canvas is available."""
+        return bool(AIRUNNER_ART_ENABLED)
 
     def eventFilter(self, obj, event) -> bool:
         """Handle prompt submission and prompt drag-drop events.

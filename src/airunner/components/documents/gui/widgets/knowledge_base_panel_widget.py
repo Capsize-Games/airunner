@@ -5,7 +5,7 @@ from PySide6.QtGui import QIcon
 
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.home_stage.gui.widgets.templates.knowledge_base_panel_ui import (
+from airunner.components.documents.gui.widgets.templates.knowledge_base_panel_ui import (
     Ui_knowledge_base_panel,
 )
 

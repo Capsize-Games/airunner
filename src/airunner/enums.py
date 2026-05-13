@@ -408,53 +408,6 @@ class Mode(Enum):
     LANGUAGE_PROCESSOR = "Language Processing"
     MODEL_MANAGER = "Model Manager"
 
-
-class UISection(Enum):
-    """
-    UI sections in the main application window.
-    
-    Used to track which section of the application is active,
-    allowing the LLM to be contextually aware of the user's current focus.
-    """
-    HOME = "home"
-    ART = "art"  # Image generation and canvas manipulation
-    UNKNOWN = "unknown"
-
-    @classmethod
-    def from_button_name(cls, button_name: str) -> "UISection":
-        """Convert a button name to UISection enum.
-        
-        Args:
-            button_name: The button name (e.g., "art_editor_button")
-            
-        Returns:
-            Corresponding UISection enum value
-        """
-        mapping = {
-            "home_button": cls.HOME,
-            "art_editor_button": cls.ART,
-        }
-        return mapping.get(button_name, cls.UNKNOWN)
-
-    def get_context_description(self) -> str:
-        """Get a human-readable description of the section for the LLM.
-        
-        Returns:
-            Description string for system prompt context
-        """
-        descriptions = {
-            UISection.HOME: "The user is on the home dashboard.",
-            UISection.ART: (
-                "The user is in the ART section with the image generation canvas. "
-                "They can generate images, manipulate them on a canvas, use drawing tools, "
-                "apply filters, and work with layers. Relevant tools include image generation, "
-                "canvas operations (clear, save, load), and drawing tools."
-            ),
-            UISection.UNKNOWN: "",
-        }
-        return descriptions.get(self, "")
-
-
 class LLMActionType(Enum):
     """
     The following action types are used by the LLM to process various user
