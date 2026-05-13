@@ -87,7 +87,6 @@ class BaseDiffusersModelManager(
         self._controlnet: Optional[Any] = None
         self._controlnet_processor: Any = None
         self._memory_settings_flags: dict = {
-            "torch_compile_applied": False,
             "vae_slicing_applied": None,
             "last_channels_applied": None,
             "attention_slicing_applied": None,

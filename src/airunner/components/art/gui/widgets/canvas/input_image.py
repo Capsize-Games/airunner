@@ -233,6 +233,8 @@ class InputImage(BaseWidget):
 
     @Slot(bool)
     def on_lock_input_image_button_toggled(self, val: bool):
+        if val:
+            self._capture_current_input_image()
         self.update_current_settings("lock_input_image", val)
         # Immediately update the scene so generated images are ignored when locked.
         try:
@@ -242,6 +244,31 @@ class InputImage(BaseWidget):
                 )
         except Exception:
             pass
+
+    def _capture_current_input_image(self) -> None:
+        """Persist the current visible source image before locking it."""
+        if self.is_mask:
+            return
+
+        image = self._get_lock_source_image()
+        if image is None:
+            return
+
+        self.load_image_from_object(image)
+        self.update_current_settings(
+            "image",
+            convert_image_to_binary(image),
+        )
+
+    def _get_lock_source_image(self) -> Optional[Image.Image]:
+        """Return the image that should be frozen by the lock button."""
+        if self.settings_key == "image_to_image_settings":
+            return self.img2img_image or self.drawing_pad_image
+        if self.settings_key == "controlnet_settings":
+            return self.controlnet_image or self.drawing_pad_image
+        if self.settings_key == "outpaint_settings":
+            return self.outpaint_image or self.drawing_pad_image
+        return self.drawing_pad_image
 
     @Slot()
     def on_refresh_button_clicked(self):

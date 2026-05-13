@@ -103,6 +103,40 @@ def _resolve_art_pipeline_action(metadata: dict[str, Any]) -> str:
     return "txt2img"
 
 
+def _resolve_art_generator_section(metadata: dict[str, Any]) -> Any:
+    """Return the requested generator section for one art job."""
+    from airunner.enums import GeneratorSection
+
+    pipeline_action = _resolve_art_pipeline_action(metadata)
+    try:
+        return GeneratorSection(pipeline_action)
+    except ValueError:
+        return GeneratorSection.TXT2IMG
+
+
+def _resolve_art_request_strength(metadata: dict[str, Any]) -> float:
+    """Return one normalized strength value for image-conditioned jobs."""
+    try:
+        return float(metadata.get("strength"))
+    except (TypeError, ValueError):
+        return 0.5
+
+
+def _resolve_art_request_image(metadata: dict[str, Any]) -> Any:
+    """Return one decoded PIL image carried by the art invocation."""
+    image_b64 = metadata.get("image_b64")
+    if not image_b64:
+        return None
+    try:
+        from PIL import Image
+
+        image_bytes = base64.b64decode(image_b64)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            return image.convert("RGB")
+    except Exception:
+        return None
+
+
 def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
     """Create an LLM request object for the legacy signal path."""
     from airunner.components.llm.managers.llm_request import LLMRequest
@@ -1013,11 +1047,13 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         from airunner.components.art.managers.stablediffusion.image_request import (
             ImageRequest,
         )
-        from airunner.enums import GeneratorSection, SignalCode
+        from airunner.enums import SignalCode
 
         invocation = ArtInvocationRequest.model_validate(request.payload)
         metadata = invocation.metadata
         image_queue: Queue[Any] = Queue()
+        pipeline_action = _resolve_art_pipeline_action(metadata)
+        generator_section = _resolve_art_generator_section(metadata)
 
         def on_complete(result: Any) -> None:
             image_queue.put(result)
@@ -1032,7 +1068,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             )
 
         image_request = ImageRequest(
-            pipeline_action=_resolve_art_pipeline_action(metadata),
+            pipeline_action=pipeline_action,
             prompt=invocation.prompt,
             negative_prompt=invocation.negative_prompt,
             model_path=invocation.model or "",
@@ -1047,10 +1083,12 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             random_seed=invocation.seed is None,
             n_samples=invocation.num_images,
             images_per_batch=invocation.num_images,
+            strength=_resolve_art_request_strength(metadata),
             width=invocation.width,
             height=invocation.height,
             callback=on_complete,
-            generator_section=GeneratorSection.TXT2IMG,
+            image=_resolve_art_request_image(metadata),
+            generator_section=generator_section,
         )
 
         progress_handler = None

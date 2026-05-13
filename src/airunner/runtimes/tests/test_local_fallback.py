@@ -1,6 +1,7 @@
 """Tests for local fallback runtime clients."""
 
 import base64
+import io
 from queue import Queue
 from types import SimpleNamespace
 
@@ -543,6 +544,63 @@ class TestLocalFallbackArtClient:
                 "total": 4,
             }
         ]
+
+    def test_invoke_can_decode_img2img_request_metadata(self):
+        mediator = FakeMediator()
+        observed_request = {}
+        image_buffer = io.BytesIO()
+        Image.new("RGB", (2, 2), "white").save(image_buffer, format="PNG")
+        image_b64 = base64.b64encode(image_buffer.getvalue()).decode("ascii")
+
+        def respond_to_generate(payload):
+            request = payload["image_request"]
+            observed_request["pipeline_action"] = request.pipeline_action
+            observed_request["generator_section"] = (
+                request.generator_section.value
+            )
+            observed_request["strength"] = request.strength
+            observed_request["image_size"] = request.image.size
+            request.callback(
+                ImageResponse(
+                    images=[Image.new("RGB", (1, 1), "white")],
+                    data={"seed": 1},
+                    active_rect=None,
+                    is_outpaint=False,
+                )
+            )
+
+        signal_source = FakeSignalSource(
+            mediator,
+            responders={SignalCode.DO_GENERATE_SIGNAL: respond_to_generate},
+        )
+        client = LocalFallbackArtClient(
+            mediator=mediator,
+            signal_source=signal_source,
+        )
+
+        response = client.invoke(
+            RequestEnvelope(
+                request_id="req-art-img2img",
+                runtime=RuntimeKind.ART,
+                action=RuntimeAction.INVOKE,
+                payload={
+                    "prompt": "mountains",
+                    "metadata": {
+                        "pipeline": "img2img",
+                        "strength": 0.35,
+                        "image_b64": image_b64,
+                    },
+                },
+            )
+        )
+
+        assert response.status == EnvelopeStatus.SUCCEEDED
+        assert observed_request == {
+            "pipeline_action": "img2img",
+            "generator_section": "img2img",
+            "strength": 0.35,
+            "image_size": (2, 2),
+        }
 
 
 class TestLocalFallbackRegistry:

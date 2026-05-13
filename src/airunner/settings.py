@@ -412,6 +412,7 @@ QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
 #   - tool: The tool name to force (or None for special behavior)
 #   - description: Human-readable description shown in autocomplete
 #   - action: Optional LLMActionType override (defaults to APPLICATION_COMMAND)
+#   - request_mode: Optional visible request mode to apply for the command
 #   - prompt_prefix: Optional prefix to prepend to user's message
 SLASH_COMMANDS = {
     "deepsearch": {
@@ -443,6 +444,34 @@ SLASH_COMMANDS = {
         "description": "Code assistance with structured TDD workflow",
         "action": "CODE",
         "prompt_prefix": "Please help me with this coding task: ",
+    },
+    "meeting-pack": {
+        "tool": None,
+        "description": "Turn meeting notes into a deliverable pack",
+        "action": "CODE",
+        "request_mode": "agent",
+        "prompt_prefix": (
+            "Treat this as a meeting-to-deliverables workflow in the "
+            "active AIRunner project. Start or update a meeting run, "
+            "record the structured decisions, tasks, risks, deadlines, "
+            "and open questions, generate the meeting pack, open the "
+            "pack in the document editor, and call out unresolved items "
+            "that still need review.\n\nMeeting input: "
+        ),
+    },
+    "meeting-review": {
+        "tool": None,
+        "description": "Review and approve the latest meeting pack",
+        "action": "CODE",
+        "request_mode": "agent",
+        "prompt_prefix": (
+            "Inspect the latest meeting deliverable pack in the active "
+            "AIRunner project, surface flagged or low-confidence items, "
+            "apply any user corrections, persist the review result, open "
+            "the review artifact in the document editor, and report "
+            "whether the pack is approved or still needs revision.\n\n"
+            "Review request: "
+        ),
     },
     "rag": {
         "tool": "rag_search",

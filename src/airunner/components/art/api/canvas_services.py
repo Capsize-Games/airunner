@@ -250,6 +250,8 @@ class CanvasAPIService(APIServiceBase):
         # Get image from ImageToImageSettings if img2img
         if is_img2img:
             binary_image = self.image_to_image_settings.image
+            if binary_image is None:
+                image = self.img2img_image
 
         if binary_image is not None:
             image = convert_binary_to_image(binary_image)

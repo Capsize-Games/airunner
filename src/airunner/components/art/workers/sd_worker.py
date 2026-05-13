@@ -1,3 +1,4 @@
+import base64
 import io
 import os
 import threading
@@ -39,6 +40,7 @@ from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
+from airunner.utils.image import convert_image_to_binary
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -623,6 +625,16 @@ class SDWorker(Worker):
             return None
         return getattr(api, "daemon_client", None)
 
+    @staticmethod
+    def _encode_daemon_image(image: Optional[Image.Image]) -> Optional[str]:
+        """Return one PNG base64 payload for daemon art requests."""
+        if image is None:
+            return None
+        binary = convert_image_to_binary(image.convert("RGB"))
+        if not binary:
+            return None
+        return base64.b64encode(binary).decode("ascii")
+
     def _generate_image_via_daemon(self, message: Dict) -> None:
         client = self._daemon_client()
         image_request = message.get("image_request")
@@ -631,6 +643,12 @@ class SDWorker(Worker):
             return
 
         total_steps = max(int(image_request.steps or 1), 1)
+        pipeline = getattr(
+            image_request.generator_section,
+            "value",
+            GeneratorSection.TXT2IMG.value,
+        )
+        image_b64 = SDWorker._encode_daemon_image(image_request.image)
 
         def on_progress(status: Dict) -> None:
             try:
@@ -668,6 +686,9 @@ class SDWorker(Worker):
                 model=image_request.model_path or None,
                 version=image_request.version or None,
                 scheduler=image_request.scheduler or None,
+                pipeline=pipeline,
+                strength=image_request.strength,
+                image_b64=image_b64,
                 skip_auto_export=True,
             )
             job_id = str(job.get("job_id", "") or "")

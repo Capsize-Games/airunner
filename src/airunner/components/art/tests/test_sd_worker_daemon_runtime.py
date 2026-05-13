@@ -4,6 +4,8 @@ import base64
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from PIL import Image
+
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
@@ -117,6 +119,31 @@ def test_generate_image_via_daemon_publishes_canvas_and_worker_response():
     assert client.calls[0][1]["skip_auto_export"] is True
     assert client.calls[1][0] == "wait"
     assert worker._active_daemon_job_id is None
+
+
+def test_generate_image_via_daemon_forwards_img2img_payload():
+    client = FakeDaemonClient()
+    worker, _export_worker, _canvas_calls, _responses, alerts, errors = _worker(
+        client
+    )
+    request = ImageRequest(
+        prompt="A mountain",
+        model_path="/tmp/art-model",
+        version="Z-Image Turbo",
+        scheduler="Flow Match Euler",
+        strength=0.35,
+        image=Image.new("RGB", (4, 4), "white"),
+        generator_section=GeneratorSection.IMG2IMG,
+    )
+
+    worker._generate_image_via_daemon({"image_request": request})
+
+    assert not alerts
+    assert not errors
+    payload = client.calls[0][1]
+    assert payload["pipeline"] == "img2img"
+    assert payload["strength"] == 0.35
+    assert isinstance(payload["image_b64"], str)
 
 
 def test_interrupt_image_generation_cancels_active_daemon_job():

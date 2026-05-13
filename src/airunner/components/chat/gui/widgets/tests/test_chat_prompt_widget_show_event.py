@@ -375,6 +375,89 @@ def test_parse_slash_command_recognizes_project_template(monkeypatch):
     assert result == ("maze", "add DFS support", None, True)
 
 
+def test_parse_slash_command_prefers_builtin_config():
+    """Built-in slash commands should win over same-name templates."""
+    widget = SimpleNamespace(
+        _project_slash_templates={
+            "meeting-pack": SimpleNamespace(prompt="Template prompt")
+        },
+        _refresh_slash_commands_data=lambda: None,
+        logger=Mock(),
+    )
+
+    result = ChatPromptWidget._parse_slash_command(
+        widget,
+        "/meeting-pack weekly sync",
+    )
+
+    assert result == (
+        "meeting-pack",
+        "weekly sync",
+        LLMActionType.CODE,
+        False,
+    )
+
+
+def test_refresh_slash_commands_keeps_builtin_template_binding(monkeypatch):
+    """Same-name project templates should stay bound to built-in commands."""
+    widget = SimpleNamespace()
+    prompt_service = SimpleNamespace(
+        prompt_templates=lambda: [
+            SimpleNamespace(
+                command_name="meeting-pack",
+                description="Meeting pack",
+                prompt="Template prompt",
+            )
+        ]
+    )
+
+    monkeypatch.setattr(
+        module,
+        "active_project_prompt_service",
+        lambda: prompt_service,
+    )
+
+    ChatPromptWidget._refresh_slash_commands_data(widget)
+
+    assert widget._project_slash_templates["meeting-pack"].prompt == (
+        "Template prompt"
+    )
+    assert [
+        item["command"] for item in widget._slash_commands_data
+    ].count("/meeting-pack") == 1
+
+
+def test_builtin_meeting_command_uses_project_template_prompt():
+    """Built-in meeting slash commands should reuse project template text."""
+    widget = SimpleNamespace(
+        _project_slash_templates={
+            "meeting-pack": SimpleNamespace(prompt="Template prompt")
+        }
+    )
+
+    prompt = ChatPromptWidget._slash_command_request_prompt(
+        widget,
+        "weekly sync notes",
+        "meeting-pack",
+    )
+
+    assert prompt == "Template prompt\n\nweekly sync notes"
+
+
+def test_meeting_slash_command_uses_agent_request_mode():
+    """Meeting slash commands should opt into the coding agent mode."""
+    widget = SimpleNamespace()
+
+    request_mode = ChatPromptWidget._slash_command_request_mode(
+        widget,
+        "meeting-pack",
+    )
+
+    assert request_mode is not None
+    assert request_mode.key == "agent"
+    assert request_mode.action is LLMActionType.CODE
+
+
 def test_submit_generation_request_sets_request_mode_system_prompt():
     """Request-mode prompts should flow into the generated llm_request."""
     widget = SimpleNamespace(

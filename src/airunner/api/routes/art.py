@@ -71,6 +71,9 @@ class GenerationRequest(BaseModel):
     model: Optional[str] = None
     version: Optional[str] = None
     scheduler: Optional[str] = None
+    pipeline: Optional[str] = None
+    strength: Optional[float] = None
+    image_b64: Optional[str] = None
     skip_auto_export: bool = False
 
 
@@ -212,6 +215,12 @@ async def _run_art_job(
         metadata["version"] = request.version
     if request.scheduler:
         metadata["scheduler"] = request.scheduler
+    if request.pipeline:
+        metadata["pipeline"] = request.pipeline
+    if request.strength is not None:
+        metadata["strength"] = float(request.strength)
+    if request.image_b64:
+        metadata["image_b64"] = request.image_b64
     if request.skip_auto_export:
         metadata["skip_auto_export"] = True
     loop = asyncio.get_running_loop()

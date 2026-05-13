@@ -183,7 +183,6 @@ class GeneratorForm(BaseWidget):
             "use_cudnn_benchmark": self.memory_settings.use_cudnn_benchmark,
             "use_enable_vae_slicing": self.memory_settings.use_enable_vae_slicing,
             "use_accelerated_transformers": self.memory_settings.use_accelerated_transformers,
-            "use_torch_compile": self.memory_settings.use_torch_compile,
             "use_tiled_vae": self.memory_settings.use_tiled_vae,
             "use_tome_sd": self.memory_settings.use_tome_sd,
             "tome_sd_ratio": self.memory_settings.tome_sd_ratio,

@@ -225,6 +225,42 @@ def test_generate_image_can_mark_job_to_skip_auto_export(monkeypatch):
     assert client.invocations[0].payload["metadata"]["skip_auto_export"] is True
 
 
+def test_generate_image_can_forward_img2img_metadata(monkeypatch):
+    from airunner.api.routes.art import GenerationRequest, generate_image
+
+    client = FakeArtRuntimeClient()
+    scheduled = []
+
+    def fake_create_task(coroutine):
+        scheduled.append(coroutine)
+        return SimpleNamespace(done=lambda: False)
+
+    async def run_test():
+        monkeypatch.setattr(
+            "airunner.api.routes.art.asyncio.create_task",
+            fake_create_task,
+        )
+        response = await generate_image(
+            GenerationRequest(
+                prompt="A lighthouse",
+                pipeline="img2img",
+                strength=0.35,
+                image_b64="cG5nLWJ5dGVz",
+            ),
+            _request_for(client),
+        )
+        await scheduled[0]
+        return response
+
+    response = asyncio.run(run_test())
+
+    assert response.status == "running"
+    metadata = client.invocations[0].payload["metadata"]
+    assert metadata["pipeline"] == "img2img"
+    assert metadata["strength"] == 0.35
+    assert metadata["image_b64"] == "cG5nLWJ5dGVz"
+
+
 def test_get_result_prefers_cached_png_bytes():
     from airunner.api.routes.art import get_result
     from airunner.utils.job_tracker import JobTracker

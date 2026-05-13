@@ -71,9 +71,6 @@ class SDMemoryManagementMixin:
         # Apply xformers for Flash Attention 2 (major speedup)
         self._apply_xformers()
 
-        # Apply torch.compile for 2-3x speedup (one-time compilation)
-        self._apply_torch_compile()
-
         self._apply_memory_setting(
             "cpu_offload_applied",
             "use_enable_sequential_cpu_offload",
@@ -346,62 +343,6 @@ class SDMemoryManagementMixin:
             self.logger.debug(
                 "Install xformers for Flash Attention 2: pip install xformers"
             )
-
-    def _apply_torch_compile(self):
-        """
-        Apply torch.compile() to UNet for 2-3x inference speedup.
-
-        NOTE: torch.compile() is lazy - it wraps the model but doesn't compile
-        until the first forward pass. This means:
-        - Wrapping is instant (happens here)
-        - Compilation is slow (happens during first generation, 2-3 minutes)
-        - Cache persists per input shape (different resolutions = recompile)
-
-        Only applies once per pipeline load to avoid recompilation overhead.
-
-        Note: DeepCache has been permanently disabled as it's incompatible
-        with torch.compile() and provides inferior speedup (15% vs 2-3x).
-        """
-        settings = get_qsettings()
-        settings.beginGroup("generator_settings")
-        enable_torch_compile = settings.value(
-            "enable_torch_compile", False, type=bool
-        )
-        settings.endGroup()
-        print("APPLY TORCH COMPILE")
-        print("-" * 100)
-        print(enable_torch_compile)
-        if not enable_torch_compile:
-            return
-
-        if self._memory_settings_flags.get("torch_compile_applied"):
-            return  # Already compiled
-
-        if not hasattr(self._pipe, "unet") or self._pipe.unet is None:
-            return
-
-        try:
-            self.logger.info(
-                "Wrapping UNet with torch.compile() - compilation will happen on first generation"
-            )
-            # Note: torch.compile caches are stored in PyTorch's internal cache
-            # directory (~/.triton or TORCH_COMPILE_DIR). They persist across runs
-            # and are reused when the same model graph AND input shapes are seen.
-            self._pipe.unet = torch.compile(
-                self._pipe.unet,
-                mode="reduce-overhead",  # Best for inference
-                fullgraph=False,  # Allow fallback for unsupported ops
-            )
-            self._memory_settings_flags["torch_compile_applied"] = True
-            self.logger.info(
-                "✓ UNet wrapped for compilation (first generation will take 2-3 min)"
-            )
-            self.logger.debug(
-                "Compiled cache stored in ~/.triton per input shape (resolution/batch)"
-            )
-        except Exception as e:
-            self.logger.warning(f"Could not compile UNet: {e}")
-            self.logger.debug("torch.compile requires PyTorch 2.0+")
 
     def _remove_tome_sd(self):
         """

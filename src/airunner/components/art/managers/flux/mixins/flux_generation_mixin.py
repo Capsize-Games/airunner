@@ -110,46 +110,6 @@ class FluxGenerationMixin:
         self._loaded_lora = {}
         self._disabled_lora = []
 
-    def _apply_torch_compile(self):
-        """Apply torch.compile() to transformer for inference speedup.
-        
-        FLUX uses 'transformer' instead of 'unet', so we override
-        the base class implementation.
-        """
-        settings = get_qsettings()
-        settings.beginGroup("generator_settings")
-        enable_torch_compile = settings.value(
-            "enable_torch_compile", False, type=bool
-        )
-        settings.endGroup()
-        
-        if not enable_torch_compile:
-            self.logger.debug("torch.compile disabled in settings")
-            return
-
-        if self._memory_settings_flags.get("torch_compile_applied"):
-            return  # Already compiled
-
-        if not hasattr(self._pipe, "transformer") or self._pipe.transformer is None:
-            self.logger.debug("No transformer found for torch.compile")
-            return
-
-        try:
-            self.logger.info(
-                "Wrapping FLUX transformer with torch.compile() - compilation will happen on first generation"
-            )
-            self._pipe.transformer = torch.compile(
-                self._pipe.transformer,
-                mode="reduce-overhead",  # Best for inference
-                fullgraph=False,  # Allow fallback for unsupported ops
-            )
-            self._memory_settings_flags["torch_compile_applied"] = True
-            self.logger.info(
-                "✓ FLUX transformer wrapped for compilation (first generation will take 2-3 min)"
-            )
-        except Exception as e:
-            self.logger.warning(f"Could not compile FLUX transformer: {e}")
-
     def _load_deep_cache(self):
         """Deep cache not supported for FLUX."""
 

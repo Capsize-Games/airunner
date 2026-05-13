@@ -448,6 +448,27 @@ def test_start_art_generation_can_skip_daemon_auto_export():
     assert kwargs["json"]["skip_auto_export"] is True
 
 
+def test_start_art_generation_can_send_img2img_fields():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    client.start_art_generation(
+        prompt="A bridge",
+        pipeline="img2img",
+        strength=0.35,
+        image_b64="cG5nLWJ5dGVz",
+    )
+
+    _method, _url, kwargs = session.calls[-1]
+    assert kwargs["json"]["pipeline"] == "img2img"
+    assert kwargs["json"]["strength"] == 0.35
+    assert kwargs["json"]["image_b64"] == "cG5nLWJ5dGVz"
+
+
 def test_wait_art_job_polls_until_completion():
     ready_state = {
         "ready": True,

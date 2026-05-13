@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, List
 
 from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtCore import Slot
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QApplication
 
 from airunner.gui.cursors.circle_brush import circle_cursor
@@ -76,7 +77,7 @@ class CanvasWidget(BaseWidget):
             SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.on_eraser_button_toggled(
                 True
             ),
-            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.on_active_grid_area_button_toggled(
+            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.on_move_button_toggled(
                 True
             ),
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
@@ -108,6 +109,7 @@ class CanvasWidget(BaseWidget):
         self.load_splitter_settings(
             default_maximize_config=default_canvas_splitter_config
         )
+        self._configure_canvas_shortcuts()
 
         show_grid = self.grid_settings.show_grid
 
@@ -520,7 +522,6 @@ class CanvasWidget(BaseWidget):
             val: True if eraser tool should be activated, False otherwise.
         """
         self.api.art.canvas.toggle_tool(CanvasToolName.ERASER, val)
-        self._update_cursor()
 
     @Slot(bool)
     def on_active_grid_area_button_toggled(self, val: bool) -> None:
@@ -560,7 +561,12 @@ class CanvasWidget(BaseWidget):
             self.update_application_settings(**settings_data)
             self.api.art.canvas.tool_changed(tool, active)
             self._update_action_buttons(tool, active)
-            self._update_cursor()
+            self._update_cursor(
+                {
+                    "apply_cursor": active,
+                    "current_tool": tool,
+                }
+            )
             self._update_status_labels()
         finally:
             self._processing_tool_change = False
@@ -657,7 +663,51 @@ class CanvasWidget(BaseWidget):
 
         if not self._initialized:
             self._initialized = True
-            self._update_cursor()
+            self._update_cursor({"apply_cursor": True})
+
+    def _configure_canvas_shortcuts(self) -> None:
+        """Register keyboard shortcuts that only apply inside the canvas."""
+        target = getattr(getattr(self, "ui", None), "canvas_container", None)
+        self._canvas_shortcuts = []
+        if target is None:
+            return
+
+        shortcuts = (
+            ("Ctrl+Z", self.on_undo_button_clicked),
+            ("Ctrl+Y", self.on_redo_button_clicked),
+            ("Ctrl+Shift+Z", self.on_redo_button_clicked),
+        )
+        for sequence, handler in shortcuts:
+            shortcut = self._create_canvas_shortcut(
+                target,
+                sequence,
+                handler,
+            )
+            if shortcut is not None:
+                self._canvas_shortcuts.append(shortcut)
+
+    def _create_canvas_shortcut(
+        self,
+        target: Any,
+        sequence: str,
+        handler: Any,
+    ) -> Optional[QShortcut]:
+        """Create one canvas-local keyboard shortcut."""
+        try:
+            shortcut = QShortcut(QKeySequence(sequence), target)
+            shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+            try:
+                shortcut.setAutoRepeat(False)
+            except Exception:
+                pass
+            shortcut.activated.connect(handler)
+            return shortcut
+        except Exception:
+            self.logger.debug(
+                "Could not create canvas shortcut %s",
+                sequence,
+            )
+            return None
 
     def on_canvas_update_cursor_signal(self, message: Dict) -> None:
         """Handle cursor update signal.

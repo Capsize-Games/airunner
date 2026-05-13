@@ -130,6 +130,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.seed_override = None
         self.parent = None
         self.initialized = False
+        self._generation_in_progress = False
+        self._backend_progress_started = False
+        self._waiting_for_backend_progress = False
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
         self.worker.moveToThread(self.thread)
@@ -147,12 +150,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
         self.ui.infinite_images_button.blockSignals(False)
         settings = get_qsettings()
-        settings.beginGroup("generator_settings")
-        enable_torch_compile = settings.value(
-            "enable_torch_compile", False, type=bool
-        )
-        settings.endGroup()
-        self.ui.enable_torch_compile.setChecked(enable_torch_compile)
+        self._set_progress_bar_idle()
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -214,13 +212,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
     @Slot()
     def on_interrupt_button_clicked(self):
         self.api.art.canvas.interrupt_image_generation()
-
-    @Slot(bool)
-    def on_enable_torch_compile_toggled(self, checked: bool):
-        settings = get_qsettings()
-        settings.beginGroup("generator_settings")
-        settings.setValue("enable_torch_compile", checked)
-        settings.endGroup()
 
     def on_delete_prompt_clicked(self, data: Dict):
         prompt_id = data.get("prompt_id", None)
@@ -499,6 +490,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
     def handle_generate_button_clicked(self, data=None):
+        self._generation_in_progress = True
+        self._backend_progress_started = False
+        self._waiting_for_backend_progress = True
         self.start_progress_bar()
         self.generate(data)
 
@@ -560,7 +554,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             "use_cudnn_benchmark": self.memory_settings.use_cudnn_benchmark,
             "use_enable_vae_slicing": self.memory_settings.use_enable_vae_slicing,
             "use_accelerated_transformers": self.memory_settings.use_accelerated_transformers,
-            "use_torch_compile": self.memory_settings.use_torch_compile,
             "use_tiled_vae": self.memory_settings.use_tiled_vae,
             "use_tome_sd": self.memory_settings.use_tome_sd,
             "tome_sd_ratio": self.memory_settings.tome_sd_ratio,
@@ -569,19 +562,26 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
-        # if step == total:
-        #     self.stop_progress_bar()
-        #     return
+        if step is None or total in (None, 0):
+            return
 
-        if step == 0 and total == 0:
+        if int(step) <= 0 and not getattr(
+            self,
+            "_backend_progress_started",
+            False,
+        ):
+            return
+
+        self._waiting_for_backend_progress = False
+        self._backend_progress_started = True
+
+        try:
+            current = step / total
+        except ZeroDivisionError:
             current = 0
-        else:
-            try:
-                current = step / total
-            except ZeroDivisionError:
-                current = 0
         value = int(current * 100)
         if value >= 100:
+            self.set_progress_bar_value(100)
             self.ui.progress_bar.setFormat("Processing")
         else:
             self.set_progress_bar_value(value)
@@ -592,26 +592,44 @@ class StableDiffusionGeneratorForm(BaseWidget):
             return
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)
+        progressbar.setFormat("Generating %p%")
         progressbar.setValue(value)
         QApplication.processEvents()
 
     def start_progress_bar(self):
         progressbar = self.ui.progress_bar
-        progressbar.setFormat("Generating %p%")
+        progressbar.setFormat("Preparing...")
         progressbar.setRange(0, 0)
         progressbar.show()
         QApplication.processEvents()
 
+    def _set_progress_bar_idle(self):
+        progressbar = getattr(self.ui, "progress_bar", None)
+        if not progressbar:
+            return
+        progressbar.setRange(0, 100)
+        progressbar.setValue(0)
+        progressbar.setFormat("")
+
     def on_model_status_changed_signal(self, data):
         if data["model"] is ModelType.SD:
-            if data["status"] is not ModelStatus.LOADING:
-                self.stop_progress_bar(do_clear=True)
-                self.ui.generate_button.setEnabled(True)
-                self.ui.interrupt_button.setEnabled(True)
-            else:
-                self.start_progress_bar()
+            if data["status"] is ModelStatus.LOADING:
+                if (
+                    not self._generation_in_progress
+                    or not self._backend_progress_started
+                ):
+                    self.start_progress_bar()
                 self.ui.generate_button.setEnabled(False)
                 self.ui.interrupt_button.setEnabled(False)
+                return
+
+            self.ui.generate_button.setEnabled(True)
+            self.ui.interrupt_button.setEnabled(True)
+            if self._waiting_for_backend_progress:
+                return
+            if getattr(self, "_generation_in_progress", False):
+                return
+            self._set_progress_bar_idle()
 
     def showEvent(self, event):
         if not self.initialized:
@@ -668,14 +686,16 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.secondary_negative_prompt.setPlainText("")
 
     def stop_progress_bar(self, do_clear=False):
+        self._generation_in_progress = False
+        self._backend_progress_started = False
+        self._waiting_for_backend_progress = False
         progressbar = self.ui.progress_bar
         if not progressbar:
             return
-        progressbar.setRange(0, 100)
         if do_clear:
-            progressbar.setValue(0)
-            progressbar.setFormat("")
+            self._set_progress_bar_idle()
         else:
+            progressbar.setRange(0, 100)
             progressbar.setValue(100)
             progressbar.setFormat("Complete")
 

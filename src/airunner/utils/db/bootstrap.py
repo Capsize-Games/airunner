@@ -159,6 +159,22 @@ def set_default_shortcut_keys():
                 "signal": SignalCode.ENABLE_MOVE_TOOL_SIGNAL.value,
             },
             {
+                "display_name": "Undo",
+                "text": "Ctrl+Z",
+                "key": QtCore.Qt.Key.Key_Z.value,
+                "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
+                "description": "Undo the last canvas edit.",
+                "signal": SignalCode.UNDO_SIGNAL.value,
+            },
+            {
+                "display_name": "Redo",
+                "text": "Ctrl+Y",
+                "key": QtCore.Qt.Key.Key_Y.value,
+                "modifiers": QtCore.Qt.KeyboardModifier.ControlModifier.value,
+                "description": "Redo the last undone canvas edit.",
+                "signal": SignalCode.REDO_SIGNAL.value,
+            },
+            {
                 "display_name": "Interrupt",
                 "text": "Shift+Ctrl+I",
                 "key": QtCore.Qt.Key.Key_I.value,

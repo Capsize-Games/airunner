@@ -422,7 +422,23 @@ class ChatPromptWidget(BaseWidget):
                     request_mode,
                 )
             else:
-                action = action_override if action_override else self.action
+                request_mode = self._slash_command_request_mode(
+                    slash_command
+                )
+                action = (
+                    action_override
+                    if action_override
+                    else (
+                        request_mode.action
+                        if request_mode is not None
+                        else self.action
+                    )
+                )
+                if request_mode is not None:
+                    request_prompt = self._request_mode_prompt(
+                        request_prompt,
+                        request_mode,
+                    )
         else:
             request_mode = self._selected_request_mode()
             action = request_mode.action
@@ -790,6 +806,21 @@ class ChatPromptWidget(BaseWidget):
 
         return self._apply_prompt_prefix(prompt, request_mode.prompt_prefix)
 
+    def _slash_command_request_mode(
+        self,
+        slash_command: Optional[str],
+    ) -> Optional[ChatRequestMode]:
+        """Return the request mode override configured for a slash command."""
+
+        if not slash_command:
+            return None
+        mode_key = SLASH_COMMANDS.get(slash_command, {}).get(
+            "request_mode"
+        )
+        if not mode_key:
+            return None
+        return get_chat_request_mode(str(mode_key))
+
     @Slot(int)
     def on_request_mode_changed(self, index: int) -> None:
         """Persist and describe the currently selected request mode."""
@@ -1114,28 +1145,25 @@ class ChatPromptWidget(BaseWidget):
         parts = prompt[1:].split(" ", 1)
         command = parts[0].lower()
         self._refresh_slash_commands_data()
-        if command in getattr(self, "_project_slash_templates", {}):
-            remaining = parts[1].strip() if len(parts) > 1 else ""
-            return command, remaining, None, True
-        
-        if command not in SLASH_COMMANDS:
-            # Unknown command, treat as regular prompt
-            return None, prompt, None, False
-        
-        # Get remaining prompt (everything after the command)
         remaining = parts[1].strip() if len(parts) > 1 else ""
-        
-        # Get action type override if specified
-        cmd_config = SLASH_COMMANDS[command]
-        action_override = None
-        if "action" in cmd_config:
-            action_name = cmd_config["action"]
-            try:
-                action_override = LLMActionType[action_name]
-            except KeyError:
-                self.logger.warning(f"Unknown action type in slash command: {action_name}")
-        
-        return command, remaining, action_override, False
+        if command in SLASH_COMMANDS:
+            cmd_config = SLASH_COMMANDS[command]
+            action_override = None
+            if "action" in cmd_config:
+                action_name = cmd_config["action"]
+                try:
+                    action_override = LLMActionType[action_name]
+                except KeyError:
+                    self.logger.warning(
+                        "Unknown action type in slash command: %s",
+                        action_name,
+                    )
+            return command, remaining, action_override, False
+
+        if command in getattr(self, "_project_slash_templates", {}):
+            return command, remaining, None, True
+
+        return None, prompt, None, False
 
     def _refresh_slash_commands_data(self) -> None:
         """Merge built-in slash commands with project prompt templates."""
@@ -1152,9 +1180,9 @@ class ChatPromptWidget(BaseWidget):
         if prompt_service is None:
             return
         for template in prompt_service.prompt_templates():
+            self._project_slash_templates[template.command_name] = template
             if template.command_name in SLASH_COMMANDS:
                 continue
-            self._project_slash_templates[template.command_name] = template
             self._slash_commands_data.append(
                 {
                     "command": f"/{template.command_name}",

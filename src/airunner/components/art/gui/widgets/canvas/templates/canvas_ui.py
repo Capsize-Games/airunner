@@ -428,7 +428,7 @@ class Ui_canvas(object):
         sizePolicy1.setHeightForWidth(self.active_item_info.sizePolicy().hasHeightForWidth())
         self.active_item_info.setSizePolicy(sizePolicy1)
         self.active_item_info.setFont(font)
-        self.active_item_info.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignVCenter)
+        self.active_item_info.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
 
         self.horizontalLayout_4.addWidget(self.active_item_info)
 
