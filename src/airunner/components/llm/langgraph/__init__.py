@@ -9,7 +9,6 @@ Key Components:
     - graph_builder: LangGraph workflow construction
     - code_generator: Python code generation from visual graphs
     - runtime_executor: Runtime compilation and execution
-    - bridge: Integration with existing LlamaIndex RAG
 """
 
 from airunner.components.llm.langgraph.state import (
@@ -19,7 +18,6 @@ from airunner.components.llm.langgraph.state import (
     ToolAgentState,
 )
 from airunner.components.llm.langgraph.graph_builder import LangGraphBuilder
-from airunner.components.llm.langgraph.bridge import LlamaIndexBridge
 
 __all__ = [
     "AgentStateType",
@@ -27,5 +25,4 @@ __all__ = [
     "RAGAgentState",
     "ToolAgentState",
     "LangGraphBuilder",
-    "LlamaIndexBridge",
 ]

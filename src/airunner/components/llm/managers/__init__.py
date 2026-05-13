@@ -1,5 +1,4 @@
 __all__ = [
-    "HuggingFaceLLM",
     "LLMModelManager",
     "LLMRequest",
     "LLMResponse",
@@ -12,49 +11,43 @@ __all__ = [
 
 
 def __getattr__(name):
-    if name == "HuggingFaceLLM":
-        from airunner.components.llm.managers.huggingface_llm import (
-            HuggingFaceLLM,
-        )
-
-        return HuggingFaceLLM
-    elif name == "LLMModelManager":
+    if name == "LLMModelManager":
         from airunner.components.llm.managers.llm_model_manager import (
             LLMModelManager,
         )
 
         return LLMModelManager
-    elif name == "LLMRequest":
+    if name == "LLMRequest":
         from airunner.components.llm.managers.llm_request import LLMRequest
 
         return LLMRequest
-    elif name == "LLMResponse":
+    if name == "LLMResponse":
         from airunner.components.llm.managers.llm_response import LLMResponse
 
         return LLMResponse
-    elif name == "LLMSettings":
+    if name == "LLMSettings":
         from airunner.components.llm.managers.llm_settings import LLMSettings
 
         return LLMSettings
-    elif name == "OpenrouterMistralRequest":
+    if name == "OpenrouterMistralRequest":
         from airunner.components.llm.managers.llm_request import (
             OpenrouterMistralRequest,
         )
 
         return OpenrouterMistralRequest
-    elif name == "FaraModelManager":
+    if name == "FaraModelManager":
         from airunner.components.llm.managers.fara_model_manager import (
             FaraModelManager,
         )
 
         return FaraModelManager
-    elif name == "FaraController":
+    if name == "FaraController":
         from airunner.components.llm.managers.fara_controller import (
             FaraController,
         )
 
         return FaraController
-    elif name == "DualLLMRouter":
+    if name == "DualLLMRouter":
         from airunner.components.llm.managers.dual_llm_router import (
             DualLLMRouter,
         )

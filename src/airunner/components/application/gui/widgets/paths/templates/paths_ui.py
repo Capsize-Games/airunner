@@ -40,13 +40,13 @@ class Ui_paths_form(object):
 
         self.gridLayout.addWidget(self.image_path_widget, 2, 0, 1, 1)
 
-        self.llama_index_path_widget = PathWidget(paths_form)
-        self.llama_index_path_widget.setObjectName(u"llama_index_path_widget")
-        sizePolicy.setHeightForWidth(self.llama_index_path_widget.sizePolicy().hasHeightForWidth())
-        self.llama_index_path_widget.setSizePolicy(sizePolicy)
-        self.llama_index_path_widget.setMinimumSize(QSize(0, 0))
+        self.rag_index_path_widget = PathWidget(paths_form)
+        self.rag_index_path_widget.setObjectName(u"rag_index_path_widget")
+        sizePolicy.setHeightForWidth(self.rag_index_path_widget.sizePolicy().hasHeightForWidth())
+        self.rag_index_path_widget.setSizePolicy(sizePolicy)
+        self.rag_index_path_widget.setMinimumSize(QSize(0, 0))
 
-        self.gridLayout.addWidget(self.llama_index_path_widget, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.rag_index_path_widget, 5, 0, 1, 1)
 
         self.base_path_widget = PathWidget(paths_form)
         self.base_path_widget.setObjectName(u"base_path_widget")
@@ -94,9 +94,9 @@ class Ui_paths_form(object):
         self.image_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"Image Path", None))
         self.image_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to the directory which will contain generated images", None))
         self.image_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"image_path", None))
-        self.llama_index_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"LLama Index Path", None))
-        self.llama_index_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to directory which will store files for LLama Index", None))
-        self.llama_index_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"llama_index_path", None))
+        self.rag_index_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"RAG Index Path", None))
+        self.rag_index_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to directory which will store persisted RAG indexes", None))
+        self.rag_index_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"rag_index_path", None))
         self.base_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"Base Path", None))
         self.base_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to the directory which will hold all model directories", None))
         self.base_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"base_path", None))

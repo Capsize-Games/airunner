@@ -1,15 +1,23 @@
 import os
+from dataclasses import dataclass
+
 from llama_cloud import MessageRole
 import torch
 from typing import Dict, Optional, Any, List, Union
 
 from transformers import Gemma3ForConditionalGeneration, AutoProcessor
-from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.enums import LLMActionType, ModelType, ModelStatus
+
+
+@dataclass(slots=True)
+class AgentChatResponse:
+    """Minimal chat response container for Gemma manager outputs."""
+
+    response: str
 
 
 class Gemma3Manager(LLMModelManager):

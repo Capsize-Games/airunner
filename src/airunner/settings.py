@@ -38,7 +38,7 @@ DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 NLTK_DOWNLOAD_DIR = os.path.join(
     python_venv_dir,
     "..",
-    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/",
+    "nltk_data",
 )
 # Default LLM model path.
 # Historically this env var name was accidentally duplicated

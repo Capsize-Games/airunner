@@ -7,7 +7,7 @@ PATH_SETTINGS_DATA = {
         os.path.join("text", "other", "documents")
     ),
     "ebook_path": os.path.expanduser(os.path.join("text", "other", "ebooks")),
-    "llama_index_path": os.path.expanduser(os.path.join("text", "rag", "db")),
+    "rag_index_path": os.path.expanduser(os.path.join("text", "rag", "db")),
     "webpages_path": os.path.expanduser(
         os.path.join("text", "other", "webpages")
     ),

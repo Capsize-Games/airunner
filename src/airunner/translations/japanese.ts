@@ -3372,17 +3372,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </message>
     <message>
         <location filename="../gui/widgets/paths/templates/paths.ui" line="82"/>
-        <source>LLama Index Path</source>
-        <translation>LLama Indexパス</translation>
+        <source>RAG Index Path</source>
+        <translation>RAGインデックスパス</translation>
     </message>
     <message>
         <location filename="../gui/widgets/paths/templates/paths.ui" line="85"/>
-        <source>Absolute path to directory which will store files for LLama Index</source>
-        <translation>LLama Indexのファイルを保存するディレクトリへの絶対パス</translation>
+        <source>Absolute path to directory which will store persisted RAG indexes</source>
+        <translation>永続化されたRAGインデックスを保存するディレクトリへの絶対パス</translation>
     </message>
     <message>
         <location filename="../gui/widgets/paths/templates/paths.ui" line="88"/>
-        <source>llama_index_path</source>
+        <source>rag_index_path</source>
         <translation></translation>
     </message>
     <message>

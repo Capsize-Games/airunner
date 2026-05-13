@@ -24,7 +24,7 @@ def create_airunner_paths(path_settings: PathSettings):
         "documents_path",
         "ebook_path",
         "image_path",
-        "llama_index_path",
+        "rag_index_path",
         "webpages_path",
         "stt_model_path",
         "tts_model_path",

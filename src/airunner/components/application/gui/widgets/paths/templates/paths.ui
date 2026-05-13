@@ -64,8 +64,8 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="PathWidget" name="llama_index_path_widget" native="true">
+    <item row="5" column="0">
+     <widget class="PathWidget" name="rag_index_path_widget" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -78,14 +78,14 @@
        <height>0</height>
       </size>
      </property>
-     <property name="title" stdset="0">
-      <string>LLama Index Path</string>
+    <property name="title" stdset="0">
+     <string>RAG Index Path</string>
      </property>
      <property name="description" stdset="0">
-      <string>Absolute path to directory which will store files for LLama Index</string>
+     <string>Absolute path to directory which will store persisted RAG indexes</string>
      </property>
      <property name="path_name" stdset="0">
-      <string>llama_index_path</string>
+     <string>rag_index_path</string>
      </property>
     </widget>
    </item>

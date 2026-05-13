@@ -1,8 +1,3 @@
-from airunner.components.llm.managers.storage.chat_store.database import (
-    DatabaseChatStore,
-)
+"""Legacy chat store package retained for import stability."""
 
-
-__all__ = [
-    "DatabaseChatStore",
-]
+__all__: list[str] = []

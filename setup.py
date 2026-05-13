@@ -84,15 +84,15 @@ LLM_NATIVE_REQUIREMENTS = [
     "libzim==3.7.0",
     "mistral_common>=1.8.5",
     "rank-bm25>=0.2.2",
-    "llama-index-readers-file==0.4.0",
-    "llama-index-embeddings-huggingface==0.4.0",
     "llama-cloud==0.1.23",
-    "llama-index-core==0.12.36",
     "langchain-core==1.0.0",
+    "langchain-huggingface==1.0.0",
     "langgraph==1.0.0",
     "langsmith>=0.1.0",
     "langchain-ollama==1.0.0",
+    "langchain-text-splitters==1.0.0",
     "EbookLib==0.19",
+    "pypdf>=5.6.0",
 ]
 
 STT_NATIVE_REQUIREMENTS = [

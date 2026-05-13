@@ -91,8 +91,18 @@ class PathSettings(BaseModel):
     # List of path attributes that should be auto-resolved
     _PATH_ATTRS = {
         'base_path', 'documents_path', 'ebook_path', 'image_path',
-        'llama_index_path', 'webpages_path', 'stt_model_path', 'tts_model_path'
+        'llama_index_path', 'rag_index_path', 'webpages_path',
+        'stt_model_path', 'tts_model_path'
     }
+
+    @property
+    def rag_index_path(self) -> str:
+        """Compatibility alias for the legacy llama_index_path column."""
+        return self.llama_index_path
+
+    @rag_index_path.setter
+    def rag_index_path(self, value: str) -> None:
+        self.llama_index_path = value
 
     def __getattribute__(self, name: str):
         """Override attribute access to auto-resolve paths."""

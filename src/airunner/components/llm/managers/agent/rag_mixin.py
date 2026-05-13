@@ -9,7 +9,7 @@ Architecture:
     - Lazy loading of indexes (only load active documents)
     - Document registry tracks index metadata and status
     - LangChain integration for chat workflows
-    - LlamaIndex for embedding and retrieval
+    - LangChain-native embeddings, chunking, and retrieval
 
 The RAGMixin is composed of several focused mixins:
     - RAGPropertiesMixin: Configuration and property accessors

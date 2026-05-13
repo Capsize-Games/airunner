@@ -42,9 +42,6 @@ class RAGPropertiesMixin:
         configured = getattr(self.path_settings, "rag_index_path", None)
         if configured:
             return os.path.expanduser(configured)
-        legacy = getattr(self.path_settings, "llama_index_path", None)
-        if legacy:
-            return os.path.expanduser(legacy)
         return self.legacy_rag_storage_root
 
     @property

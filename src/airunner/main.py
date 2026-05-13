@@ -96,7 +96,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             os.path.join(airunner_path, "art/other/images"),
             os.path.join(airunner_path, "certs"),
             os.path.join(os.path.expanduser("~"), ".triton/cache/"),
-            os.path.join(os.path.expanduser("~"), ".cache/llama_index/"),
+            os.path.join(os.path.expanduser("~"), ".cache/airunner-rag/"),
             os.path.join(os.path.expanduser("~"), "Desktop/"),
             "/dev/",
             "/proc/",
