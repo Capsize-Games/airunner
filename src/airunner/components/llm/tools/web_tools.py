@@ -112,7 +112,6 @@ def search_web(
         formatted += "📝 NEXT STEPS: You can:\n"
         formatted += "- Use `scrape_website` on a URL to get full article content\n"
         formatted += "- Use `search_web` again with a different query for more info\n"
-        formatted += "- Use `create_research_document` to save findings\n"
         formatted += "- Or respond directly if you have enough information\n"
         formatted += "="*60 + "\n"
 
@@ -219,7 +218,6 @@ def search_news(
         formatted += "📝 NEXT STEPS: You can:\n"
         formatted += "- Use `scrape_website` on a URL to get full article content\n"
         formatted += "- Use `search_news` again with a different query for more info\n"
-        formatted += "- Use `create_research_document` to save findings\n"
         formatted += "- Or respond directly if you have enough information\n"
         formatted += "="*60 + "\n"
 

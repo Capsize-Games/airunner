@@ -521,9 +521,8 @@ class GenerationMixin:
             self.unload()
             self.load()
 
-        # DEEP RESEARCH MODE: Now uses standard tool-based workflow
-        # The LLM uses research tools (search_web, scrape_website, validate_url,
-        # create_research_document, etc.) autonomously based on the system prompt
+        # DEEP RESEARCH MODE: Uses the standard tool workflow with
+        # search, validation, scraping, and synthesized response output.
         if action == LLMActionType.DEEP_RESEARCH:
             self.logger.info(
                 "Deep Research mode - using tool-based research workflow"
@@ -536,7 +535,7 @@ class GenerationMixin:
             # but log that we're in research mode
             self.logger.info(
                 "Research tools will be used: search_web, search_news, scrape_website, "
-                "validate_url, validate_content, create_research_document, etc."
+                "validate_url, validate_content, and related validation tools."
             )
 
         llm_request = llm_request or LLMRequest()

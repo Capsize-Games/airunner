@@ -308,7 +308,7 @@ class FileExplorerWidget(BaseWidget):
             return None
         project_path = os.path.abspath(self._session_project_path)
         session_id = hashlib.sha1(project_path.encode("utf-8")).hexdigest()
-        return f"coding_workspace/project_sessions/{session_id}/explorer"
+        return f"project_sessions/{session_id}/explorer"
 
     def _persist_tree_state(self, *_args) -> None:
         """Store expanded folders and the selected path for one project."""

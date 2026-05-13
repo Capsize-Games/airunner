@@ -321,24 +321,23 @@ RESEARCH_WORKFLOW = WorkflowDefinition(
         ),
         PhaseDefinition(
             name=Phase.PLANNING,
-            description="Review findings, create outline",
+            description="Review findings and create an evidence-backed outline",
             required_steps=["review_sources", "identify_gaps", "create_outline"],
-            allowed_tools=["recall_knowledge", "search_web", "create_document"],
+            allowed_tools=["recall_knowledge", "search_web", "search_news", "scrape_website"],
         ),
         PhaseDefinition(
             name=Phase.EXECUTION,
-            description="Write research document section by section",
+            description="Synthesize findings with citations and fact-checking",
             required_steps=["write_sections", "cite_sources", "fact_check"],
             allowed_tools=[
-                "recall_knowledge", "search_web", "scrape_website",
-                "create_document", "edit_document"
+                "recall_knowledge", "search_web", "search_news", "scrape_website"
             ],
         ),
         PhaseDefinition(
             name=Phase.REVIEW,
-            description="Review document, fill gaps, finalize",
+            description="Review synthesis, fill gaps, and finalize response",
             required_steps=["review_document", "fill_gaps", "finalize"],
-            allowed_tools=["read_document", "edit_document", "search_web"],
+            allowed_tools=["search_web", "search_news", "scrape_website"],
         ),
         PhaseDefinition(
             name=Phase.COMPLETE,

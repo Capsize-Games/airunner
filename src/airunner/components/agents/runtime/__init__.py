@@ -1,4 +1,4 @@
-"""Runtime records for AIRunner coding agents."""
+"""Runtime records for AIRunner agent workflows."""
 
 from airunner.components.agents.runtime.agent_message_channel import (
     AgentMessageChannel,
@@ -64,28 +64,9 @@ from airunner.components.agents.runtime.agent_task_status import (
 from airunner.components.agents.runtime.agent_tool_call_record import (
     AgentToolCallRecord,
 )
-
-
-def __getattr__(name: str):
-    """Lazily expose runtime helpers that depend on project services."""
-    if name == "AgentBackgroundRunManager":
-        from airunner.components.agents.runtime.agent_background_run_manager import (
-            AgentBackgroundRunManager,
-        )
-
-        return AgentBackgroundRunManager
-    if name == "AgentOrchestrationService":
-        from airunner.components.agents.runtime.agent_orchestration_service import (
-            AgentOrchestrationService,
-        )
-
-        return AgentOrchestrationService
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
 __all__ = [
     "AgentMessageChannel",
     "AgentMessageRecord",
-    "AgentBackgroundRunManager",
     "AgentGeneratedWriteRecord",
     "AgentHandoffRecord",
     "MeetingDeliverableRecord",
@@ -94,7 +75,6 @@ __all__ = [
     "MeetingReviewStatus",
     "MeetingItemStatus",
     "MeetingRunRecord",
-    "AgentOrchestrationService",
     "AgentRole",
     "AgentRunRecord",
     "AgentRunStatus",

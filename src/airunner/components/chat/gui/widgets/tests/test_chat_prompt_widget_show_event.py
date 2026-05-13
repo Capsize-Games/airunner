@@ -339,163 +339,23 @@ def test_request_mode_helpers_use_qsettings(monkeypatch):
     assert settings.values["request_mode"] == "agent"
 
 
-def test_request_system_prompt_appends_project_instructions(monkeypatch):
-    """Agent mode should append project instructions to the base prompt."""
-
-    class PromptService:
-        @staticmethod
-        def instructions_text():
-            return "Use pytest for validation."
-
+def test_request_system_prompt_returns_base_prompt(monkeypatch):
+    """Request modes should return their base coding prompt."""
     widget = SimpleNamespace()
 
     monkeypatch.setattr(module, "load_coding_prompt", lambda _key: "Base prompt")
-    monkeypatch.setattr(
-        module,
-        "active_project_prompt_service",
-        lambda: PromptService(),
-    )
 
     prompt = ChatPromptWidget._request_system_prompt(
         widget,
         get_chat_request_mode("agent"),
     )
 
-    assert "Base prompt" in prompt
-    assert "Project Instructions" in prompt
-    assert "Use pytest for validation." in prompt
+    assert prompt == "Base prompt"
 
 
-def test_parse_slash_command_recognizes_project_template(monkeypatch):
-    """Project prompt templates should parse like slash commands."""
-    widget = SimpleNamespace(
-        _project_slash_templates={
-            "maze": SimpleNamespace(prompt="Template prompt")
-        },
-        _refresh_slash_commands_data=lambda: None,
-        logger=Mock(),
-    )
-
-    result = ChatPromptWidget._parse_slash_command(
-        widget,
-        "/maze add DFS support",
-    )
-
-    assert result == ("maze", "add DFS support", None, True)
-
-
-def test_parse_slash_command_prefers_builtin_config():
-    """Built-in slash commands should win over same-name templates."""
-    widget = SimpleNamespace(
-        _project_slash_templates={
-            "deepsearch": SimpleNamespace(prompt="Template prompt")
-        },
-        _refresh_slash_commands_data=lambda: None,
-        logger=Mock(),
-    )
-
-    result = ChatPromptWidget._parse_slash_command(
-        widget,
-        "/deepsearch weekly sync",
-    )
-
-    assert result == (
-        "deepsearch",
-        "weekly sync",
-        LLMActionType.DEEP_RESEARCH,
-        False,
-    )
-
-
-def test_parse_slash_command_rejects_retired_command_names():
-    """Retired slash commands should not parse from project templates."""
-    widget = SimpleNamespace(
-        _project_slash_templates={
-            "meeting-pack": SimpleNamespace(prompt="Template prompt")
-        },
-        _refresh_slash_commands_data=lambda: None,
-        logger=Mock(),
-    )
-
-    result = ChatPromptWidget._parse_slash_command(
-        widget,
-        "/meeting-pack weekly sync",
-    )
-
-    assert result == (None, "/meeting-pack weekly sync", None, False)
-
-
-def test_refresh_slash_commands_keeps_builtin_template_binding(monkeypatch):
-    """Same-name project templates should stay bound to built-in commands."""
-    widget = SimpleNamespace()
-    prompt_service = SimpleNamespace(
-        prompt_templates=lambda: [
-            SimpleNamespace(
-                command_name="deepsearch",
-                description="Deep search template",
-                prompt="Template prompt",
-            )
-        ]
-    )
-
-    monkeypatch.setattr(
-        module,
-        "active_project_prompt_service",
-        lambda: prompt_service,
-    )
-
-    ChatPromptWidget._refresh_slash_commands_data(widget)
-
-    assert widget._project_slash_templates["deepsearch"].prompt == (
-        "Template prompt"
-    )
-    assert [
-        item["command"] for item in widget._slash_commands_data
-    ].count("/deepsearch") == 1
-
-
-def test_refresh_slash_commands_omits_retired_commands(monkeypatch):
-    """Retired commands should stay out of autocomplete data."""
-    widget = SimpleNamespace()
-    prompt_service = SimpleNamespace(
-        prompt_templates=lambda: [
-            SimpleNamespace(
-                command_name="meeting-pack",
-                description="Meeting pack",
-                prompt="Template prompt",
-            ),
-            SimpleNamespace(
-                command_name="maze",
-                description="Maze prompt",
-                prompt="Maze prompt",
-            ),
-        ]
-    )
-
-    monkeypatch.setattr(
-        module,
-        "active_project_prompt_service",
-        lambda: prompt_service,
-    )
-
-    ChatPromptWidget._refresh_slash_commands_data(widget)
-
-    assert "meeting-pack" not in widget._project_slash_templates
-    assert "maze" in widget._project_slash_templates
-    commands = [item["command"] for item in widget._slash_commands_data]
-    assert "/meeting-pack" not in commands
-    assert "/maze" in commands
-
-
-def test_refresh_slash_commands_keeps_required_search_commands(monkeypatch):
+def test_refresh_slash_commands_keeps_required_search_commands():
     """Search, deepsearch, and news should remain available."""
     widget = SimpleNamespace()
-
-    monkeypatch.setattr(
-        module,
-        "active_project_prompt_service",
-        lambda: None,
-    )
 
     ChatPromptWidget._refresh_slash_commands_data(widget)
 

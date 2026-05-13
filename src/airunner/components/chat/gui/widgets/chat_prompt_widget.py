@@ -37,9 +37,6 @@ from airunner.components.chat.gui.widgets.chat_request_mode import (
 from airunner.components.chat.gui.widgets.image_attachment_widget import (
     ImageAttachmentWidget,
 )
-from airunner.components.document_editor.project import (
-    active_project_prompt_service,
-)
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.coding_prompt_profile import load_coding_prompt
 from airunner.enums import (
@@ -1173,7 +1170,7 @@ class ChatPromptWidget(BaseWidget):
         return None, prompt, None, False
 
     def _refresh_slash_commands_data(self) -> None:
-        """Merge built-in slash commands with project prompt templates."""
+        """Load slash-command metadata for built-in commands only."""
         self._project_slash_templates = {}
         self._slash_commands_data = []
         for cmd, config in SLASH_COMMANDS.items():
@@ -1181,21 +1178,6 @@ class ChatPromptWidget(BaseWidget):
                 {
                     "command": f"/{cmd}",
                     "description": config.get("description", ""),
-                }
-            )
-        prompt_service = active_project_prompt_service()
-        if prompt_service is None:
-            return
-        for template in prompt_service.prompt_templates():
-            if template.command_name in RETIRED_SLASH_COMMANDS:
-                continue
-            self._project_slash_templates[template.command_name] = template
-            if template.command_name in SLASH_COMMANDS:
-                continue
-            self._slash_commands_data.append(
-                {
-                    "command": f"/{template.command_name}",
-                    "description": template.description,
                 }
             )
 
@@ -1209,19 +1191,7 @@ class ChatPromptWidget(BaseWidget):
         profile_key = REQUEST_MODE_PROMPT_KEYS.get(request_mode.key)
         if profile_key is None:
             return None
-        prompt_service = active_project_prompt_service()
-        if request_mode.key == "ask" and prompt_service is None:
-            return None
-        prompt = load_coding_prompt(profile_key)
-        if request_mode.key != "agent" or prompt_service is None:
-            return prompt
-        instructions = prompt_service.instructions_text()
-        if not instructions:
-            return prompt
-        return (
-            f"{prompt}\n\n## Project Instructions\n"
-            f"{instructions}"
-        )
+        return load_coding_prompt(profile_key)
 
     def _update_token_count_label(self, prompt: str) -> None:
         """Refresh the token count label with the latest approximation."""

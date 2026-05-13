@@ -29,7 +29,6 @@ _MANUAL_TEST_SUFFIXES = (
     "src/airunner/components/llm/tests/test_download_manager.py",
     "src/airunner/components/llm/tests/test_ministral3_loading.py",
     "src/airunner/components/llm/tests/test_model_download.py",
-    "src/airunner/components/llm/tests/test_model_pipeline.py",
 )
 _EVAL_TEST_PREFIXES = (
     "/src/airunner/components/eval/",

@@ -20,7 +20,6 @@ from langchain_core.messages import (
 from langchain_core.messages import SystemMessage
 from airunner.components.llm.utils.thinking_parser import (
     strip_thinking_tags,
-    has_thinking_content,
     detect_thinking_open_tag,
     detect_thinking_close_tag,
 )
@@ -1551,17 +1550,12 @@ Based on the search results above, provide a clear, conversational answer to the
                 urls = re.findall(r'https?://[^\s\]"<>]+', content)
                 search_urls.extend(urls[:5])  # Keep top 5
         
-        has_document = any(
-            'create_research_document' in str(getattr(m, 'tool_calls', []))
-            for m in trimmed_messages
-        )
-        
         self.logger.info(
             f"[POST-TOOL] response_format={response_format}, tool_calling_mode={tool_calling_mode}, "
             f"force_tool={force_tool}, is_research_mode={is_research_mode}, "
             f"tool_calls={tool_call_count}, scrape_attempts={scrape_attempts}, "
             f"successful_scrapes={successful_scrapes}, failed_scrapes={failed_scrapes}, "
-            f"has_doc={has_document}, search_urls={len(search_urls)}"
+            f"search_urls={len(search_urls)}"
         )
 
         # Build instruction based on mode
@@ -1597,30 +1591,27 @@ Based on the search results above, provide a clear, conversational answer to the
                     f"{url_hint}\n"
                     "**DO NOT** give up. Try 2-3 more URLs before proceeding."
                 )
-            elif successful_scrapes > 0 and not has_document:
-                # Phase 2: Have successful scrapes, need to create document
+            elif successful_scrapes < 2 and tool_call_count < 8:
+                # Phase 2: Need broader source coverage before summarizing
                 instruction = (
-                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 2: CREATE RESEARCH DOCUMENT ===\n"
-                    f"You've successfully scraped {successful_scrapes} source(s). Now create your document.\n\n"
+                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 2: EXPAND SOURCE COVERAGE ===\n"
+                    f"You've successfully scraped {successful_scrapes} source(s). Gather at least one or two more high-value sources before summarizing.\n\n"
                     "**YOUR NEXT ACTION:**\n"
-                    "1. Call `create_research_document` with a title for your research paper\n"
-                    "2. Then call `append_to_document` to add your synthesized findings\n\n"
-                    "**DO NOT** respond to the user yet. Create the document first."
+                    "1. Call `scrape_website` on additional strong URLs from your search results\n"
+                    "2. Prefer sources that add new facts, dates, or perspectives\n\n"
+                    "**DO NOT** respond to the user yet. Strengthen the evidence first."
                 )
-            elif has_document and tool_call_count < 8:
-                # Phase 3: Document exists, continue writing/editing
+            elif successful_scrapes > 0:
+                # Phase 3: Synthesize the answer directly for the user
                 instruction = (
-                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 3: WRITE & REVIEW ===\n"
-                    "Your research document exists. Continue building it.\n\n"
-                    "**YOUR NEXT ACTIONS:**\n"
-                    "1. Use `append_to_document` to add more sections (introduction, analysis, conclusion)\n"
-                    "2. Review what you've written for accuracy\n"
-                    "3. If you find issues, use `append_to_document` to add corrections\n\n"
-                    "**WHEN COMPLETE:** Once your research paper has:\n"
-                    "- Introduction\n"
-                    "- Main findings with citations\n"
-                    "- Conclusion\n\n"
-                    "Then provide a summary response to the user with the document path."
+                    "\n\n=== DEEP RESEARCH WORKFLOW - PHASE 3: SYNTHESIZE & RESPOND ===\n"
+                    "You have enough source material to answer directly.\n\n"
+                    "**YOUR RESPONSE SHOULD INCLUDE:**\n"
+                    "1. A concise executive summary\n"
+                    "2. Key findings with source links or explicit source attribution\n"
+                    "3. Any important uncertainty, disagreement, or missing evidence\n"
+                    "4. A short conclusion or recommended next step if relevant\n\n"
+                    "**DO NOT** mention a generated document path. Respond with findings only."
                 )
             else:
                 # Phase 4: Research complete or max iterations, summarize
@@ -1629,8 +1620,8 @@ Based on the search results above, provide a clear, conversational answer to the
                     "Your research is complete. Provide a summary to the user.\n\n"
                     "**YOUR RESPONSE SHOULD INCLUDE:**\n"
                     "1. Key findings from your research\n"
-                    "2. The path to the research document you created (if any)\n"
-                    "3. A brief summary of your sources\n\n"
+                    "2. A brief summary of your sources\n"
+                    "3. Any notable uncertainty or missing evidence\n\n"
                     "**DO NOT** call more tools. Respond with your findings."
                 )
         elif response_format == "json":

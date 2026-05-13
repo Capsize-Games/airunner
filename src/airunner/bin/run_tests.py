@@ -72,37 +72,6 @@ def _component_targets(
             / "tests"
             / "test_knowledge_base_panel_widget.py",
         ],
-        "coding_workspace": [
-            base_path / "agents" / "tests" / "test_agent_runtime_records.py",
-            base_path
-            / "document_editor"
-            / "tests"
-            / "test_airunner_project_manager.py",
-            base_path
-            / "document_editor"
-            / "tests"
-            / "test_airunner_project_service.py",
-            base_path
-            / "document_editor"
-            / "tests"
-            / "test_airunner_project_context_index_service.py",
-            base_path
-            / "document_editor"
-            / "tests"
-            / "test_airunner_project_state_service.py",
-            base_path
-            / "document_editor"
-            / "tests"
-            / "test_workspace_shell_support.py",
-            base_path / "llm" / "tools" / "tests" / "test_project_file_tools.py",
-            base_path / "llm" / "tools" / "tests" / "test_project_runtime_tools.py",
-            base_path / "llm" / "tools" / "tests" / "test_project_context_tools.py",
-            base_path
-            / "llm"
-            / "tools"
-            / "tests"
-            / "test_coding_workspace_validation_flow.py",
-        ],
     }
     if component in alias_targets:
         return alias_targets[component], (
