@@ -21,7 +21,6 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.workers.mixins import (
     RAGIndexingMixin,
-    FineTuningMixin,
     QuantizationMixin,
     ModelDownloadMixin,
 )
@@ -29,7 +28,6 @@ from airunner.components.llm.workers.mixins import (
 
 class LLMGenerateWorker(
     RAGIndexingMixin,
-    FineTuningMixin,
     QuantizationMixin,
     ModelDownloadMixin,
     Worker,
@@ -40,7 +38,6 @@ class LLMGenerateWorker(
     - LLM text generation requests
     - Model loading/unloading
     - RAG document indexing (via RAGIndexingMixin)
-    - Fine-tuning operations (via FineTuningMixin)
     - Quantization settings (via QuantizationMixin)
     - Model downloads (via ModelDownloadMixin)
 

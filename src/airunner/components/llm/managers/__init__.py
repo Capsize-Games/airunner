@@ -4,7 +4,6 @@ __all__ = [
     "LLMRequest",
     "LLMResponse",
     "LLMSettings",
-    "TrainingMixin",
     "OpenrouterMistralRequest",
     "FaraModelManager",
     "FaraController",
@@ -37,12 +36,6 @@ def __getattr__(name):
         from airunner.components.llm.managers.llm_settings import LLMSettings
 
         return LLMSettings
-    elif name == "TrainingMixin":
-        from airunner.components.llm.managers.training_mixin import (
-            TrainingMixin,
-        )
-
-        return TrainingMixin
     elif name == "OpenrouterMistralRequest":
         from airunner.components.llm.managers.llm_request import (
             OpenrouterMistralRequest,

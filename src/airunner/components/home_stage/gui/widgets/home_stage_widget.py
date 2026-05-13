@@ -5,10 +5,10 @@ from airunner.components.home_stage.gui.widgets.templates.home_stage_ui import (
     Ui_home_stage_widget,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.enums import SignalCode
-from airunner.components.home_stage.gui.widgets.training_widget import (
-    TrainingWidget,
+from airunner.components.documents.gui.widgets.knowledge_base_panel_widget import (
+    KnowledgeBasePanelWidget,
 )
+from airunner.enums import SignalCode
 from airunner.components.model_management.gui.model_status_widget import (
     ModelStatusWidget,
 )
@@ -21,10 +21,11 @@ class HomeStageWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL:
+            self.on_main_window_loaded_signal,
         }
         super().__init__(*args, **kwargs)
-        self.training_panel = None
+        self.knowledge_base_widget = None
         self.model_status_panel = None
         self._deferred_startup_loaded = False
         self._startup_ready = False
@@ -43,9 +44,11 @@ class HomeStageWidget(BaseWidget):
             return
 
         self._deferred_startup_loaded = True
-        self.training_panel = TrainingWidget(self.ui.knowledge_base_panel)
+        self.knowledge_base_widget = KnowledgeBasePanelWidget(
+            self.ui.knowledge_base_panel
+        )
         self._get_panel_layout(self.ui.knowledge_base_panel).addWidget(
-            self.training_panel
+            self.knowledge_base_widget
         )
 
         self.model_status_panel = ModelStatusWidget(

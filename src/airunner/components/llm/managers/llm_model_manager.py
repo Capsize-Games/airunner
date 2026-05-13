@@ -35,7 +35,6 @@ from airunner.components.llm.managers.mixins import (
     ToolFilteringMixin,
     ValidationMixin,
 )
-from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
@@ -69,7 +68,6 @@ class LLMModelManager(
     ValidationMixin,
     RAGMixin,
     QuantizationMixin,
-    TrainingMixin,
 ):
     """
     Handler for Large Language Model operations in AI Runner.

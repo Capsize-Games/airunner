@@ -96,10 +96,6 @@ class SignalCode(Enum):
     # Backwards-compat alias used by some headless API routes.
     # Keep the canonical name as APPLICATION_STATUS_ERROR_SIGNAL.
     APPLICATION_ERROR_SIGNAL = "status_error_signal"
-    LLM_START_FINE_TUNE = "llm_start_fine_tune"
-    LLM_FINE_TUNE_PROGRESS = "llm_fine_tune_progress"
-    LLM_FINE_TUNE_COMPLETE = "llm_fine_tune_complete"
-    LLM_FINE_TUNE_CANCEL = "llm_fine_tune_cancel"
     LLM_START_QUANTIZATION = "llm_start_quantization"
     LLM_QUANTIZATION_PROGRESS = "llm_quantization_progress"
     LLM_QUANTIZATION_COMPLETE = "llm_quantization_complete"

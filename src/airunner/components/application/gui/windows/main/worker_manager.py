@@ -57,8 +57,6 @@ class WorkerManager(Worker):
             SignalCode.RAG_INDEX_CANCEL: self.on_rag_index_cancel_signal,
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
             SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
-            SignalCode.LLM_START_FINE_TUNE: self.on_llm_start_fine_tune_signal,
-            SignalCode.LLM_FINE_TUNE_CANCEL: self.on_llm_fine_tune_cancel_signal,
             SignalCode.LLM_START_QUANTIZATION: self.on_llm_start_quantization_signal,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
             SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
@@ -1912,14 +1910,6 @@ class WorkerManager(Worker):
     def on_index_document_signal(self, data):
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_index_document_signal(data)
-
-    def on_llm_start_fine_tune_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_start_fine_tune_signal(data)
-
-    def on_llm_fine_tune_cancel_signal(self, data):
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.on_llm_fine_tune_cancel_signal(data)
 
     def on_llm_start_quantization_signal(self, data):
         if self._llm_generate_worker is not None:
