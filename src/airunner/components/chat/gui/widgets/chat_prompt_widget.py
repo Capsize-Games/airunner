@@ -61,6 +61,7 @@ from airunner.components.llm.workers.llm_response_worker import (
 from airunner.settings import (
     AIRUNNER_ART_ENABLED,
     AIRUNNER_LOG_LEVEL,
+    RETIRED_SLASH_COMMANDS,
     SLASH_COMMANDS,
 )
 from airunner.utils.settings import get_qsettings
@@ -785,6 +786,8 @@ class ChatPromptWidget(BaseWidget):
 
         if not slash_command:
             return prompt
+        if slash_command in RETIRED_SLASH_COMMANDS:
+            return prompt
         template = getattr(self, "_project_slash_templates", {}).get(
             slash_command
         )
@@ -813,6 +816,8 @@ class ChatPromptWidget(BaseWidget):
         """Return the request mode override configured for a slash command."""
 
         if not slash_command:
+            return None
+        if slash_command in RETIRED_SLASH_COMMANDS:
             return None
         mode_key = SLASH_COMMANDS.get(slash_command, {}).get(
             "request_mode"
@@ -1146,6 +1151,8 @@ class ChatPromptWidget(BaseWidget):
         command = parts[0].lower()
         self._refresh_slash_commands_data()
         remaining = parts[1].strip() if len(parts) > 1 else ""
+        if command in RETIRED_SLASH_COMMANDS:
+            return None, prompt, None, False
         if command in SLASH_COMMANDS:
             cmd_config = SLASH_COMMANDS[command]
             action_override = None
@@ -1180,6 +1187,8 @@ class ChatPromptWidget(BaseWidget):
         if prompt_service is None:
             return
         for template in prompt_service.prompt_templates():
+            if template.command_name in RETIRED_SLASH_COMMANDS:
+                continue
             self._project_slash_templates[template.command_name] = template
             if template.command_name in SLASH_COMMANDS:
                 continue

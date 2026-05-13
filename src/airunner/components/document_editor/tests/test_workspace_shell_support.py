@@ -101,8 +101,8 @@ def test_python_diagnostics_summary_renders_counts():
     assert "- quality report: 2 issue(s)" in summary
 
 
-def test_meeting_workflow_summary_lists_commands_and_status():
-    """Meeting workflow summaries should surface chat and review state."""
+def test_meeting_workflow_summary_lists_status():
+    """Meeting workflow summaries should surface review state."""
     summary = meeting_workflow_summary(
         {
             "commands": ["meeting-pack", "meeting-review"],
@@ -115,6 +115,6 @@ def test_meeting_workflow_summary_lists_commands_and_status():
     )
 
     assert "Meeting workflow:" in summary
-    assert "/meeting-pack" in summary
+    assert "chat commands" not in summary
     assert "- packs needing review: 1" in summary
     assert "Meeting Pack: Weekly sync (needs_revision)" in summary

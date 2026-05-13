@@ -414,16 +414,21 @@ QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
 #   - action: Optional LLMActionType override (defaults to APPLICATION_COMMAND)
 #   - request_mode: Optional visible request mode to apply for the command
 #   - prompt_prefix: Optional prefix to prepend to user's message
+RETIRED_SLASH_COMMANDS = frozenset(
+    {
+        "clear",
+        "code",
+        "deepresearch",
+        "image",
+        "meeting-pack",
+        "meeting-review",
+    }
+)
+
 SLASH_COMMANDS = {
     "deepsearch": {
         "tool": "search_web",  # Force search tool, model chains additional tools
         "description": "Multi-source research with notes & paper",
-        "action": "DEEP_RESEARCH",  # Uses research system prompt with agentic tool chaining
-        "prompt_prefix": "Please conduct comprehensive research on: ",
-    },
-    "deepresearch": {
-        "tool": "search_web",  # Force search tool, model chains additional tools
-        "description": "Alias for /deepsearch",
         "action": "DEEP_RESEARCH",  # Uses research system prompt with agentic tool chaining
         "prompt_prefix": "Please conduct comprehensive research on: ",
     },
@@ -434,44 +439,6 @@ SLASH_COMMANDS = {
     "news": {
         "tool": "search_news",
         "description": "Search for recent news articles",
-    },
-    "image": {
-        "tool": "generate_image",
-        "description": "Generate an image from your description",
-    },
-    "code": {
-        "tool": None,  # No forced tool - let model follow workflow instructions
-        "description": "Code assistance with structured TDD workflow",
-        "action": "CODE",
-        "prompt_prefix": "Please help me with this coding task: ",
-    },
-    "meeting-pack": {
-        "tool": None,
-        "description": "Turn meeting notes into a deliverable pack",
-        "action": "CODE",
-        "request_mode": "agent",
-        "prompt_prefix": (
-            "Treat this as a meeting-to-deliverables workflow in the "
-            "active AIRunner project. Start or update a meeting run, "
-            "record the structured decisions, tasks, risks, deadlines, "
-            "and open questions, generate the meeting pack, open the "
-            "pack in the document editor, and call out unresolved items "
-            "that still need review.\n\nMeeting input: "
-        ),
-    },
-    "meeting-review": {
-        "tool": None,
-        "description": "Review and approve the latest meeting pack",
-        "action": "CODE",
-        "request_mode": "agent",
-        "prompt_prefix": (
-            "Inspect the latest meeting deliverable pack in the active "
-            "AIRunner project, surface flagged or low-confidence items, "
-            "apply any user corrections, persist the review result, open "
-            "the review artifact in the document editor, and report "
-            "whether the pack is approved or still needs revision.\n\n"
-            "Review request: "
-        ),
     },
     "rag": {
         "tool": "rag_search",
@@ -488,10 +455,6 @@ SLASH_COMMANDS = {
     "recall": {
         "tool": "recall_knowledge",
         "description": "Recall information from long-term memory",
-    },
-    "clear": {
-        "tool": "clear_conversation",
-        "description": "Clear the current conversation history",
     },
 }
 

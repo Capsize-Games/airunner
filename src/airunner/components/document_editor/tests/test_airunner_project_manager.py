@@ -137,9 +137,7 @@ def test_project_manager_creates_python_project_scaffold(
     assert (project_path / "tests" / "test_python_project.py").exists()
     assert (project_path / INSTRUCTIONS_FILE).exists()
     assert (project_path / PROMPT_TEMPLATES_DIR / "implement.prompt.md").exists()
-    assert (
-        project_path / PROMPT_TEMPLATES_DIR / "meeting-pack.prompt.md"
-    ).exists()
+    assert (project_path / PROMPT_TEMPLATES_DIR / "review.prompt.md").exists()
 
 
 def test_project_manager_selects_python_environment(tmp_path, monkeypatch):

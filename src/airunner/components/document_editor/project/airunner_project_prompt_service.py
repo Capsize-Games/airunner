@@ -15,6 +15,7 @@ from airunner.components.document_editor.project.airunner_project_paths import (
 from airunner.components.document_editor.project.airunner_project_service import (
     AirunnerProjectService,
 )
+from airunner.settings import RETIRED_SLASH_COMMANDS
 
 
 @dataclass(frozen=True)
@@ -47,21 +48,14 @@ class AirunnerProjectPromptService:
             os.path.join(PROMPT_TEMPLATES_DIR, "review.prompt.md"),
             self._review_template(),
         )
-        self._ensure_file(
-            os.path.join(PROMPT_TEMPLATES_DIR, "meeting-pack.prompt.md"),
-            self._meeting_pack_template(),
-        )
-        self._ensure_file(
-            os.path.join(PROMPT_TEMPLATES_DIR, "meeting-review.prompt.md"),
-            self._meeting_review_template(),
-        )
 
     def instructions_text(self) -> str:
         """Return the project instruction markdown body."""
         path = self.project_service.resolve_path(INSTRUCTIONS_FILE)
         if not os.path.exists(path):
             return ""
-        return self.project_service.read_file(INSTRUCTIONS_FILE).strip()
+        raw = self.project_service.read_file(INSTRUCTIONS_FILE)
+        return self._strip_retired_slash_command_lines(raw).strip()
 
     def prompt_templates(self) -> list[AirunnerProjectPromptTemplate]:
         """Return all project-defined slash templates."""
@@ -71,8 +65,11 @@ class AirunnerProjectPromptService:
         templates: list[AirunnerProjectPromptTemplate] = []
         for name in sorted(os.listdir(directory)):
             template = self._read_template(name)
-            if template is not None:
-                templates.append(template)
+            if template is None:
+                continue
+            if template.command_name in RETIRED_SLASH_COMMANDS:
+                continue
+            templates.append(template)
         return templates
 
     def _ensure_file(self, rel_path: str, content: str) -> None:
@@ -127,6 +124,19 @@ class AirunnerProjectPromptService:
                 description = value.strip()
         return description, parts[1]
 
+    def _strip_retired_slash_command_lines(self, content: str) -> str:
+        """Remove retired slash-command guidance from saved instructions."""
+        retired_markers = tuple(f"/{name}" for name in RETIRED_SLASH_COMMANDS)
+        filtered_lines = []
+        for line in content.splitlines():
+            stripped = line.strip()
+            if stripped == "## Meeting Workflows":
+                continue
+            if any(marker in line for marker in retired_markers):
+                continue
+            filtered_lines.append(line)
+        return "\n".join(filtered_lines)
+
     def _instructions_content(
         self,
         bootstrap_profile: str | None,
@@ -142,20 +152,13 @@ class AirunnerProjectPromptService:
             )
         return (
             "# AIRunner Instructions\n\n"
-            "Use this file for project-specific coding guidance that should be "
-            "appended to the Code Agent system prompt.\n\n"
+            "Use this file for project-specific coding guidance that should "
+            "be appended to the Code Agent system prompt.\n\n"
             "## General\n"
             "- Keep changes focused on the current task.\n"
             "- Preserve existing conventions unless the task requires a "
             "change.\n"
             "- Validate modified behavior before declaring the task done.\n"
-            "\n## Meeting Workflows\n"
-            "- Use /meeting-pack to turn meeting notes or transcripts into "
-            "deliverable packs.\n"
-            "- Use /meeting-review to inspect flagged items, apply "
-            "corrections, and approve packs.\n"
-            "- Keep meeting artifacts under .airunner/meetings and open "
-            "generated markdown in the document editor for review.\n"
             f"{python_block}"
         )
 
@@ -165,9 +168,9 @@ class AirunnerProjectPromptService:
             "---\n"
             "description: Implement the requested feature in this project\n"
             "---\n"
-            "Inspect the relevant files before editing. Keep changes minimal, "
-            "update tests when behavior changes, and summarize what was "
-            "implemented plus how it was validated.\n"
+            "Inspect the relevant files before editing. Keep changes "
+            "minimal, update tests when behavior changes, and summarize "
+            "what was implemented plus how it was validated.\n"
         )
 
     def _review_template(self) -> str:
@@ -176,34 +179,9 @@ class AirunnerProjectPromptService:
             "---\n"
             "description: Review a change for bugs, regressions, and gaps\n"
             "---\n"
-            "Review the relevant files with a code-review mindset. Prioritize "
-            "concrete bugs, regressions, risky assumptions, and missing tests.\n"
-        )
-
-    def _meeting_pack_template(self) -> str:
-        """Return the default meeting-pack workflow template."""
-        return (
-            "---\n"
-            "description: Turn meeting input into a deliverable pack\n"
-            "---\n"
-            "Treat this as a meeting-to-deliverables workflow in the active "
-            "AIRunner project. Start or update a meeting run, record the "
-            "structured decisions, tasks, risks, deadlines, and open "
-            "questions, generate the meeting pack, open the pack in the "
-            "document editor, and call out unresolved items that still need "
-            "review.\n"
-        )
-
-    def _meeting_review_template(self) -> str:
-        """Return the default meeting-review workflow template."""
-        return (
-            "---\n"
-            "description: Review and approve the latest meeting pack\n"
-            "---\n"
-            "Inspect the latest meeting deliverable pack, surface the flagged "
-            "or low-confidence items, apply any user corrections, persist the "
-            "review result, open the review artifact in the document editor, "
-            "and report whether the pack is approved or still needs revision.\n"
+            "Review the relevant files with a code-review mindset. "
+            "Prioritize concrete bugs, regressions, risky assumptions, and "
+            "missing tests.\n"
         )
 
 

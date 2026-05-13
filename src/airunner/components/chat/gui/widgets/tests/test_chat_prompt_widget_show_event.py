@@ -379,6 +379,29 @@ def test_parse_slash_command_prefers_builtin_config():
     """Built-in slash commands should win over same-name templates."""
     widget = SimpleNamespace(
         _project_slash_templates={
+            "deepsearch": SimpleNamespace(prompt="Template prompt")
+        },
+        _refresh_slash_commands_data=lambda: None,
+        logger=Mock(),
+    )
+
+    result = ChatPromptWidget._parse_slash_command(
+        widget,
+        "/deepsearch weekly sync",
+    )
+
+    assert result == (
+        "deepsearch",
+        "weekly sync",
+        LLMActionType.DEEP_RESEARCH,
+        False,
+    )
+
+
+def test_parse_slash_command_rejects_retired_command_names():
+    """Retired slash commands should not parse from project templates."""
+    widget = SimpleNamespace(
+        _project_slash_templates={
             "meeting-pack": SimpleNamespace(prompt="Template prompt")
         },
         _refresh_slash_commands_data=lambda: None,
@@ -390,12 +413,7 @@ def test_parse_slash_command_prefers_builtin_config():
         "/meeting-pack weekly sync",
     )
 
-    assert result == (
-        "meeting-pack",
-        "weekly sync",
-        LLMActionType.CODE,
-        False,
-    )
+    assert result == (None, "/meeting-pack weekly sync", None, False)
 
 
 def test_refresh_slash_commands_keeps_builtin_template_binding(monkeypatch):
@@ -404,8 +422,8 @@ def test_refresh_slash_commands_keeps_builtin_template_binding(monkeypatch):
     prompt_service = SimpleNamespace(
         prompt_templates=lambda: [
             SimpleNamespace(
-                command_name="meeting-pack",
-                description="Meeting pack",
+                command_name="deepsearch",
+                description="Deep search template",
                 prompt="Template prompt",
             )
         ]
@@ -419,43 +437,67 @@ def test_refresh_slash_commands_keeps_builtin_template_binding(monkeypatch):
 
     ChatPromptWidget._refresh_slash_commands_data(widget)
 
-    assert widget._project_slash_templates["meeting-pack"].prompt == (
+    assert widget._project_slash_templates["deepsearch"].prompt == (
         "Template prompt"
     )
     assert [
         item["command"] for item in widget._slash_commands_data
-    ].count("/meeting-pack") == 1
+    ].count("/deepsearch") == 1
 
 
-def test_builtin_meeting_command_uses_project_template_prompt():
-    """Built-in meeting slash commands should reuse project template text."""
-    widget = SimpleNamespace(
-        _project_slash_templates={
-            "meeting-pack": SimpleNamespace(prompt="Template prompt")
-        }
+def test_refresh_slash_commands_omits_retired_commands(monkeypatch):
+    """Retired commands should stay out of autocomplete data."""
+    widget = SimpleNamespace()
+    prompt_service = SimpleNamespace(
+        prompt_templates=lambda: [
+            SimpleNamespace(
+                command_name="meeting-pack",
+                description="Meeting pack",
+                prompt="Template prompt",
+            ),
+            SimpleNamespace(
+                command_name="maze",
+                description="Maze prompt",
+                prompt="Maze prompt",
+            ),
+        ]
     )
 
-    prompt = ChatPromptWidget._slash_command_request_prompt(
-        widget,
-        "weekly sync notes",
-        "meeting-pack",
+    monkeypatch.setattr(
+        module,
+        "active_project_prompt_service",
+        lambda: prompt_service,
     )
 
-    assert prompt == "Template prompt\n\nweekly sync notes"
+    ChatPromptWidget._refresh_slash_commands_data(widget)
+
+    assert "meeting-pack" not in widget._project_slash_templates
+    assert "maze" in widget._project_slash_templates
+    commands = [item["command"] for item in widget._slash_commands_data]
+    assert "/meeting-pack" not in commands
+    assert "/maze" in commands
 
 
-def test_meeting_slash_command_uses_agent_request_mode():
-    """Meeting slash commands should opt into the coding agent mode."""
+def test_refresh_slash_commands_keeps_required_search_commands(monkeypatch):
+    """Search, deepsearch, and news should remain available."""
     widget = SimpleNamespace()
 
-    request_mode = ChatPromptWidget._slash_command_request_mode(
-        widget,
-        "meeting-pack",
+    monkeypatch.setattr(
+        module,
+        "active_project_prompt_service",
+        lambda: None,
     )
 
-    assert request_mode is not None
-    assert request_mode.key == "agent"
-    assert request_mode.action is LLMActionType.CODE
+    ChatPromptWidget._refresh_slash_commands_data(widget)
+
+    commands = {item["command"] for item in widget._slash_commands_data}
+    assert "/search" in commands
+    assert "/deepsearch" in commands
+    assert "/news" in commands
+    assert "/deepresearch" not in commands
+    assert "/image" not in commands
+    assert "/code" not in commands
+    assert "/clear" not in commands
 
 
 def test_submit_generation_request_sets_request_mode_system_prompt():

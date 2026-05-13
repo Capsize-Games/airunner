@@ -122,11 +122,7 @@ def python_workflow_summary(summary: dict[str, object]) -> str:
 
 def meeting_workflow_summary(summary: dict[str, object]) -> str:
     """Return a problems-panel summary for meeting workflow state."""
-    commands = summary.get("commands", []) if isinstance(summary, dict) else []
     lines = ["Meeting workflow:"]
-    if commands:
-        joined = ", ".join(f"/{command}" for command in commands)
-        lines.append(f"- chat commands: {joined}")
     lines.append(f"- meeting runs: {summary.get('meeting_run_count', 0)}")
     lines.append(f"- deliverable packs: {summary.get('deliverable_count', 0)}")
     lines.append(
