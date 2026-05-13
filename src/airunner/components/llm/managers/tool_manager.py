@@ -301,7 +301,7 @@ class ToolManager(
             Compiled tool function or None if compilation fails
         """
         try:
-            from langchain.tools import tool
+            from langchain_core.tools import tool
             from airunner.components.llm.core.code_sandbox import create_safe_builtins
 
             # Create a namespace for execution

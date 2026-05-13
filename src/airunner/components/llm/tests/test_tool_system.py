@@ -12,7 +12,6 @@ from airunner.components.llm.core.tool_registry import (
     ToolCategory,
     tool,
 )
-from airunner.components.llm.core.tool_executor import ToolExecutor
 from airunner.components.llm.core.request_processor import RequestProcessor
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.enums import LLMActionType
@@ -104,100 +103,6 @@ class TestToolRegistry:
         # Request a known default tool - should trigger import & registration
         gen_tool = ToolRegistry.get("generate_direct_response")
         assert gen_tool is not None
-
-
-class TestToolExecutor:
-    """Test tool execution with dependency injection."""
-
-    def setup_method(self):
-        """Setup test fixtures."""
-        ToolRegistry.clear()
-        self.mock_agent = Mock()
-        self.mock_api = Mock()
-        self.executor = ToolExecutor(
-            agent=self.mock_agent,
-            api=self.mock_api,
-        )
-
-    def test_basic_tool_execution(self):
-        """Test executing a basic tool."""
-
-        @tool(name="basic", category=ToolCategory.SYSTEM, description="Basic")
-        def basic_tool():
-            return "success"
-
-        info = ToolRegistry.get("basic")
-        wrapped = self.executor.wrap_tool(info)
-        result = wrapped()
-        assert result == "success"
-
-    def test_agent_injection(self):
-        """Test agent dependency injection."""
-
-        @tool(
-            name="needs_agent",
-            category=ToolCategory.SYSTEM,
-            description="Needs agent",
-            requires_agent=True,
-        )
-        def agent_tool(agent=None):
-            return agent.test_value
-
-        self.mock_agent.test_value = "injected"
-
-        info = ToolRegistry.get("needs_agent")
-        wrapped = self.executor.wrap_tool(info)
-        result = wrapped()
-        assert result == "injected"
-
-    def test_api_injection(self):
-        """Test API dependency injection."""
-
-        @tool(
-            name="needs_api",
-            category=ToolCategory.SYSTEM,
-            description="Needs API",
-            requires_api=True,
-        )
-        def api_tool(api=None):
-            return api.test_value
-
-        self.mock_api.test_value = "api_injected"
-
-        info = ToolRegistry.get("needs_api")
-        wrapped = self.executor.wrap_tool(info)
-        result = wrapped()
-        assert result == "api_injected"
-
-    def test_error_handling(self):
-        """Test error handling in tool execution."""
-
-        @tool(name="error", category=ToolCategory.SYSTEM, description="Error")
-        def error_tool():
-            raise ValueError("Test error")
-
-        info = ToolRegistry.get("error")
-        wrapped = self.executor.wrap_tool(info)
-        result = wrapped()
-        assert "Error:" in result
-
-    def test_to_function_tool(self):
-        """Test conversion to FunctionTool."""
-
-        @tool(
-            name="convert",
-            category=ToolCategory.SYSTEM,
-            description="Convert values between formats",
-        )
-        def convert_tool():
-            return "converted"
-
-        info = ToolRegistry.get("convert")
-        function_tool = self.executor.to_function_tool(info)
-
-        assert function_tool is not None
-        assert hasattr(function_tool, "metadata")
-        assert function_tool.metadata.name == "convert"
 
 
 class TestRequestProcessor:

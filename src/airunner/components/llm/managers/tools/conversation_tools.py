@@ -3,7 +3,7 @@
 from typing import Callable, Optional
 from datetime import datetime, timedelta
 
-from langchain.tools import tool
+from langchain_core.tools import tool
 
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.tools.base_tool import BaseTool

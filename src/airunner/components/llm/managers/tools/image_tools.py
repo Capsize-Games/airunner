@@ -3,7 +3,7 @@
 from typing import Callable
 import os
 
-from langchain.tools import tool
+from langchain_core.tools import tool
 
 from airunner.components.tools.base_tool import BaseTool
 from airunner.enums import SignalCode
