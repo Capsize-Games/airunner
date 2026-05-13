@@ -1,16 +1,40 @@
-"""Multi-Index Retriever for RAG system.
+"""Retriever helpers for LangChain-native RAG."""
 
-This module provides lazy-loading retrieval across multiple per-document indexes.
-Only documents marked as active in the database are loaded and searched.
-"""
+from typing import Optional, Sequence
 
-from typing import List
-from llama_index.core.retrievers import BaseRetriever
-from llama_index.core.schema import QueryBundle, NodeWithScore
-from llama_index.core.retrievers import VectorIndexRetriever
+from langchain_core.documents import Document
+
+from airunner.components.llm.managers.agent.vector_index import (
+    DocumentVectorIndex,
+)
 
 
-class MultiIndexRetriever(BaseRetriever):
+class DocumentIndexRetriever:
+    """Query a single vector index."""
+
+    def __init__(
+        self,
+        index: DocumentVectorIndex,
+        embedding_model,
+        similarity_top_k: int = 5,
+        doc_ids: Optional[Sequence[str]] = None,
+    ):
+        self._index = index
+        self._embedding_model = embedding_model
+        self._similarity_top_k = similarity_top_k
+        self._doc_ids = doc_ids
+
+    def retrieve(self, query: str) -> list[Document]:
+        hits = self._index.similarity_search(
+            query,
+            self._embedding_model,
+            self._similarity_top_k,
+            self._doc_ids,
+        )
+        return [hit.document for hit in hits]
+
+
+class MultiIndexRetriever:
     """Lazily load and search multiple per-document indexes.
 
     Only loads documents marked as active=True in the database.
@@ -33,7 +57,7 @@ class MultiIndexRetriever(BaseRetriever):
         self._rag_mixin = rag_mixin
         self._similarity_top_k = similarity_top_k
 
-    def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
+    def retrieve(self, query: str) -> list[Document]:
         """Load and search only documents marked as active by user.
 
         This searches both:
@@ -41,15 +65,15 @@ class MultiIndexRetriever(BaseRetriever):
         2. Unified in-memory index (from files loaded via ensure_indexed_files)
 
         Args:
-            query_bundle: Query to execute
-
         Returns:
-            List of scored nodes from all active document indexes
+            List of LangChain documents from active document indexes
         """
-        all_nodes = []
+        query_vector = self._embed_query(query)
+        if query_vector is None:
+            return []
 
-        # First, search the unified in-memory index if it exists
-        # This contains files loaded via ensure_indexed_files() or load_file_into_rag()
+        all_documents: list = []
+
         if hasattr(self._rag_mixin, "_index") and self._rag_mixin._index:
             try:
                 if hasattr(self._rag_mixin, "logger"):
@@ -57,16 +81,16 @@ class MultiIndexRetriever(BaseRetriever):
                         "Searching unified in-memory index"
                     )
 
-                unified_retriever = VectorIndexRetriever(
-                    index=self._rag_mixin._index,
-                    similarity_top_k=self._similarity_top_k,
+                all_documents.extend(
+                    self._rag_mixin._index.similarity_search_by_vector(
+                        query_vector,
+                        self._similarity_top_k,
+                    )
                 )
-                unified_nodes = unified_retriever.retrieve(query_bundle)
-                all_nodes.extend(unified_nodes)
 
                 if hasattr(self._rag_mixin, "logger"):
                     self._rag_mixin.logger.debug(
-                        f"Found {len(unified_nodes)} nodes from unified index"
+                        "Searched unified in-memory index successfully"
                     )
 
             except Exception as e:
@@ -75,7 +99,6 @@ class MultiIndexRetriever(BaseRetriever):
                         f"Error retrieving from unified index: {e}"
                     )
 
-        # Then search per-document persistent indexes
         active_doc_ids = self._rag_mixin._get_active_document_ids()
 
         if not active_doc_ids:
@@ -83,11 +106,7 @@ class MultiIndexRetriever(BaseRetriever):
                 self._rag_mixin.logger.warning(
                     "No active documents selected. Please activate documents in the Documents panel."
                 )
-            # If we have unified index results, return those
-            if all_nodes:
-                all_nodes.sort(key=lambda x: x.score or 0.0, reverse=True)
-                return all_nodes[: self._similarity_top_k]
-            return []
+            return _top_documents(all_documents, self._similarity_top_k)
 
         if hasattr(self._rag_mixin, "logger"):
             self._rag_mixin.logger.info(
@@ -96,30 +115,36 @@ class MultiIndexRetriever(BaseRetriever):
 
         for doc_id in active_doc_ids:
             try:
-                # Lazy load the index
                 doc_index = self._rag_mixin._load_doc_index(doc_id)
                 if not doc_index:
                     continue
 
-                # Create a retriever for this specific index
-                retriever = VectorIndexRetriever(
-                    index=doc_index,
-                    similarity_top_k=self._similarity_top_k,
+                all_documents.extend(
+                    doc_index.similarity_search_by_vector(
+                        query_vector,
+                        self._similarity_top_k,
+                    )
                 )
 
-                # Retrieve nodes from this index
-                nodes = retriever.retrieve(query_bundle)
-                all_nodes.extend(nodes)
-
             except Exception as e:
-                # Log but continue with other indexes
                 if hasattr(self._rag_mixin, "logger"):
                     self._rag_mixin.logger.error(
                         f"Error retrieving from index {doc_id}: {e}"
                     )
 
-        # Sort all nodes by score (highest first)
-        all_nodes.sort(key=lambda x: x.score or 0.0, reverse=True)
+        return _top_documents(all_documents, self._similarity_top_k)
 
-        # Return top N nodes across all filtered indexes
-        return all_nodes[: self._similarity_top_k]
+    def _embed_query(self, query: str):
+        try:
+            return self._rag_mixin.embedding.embed_query(query)
+        except Exception as exc:
+            if hasattr(self._rag_mixin, "logger"):
+                self._rag_mixin.logger.error(
+                    f"Error embedding query for retrieval: {exc}"
+                )
+            return None
+
+
+def _top_documents(hits: list, limit: int) -> list[Document]:
+    hits.sort(key=lambda hit: hit.score, reverse=True)
+    return [hit.document for hit in hits[:limit]]

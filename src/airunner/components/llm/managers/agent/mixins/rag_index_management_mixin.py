@@ -1,12 +1,4 @@
-"""RAG index management and registry operations.
-
-This mixin provides:
-- Index registry loading/saving
-- Per-document index CRUD operations
-- Index directory management
-- Cache validation
-- Legacy index migration
-"""
+"""RAG index management and registry operations."""
 
 import os
 import json
@@ -14,10 +6,11 @@ import shutil
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from llama_index.core import (
-    VectorStoreIndex,
-    StorageContext,
-    load_index_from_storage,
+from airunner.components.documents.data.models.document import (
+    Document as DBDocument,
+)
+from airunner.components.llm.managers.agent.vector_index import (
+    DocumentVectorIndex,
 )
 
 
@@ -30,9 +23,11 @@ class RAGIndexManagementMixin:
         Returns:
             Registry dictionary with documents and version
         """
-        if os.path.exists(self.registry_path):
+        for registry_path in self._registry_candidates():
+            if not os.path.exists(registry_path):
+                continue
             try:
-                with open(self.registry_path, "r") as f:
+                with open(registry_path, "r", encoding="utf-8") as f:
                     registry = json.load(f)
                 self.logger.info(
                     f"Loaded registry with {len(registry.get('documents', {}))} documents"
@@ -41,18 +36,27 @@ class RAGIndexManagementMixin:
             except Exception as e:
                 self.logger.error(f"Error loading registry: {e}")
 
-        # Return empty registry
-        return {"documents": {}, "version": "1.0"}
+        return {"documents": {}, "version": "2.0"}
 
     def _save_registry(self):
         """Save the index registry to disk."""
         try:
             os.makedirs(self.doc_indexes_dir, exist_ok=True)
-            with open(self.registry_path, "w") as f:
+            with open(self.registry_path, "w", encoding="utf-8") as f:
                 json.dump(self._index_registry, f, indent=2)
             self.logger.debug("Registry saved successfully")
         except Exception as e:
             self.logger.error(f"Error saving registry: {e}")
+
+    def _registry_candidates(self) -> list[str]:
+        paths = [self.registry_path]
+        legacy_path = os.path.join(
+            self.legacy_doc_indexes_dir,
+            "index_registry.json",
+        )
+        if legacy_path not in paths:
+            paths.append(legacy_path)
+        return paths
 
     def _update_registry_entry(
         self,
@@ -96,7 +100,18 @@ class RAGIndexManagementMixin:
         )
         return os.path.join(self.doc_indexes_dir, f"{doc_id}_{safe_filename}")
 
-    def _load_doc_index(self, doc_id: str) -> Optional[VectorStoreIndex]:
+    def _get_legacy_doc_index_dir(self, doc_id: str, file_path: str) -> str:
+        """Return the legacy directory path for a document index."""
+        filename = os.path.basename(file_path)
+        safe_filename = "".join(
+            c if c.isalnum() or c in "._-" else "_" for c in filename
+        )
+        return os.path.join(
+            self.legacy_doc_indexes_dir,
+            f"{doc_id}_{safe_filename}",
+        )
+
+    def _load_doc_index(self, doc_id: str) -> Optional[DocumentVectorIndex]:
         """Lazy load a document's index from disk.
 
         Args:
@@ -117,15 +132,11 @@ class RAGIndexManagementMixin:
 
         # Load from disk
         try:
-            index_dir = self._get_doc_index_dir(doc_id, doc_info["path"])
-            if not os.path.exists(index_dir):
-                self.logger.warning(f"Index directory not found: {index_dir}")
+            index_dir = self._resolve_doc_index_dir(doc_id, doc_info["path"])
+            if index_dir is None:
                 return None
 
-            storage_context = StorageContext.from_defaults(
-                persist_dir=index_dir
-            )
-            doc_index = load_index_from_storage(storage_context)
+            doc_index = DocumentVectorIndex.load(index_dir)
 
             # Cache it
             self._doc_indexes_cache[doc_id] = doc_index
@@ -139,6 +150,21 @@ class RAGIndexManagementMixin:
         except Exception as e:
             self.logger.error(f"Error loading index for {doc_id}: {e}")
             return None
+
+    def _resolve_doc_index_dir(
+        self,
+        doc_id: str,
+        file_path: str,
+    ) -> Optional[str]:
+        candidates = [
+            self._get_doc_index_dir(doc_id, file_path),
+            self._get_legacy_doc_index_dir(doc_id, file_path),
+        ]
+        for index_dir in candidates:
+            if DocumentVectorIndex.is_persisted(index_dir):
+                return index_dir
+        self.logger.warning(f"Index directory not found for {file_path}")
+        return None
 
     def _unload_doc_index(self, doc_id: str):
         """Unload a document's index from memory.
@@ -160,41 +186,47 @@ class RAGIndexManagementMixin:
         if self._index:
             try:
                 os.makedirs(self.storage_persist_dir, exist_ok=True)
-                self._index.storage_context.persist(
-                    persist_dir=self.storage_persist_dir
-                )
+                self._index.persist(self.storage_persist_dir)
                 self.logger.info("Unified index saved to storage")
             except Exception as e:
                 self.logger.error(f"Error saving index: {e}")
 
-    def _load_index(self) -> Optional[VectorStoreIndex]:
+    def _load_index(self) -> Optional[DocumentVectorIndex]:
         """Load the unified index from disk (legacy).
 
         Returns:
             VectorStoreIndex or None if loading fails
         """
-        if os.path.exists(self.storage_persist_dir):
+        for persist_dir in self._index_candidates():
+            if not DocumentVectorIndex.is_persisted(persist_dir):
+                continue
             try:
-                storage_context = StorageContext.from_defaults(
-                    persist_dir=self.storage_persist_dir
-                )
-                index = load_index_from_storage(storage_context)
+                index = DocumentVectorIndex.load(persist_dir)
                 self.logger.info("Unified index loaded from storage")
                 return index
             except Exception as e:
                 self.logger.error(f"Error loading index: {e}")
         return None
 
-    def _detect_old_unified_index(self) -> bool:
+    def _index_candidates(self) -> list[str]:
+        paths = [self.storage_persist_dir]
+        if self.legacy_storage_persist_dir not in paths:
+            paths.append(self.legacy_storage_persist_dir)
+        return paths
+
+    def _detect_old_unified_index(self) -> Optional[str]:
         """Check if there's an old unified index that needs migration.
 
         Returns:
-            True if old unified index exists
+            Path to the old unified index directory if it exists
         """
-        docstore_path = os.path.join(self.storage_persist_dir, "docstore.json")
-        return os.path.exists(docstore_path)
+        for storage_dir in self._index_candidates():
+            docstore_path = os.path.join(storage_dir, "docstore.json")
+            if os.path.exists(docstore_path):
+                return storage_dir
+        return None
 
-    def _migrate_from_unified_index(self):
+    def _migrate_from_unified_index(self, storage_dir: str):
         """Migrate from old unified index to per-document architecture.
 
         This is a one-time migration that:
@@ -208,71 +240,30 @@ class RAGIndexManagementMixin:
         )
 
         try:
-            # Load old unified index
-            old_index = self._load_index()
-            if not old_index:
-                self.logger.warning("Could not load old index for migration")
-                return
+            migrated = 0
+            for document in DBDocument.objects.all():
+                if not os.path.exists(document.path):
+                    continue
+                if self._index_single_document(document):
+                    migrated += 1
 
-            # Get all documents from unified index
-            # Note: This requires accessing internal docstore
-            docstore = old_index.docstore
-            all_docs = list(docstore.docs.values())
-
-            self.logger.info(f"Found {len(all_docs)} documents in old index")
-
-            # Group documents by file_path
-            docs_by_file: Dict[str, list] = {}
-            for doc in all_docs:
-                file_path = doc.metadata.get("file_path")
-                if file_path:
-                    if file_path not in docs_by_file:
-                        docs_by_file[file_path] = []
-                    docs_by_file[file_path].append(doc)
-
-            # Create per-document indexes
-            for file_path, file_docs in docs_by_file.items():
-                try:
-                    doc_id = self._generate_doc_id(file_path)
-
-                    # Create index for this file
-                    doc_index = VectorStoreIndex.from_documents(
-                        file_docs,
-                        embed_model=self.embedding,
-                        show_progress=False,
-                    )
-
-                    # Save to new location
-                    index_dir = self._get_doc_index_dir(doc_id, file_path)
-                    os.makedirs(index_dir, exist_ok=True)
-                    doc_index.storage_context.persist(persist_dir=index_dir)
-
-                    # Update registry
-                    self._update_registry_entry(
-                        doc_id, file_path, len(file_docs)
-                    )
-
-                    self.logger.info(f"Migrated {file_path}")
-
-                except Exception as e:
-                    self.logger.error(f"Error migrating {file_path}: {e}")
-
-            # Archive old unified index
-            archive_path = f"{self.storage_persist_dir}_archived_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            shutil.move(self.storage_persist_dir, archive_path)
-
-            self.logger.info(
-                f"Migration complete. Old index archived to {archive_path}"
+            archive_path = (
+                f"{storage_dir}_archived_"
+                f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
-
+            shutil.move(storage_dir, archive_path)
+            self.logger.info(
+                f"Migrated {migrated} documents and archived {storage_dir}"
+            )
         except Exception as e:
             self.logger.error(f"Error during migration: {e}")
 
     def _detect_and_migrate_old_index(self):
         """Detect and migrate old unified index if present."""
-        if self._detect_old_unified_index():
+        storage_dir = self._detect_old_unified_index()
+        if storage_dir:
             self.logger.info("Old unified index detected, migrating...")
-            self._migrate_from_unified_index()
+            self._migrate_from_unified_index(storage_dir)
 
     def _validate_cache_integrity(self) -> bool:
         """Validate that cached indexes match registry and disk state.

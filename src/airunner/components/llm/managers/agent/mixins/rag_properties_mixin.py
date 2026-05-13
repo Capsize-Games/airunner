@@ -1,18 +1,11 @@
-"""RAG properties and configuration management.
-
-This mixin provides:
-- Property accessors for RAG components
-- Configuration path management
-- Embedding model setup
-- Text splitter configuration
-"""
+"""RAG properties and configuration management."""
 
 import os
-from typing import Optional, Dict, Any
-import torch
+from typing import Any, Dict, Optional
 
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+import torch
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
@@ -21,7 +14,7 @@ class RAGPropertiesMixin:
     """Mixin for RAG properties and configuration."""
 
     @property
-    def text_splitter(self) -> SentenceSplitter:
+    def text_splitter(self) -> RecursiveCharacterTextSplitter:
         """Get or create the text splitter for document chunking.
 
         Returns:
@@ -37,11 +30,30 @@ class RAGPropertiesMixin:
                 chunk_size = getattr(rag_settings, "chunk_size", 512)
                 chunk_overlap = getattr(rag_settings, "chunk_overlap", 50)
 
-            self._text_splitter = SentenceSplitter(
+            self._text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
             )
         return self._text_splitter
+
+    @property
+    def rag_storage_root(self) -> str:
+        """Return the configured root for persisted RAG data."""
+        configured = getattr(self.path_settings, "rag_index_path", None)
+        if configured:
+            return os.path.expanduser(configured)
+        legacy = getattr(self.path_settings, "llama_index_path", None)
+        if legacy:
+            return os.path.expanduser(legacy)
+        return self.legacy_rag_storage_root
+
+    @property
+    def legacy_rag_storage_root(self) -> str:
+        """Return the legacy root used by older per-document indexes."""
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "rag",
+        )
 
     @property
     def doc_indexes_dir(self) -> str:
@@ -50,13 +62,14 @@ class RAGPropertiesMixin:
         Returns:
             Absolute path to doc_indexes directory
         """
-        base_dir = os.path.join(
-            os.path.expanduser(self.path_settings.base_path),
-            "rag",
-            "doc_indexes",
-        )
+        base_dir = os.path.join(self.rag_storage_root, "doc_indexes")
         os.makedirs(base_dir, exist_ok=True)
         return base_dir
+
+    @property
+    def legacy_doc_indexes_dir(self) -> str:
+        """Return the legacy per-document index directory."""
+        return os.path.join(self.legacy_rag_storage_root, "doc_indexes")
 
     @property
     def registry_path(self) -> str:
@@ -79,7 +92,7 @@ class RAGPropertiesMixin:
         return self._index_registry
 
     @property
-    def embedding(self) -> HuggingFaceEmbedding:
+    def embedding(self) -> Optional[HuggingFaceEmbeddings]:
         """Get or create the embedding model for RAG.
 
         This is a lazy-loaded property that creates the embedding model
@@ -124,21 +137,15 @@ class RAGPropertiesMixin:
                     f"{model_name}"
                 )
 
-                # Set quantization flag if using CPU or limited GPU memory
-                # This can reduce memory usage significantly
-                # quantization_flag = device == "cpu"
-
-                # Use fp16 to reduce VRAM usage (~650MB vs ~1.3GB)
                 model_kwargs = {}
-                if device == "cuda":
-                    model_kwargs["torch_dtype"] = torch.float16
+                model_kwargs["device"] = device
+                model_kwargs["trust_remote_code"] = True
+                model_kwargs["local_files_only"] = AIRUNNER_LOCAL_FILES_ONLY
 
-                self._embedding = HuggingFaceEmbedding(
+                self._embedding = HuggingFaceEmbeddings(
                     model_name=model_name,
-                    device=device,
-                    trust_remote_code=True,
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                     model_kwargs=model_kwargs,
+                    encode_kwargs={"normalize_embeddings": True},
                 )
 
                 self.logger.info("Embedding model initialized successfully")
@@ -199,13 +206,14 @@ class RAGPropertiesMixin:
         Returns:
             Absolute path to storage directory
         """
-        storage_dir = os.path.join(
-            os.path.expanduser(self.path_settings.base_path),
-            "rag",
-            "storage",
-        )
+        storage_dir = os.path.join(self.rag_storage_root, "storage")
         os.makedirs(storage_dir, exist_ok=True)
         return storage_dir
+
+    @property
+    def legacy_storage_persist_dir(self) -> str:
+        """Return the legacy unified-index storage directory."""
+        return os.path.join(self.legacy_rag_storage_root, "storage")
 
     def _check_and_download_embedding_model(self, model_path: str) -> bool:
         """Check if embedding model files exist and trigger download if needed.

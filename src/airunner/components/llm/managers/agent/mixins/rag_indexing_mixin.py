@@ -1,28 +1,16 @@
-"""RAG document indexing operations.
-
-This mixin provides:
-- Single document indexing
-- Batch document indexing with progress
-- Document reader creation
-- Index rebuild functionality
-"""
+"""RAG document indexing operations."""
 
 import os
 from typing import List, Optional
 
-from llama_index.core import (
-    Document,
-    VectorStoreIndex,
-    SimpleDirectoryReader,
-)
-from llama_index.readers.file import PDFReader, MarkdownReader
+from langchain_core.documents import Document
 
-from airunner.components.llm.managers.agent.custom_epub_reader import (
-    CustomEpubReader,
+from airunner.components.llm.managers.agent.document_loader import (
+    DocumentBatchLoader,
+    load_documents_from_file,
 )
-from airunner.components.llm.managers.agent import HtmlFileReader
-from airunner.components.zimreader.llamaindex_zim_reader import (
-    LlamaIndexZIMReader,
+from airunner.components.llm.managers.agent.vector_index import (
+    DocumentVectorIndex,
 )
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
@@ -34,7 +22,7 @@ class RAGIndexingMixin:
     """Mixin for RAG document indexing operations."""
 
     @property
-    def document_reader(self) -> Optional[SimpleDirectoryReader]:
+    def document_reader(self) -> Optional[DocumentBatchLoader]:
         """Get document reader for all indexed files.
 
         Returns:
@@ -49,18 +37,9 @@ class RAGIndexingMixin:
                 f"Creating unified document reader for {len(self.target_files)} files"
             )
             try:
-                self._document_reader = SimpleDirectoryReader(
+                self._document_reader = DocumentBatchLoader(
                     input_files=self.target_files,
-                    file_extractor={
-                        ".pdf": PDFReader(),
-                        ".epub": CustomEpubReader(),
-                        ".html": HtmlFileReader(),
-                        ".htm": HtmlFileReader(),
-                        ".md": MarkdownReader(),
-                        ".zim": LlamaIndexZIMReader(),
-                    },
-                    exclude_hidden=False,
-                    file_metadata=self._extract_metadata,
+                    metadata_loader=self._extract_metadata,
                 )
                 self.logger.debug("Document reader created successfully")
             except Exception as e:
@@ -81,13 +60,6 @@ class RAGIndexingMixin:
 
         try:
             documents = self.document_reader.load_data()
-
-            # Enrich with metadata from database
-            for doc in documents:
-                file_path = doc.metadata.get("file_path")
-                if file_path:
-                    doc.metadata.update(self._extract_metadata(file_path))
-
             self.logger.debug(
                 f"Loaded {len(documents)} documents with metadata"
             )
@@ -106,48 +78,31 @@ class RAGIndexingMixin:
             True if indexing succeeded, False otherwise
         """
         try:
+            self._setup_rag()
+            if self.embedding is None:
+                return False
+
             doc_id = self._generate_doc_id(db_doc.path)
 
-            # Load document
-            reader = SimpleDirectoryReader(
-                input_files=[db_doc.path],
-                file_extractor={
-                    ".pdf": PDFReader(),
-                    ".epub": CustomEpubReader(),
-                    ".html": HtmlFileReader(),
-                    ".htm": HtmlFileReader(),
-                    ".md": MarkdownReader(),
-                    ".zim": LlamaIndexZIMReader(),
-                },
-                file_metadata=self._extract_metadata,
-            )
-
-            docs = reader.load_data()
+            docs = load_documents_from_file(db_doc.path, self._extract_metadata)
             if not docs:
                 self.logger.warning(f"No content extracted from {db_doc.path}")
                 return False
-
-            # Enrich with metadata
             for doc in docs:
                 doc.metadata.update(self._extract_metadata(db_doc.path))
                 doc.metadata["doc_id"] = doc_id
 
-            # Create per-document index
-            doc_index = VectorStoreIndex.from_documents(
+            doc_index = DocumentVectorIndex.from_documents(
                 docs,
-                embed_model=self.embedding,
-                show_progress=False,
+                self.embedding,
+                self.text_splitter,
             )
 
-            # Save to disk
             index_dir = self._get_doc_index_dir(doc_id, db_doc.path)
             os.makedirs(index_dir, exist_ok=True)
-            doc_index.storage_context.persist(persist_dir=index_dir)
+            doc_index.persist(index_dir)
 
-            # Update registry
             self._update_registry_entry(doc_id, db_doc.path, len(docs))
-
-            # Mark as indexed in DB
             self._mark_document_indexed(db_doc.path)
 
             self.logger.info(

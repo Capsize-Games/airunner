@@ -1,7 +1,9 @@
 import os
 from typing import Optional
 
-from llama_index.readers.file import PDFReader
+from airunner.components.llm.managers.agent.document_loader import (
+    extract_text_from_file,
+)
 
 
 def _naive_read(path: str) -> Optional[str]:
@@ -180,24 +182,11 @@ def extract_text_from_epub(path: str) -> Optional[str]:
 
 
 def extract_text_from_pdf(path: str) -> Optional[str]:
-    """Extract text from PDF using llama_index PDFReader (same as RAG)."""
-    try:
-        pdf_reader = PDFReader()
-        documents = pdf_reader.load_data(file=path)
-
-        if not documents:
-            return None
-
-        # Combine all pages into one text
-        text_parts = [doc.text for doc in documents if doc.text]
-        if text_parts:
-            combined_text = "\n\n".join(text_parts)
-            return _clean_text(combined_text)
-
+    """Extract text from PDF using the active LangChain-native loader."""
+    text = extract_text_from_file(path)
+    if not text:
         return None
-    except Exception:
-        # Log error but don't fail completely
-        return None
+    return _clean_text(text)
 
 
 def extract_text(path: str) -> Optional[str]:
