@@ -59,7 +59,7 @@ def _get_log_level_from_env() -> int:
         return logging.DEBUG
 
 
-def _get_log_file_path(root_logger: logging.Logger) -> str:
+def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
     """Determine the log file path."""
     try:
         # Import locally to avoid circular dependency
@@ -88,17 +88,17 @@ def _get_log_file_path(root_logger: logging.Logger) -> str:
     except PermissionError as e:
         root_logger.error(
             "Permission denied creating log directory; "
-            "using fallback file logging: %s",
+            "file logging disabled: %s",
             e,
         )
-        return os.path.join("/tmp", "airunner.log")
+        return None
     except Exception as e:
         root_logger.error(
             "Error while preparing log directory; "
-            "using fallback file logging: %s",
+            "file logging disabled: %s",
             e,
         )
-        return os.path.join("/tmp", "airunner.log")
+        return None
 
 
 def _create_file_handler(
@@ -118,31 +118,14 @@ def _create_file_handler(
     except PermissionError as e:
         root_logger.error(
             "Permission denied creating log file; "
-            "falling back to temporary file output: %s",
+            "file logging disabled: %s",
             e,
         )
-        _try_fallback_file_handler(log_level, formatter, root_logger)
     except Exception as e:
-        root_logger.error("Failed to setup file logging: %s", e)
-
-
-def _try_fallback_file_handler(
-    log_level: int, formatter: logging.Formatter, root_logger: logging.Logger
-) -> None:
-    """Try to create fallback file handler in /tmp."""
-    try:
-        fallback = os.path.join("/tmp", "airunner.log")
-        file_handler = logging.FileHandler(fallback, mode="a")
-        file_handler.setLevel(log_level)
-        file_handler.setFormatter(formatter)
-        file_handler.addFilter(LogHygieneFilter())
-        root_logger.addHandler(file_handler)
-        root_logger.info("Logging to fallback file output")
-    except Exception as e_fallback:
         root_logger.error(
-            "Failed to setup fallback file logging: %s. "
+            "Failed to setup file logging: %s. "
             "File logging disabled.",
-            e_fallback,
+            e,
         )
 
 
@@ -154,6 +137,8 @@ def _setup_file_logging(
         return
 
     log_file = _get_log_file_path(root_logger)
+    if not log_file:
+        return
     _create_file_handler(log_file, log_level, formatter, root_logger)
 
 

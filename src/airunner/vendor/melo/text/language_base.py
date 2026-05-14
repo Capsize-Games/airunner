@@ -3,6 +3,7 @@ import torch
 import os
 from g2p_en import G2p
 
+from airunner.settings import AIRUNNER_BASE_PATH
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from airunner.vendor.melo.runtime_support import (
     get_melo_logger,
@@ -10,12 +11,22 @@ from airunner.vendor.melo.runtime_support import (
 )
 
 
+def _melo_cache_path() -> str:
+    """Return the AIRunner-managed cache path for Melo artifacts."""
+    return os.path.join(
+        AIRUNNER_BASE_PATH,
+        "cache",
+        "melo",
+        "cmudict_cache.pickle",
+    )
+
+
 class LanguageBase:
     model_path = ""
     model_path_bert = ""
     current_file_path = os.path.dirname(__file__)
     CMU_DICT_PATH = os.path.join(current_file_path, "cmudict.rep")
-    CACHE_PATH = os.path.join(current_file_path, "cmudict_cache.pickle")
+    CACHE_PATH = _melo_cache_path()
 
     @staticmethod
     def distribute_phone(n_phone, n_word):
@@ -42,9 +53,7 @@ class LanguageBase:
         self.cmu_dict_path = os.path.join(
             self.current_file_path, "cmudict.rep"
         )
-        self.cache_path = os.path.join(
-            self.current_file_path, "cmudict_cache.pickle"
-        )
+        self.cache_path = self.CACHE_PATH
 
     @property
     def device(self) -> str:
@@ -103,16 +112,17 @@ class LanguageBase:
     def get_dict(
         self,
     ):
-        if os.path.exists(self.CACHE_PATH):
-            with open(self.CACHE_PATH, "rb") as pickle_file:
+        if os.path.exists(self.cache_path):
+            with open(self.cache_path, "rb") as pickle_file:
                 g2p_dict = pickle.load(pickle_file)
         else:
             g2p_dict = self.read_dict()
-            self.cache_dict(g2p_dict, self.CACHE_PATH)
+            self.cache_dict(g2p_dict, self.cache_path)
 
         return g2p_dict
 
     def cache_dict(self, g2p_dict, file_path):
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "wb") as pickle_file:
             pickle.dump(g2p_dict, pickle_file)
 

@@ -125,6 +125,85 @@ def safe_fetch_url(
     Returns the response body as text (best-effort decoding).
     """
 
+    body, encoding = _fetch_body_and_encoding(
+        url,
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+        max_redirects=max_redirects,
+        max_bytes=max_bytes,
+    )
+
+    try:
+        return body.decode(encoding, errors="replace")
+    except LookupError:
+        return body.decode("utf-8", errors="replace")
+
+
+def safe_fetch_bytes(
+    url: str,
+    *,
+    headers: Optional[dict[str, str]] = None,
+    timeout_seconds: Optional[float] = None,
+    max_redirects: Optional[int] = None,
+    max_bytes: Optional[int] = None,
+) -> bytes:
+    """Fetch one URL and return its body as bytes."""
+    body, _encoding = _fetch_body_and_encoding(
+        url,
+        headers=headers,
+        timeout_seconds=timeout_seconds,
+        max_redirects=max_redirects,
+        max_bytes=max_bytes,
+    )
+    return body
+
+
+def _fetch_body_and_encoding(
+    url: str,
+    *,
+    headers: Optional[dict[str, str]] = None,
+    timeout_seconds: Optional[float] = None,
+    max_redirects: Optional[int] = None,
+    max_bytes: Optional[int] = None,
+) -> tuple[bytes, str]:
+    """Fetch one URL and return its body plus response encoding."""
+    timeout_seconds, max_redirects, max_bytes = _request_limits(
+        timeout_seconds,
+        max_redirects,
+        max_bytes,
+    )
+    current = url
+    redirects_followed = 0
+
+    with requests.Session() as session:
+        while True:
+            validate_url_for_fetch(current)
+            with session.get(
+                current,
+                headers=headers,
+                timeout=timeout_seconds,
+                allow_redirects=False,
+                stream=True,
+            ) as response:
+                redirect = response.headers.get("location")
+                if response.status_code in {301, 302, 303, 307, 308} and redirect:
+                    redirects_followed += 1
+                    if redirects_followed > max_redirects:
+                        raise SSRFBlocked("too many redirects")
+                    current = urljoin(current, redirect)
+                    continue
+
+                body = _read_response_body(response, max_bytes)
+                return body, response.encoding or "utf-8"
+
+
+def _request_limits(
+    timeout_seconds: Optional[float],
+    max_redirects: Optional[int],
+    max_bytes: Optional[int],
+) -> tuple[float, int, int]:
+    """Resolve default fetch limits from one optional override set."""
+
     if timeout_seconds is None:
         timeout_seconds = float(os.environ.get("AIRUNNER_SCRAPER_TIMEOUT_SECONDS", "8"))
 
@@ -134,43 +213,21 @@ def safe_fetch_url(
     if max_bytes is None:
         max_bytes = int(os.environ.get("AIRUNNER_SCRAPER_MAX_BYTES", "2000000"))
 
-    session = requests.Session()
+    return timeout_seconds, max_redirects, max_bytes
 
-    current = url
-    redirects_followed = 0
 
-    while True:
-        validate_url_for_fetch(current)
-
-        resp = session.get(
-            current,
-            headers=headers,
-            timeout=timeout_seconds,
-            allow_redirects=False,
-            stream=True,
-        )
-
-        if resp.status_code in {301, 302, 303, 307, 308} and resp.headers.get("location"):
-            redirects_followed += 1
-            if redirects_followed > max_redirects:
-                raise SSRFBlocked("too many redirects")
-            current = urljoin(current, resp.headers["location"])
+def _read_response_body(
+    response: requests.Response,
+    max_bytes: int,
+) -> bytes:
+    """Read one streamed HTTP response with a hard size cap."""
+    total = 0
+    chunks: list[bytes] = []
+    for chunk in response.iter_content(chunk_size=65536):
+        if not chunk:
             continue
-
-        total = 0
-        chunks: list[bytes] = []
-        for chunk in resp.iter_content(chunk_size=65536):
-            if not chunk:
-                continue
-            total += len(chunk)
-            if total > max_bytes:
-                raise SSRFBlocked("response too large")
-            chunks.append(chunk)
-
-        body = b"".join(chunks)
-
-        encoding = resp.encoding or "utf-8"
-        try:
-            return body.decode(encoding, errors="replace")
-        except LookupError:
-            return body.decode("utf-8", errors="replace")
+        total += len(chunk)
+        if total > max_bytes:
+            raise SSRFBlocked("response too large")
+        chunks.append(chunk)
+    return b"".join(chunks)

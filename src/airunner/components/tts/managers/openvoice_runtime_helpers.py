@@ -12,6 +12,7 @@ from airunner.components.tts.managers.exceptions import FileMissing
 from airunner.enums import AvailableLanguage
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
+from airunner.utils.path_policy import normalize_local_path
 from airunner.vendor.melo.api import TTS
 from airunner.vendor.openvoice import se_extractor
 from airunner.vendor.openvoice.api import (
@@ -100,7 +101,7 @@ def expand_reference_speaker_path(
     value = str(reference_speaker_path).strip()
     if not value or value == "default":
         return None
-    return os.path.expanduser(value)
+    return normalize_local_path(value, label="Reference speaker path")
 
 
 def default_openvoice_device() -> str:

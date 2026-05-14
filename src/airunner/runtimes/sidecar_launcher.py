@@ -14,6 +14,7 @@ from airunner.runtimes.llama_cpp_runtime_settings import (
     LlamaCppRuntimeSettings,
 )
 from airunner.runtime_layout import build_runtime_directory_layout
+from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 HealthOpener = Callable[..., Any]
 ProcessFactory = Callable[..., subprocess.Popen]
@@ -123,10 +124,14 @@ class SidecarLauncher:
         model_path = self.settings.model_path
         if not model_path:
             raise RuntimeError("No GGUF model is configured for llama.cpp")
-        expanded = os.path.expanduser(model_path)
-        if not os.path.exists(expanded):
-            raise RuntimeError(f"Configured GGUF model not found: {expanded}")
-        return expanded
+        try:
+            return resolve_existing_file(
+                model_path,
+                label="Configured GGUF model",
+                allowed_suffixes=(".gguf",),
+            )
+        except PathPolicyError as error:
+            raise RuntimeError(str(error)) from error
 
     def _spawn_if_needed(self) -> None:
         """Spawn the subprocess when it is not already alive."""

@@ -45,12 +45,14 @@ class FakeProcess:
         self.returncode = -9
 
 
-def _settings() -> WhisperCppRuntimeSettings:
+def _settings(
+    model_path: str = "/tmp/ggml-base.en.bin",
+) -> WhisperCppRuntimeSettings:
     return WhisperCppRuntimeSettings(
         executable="whisper-server",
         host="127.0.0.1",
         port=8012,
-        model_path="/tmp/ggml-base.en.bin",
+        model_path=model_path,
         model_id="ggml-base.en.bin",
         n_threads=4,
         n_processors=1,
@@ -63,9 +65,10 @@ def _settings() -> WhisperCppRuntimeSettings:
     )
 
 
-def test_command_includes_whisper_server_flags(monkeypatch):
-    monkeypatch.setattr("os.path.exists", lambda _path: True)
-    launcher = SidecarSTTLauncher(_settings())
+def test_command_includes_whisper_server_flags(tmp_path):
+    model_path = tmp_path / "ggml-base.en.bin"
+    model_path.write_text("model")
+    launcher = SidecarSTTLauncher(_settings(str(model_path)))
 
     command = launcher.command()
 
@@ -74,11 +77,12 @@ def test_command_includes_whisper_server_flags(monkeypatch):
     assert "/inference" in command
 
 
-def test_start_spawns_process_and_waits_for_health(monkeypatch):
+def test_start_spawns_process_and_waits_for_health(tmp_path):
     process = FakeProcess()
-    monkeypatch.setattr("os.path.exists", lambda _path: True)
+    model_path = tmp_path / "ggml-base.en.bin"
+    model_path.write_text("model")
     launcher = SidecarSTTLauncher(
-        _settings(),
+        _settings(str(model_path)),
         process_factory=lambda *args, **kwargs: process,
         health_opener=lambda *args, **kwargs: FakeResponse(),
     )
@@ -100,10 +104,11 @@ def test_start_uses_runtime_layout_environment_without_file_logging(
         captured["kwargs"] = kwargs
         return process
 
-    monkeypatch.setattr("os.path.exists", lambda _path: True)
+    model_path = tmp_path / "ggml-base.en.bin"
+    model_path.write_text("model")
     monkeypatch.setenv("AIRUNNER_BASE_PATH", str(tmp_path))
     launcher = SidecarSTTLauncher(
-        _settings(),
+        _settings(str(model_path)),
         process_factory=process_factory,
         health_opener=lambda *args, **kwargs: FakeResponse(),
     )
@@ -117,11 +122,12 @@ def test_start_uses_runtime_layout_environment_without_file_logging(
     assert captured["kwargs"]["stdout"] is subprocess.DEVNULL
 
 
-def test_stop_terminates_running_process(monkeypatch):
+def test_stop_terminates_running_process(tmp_path):
     process = FakeProcess()
-    monkeypatch.setattr("os.path.exists", lambda _path: True)
+    model_path = tmp_path / "ggml-base.en.bin"
+    model_path.write_text("model")
     launcher = SidecarSTTLauncher(
-        _settings(),
+        _settings(str(model_path)),
         process_factory=lambda *args, **kwargs: process,
         health_opener=lambda *args, **kwargs: FakeResponse(),
     )
@@ -132,12 +138,13 @@ def test_stop_terminates_running_process(monkeypatch):
     assert process.terminated == 1
 
 
-def test_health_status_reports_failed_exit(monkeypatch):
+def test_health_status_reports_failed_exit(tmp_path):
     process = FakeProcess()
     process.returncode = 9
-    monkeypatch.setattr("os.path.exists", lambda _path: True)
+    model_path = tmp_path / "ggml-base.en.bin"
+    model_path.write_text("model")
     launcher = SidecarSTTLauncher(
-        _settings(),
+        _settings(str(model_path)),
         process_factory=lambda *args, **kwargs: process,
         health_opener=lambda *args, **kwargs: FakeResponse(),
     )

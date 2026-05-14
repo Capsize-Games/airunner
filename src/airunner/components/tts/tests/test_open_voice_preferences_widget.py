@@ -9,6 +9,7 @@ from airunner.components.tts.gui.widgets.open_voice_preferences_widget import (
     OpenVoicePreferencesWidget,
 )
 from airunner.enums import TTSModel
+from airunner.utils.path_policy import PathPolicyError
 
 
 def test_import_widget_does_not_touch_pkg_info(tmp_path):
@@ -47,6 +48,7 @@ def test_store_reference_speaker_path_updates_settings(monkeypatch):
         _id=7,
         _item=item,
         _notify_api_or_app=notify,
+        logger=Mock(),
     )
 
     monkeypatch.setattr(
@@ -58,6 +60,21 @@ def test_store_reference_speaker_path_updates_settings(monkeypatch):
         "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
         ".OpenVoiceSettings.objects.update",
         update,
+    )
+    monkeypatch.setattr(
+        "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
+        ".normalize_local_path",
+        lambda path, **_kwargs: path,
+    )
+    monkeypatch.setattr(
+        "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
+        ".os.path.isfile",
+        lambda _path: True,
+    )
+    monkeypatch.setattr(
+        "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
+        ".resolve_existing_file",
+        lambda path, **_kwargs: path,
     )
 
     OpenVoicePreferencesWidget._store_reference_speaker_path(
@@ -72,6 +89,47 @@ def test_store_reference_speaker_path_updates_settings(monkeypatch):
         "new.wav",
     )
     assert item.reference_speaker_path == "new.wav"
+
+
+def test_store_reference_speaker_path_rejects_remote_uri(monkeypatch):
+    settings = SimpleNamespace(reference_speaker_path="old.wav")
+    update = Mock()
+    notify = Mock()
+    logger = Mock()
+    item = SimpleNamespace(reference_speaker_path="old.wav")
+    widget = SimpleNamespace(
+        _id=7,
+        _item=item,
+        _notify_api_or_app=notify,
+        logger=logger,
+    )
+
+    monkeypatch.setattr(
+        "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
+        ".OpenVoiceSettings.objects.get",
+        lambda _id: settings,
+    )
+    monkeypatch.setattr(
+        "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
+        ".OpenVoiceSettings.objects.update",
+        update,
+    )
+    monkeypatch.setattr(
+        "airunner.components.tts.gui.widgets.open_voice_preferences_widget"
+        ".normalize_local_path",
+        lambda _path, **_kwargs: (_ for _ in ()).throw(
+            PathPolicyError("Reference speaker path must be local")
+        ),
+    )
+
+    OpenVoicePreferencesWidget._store_reference_speaker_path(
+        widget,
+        "https://example.com/voice.wav",
+    )
+
+    update.assert_not_called()
+    notify.assert_not_called()
+    logger.error.assert_called_once()
 
 
 def test_should_precompute_in_background_when_tts_disabled():

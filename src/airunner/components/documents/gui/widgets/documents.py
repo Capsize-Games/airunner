@@ -31,6 +31,11 @@ from airunner.components.documents.gui.widgets.kiwix_widget import KiwixWidget
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
     FileExplorerWidget,
 )
+from airunner.utils.path_policy import (
+    PathPolicyError,
+    resolve_existing_directory,
+    resolve_existing_file,
+)
 
 
 class DocumentsWidget(BaseWidget):
@@ -222,6 +227,14 @@ class DocumentsWidget(BaseWidget):
             "text/other/documents",
         )
 
+    @property
+    def zim_path(self) -> str:
+        """Return the configured ZIM directory."""
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "zim",
+        )
+
     @documents_path.setter
     def documents_path(self, value: str):
         settings = get_qsettings()
@@ -339,7 +352,10 @@ class DocumentsWidget(BaseWidget):
 
     def add_folder_documents_to_active(self, folder_path: str):
         """Add all documents from a folder to the active RAG collection."""
-        for root, dirs, files in os.walk(folder_path):
+        validated_folder = self._validate_document_directory(folder_path)
+        if not validated_folder:
+            return
+        for root, dirs, files in os.walk(validated_folder):
             for fname in files:
                 ext = os.path.splitext(fname)[1][1:].lower()
                 if ext in self.file_extensions:
@@ -374,6 +390,11 @@ class DocumentsWidget(BaseWidget):
 
     def add_document_to_active(self, file_path: str):
         """Add a document to the active RAG collection."""
+        validated_path = self._validate_document_file(file_path)
+        if not validated_path:
+            return
+        file_path = validated_path
+
         # Check if indexed
         docs = Document.objects.filter_by(path=file_path)
         if not docs or not docs[0].indexed:
@@ -407,6 +428,38 @@ class DocumentsWidget(BaseWidget):
             Document.objects.create(path=file_path, active=True, indexed=True)
 
         self.logger.info(f"Added to active documents: {display_name}")
+
+    def _validate_document_directory(self, folder_path: str) -> str | None:
+        """Validate one directory before recursive document import."""
+        try:
+            return resolve_existing_directory(
+                folder_path,
+                label="Document directory",
+                allowed_roots=self._allowed_document_roots(),
+            )
+        except PathPolicyError as error:
+            self.logger.warning("Rejected document directory: %s", error)
+            QMessageBox.warning(self, "Invalid Document Path", str(error))
+            return None
+
+    def _validate_document_file(self, file_path: str) -> str | None:
+        """Validate one document file before using it in the UI."""
+        suffixes = tuple(f".{ext}" for ext in self.file_extensions)
+        try:
+            return resolve_existing_file(
+                file_path,
+                label="Document path",
+                allowed_suffixes=suffixes,
+                allowed_roots=self._allowed_document_roots(),
+            )
+        except PathPolicyError as error:
+            self.logger.warning("Rejected document path: %s", error)
+            QMessageBox.warning(self, "Invalid Document Path", str(error))
+            return None
+
+    def _allowed_document_roots(self) -> tuple[str, str]:
+        """Return the approved document roots for UI imports."""
+        return (self.documents_path, self.zim_path)
 
     def remove_document_from_active(self, file_path: str):
         """Remove a document from the active RAG collection."""

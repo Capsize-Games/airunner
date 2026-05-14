@@ -21,3 +21,14 @@
 - When you need to check code coverage use the `src/airunner/bin/coverage_report.py` script
 - Always run automated tests to ensure that your code changes do not break existing functionality. Use the `src/airunner/bin/run_tests.py` script to run tests.
 - Avoid multiple classes in a single file - we prefer one class per file for better organization and readability. Subdirectories are a good way to group related classes together while keeping each file focused and manageable.
+
+## Security and Privacy Standards
+
+- Treat log hygiene as a product requirement, not a cleanup pass. Do not add logs that expose prompts, conversation bodies, transcriptions, raw tool payloads, API responses, filesystem paths, tokens, secrets, or other user content unless the user explicitly asks for that level of logging.
+- Prefer structured summaries in logs over raw values. Log counts, sizes, IDs, hashes, timing, and state transitions instead of full content.
+- Reuse the existing log-hygiene utilities in `src/airunner/utils/application/log_hygiene.py` and keep sanitization active for both headless/root logging and wrapped GUI loggers.
+- Do not introduce fallback logging to shared temp locations such as `/tmp`. If file logging is unavailable, disable it cleanly instead of redirecting sensitive output to a broader filesystem scope.
+- Route any new remote fetch path through the existing URL safety layer in `src/airunner/components/tools/url_safety.py`. Do not add direct `requests` or similar network fetches for user-supplied URLs without the shared validation path.
+- Validate and normalize every user-controlled local path through the shared helpers in `src/airunner/utils/path_policy.py` before reading, persisting, or executing against it.
+- Keep persistent caches, logs, and other app-managed files inside `AIRUNNER_BASE_PATH` rather than package directories or generic temp directories.
+- Prefer least-privilege filesystem behavior for application data. When creating sensitive data directories, preserve private permissions where practical.

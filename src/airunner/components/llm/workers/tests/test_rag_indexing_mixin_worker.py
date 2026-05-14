@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from airunner.components.llm.workers.mixins.rag_indexing_mixin import (
     RAGIndexingMixin,
 )
+from airunner.utils.path_policy import PathPolicyError
 from unittest.mock import Mock
 
 
@@ -48,6 +49,11 @@ def test_rag_mixin_uses_manager_when_agent_missing(monkeypatch):
     worker = DummyWorker()
     stub = StubModelManager()
     worker._model_manager = stub
+    monkeypatch.setattr(
+        "airunner.components.llm.workers.mixins.rag_indexing_mixin"
+        ".resolve_existing_file",
+        lambda path, **_kwargs: path,
+    )
 
     # Replace DB document lookup with a stub object that has a path
     fake_db_doc = Mock()
@@ -85,6 +91,11 @@ def test_rag_mixin_prefers_agent_over_manager(monkeypatch):
             return None
 
     worker = DummyWorker()
+    monkeypatch.setattr(
+        "airunner.components.llm.workers.mixins.rag_indexing_mixin"
+        ".resolve_existing_file",
+        lambda path, **_kwargs: path,
+    )
 
     class StubAgent:
         def __init__(self):
@@ -119,3 +130,29 @@ def test_rag_mixin_prefers_agent_over_manager(monkeypatch):
 
     worker._perform_all_documents_indexing()
     assert agent.index_all_called
+
+
+def test_rag_mixin_rejects_invalid_document_paths(monkeypatch):
+    class DummyWorker(RAGIndexingMixin):
+        def __init__(self):
+            self.logger = Mock()
+            self._signals = []
+
+        def emit_signal(self, code, data=None):
+            self._signals.append((code, data))
+
+    worker = DummyWorker()
+    monkeypatch.setattr(
+        "airunner.components.llm.workers.mixins.rag_indexing_mixin"
+        ".resolve_existing_file",
+        lambda _path, **_kwargs: (_ for _ in ()).throw(
+            PathPolicyError("Document path must be inside an approved directory")
+        ),
+    )
+
+    result = worker._validate_document_path("/tmp/outside.txt")
+
+    assert result is None
+    assert worker._signals[-1][1]["error"] == (
+        "Document path must be inside an approved directory"
+    )

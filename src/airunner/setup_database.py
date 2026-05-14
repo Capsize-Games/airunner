@@ -19,6 +19,15 @@ _SETUP_LOCK = threading.Lock()
 _COMPLETED_SETUP_URLS: set[str] = set()
 
 
+def _ensure_private_directory(path: str | Path) -> None:
+    """Create one directory with best-effort user-only permissions."""
+    os.makedirs(path, exist_ok=True, mode=0o700)
+    try:
+        os.chmod(path, 0o700)
+    except OSError:
+        pass
+
+
 def _default_db_url() -> str:
     """Return the configured database URL with a fresh env lookup."""
     return os.environ.get("AIRUNNER_DATABASE_URL") or DEFAULT_AIRUNNER_DB_URL
@@ -47,7 +56,7 @@ def _ensure_sqlite_parent_dir(db_url: str) -> None:
     db_path = db_url.replace("sqlite:///", "", 1)
     db_dir = os.path.dirname(db_path)
     if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+        _ensure_private_directory(db_dir)
 
 
 def _use_setup_cache() -> bool:
@@ -72,7 +81,7 @@ def _version_locations(base: Path, alembic_dir: Path) -> list[Path]:
 def _migration_heads_cache_path() -> Path:
     """Return the on-disk cache path for discovered migration heads."""
     cache_dir = Path(AIRUNNER_BASE_PATH) / "data"
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_private_directory(cache_dir)
     return cache_dir / "migration_heads.json"
 
 

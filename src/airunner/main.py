@@ -183,8 +183,11 @@ base_path = AIRUNNER_BASE_PATH
 ################################################################
 base_dir = os.path.join(base_path, "data")
 try:
-    os.makedirs(base_dir, exist_ok=True)
+    os.makedirs(base_dir, exist_ok=True, mode=0o700)
+    os.chmod(base_dir, 0o700)
 except FileExistsError:
+    pass
+except OSError:
     pass
 
 startup_logger = logging.getLogger(__name__)
@@ -209,14 +212,7 @@ if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
         sys.stdout = open(AIRUNNER_LOG_FILE, "a")
         sys.stderr = open(AIRUNNER_LOG_FILE, "a")
     except PermissionError:
-        # Fall back to /tmp if we don't have permissions to write the desired file
-        fallback = os.path.join("/tmp", "airunner.log")
-        try:
-            sys.stdout = open(fallback, "a")
-            sys.stderr = open(fallback, "a")
-        except Exception:
-            # If this still fails, keep default stdout/stderr and continue
-            pass
+        pass
     except Exception:
         # Any other unexpected error: don't crash the startup
         pass

@@ -8,6 +8,19 @@ from airunner.enums import SignalCode
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
+from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
+
+
+_DOCUMENT_FILE_SUFFIXES = (
+    ".md",
+    ".txt",
+    ".docx",
+    ".doc",
+    ".odt",
+    ".pdf",
+    ".epub",
+    ".zim",
+)
 
 
 class RAGIndexingMixin:
@@ -186,13 +199,21 @@ class RAGIndexingMixin:
             file_paths: List of file paths to index
         """
         total = len(file_paths)
+        indexed_total = 0
         for idx, file_path in enumerate(file_paths):
             self._emit_indexing_progress(idx, total)
-            self._index_single_file(file_path, idx, total)
+            validated_path = self._validate_document_path(file_path)
+            if not validated_path:
+                continue
+            indexed_total += 1
+            self._index_single_file(validated_path, idx, total)
 
         self.emit_signal(
             SignalCode.RAG_INDEXING_COMPLETE,
-            {"success": True, "message": f"Indexed {total} documents"},
+            {
+                "success": True,
+                "message": f"Indexed {indexed_total} of {total} documents",
+            },
         )
 
     def _emit_indexing_progress(self, idx: int, total: int) -> None:
@@ -313,8 +334,8 @@ class RAGIndexingMixin:
         Args:
             data: Dictionary containing document path
         """
-        document_path = data.get("path", None)
-        if not self._validate_document_path(document_path):
+        document_path = self._validate_document_path(data.get("path", None))
+        if not document_path:
             return
 
         filename = os.path.basename(document_path)
@@ -330,21 +351,43 @@ class RAGIndexingMixin:
 
         self._process_document_indexing(document_path, db_doc, filename)
 
-    def _validate_document_path(self, path) -> bool:
-        """Validate document path from signal.
+    def _validate_document_path(self, path) -> str | None:
+        """Validate one document path from a signal payload.
 
         Args:
             path: Path to validate
 
         Returns:
-            True if path is valid
+            Normalized path when valid, otherwise None
         """
         if not isinstance(path, str) or not path:
             self.logger.warning(
                 "INDEX_DOCUMENT signal received with invalid path"
             )
-            return False
-        return True
+            return None
+        try:
+            return resolve_existing_file(
+                path,
+                label="Document path",
+                allowed_suffixes=_DOCUMENT_FILE_SUFFIXES,
+                allowed_roots=self._allowed_document_roots(),
+            )
+        except PathPolicyError as error:
+            self.logger.warning("Rejected document path: %s", error)
+            self._emit_index_failed(path, str(error))
+            return None
+
+    def _allowed_document_roots(self) -> tuple[str, ...]:
+        """Return the approved roots for document indexing."""
+        path_settings = getattr(self, "path_settings", None)
+        if path_settings is None:
+            return ()
+        base_path = getattr(path_settings, "base_path", "")
+        documents_path = getattr(path_settings, "documents_path", "")
+        roots = [documents_path]
+        if base_path:
+            roots.append(os.path.join(os.path.expanduser(base_path), "zim"))
+        return tuple(root for root in roots if root)
 
     def _process_document_indexing(
         self, path: str, db_doc, filename: str

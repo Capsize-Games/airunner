@@ -1,8 +1,8 @@
+import hashlib
 import os
 import re
 import json
 import pprint
-import tempfile
 import webbrowser
 import urllib.parse
 import datetime
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.utils.application.create_worker import create_worker
+from airunner.components.tools.url_safety import safe_fetch_bytes
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.data.scan_zimfiles import scan_zimfiles
 from airunner.components.documents.data.models.zimfile import ZimFile
@@ -343,7 +344,7 @@ class KiwixWidget(BaseWidget):
 
     def _add_illustration_to_layout(self, zim, layout):
         """Add illustration image to layout if available."""
-        img_url = zim.get("url")
+        img_url = zim.get("image_url") or zim.get("url")
         if img_url and "/illustration/" in img_url:
             # Fix double https:// if present
             if img_url.startswith("//"):
@@ -351,15 +352,11 @@ class KiwixWidget(BaseWidget):
             elif img_url.startswith("/catalog/"):
                 img_url = "https://library.kiwix.org" + img_url
             try:
-                cache_dir = tempfile.gettempdir()
-                img_cache_path = os.path.join(
-                    cache_dir, os.path.basename(img_url)
-                )
+                img_cache_path = self._illustration_cache_path(img_url)
                 if not os.path.exists(img_cache_path):
-                    r = requests.get(img_url, timeout=10)
-                    if r.status_code == 200:
-                        with open(img_cache_path, "wb") as f:
-                            f.write(r.content)
+                    payload = safe_fetch_bytes(img_url, max_bytes=1_000_000)
+                    with open(img_cache_path, "wb") as file_pointer:
+                        file_pointer.write(payload)
                 pixmap = QPixmap(img_cache_path)
                 if not pixmap.isNull():
                     img_label = QLabel()
@@ -367,6 +364,20 @@ class KiwixWidget(BaseWidget):
                     layout.addWidget(img_label, alignment=Qt.AlignLeft)
             except Exception:
                 pass
+
+    def _illustration_cache_path(self, img_url: str) -> str:
+        """Return one app-scoped cache path for a Kiwix illustration."""
+        cache_dir = os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "cache",
+            "kiwix",
+            "illustrations",
+        )
+        os.makedirs(cache_dir, exist_ok=True)
+        parsed_url = urllib.parse.urlparse(img_url)
+        suffix = os.path.splitext(parsed_url.path)[1] or ".img"
+        digest = hashlib.sha256(img_url.encode("utf-8")).hexdigest()
+        return os.path.join(cache_dir, f"{digest}{suffix}")
 
     def _format_size(self, size):
         """Format file size for display."""

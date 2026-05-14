@@ -8,14 +8,25 @@ import io
 import json
 import os
 from typing import Optional
+from urllib.parse import unquote, urlparse
 
-import requests
 from PIL import Image
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
+
+from airunner.components.tools.url_safety import safe_fetch_bytes
+from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 
 # Custom MIME type used by ImageWidget for drag operations
 IMAGE_METADATA_MIME_TYPE = "application/x-qt-image-metadata"
+_ALLOWED_IMAGE_SUFFIXES = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".bmp",
+    ".gif",
+    ".webp",
+)
 
 
 class CanvasDragDropMixin:
@@ -261,30 +272,36 @@ class CanvasDragDropMixin:
         if url_or_path.startswith("http://") or url_or_path.startswith(
             "https://"
         ):
-            try:
-                resp = requests.get(url_or_path, timeout=10)
-                resp.raise_for_status()
-                return Image.open(io.BytesIO(resp.content)).convert("RGBA")
-            except Exception as e:
-                self.logger.error(f"Failed to download image: {e}")
-                return None
+            return self._load_remote_image(url_or_path)
         elif url_or_path.startswith("file://"):
-            path = url_or_path[7:]
-            self.logger.debug(f"Extracted path from file URL: {path}, exists: {os.path.exists(path)}")
-            if os.path.exists(path):
-                try:
-                    return Image.open(path).convert("RGBA")
-                except Exception as e:
-                    self.logger.error(f"Failed to open file image: {e}")
-            return None
+            parsed = urlparse(url_or_path)
+            return self._load_local_image(unquote(parsed.path))
         else:
-            exists = os.path.exists(url_or_path)
-            self.logger.debug(f"Trying as plain path, exists: {exists}")
-            if exists:
-                try:
-                    return Image.open(url_or_path).convert("RGBA")
-                except Exception as e:
-                    self.logger.error(f"Failed to open file image: {e}")
+            return self._load_local_image(url_or_path)
+
+    def _load_remote_image(self, url: str) -> Optional[Image.Image]:
+        """Load one remote image through the guarded fetch path."""
+        try:
+            payload = safe_fetch_bytes(url, max_bytes=10_000_000)
+            return Image.open(io.BytesIO(payload)).convert("RGBA")
+        except Exception as error:
+            self.logger.error(f"Failed to download image: {error}")
+            return None
+
+    def _load_local_image(self, path: str) -> Optional[Image.Image]:
+        """Load one local image after validating the filesystem path."""
+        try:
+            resolved_path = resolve_existing_file(
+                path,
+                label="Image path",
+                allowed_suffixes=_ALLOWED_IMAGE_SUFFIXES,
+            )
+            return Image.open(resolved_path).convert("RGBA")
+        except PathPolicyError as error:
+            self.logger.error(f"Rejected dropped image path: {error}")
+            return None
+        except Exception as error:
+            self.logger.error(f"Failed to open file image: {error}")
             return None
 
     def _load_image_from_object(

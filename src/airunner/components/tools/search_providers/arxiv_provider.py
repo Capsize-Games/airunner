@@ -15,7 +15,7 @@ from airunner.utils.application.log_hygiene import summarize_text
 class ArxivProvider(BaseSearchProvider):
     """arXiv academic search provider."""
 
-    API_BASE_URL: str = "http://export.arxiv.org/api/query"
+    API_BASE_URL: str = "https://export.arxiv.org/api/query"
 
     async def search(
         self,

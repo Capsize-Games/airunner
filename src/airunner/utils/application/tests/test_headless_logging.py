@@ -195,6 +195,35 @@ def test_get_logger_skips_file_handler_by_default(monkeypatch):
     )
 
 
+def test_headless_logging_does_not_fallback_to_tmp(monkeypatch, tmp_path):
+    log_file = tmp_path / "blocked.log"
+    attempted_paths = []
+
+    monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "1")
+    monkeypatch.setenv("AIRUNNER_LOG_FILE", str(log_file))
+    monkeypatch.setenv("DEV_ENV", "0")
+
+    logging_utils = importlib.import_module(
+        "airunner.utils.application.logging_utils"
+    )
+    importlib.reload(logging_utils)
+
+    def fake_file_handler(path, mode="a"):
+        attempted_paths.append(str(path))
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(
+        logging_utils.logging,
+        "FileHandler",
+        fake_file_handler,
+    )
+
+    logging_utils.configure_headless_logging()
+
+    assert attempted_paths == [str(log_file)]
+    assert "/tmp/airunner.log" not in attempted_paths
+
+
 def test_configure_noisy_loggers_suppresses_sqlalchemy_children():
     logging_utils = importlib.import_module(
         "airunner.utils.application.logging_utils"

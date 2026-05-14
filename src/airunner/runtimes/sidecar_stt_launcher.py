@@ -14,6 +14,7 @@ from airunner.runtime_layout import build_runtime_directory_layout
 from airunner.runtimes.whisper_cpp_runtime_settings import (
     WhisperCppRuntimeSettings,
 )
+from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 HealthOpener = Callable[..., Any]
 ProcessFactory = Callable[..., subprocess.Popen]
@@ -142,12 +143,13 @@ class SidecarSTTLauncher:
         model_path = self.settings.model_path
         if not model_path:
             raise RuntimeError("No whisper.cpp model is configured")
-        expanded = os.path.expanduser(model_path)
-        if not os.path.exists(expanded):
-            raise RuntimeError(
-                f"Configured whisper.cpp model not found: {expanded}"
+        try:
+            return resolve_existing_file(
+                model_path,
+                label="Configured whisper.cpp model",
             )
-        return expanded
+        except PathPolicyError as error:
+            raise RuntimeError(str(error)) from error
 
     def _spawn_if_needed(self) -> None:
         """Spawn the subprocess when it is not already alive."""

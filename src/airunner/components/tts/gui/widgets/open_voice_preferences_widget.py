@@ -1,3 +1,4 @@
+import os
 import threading
 
 from PySide6.QtCore import Slot
@@ -9,6 +10,14 @@ from airunner.components.tts.gui.widgets.templates.open_voice_preferences_ui imp
 )
 from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
 from airunner.enums import AvailableLanguage, TTSModel
+from airunner.utils.path_policy import (
+    PathPolicyError,
+    normalize_local_path,
+    resolve_existing_file,
+)
+
+
+_AUDIO_FILE_SUFFIXES = (".wav", ".mp3", ".ogg")
 
 
 class OpenVoicePreferencesWidget(BaseWidget):
@@ -45,18 +54,40 @@ class OpenVoicePreferencesWidget(BaseWidget):
 
     def _store_reference_speaker_path(self, path: str) -> None:
         """Persist one reference speaker path and notify the app."""
+        if not isinstance(path, str) or not path.strip():
+            return
+        try:
+            normalized_path = normalize_local_path(
+                path,
+                label="Reference speaker path",
+            )
+        except PathPolicyError as error:
+            self.logger.error("Rejected reference speaker path: %s", error)
+            return
+        if not os.path.isfile(normalized_path):
+            return
+        try:
+            validated_path = resolve_existing_file(
+                normalized_path,
+                label="Reference speaker path",
+                allowed_suffixes=_AUDIO_FILE_SUFFIXES,
+            )
+        except PathPolicyError as error:
+            self.logger.error("Rejected reference speaker path: %s", error)
+            return
+
         open_voice_settings = OpenVoiceSettings.objects.get(self._id)
         if not open_voice_settings:
             return
-        if open_voice_settings.reference_speaker_path != path:
+        if open_voice_settings.reference_speaker_path != validated_path:
             OpenVoiceSettings.objects.update(
-                self._id, reference_speaker_path=path
+                self._id, reference_speaker_path=validated_path
             )
-            self._item.reference_speaker_path = path
+            self._item.reference_speaker_path = validated_path
             self._notify_api_or_app(
                 "openvoice_settings",
                 "reference_speaker_path",
-                path,
+                validated_path,
             )
 
     def _should_precompute_in_background(self) -> bool:

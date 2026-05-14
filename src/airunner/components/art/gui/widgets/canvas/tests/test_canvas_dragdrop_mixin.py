@@ -167,29 +167,32 @@ class TestCanvasDragDropMixin(unittest.TestCase):
 
         self.canvas._resize_image.assert_called_once()
 
-    @patch("requests.get")
-    def test_load_image_from_url_http(self, mock_get):
+    @patch(
+        "airunner.components.art.gui.widgets.canvas.mixins."
+        "canvas_dragdrop_mixin.safe_fetch_bytes"
+    )
+    def test_load_image_from_url_http(self, mock_fetch):
         """Test loading image from HTTP URL."""
         img_bytes = io.BytesIO()
         self.test_image.save(img_bytes, format="PNG")
         img_bytes.seek(0)
 
-        mock_response = Mock()
-        mock_response.content = img_bytes.getvalue()
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+        mock_fetch.return_value = img_bytes.getvalue()
 
         result = self.canvas._load_image_from_url_or_file(
             "http://example.com/test.png"
         )
 
         self.assertIsNotNone(result)
-        mock_get.assert_called_once()
+        mock_fetch.assert_called_once()
 
-    @patch("requests.get")
-    def test_load_image_from_url_http_failure(self, mock_get):
+    @patch(
+        "airunner.components.art.gui.widgets.canvas.mixins."
+        "canvas_dragdrop_mixin.safe_fetch_bytes"
+    )
+    def test_load_image_from_url_http_failure(self, mock_fetch):
         """Test loading image from HTTP URL with failure."""
-        mock_get.side_effect = Exception("Connection error")
+        mock_fetch.side_effect = Exception("Connection error")
 
         result = self.canvas._load_image_from_url_or_file(
             "http://example.com/test.png"
@@ -198,11 +201,14 @@ class TestCanvasDragDropMixin(unittest.TestCase):
         self.assertIsNone(result)
         self.canvas.logger.error.assert_called_once()
 
-    @patch("os.path.exists")
+    @patch(
+        "airunner.components.art.gui.widgets.canvas.mixins."
+        "canvas_dragdrop_mixin.resolve_existing_file"
+    )
     @patch("PIL.Image.open")
-    def test_load_image_from_file_path(self, mock_open, mock_exists):
+    def test_load_image_from_file_path(self, mock_open, mock_resolve):
         """Test loading image from file path."""
-        mock_exists.return_value = True
+        mock_resolve.return_value = "/tmp/test.png"
         mock_img = Mock()
         mock_img.convert = Mock(return_value=self.test_image)
         mock_open.return_value = mock_img
@@ -210,12 +216,15 @@ class TestCanvasDragDropMixin(unittest.TestCase):
         result = self.canvas._load_image_from_url_or_file("/tmp/test.png")
 
         self.assertIsNotNone(result)
-        mock_exists.assert_called_once()
+        mock_resolve.assert_called_once()
 
-    @patch("os.path.exists")
-    def test_load_image_from_nonexistent_file(self, mock_exists):
+    @patch(
+        "airunner.components.art.gui.widgets.canvas.mixins."
+        "canvas_dragdrop_mixin.resolve_existing_file"
+    )
+    def test_load_image_from_nonexistent_file(self, mock_resolve):
         """Test loading image from nonexistent file."""
-        mock_exists.return_value = False
+        mock_resolve.side_effect = ValueError("missing")
 
         result = self.canvas._load_image_from_url_or_file(
             "/nonexistent/test.png"
