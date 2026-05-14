@@ -23,11 +23,26 @@ Build Linux sidecar binaries:
 ./scripts/build_runtime_sidecars.sh --clean --target-platform linux
 ```
 
+Build CUDA-enabled Linux sidecars for a specific architecture target:
+
+```bash
+./scripts/build_runtime_sidecars.sh \
+  --clean \
+  --target-platform linux \
+  --enable-cuda \
+  --cuda-architectures 89
+```
+
 Cross-build Windows sidecar binaries from Linux when MinGW-w64 is present:
 
 ```bash
 ./scripts/build_runtime_sidecars.sh --clean --target-platform windows
 ```
+
+The build script also honors:
+
+- `AIRUNNER_SIDECAR_ENABLE_CUDA=1`
+- `AIRUNNER_SIDECAR_CUDA_ARCHITECTURES=<arch list>`
 
 The script produces a bundle-style layout under:
 

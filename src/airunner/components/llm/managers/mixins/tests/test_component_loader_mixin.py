@@ -8,6 +8,7 @@ This module tests component loading and unloading functionality including:
 - Component unloading and memory cleanup
 """
 
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from airunner.components.llm.managers.mixins.component_loader_mixin import (
@@ -22,6 +23,8 @@ class MockComponentLoader(ComponentLoaderMixin):
         self.logger = Mock()
         self.llm_settings = Mock()
         self.llm_settings.use_local_llm = True
+        self.memory_settings = Mock()
+        self.memory_settings.move_unused_model_to_cpu = False
         self._last_load_error = None
         self._model = None
         self._tokenizer = None
@@ -575,3 +578,32 @@ class TestUnloadComponents:
 
         # Should log 5 errors (one for each method)
         assert loader.logger.error.call_count == 5
+
+    def test_unload_components_keeps_offloaded_model_for_reuse(self):
+        """Test CPU retention when a model can be offloaded instead."""
+        loader = MockComponentLoader()
+        loader.memory_settings.move_unused_model_to_cpu = True
+        loader._workflow_manager = Mock()
+        loader._tool_manager = Mock()
+        loader._chat_model = SimpleNamespace(model=None)
+        loader._tokenizer = Mock()
+        loader._model = Mock()
+
+        with patch("torch.cuda.is_available", return_value=True), patch(
+            "torch.cuda.empty_cache"
+        ) as mock_empty_cache, patch(
+            "torch.cuda.synchronize"
+        ) as mock_synchronize, patch(
+            "gc.collect"
+        ) as mock_gc_collect:
+            loader._unload_components()
+
+        loader._model.to.assert_called_once_with("cpu")
+        assert loader._workflow_manager is None
+        assert loader._tool_manager is None
+        assert loader._chat_model is not None
+        assert loader._tokenizer is not None
+        assert loader._model is not None
+        mock_gc_collect.assert_called_once()
+        mock_empty_cache.assert_called_once()
+        mock_synchronize.assert_called_once()

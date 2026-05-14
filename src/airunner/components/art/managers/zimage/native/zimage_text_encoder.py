@@ -25,6 +25,8 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
+from airunner.utils.memory import clear_memory
+
 logger = logging.getLogger(__name__)
 
 _SAFE_TENSORS_FORMATS = {"pt", "tf", "flax", "mlx"}
@@ -335,11 +337,10 @@ class ZImageTextEncoder(nn.Module):
         """Release model weights while keeping tokenizer and load settings."""
         if self.model is None:
             return
+        device = getattr(self.model, "device", None)
         del self.model
         self.model = None
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        clear_memory(device)
     
     def encode(
         self,
@@ -408,6 +409,7 @@ class ZImageTextEncoder(nn.Module):
     
     def unload(self):
         """Unload model to free memory."""
+        device = getattr(self.model, "device", None)
         if self.model is not None:
             del self.model
             self.model = None
@@ -416,8 +418,7 @@ class ZImageTextEncoder(nn.Module):
             del self.tokenizer
             self.tokenizer = None
         
-        gc.collect()
-        torch.cuda.empty_cache()
+        clear_memory(device)
 
 
 class SimpleTextEncoder(nn.Module):

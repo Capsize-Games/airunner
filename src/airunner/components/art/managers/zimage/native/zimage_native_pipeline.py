@@ -39,6 +39,7 @@ from airunner.components.art.managers.zimage.native.zimage_text_encoder import (
     ZImageTextEncoder,
     ZImageTokenizer,
 )
+from airunner.utils.memory import clear_memory
 # We still rely on diffusers AutoencoderKL until a native VAE is available.
 from diffusers import AutoencoderKL
 
@@ -1273,14 +1274,7 @@ class ZImageNativePipeline:
             if "vae" in self._loaded_components:
                 self._loaded_components.remove("vae")
         
-        # Force garbage collection
-        gc.collect()
-        try:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except (RuntimeError, AttributeError):
-            # torch may be None during interpreter shutdown
-            pass
+        clear_memory(self.device)
         
         logger.info(f"Unloaded components: {components}")
     

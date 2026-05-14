@@ -223,6 +223,54 @@ class ComponentLoaderMixin:
                 self.logger.warning(f"Error unloading workflow manager: {e}")
                 self._workflow_manager = None
 
+    def _should_keep_unused_model_in_cpu_memory(self) -> bool:
+        """Return whether unload should retain one CPU copy for reuse."""
+        memory_settings = getattr(self, "memory_settings", None)
+        return bool(
+            getattr(memory_settings, "move_unused_model_to_cpu", False)
+        )
+
+    @staticmethod
+    def _move_model_instance_to_cpu(model) -> bool:
+        """Move one model-like object to CPU when supported."""
+        if model is None:
+            return False
+        move_to = getattr(model, "to", None)
+        if callable(move_to):
+            move_to("cpu")
+            return True
+        move_cpu = getattr(model, "cpu", None)
+        if callable(move_cpu):
+            move_cpu()
+            return True
+        return False
+
+    def _park_unused_model_on_cpu(self) -> bool:
+        """Keep one offloadable local model in CPU memory for reuse."""
+        if not self._should_keep_unused_model_in_cpu_memory():
+            return False
+
+        candidates = [
+            self._model,
+            getattr(self._chat_model, "model", None),
+        ]
+        moved = False
+        for candidate in candidates:
+            try:
+                moved = self._move_model_instance_to_cpu(candidate) or moved
+            except Exception as exc:
+                self.logger.warning(
+                    "Failed to move unused model to CPU: %s",
+                    exc,
+                )
+
+        if moved:
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+        return moved
+
     def _unload_model(self) -> None:
         """Unload the LLM model from memory.
 
@@ -261,13 +309,19 @@ class ComponentLoaderMixin:
         Calls all unload methods in proper order: workflow manager,
         tool manager, chat model, tokenizer, and model.
         """
-        for unload_func in [
+        unload_funcs = [
             self._unload_workflow_manager,
             self._unload_tool_manager,
-            self._unload_chat_model,
-            self._unload_tokenizer,
-            self._unload_model,
-        ]:
+        ]
+        if not self._park_unused_model_on_cpu():
+            unload_funcs.extend(
+                [
+                    self._unload_chat_model,
+                    self._unload_tokenizer,
+                    self._unload_model,
+                ]
+            )
+        for unload_func in unload_funcs:
             try:
                 unload_func()
             except Exception as e:

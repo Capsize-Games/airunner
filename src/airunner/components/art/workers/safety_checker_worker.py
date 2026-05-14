@@ -10,6 +10,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode, ModelStatus, ModelType
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner.utils.memory import clear_memory
 
 
 class SafetyCheckerWorker(Worker):
@@ -268,13 +269,7 @@ class SafetyCheckerWorker(Worker):
                 pass
             self._feature_extractor = None
 
-        # Force garbage collection
-        import gc
-
-        gc.collect()
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        clear_memory(self._device)
 
         self._emit_status(ModelStatus.UNLOADED)
         self.logger.info("Safety checker worker unloaded")

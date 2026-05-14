@@ -43,7 +43,7 @@ from airunner.enums import (
     ModelType,
     ModelStatus,
 )
-from airunner.utils.memory import clear_memory
+from airunner.utils.memory import apply_cudnn_benchmark, clear_memory
 from airunner.components.llm.managers.llm_settings import LLMSettings
 
 
@@ -119,6 +119,7 @@ class LLMModelManager(
         self._hw_profiler = None
         self._current_request_id = None
         self._last_load_error = None
+        apply_cudnn_benchmark(self.memory_settings)
 
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM.
@@ -148,6 +149,7 @@ class LLMModelManager(
             "load() called, current status: %s",
             self.model_status[ModelType.LLM],
         )
+        apply_cudnn_benchmark(self.memory_settings)
         if self.model_status[ModelType.LLM] in (
             ModelStatus.LOADING,
             ModelStatus.LOADED,

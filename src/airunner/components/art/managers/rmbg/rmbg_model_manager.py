@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 import importlib.machinery
 import importlib.util
 import logging
@@ -15,6 +14,7 @@ from safetensors.torch import load_file
 from torchvision import transforms
 
 from airunner.settings import MODELS_DIR
+from airunner.utils.memory import clear_memory
 from airunner.utils.image.convert_image_to_binary import (
     convert_image_to_binary,
 )
@@ -152,11 +152,10 @@ class RMBGModelManager:
             )
 
         del model
-        gc.collect()
+        clear_memory(device)
 
         if device and device.startswith("cuda"):
             try:
-                torch.cuda.empty_cache()
                 if hasattr(torch.cuda, "ipc_collect"):
                     torch.cuda.ipc_collect()
             except Exception:

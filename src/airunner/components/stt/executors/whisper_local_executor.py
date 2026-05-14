@@ -16,6 +16,7 @@ from airunner.components.stt.executors.stt_executor import STTExecutor
 from airunner.enums import ModelStatus, ModelType, SignalCode
 from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
 from airunner.utils.application.log_hygiene import summarize_text
+from airunner.utils.memory import clear_memory
 
 
 class WhisperLocalExecutor(BaseModelManager, STTExecutor):
@@ -129,7 +130,7 @@ class WhisperLocalExecutor(BaseModelManager, STTExecutor):
         )
         try:
             if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+                clear_memory(self._device)
 
             self._model = WhisperModel(
                 self.model_path,
@@ -151,8 +152,7 @@ class WhisperLocalExecutor(BaseModelManager, STTExecutor):
         if self._model is not None:
             del self._model
         self._model = None
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        clear_memory(self._device)
 
     def _process_inputs(self, inputs: np.ndarray) -> str:
         """Run faster-whisper transcription on normalized audio samples."""

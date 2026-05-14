@@ -12,8 +12,11 @@ CMAKE_BUILD_TYPE="Release"
 JOBS="${AIRUNNER_BUILD_JOBS:-}"
 CLEAN=0
 DRY_RUN=0
+ENABLE_CUDA="${AIRUNNER_SIDECAR_ENABLE_CUDA:-0}"
+CUDA_ARCHITECTURES="${AIRUNNER_SIDECAR_CUDA_ARCHITECTURES:-}"
 
 CMAKE_PLATFORM_ARGS=()
+CMAKE_CUDA_ARGS=()
 BINARY_SUFFIX=""
 
 usage() {
@@ -26,6 +29,8 @@ Options:
   --work-root PATH                 Source and build work directory
   --clean                          Remove previous output for the target
   --dry-run                        Print build steps without running them
+    --enable-cuda                    Build llama.cpp and whisper.cpp with CUDA
+    --cuda-architectures LIST        Set CUDA architectures for both builds
   -h, --help                       Show this help text
 EOF
 }
@@ -61,6 +66,14 @@ parse_args() {
                 DRY_RUN=1
                 shift
                 ;;
+            --enable-cuda)
+                ENABLE_CUDA=1
+                shift
+                ;;
+            --cuda-architectures)
+                CUDA_ARCHITECTURES="$2"
+                shift 2
+                ;;
             -h|--help)
                 usage
                 exit 0
@@ -93,7 +106,18 @@ detect_jobs() {
 
 configure_platform() {
     CMAKE_PLATFORM_ARGS=()
+    CMAKE_CUDA_ARGS=()
     BINARY_SUFFIX=""
+
+    if [[ "$ENABLE_CUDA" == "1" ]]; then
+        CMAKE_CUDA_ARGS=(-DGGML_CUDA=ON)
+        if [[ -n "$CUDA_ARCHITECTURES" ]]; then
+            CMAKE_CUDA_ARGS+=(
+                -DGGML_CUDA_ARCHITECTURES="$CUDA_ARCHITECTURES"
+                -DCMAKE_CUDA_ARCHITECTURES="$CUDA_ARCHITECTURES"
+            )
+        fi
+    fi
 
     if [[ "$TARGET_PLATFORM" == "linux" ]]; then
         return
@@ -175,6 +199,7 @@ configure_build() {
         -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
         -DBUILD_SHARED_LIBS=OFF \
         "${CMAKE_PLATFORM_ARGS[@]}" \
+        "${CMAKE_CUDA_ARGS[@]}" \
         "$@"
 }
 

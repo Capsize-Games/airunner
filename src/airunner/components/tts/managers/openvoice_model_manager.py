@@ -282,6 +282,14 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         self.logger.debug("Unloading OpenVoice")
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
+        if self.model is not None:
+            try:
+                self.model.unload()
+            except Exception as exc:
+                self.logger.warning(
+                    "Failed to unload OpenVoice model cleanly: %s",
+                    exc,
+                )
         self.model = None
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
 

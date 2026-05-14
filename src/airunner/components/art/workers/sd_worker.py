@@ -38,6 +38,7 @@ from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.enums import StableDiffusionVersion, normalize_art_version
 from airunner.components.application.exceptions import PipeNotLoadedException
 from airunner.utils.image import convert_image_to_binary
+from airunner.utils.memory import apply_cudnn_benchmark
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -67,6 +68,7 @@ class SDWorker(Worker):
         self._active_daemon_job_id: Optional[str] = None
         self._pending_daemon_unload_after_cancel: bool = False
         super().__init__()
+        apply_cudnn_benchmark(self.memory_settings)
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []

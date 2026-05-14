@@ -100,3 +100,28 @@ def test_warm_model_components_runs_full_inference_warmup(monkeypatch):
     warmup_request = manager.generate.call_args.args[0]
     assert warmup_request.message == "Warm up."
     assert warmup_request.gender == "Female"
+
+
+def test_unload_uses_model_cleanup_before_clearing_reference():
+    fake_tts = SimpleNamespace(unload=Mock())
+    manager = SimpleNamespace(
+        logger=SimpleNamespace(
+            debug=lambda *args, **kwargs: None,
+            warning=Mock(),
+        ),
+        change_model_status=Mock(),
+        model=fake_tts,
+    )
+
+    OpenVoiceModelManager.unload(manager)
+
+    fake_tts.unload.assert_called_once_with()
+    assert manager.model is None
+    assert manager.change_model_status.call_args_list[0].args == (
+        ModelType.TTS,
+        ModelStatus.LOADING,
+    )
+    assert manager.change_model_status.call_args_list[-1].args == (
+        ModelType.TTS,
+        ModelStatus.UNLOADED,
+    )
