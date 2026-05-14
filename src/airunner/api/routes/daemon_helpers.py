@@ -10,6 +10,7 @@ from fastapi import HTTPException, Request
 from airunner.api.models.runtime_route_request import RuntimeRouteRequest
 from airunner.api.models.runtime_summary_response import RuntimeSummaryResponse
 from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope, ResponseEnvelope
+from airunner.enums import ModelStatus
 from airunner.runtimes.base import RuntimeClient
 from airunner.runtimes.contracts import RuntimeAction, RuntimeHealthStatus, RuntimeKind
 
@@ -78,6 +79,7 @@ def runtime_loaded(request: Request, runtime: RuntimeKind) -> bool:
 
 
 def health_fields(
+    request: Request,
     client: RuntimeClient,
     loaded: bool,
 ) -> tuple[str, str, dict[str, Any]]:
@@ -87,7 +89,20 @@ def health_fields(
     details = health.details
     metadata = dict(health.metadata)
 
-    if health.status is RuntimeHealthStatus.UNKNOWN:
+    (
+        status,
+        details,
+        metadata,
+        local_override_applied,
+    ) = _prefer_local_llm_worker_status(
+        request,
+        client,
+        status,
+        details,
+        metadata,
+    )
+
+    if health.status is RuntimeHealthStatus.UNKNOWN and not local_override_applied:
         if loaded:
             status = RuntimeHealthStatus.READY.value
             details = details or "loaded"
@@ -97,6 +112,78 @@ def health_fields(
             details = details or "not loaded"
 
     return status, details, metadata
+
+
+def _prefer_local_llm_worker_status(
+    request: Request,
+    client: RuntimeClient,
+    status: str,
+    details: str,
+    metadata: dict[str, Any],
+) -> tuple[str, str, dict[str, Any], bool]:
+    """Prefer the daemon's live local LLM worker status when available."""
+    if client.descriptor.runtime is not RuntimeKind.LLM:
+        return status, details, metadata, False
+
+    worker_status = _local_llm_worker_status(request)
+    override = {
+        ModelStatus.LOADING: (RuntimeHealthStatus.STARTING.value, "loading"),
+        ModelStatus.LOADED: (RuntimeHealthStatus.READY.value, "loaded"),
+        ModelStatus.READY: (RuntimeHealthStatus.READY.value, "loaded"),
+        ModelStatus.FAILED: (RuntimeHealthStatus.FAILED.value, "failed"),
+        ModelStatus.UNLOADED: (RuntimeHealthStatus.STOPPED.value, "unloaded"),
+    }.get(worker_status)
+    if override is None:
+        return status, details, metadata, False
+
+    merged_metadata = _configured_llm_metadata(metadata)
+    merged_metadata["model_status"] = override[1]
+    return override[0], override[1], merged_metadata, True
+
+
+def _local_llm_worker_status(request: Request) -> Any:
+    """Return the current daemon-local LLM worker status when one exists."""
+    lifecycle_service = getattr(request.app.state, "lifecycle_service", None)
+    worker_manager = getattr(lifecycle_service, "worker_manager", None)
+    worker = getattr(worker_manager, "_llm_generate_worker", None)
+    if worker is None:
+        return None
+
+    status_getter = getattr(worker, "current_model_status", None)
+    if callable(status_getter):
+        try:
+            status = status_getter()
+        except Exception:
+            status = None
+        if status is not None:
+            return status
+
+    model_manager = getattr(worker, "_model_manager", None)
+    if model_manager is not None and getattr(model_manager, "_chat_model", None) is not None:
+        return ModelStatus.LOADED
+    return None
+
+
+def _configured_llm_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Merge persisted LLM model identity into runtime metadata."""
+    merged = dict(metadata)
+    try:
+        from airunner.components.llm.data.llm_generator_settings import (
+            LLMGeneratorSettings,
+        )
+
+        settings = LLMGeneratorSettings.objects.first()
+    except Exception:
+        settings = None
+
+    if settings is None:
+        return merged
+
+    for key in ("model_path", "model_id", "model_version"):
+        value = str(getattr(settings, key, "") or "").strip()
+        if value and key not in merged:
+            merged[key] = value
+    return merged
 
 
 def supports_cancellation(client: RuntimeClient) -> bool:
@@ -111,7 +198,11 @@ def build_runtime_summary(
 ) -> RuntimeSummaryResponse:
     """Build a daemon-facing runtime summary for a client."""
     lifecycle_loaded = runtime_loaded(request, client.descriptor.runtime)
-    status, details, metadata = health_fields(client, lifecycle_loaded)
+    status, details, metadata = health_fields(
+        request,
+        client,
+        lifecycle_loaded,
+    )
     loaded = infer_loaded_state(status, metadata, lifecycle_loaded)
     descriptor = client.descriptor
     return RuntimeSummaryResponse(

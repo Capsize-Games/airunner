@@ -1,8 +1,10 @@
 """Focused tests for FastAPI legacy compatibility routes."""
 
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 from airunner.api.routes import legacy
+from airunner.enums import SignalCode
 
 
 def test_legacy_admin_shutdown_schedules_process_exit(monkeypatch):
@@ -47,3 +49,54 @@ def test_legacy_llm_generate_disables_tts_for_stream_bridge(monkeypatch):
 
     assert captured["prompt"] == "Hello"
     assert captured["do_tts_reply"] is False
+
+
+def test_legacy_admin_llm_unload_prefers_live_worker(monkeypatch):
+    worker = SimpleNamespace(
+        request_unload_after_interrupt=Mock(return_value=True)
+    )
+    api = SimpleNamespace(
+        _worker_manager=SimpleNamespace(_llm_generate_worker=worker)
+    )
+    mediator = Mock()
+
+    monkeypatch.setattr(legacy, "_get_airunner_api", lambda _req: api)
+    monkeypatch.setattr(legacy, "SignalMediator", lambda: mediator)
+
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(lifecycle_service=None))
+    )
+
+    response = legacy.legacy_admin_unload_llm(request)
+
+    assert response == {"status": "ok", "queued": True}
+    worker.request_unload_after_interrupt.assert_called_once_with(
+        {"source": "daemon_admin_unload"}
+    )
+    mediator.emit_signal.assert_not_called()
+
+
+def test_legacy_admin_llm_unload_interrupts_then_queues_unload(monkeypatch):
+    emitted = []
+    mediator = SimpleNamespace(
+        emit_signal=lambda code, data=None: emitted.append((code, data))
+    )
+
+    api = SimpleNamespace(_worker_manager=None)
+    monkeypatch.setattr(legacy, "_get_airunner_api", lambda _req: api)
+    monkeypatch.setattr(legacy, "SignalMediator", lambda: mediator)
+
+    request = SimpleNamespace(
+        app=SimpleNamespace(state=SimpleNamespace(lifecycle_service=None))
+    )
+
+    response = legacy.legacy_admin_unload_llm(request)
+
+    assert response == {"status": "ok", "queued": True}
+    assert emitted == [
+        (SignalCode.INTERRUPT_PROCESS_SIGNAL, {}),
+        (
+            SignalCode.LLM_UNLOAD_SIGNAL,
+            {"source": "daemon_admin_unload"},
+        ),
+    ]

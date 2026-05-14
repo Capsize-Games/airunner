@@ -16,6 +16,7 @@ from airunner.enums import (
     ModelAction,
     ModelStatus,
     ModelType,
+    SignalCode,
     StableDiffusionVersion,
 )
 
@@ -28,8 +29,9 @@ PNG_BYTES = base64.b64decode(
 class FakeDaemonClient:
     """Minimal daemon client double for SD worker tests."""
 
-    def __init__(self):
+    def __init__(self, *, wait_error=None):
         self.calls = []
+        self.wait_error = wait_error
 
     def start_art_generation(self, **kwargs):
         self.calls.append(("start", kwargs))
@@ -37,6 +39,8 @@ class FakeDaemonClient:
 
     def wait_art_job(self, job_id, **kwargs):
         self.calls.append(("wait", job_id, kwargs))
+        if self.wait_error is not None:
+            raise RuntimeError(self.wait_error)
         return PNG_BYTES
 
     def cancel_art_job(self, job_id, **kwargs):
@@ -60,8 +64,10 @@ def _worker(client):
     worker_responses = []
     alerts = []
     errors = []
+    signals = []
     fake = SimpleNamespace(
         _active_daemon_job_id=None,
+        _pending_daemon_unload_after_cancel=False,
         image_export_worker=export_worker,
         api=SimpleNamespace(
             art=SimpleNamespace(
@@ -77,6 +83,8 @@ def _worker(client):
         path_settings=SimpleNamespace(image_path="/tmp"),
         metadata_settings=SimpleNamespace(export_metadata=False),
         controlnet_settings=SimpleNamespace(controlnet="canny"),
+        emit_signal=lambda code, data=None: signals.append((code, data)),
+        _signal_emissions=signals,
         logger=SimpleNamespace(
             debug=lambda *args, **kwargs: None,
             info=lambda *args, **kwargs: None,
@@ -89,6 +97,12 @@ def _worker(client):
     fake._daemon_result_data = SDWorker._daemon_result_data.__get__(fake, SimpleNamespace)
     fake._publish_daemon_art_result = SDWorker._publish_daemon_art_result.__get__(fake, SimpleNamespace)
     fake._handle_daemon_art_error = SDWorker._handle_daemon_art_error.__get__(fake, SimpleNamespace)
+    fake._emit_pending_daemon_unload_if_requested = (
+        SDWorker._emit_pending_daemon_unload_if_requested.__get__(
+            fake,
+            SimpleNamespace,
+        )
+    )
     fake._generate_image_via_daemon = SDWorker._generate_image_via_daemon.__get__(fake, SimpleNamespace)
     return fake, export_worker, canvas_calls, worker_responses, alerts, errors
 
@@ -157,6 +171,29 @@ def test_interrupt_image_generation_cancels_active_daemon_job():
     SDWorker.on_interrupt_image_generation_signal(worker)
 
     assert client.calls[0][0] == "cancel"
+
+
+def test_generate_image_via_daemon_emits_pending_unload_after_cancel():
+    client = FakeDaemonClient(wait_error="Art generation cancelled")
+    worker, _export_worker, _canvas_calls, responses, _alerts, _errors = _worker(
+        client
+    )
+    worker._pending_daemon_unload_after_cancel = True
+    request = ImageRequest(
+        prompt="A mountain",
+        model_path="/tmp/art-model",
+        version="Z-Image Turbo",
+        scheduler="Flow Match Euler",
+        generator_section=GeneratorSection.TXT2IMG,
+    )
+
+    worker._generate_image_via_daemon({"image_request": request})
+
+    assert responses[0][0] is EngineResponseCode.INTERRUPTED
+    assert worker._signal_emissions == [
+        (SignalCode.SD_UNLOAD_SIGNAL, {})
+    ]
+    assert worker._pending_daemon_unload_after_cancel is False
 
 
 def test_finalize_do_generate_signal_reports_failures_via_callback():

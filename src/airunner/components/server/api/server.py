@@ -320,6 +320,38 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     return getattr(manager, 'model_is_loaded', False)
         return False
 
+    def _art_model_status(self) -> str:
+        """Return the current art model lifecycle status string."""
+        api = get_api()
+        if not api:
+            return "unloaded"
+
+        worker_manager = getattr(api, "_worker_manager", None)
+        if worker_manager is None:
+            return "unloaded"
+
+        worker = getattr(worker_manager, "_sd_worker", None)
+        if worker is None:
+            return "unloaded"
+
+        manager = getattr(worker, "_model_manager", None)
+        if manager is None:
+            return "unloaded"
+
+        try:
+            model_status = manager.model_status.get(manager.model_type)
+        except Exception:
+            model_status = None
+
+        status_value = str(getattr(model_status, "value", "")).strip().lower()
+        if status_value:
+            return status_value
+        if getattr(manager, "sd_is_loading", False):
+            return "loading"
+        if getattr(manager, "model_is_loaded", False):
+            return "loaded"
+        return "unloaded"
+
     def _ensure_art_model_loaded(self, model_path: str | None = None) -> tuple[bool, str]:
         """Ensure art/Stable Diffusion model is loaded, triggering load if necessary.
         
@@ -827,6 +859,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_health(self):
         """Health check endpoint."""
+        art_model_status = "disabled"
+        if os.environ.get("AIRUNNER_SD_ON", "0") == "1":
+            art_model_status = self._art_model_status()
         health_data = {
             "status": "ready",
             "services": {
@@ -835,6 +870,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "tts": os.environ.get("AIRUNNER_TTS_ON", "0") == "1",
                 "stt": os.environ.get("AIRUNNER_STT_ON", "0") == "1",
             },
+            "art_model_status": art_model_status,
+            "art_model_loaded": art_model_status in {"loaded", "ready"},
             "version": "2.0.0",
         }
         self._send_json_response(health_data)

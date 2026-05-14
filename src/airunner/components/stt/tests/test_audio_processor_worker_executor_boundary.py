@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from airunner.components.stt.workers.audio_processor_worker import (
     AudioProcessorWorker,
 )
+from airunner.enums import SignalCode
 
 
 def test_handle_message_uses_executor_for_transcription():
@@ -128,6 +129,27 @@ def test_stt_load_uses_refreshed_api_for_daemon_detection():
 
     executor.load.assert_not_called()
     worker.emit_signal.assert_not_called()
+
+
+def test_stt_load_uses_local_executor_when_daemon_is_unreachable():
+    executor = SimpleNamespace(load=MagicMock())
+    worker = AudioProcessorWorker.__new__(AudioProcessorWorker)
+    worker._executor = executor
+    worker.logger = MagicMock()
+    worker.emit_signal = MagicMock()
+    worker.api = SimpleNamespace(
+        daemon_client=SimpleNamespace(
+            is_available=lambda timeout_seconds=0.2: False,
+        ),
+        headless=False,
+    )
+
+    AudioProcessorWorker._stt_load(worker)
+
+    executor.load.assert_called_once_with()
+    worker.emit_signal.assert_called_once_with(
+        SignalCode.STT_START_CAPTURE_SIGNAL
+    )
 
 
 def test_handle_message_uses_refreshed_api_when_cached_api_is_stale():

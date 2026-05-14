@@ -6,6 +6,7 @@ from typing import Optional, Type, Dict
 
 import soundfile as sf
 
+from airunner.daemon_client.availability import daemon_client_is_available
 from airunner.components.tts.managers.exceptions import OpenVoiceError
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
@@ -242,7 +243,7 @@ class TTSGeneratorWorker(Worker):
         if api is None or getattr(api, "headless", False):
             return None
         client = getattr(api, "daemon_client", None)
-        if client is not None:
+        if client is not None and daemon_client_is_available(client):
             return client
 
         main_window_getter = getattr(
@@ -258,7 +259,7 @@ class TTSGeneratorWorker(Worker):
         daemon_getter = getattr(worker_manager, "_daemon_client", None)
         if callable(daemon_getter):
             client = daemon_getter()
-            if client is not None:
+            if client is not None and daemon_client_is_available(client):
                 return client
 
         for candidate in (
@@ -269,7 +270,7 @@ class TTSGeneratorWorker(Worker):
             if candidate is None or getattr(candidate, "headless", False):
                 continue
             client = getattr(candidate, "daemon_client", None)
-            if client is not None:
+            if client is not None and daemon_client_is_available(client):
                 return client
         return None
 
@@ -281,25 +282,11 @@ class TTSGeneratorWorker(Worker):
         """Return whether GUI-owned streamed TTS should use the daemon path."""
         current_api_getter = getattr(self, "_current_api", None)
         if callable(current_api_getter):
-            api = current_api_getter()
-        else:
-            api = TTSGeneratorWorker._current_api(self)
-        if api is not None and getattr(api, "daemon_client", None) is not None:
-            return True
+            return TTSGeneratorWorker._daemon_client(self) is not None
 
-        main_window_getter = getattr(
-            self,
-            "_main_window",
-            TTSGeneratorWorker._main_window,
-        )
-        main_window = main_window_getter()
-        if main_window is None:
-            return False
-
-        worker_manager = getattr(main_window, "worker_manager", None)
-        daemon_getter = getattr(worker_manager, "_daemon_client", None)
-        if callable(daemon_getter):
-            return daemon_getter() is not None
+        daemon_client_getter = getattr(self, "_daemon_client", None)
+        if callable(daemon_client_getter):
+            return daemon_client_getter() is not None
         return False
 
     def _report_tts_load_error(self, error: Exception) -> None:

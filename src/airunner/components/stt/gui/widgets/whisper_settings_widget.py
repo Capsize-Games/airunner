@@ -35,9 +35,9 @@ class WhisperSettingsWidget(BaseWidget):
     def on_language_changed(self, language):
         self.update_whisper_settings(language=language)
 
-    @Slot(int)
-    def on_task_changed(self, value):
-        self.update_whisper_settings(task=value)
+    @Slot(str)
+    def on_task_changed(self, task: str):
+        self.update_whisper_settings(task=task)
 
     @Slot()
     def on_reset_default_clicked(self):

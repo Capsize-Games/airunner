@@ -66,11 +66,20 @@ class TTSVocalizerWorker(Worker):
 
     def _current_api(self):
         """Return the freshest API reference available to this worker."""
-        candidates = []
+        explicit_candidates = []
         refresher = getattr(self, "refresh_api_reference", None)
         if callable(refresher):
-            candidates.append(refresher())
-        candidates.append(getattr(self, "api", None))
+            explicit_candidates.append(refresher())
+        explicit_candidates.append(getattr(self, "api", None))
+
+        api = TTSVocalizerWorker._resolve_current_api_candidates(
+            self,
+            explicit_candidates,
+        )
+        if api is not None:
+            return api
+
+        candidates = []
 
         resolve_api = getattr(
             self,
@@ -109,6 +118,30 @@ class TTSVocalizerWorker(Worker):
         if fallback_api is not None:
             self.api = fallback_api
         return fallback_api
+
+    @staticmethod
+    def _resolve_current_api_candidates(worker, candidates):
+        """Return one usable API from the provided candidate list."""
+        fallback_api = None
+        had_candidate = False
+        for candidate in candidates:
+            candidate = TTSVocalizerWorker._normalize_api_candidate(candidate)
+            if candidate is None or getattr(candidate, "headless", False):
+                continue
+            had_candidate = True
+            if TTSVocalizerWorker._candidate_has_sounddevice_manager(
+                candidate
+            ):
+                worker.api = candidate
+                return candidate
+            if fallback_api is None:
+                fallback_api = candidate
+
+        if fallback_api is not None:
+            worker.api = fallback_api
+        if had_candidate:
+            return fallback_api
+        return None
 
     @staticmethod
     def _normalize_api_candidate(candidate):

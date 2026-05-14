@@ -1,7 +1,9 @@
 import pytest
 
+from airunner.components.art.api import art_services as art_services_module
 from airunner.components.art.api.art_services import ARTAPIService
 from airunner.components.art.managers.stablediffusion.image_request import ImageRequest
+from airunner.components.model_management.types import ModelState
 from airunner.enums import SignalCode, GeneratorSection
 
 
@@ -80,3 +82,77 @@ def test_send_request_prefers_data_image_request(monkeypatch):
     assert called["canvas"] == 0
     assert emitted[-1][0] == SignalCode.DO_GENERATE_SIGNAL
     assert emitted[-1][1]["image_request"] is in_data
+
+
+def test_send_request_marks_requested_model_loading(monkeypatch):
+    api = ARTAPIService()
+    emitted = []
+    manager_calls = []
+
+    def fake_emit_signal(code, data=None):
+        emitted.append((code, data))
+
+    class FakeManager:
+        def get_model_state(self, _model_id):
+            return ModelState.UNLOADED
+
+        def set_model_state(self, model_id, state, model_type=None):
+            manager_calls.append((model_id, state, model_type))
+
+    request = ImageRequest(
+        prompt="explicit",
+        model_path="/models/zimage.safetensors",
+        generator_section=GeneratorSection.TXT2IMG,
+    )
+
+    monkeypatch.setattr(api, "emit_signal", fake_emit_signal)
+    monkeypatch.setattr(
+        art_services_module,
+        "ModelResourceManager",
+        FakeManager,
+    )
+
+    api.send_request(image_request=request)
+
+    assert manager_calls == [
+        (
+            "/models/zimage.safetensors",
+            ModelState.LOADING,
+            "text_to_image",
+        )
+    ]
+    assert emitted[-1][0] == SignalCode.DO_GENERATE_SIGNAL
+
+
+def test_send_request_keeps_loaded_requested_model_state(monkeypatch):
+    api = ARTAPIService()
+    emitted = []
+    manager_calls = []
+
+    def fake_emit_signal(code, data=None):
+        emitted.append((code, data))
+
+    class FakeManager:
+        def get_model_state(self, _model_id):
+            return ModelState.LOADED
+
+        def set_model_state(self, model_id, state, model_type=None):
+            manager_calls.append((model_id, state, model_type))
+
+    request = ImageRequest(
+        prompt="explicit",
+        model_path="/models/zimage.safetensors",
+        generator_section=GeneratorSection.TXT2IMG,
+    )
+
+    monkeypatch.setattr(api, "emit_signal", fake_emit_signal)
+    monkeypatch.setattr(
+        art_services_module,
+        "ModelResourceManager",
+        FakeManager,
+    )
+
+    api.send_request(image_request=request)
+
+    assert manager_calls == []
+    assert emitted[-1][0] == SignalCode.DO_GENERATE_SIGNAL

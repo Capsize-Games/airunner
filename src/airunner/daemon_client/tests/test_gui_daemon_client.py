@@ -161,6 +161,10 @@ class FakeSession:
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
             return FakeResponse(payload={"status": "ok"})
+        if url.endswith("/admin/llm/unload"):
+            if not self.ready_state["ready"]:
+                raise requests.ConnectionError("daemon down")
+            return FakeResponse(payload={"status": "ok", "queued": True})
         raise AssertionError(f"Unexpected URL: {url}")
 
 
@@ -554,6 +558,21 @@ def test_runtime_control_posts_expected_payload():
     assert load_call[1].endswith("/api/v1/daemon/runtimes/llm/load")
     assert load_call[2]["json"]["request_id"] == "req-1"
     assert unload_call[1].endswith("/api/v1/daemon/runtimes/llm/unload")
+
+
+def test_unload_local_llm_posts_admin_unload_endpoint():
+    ready_state = {"ready": True}
+    session = FakeSession(ready_state)
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=session,
+    )
+
+    response = client.unload_local_llm()
+
+    assert response == {"status": "ok", "queued": True}
+    assert session.calls[-1][0] == "POST"
+    assert session.calls[-1][1].endswith("/admin/llm/unload")
 
 
 def test_transcribe_audio_posts_multipart_request():

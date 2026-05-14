@@ -14,6 +14,8 @@ from PySide6.QtCore import (
 from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.application.data import ShortcutKeys
+from airunner.components.model_management import ModelResourceManager
+from airunner.components.model_management.types import ModelState
 from airunner.enums import (
     normalize_art_version,
     SignalCode,
@@ -102,7 +104,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
     _prompt_containers: Dict[str, QWidget] = {}
     icons = [
         ("chevron-up", "generate_button"),
-        ("x", "interrupt_button"),
+        ("circle-stop", "interrupt_button"),
         ("circle", "infinite_images_button"),
     ]
     _splitters = ["generator_form_splitter"]
@@ -133,6 +135,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._generation_in_progress = False
         self._backend_progress_started = False
         self._waiting_for_backend_progress = False
+        self._busy_progress_models = set()
         self.thread = QThread()
         self.worker = SaveGeneratorSettingsWorker(parent=self)
         self.worker.moveToThread(self.thread)
@@ -551,12 +554,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def do_generate_image_from_image_signal_handler(self, _data):
         self.do_generate()
 
-    def do_generate(self, data=None):
+    def _build_generate_request(self, data=None):
         data = data or {}
-
         callback = data.get("finalize", None)
-
-        # Update data with additional prompt data from self._prompt_containers
         additional_prompts = [
             {
                 "prompt": container.get_prompt(),
@@ -564,11 +564,23 @@ class StableDiffusionGeneratorForm(BaseWidget):
             }
             for _prompt_id, container in self._prompt_containers.items()
         ]
-
-        image_request = self.api.art.canvas.create_image_request(
+        return self.api.art.canvas.create_image_request(
             additional_prompts=additional_prompts, callback=callback
         )
 
+    @staticmethod
+    def _uses_loaded_generation_progress(image_request) -> bool:
+        model_path = str(getattr(image_request, "model_path", "") or "").strip()
+        if not model_path:
+            return False
+        resource_manager = ModelResourceManager()
+        return resource_manager.get_model_state(model_path) is ModelState.LOADED
+
+    def do_generate(self, data=None):
+        data = data or {}
+        image_request = data.get("image_request")
+        if image_request is None:
+            image_request = self._build_generate_request(data)
         self.api.art.send_request(image_request=image_request)
 
     @Slot()
@@ -581,11 +593,24 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
     def handle_generate_button_clicked(self, data=None):
+        request_data = dict(data or {})
+        image_request = request_data.get("image_request")
+        if image_request is None:
+            try:
+                image_request = self._build_generate_request(request_data)
+            except Exception:
+                image_request = None
+            if image_request is not None:
+                request_data["image_request"] = image_request
+
         self._generation_in_progress = True
         self._backend_progress_started = False
         self._waiting_for_backend_progress = True
-        self.start_progress_bar()
-        self.generate(data)
+        if self._uses_loaded_generation_progress(image_request):
+            self.set_progress_bar_value(0)
+        else:
+            self.start_progress_bar()
+        self.generate(request_data or None)
 
     @Slot(bool)
     def on_infinite_images_button_toggled(self, val: bool):
@@ -702,25 +727,50 @@ class StableDiffusionGeneratorForm(BaseWidget):
         progressbar.setValue(0)
         progressbar.setFormat("")
 
-    def on_model_status_changed_signal(self, data):
-        if data["model"] is ModelType.SD:
-            if data["status"] is ModelStatus.LOADING:
-                if (
-                    not self._generation_in_progress
-                    or not self._backend_progress_started
-                ):
-                    self.start_progress_bar()
-                self.ui.generate_button.setEnabled(False)
-                self.ui.interrupt_button.setEnabled(False)
-                return
+    def _progress_models(self):
+        models = getattr(self, "_busy_progress_models", None)
+        if models is None:
+            models = set()
+            self._busy_progress_models = models
+        return models
 
+    @staticmethod
+    def _tracks_progress_model(model):
+        return model in (ModelType.SD, ModelType.RMBG)
+
+    def _handle_loading_progress_model(self, model):
+        self._progress_models().add(model)
+        should_start = model is ModelType.RMBG or (
+            not self._generation_in_progress
+            or not self._backend_progress_started
+        )
+        if should_start:
+            self.start_progress_bar()
+        if model is ModelType.SD:
+            self.ui.generate_button.setEnabled(False)
+            self.ui.interrupt_button.setEnabled(False)
+
+    def _handle_idle_progress_model(self, model):
+        self._progress_models().discard(model)
+        if model is ModelType.SD:
             self.ui.generate_button.setEnabled(True)
             self.ui.interrupt_button.setEnabled(True)
-            if self._waiting_for_backend_progress:
-                return
-            if getattr(self, "_generation_in_progress", False):
-                return
-            self._set_progress_bar_idle()
+        if self._waiting_for_backend_progress:
+            return
+        if getattr(self, "_generation_in_progress", False):
+            return
+        if self._progress_models():
+            return
+        self._set_progress_bar_idle()
+
+    def on_model_status_changed_signal(self, data):
+        model = data.get("model")
+        if not self._tracks_progress_model(model):
+            return
+        if data.get("status") is ModelStatus.LOADING:
+            self._handle_loading_progress_model(model)
+            return
+        self._handle_idle_progress_model(model)
 
     def showEvent(self, event):
         if not self.initialized:

@@ -65,6 +65,7 @@ class SDWorker(Worker):
         self._pending_scheduler: Optional[str] = None  # Deferred scheduler change
         self._is_generating: bool = False  # Track generation state
         self._active_daemon_job_id: Optional[str] = None
+        self._pending_daemon_unload_after_cancel: bool = False
         super().__init__()
         self.__requested_action = ModelAction.NONE
         self._threads = []
@@ -497,6 +498,20 @@ class SDWorker(Worker):
             }
         )
 
+    def request_daemon_unload_after_cancel(self) -> bool:
+        """Unload the daemon art runtime after the active job finishes."""
+        if self._active_daemon_job_id is None:
+            return False
+        self._pending_daemon_unload_after_cancel = True
+        return True
+
+    def _emit_pending_daemon_unload_if_requested(self) -> None:
+        """Emit one deferred unload after a daemon art job exits."""
+        if not self._pending_daemon_unload_after_cancel:
+            return
+        self._pending_daemon_unload_after_cancel = False
+        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
+
     def on_interrupt_image_generation_signal(self, _data=None):
         client = self._daemon_client()
         if client is not None and self._active_daemon_job_id is not None:
@@ -620,6 +635,8 @@ class SDWorker(Worker):
             GeneratorSection.TXT2IMG.value,
         )
         image_b64 = SDWorker._encode_daemon_image(image_request.image)
+        error_message: Optional[str] = None
+        image_bytes: Optional[bytes] = None
 
         def on_progress(status: Dict) -> None:
             try:
@@ -678,11 +695,26 @@ class SDWorker(Worker):
                 len(image_bytes),
             )
         except RuntimeError as exc:
-            self._handle_daemon_art_error(str(exc))
-            return
+            error_message = str(exc)
         finally:
             self._active_daemon_job_id = None
-        self._publish_daemon_art_result(message, image_request, image_bytes)
+
+        if error_message is not None:
+            self._handle_daemon_art_error(error_message)
+            self._emit_pending_daemon_unload_if_requested()
+            return
+
+        if image_bytes is None:
+            return
+
+        try:
+            self._publish_daemon_art_result(
+                message,
+                image_request,
+                image_bytes,
+            )
+        finally:
+            self._emit_pending_daemon_unload_if_requested()
 
     def _handle_daemon_art_error(self, message: str) -> None:
         self.handle_error(message)

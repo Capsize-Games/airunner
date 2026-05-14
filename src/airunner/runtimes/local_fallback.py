@@ -993,6 +993,22 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             health_provider=health_provider,
             allows_model_control=False,
         )
+        self._art_model_metadata: dict[str, Any] = {}
+
+    def _status_metadata(self) -> dict[str, Any]:
+        """Return cached art metadata for daemon health summaries."""
+        metadata = super()._status_metadata()
+        metadata.update(self._art_model_metadata)
+        return metadata
+
+    def _cache_art_model_metadata(self, image_request) -> None:
+        """Store the current art model identity for health summaries."""
+        metadata: dict[str, Any] = {}
+        if getattr(image_request, "model_path", None):
+            metadata["model_path"] = image_request.model_path
+        if getattr(image_request, "version", None):
+            metadata["model_version"] = image_request.version
+        self._art_model_metadata = metadata
 
     def invoke(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Execute one art request without progress callbacks."""
@@ -1035,6 +1051,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         """Unload the current art pipeline on a best-effort basis."""
         from airunner.enums import SignalCode
 
+        self._art_model_metadata = {}
         self._emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
         return ResponseEnvelope(
             request_id=request_id,
@@ -1094,6 +1111,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             image=_resolve_art_request_image(metadata),
             generator_section=generator_section,
         )
+        self._cache_art_model_metadata(image_request)
 
         progress_handler = None
         if progress_callback is not None:

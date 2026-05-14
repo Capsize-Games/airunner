@@ -178,6 +178,69 @@ class LLMAPIService(APIServiceBase):
         print("[LLM INTERRUPT] Emitting INTERRUPT_PROCESS_SIGNAL")
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
+    def unload(self, data: Optional[dict] = None) -> None:
+        """Unload the active LLM without blocking the caller."""
+        payload = dict(data or {})
+        if LLMAPIService._local_llm_should_handle_unload(self):
+            self._emit_local_unload_request(payload)
+            return
+
+        client = self._daemon_client()
+        if client is None:
+            self._emit_local_unload_request(payload)
+            return
+
+        thread = threading.Thread(
+            target=LLMAPIService._run_daemon_unload,
+            args=(self, client, payload),
+            daemon=True,
+        )
+        thread.start()
+
+    def _emit_local_unload_request(self, payload: dict) -> None:
+        """Emit one best-effort local unload request."""
+        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, payload)
+
+    def _local_llm_should_handle_unload(self) -> bool:
+        """Return True when the GUI-local worker owns the live LLM."""
+        from airunner.enums import ModelStatus
+
+        worker_manager_getter = getattr(self, "_worker_manager", None)
+        if not callable(worker_manager_getter):
+            return False
+
+        worker_manager = worker_manager_getter()
+        if worker_manager is None:
+            return False
+
+        worker = getattr(worker_manager, "_llm_generate_worker", None)
+        if worker is None:
+            return False
+
+        status_getter = getattr(worker, "current_model_status", None)
+        if callable(status_getter):
+            try:
+                status = status_getter()
+            except Exception:
+                status = None
+            if status in (ModelStatus.LOADING, ModelStatus.LOADED):
+                return True
+
+        return getattr(worker, "_pending_llm_request", None) is not None
+
+    def _run_daemon_unload(self, client, payload: dict) -> None:
+        """Interrupt and queue one daemon-side LLM unload."""
+        try:
+            client.interrupt_llm()
+        except RuntimeError:
+            pass
+
+        try:
+            client.unload_local_llm(auto_start=False)
+        except RuntimeError:
+            self._emit_local_unload_request(payload)
+
     def delete_messages_after_id(self, message_id: int):
         self.emit_signal(
             SignalCode.DELETE_MESSAGES_AFTER_ID, {"message_id": message_id}

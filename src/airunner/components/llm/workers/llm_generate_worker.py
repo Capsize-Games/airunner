@@ -55,6 +55,7 @@ class LLMGenerateWorker(
         self._pending_llm_request = (
             None  # Store pending request during download
         )
+        self._pending_unload_request: Optional[Dict] = None
         self.manager_thread: Optional[QThread] = None
         self.download_manager = None
         super().__init__()
@@ -343,6 +344,35 @@ class LLMGenerateWorker(
         """
         self.unload_llm(data)
 
+    def request_unload_after_interrupt(
+        self,
+        data: Optional[Dict] = None,
+    ) -> bool:
+        """Interrupt the current request and queue one unload."""
+        if self._model_manager is None:
+            return False
+
+        request_data = dict(data or {})
+        self.llm_on_interrupt_process_signal(request_data)
+        self._pending_unload_request = request_data
+        if self._pending_llm_request is None:
+            self._queue_pending_unload_request()
+        return True
+
+    def _queue_pending_unload_request(self) -> None:
+        """Queue any unload requested during or after interruption."""
+        if self._pending_unload_request is None:
+            return
+
+        request_data = self._pending_unload_request
+        self._pending_unload_request = None
+        self.add_to_queue(
+            {
+                "_message_type": "llm_unload",
+                "data": request_data,
+            }
+        )
+
     def unload_llm(self, data: Optional[Dict] = None) -> None:
         """Unload the LLM model and execute callback.
 
@@ -549,6 +579,7 @@ class LLMGenerateWorker(
             except Exception:
                 # If even error reporting fails, at least don't crash the worker loop.
                 pass
+            self._queue_pending_unload_request()
             return
 
         # Clear pending request only if request truly completed successfully
@@ -617,6 +648,8 @@ class LLMGenerateWorker(
                     )
                 except Exception:
                     pass
+
+            self._queue_pending_unload_request()
 
     def _load_llm_thread(self, data: Optional[Dict] = None) -> None:
         """Load LLM in a separate thread.

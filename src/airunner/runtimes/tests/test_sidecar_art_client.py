@@ -44,6 +44,8 @@ class FakeSession:
 
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
+        if not self.responses:
+            return FakeResponse(payload={})
         return self.responses.pop(0)
 
     def close(self):
@@ -236,6 +238,98 @@ def test_healthcheck_reports_launcher_status():
 
     assert health.status is RuntimeHealthStatus.READY
     assert health.metadata["model_version"] == "SDXL 1.0"
+
+
+def test_healthcheck_uses_remote_art_model_status():
+    launcher = FakeLauncher(_settings())
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=FakeSession(
+            [
+                FakeResponse(
+                    payload={
+                        "status": "ready",
+                        "art_model_status": "loading",
+                    }
+                )
+            ]
+        ),
+    )
+
+    health = client.healthcheck()
+
+    assert health.status is RuntimeHealthStatus.STARTING
+    assert health.metadata["model_status"] == "loading"
+
+
+def test_healthcheck_stays_starting_when_active_job_hides_remote_status():
+    launcher = FakeLauncher(_settings())
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=FakeSession([]),
+    )
+    client._active_jobs["art-req-1"] = "job-1"
+
+    health = client.healthcheck()
+
+    assert health.status is RuntimeHealthStatus.STARTING
+    assert health.metadata["model_status"] == "loading"
+
+
+def test_healthcheck_stays_ready_when_loaded_model_handles_active_job():
+    launcher = FakeLauncher(_settings())
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=FakeSession([]),
+    )
+    client._last_known_model_status = "loaded"
+    client._active_jobs["art-req-1"] = "job-1"
+
+    health = client.healthcheck()
+
+    assert health.status is RuntimeHealthStatus.READY
+    assert health.metadata["model_status"] == "loaded"
+
+
+def test_observe_job_status_marks_model_loaded_after_progress_advances():
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=FakeLauncher(_settings()),
+        session=FakeSession([]),
+    )
+
+    client._observe_job_status("running", 1.0)
+    assert client._last_known_model_status == "loading"
+
+    client._observe_job_status("running", 12.5)
+
+    assert client._last_known_model_status == "loaded"
+
+
+def test_healthcheck_reports_unloaded_when_sidecar_has_no_model():
+    launcher = FakeLauncher(_settings())
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=FakeSession(
+            [
+                FakeResponse(
+                    payload={
+                        "status": "ready",
+                        "art_model_status": "unloaded",
+                    }
+                )
+            ]
+        ),
+    )
+
+    health = client.healthcheck()
+
+    assert health.status is RuntimeHealthStatus.STOPPED
+    assert health.metadata["model_status"] == "unloaded"
 
 
 def test_register_sidecar_art_client_uses_explicit_sidecar_route():

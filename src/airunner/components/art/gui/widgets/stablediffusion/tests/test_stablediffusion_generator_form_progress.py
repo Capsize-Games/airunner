@@ -18,14 +18,43 @@ def test_generate_click_keeps_spinner_pending_until_backend_progress():
         StableDiffusionGeneratorForm
     )
     form._waiting_for_backend_progress = False
+    form._build_generate_request = Mock(return_value=None)
     form.start_progress_bar = Mock()
+    form.set_progress_bar_value = Mock()
     form.generate = Mock()
 
     StableDiffusionGeneratorForm.handle_generate_button_clicked(form)
 
     assert form._waiting_for_backend_progress is True
     form.start_progress_bar.assert_called_once_with()
+    form.set_progress_bar_value.assert_not_called()
     form.generate.assert_called_once_with(None)
+
+
+def test_generate_click_uses_determinate_progress_for_loaded_model():
+    """Repeat generations should skip the indeterminate spinner."""
+    image_request = SimpleNamespace(model_path="/tmp/model.safetensors")
+    form = StableDiffusionGeneratorForm.__new__(
+        StableDiffusionGeneratorForm
+    )
+    form._waiting_for_backend_progress = False
+    form._build_generate_request = Mock(return_value=image_request)
+    form.start_progress_bar = Mock()
+    form.set_progress_bar_value = Mock()
+    form.generate = Mock()
+
+    module.ModelResourceManager().set_model_state(
+        image_request.model_path,
+        module.ModelState.LOADED,
+        "text_to_image",
+    )
+
+    StableDiffusionGeneratorForm.handle_generate_button_clicked(form)
+
+    assert form._waiting_for_backend_progress is True
+    form.set_progress_bar_value.assert_called_once_with(0)
+    form.start_progress_bar.assert_not_called()
+    form.generate.assert_called_once_with({"image_request": image_request})
 
 
 def test_model_loaded_does_not_clear_spinner_while_waiting():
@@ -33,6 +62,7 @@ def test_model_loaded_does_not_clear_spinner_while_waiting():
     form = StableDiffusionGeneratorForm.__new__(
         StableDiffusionGeneratorForm
     )
+    form._busy_progress_models = set()
     form._waiting_for_backend_progress = True
     form.stop_progress_bar = Mock()
     form.ui = SimpleNamespace(
@@ -48,6 +78,56 @@ def test_model_loaded_does_not_clear_spinner_while_waiting():
     form.stop_progress_bar.assert_not_called()
     form.ui.generate_button.setEnabled.assert_called_once_with(True)
     form.ui.interrupt_button.setEnabled.assert_called_once_with(True)
+
+
+def test_rmbg_loading_starts_busy_progress_without_touching_sd_buttons():
+    """RMBG activity should reuse the busy spinner without SD-only toggles."""
+    form = StableDiffusionGeneratorForm.__new__(
+        StableDiffusionGeneratorForm
+    )
+    form._generation_in_progress = False
+    form._backend_progress_started = False
+    form._waiting_for_backend_progress = False
+    form.start_progress_bar = Mock()
+    form.ui = SimpleNamespace(
+        generate_button=Mock(),
+        interrupt_button=Mock(),
+    )
+
+    StableDiffusionGeneratorForm.on_model_status_changed_signal(
+        form,
+        {"model": ModelType.RMBG, "status": ModelStatus.LOADING},
+    )
+
+    assert form._busy_progress_models == {ModelType.RMBG}
+    form.start_progress_bar.assert_called_once_with()
+    form.ui.generate_button.setEnabled.assert_not_called()
+    form.ui.interrupt_button.setEnabled.assert_not_called()
+
+
+def test_rmbg_ready_clears_busy_spinner_when_no_other_work_remains():
+    """RMBG completion should return the progress bar to its idle state."""
+    form = StableDiffusionGeneratorForm.__new__(
+        StableDiffusionGeneratorForm
+    )
+    form._busy_progress_models = {ModelType.RMBG}
+    form._waiting_for_backend_progress = False
+    form._generation_in_progress = False
+    form._set_progress_bar_idle = Mock()
+    form.ui = SimpleNamespace(
+        generate_button=Mock(),
+        interrupt_button=Mock(),
+    )
+
+    StableDiffusionGeneratorForm.on_model_status_changed_signal(
+        form,
+        {"model": ModelType.RMBG, "status": ModelStatus.READY},
+    )
+
+    assert form._busy_progress_models == set()
+    form._set_progress_bar_idle.assert_called_once_with()
+    form.ui.generate_button.setEnabled.assert_not_called()
+    form.ui.interrupt_button.setEnabled.assert_not_called()
 
 
 def test_progress_signal_switches_bar_to_real_percentage(monkeypatch):

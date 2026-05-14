@@ -349,7 +349,10 @@ class BaseDiffusersModelManager(
             self._finalize_load_stable_diffusion()
 
             # Mark model as loaded
-            resource_manager.model_loaded(self.model_path)
+            resource_manager.model_loaded(
+                self.model_path,
+                "text_to_image",
+            )
 
     def load_controlnet(self):
         """
@@ -425,6 +428,13 @@ class BaseDiffusersModelManager(
 
         # Final memory clear to ensure everything is released
         clear_memory(self._device_index)
+
+        model_path = self.model_path
+        if model_path:
+            ModelResourceManager().cleanup_model(
+                model_path,
+                "text_to_image",
+            )
 
         self.change_model_status(self.model_type, ModelStatus.UNLOADED)
 
@@ -535,10 +545,6 @@ class BaseDiffusersModelManager(
 
         try:
             self._set_pipe(self.config_path, data)
-            self.change_model_status(self.model_type, ModelStatus.LOADED)
-
-            resource_manager = ModelResourceManager()
-            resource_manager.model_loaded(self.model_path)
         except RuntimeError as e:
             error_msg = str(e)
             if "download triggered" in error_msg:

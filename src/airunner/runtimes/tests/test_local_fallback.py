@@ -602,6 +602,47 @@ class TestLocalFallbackArtClient:
             "image_size": (2, 2),
         }
 
+    def test_healthcheck_includes_active_art_model_metadata(self):
+        """Art health summaries should retain the active model identity."""
+        mediator = FakeMediator()
+
+        def respond_to_generate(payload):
+            payload["image_request"].callback(
+                ImageResponse(
+                    images=[Image.new("RGB", (1, 1), "white")],
+                    data={"seed": 1},
+                    active_rect=None,
+                    is_outpaint=False,
+                )
+            )
+
+        signal_source = FakeSignalSource(
+            mediator,
+            responders={SignalCode.DO_GENERATE_SIGNAL: respond_to_generate},
+        )
+        client = LocalFallbackArtClient(
+            mediator=mediator,
+            signal_source=signal_source,
+        )
+
+        client.invoke(
+            RequestEnvelope(
+                request_id="req-art-health",
+                runtime=RuntimeKind.ART,
+                action=RuntimeAction.INVOKE,
+                payload={
+                    "prompt": "mountains",
+                    "model": "/models/zimage.safetensors",
+                    "metadata": {"version": "Z-Image Turbo"},
+                },
+            )
+        )
+
+        health = client.healthcheck()
+
+        assert health.metadata["model_path"] == "/models/zimage.safetensors"
+        assert health.metadata["model_version"] == "Z-Image Turbo"
+
 
 class TestLocalFallbackRegistry:
     """Tests for local fallback registry registration."""

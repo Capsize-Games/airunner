@@ -1,6 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import torch
 from safetensors.torch import save_file
@@ -119,6 +119,80 @@ class TestHuggingFaceDownloadWorker:
             "text_encoder/config.json",
             "vae/diffusion_pytorch_model.safetensors",
         ]
+
+    def test_rmbg_download_uses_bootstrap_output_dir(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        worker = HuggingFaceDownloadWorker()
+        output_dir = tmp_path / "rmbg"
+        temp_dir = tmp_path / ".downloading"
+        temp_dir.mkdir()
+        created_threads = []
+
+        class _Settings:
+            def value(self, *_args, **_kwargs):
+                return ""
+
+        class _FakeThread:
+            def __init__(self, target, args, daemon):
+                created_threads.append(
+                    {
+                        "target": target,
+                        "args": args,
+                        "daemon": daemon,
+                    }
+                )
+
+            def start(self):
+                return None
+
+        monkeypatch.setattr(
+            "airunner.components.application.workers."
+            "huggingface_download_worker.get_qsettings",
+            lambda: _Settings(),
+        )
+        monkeypatch.setattr(
+            "airunner.components.application.workers."
+            "huggingface_download_worker.threading.Thread",
+            _FakeThread,
+        )
+        monkeypatch.setattr(
+            worker,
+            "_prepare_temp_dir",
+            lambda _model_path: temp_dir,
+        )
+        monkeypatch.setattr(
+            worker,
+            "_wait_for_completion",
+            lambda _count: False,
+        )
+        monkeypatch.setattr(worker, "emit_signal", Mock())
+        worker.downloader.get_model_files = Mock(
+            side_effect=AssertionError(
+                "RMBG downloads should not fetch the API file list"
+            )
+        )
+
+        worker._download_model(
+            repo_id="briaai/RMBG-2.0",
+            model_type="rmbg",
+            output_dir=str(output_dir),
+        )
+
+        assert worker._model_path == output_dir
+        assert {
+            thread["args"][1]
+            for thread in created_threads
+        } == {
+            "config.json",
+            "model.safetensors",
+            "preprocessor_config.json",
+            "BiRefNet_config.py",
+            "birefnet.py",
+        }
+        worker.downloader.get_model_files.assert_not_called()
 
 
 def _create_zimage_fp8_bundle(tmp_path: Path) -> Path:

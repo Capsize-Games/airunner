@@ -9,7 +9,7 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.daemon_client.daemon_connection_state import (
     DaemonConnectionState,
 )
-from airunner.enums import LLMActionType, SignalCode
+from airunner.enums import LLMActionType, ModelStatus, SignalCode
 
 
 def test_send_request_via_daemon_starts_background_stream(monkeypatch):
@@ -320,6 +320,88 @@ def test_interrupt_prefers_daemon_client():
 
     interrupt_llm.assert_called_once_with()
     service.emit_signal.assert_not_called()
+
+
+def test_unload_prefers_daemon_client(monkeypatch):
+    interrupt_llm = MagicMock()
+    unload_local_llm = MagicMock()
+    started = {}
+
+    class FakeThread:
+        def __init__(self, target, args, daemon):
+            started["target"] = target
+            started["args"] = args
+            started["daemon"] = daemon
+
+        def start(self):
+            started["started"] = True
+            started["target"](*started["args"])
+
+    service = SimpleNamespace(
+        _daemon_client=lambda: SimpleNamespace(
+            interrupt_llm=interrupt_llm,
+            unload_local_llm=unload_local_llm,
+        ),
+        _emit_local_unload_request=MagicMock(),
+    )
+
+    monkeypatch.setattr(
+        "airunner.components.llm.api.llm_services.threading.Thread",
+        FakeThread,
+    )
+
+    LLMAPIService.unload(service, {"source": "widget"})
+
+    assert started["daemon"] is True
+    interrupt_llm.assert_called_once_with()
+    unload_local_llm.assert_called_once_with(auto_start=False)
+    service._emit_local_unload_request.assert_not_called()
+
+
+def test_unload_prefers_local_worker_when_llm_is_loaded(monkeypatch):
+    service = SimpleNamespace(
+        _daemon_client=lambda: SimpleNamespace(unload_local_llm=MagicMock()),
+        _worker_manager=lambda: SimpleNamespace(
+            _llm_generate_worker=SimpleNamespace(
+                current_model_status=lambda: ModelStatus.LOADED,
+                _pending_llm_request=None,
+            )
+        ),
+        _emit_local_unload_request=MagicMock(),
+        _local_llm_should_handle_unload=lambda: LLMAPIService._local_llm_should_handle_unload(service),
+    )
+
+    thread_ctor = MagicMock()
+    monkeypatch.setattr(
+        "airunner.components.llm.api.llm_services.threading.Thread",
+        thread_ctor,
+    )
+
+    LLMAPIService.unload(service, {"source": "widget"})
+
+    service._emit_local_unload_request.assert_called_once_with(
+        {"source": "widget"}
+    )
+    thread_ctor.assert_not_called()
+
+
+def test_unload_falls_back_to_local_signals_without_daemon():
+    emitted = []
+    service = SimpleNamespace(
+        _daemon_client=lambda: None,
+        emit_signal=lambda code, data=None: emitted.append((code, data)),
+        _emit_local_unload_request=lambda payload: LLMAPIService._emit_local_unload_request(
+            service,
+            payload,
+        ),
+    )
+
+    LLMAPIService.unload(service, {"source": "widget"})
+
+    assert emitted == [
+        (SignalCode.INTERRUPT_PROCESS_SIGNAL, None),
+        (SignalCode.LLM_UNLOAD_SIGNAL, {"source": "widget"}),
+    ]
 
 
 def test_send_llm_text_streamed_signal_fast_forwards_to_tts_worker():

@@ -2,6 +2,7 @@
 
 This module consolidates file requirements from:
 - Art models (SD, SDXL, Z-Image, ControlNet)
+- RMBG background-removal models
 - LLM models (Llama, Qwen, etc.)
 - STT models (Whisper)
 - TTS models (OpenVoice)
@@ -12,6 +13,9 @@ from airunner.settings import AIRUNNER_ART_ENABLED
 # Import existing bootstrap data
 from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
+)
+from airunner.components.art.data.bootstrap.rmbg_bootstrap_data import (
+    RMBG_FILES,
 )
 from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
@@ -25,6 +29,7 @@ from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
 # Unified model file bootstrap data
 UNIFIED_MODEL_FILES = {
     "art": SD_FILE_BOOTSTRAP_DATA,
+    "rmbg": RMBG_FILES,
     "llm": LLM_FILE_BOOTSTRAP_DATA,
     "stt": WHISPER_FILES,
     "tts_openvoice": OPENVOICE_FILES,
@@ -40,7 +45,7 @@ def get_required_files_for_model(
     """Get required files for a model.
 
     Args:
-        model_type: Type of model (art, llm, stt, tts_openvoice)
+        model_type: Type of model (art, rmbg, llm, stt, tts_openvoice)
         model_id: Model identifier (repo_id or version name)
         version: Model version (for art models like "Z-Image Turbo" and
             "SDXL 1.0")
@@ -84,6 +89,10 @@ def get_required_files_for_model(
         if not model_data:
             return None
         return model_data.get("files")
+
+    # RMBG background-removal models use repo_id lookup
+    elif model_type == "rmbg":
+        return data.get(model_id)
 
     # STT models (Whisper) use repo_id lookup
     elif model_type == "stt":

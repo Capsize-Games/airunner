@@ -10,7 +10,6 @@ from typing import Optional, Dict, Any, List
 from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QKeySequence, QShortcut
-from PySide6.QtWidgets import QApplication
 
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
@@ -54,11 +53,11 @@ class CanvasWidget(BaseWidget):
         ("arrow-up", "export_button"),
         ("target", "recenter_button"),
         ("object-selected-icon", "active_grid_area_button"),
-        ("pencil-icon", "brush_button"),
-        ("eraser-icon", "eraser_button"),
-        ("grid", "grid_button"),
-        ("corner-up-left", "undo_button"),
-        ("corner-up-right", "redo_button"),
+        ("pencil", "brush_button"),
+        ("eraser", "eraser_button"),
+        ("grid-3x3", "grid_button"),
+        ("undo", "undo_button"),
+        ("redo", "redo_button"),
         ("folder", "open_art_document"),
         ("save", "save_art_document"),
         ("link-2", "snap_to_grid_button"),
@@ -66,6 +65,7 @@ class CanvasWidget(BaseWidget):
         ("message-square", "prompt_editor_button"),
         ("tool", "art_tools_button"),
         ("filter", "filter_button"),
+        ("image-minus", "remove_background_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -363,6 +363,11 @@ class CanvasWidget(BaseWidget):
     def on_brush_color_button_clicked(self) -> None:
         """Handle brush color button click to open color picker."""
         self.color_button_clicked()
+
+    @Slot()
+    def on_remove_background_button_clicked(self) -> None:
+        """Handle remove background button click."""
+        self.api.art.canvas.remove_background()
 
     @Slot()
     def on_recenter_button_clicked(self) -> None:

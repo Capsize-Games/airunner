@@ -11,6 +11,7 @@ class TestModelFileChecker:
 
     _ART_VERSION = "Z-Image Turbo"
     _LLM_MODEL_ID = "Qwen/Qwen3-8B-GGUF"
+    _RMBG_MODEL_ID = "briaai/RMBG-2.0"
     _STT_MODEL_ID = "Systran/faster-distil-whisper-large-v3"
     _TTS_MODEL_ID = "myshell-ai/MeloTTS-English"
 
@@ -58,6 +59,17 @@ class TestModelFileChecker:
         assert isinstance(files, list)
         assert "config.json" in files
         assert "checkpoint.pth" in files
+
+    def test_get_required_files_rmbg_model(self):
+        """Test getting required files for RMBG models."""
+        files = ModelFileChecker.get_required_files(
+            model_type="rmbg",
+            model_id=self._RMBG_MODEL_ID,
+        )
+        assert files is not None
+        assert isinstance(files, list)
+        assert "config.json" in files
+        assert "model.safetensors" in files
 
     def test_get_required_files_unknown_model(self):
         """Test getting required files for unknown model returns None."""
@@ -197,6 +209,7 @@ class TestUnifiedModelFiles:
         )
 
         assert "art" in UNIFIED_MODEL_FILES
+        assert "rmbg" in UNIFIED_MODEL_FILES
         assert "llm" in UNIFIED_MODEL_FILES
         assert "stt" in UNIFIED_MODEL_FILES
         assert "tts_openvoice" in UNIFIED_MODEL_FILES
@@ -233,6 +246,22 @@ class TestUnifiedModelFiles:
         # LLM files are now a dict of {filename: expected_size}
         assert isinstance(files, dict)
         assert "Qwen3-8B-Q4_K_M.gguf" in files
+
+    def test_get_required_files_for_model_rmbg(self):
+        """Test get_required_files_for_model for RMBG models."""
+        from airunner.components.data.bootstrap.unified_model_files import (
+            get_required_files_for_model,
+        )
+
+        files = get_required_files_for_model(
+            model_type="rmbg",
+            model_id="briaai/RMBG-2.0",
+        )
+
+        assert files is not None
+        assert isinstance(files, list)
+        assert "BiRefNet_config.py" in files
+        assert "birefnet.py" in files
 
     def test_get_required_files_for_model_stt(self):
         """Test get_required_files_for_model for STT models."""

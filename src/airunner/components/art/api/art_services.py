@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from airunner.components.application.api.api_service_base import APIServiceBase
+from airunner.components.model_management import ModelResourceManager
+from airunner.components.model_management.types import ModelState
 from airunner.enums import GeneratorSection, SignalCode
 
 if TYPE_CHECKING:
@@ -191,6 +193,26 @@ class ARTAPIService(APIServiceBase):
             {"do_clear": True},
         )
 
+    @staticmethod
+    def _mark_requested_model_loading(
+        image_request: Optional[ImageRequest],
+    ) -> None:
+        """Track the requested art model in the shared resource widget."""
+        model_path = str(
+            getattr(image_request, "model_path", "") or ""
+        ).strip()
+        if not model_path:
+            return
+        resource_manager = ModelResourceManager()
+        current_state = resource_manager.get_model_state(model_path)
+        if current_state in (ModelState.LOADED, ModelState.BUSY):
+            return
+        resource_manager.set_model_state(
+            model_path,
+            ModelState.LOADING,
+            "text_to_image",
+        )
+
     def missing_required_models(self, message: str):
         self.emit_signal(
             SignalCode.MISSING_REQUIRED_MODELS,
@@ -214,6 +236,7 @@ class ARTAPIService(APIServiceBase):
             # live outside generator_settings and determine generator_section, image, strength, etc.
             resolved_request = self.canvas.create_image_request()
 
+        self._mark_requested_model_loading(resolved_request)
         data.update({"image_request": resolved_request})
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 

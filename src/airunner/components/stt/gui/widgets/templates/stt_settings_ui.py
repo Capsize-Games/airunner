@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QLabel,
     QScrollArea, QSizePolicy, QSpacerItem, QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
-from airunner.components.stt.gui.widgets.stt.whisper_settings_widget import WhisperSettingsWidget
+from airunner.components.stt.gui.widgets.whisper_settings_widget import WhisperSettingsWidget
 
 class Ui_stt_settings(object):
     def setupUi(self, stt_settings):
@@ -122,7 +122,7 @@ class Ui_stt_settings(object):
 
     def retranslateUi(self, stt_settings):
         stt_settings.setWindowTitle(QCoreApplication.translate("stt_settings", u"Form", None))
-        self.label_2.setText(QCoreApplication.translate("stt_settings", u"LLM Settings", None))
+        self.label_2.setText(QCoreApplication.translate("stt_settings", u"STT Settings", None))
         self.volume_input_threshold_slider.setProperty(u"settings_property", QCoreApplication.translate("stt_settings", u"stt_settings.volume_input_threshold", None))
         self.volume_input_threshold_slider.setProperty(u"label_text", QCoreApplication.translate("stt_settings", u"Input Volume", None))
         self.silence_buffer_seconds.setProperty(u"settings_property", QCoreApplication.translate("stt_settings", u"stt_settings.silence_buffer_seconds", None))

@@ -158,6 +158,21 @@ class GuiDaemonClient:
         )
         return response.json()
 
+    def unload_local_llm(
+        self,
+        *,
+        auto_start: bool = False,
+        timeout_seconds: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Interrupt and queue unload for the daemon's local-worker LLM."""
+        response = self._request(
+            "POST",
+            "/admin/llm/unload",
+            auto_start=auto_start,
+            timeout_seconds=timeout_seconds,
+        )
+        return response.json()
+
     def daemon_runtime_status(
         self,
         *,

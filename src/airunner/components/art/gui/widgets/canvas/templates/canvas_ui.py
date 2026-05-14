@@ -234,7 +234,7 @@ class Ui_canvas(object):
         self.brush_button.setMaximumSize(QSize(30, 30))
         self.brush_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon11 = QIcon()
-        icon11.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon11.addFile(u":/light/icons/lucide/light/pencil.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.brush_button.setIcon(icon11)
         self.brush_button.setCheckable(True)
         self.brush_button.setFlat(False)
@@ -247,7 +247,7 @@ class Ui_canvas(object):
         self.eraser_button.setMaximumSize(QSize(30, 30))
         self.eraser_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon12 = QIcon()
-        icon12.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon12.addFile(u":/light/icons/lucide/light/eraser.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.eraser_button.setIcon(icon12)
         self.eraser_button.setCheckable(True)
         self.eraser_button.setFlat(False)
@@ -267,7 +267,7 @@ class Ui_canvas(object):
         self.grid_button.setMaximumSize(QSize(30, 30))
         self.grid_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon13 = QIcon()
-        icon13.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon13.addFile(u":/light/icons/lucide/light/grid-3x3.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.grid_button.setIcon(icon13)
         self.grid_button.setCheckable(True)
         self.grid_button.setFlat(False)
@@ -299,7 +299,7 @@ class Ui_canvas(object):
         self.undo_button.setMaximumSize(QSize(30, 30))
         self.undo_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon15 = QIcon()
-        icon15.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon15.addFile(u":/light/icons/lucide/light/undo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.undo_button.setIcon(icon15)
         self.undo_button.setFlat(False)
 
@@ -311,11 +311,29 @@ class Ui_canvas(object):
         self.redo_button.setMaximumSize(QSize(30, 30))
         self.redo_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon16 = QIcon()
-        icon16.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon16.addFile(u":/light/icons/lucide/light/redo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.redo_button.setIcon(icon16)
         self.redo_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.redo_button)
+
+        self.line_8 = QFrame(self.widget1)
+        self.line_8.setObjectName(u"line_8")
+        self.line_8.setFrameShape(QFrame.Shape.VLine)
+        self.line_8.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout_2.addWidget(self.line_8)
+
+        self.remove_background_button = QPushButton(self.widget1)
+        self.remove_background_button.setObjectName(u"remove_background_button")
+        self.remove_background_button.setMinimumSize(QSize(30, 30))
+        self.remove_background_button.setMaximumSize(QSize(30, 30))
+        self.remove_background_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon17 = QIcon()
+        icon17.addFile(u":/light/icons/lucide/light/image-minus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.remove_background_button.setIcon(icon17)
+
+        self.horizontalLayout_2.addWidget(self.remove_background_button)
 
         self.horizontalSpacer = QSpacerItem(425, 9, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -417,7 +435,7 @@ class Ui_canvas(object):
         sizePolicy1.setHeightForWidth(self.active_item_info.sizePolicy().hasHeightForWidth())
         self.active_item_info.setSizePolicy(sizePolicy1)
         self.active_item_info.setFont(font)
-        self.active_item_info.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        self.active_item_info.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.horizontalLayout_4.addWidget(self.active_item_info)
 
@@ -516,6 +534,10 @@ class Ui_canvas(object):
         self.redo_button.setToolTip(QCoreApplication.translate("canvas", u"Redo", None))
 #endif // QT_CONFIG(tooltip)
         self.redo_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.remove_background_button.setToolTip(QCoreApplication.translate("canvas", u"Remove Background", None))
+#endif // QT_CONFIG(tooltip)
+        self.remove_background_button.setText("")
 #if QT_CONFIG(tooltip)
         self.brush_size_slider.setToolTip(QCoreApplication.translate("canvas", u"Brush Size", None))
 #endif // QT_CONFIG(tooltip)

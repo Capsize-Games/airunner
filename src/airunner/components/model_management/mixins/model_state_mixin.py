@@ -19,7 +19,10 @@ class ModelStateMixin:
     """
 
     def set_model_state(
-        self, model_id: str, state, model_type: str = None
+        self,
+        model_id: str,
+        state,
+        model_type: str | None = None,
     ) -> None:
         """Update model state.
 
@@ -28,6 +31,8 @@ class ModelStateMixin:
             state: New state for the model
             model_type: Optional type of model (llm, text_to_image, etc.)
         """
+        if model_type is not None:
+            self._model_types[model_id] = model_type
         self._model_states[model_id] = state
 
     def get_model_state(self, model_id: str):
@@ -43,7 +48,11 @@ class ModelStateMixin:
 
         return self._model_states.get(model_id, ModelState.UNLOADED)
 
-    def model_loaded(self, model_id: str) -> None:
+    def model_loaded(
+        self,
+        model_id: str,
+        model_type: str | None = None,
+    ) -> None:
         """Mark model as loaded successfully.
 
         Args:
@@ -51,9 +60,13 @@ class ModelStateMixin:
         """
         from airunner.components.model_management.types import ModelState
 
-        self.set_model_state(model_id, ModelState.LOADED)
+        self.set_model_state(model_id, ModelState.LOADED, model_type)
 
-    def model_busy(self, model_id: str) -> None:
+    def model_busy(
+        self,
+        model_id: str,
+        model_type: str | None = None,
+    ) -> None:
         """Mark model as busy (generating/processing).
 
         Args:
@@ -61,9 +74,13 @@ class ModelStateMixin:
         """
         from airunner.components.model_management.types import ModelState
 
-        self.set_model_state(model_id, ModelState.BUSY)
+        self.set_model_state(model_id, ModelState.BUSY, model_type)
 
-    def model_ready(self, model_id: str) -> None:
+    def model_ready(
+        self,
+        model_id: str,
+        model_type: str | None = None,
+    ) -> None:
         """Mark model as ready (finished processing).
 
         Args:
@@ -71,7 +88,7 @@ class ModelStateMixin:
         """
         from airunner.components.model_management.types import ModelState
 
-        self.set_model_state(model_id, ModelState.LOADED)
+        self.set_model_state(model_id, ModelState.LOADED, model_type)
 
     def cleanup_model(self, model_id: str, model_type: str = "llm") -> None:
         """Cleanup resources after model unloading.

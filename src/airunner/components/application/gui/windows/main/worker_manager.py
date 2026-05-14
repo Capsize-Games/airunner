@@ -21,6 +21,7 @@ _STREAM_TTS_WORKER_SLEEP_MS = 1
 class WorkerManager(Worker):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
+            SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
             SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
@@ -31,6 +32,7 @@ class WorkerManager(Worker):
             SignalCode.ART_MODEL_DOWNLOAD_REQUIRED: self.on_art_model_download_required,
             SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE: self.on_huggingface_download_complete,
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
+            SignalCode.RMBG_UNLOAD_SIGNAL: self.on_unload_rmbg_signal,
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
@@ -41,6 +43,7 @@ class WorkerManager(Worker):
             SignalCode.CONTROLNET_LOAD_SIGNAL: self.on_load_controlnet_signal,
             SignalCode.CONTROLNET_UNLOAD_SIGNAL: self.on_unload_controlnet_signal,
             SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_safety_checker_load_signal,
+            SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_safety_checker_unload_signal,
             SignalCode.INPUT_IMAGE_SETTINGS_CHANGED: self.on_input_image_settings_changed_signal,
             SignalCode.LORA_UPDATE_SIGNAL: self.on_update_lora_signal,
             SignalCode.EMBEDDING_UPDATE_SIGNAL: self.on_update_embeddings_signal,
@@ -101,6 +104,7 @@ class WorkerManager(Worker):
         self._huggingface_download_worker = None
         self._image_export_worker = None
         self._model_scanner_worker = None
+        self._background_removal_worker = None
         self._art_runtime_prewarm_started = False
         self._tts_runtime_prewarm_started = False
         if self.logger:
@@ -109,6 +113,84 @@ class WorkerManager(Worker):
             )
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
+
+    @property
+    def background_removal_worker(self):
+        if self._background_removal_worker is None:
+            from airunner.components.art.workers.background_removal_worker import (
+                BackgroundRemovalWorker,
+            )
+
+            self._background_removal_worker = create_worker(
+                BackgroundRemovalWorker
+            )
+        return self._background_removal_worker
+
+    def on_remove_background_signal(self, _data: Dict):
+        """Queue background removal for the selected canvas layer."""
+        from PySide6.QtWidgets import QMessageBox
+
+        layer_id = self._get_current_selected_layer_id()
+        if layer_id is None:
+            try:
+                from airunner.components.art.data.canvas_layer import (
+                    CanvasLayer,
+                )
+
+                layers = CanvasLayer.objects.order_by("order").all() or []
+                if layers:
+                    layer_id = getattr(layers[0], "id", None)
+            except Exception:
+                layer_id = None
+
+        image_binary = None
+        try:
+            from airunner.components.art.data.drawingpad_settings import (
+                DrawingPadSettings,
+            )
+
+            if layer_id is not None:
+                drawing_pad = DrawingPadSettings.objects.filter_by_first(
+                    layer_id=layer_id
+                )
+                image_binary = getattr(drawing_pad, "image", None)
+            else:
+                image_binary = getattr(
+                    self.drawing_pad_settings,
+                    "image",
+                    None,
+                )
+        except Exception:
+            image_binary = None
+
+        if not image_binary:
+            main_window = self._get_main_window()
+            if main_window is not None:
+                QMessageBox.information(
+                    main_window,
+                    "No Image",
+                    "Please import or generate an image first.",
+                )
+            return
+
+        self.background_removal_worker.add_to_queue(
+            {
+                "action": "remove_background",
+                "data": {
+                    "layer_id": layer_id,
+                    "image": image_binary,
+                },
+            }
+        )
+
+    def on_unload_rmbg_signal(self, data: Dict):
+        """Queue RMBG unloading for the background-removal worker."""
+        self.background_removal_worker.add_to_queue(
+            {
+                "action": "unload",
+                "data": data,
+            }
+        )
 
     def handle_message(self, message: Dict):
         if self.logger:
@@ -602,6 +684,103 @@ class WorkerManager(Worker):
             return None
         return getattr(api, "daemon_client", None)
 
+    @staticmethod
+    def _daemon_client_is_available(client) -> bool:
+        """Return True when one daemon client can handle requests now."""
+        from airunner.daemon_client.availability import (
+            daemon_client_is_available,
+        )
+
+        return daemon_client_is_available(client)
+
+    def _optional_runtime_should_use_local_fallback(
+        self,
+        runtime_name: str,
+        action: str,
+        model_type,
+    ) -> bool:
+        """Return True when optional runtime control should stay local."""
+        is_optional = self._is_optional_runtime_load(
+            action,
+            model_type,
+        ) or self._is_optional_runtime_unload(action, model_type)
+        if not is_optional:
+            return False
+
+        client = self._daemon_client()
+        if client is None:
+            return True
+
+        if WorkerManager._daemon_client_is_available(client):
+            return False
+
+        if self.logger:
+            self.logger.debug(
+                "Daemon unavailable for %s %s; using local fallback",
+                action,
+                runtime_name,
+            )
+        return True
+
+    def _llm_daemon_client(self):
+        """Return one daemon client for LLM controls.
+
+        The chat stop button resolves through the LLM service, so unload needs
+        the same fallback when the WorkerManager API reference is stale.
+        """
+        client = self._daemon_client()
+        if client is not None:
+            return client
+
+        api = self._current_gui_api()
+        llm_service = getattr(api, "llm", None) if api is not None else None
+        resolver = getattr(llm_service, "_daemon_client", None)
+        if not callable(resolver):
+            return None
+        try:
+            return resolver()
+        except Exception:
+            return None
+
+    def _llm_worker_for_unload(self, *, create: bool = False):
+        """Return one local LLM worker instance when available."""
+        worker = getattr(self, "_llm_generate_worker", None)
+        if worker is not None:
+            return worker
+        if not create:
+            return None
+        try:
+            return self.llm_generate_worker
+        except Exception:
+            return None
+
+    def _local_llm_should_handle_unload(self) -> bool:
+        """Return True when the live LLM appears to be owned locally."""
+        from airunner.enums import ModelStatus
+
+        worker = self._llm_worker_for_unload(create=False)
+        if worker is None:
+            return False
+        if not callable(
+            getattr(worker, "llm_on_interrupt_process_signal", None)
+        ):
+            return False
+        if not callable(getattr(worker, "add_to_queue", None)):
+            return False
+
+        status_getter = getattr(worker, "current_model_status", None)
+        if callable(status_getter):
+            try:
+                status = status_getter()
+            except Exception:
+                status = None
+            if status in (ModelStatus.LOADING, ModelStatus.LOADED):
+                return True
+
+        if getattr(worker, "_pending_llm_request", None) is not None:
+            return True
+        return False
+
     def _start_art_runtime_prewarm(self) -> None:
         """Start the art sidecar in the background after the GUI loads."""
         if self._art_runtime_prewarm_started:
@@ -623,15 +802,12 @@ class WorkerManager(Worker):
             self._art_runtime_prewarm_started = False
             return
         try:
-            client.load_runtime("art")
-            ready = client.wait_runtime_ready(
+            client.load_runtime(
                 "art",
-                loaded=True,
+                deployment_mode="sidecar",
                 auto_start=False,
-                timeout_seconds=60.0,
             )
-            if ready:
-                return
+            return
         except RuntimeError as exc:
             if self.logger:
                 self.logger.debug("Art runtime prewarm skipped: %s", exc)
@@ -1039,6 +1215,12 @@ class WorkerManager(Worker):
         """Run one daemon runtime action without blocking the caller."""
         if self._daemon_client() is None:
             return False
+        if self._optional_runtime_should_use_local_fallback(
+            runtime_name,
+            action,
+            model_type,
+        ):
+            return False
 
         thread = threading.Thread(
             target=self._control_daemon_runtime,
@@ -1048,6 +1230,60 @@ class WorkerManager(Worker):
                 "before_request": before_request,
                 "after_success": after_success,
             },
+            daemon=True,
+        )
+        thread.start()
+        return True
+
+    def _run_daemon_llm_unload(self) -> bool:
+        """Unload the daemon-managed local LLM without blocking the UI."""
+        from airunner.enums import ModelStatus, ModelType, SignalCode
+
+        client = self._llm_daemon_client()
+        if client is None:
+            return False
+        try:
+            client.interrupt_llm()
+        except RuntimeError:
+            pass
+        try:
+            client.unload_local_llm(auto_start=False)
+        except RuntimeError as exc:
+            return self._emit_daemon_runtime_failure(
+                "unload",
+                "llm",
+                ModelType.LLM,
+                "Daemon unload for llm failed: %s" % exc,
+            )
+        ready = client.wait_runtime_ready(
+            "llm",
+            loaded=False,
+            auto_start=False,
+            timeout_seconds=self._runtime_wait_timeout_seconds(
+                "unload",
+                ModelType.LLM,
+            ),
+        )
+        if not ready:
+            return self._emit_daemon_runtime_failure(
+                "unload",
+                "llm",
+                ModelType.LLM,
+                "Daemon unload for llm timed out waiting for runtime state",
+            )
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.UNLOADED},
+        )
+        return True
+
+    def _unload_daemon_llm_async(self) -> bool:
+        """Start the daemon-backed local LLM unload in a background thread."""
+        if self._llm_daemon_client() is None:
+            return False
+        thread = threading.Thread(
+            target=self._run_daemon_llm_unload,
+            name="airunner-llm-unload",
             daemon=True,
         )
         thread.start()
@@ -1076,7 +1312,8 @@ class WorkerManager(Worker):
         """Return the daemon deployment mode used for one runtime action."""
         from airunner.enums import ModelType
 
-        if runtime_name in {"tts", "stt"} or model_type in {
+        if runtime_name in {"art", "tts", "stt"} or model_type in {
+            ModelType.SD,
             ModelType.TTS,
             ModelType.STT,
         }:
@@ -1152,10 +1389,40 @@ class WorkerManager(Worker):
                     "No pending generation request found after download completion"
                 )
 
+    def _interrupt_active_daemon_art_job(self, data: Dict) -> bool:
+        """Cancel one active daemon art job before unloading its runtime."""
+        worker = getattr(self, "_sd_worker", None)
+        if worker is None:
+            return False
+
+        request_unload = getattr(
+            worker,
+            "request_daemon_unload_after_cancel",
+            None,
+        )
+        if callable(request_unload):
+            if not request_unload():
+                return False
+        elif not getattr(worker, "_active_daemon_job_id", None):
+            return False
+        else:
+            worker._pending_daemon_unload_after_cancel = True
+
+        worker.on_interrupt_image_generation_signal(data)
+        return True
+
     def on_unload_art_signal(self, data: Dict):
         from airunner.enums import ModelType
 
-        if self._control_daemon_runtime("art", "unload", ModelType.SD):
+        data = data or {}
+        if self._interrupt_active_daemon_art_job(data):
+            return
+
+        if self._control_daemon_runtime_async(
+            "art",
+            "unload",
+            ModelType.SD,
+        ):
             return
         if self._sd_worker is not None:
 
@@ -1165,10 +1432,6 @@ class WorkerManager(Worker):
 
             data["callback"] = callback
             self.sd_worker.unload(data)
-            self.sd_worker.image_export_worker.stop()
-            del self.sd_worker.image_export_worker
-            self.sd_worker.image_export_worker = None
-            self._image_export_worker = None
 
     def on_sd_cancel_signal(self, data):
         if self._sd_worker is not None:
@@ -1247,13 +1510,8 @@ class WorkerManager(Worker):
             self.stt_audio_capture_worker.on_model_status_changed_signal(data)
 
     def on_load_art_signal(self, data):
-        from airunner.enums import ModelStatus, ModelType, SignalCode
-
         if self._daemon_client() is not None:
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                {"model": ModelType.SD, "status": ModelStatus.READY},
-            )
+            self._start_art_runtime_prewarm()
             return
         if self.sd_worker is not None:
             self.sd_worker.on_load_art_signal(data)
@@ -1265,14 +1523,15 @@ class WorkerManager(Worker):
             return
 
         client = self._daemon_client()
-        if client is not None:
-            is_available = getattr(client, "is_available", None)
-            if callable(is_available) and not is_available(timeout_seconds=0.2):
-                if self.logger:
-                    self.logger.debug(
-                        "Deferring startup TTS load until the daemon is reachable"
-                    )
-                return
+        if (
+            client is not None
+            and not WorkerManager._daemon_client_is_available(client)
+        ):
+            if self.logger:
+                self.logger.debug(
+                    "Deferring startup TTS load until the daemon is reachable"
+                )
+            return
 
         self.on_enable_tts_signal({"source": "startup"})
 
@@ -1410,17 +1669,34 @@ class WorkerManager(Worker):
             self.sd_worker.delete_missing_embeddings(data)
 
     def on_llm_on_unload_signal(self, data):
-        from airunner.enums import ModelType
+        data = data or {}
 
-        if self._control_daemon_runtime("llm", "unload", ModelType.LLM):
-            return
-        if self._llm_generate_worker is not None:
-            self.llm_generate_worker.add_to_queue(
+        if self._local_llm_should_handle_unload():
+            worker = self._llm_worker_for_unload(create=False)
+            if worker is None:
+                return
+            worker.llm_on_interrupt_process_signal(data)
+            worker.add_to_queue(
                 {
                     "_message_type": "llm_unload",
                     "data": data,
                 }
             )
+            return
+
+        if self._unload_daemon_llm_async():
+            return
+        worker = self._llm_worker_for_unload(create=True)
+        if worker is None:
+            return
+
+        worker.llm_on_interrupt_process_signal(data)
+        worker.add_to_queue(
+            {
+                "_message_type": "llm_unload",
+                "data": data,
+            }
+        )
 
     def on_llm_load_model_signal(self, data):
         from airunner.enums import ModelType

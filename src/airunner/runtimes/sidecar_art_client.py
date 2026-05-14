@@ -26,6 +26,7 @@ from airunner.runtimes.contracts import (
     RuntimeAction,
     RuntimeDescriptor,
     RuntimeHealth,
+    RuntimeHealthStatus,
     RuntimeKind,
     RuntimeMode,
     TransportKind,
@@ -59,6 +60,7 @@ class SidecarArtClient(RuntimeClient):
         self._active_jobs: dict[str, str] = {}
         self._active_jobs_lock = threading.Lock()
         self._invoke_lock = threading.Lock()
+        self._last_known_model_status: Optional[str] = None
         self.descriptor = RuntimeDescriptor(
             runtime=RuntimeKind.ART,
             provider=provider,
@@ -94,12 +96,100 @@ class SidecarArtClient(RuntimeClient):
     def healthcheck(self) -> RuntimeHealth:
         """Return the health of the managed art runtime."""
         status, details = self._launcher.health_status()
+        metadata = self._metadata()
+        if status is RuntimeHealthStatus.READY:
+            model_status = self._remote_model_status()
+            if model_status is not None:
+                model_status = self._remember_model_status(model_status)
+                metadata["model_status"] = model_status
+                status, details = self._status_from_model_status(
+                    model_status,
+                    details,
+                )
+            else:
+                fallback_model_status = self._fallback_model_status()
+                if fallback_model_status is not None:
+                    metadata["model_status"] = fallback_model_status
+                    status, details = self._status_from_model_status(
+                        fallback_model_status,
+                        details,
+                    )
         return RuntimeHealth(
             descriptor=self.descriptor,
             status=status,
             details=details,
-            metadata=self._metadata(),
+            metadata=metadata,
         )
+
+    def _has_active_jobs(self) -> bool:
+        """Return whether the sidecar currently has one tracked art job."""
+        with self._active_jobs_lock:
+            return bool(self._active_jobs)
+
+    def _fallback_model_status(self) -> Optional[str]:
+        """Return the best local model status when `/health` is unavailable."""
+        if self._has_active_jobs():
+            if self._last_known_model_status in {"loaded", "ready"}:
+                return "loaded"
+            return "loading"
+        return self._last_known_model_status or None
+
+    def _remember_model_status(self, model_status: str) -> str:
+        """Store one normalized model status observed from the sidecar."""
+        normalized = str(model_status or "").strip().lower()
+        if normalized:
+            self._last_known_model_status = normalized
+        return normalized
+
+    def _observe_job_status(self, status: str, progress: float) -> None:
+        """Update the cached model status based on one job poll result."""
+        normalized_status = str(status or "").strip().lower()
+        if normalized_status in {"completed"}:
+            self._remember_model_status("loaded")
+            return
+        if normalized_status == "running":
+            if progress > 1.0:
+                self._remember_model_status("loaded")
+                return
+            if self._last_known_model_status not in {"loaded", "ready"}:
+                self._remember_model_status("loading")
+            return
+        if normalized_status == "pending":
+            if self._last_known_model_status not in {"loaded", "ready"}:
+                self._remember_model_status("loading")
+
+    def _remote_model_status(self) -> Optional[str]:
+        """Return the current model status reported by the art sidecar."""
+        url = f"{self._launcher.endpoint}/health"
+        try:
+            response = self._session.request(
+                "GET",
+                url,
+                timeout=self._settings.request_timeout_seconds,
+            )
+            response.raise_for_status()
+        except requests.RequestException:
+            return None
+
+        payload = response.json()
+        model_status = str(payload.get("art_model_status", "")).strip().lower()
+        return model_status or None
+
+    @staticmethod
+    def _status_from_model_status(
+        model_status: str,
+        default_details: str,
+    ) -> tuple[RuntimeHealthStatus, str]:
+        """Map one art model status string to runtime health semantics."""
+        if model_status in {"loaded", "ready"}:
+            return RuntimeHealthStatus.READY, model_status
+        if model_status == "loading":
+            return RuntimeHealthStatus.STARTING, model_status
+        if model_status in {"failed", "error"}:
+            return RuntimeHealthStatus.FAILED, model_status
+        if model_status in {"unloaded", "disabled"}:
+            return RuntimeHealthStatus.STOPPED, model_status
+        return RuntimeHealthStatus.READY, default_details
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
         """Cancel an active art job on a best-effort basis."""
@@ -117,6 +207,7 @@ class SidecarArtClient(RuntimeClient):
 
     def close(self) -> None:
         """Release the managed sidecar process during shutdown."""
+        self._remember_model_status("unloaded")
         self._launcher.stop()
         close = getattr(self._session, "close", None)
         if close is not None:
@@ -154,6 +245,7 @@ class SidecarArtClient(RuntimeClient):
     def _unload_runtime(self, request_id: str) -> ResponseEnvelope:
         """Stop the managed art daemon."""
         with self._invoke_lock:
+            self._remember_model_status("unloaded")
             self._launcher.stop()
         return ResponseEnvelope(
             request_id=request_id,
@@ -174,6 +266,8 @@ class SidecarArtClient(RuntimeClient):
                 settings = self._settings_for_invocation(invocation)
                 self._ensure_launcher(settings)
                 self._launcher.start()
+                if self._last_known_model_status not in {"loaded", "ready"}:
+                    self._remember_model_status("loading")
                 job_id = self._submit_job(invocation)
                 if progress_callback is not None:
                     progress_callback(
@@ -253,6 +347,7 @@ class SidecarArtClient(RuntimeClient):
         if launcher_settings == current_launcher_settings:
             self._settings = settings
             return
+        self._remember_model_status("unloaded")
         self._launcher.stop()
         self._settings = settings
         self._launcher = SidecarArtLauncher(launcher_settings)
@@ -294,6 +389,7 @@ class SidecarArtClient(RuntimeClient):
             response = self._request("GET", f"/status/{job_id}")
             status = str(response.get("status", "")).lower()
             progress = float(response.get("progress") or 0.0)
+            self._observe_job_status(status, progress)
             if progress_callback is not None and (
                 status != last_status or progress != last_progress
             ):

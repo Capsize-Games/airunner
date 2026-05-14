@@ -47,6 +47,21 @@ class FakeDaemonClient:
             raise RuntimeError(error)
         return {"status": "ok"}
 
+    def interrupt_llm(self):
+        self.calls.append(("interrupt", "llm"))
+        error = self.request_errors.get(("interrupt", "llm"))
+        if error is not None:
+            raise RuntimeError(error)
+        return {"status": "ok"}
+
+    def unload_local_llm(self, **kwargs):
+        self.calls.append(("unload_local_llm", "llm"))
+        self.request_kwargs.append(("unload_local_llm", "llm", kwargs))
+        error = self.request_errors.get(("unload_local_llm", "llm"))
+        if error is not None:
+            raise RuntimeError(error)
+        return {"status": "ok", "queued": True}
+
     def wait_runtime_ready(self, runtime_name, *, loaded, **kwargs):
         self.calls.append(("wait", runtime_name, loaded))
         self.wait_kwargs.append((runtime_name, loaded, kwargs))
@@ -76,7 +91,14 @@ class FakeThread:
 
     started = []
 
-    def __init__(self, target, args=(), kwargs=None, daemon=None):
+    def __init__(
+        self,
+        target,
+        args=(),
+        kwargs=None,
+        daemon=None,
+        name=None,
+    ):
         self._target = target
         self._args = args
         self._kwargs = kwargs or {}
@@ -90,10 +112,19 @@ class FakeQueuedWorker:
     """Minimal worker double that records queued requests."""
 
     def __init__(self):
+        self.interrupts = []
         self.messages = []
+        self._pending_llm_request = None
+        self._status = None
+
+    def llm_on_interrupt_process_signal(self, data):
+        self.interrupts.append(data)
 
     def add_to_queue(self, message):
         self.messages.append(message)
+
+    def current_model_status(self):
+        return self._status
 
 
 def test_llm_load_signal_uses_daemon_runtime():
@@ -119,14 +150,76 @@ def test_sd_unload_signal_uses_daemon_runtime():
     client = FakeDaemonClient()
     manager, emitted = _worker_manager(client)
 
-    WorkerManager.on_unload_art_signal(manager, {})
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ):
+        WorkerManager.on_unload_art_signal(manager, {})
 
+    assert FakeThread.started == [True]
     assert client.calls == [("unload", "art"), ("wait", "art", False)]
+    assert client.request_kwargs == [
+        (
+            "unload",
+            "art",
+            {
+                "deployment_mode": "sidecar",
+                "metadata": None,
+                "auto_start": False,
+                "timeout_seconds": None,
+            },
+        )
+    ]
+    assert client.wait_kwargs == [
+        (
+            "art",
+            False,
+            {
+                "deployment_mode": "sidecar",
+                "auto_start": False,
+                "timeout_seconds": 30.0,
+            },
+        )
+    ]
     assert emitted == [
         (
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             {"model": ModelType.SD, "status": ModelStatus.UNLOADED},
         )
+    ]
+
+
+def test_sd_unload_signal_interrupts_active_daemon_job_first():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+    interrupts = []
+    manager._sd_worker = SimpleNamespace(
+        request_daemon_unload_after_cancel=lambda: True,
+        on_interrupt_image_generation_signal=lambda data: interrupts.append(
+            data
+        ),
+    )
+
+    WorkerManager.on_unload_art_signal(manager, {"source": "ui"})
+
+    assert interrupts == [{"source": "ui"}]
+    assert client.calls == []
+    assert emitted == []
+
+
+def test_rmbg_unload_signal_queues_background_worker_unload():
+    worker = FakeQueuedWorker()
+    manager, _emitted = _worker_manager(None)
+    manager._background_removal_worker = worker
+
+    WorkerManager.on_unload_rmbg_signal(manager, {"source": "ui"})
+
+    assert worker.messages == [
+        {
+            "action": "unload",
+            "data": {"source": "ui"},
+        }
     ]
 
 
@@ -218,6 +311,20 @@ def test_stt_load_signal_uses_daemon_runtime():
             {"model": ModelType.STT, "status": ModelStatus.LOADED},
         ),
         (SignalCode.STT_START_CAPTURE_SIGNAL, {}),
+    ]
+
+
+def test_stt_load_signal_falls_back_to_local_worker_when_unavailable():
+    client = FakeDaemonClient(available=False)
+    manager, _emitted = _worker_manager(client)
+    manager._stt_audio_processor_worker = FakeQueuedWorker()
+
+    WorkerManager.on_stt_load_signal(manager, {"source": "ui"})
+
+    assert client.calls == []
+    assert client.availability_checks == [0.2]
+    assert manager._stt_audio_processor_worker.messages == [
+        {"_message_type": "stt_load", "data": {"source": "ui"}}
     ]
 
 
@@ -316,7 +423,22 @@ def test_prewarm_art_runtime_uses_daemon_runtime():
 
     WorkerManager._prewarm_art_runtime(manager)
 
-    assert client.calls == [("load", "art"), ("wait", "art", True)]
+    assert client.calls == [("load", "art")]
+    assert client.request_kwargs[0][0:2] == ("load", "art")
+    assert client.request_kwargs[0][2]["deployment_mode"] == "sidecar"
+    assert client.request_kwargs[0][2]["auto_start"] is False
+    assert client.wait_kwargs == []
+    assert emitted == []
+
+
+def test_load_art_signal_with_daemon_starts_prewarm_without_ready_signal():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+    manager._start_art_runtime_prewarm = Mock()
+
+    WorkerManager.on_load_art_signal(manager, {"model_path": "/tmp/model"})
+
+    manager._start_art_runtime_prewarm.assert_called_once_with()
     assert emitted == []
 
 
@@ -518,6 +640,20 @@ def test_tts_enable_signal_uses_background_daemon_runtime():
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
             {"model": ModelType.TTS, "status": ModelStatus.LOADED},
         ),
+    ]
+
+
+def test_tts_enable_signal_falls_back_to_local_worker_when_unavailable():
+    client = FakeDaemonClient(available=False)
+    manager, _emitted = _worker_manager(client)
+    manager._tts_generator_worker = FakeQueuedWorker()
+
+    WorkerManager.on_enable_tts_signal(manager, {"source": "ui"})
+
+    assert client.calls == []
+    assert client.availability_checks == [0.2]
+    assert manager._tts_generator_worker.messages == [
+        {"_message_type": "tts_enable", "data": {"source": "ui"}}
     ]
 
 
@@ -762,14 +898,105 @@ def test_optional_runtime_load_unloads_when_preference_changed():
     after_success.assert_not_called()
 
 
-def test_llm_unload_signal_queues_local_worker_request():
+def test_llm_unload_signal_uses_daemon_local_worker_unload():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(client)
+
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ):
+        WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
+
+    assert FakeThread.started == [True]
+    assert client.calls == [
+        ("interrupt", "llm"),
+        ("unload_local_llm", "llm"),
+        ("wait", "llm", False),
+    ]
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.UNLOADED},
+        ),
+    ]
+
+
+def test_llm_unload_prefers_local_worker_when_model_is_loaded():
+    client = FakeDaemonClient()
+    manager, _emitted = _worker_manager(client)
+    worker = FakeQueuedWorker()
+    worker._status = ModelStatus.LOADED
+    manager._llm_generate_worker = worker
+
+    WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
+
+    assert client.calls == []
+    assert worker.interrupts == [{"source": "ui"}]
+    assert worker.messages == [
+        {"_message_type": "llm_unload", "data": {"source": "ui"}}
+    ]
+
+
+def test_llm_unload_signal_interrupts_and_queues_local_worker_request():
     client = None
     manager, _emitted = _worker_manager(client)
     manager._llm_generate_worker = FakeQueuedWorker()
 
     WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
 
+    assert manager._llm_generate_worker.interrupts == [{"source": "ui"}]
     assert manager._llm_generate_worker.messages == [
+        {"_message_type": "llm_unload", "data": {"source": "ui"}}
+    ]
+
+
+def test_llm_unload_uses_llm_service_daemon_client_fallback():
+    client = FakeDaemonClient()
+    manager, emitted = _worker_manager(None)
+    llm_service = SimpleNamespace(_daemon_client=lambda: client)
+    manager._current_gui_api = lambda: SimpleNamespace(
+        daemon_client=None,
+        headless=False,
+        llm=llm_service,
+    )
+
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ):
+        WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
+
+    assert FakeThread.started == [True]
+    assert client.calls == [
+        ("interrupt", "llm"),
+        ("unload_local_llm", "llm"),
+        ("wait", "llm", False),
+    ]
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.LLM, "status": ModelStatus.UNLOADED},
+        ),
+    ]
+
+
+def test_llm_unload_signal_uses_lazy_local_worker_fallback():
+    manager, _emitted = _worker_manager(None)
+    worker = FakeQueuedWorker()
+
+    with patch.object(
+        WorkerManager,
+        "llm_generate_worker",
+        new_callable=PropertyMock,
+        return_value=worker,
+    ):
+        WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
+
+    assert worker.interrupts == [{"source": "ui"}]
+    assert worker.messages == [
         {"_message_type": "llm_unload", "data": {"source": "ui"}}
     ]
 
@@ -989,7 +1216,7 @@ def test_llm_load_failure_keeps_loaded_local_status():
 def test_llm_unload_failure_keeps_loaded_local_status():
     client = FakeDaemonClient(
         request_errors={
-            ("unload", "llm"): (
+            ("unload_local_llm", "llm"): (
                 "HTTPConnectionPool(host='127.0.0.1', port=8188): "
                 "Read timed out. (read timeout=2.0)"
             )
@@ -1001,7 +1228,12 @@ def test_llm_unload_failure_keeps_loaded_local_status():
         current_model_status=lambda: ModelStatus.LOADED,
     )
 
-    WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ):
+        WorkerManager.on_llm_on_unload_signal(manager, {"source": "ui"})
 
     assert emitted == [
         (

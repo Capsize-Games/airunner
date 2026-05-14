@@ -7,9 +7,11 @@ from functools import partial
 from typing import Dict, Optional
 
 from airunner.components.about.gui.windows.about.about import AboutWindow
+from airunner.components.model_management import ModelResourceManager
 from airunner.components.model_management.gui.model_status_widget import (
     ModelStatusWidget,
 )
+from airunner.components.model_management.types import ModelState
 from airunner.components.application.gui.widgets.status.status_widget import (
     StatusWidget,
 )
@@ -1865,8 +1867,231 @@ class MainWindow(
             self._sync_model_status(ModelType.TTS, "TTS", loaded_models)
             self._sync_model_status(ModelType.STT, "STT", loaded_models)
             self._sync_model_status(ModelType.SD, "SD", loaded_models)
+        MainWindow._sync_model_resource_manager_from_daemon(self, status)
         loaded_models = self._loaded_model_names_from_runtime_status(status)
         self._reconcile_optional_runtime_preferences(loaded_models)
+
+    def _sync_model_resource_manager_from_daemon(self, status: dict) -> None:
+        """Mirror daemon runtime state into the shared resource manager."""
+        runtimes = status.get("runtimes")
+        if not isinstance(runtimes, list):
+            return
+
+        manager = ModelResourceManager()
+        for runtime in runtimes:
+            model_type = MainWindow._resource_model_type_from_runtime(runtime)
+            if model_type is None:
+                continue
+            model_status = MainWindow._model_status_from_runtime_summary(
+                runtime
+            )
+            model_id = MainWindow._resource_model_id_from_runtime(
+                runtime,
+                manager,
+                model_type,
+            )
+            MainWindow._apply_runtime_resource_state(
+                manager,
+                model_type,
+                model_id,
+                model_status,
+            )
+
+    @staticmethod
+    def _resource_model_type_from_runtime(runtime: dict) -> Optional[str]:
+        """Return the resource-manager type for one daemon runtime."""
+        runtime_name = str(runtime.get("runtime", "")).strip().lower()
+        return {
+            "art": "text_to_image",
+            "llm": "llm",
+            "stt": "stt",
+            "tts": "tts",
+        }.get(runtime_name)
+
+    @staticmethod
+    def _active_resource_model_ids(
+        manager: ModelResourceManager,
+        model_type: str,
+    ) -> list[str]:
+        """Return active model IDs tracked for one resource-manager type."""
+        return [
+            model.model_id
+            for model in manager.get_active_models()
+            if getattr(model, "model_type", "") == model_type
+        ]
+
+    @staticmethod
+    def _resource_model_id_from_runtime(
+        runtime: dict,
+        manager: ModelResourceManager,
+        model_type: str,
+    ) -> Optional[str]:
+        """Resolve one daemon runtime summary to a stable model ID."""
+        metadata = runtime.get("metadata") or {}
+        for key in ("model_path", "model_id", "model_version", "model_type"):
+            value = str(metadata.get(key, "")).strip()
+            if value:
+                return value
+
+        active_ids = MainWindow._active_resource_model_ids(manager, model_type)
+        if active_ids:
+            return active_ids[0]
+
+        runtime_name = str(runtime.get("runtime", "")).strip().lower()
+        if runtime_name in {"llm", "stt", "tts"}:
+            return runtime_name.upper()
+        return None
+
+    @staticmethod
+    def _resource_model_type_from_status_signal(
+        model_type: ModelType,
+    ) -> Optional[str]:
+        """Return the resource-manager type for one direct status signal."""
+        return {
+            ModelType.LLM: "llm",
+            ModelType.TTS: "tts",
+            ModelType.STT: "stt",
+            ModelType.SAFETY_CHECKER: "safety_checker",
+        }.get(model_type)
+
+    def _configured_resource_model_id(self, model_type: ModelType) -> str:
+        """Return the configured model identifier for one runtime."""
+        if model_type is ModelType.LLM:
+            settings = getattr(self, "llm_generator_settings", None)
+            for key in ("model_path", "model_id", "model_version"):
+                value = str(getattr(settings, key, "") or "").strip()
+                if value:
+                    return value
+            return "LLM"
+        if model_type is ModelType.TTS:
+            return MainWindow._configured_tts_resource_model_id(self)
+        if model_type is ModelType.STT:
+            return MainWindow._configured_stt_resource_model_id(self)
+        if model_type is ModelType.SAFETY_CHECKER:
+            return "Safety Checker"
+        return ""
+
+    def _configured_tts_resource_model_id(self) -> str:
+        """Return the label used for one TTS runtime row."""
+        voice_settings = getattr(self, "chatbot_voice_settings", None)
+        model_type = str(getattr(voice_settings, "model_type", "") or "")
+        if model_type.strip():
+            return model_type.strip()
+
+        settings = getattr(self, "path_settings", None)
+        value = str(getattr(settings, "tts_model_path", "") or "")
+        return value.strip() or "TTS"
+
+    def _configured_stt_resource_model_id(self) -> str:
+        """Return the label used for one STT runtime row."""
+        from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
+
+        settings = getattr(self, "path_settings", None)
+        base_path = str(getattr(settings, "stt_model_path", "") or "")
+        if base_path.strip():
+            return os.path.join(
+                base_path.strip(),
+                AIRUNNER_DEFAULT_STT_HF_PATH,
+            )
+        return AIRUNNER_DEFAULT_STT_HF_PATH
+
+    def _resource_model_id_from_status_signal(
+        self,
+        data: dict,
+        manager: ModelResourceManager,
+        model_type: ModelType,
+        resource_model_type: str,
+        status: ModelStatus,
+    ) -> Optional[str]:
+        """Resolve one stable model ID from a direct status signal."""
+        for key in ("model_path", "path", "model_id"):
+            value = str(data.get(key, "") or "").strip()
+            if value:
+                return value
+        active_ids = MainWindow._active_resource_model_ids(
+            manager,
+            resource_model_type,
+        )
+        if status in (ModelStatus.UNLOADED, ModelStatus.FAILED) and active_ids:
+            return active_ids[0]
+        configured = MainWindow._configured_resource_model_id(
+            self,
+            model_type,
+        )
+        if configured:
+            return configured
+        if active_ids:
+            return active_ids[0]
+        return None
+
+    def _sync_model_resource_manager_from_status_signal(
+        self,
+        data: dict,
+        model_type: ModelType,
+        status: ModelStatus,
+    ) -> None:
+        """Mirror a direct status signal into the shared resource widget."""
+        resource_model_type = MainWindow._resource_model_type_from_status_signal(
+            model_type
+        )
+        if resource_model_type is None:
+            return
+        manager = ModelResourceManager()
+        model_id = MainWindow._resource_model_id_from_status_signal(
+            self,
+            data,
+            manager,
+            model_type,
+            resource_model_type,
+            status,
+        )
+        current_state = None
+        if model_id is not None:
+            current_state = manager.get_model_state(model_id)
+        if status is ModelStatus.READY:
+            status = ModelStatus.LOADED
+        if (
+            status is ModelStatus.LOADING
+            and current_state in (ModelState.LOADED, ModelState.BUSY)
+        ):
+            return
+        MainWindow._apply_runtime_resource_state(
+            manager,
+            resource_model_type,
+            model_id,
+            status,
+        )
+
+    @staticmethod
+    def _apply_runtime_resource_state(
+        manager: ModelResourceManager,
+        model_type: str,
+        model_id: Optional[str],
+        model_status: ModelStatus,
+    ) -> None:
+        """Apply one daemon runtime summary to the shared resource state."""
+        active_ids = MainWindow._active_resource_model_ids(manager, model_type)
+        if model_status not in (ModelStatus.LOADING, ModelStatus.LOADED):
+            for active_id in active_ids:
+                manager.cleanup_model(active_id, model_type)
+            return
+
+        if not model_id:
+            return
+
+        for active_id in active_ids:
+            if active_id != model_id:
+                manager.cleanup_model(active_id, model_type)
+
+        if model_status is ModelStatus.LOADING:
+            manager.set_model_state(
+                model_id,
+                ModelState.LOADING,
+                model_type,
+            )
+            return
+
+        manager.model_loaded(model_id, model_type)
 
     def _effective_llm_status(
         self,
@@ -2060,11 +2285,21 @@ class MainWindow(
         )
 
     def on_model_status_changed_signal(self, data):
-        model = data["model"]
-        status = data["status"]
+        if not isinstance(data, dict):
+            return
+        model = data.get("model")
+        status = data.get("status")
+        if model is None or status is None:
+            return
         if model is ModelType.LLM:
             status = self._normalize_direct_llm_status(status)
-        if self._model_status[model] is status:
+        MainWindow._sync_model_resource_manager_from_status_signal(
+            self,
+            data,
+            model,
+            status,
+        )
+        if self._model_status.get(model) is status:
             return
         self._model_status[model] = status
         if model is ModelType.SD:

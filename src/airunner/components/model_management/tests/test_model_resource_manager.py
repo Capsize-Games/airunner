@@ -178,6 +178,31 @@ def test_prepare_model_loading_ignores_target_loading_state(caplog):
     assert "Found 1 active models" not in caplog.text
 
 
+def test_model_type_persists_across_busy_and_ready_states():
+    """Explicit model types should survive later lifecycle transitions."""
+    manager = ModelResourceManager()
+    manager._model_states.clear()
+    manager._model_types.clear()
+
+    model_id = "briaai/RMBG-2.0"
+
+    manager.model_busy(model_id, "rmbg")
+    active = manager.get_active_models()
+
+    assert len(active) == 1
+    assert active[0].model_type == "rmbg"
+    assert active[0].state == ModelState.BUSY
+
+    manager.model_ready(model_id)
+    active = manager.get_active_models()
+
+    assert len(active) == 1
+    assert active[0].model_type == "rmbg"
+    assert active[0].state == ModelState.LOADED
+
+    manager.cleanup_model(model_id, "rmbg")
+
+
 def test_memory_breakdown():
     """Test memory allocation breakdown."""
     logger.info("\n=== Testing Memory Allocation Breakdown ===")

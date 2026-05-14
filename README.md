@@ -1,16 +1,8 @@
 # AI Runner
 
-```
-Support development. Send crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
-```
+## Edge AI for art and chat companions, built with privacy, flexibility, and creativity in mind.
 
-## Local AI workflow workbench
-
-AI Runner is an offline-first desktop application, headless server,
-and Python library for local AI workflows. Its primary goal is to
-produce durable deliverables such as research briefs and
-meeting-follow-up packs, with chat, speech, search, and coding acting
-as operators behind the scenes.
+AI Runner is a private AI companion you shape — name, personality, voice, memory — and a layered canvas for AI art generation. Everything runs offline on your machine.
 
 
 <img src="./images/art_interface.png" alt="AI Runner Logo" />
@@ -22,36 +14,37 @@ as operators behind the scenes.
 
 ---
 
-## What AIRunner Is For
+## What AI Runner Is For
 
-AI Runner is being positioned around two outcome-first workflows:
+AI Runner is built around two interlocking experiences.
 
-- **Research Brief Builder**: Gather sources, capture evidence, and
-  produce a reviewable brief package with findings, citations, open
-  questions, and reusable artifacts.
-- **Meeting-to-Deliverables**: Turn meeting notes or transcripts into
-  decision logs, action items, follow-up drafts, and editable work
-  products.
-- **Hidden workflow operator**: Coding is still valuable, but it moves
-  behind the scenes. AIRunner can create helper projects under
-  `~/.local/share/airunner/Projects` when a workflow needs custom logic,
-  store what those helpers do, and reuse them later instead of treating
-  ad hoc scripts as the end product.
+**A companion you shape.** Name it, give it a personality, assign it
+a voice, and let it build memory of who you are over time. Your
+companion is aware of the time, date, and weather, and its mood shifts
+naturally through conversation. Everything — the conversations, the
+memories, the personality — stays on your machine.
 
-The target workflow contracts for these two product wedges are captured
-in [docs/deliverable_workflows.md](./docs/deliverable_workflows.md).
+**A canvas for AI art.** A layered drawing and generation surface where
+you can sketch, paint, generate, and filter. Convert sketches to images,
+iterate with image-to-image, composite on layers, and apply styles and
+filters — with your companion present alongside you while you create.
+
+Neither experience requires an internet connection, an API key, or a
+subscription. Everything runs on your hardware.
 
 ## ✨ Key Features
 
 | Feature | Description |
 |---------|-------------|
-| **📚 Research Brief Builder** | Deep research workflow that collects sources, tracks evidence, and produces a structured brief package |
-| **📝 Meeting-to-Deliverables** | Converts meeting input into decisions, action items, follow-up drafts, and editable deliverables |
-| **🧰 Hidden Workflow Operator** | AIRunner can use tools, search, speech, and helper projects to finish a workflow without making generated code the end goal |
-| **🎨 Visual Workflows** | Drag-and-drop LangGraph workflow builder with runtime execution |
-| **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and Z-Image models with drawing tools, LoRA, inpainting, and filters |
-| **🔒 Privacy First** | Runs locally with no external APIs by default, configurable guardrails |
-| **⚡ Local Runtime Stack** | Desktop app, headless server, and Python library for local LLM, TTS, STT, and workflow automation |
+| **🤖 AI Companion** | Shape a named, voiced companion with persistent personality, shifting mood, and long-term memory built from your conversations |
+| **🎨 Layered Canvas** | Draw, paint, generate, and filter on a multi-layer canvas — convert sketches to images, composite scenes, and iterate in place |
+| **🖼️ Image Generation** | SDXL and Z-Image Turbo with LoRA, embeddings, image-to-image, inpainting, and post-process filters, background removal |
+| **🗣️ Voice Conversation** | Full TTS and STT — speak to your companion and hear it respond in a voice you choose |
+| **🧠 Memory & Recall** | Companion builds long-term memory of you across sessions with RAG-powered recall |
+| **🌤️ Environmental Awareness** | Companion is aware of time, date, and local weather — grounded in the real moment |
+| **🔒 Privacy First** | Fully local — no external APIs, no telemetry, no data leaves your machine |
+| **🛡️ Safety Filters** | Configurable NSFW output filtering and always-on prompt classifier for illegal content |
+| **📦 Model Management** | Built-in HuggingFace and Civitai downloaders with support for multiple local LLMs and image models |
 
 ### 🌍 Language Support
 

@@ -26,6 +26,9 @@ from airunner.utils.image.convert_binary_to_image import (
 
 
 class CanvasAPIService(APIServiceBase):
+    def remove_background(self):
+        self.emit_signal(SignalCode.REMOVE_BACKGROUND)
+
     def recenter_grid(self):
         self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
 

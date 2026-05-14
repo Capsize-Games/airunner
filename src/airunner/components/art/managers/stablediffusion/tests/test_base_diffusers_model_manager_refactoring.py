@@ -6,6 +6,9 @@ are accessible via the Method Resolution Order (MRO).
 """
 
 import pytest
+from unittest.mock import Mock
+
+from airunner.enums import ModelStatus, ModelType
 
 
 def test_all_imports_work():
@@ -211,6 +214,49 @@ def test_helper_class_exists():
 
     assert DeterministicSDENoiseSampler is not None
     assert hasattr(DeterministicSDENoiseSampler, "__call__")
+
+
+def test_load_pipe_keeps_sd_loading_until_finalization(monkeypatch):
+    from airunner.components.art.managers.stablediffusion import (
+        base_diffusers_model_manager as manager_module,
+    )
+    from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+        BaseDiffusersModelManager,
+    )
+
+    statuses = []
+    resource_manager = Mock()
+
+    manager = type("FakeManager", (), {})()
+    manager.logger = type(
+        "Logger",
+        (),
+        {
+            "debug": staticmethod(lambda *args, **kwargs: None),
+            "error": staticmethod(lambda *args, **kwargs: None),
+            "info": staticmethod(lambda *args, **kwargs: None),
+        },
+    )()
+    manager._pipeline_class = object()
+    manager.section = "txt2img"
+    manager.model_type = ModelType.SD
+    manager.config_path = "/tmp/model"
+    manager.model_path = "/tmp/model"
+    manager._prepare_pipe_data = lambda: {}
+    manager._set_pipe = lambda _config, _data: None
+    manager.change_model_status = (
+        lambda model, status: statuses.append((model, status))
+    )
+
+    monkeypatch.setattr(
+        manager_module,
+        "ModelResourceManager",
+        lambda: resource_manager,
+    )
+
+    assert BaseDiffusersModelManager._load_pipe(manager) is True
+    assert statuses == [(ModelType.SD, ModelStatus.LOADING)]
+    resource_manager.model_loaded.assert_not_called()
 
 
 if __name__ == "__main__":

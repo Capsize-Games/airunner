@@ -88,3 +88,20 @@ def test_on_toggle_tool_signal_applies_cursor_for_active_tool():
             "current_tool": CanvasToolName.BRUSH,
         }
     )
+
+
+def test_remove_background_button_delegates_to_canvas_api():
+    """The canvas remove-background button should call the canvas API."""
+    remove_background = Mock()
+    widget = CanvasWidget.__new__(CanvasWidget)
+    widget.api = SimpleNamespace(
+        art=SimpleNamespace(
+            canvas=SimpleNamespace(remove_background=remove_background)
+        )
+    )
+
+    assert ("triangle", "remove_background_button") in CanvasWidget.icons
+
+    CanvasWidget.on_remove_background_button_clicked(widget)
+
+    remove_background.assert_called_once_with()

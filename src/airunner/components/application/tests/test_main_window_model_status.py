@@ -12,7 +12,9 @@ from airunner.components.application.gui.windows.main import (
 from airunner.components.application.gui.windows.main.main_window import (
     MainWindow,
 )
+from airunner.components.model_management.types import ModelState
 from airunner.enums import ModelStatus, ModelType
+from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +23,23 @@ def qapp():
     if app is None:
         app = QApplication([])
     return app
+
+
+@pytest.fixture(autouse=True)
+def resource_manager_stub(monkeypatch):
+    manager = SimpleNamespace(
+        get_active_models=lambda: [],
+        cleanup_model=Mock(),
+        model_loaded=Mock(),
+        set_model_state=Mock(),
+        get_model_state=Mock(return_value=ModelState.UNLOADED),
+    )
+    monkeypatch.setattr(
+        main_window_module,
+        "ModelResourceManager",
+        lambda: manager,
+    )
+    return manager
 
 
 def _make_action() -> Mock:
@@ -34,10 +53,7 @@ def _make_action() -> Mock:
 def _make_window_stub():
     window = SimpleNamespace(
         _model_status={
-            ModelType.SD: ModelStatus.UNLOADED,
-            ModelType.LLM: ModelStatus.UNLOADED,
-            ModelType.TTS: ModelStatus.UNLOADED,
-            ModelType.STT: ModelStatus.UNLOADED,
+            model_type: ModelStatus.UNLOADED for model_type in ModelType
         },
         _post_startup_status_refresh_requested=False,
         _restore_sidebar_page_after_startup=None,
@@ -59,7 +75,19 @@ def _make_window_stub():
             llm_enabled=False,
             tts_enabled=False,
             stt_enabled=False,
+            sd_enabled=False,
+            nsfw_filter=False,
         ),
+        llm_generator_settings=SimpleNamespace(
+            model_path="",
+            model_id="",
+            model_version="",
+        ),
+        path_settings=SimpleNamespace(
+            tts_model_path="",
+            stt_model_path="",
+        ),
+        chatbot_voice_settings=SimpleNamespace(model_type=""),
         update_application_settings=Mock(),
         emit_signal=Mock(),
         initialize_widget_elements=Mock(),
@@ -383,6 +411,164 @@ def test_daemon_failed_status_does_not_override_local_llm_state():
     )
 
     assert window._model_status[ModelType.LLM] == ModelStatus.UNLOADED
+
+
+def test_sync_model_resource_manager_from_daemon_tracks_art_model(
+    monkeypatch,
+):
+    window = _make_window_stub()
+    manager = SimpleNamespace(
+        get_active_models=lambda: [],
+        cleanup_model=Mock(),
+        model_loaded=Mock(),
+        set_model_state=Mock(),
+    )
+    monkeypatch.setattr(
+        main_window_module,
+        "ModelResourceManager",
+        lambda: manager,
+    )
+
+    MainWindow._sync_model_resource_manager_from_daemon(
+        window,
+        {
+            "runtimes": [
+                {
+                    "runtime": "art",
+                    "status": "ready",
+                    "loaded": True,
+                    "metadata": {
+                        "model_path": "/models/zimage.safetensors",
+                    },
+                }
+            ]
+        },
+    )
+
+    manager.model_loaded.assert_called_once_with(
+        "/models/zimage.safetensors",
+        "text_to_image",
+    )
+
+
+def test_sync_model_resource_manager_from_daemon_cleans_unloaded_art(
+    monkeypatch,
+):
+    window = _make_window_stub()
+    manager = SimpleNamespace(
+        get_active_models=lambda: [
+            SimpleNamespace(
+                model_id="/models/zimage.safetensors",
+                model_type="text_to_image",
+                state=ModelState.LOADED,
+            )
+        ],
+        cleanup_model=Mock(),
+        model_loaded=Mock(),
+        set_model_state=Mock(),
+    )
+    monkeypatch.setattr(
+        main_window_module,
+        "ModelResourceManager",
+        lambda: manager,
+    )
+
+    MainWindow._sync_model_resource_manager_from_daemon(
+        window,
+        {
+            "runtimes": [
+                {
+                    "runtime": "art",
+                    "status": "stopped",
+                    "loaded": False,
+                    "metadata": {},
+                }
+            ]
+        },
+    )
+
+    manager.cleanup_model.assert_called_once_with(
+        "/models/zimage.safetensors",
+        "text_to_image",
+    )
+
+
+def test_direct_loaded_llm_status_syncs_resource_manager(
+    resource_manager_stub,
+):
+    window = _make_window_stub()
+    window._model_status[ModelType.LLM] = ModelStatus.LOADED
+    window.llm_generator_settings = SimpleNamespace(
+        model_path="/models/qwen3.gguf",
+        model_id="qwen3",
+        model_version="Qwen3",
+    )
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {"model": ModelType.LLM, "status": ModelStatus.LOADED},
+    )
+
+    resource_manager_stub.model_loaded.assert_called_once_with(
+        "/models/qwen3.gguf",
+        "llm",
+    )
+
+
+def test_direct_loaded_tts_status_uses_voice_model_name(
+    resource_manager_stub,
+):
+    window = _make_window_stub()
+    window.chatbot_voice_settings = SimpleNamespace(model_type="OpenVoice")
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {"model": ModelType.TTS, "status": ModelStatus.LOADED},
+    )
+
+    resource_manager_stub.model_loaded.assert_called_once_with(
+        "OpenVoice",
+        "tts",
+    )
+
+
+def test_direct_loaded_stt_status_uses_configured_model_path(
+    resource_manager_stub,
+):
+    window = _make_window_stub()
+    window.path_settings = SimpleNamespace(
+        tts_model_path="",
+        stt_model_path="/models/stt",
+    )
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {"model": ModelType.STT, "status": ModelStatus.LOADED},
+    )
+
+    resource_manager_stub.model_loaded.assert_called_once_with(
+        f"/models/stt/{AIRUNNER_DEFAULT_STT_HF_PATH}",
+        "stt",
+    )
+
+
+def test_safety_checker_status_syncs_resource_manager(
+    resource_manager_stub,
+):
+    window = _make_window_stub()
+
+    MainWindow.on_model_status_changed_signal(
+        window,
+        {
+            "model": ModelType.SAFETY_CHECKER,
+            "status": ModelStatus.LOADED,
+        },
+    )
+
+    resource_manager_stub.model_loaded.assert_called_once_with(
+        "Safety Checker",
+        "safety_checker",
+    )
 
 
 def test_direct_failed_status_does_not_override_local_llm_loading():

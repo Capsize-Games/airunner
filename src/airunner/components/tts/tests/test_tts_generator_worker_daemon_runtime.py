@@ -202,6 +202,24 @@ def test_daemon_client_falls_back_to_main_window_worker_manager():
     assert TTSGeneratorWorker._daemon_client(worker) is client
 
 
+def test_daemon_client_returns_none_when_unavailable():
+    client = SimpleNamespace(
+        is_available=lambda timeout_seconds=0.2: False,
+    )
+    worker = SimpleNamespace(
+        api=SimpleNamespace(headless=False),
+        refresh_api_reference=Mock(
+            return_value=SimpleNamespace(
+                daemon_client=client,
+                headless=False,
+            )
+        ),
+    )
+    worker._current_api = lambda: TTSGeneratorWorker._current_api(worker)
+
+    assert TTSGeneratorWorker._daemon_client(worker) is None
+
+
 def test_streamed_text_skips_repeated_local_load_after_failure():
     worker = SimpleNamespace(
         application_settings=SimpleNamespace(tts_enabled=True),

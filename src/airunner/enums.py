@@ -49,6 +49,7 @@ class CodeOperationType(Enum):
 
 
 class SignalCode(Enum):
+    REMOVE_BACKGROUND = "remove_background_signal"
     IMAGE_EXPORTED = "image_exported_signal"
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     NEW_DOCUMENT = "new_document_signal"
@@ -221,6 +222,7 @@ class SignalCode(Enum):
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
+    RMBG_UNLOAD_SIGNAL = "rmbg_unload_signal"
     SD_ART_MODEL_CHANGED = "reload_stablediffusion_signal"
     LLM_MODEL_CHANGED = "llm_model_changed_signal"
     RAG_LOAD_DOCUMENTS = "rag_load_documents_signal"
@@ -526,6 +528,7 @@ class ModelType(Enum):
     LORA = "Lora"
     EMBEDDINGS = "Embeddings"
     SD = "SD Model"
+    RMBG = "RMBG Model"
     SD_VAE = "SD VAE"
     SD_UNET = "SD UNet"
     SD_TOKENIZER = "SD Tokenizer"

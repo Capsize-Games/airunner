@@ -7,7 +7,7 @@ from PIL import Image
 
 from airunner.components.art.api import canvas_services as module
 from airunner.components.art.api.canvas_services import CanvasAPIService
-from airunner.enums import GeneratorSection
+from airunner.enums import GeneratorSection, SignalCode
 
 
 def test_create_image_request_uses_img2img_fallback_image(monkeypatch):
@@ -201,3 +201,15 @@ def test_create_image_request_uses_controlnet_fallback_image(monkeypatch):
     assert request.controlnet_enabled is True
     assert request.controlnet_image is fallback_image
     assert request.strength == 0.65
+
+
+def test_remove_background_emits_signal():
+    """Canvas background-removal requests should emit the worker signal."""
+    service = CanvasAPIService.__new__(CanvasAPIService)
+    service.emit_signal = Mock()
+
+    CanvasAPIService.remove_background(service)
+
+    service.emit_signal.assert_called_once_with(
+        SignalCode.REMOVE_BACKGROUND
+    )

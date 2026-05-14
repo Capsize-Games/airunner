@@ -48,6 +48,42 @@ def _get_airunner_api(req: Request):
     return api
 
 
+def _daemon_llm_worker(req: Request):
+    """Return the live daemon LLM worker when one is available."""
+    api = _get_airunner_api(req)
+    worker_manager = getattr(api, "_worker_manager", None)
+    if worker_manager is None:
+        lifecycle = getattr(req.app.state, "lifecycle_service", None)
+        worker_manager = getattr(lifecycle, "worker_manager", None)
+    if worker_manager is None:
+        return None
+    worker = getattr(worker_manager, "_llm_generate_worker", None)
+    if worker is not None:
+        return worker
+    return getattr(worker_manager, "llm_generate_worker", None)
+
+
+def _queue_daemon_llm_unload(req: Request) -> bool:
+    """Interrupt and queue unload on the live daemon LLM worker."""
+    worker = _daemon_llm_worker(req)
+    if worker is None:
+        return False
+
+    payload = {"source": "daemon_admin_unload"}
+    request_unload = getattr(worker, "request_unload_after_interrupt", None)
+    if callable(request_unload):
+        return bool(request_unload(payload))
+
+    interrupt = getattr(worker, "llm_on_interrupt_process_signal", None)
+    queue_unload = getattr(worker, "add_to_queue", None)
+    if not callable(interrupt) or not callable(queue_unload):
+        return False
+
+    interrupt(payload)
+    queue_unload({"_message_type": "llm_unload", "data": payload})
+    return True
+
+
 @router.get("/health")
 async def legacy_health() -> Dict[str, Any]:
     return {
@@ -538,6 +574,20 @@ def legacy_admin_interrupt(body: Optional[LegacyInterruptRequest] = None) -> Dic
         mediator.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
 
     return {"status": "ok"}
+
+
+@router.post("/admin/llm/unload")
+def legacy_admin_unload_llm(req: Request) -> Dict[str, Any]:
+    if _queue_daemon_llm_unload(req):
+        return {"status": "ok", "queued": True}
+
+    mediator = SignalMediator()
+    mediator.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
+    mediator.emit_signal(
+        SignalCode.LLM_UNLOAD_SIGNAL,
+        {"source": "daemon_admin_unload"},
+    )
+    return {"status": "ok", "queued": True}
 
 
 @router.post("/admin/reset_database")

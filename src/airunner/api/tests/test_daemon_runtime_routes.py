@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException
 
 from airunner.ipc.messages import ErrorEnvelope, EnvelopeStatus, ResponseEnvelope
+from airunner.enums import ModelStatus
 from airunner.runtimes.contracts import (
     RuntimeDescriptor,
     RuntimeHealth,
@@ -89,7 +90,7 @@ class FakeRegistry:
         return self.route_map[route]
 
 
-def _fake_request(registry, loaded_models=None):
+def _fake_request(registry, loaded_models=None, worker_manager=None):
     """Build a minimal FastAPI request double for direct route calls."""
     status = {
         "lifecycle_initialized": True,
@@ -104,7 +105,10 @@ def _fake_request(registry, loaded_models=None):
         app=SimpleNamespace(
             state=SimpleNamespace(
                 runtime_registry=registry,
-                lifecycle_service=SimpleNamespace(get_status=lambda: status),
+                lifecycle_service=SimpleNamespace(
+                    get_status=lambda: status,
+                    worker_manager=worker_manager,
+                ),
             )
         )
     )
@@ -190,6 +194,112 @@ def test_list_runtimes_stopped_health_overrides_stale_lifecycle_loaded():
     response = asyncio.run(list_runtimes(_fake_request(registry, ["LLM"])))
 
     assert response[0].loaded is False
+
+
+def test_list_runtimes_prefers_loaded_local_llm_worker_status():
+    """Local daemon LLM worker status should override stopped sidecar health."""
+    from airunner.api.routes.daemon import list_runtimes
+
+    client = FakeRuntimeClient(
+        RuntimeKind.LLM,
+        status=RuntimeHealthStatus.STOPPED,
+        metadata={"model_path": "/tmp/model.gguf"},
+    )
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
+        }
+    )
+    worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.LOADED,
+        )
+    )
+
+    response = asyncio.run(
+        list_runtimes(
+            _fake_request(
+                registry,
+                [],
+                worker_manager=worker_manager,
+            )
+        )
+    )
+
+    assert response[0].status == "ready"
+    assert response[0].loaded is True
+    assert response[0].metadata["model_status"] == "loaded"
+    assert response[0].metadata["model_path"] == "/tmp/model.gguf"
+
+
+def test_list_runtimes_reports_local_llm_worker_loading():
+    """Local daemon LLM worker loading should appear as starting/loading."""
+    from airunner.api.routes.daemon import list_runtimes
+
+    client = FakeRuntimeClient(
+        RuntimeKind.LLM,
+        status=RuntimeHealthStatus.STOPPED,
+        metadata={"model_path": "/tmp/model.gguf"},
+    )
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
+        }
+    )
+    worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.LOADING,
+        )
+    )
+
+    response = asyncio.run(
+        list_runtimes(
+            _fake_request(
+                registry,
+                [],
+                worker_manager=worker_manager,
+            )
+        )
+    )
+
+    assert response[0].status == "starting"
+    assert response[0].loaded is True
+    assert response[0].metadata["model_status"] == "loading"
+
+
+def test_list_runtimes_prefers_unloaded_local_llm_worker_status():
+    """Local daemon LLM unloads should override ready sidecar health."""
+    from airunner.api.routes.daemon import list_runtimes
+
+    client = FakeRuntimeClient(
+        RuntimeKind.LLM,
+        status=RuntimeHealthStatus.READY,
+        metadata={"model_path": "/tmp/model.gguf"},
+    )
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
+        }
+    )
+    worker_manager = SimpleNamespace(
+        _llm_generate_worker=SimpleNamespace(
+            current_model_status=lambda: ModelStatus.UNLOADED,
+        )
+    )
+
+    response = asyncio.run(
+        list_runtimes(
+            _fake_request(
+                registry,
+                [],
+                worker_manager=worker_manager,
+            )
+        )
+    )
+
+    assert response[0].status == "stopped"
+    assert response[0].loaded is False
+    assert response[0].metadata["model_status"] == "unloaded"
 
 
 def test_get_runtime_status_returns_requested_runtime():
