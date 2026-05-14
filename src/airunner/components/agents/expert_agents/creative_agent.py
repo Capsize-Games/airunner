@@ -5,6 +5,7 @@ from datetime import datetime
 from airunner.components.agents.expert_agent import ExpertAgent
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 class CreativeExpertAgent(ExpertAgent):
@@ -120,7 +121,10 @@ class CreativeExpertAgent(ExpertAgent):
         Returns:
             Dictionary containing task result
         """
-        self.logger.info(f"Creative agent executing task: {task[:50]}...")
+        self.logger.info(
+            "Creative agent executing task (%s)",
+            summarize_text(task, label="task"),
+        )
 
         context = context or {}
         task_lower = task.lower()

@@ -25,6 +25,7 @@ from airunner.runtimes.contracts import (
 from airunner.runtimes.registry import RuntimeRegistry
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
@@ -106,7 +107,10 @@ async def synthesize_speech(request: TTSRequest, req: Request):
     Returns:
         Audio file (WAV)
     """
-    logger.info(f"TTS request: {request.text[:50]}...")
+    logger.info(
+        "TTS request received (%s)",
+        summarize_text(request.text),
+    )
 
     client = resolve_tts_client(require_runtime_registry(req))
     try:

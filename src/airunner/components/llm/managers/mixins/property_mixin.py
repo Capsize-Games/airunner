@@ -228,7 +228,7 @@ class PropertyMixin:
         if not model_path or (isinstance(model_path, str) and model_path.strip() == ""):
             from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
             model_path = AIRUNNER_DEFAULT_LLM_HF_PATH
-            self.logger.info(f"No model path configured, using default: {model_path}")
+            self.logger.info("No model path configured, using default LLM model")
             
         if not model_path:
             raise ValueError(

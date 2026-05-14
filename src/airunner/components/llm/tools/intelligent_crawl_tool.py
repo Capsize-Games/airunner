@@ -19,6 +19,7 @@ from airunner.components.tools.scrapy.llm_crawler_controller import (
 )
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import fingerprint_value
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -226,7 +227,10 @@ def intelligent_crawl(
         )
 
         # Start crawling (blocks until complete)
-        logger.info(f"Starting intelligent crawl of {start_url}")
+        logger.info(
+            "Starting intelligent crawl (%s)",
+            fingerprint_value(start_url, label="url"),
+        )
         process.start()
 
         # Format results

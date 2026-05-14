@@ -13,6 +13,7 @@ from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.llm.core.tool_search import get_tool_search_engine
 from airunner.components.llm.core.tool_schema import get_tool_schema_with_examples
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 logger = get_logger(__name__)
@@ -50,7 +51,10 @@ def search_tools(
         limit: Maximum results to return (default 5)
         
     """
-    logger.info(f"🔍 Searching for tools: {query}")
+    logger.info(
+        "Searching for tools (%s)",
+        summarize_text(query, label="query"),
+    )
     
     # Get the search engine
     engine = get_tool_search_engine(include_immediate=False)
@@ -59,7 +63,7 @@ def search_tools(
     results = engine.search(query, limit=limit)
     
     if not results:
-        logger.info(f"No tools found matching: {query}")
+        logger.info("No tools found for query")
         return json.dumps({
             "message": "No matching tools found. Try a different query.",
             "tools": [],
@@ -72,7 +76,7 @@ def search_tools(
         schema["category"] = tool_info.category.value
         tool_schemas.append(schema)
     
-    logger.info(f"Found {len(tool_schemas)} tools matching: {query}")
+    logger.info("Found %d matching tools", len(tool_schemas))
     
     return json.dumps({
         "message": f"Found {len(tool_schemas)} matching tools.",

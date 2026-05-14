@@ -9,6 +9,7 @@ from typing import Optional, TYPE_CHECKING
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.workflow_manager import WorkflowState
@@ -208,7 +209,11 @@ class ToolExecutionMixin:
 
             query = self._extract_query_from_args(tool_args)
 
-            self.logger.info(f"🔧 Tool starting: {tool_name} - {query}")
+            self.logger.info(
+                "Tool starting: %s (%s)",
+                tool_name,
+                summarize_text(query, label="query"),
+            )
 
             # Emit "starting" status
             API().emit_signal(

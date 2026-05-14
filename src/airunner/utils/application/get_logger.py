@@ -4,6 +4,7 @@ import threading
 from typing import Optional
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application.log_hygiene import LogHygieneFilter
 
 
 _LOGGER_CACHE: dict[str, "Logger"] = {}
@@ -38,6 +39,7 @@ class Logger:
         # Add console handler -> send to stdout so systemd captures it when configured
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
+        console_handler.addFilter(LogHygieneFilter())
         logger.addHandler(console_handler)
 
         # Add file handler if enabled
@@ -85,6 +87,7 @@ class Logger:
 
                 file_handler = logging.FileHandler(log_file, mode="a")
                 file_handler.setFormatter(formatter)
+                file_handler.addFilter(LogHygieneFilter())
                 logger.addHandler(file_handler)
             except Exception as e:
                 # If file logging fails, just log to console

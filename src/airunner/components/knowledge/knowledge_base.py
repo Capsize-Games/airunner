@@ -20,6 +20,7 @@ from glob import glob
 
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -248,12 +249,18 @@ class KnowledgeBase:
                 
             # Exact match
             if normalized_new == existing:
-                self.logger.debug(f"Duplicate (exact): '{fact[:50]}...'")
+                self.logger.debug(
+                    "Duplicate fact detected (%s)",
+                    summarize_text(fact, label="fact"),
+                )
                 return True
             
             # Substring match - new fact is contained in existing
             if normalized_new in existing:
-                self.logger.debug(f"Duplicate (substring): '{fact[:50]}...' in existing")
+                self.logger.debug(
+                    "Duplicate fact substring detected (%s)",
+                    summarize_text(fact, label="fact"),
+                )
                 return True
             
             # Existing fact is contained in new fact (new is more detailed, allow it)
@@ -276,7 +283,10 @@ class KnowledgeBase:
                     existing_words = set(existing.split())
                     word_overlap = len(new_words & existing_words) / max(len(new_words), len(existing_words))
                     if word_overlap > 0.7:
-                        self.logger.debug(f"Duplicate (semantic): '{fact[:50]}...'")
+                        self.logger.debug(
+                            "Duplicate fact semantic match (%s)",
+                            summarize_text(fact, label="fact"),
+                        )
                         return True
         
         return False
@@ -332,7 +342,10 @@ class KnowledgeBase:
         
         # Check for duplicates
         if self._is_duplicate_fact(fact, section_content):
-            self.logger.info(f"Skipping duplicate fact: {fact[:50]}...")
+            self.logger.info(
+                "Skipping duplicate fact (%s)",
+                summarize_text(fact, label="fact"),
+            )
             return False
         
         # Format the fact with blank lines
@@ -348,7 +361,11 @@ class KnowledgeBase:
         )
         
         path.write_text(new_content, encoding="utf-8")
-        self.logger.info(f"Added fact to {section}: {fact[:50]}...")
+        self.logger.info(
+            "Added fact to %s (%s)",
+            section,
+            summarize_text(fact, label="fact"),
+        )
         
         # Invalidate RAG index
         self._rag_indexed = False

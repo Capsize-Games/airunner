@@ -8,12 +8,14 @@ They do not depend on application-specific mixins to remain thread-safe.
 
 from __future__ import annotations
 
+import logging
 from typing import Optional, Dict, Any
 import os
 import requests
 from PySide6.QtCore import QObject, Signal
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import fingerprint_value
 
 
 class ModelInfoWorker(QObject):
@@ -122,8 +124,13 @@ class FileDownloadWorker(QObject):
         return h
 
     def _try_download(self, url: str) -> bool:
-        self.logger.info(f"FileDownloadWorker starting download from: {url}")
-        self.logger.info(f"Saving to: {self.save_path}")
+        self.logger.info("FileDownloadWorker starting download")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                "Download target prepared (%s, %s)",
+                fingerprint_value(url, label="url"),
+                fingerprint_value(self.save_path, label="save_path"),
+            )
         self.logger.info(f"Expected size: {self.total_size} bytes")
 
         try:
@@ -151,9 +158,7 @@ class FileDownloadWorker(QObject):
                         self.logger.warning("Could not get size from headers")
 
                 os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
-                self.logger.info(
-                    f"Created directory: {os.path.dirname(self.save_path)}"
-                )
+                self.logger.info("Download directory prepared")
 
                 with open(self.save_path, "wb") as f:
                     downloaded = 0
@@ -170,7 +175,7 @@ class FileDownloadWorker(QObject):
                                 if os.path.exists(self.save_path):
                                     os.remove(self.save_path)
                                     self.logger.info(
-                                        f"Removed partial file: {self.save_path}"
+                                        "Removed partial download file"
                                     )
                             except Exception:
                                 pass
@@ -188,7 +193,8 @@ class FileDownloadWorker(QObject):
                 self.progress.emit(downloaded, self.total_size)
 
                 self.logger.info(
-                    f"Download complete: {downloaded} bytes written to {self.save_path}"
+                    "Download complete: %d bytes written",
+                    downloaded,
                 )
                 self.finished.emit(self.save_path)
                 return True
@@ -220,9 +226,9 @@ class FileDownloadWorker(QObject):
                 self.error.emit(str(http_err))
             return False
         except Exception as e:  # noqa: BLE001
-            self.logger.error(
-                f"Download failed with exception: {e}", exc_info=True
-            )
+            self.logger.error("Download failed with exception: %s", e)
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.exception("File download traceback")
             self.error.emit(str(e))
             return False
 

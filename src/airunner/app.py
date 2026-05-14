@@ -15,6 +15,7 @@ from PySide6.QtGui import QWindow
 from PySide6.QtWidgets import QApplication
 
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
     DEV_ENV,
@@ -186,7 +187,11 @@ class App(
             )
             return
 
-        self.logger.error({"message": message})
+        summary = summarize_text(
+            str(message) if message is not None else None,
+            label="message",
+        )
+        self.logger.error(f"Application error emitted ({summary})")
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
             {"message": message},

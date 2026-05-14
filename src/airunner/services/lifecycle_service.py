@@ -17,6 +17,7 @@ from airunner.enums import ModelService, SignalCode
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.create_worker import create_worker
+from airunner.utils.application.log_hygiene import fingerprint_value
 
 WorkerFactory = Callable[[type[Any]], Any]
 
@@ -116,9 +117,10 @@ class CoreLifecycleService:
         try:
             from airunner.settings import AIRUNNER_DB_URL, DEV_ENV
 
-            self.logger.info(
-                "DEBUG: Preload LLM - DB URL: %s DEV_ENV=%s",
-                AIRUNNER_DB_URL,
+            self._log_debug(
+                "Preload environment diagnostics: db_url_present=%s "
+                "DEV_ENV=%s",
+                bool(AIRUNNER_DB_URL),
                 DEV_ENV,
             )
         except Exception:
@@ -151,7 +153,11 @@ class CoreLifecycleService:
         cli_model_path: str,
     ) -> str:
         """Persist a CLI-provided model path into settings."""
-        self.logger.info("Using CLI-provided model path: %s", cli_model_path)
+        self.logger.info("Using CLI-provided model path for preload")
+        self._log_debug(
+            "CLI preload path (%s)",
+            fingerprint_value(cli_model_path, label="model_path"),
+        )
         if llm_settings is None:
             llm_settings = LLMGeneratorSettings()
             session.add(llm_settings)
@@ -166,8 +172,11 @@ class CoreLifecycleService:
         if not default_model_path:
             return None
         self.logger.info(
-            "No LLM settings row; creating default settings for model: %s",
-            default_model_path,
+            "No LLM settings row; creating default preload settings",
+        )
+        self._log_debug(
+            "Default preload path (%s)",
+            fingerprint_value(default_model_path, label="model_path"),
         )
         new_settings = LLMGeneratorSettings()
         new_settings.model_path = default_model_path
@@ -196,8 +205,11 @@ class CoreLifecycleService:
             return None
         if aimodel and aimodel.path:
             self.logger.info(
-                "No env default model set; using AIModels path: %s",
-                aimodel.path,
+                "No env default model set; using enabled AIModels entry",
+            )
+            self._log_debug(
+                "AIModels preload path (%s)",
+                fingerprint_value(aimodel.path, label="model_path"),
             )
             return aimodel.path
         return None
@@ -205,7 +217,11 @@ class CoreLifecycleService:
     def _emit_llm_load(self, model_path: str) -> None:
         """Emit the preload signal for the resolved model path."""
         self._preloaded_model_path = model_path
-        self.logger.info("Pre-loading LLM model: %s", model_path)
+        self.logger.info("Pre-loading LLM model")
+        self._log_debug(
+            "Preload signal path (%s)",
+            fingerprint_value(model_path, label="model_path"),
+        )
         self.logger.info("This may take 30-60 seconds...")
         self.signal_source.emit_signal(
             SignalCode.LLM_LOAD_SIGNAL,
@@ -213,6 +229,12 @@ class CoreLifecycleService:
         )
         time.sleep(5)
         self.logger.info("Model loading initiated in background")
+
+    def _log_debug(self, message: str, *args: Any) -> None:
+        """Log one debug message when the injected logger supports it."""
+        debug = getattr(self.logger, "debug", None)
+        if callable(debug):
+            debug(message, *args)
 
     def _loaded_model_names(self) -> list[str]:
         """Return the currently loaded model names when known."""

@@ -26,6 +26,7 @@ from airunner.components.llm.long_running.data.project_state import (
 from airunner.components.data.session_manager import session_scope
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -787,7 +788,10 @@ class ProjectManager:
             db.commit()
             db.refresh(memory)
 
-            self._logger.info(f"Recorded decision: {decision[:50]}...")
+            self._logger.info(
+                "Recorded decision (%s)",
+                summarize_text(decision, label="decision"),
+            )
             return self._detach(db, memory)
 
     def update_decision_outcome(

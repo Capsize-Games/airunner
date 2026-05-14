@@ -14,6 +14,7 @@ from airunner.components.tools.web_content_extractor import WebContentExtractor
 from airunner.components.tools.url_safety import SSRFBlocked, validate_url_for_fetch
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import fingerprint_value
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -88,14 +89,19 @@ class LLMGuidedSpider(scrapy.Spider):
         self.pages_scraped += 1
 
         logger.info(
-            f"Parsing page {self.pages_scraped}/{self.max_pages}: {url}"
+            "Parsing page %d/%d (%s)",
+            self.pages_scraped,
+            self.max_pages,
+            fingerprint_value(url, label="url"),
         )
-
         # Extract content and links
         page_data = self._extract_page_data(response)
 
         if not page_data:
-            logger.warning(f"Failed to extract data from {url}")
+            logger.warning(
+                "Failed to extract data from %s",
+                fingerprint_value(url, label="url"),
+            )
             return
 
         # Store the collected content
@@ -133,11 +139,16 @@ class LLMGuidedSpider(scrapy.Spider):
                             validate_url_for_fetch(link_url)
                         except SSRFBlocked as e:
                             logger.warning(
-                                f"Skipping blocked crawl URL (SSRF policy): {link_url} ({e})"
+                                "Skipping blocked crawl URL (%s): %s",
+                                fingerprint_value(link_url, label="url"),
+                                e,
                             )
                             continue
 
-                        logger.info(f"Following LLM-selected link: {link_url}")
+                        logger.info(
+                            "Following LLM-selected link (%s)",
+                            fingerprint_value(link_url, label="url"),
+                        )
                         yield scrapy.Request(
                             link_url,
                             callback=self.parse,
@@ -171,7 +182,10 @@ class LLMGuidedSpider(scrapy.Spider):
             )
 
             if not result:
-                logger.warning(f"WebContentExtractor returned None for {url}")
+                logger.warning(
+                    "WebContentExtractor returned None for %s",
+                    fingerprint_value(url, label="url"),
+                )
                 return None
 
             # Add URL and depth info
@@ -180,8 +194,7 @@ class LLMGuidedSpider(scrapy.Spider):
             result["page_number"] = self.pages_scraped
 
             logger.info(
-                f"Extracted {len(result['content'])} chars content, "
-                f"{len(result['links'])} links from {url}"
+                "Extracted %d chars content and %d links", len(result["content"]), len(result["links"])
             )
 
             return result

@@ -5,6 +5,7 @@ model download workers (HuggingFace, CivitAI, etc.).
 """
 
 import shutil
+import logging
 import threading
 from abc import abstractmethod
 from pathlib import Path
@@ -13,6 +14,7 @@ from typing import Dict, Set, Any
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode, QueueType
 from airunner.utils.download_temp_cleanup import cleanup_stale_download_dir
+from airunner.utils.application.log_hygiene import summarize_mapping_keys
 
 
 class BaseDownloadWorker(Worker):
@@ -108,14 +110,16 @@ class BaseDownloadWorker(Worker):
         Args:
             message: Download request with provider-specific parameters
         """
-        self.logger.info(f"BaseDownloadWorker handling message: {message}")
+        self.logger.debug(
+            "BaseDownloadWorker handling message (%s)",
+            summarize_mapping_keys(message, label="message"),
+        )
         try:
             self._download_model(**message)
         except Exception as e:
-            self.logger.error(f"Download failed: {e}")
-            import traceback
-
-            self.logger.error(traceback.format_exc())
+            self.logger.error("Download failed: %s", e)
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.exception("Download worker traceback")
             self.emit_signal(self._failed_signal, {"error": str(e)})
 
     def _update_file_progress(

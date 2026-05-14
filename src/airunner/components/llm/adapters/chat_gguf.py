@@ -33,6 +33,8 @@ from typing import (
     Union,
 )
 
+from airunner.utils.application.log_hygiene import summarize_mapping_keys
+
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.base import LanguageModelInput
@@ -551,7 +553,7 @@ class ChatGGUF(BaseChatModel):
                 "GGUF inference will run on CPU until llama-cpp-python is rebuilt with GGML_CUDA=on."
             )
 
-        self.logger.info(f"Loading GGUF model from {self.model_path}")
+        self.logger.info("Loading GGUF model")
         self.logger.info(
             f"  chat_format={self._detected_format or 'auto'}, "
             f"n_ctx={self.n_ctx}, "
@@ -1792,7 +1794,10 @@ For each function call, return a json object with function name and arguments wi
         self.logger.info(
             f"[ChatGGUF._generate] create_chat_completion returned in {time.perf_counter() - call_started:.3f}s"
         )
-        self.logger.debug(f"[TOOL CALL] Response: {response}")
+        self.logger.debug(
+            "[TOOL CALL] Response received (%s)",
+            summarize_mapping_keys(response, label="response"),
+        )
         
         # Extract response
         choice = response["choices"][0]

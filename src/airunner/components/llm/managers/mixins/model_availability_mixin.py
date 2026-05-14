@@ -25,7 +25,7 @@ class ModelAvailabilityMixin:
 
         model_path = self.model_path
         if not os.path.exists(model_path):
-            self.logger.info(f"Model path does not exist: {model_path}")
+            self.logger.info("Configured model path does not exist")
             self._missing_files = None
             self._missing_gguf = False
             return False
@@ -33,9 +33,8 @@ class ModelAvailabilityMixin:
         expected_gguf_path = self._get_expected_gguf_path()
         if expected_gguf_path and os.path.exists(expected_gguf_path):
             self.logger.info(
-                "Expected GGUF model found at %s "
-                "(preferring GGUF; skipping safetensors validation)",
-                expected_gguf_path,
+                "Expected GGUF model found "
+                "(preferring GGUF; skipping safetensors validation)"
             )
             self._missing_files = None
             self._missing_gguf = False
@@ -43,9 +42,8 @@ class ModelAvailabilityMixin:
 
         if expected_gguf_path is None and is_gguf_model(model_path):
             self.logger.info(
-                "GGUF model found at %s "
-                "(preferring GGUF; skipping safetensors validation)",
-                model_path,
+                "GGUF model found "
+                "(preferring GGUF; skipping safetensors validation)"
             )
             self._missing_files = None
             self._missing_gguf = False
@@ -54,19 +52,18 @@ class ModelAvailabilityMixin:
         gguf_selected = self._is_gguf_quantization_selected()
         if gguf_selected:
             if expected_gguf_path and os.path.exists(expected_gguf_path):
-                self.logger.info(f"GGUF model found at {expected_gguf_path}")
+                self.logger.info("GGUF model found")
                 self._missing_files = None
                 self._missing_gguf = False
                 return True
             if expected_gguf_path is None and is_gguf_model(model_path):
-                self.logger.info(f"GGUF model found at {model_path}")
+                self.logger.info("GGUF model found")
                 self._missing_files = None
                 self._missing_gguf = False
                 return True
 
             self.logger.info(
-                "GGUF quantization selected but no GGUF file found at %s",
-                expected_gguf_path or model_path,
+                "GGUF quantization selected but no GGUF file found",
             )
             self._missing_files = None
             self._missing_gguf = True

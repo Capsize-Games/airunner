@@ -96,10 +96,13 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
     Returns:
         Transcribed text
     """
-    logger.info(f"STT request: {audio.filename}")
-
     try:
         audio_data = await audio.read()
+        logger.info(
+            "STT request received (filename_present=%s, size_bytes=%d)",
+            bool(audio.filename),
+            len(audio_data),
+        )
         client = resolve_stt_client(require_runtime_registry(req))
         response = client.invoke(
             RequestEnvelope(

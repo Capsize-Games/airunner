@@ -118,7 +118,7 @@ class SpecializedModelMixin:
             primary_model_path: Path to the primary model
             original_setting: Original model path setting value
         """
-        self.logger.info(f"Restoring primary model: {primary_model_path}")
+        self.logger.info("Restoring primary model")
         self.unload()
         self.llm_generator_settings.model_path = original_setting
         self.load()

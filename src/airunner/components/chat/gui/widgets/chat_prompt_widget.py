@@ -38,6 +38,7 @@ from airunner.enums import (
     ModelStatus,
     ModelService,
 )
+from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
@@ -1434,7 +1435,10 @@ class ChatPromptWidget(BaseWidget):
 
     def on_llm_text_generate_request_signal(self, data: Dict):
         """Handle LLM text generate request signal - user message is being sent."""
-        self.logger.debug(f"LLM_TEXT_GENERATE_REQUEST_SIGNAL received: {data}")
+        self.logger.debug(
+            "LLM_TEXT_GENERATE_REQUEST_SIGNAL received (%s)",
+            summarize_mapping_keys(data, label="request"),
+        )
         # The ConversationWidget should handle displaying the message
         # This handler is just for logging/debugging
 

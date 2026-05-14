@@ -15,6 +15,7 @@ from airunner.components.tools.search_providers.base_provider import (
     BaseSearchProvider,
 )
 from airunner.components.tools.web_content_extractor import WebContentExtractor
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 class DuckDuckGoProvider(BaseSearchProvider):
@@ -83,7 +84,10 @@ class DuckDuckGoProvider(BaseSearchProvider):
         """
         # Don't add exclusions to query - DDG doesn't respect them properly
         # Instead, we'll filter results after fetching
-        self.logger.info(f"Starting DuckDuckGo search for: {query}")
+        self.logger.info(
+            "Starting DuckDuckGo search (%s)",
+            summarize_text(query, label="query"),
+        )
 
         # Fetch MORE results than requested to account for filtering
         fetch_count = (
@@ -168,7 +172,10 @@ class DuckDuckGoProvider(BaseSearchProvider):
         Returns:
             List of news article results (filtered by blocklist)
         """
-        self.logger.info(f"Starting DuckDuckGo NEWS search for: {query}")
+        self.logger.info(
+            "Starting DuckDuckGo news search (%s)",
+            summarize_text(query, label="query"),
+        )
 
         # Fetch MORE results than requested to account for filtering
         fetch_count = num_results * 5

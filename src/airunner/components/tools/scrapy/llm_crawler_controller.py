@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -283,7 +284,10 @@ Remember: Respond with ONLY the JSON object, no additional text.
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM JSON response: {e}")
-            logger.debug(f"LLM response was: {llm_response[:500]}")
+            logger.debug(
+                "LLM response summary (%s)",
+                summarize_text(llm_response, label="response"),
+            )
             # Use heuristic fallback
             return self._heuristic_decision(page_data)
         except Exception as e:

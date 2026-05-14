@@ -136,7 +136,7 @@ def test_headless_app_application_error_emits_status_signal():
 
     App.application_error(host, message="boom")
 
-    assert logged == [{"message": "boom"}]
+    assert logged == ["Application error emitted (message_chars=4)"]
     assert emitted == [
         (
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,

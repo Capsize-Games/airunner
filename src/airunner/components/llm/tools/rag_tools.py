@@ -15,6 +15,7 @@ from airunner.components.settings.data.path_settings import PathSettings
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -56,19 +57,19 @@ def rag_search(
         api: API instance (injected by ToolManager)
 
     """
-    logger.info(f"rag_search called with query: {query}")
+    logger.info(
+        "rag_search called (%s)",
+        summarize_text(query, label="query"),
+    )
 
     # For RAG tools, api IS the rag_manager (LLMModelManager with RAG search methods)
     rag_manager = api
 
-    print(
-        f"DEBUG rag_search: rag_manager type: {type(rag_manager).__name__ if rag_manager else 'None'}"
+    logger.debug(
+        "rag_manager available=%s has_search=%s",
+        rag_manager is not None,
+        hasattr(rag_manager, "search") if rag_manager else False,
     )
-    print(
-        f"DEBUG rag_search: has search method: {hasattr(rag_manager, 'search') if rag_manager else False}"
-    )
-
-    logger.info(f"rag_manager available: {rag_manager is not None}")
 
     if not rag_manager:
         error_msg = (

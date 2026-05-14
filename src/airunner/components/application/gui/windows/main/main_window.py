@@ -64,6 +64,7 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
 )
 from airunner.utils.application import create_worker
+from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.settings import get_qsettings
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
 from airunner.components.art.data.image_filter import ImageFilter
@@ -1793,7 +1794,10 @@ class MainWindow(
         self.setWindowTitle(self._window_title)
 
     def handle_unknown(self, message):
-        self.logger.error(f"Unknown message code: {message}")
+        self.logger.error(
+            "Unknown message code payload (%s)",
+            summarize_mapping_keys(message, label="message"),
+        )
 
     def clear_all_prompts(self):
         self.prompt = ""

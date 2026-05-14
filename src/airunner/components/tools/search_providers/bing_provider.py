@@ -8,6 +8,7 @@ import aiohttp
 from airunner.components.tools.search_providers.base_provider import (
     BaseSearchProvider,
 )
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 class BingProvider(BaseSearchProvider):
@@ -34,7 +35,10 @@ class BingProvider(BaseSearchProvider):
         Returns:
             List of search results
         """
-        self.logger.info(f"Starting Bing search for: {query}")
+        self.logger.info(
+            "Starting Bing search (%s)",
+            summarize_text(query, label="query"),
+        )
         if not self.SUBSCRIPTION_KEY:
             self.logger.warning(
                 "Bing Subscription Key not configured. Skipping Bing search."

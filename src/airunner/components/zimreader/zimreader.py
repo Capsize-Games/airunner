@@ -11,6 +11,7 @@ from libzim.search import Query, Searcher
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -128,5 +129,9 @@ class ZIMReader:
             search = searcher.search(q)
             return [result.path for result in search.getResults(0, limit)]
         except Exception as e:
-            logger.error(f"Search failed for query '{query}': {e}")
+            logger.error(
+                "Search failed (%s): %s",
+                summarize_text(query, label="query"),
+                e,
+            )
             return []

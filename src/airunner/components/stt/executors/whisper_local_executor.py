@@ -15,6 +15,7 @@ from airunner.components.art.utils.model_file_checker import ModelFileChecker
 from airunner.components.stt.executors.stt_executor import STTExecutor
 from airunner.enums import ModelStatus, ModelType, SignalCode
 from airunner.settings import AIRUNNER_DEFAULT_STT_HF_PATH
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 class WhisperLocalExecutor(BaseModelManager, STTExecutor):
@@ -170,7 +171,10 @@ class WhisperLocalExecutor(BaseModelManager, STTExecutor):
             transcription = transcription.strip()
             if not transcription:
                 return ""
-            self.logger.debug(f"Transcribed: {transcription[:50]}...")
+            self.logger.debug(
+                "Transcribed audio (%s)",
+                summarize_text(transcription, label="transcription"),
+            )
             return transcription
         except Exception as exc:
             self.logger.error(f"Error in audio processing: {exc}")

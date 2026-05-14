@@ -9,6 +9,7 @@ import aiohttp
 from airunner.components.tools.search_providers.base_provider import (
     BaseSearchProvider,
 )
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 class ArxivProvider(BaseSearchProvider):
@@ -32,7 +33,10 @@ class ArxivProvider(BaseSearchProvider):
         Returns:
             List of search results
         """
-        self.logger.info(f"Starting arXiv search for: {query}")
+        self.logger.info(
+            "Starting arXiv search (%s)",
+            summarize_text(query, label="query"),
+        )
         results = []
         formatted_query = urllib.parse.quote_plus(query)
         url = f"{self.API_BASE_URL}?search_query=all:{formatted_query}&start=0&max_results={num_results}"

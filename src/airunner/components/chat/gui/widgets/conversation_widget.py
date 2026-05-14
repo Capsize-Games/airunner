@@ -23,6 +23,7 @@ from airunner.components.chat.gui.widgets.templates.conversation_ui import (
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.utils import strip_names_from_message
+from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
@@ -901,7 +902,10 @@ class ConversationWidget(BaseWidget):
                 - conversation_id: ID of the conversation
                 - timestamp: When the status changed
         """
-        self.logger.debug(f"[TOOL STATUS] Received signal: {data}")
+        self.logger.debug(
+            "[TOOL STATUS] Received signal (%s)",
+            summarize_mapping_keys(data, label="data"),
+        )
 
         tool_id = data.get("tool_id")
         tool_name = data.get("tool_name")

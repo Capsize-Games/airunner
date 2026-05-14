@@ -52,6 +52,7 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 from airunner.enums import LLMActionType, SignalCode, EngineResponseCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 from airunner.components.application.api.api import API
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.data.conversation import Conversation
@@ -278,7 +279,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not api:
             return False, "API not initialized"
         
-        self.logger.info(f"Auto-loading LLM model: {model_path}")
+        self.logger.info("Auto-loading LLM model")
         
         # Import SignalCode here to avoid circular imports
         from airunner.enums import SignalCode
@@ -386,7 +387,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not art_model_path:
             return False, "No art model configured. Use --art-model flag or configure in AIRunner GUI."
         
-        self.logger.info(f"Auto-loading art model: {art_model_path}")
+        self.logger.info("Auto-loading art model")
         
         from airunner.enums import SignalCode
         api.emit_signal(SignalCode.SD_LOAD_SIGNAL, {"model_path": art_model_path})
@@ -2912,7 +2913,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         try:
             # Queue the text for TTS
             # The TTS worker will pick this up and generate speech
-            self.logger.info(f"TTS request: '{text[:50]}...'")
+            self.logger.info(
+                "TTS request queued (%s)",
+                summarize_text(text),
+            )
             api.tts.play_audio(text)
             
             self._send_json_response({
@@ -2973,7 +2977,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             def on_transcription(signal_data: dict):
                 """Handle transcription result."""
                 transcription = signal_data.get("transcription", "")
-                self.logger.info(f"STT transcription received: '{transcription[:50]}...'")
+                self.logger.info(
+                    "STT transcription received (%s)",
+                    summarize_text(transcription, label="transcription"),
+                )
                 result_holder["transcription"] = transcription
                 complete_event.set()
             

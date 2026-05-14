@@ -400,7 +400,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         # Update model path - download button state handled by _update_quantize_button_state
         if model_path:
             self.ui.model_path.setText(model_path)
-            self.logger.info(f"Model downloaded successfully: {model_path}")
+            self.logger.info("Model downloaded successfully")
 
             # Update quantize button state
             self._update_quantize_button_state()

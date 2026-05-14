@@ -10,6 +10,7 @@ from typing import Dict
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode
 from airunner.utils.application.create_worker import create_worker
+from airunner.utils.application.log_hygiene import summarize_mapping_keys
 
 
 _OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS = 5.0
@@ -585,7 +586,10 @@ class WorkerManager(Worker):
         }
 
         if self.logger:
-            self.logger.info(f"Queueing download request: {download_data}")
+            self.logger.info(
+                "Queueing download request (%s)",
+                summarize_mapping_keys(download_data, label="download"),
+            )
 
         self.huggingface_download_worker.add_to_queue(download_data)
 
@@ -1675,7 +1679,11 @@ class WorkerManager(Worker):
             self.llm_generate_worker.on_llm_model_changed_signal(data)
 
     def on_llm_model_download_required_signal(self, data):
-        self.logger.info(f"WorkerManager received LLM_MODEL_DOWNLOAD_REQUIRED: {data}")
+        self.logger.info("WorkerManager received LLM model download request")
+        self.logger.debug(
+            "%s",
+            summarize_mapping_keys(data, label="download"),
+        )
         if self._llm_generate_worker is not None:
             self.logger.info("Forwarding to llm_generate_worker")
             self.llm_generate_worker.on_llm_model_download_required_signal(
@@ -1770,7 +1778,7 @@ class WorkerManager(Worker):
         )
         
         if is_gguf and gguf_filename:
-            self.logger.info(f"Starting GGUF download: {repo_id}/{gguf_filename}")
+            self.logger.info("Starting GGUF download")
             llm_download_worker.download(
                 repo_id=repo_id,
                 model_type="gguf",
@@ -1801,7 +1809,11 @@ class WorkerManager(Worker):
         Args:
             data: Dict with model_path, model_name, quantization
         """
-        self.logger.info(f"WorkerManager received LLM_CONVERT_TO_GGUF_SIGNAL: {data}")
+        self.logger.info("WorkerManager received GGUF conversion request")
+        self.logger.debug(
+            "%s",
+            summarize_mapping_keys(data, label="conversion"),
+        )
         
         from PySide6.QtWidgets import QApplication, QProgressDialog, QMessageBox
         from PySide6.QtCore import Qt
@@ -2321,7 +2333,10 @@ class WorkerManager(Worker):
         }
 
         if self.logger:
-            self.logger.info(f"Queueing download request: {download_data}")
+            self.logger.info(
+                "Queueing download request (%s)",
+                summarize_mapping_keys(download_data, label="download"),
+            )
 
         self.huggingface_download_worker.add_to_queue(download_data)
 
@@ -2369,9 +2384,7 @@ class WorkerManager(Worker):
         )
         
         if self.logger:
-            self.logger.info(
-                f"Starting OpenVoice ZIP download to {openvoice_dir}"
-            )
+            self.logger.info("Starting OpenVoice ZIP download")
 
         # Get main window for dialog parent
         main_window = self._get_main_window()
@@ -2444,7 +2457,10 @@ class WorkerManager(Worker):
         }
 
         if self.logger:
-            self.logger.info(f"Queueing OpenVoice ZIP download request: {download_data}")
+            self.logger.info(
+                "Queueing OpenVoice ZIP download request (%s)",
+                summarize_mapping_keys(download_data, label="download"),
+            )
 
         self.huggingface_download_worker.add_to_queue(download_data)
 

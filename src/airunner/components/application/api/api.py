@@ -18,6 +18,7 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
+from airunner.utils.application.log_hygiene import summarize_text
 from airunner.setup_database import setup_database
 
 if TYPE_CHECKING:
@@ -363,7 +364,10 @@ class API(App):
             )
             return
 
-        self.logger.error({"message": message})
+        self.logger.error(
+            "Application error emitted (%s)",
+            summarize_text(message, label="message"),
+        )
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
             {"message": message},

@@ -103,6 +103,63 @@ def test_headless_logging_reconfigures_preexisting_loggers(
     assert "message_after_headless" in contents
 
 
+def test_headless_logging_sanitizes_paths(tmp_path, monkeypatch):
+    """Headless logging should redact filesystem paths in output."""
+    log_file = tmp_path / "sanitized_headless.log"
+    secret_path = "/tmp/private/models/secret.gguf"
+
+    monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "1")
+    monkeypatch.setenv("AIRUNNER_LOG_FILE", str(log_file))
+    monkeypatch.setenv("DEV_ENV", "0")
+
+    logging_utils = importlib.import_module(
+        "airunner.utils.application.logging_utils"
+    )
+    get_logger_mod = importlib.import_module(
+        "airunner.utils.application.get_logger"
+    )
+
+    importlib.reload(logging_utils)
+    importlib.reload(get_logger_mod)
+    logging_utils.configure_headless_logging()
+
+    logger = get_logger_mod.get_logger("test_headless_logger_sanitized")
+    logger.info("Loading %s", secret_path)
+    logger.info(f"Loading model from {secret_path}")
+
+    logging.shutdown()
+    time.sleep(0.05)
+
+    contents = log_file.read_text(encoding="utf8")
+    assert secret_path not in contents
+    assert "path_hash=" in contents
+
+
+def test_get_logger_sanitizes_paths(tmp_path, monkeypatch):
+    """GUI-style logger handlers should redact filesystem paths too."""
+    log_file = tmp_path / "sanitized_gui.log"
+    secret_path = "/tmp/private/models/secret.gguf"
+
+    monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "1")
+    monkeypatch.setenv("AIRUNNER_LOG_FILE", str(log_file))
+
+    get_logger_mod = importlib.import_module(
+        "airunner.utils.application.get_logger"
+    )
+    importlib.reload(get_logger_mod)
+
+    logger = get_logger_mod.get_logger("test_gui_logger_sanitized")
+    logger.info("Loading %s", secret_path)
+    logger.info(f"Loading model from {secret_path}")
+
+    logging.shutdown()
+    time.sleep(0.05)
+
+    contents = log_file.read_text(encoding="utf8")
+    assert secret_path not in contents
+    assert "path_hash=" in contents
+
+
 def test_get_logger_reuses_existing_logger_wrapper(monkeypatch):
     """Repeated get_logger calls should reuse one configured wrapper."""
     monkeypatch.setenv("AIRUNNER_SAVE_LOG_TO_FILE", "0")

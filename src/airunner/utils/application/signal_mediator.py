@@ -1,5 +1,5 @@
 import os
-import traceback
+import logging
 from typing import Dict, Optional, Callable as CallableType
 import inspect
 from typing import Callable
@@ -144,72 +144,19 @@ class Signal(QObject):
             else:
                 cb(data)
         except Exception as e:
-            # Print full traceback and context to aid debugging of signal handlers
-            # Use a guarded traceback print: some traceback/inspect utilities
-            # (e.g., inspect.getsource, linecache) can themselves trigger
-            # RecursionError in complex C-extensions or patched importers.
-            # We attempt the full traceback first, but fall back to a minimal
-            # safe print if anything goes wrong while formatting the traceback.
+            logger.error(
+                "Error in signal callback: %s (type: %s)",
+                e,
+                type(e),
+            )
+            if not logger.isEnabledFor(logging.DEBUG):
+                return
             try:
-                logger.error(
-                    f"Error in signal callback: {e} (type: {type(e)})"
-                )
-                try:
-                    print("data", data)
-                except Exception:
-                    print("data: <unprintable>")
-                try:
-                    # Avoid accessing potentially expensive attributes; use repr
-                    cb = None
-                    try:
-                        cb = (
-                            self._callback_ref()
-                            if hasattr(self, "_callback_ref")
-                            else None
-                        )
-                    except Exception:
-                        cb = None
-                    print("callback:", repr(cb))
-                except Exception:
-                    logger.error("callback: <unprintable>")
-                # This can still raise (e.g., inspect.getsource), so guard it
-                try:
-                    traceback.print_exc()
-                except RecursionError:
-                    # Fallback: simple stack summary using traceback.format_exc may also fail,
-                    # so provide a minimal representation of the exception.
-                    logger.warning(
-                        "Traceback unavailable due to recursion; exception repr below:"
-                    )
-                    try:
-                        print(repr(e))
-                    except Exception:
-                        logger.error("<unrepresentable exception>")
+                logger.exception("Signal callback traceback")
             except RecursionError:
-                # If even importing or using traceback triggers recursion, print minimal info
                 try:
-                    logger.debug(
-                        "Error in signal callback (RecursionError during traceback formatting)"
-                    )
-                    try:
-                        print("data", data)
-                    except Exception:
-                        logger.error("data: <unprintable>")
-                    try:
-                        cb = None
-                        try:
-                            cb = (
-                                self._callback_ref()
-                                if hasattr(self, "_callback_ref")
-                                else None
-                            )
-                        except Exception:
-                            cb = None
-                        print("callback:", repr(cb))
-                    except Exception:
-                        print("callback: <unprintable>")
+                    logger.debug("Signal callback traceback unavailable")
                 except Exception:
-                    # Last resort: suppress to avoid crashing the signal loop
                     pass
 
     # Add a property for backward compatibility

@@ -12,6 +12,7 @@ from typing import List
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -39,7 +40,10 @@ def verify_answer(question: str, answer: str, context: str = "") -> str:
         context: Optional context or retrieved facts to check against
 
     """
-    logger.info(f"Verifying answer for question: {question[:50]}...")
+    logger.info(
+        "Verifying answer for question (%s)",
+        summarize_text(question, label="question"),
+    )
 
     # Simple verification heuristics
     answer_lower = answer.lower()
@@ -156,7 +160,10 @@ def extract_answer_from_context(question: str, context: str) -> str:
         context: The context containing the answer
 
     """
-    logger.info(f"Extracting answer for: {question[:50]}...")
+    logger.info(
+        "Extracting answer for question (%s)",
+        summarize_text(question, label="question"),
+    )
 
     # Simple extraction: find sentences containing question keywords
     question_words = set(w.lower() for w in question.split() if len(w) > 3)

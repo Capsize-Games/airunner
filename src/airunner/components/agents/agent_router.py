@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Any
 from airunner.components.agents.agent_registry import AgentRegistry
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import summarize_text
 
 
 class AgentRouter:
@@ -51,7 +52,10 @@ class AgentRouter:
         )
 
         if not candidates:
-            self.logger.warning(f"No agents found for task: {task[:50]}...")
+            self.logger.warning(
+                "No agents found for task (%s)",
+                summarize_text(task, label="task"),
+            )
             return {
                 "success": False,
                 "result": None,

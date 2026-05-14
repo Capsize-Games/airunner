@@ -359,16 +359,14 @@ class DownloadModelDialog(QDialog):
         self._progress_dialog.setValue(percent)
 
     def _on_download_finished(self, save_path: str) -> None:
-        self.logger.info(f"Download completed successfully: {save_path}")
+        self.logger.info("Download completed successfully")
 
         # Verify file exists
         if os.path.exists(save_path):
             file_size = os.path.getsize(save_path)
             self.logger.info(f"Downloaded file size: {file_size} bytes")
         else:
-            self.logger.error(
-                f"Download finished but file not found: {save_path}"
-            )
+            self.logger.error("Download finished but file was not found")
 
         # Disconnect the progress dialog's canceled signal BEFORE cleanup
         # to prevent auto-close from triggering file deletion
@@ -395,11 +393,11 @@ class DownloadModelDialog(QDialog):
                     save_path,
                 )
                 self.logger.info(
-                    f"Successfully persisted trigger words for {save_path}"
+                    "Successfully persisted trigger words"
                 )
             except Exception as e:
                 self.logger.error(
-                    f"Failed to persist trigger words for {save_path}: {e}",
+                    f"Failed to persist trigger words: {e}",
                     exc_info=True,
                 )
 
@@ -542,10 +540,9 @@ class DownloadModelDialog(QDialog):
         save_path = os.path.join(model_dir, file_name)
 
         # Log download details for debugging
-        self.logger.info(f"Starting CivitAI download:")
+        self.logger.info("Starting CivitAI download")
         self.logger.info(f"  File: {file_name}")
         self.logger.info(f"  Size: {file_size_kb} KB")
-        self.logger.info(f"  Destination: {save_path}")
         self.logger.info(f"  Base model: {base_model}")
         self.logger.info(f"  Model type: {model_type}")
         self.logger.info(f"  Subfolder: {subfolder}")

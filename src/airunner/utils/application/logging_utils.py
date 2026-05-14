@@ -6,6 +6,7 @@ from typing import Optional
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import LogHygieneFilter
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -86,12 +87,16 @@ def _get_log_file_path(root_logger: logging.Logger) -> str:
         return log_file
     except PermissionError as e:
         root_logger.error(
-            f"Permission denied creating log directory {log_dir}: {e}; using fallback /tmp/airunner.log"
+            "Permission denied creating log directory; "
+            "using fallback file logging: %s",
+            e,
         )
         return os.path.join("/tmp", "airunner.log")
     except Exception as e:
         root_logger.error(
-            f"Error while preparing log directory {log_dir}: {e}; using fallback /tmp/airunner.log"
+            "Error while preparing log directory; "
+            "using fallback file logging: %s",
+            e,
         )
         return os.path.join("/tmp", "airunner.log")
 
@@ -107,15 +112,18 @@ def _create_file_handler(
         file_handler = logging.FileHandler(log_file, mode="a")
         file_handler.setLevel(log_level)
         file_handler.setFormatter(formatter)
+        file_handler.addFilter(LogHygieneFilter())
         root_logger.addHandler(file_handler)
-        root_logger.info(f"Logging to file: {log_file}")
+        root_logger.info("Logging to file output")
     except PermissionError as e:
         root_logger.error(
-            f"Permission denied creating log file {log_file}: {e}; falling back to /tmp/airunner.log"
+            "Permission denied creating log file; "
+            "falling back to temporary file output: %s",
+            e,
         )
         _try_fallback_file_handler(log_level, formatter, root_logger)
     except Exception as e:
-        root_logger.error(f"Failed to setup file logging: {e}")
+        root_logger.error("Failed to setup file logging: %s", e)
 
 
 def _try_fallback_file_handler(
@@ -127,11 +135,14 @@ def _try_fallback_file_handler(
         file_handler = logging.FileHandler(fallback, mode="a")
         file_handler.setLevel(log_level)
         file_handler.setFormatter(formatter)
+        file_handler.addFilter(LogHygieneFilter())
         root_logger.addHandler(file_handler)
-        root_logger.info(f"Logging to fallback file: {fallback}")
+        root_logger.info("Logging to fallback file output")
     except Exception as e_fallback:
         root_logger.error(
-            f"Failed to setup fallback file logging: {e_fallback}. File logging disabled."
+            "Failed to setup fallback file logging: %s. "
+            "File logging disabled.",
+            e_fallback,
         )
 
 
@@ -170,6 +181,7 @@ def configure_headless_logging():
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(log_level)
     stdout_handler.setFormatter(formatter)
+    stdout_handler.addFilter(LogHygieneFilter())
     root_logger.addHandler(stdout_handler)
 
     # Setup file logging

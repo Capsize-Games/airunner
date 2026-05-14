@@ -11,6 +11,10 @@ from typing import Annotated
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.utils.application.log_hygiene import (
+    fingerprint_value,
+    summarize_text,
+)
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -76,7 +80,10 @@ def search_web(
             AggregatedSearchTool,
         )
 
-        logger.info(f"🔍 Searching web for: {query}")
+        logger.info(
+            "Searching web (%s)",
+            summarize_text(query, label="query"),
+        )
 
         # Use DuckDuckGo search (web category)
         results = AggregatedSearchTool.aggregated_search_sync(
@@ -92,7 +99,7 @@ def search_web(
         logger.info(f"Got {len(ddg_results)} DuckDuckGo results")
 
         if not ddg_results:
-            logger.warning(f"Empty DuckDuckGo results list for: {query}")
+            logger.warning("Empty DuckDuckGo results list")
             return {"results": []}
 
         # Provide both raw results and a human-readable summary
@@ -183,7 +190,10 @@ def search_news(
         )
         import asyncio
 
-        logger.info(f"📰 Searching news for: {query}")
+        logger.info(
+            "Searching news (%s)",
+            summarize_text(query, label="query"),
+        )
 
         # Use DuckDuckGo news search
         provider = DuckDuckGoProvider()
@@ -192,7 +202,7 @@ def search_news(
         logger.info(f"Got {len(results)} news results")
 
         if not results:
-            logger.warning(f"No news results for: {query}")
+            logger.warning("No news results returned")
             return {"results": []}
 
         # Format top 7 results and return structured dict
@@ -256,7 +266,10 @@ def scrape_website(
         url: Website URL to scrape (e.g., "https://example.com/article")
 
     """
-    logger.info(f"Scraping: {url}")
+    logger.info(
+        "Scraping website (%s)",
+        fingerprint_value(url, label="url"),
+    )
 
     try:
         from airunner.components.tools.web_content_extractor import (
@@ -270,7 +283,8 @@ def scrape_website(
 
         if result and result.get("content"):
             logger.info(
-                f"✓ Extracted {len(result['content'])} characters from {url}"
+                "Extracted %d characters from scraped website",
+                len(result["content"]),
             )
             logger.info(f"  Title: {result.get('title', 'N/A')}")
             # Add explicit instructions to answer the user's question
@@ -289,5 +303,10 @@ def scrape_website(
             }
 
     except Exception as e:
-        logger.error(f"Web scraping error for {url}: {e}", exc_info=True)
+        logger.error(
+            "Web scraping error (%s): %s",
+            fingerprint_value(url, label="url"),
+            e,
+            exc_info=True,
+        )
         return {"content": None, "error": f"Error scraping {url}: {str(e)}"}

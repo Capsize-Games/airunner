@@ -23,6 +23,7 @@ from airunner.components.llm.long_running.task_detector import (
     analyze_task,
 )
 from airunner.components.llm.long_running.project_manager import ProjectManager
+from airunner.utils.application.log_hygiene import summarize_text
 from airunner.components.llm.long_running.data.project_state import (
     ProjectState,
     FeatureStatus,
@@ -100,7 +101,10 @@ class AutoHarnessWrapper:
 
         if not analysis.should_use_harness:
             # Simple task - execute directly without wrapping
-            logger.debug(f"Simple task, executing directly: {prompt[:50]}...")
+            logger.debug(
+                "Simple task, executing directly (%s)",
+                summarize_text(prompt, label="prompt"),
+            )
             return execute_fn(prompt)
 
         logger.info(
