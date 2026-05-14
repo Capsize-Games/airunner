@@ -684,44 +684,6 @@ class WorkerManager(Worker):
             return None
         return getattr(api, "daemon_client", None)
 
-    @staticmethod
-    def _daemon_client_is_available(client) -> bool:
-        """Return True when one daemon client can handle requests now."""
-        from airunner.daemon_client.availability import (
-            daemon_client_is_available,
-        )
-
-        return daemon_client_is_available(client)
-
-    def _optional_runtime_should_use_local_fallback(
-        self,
-        runtime_name: str,
-        action: str,
-        model_type,
-    ) -> bool:
-        """Return True when optional runtime control should stay local."""
-        is_optional = self._is_optional_runtime_load(
-            action,
-            model_type,
-        ) or self._is_optional_runtime_unload(action, model_type)
-        if not is_optional:
-            return False
-
-        client = self._daemon_client()
-        if client is None:
-            return True
-
-        if WorkerManager._daemon_client_is_available(client):
-            return False
-
-        if self.logger:
-            self.logger.debug(
-                "Daemon unavailable for %s %s; using local fallback",
-                action,
-                runtime_name,
-            )
-        return True
-
     def _llm_daemon_client(self):
         """Return one daemon client for LLM controls.
 
@@ -1082,6 +1044,7 @@ class WorkerManager(Worker):
     ) -> bool:
         """Run one daemon load or unload request and wait for its state."""
         loaded = action == "load"
+        auto_start = loaded
         action_timeout = self._runtime_action_timeout_seconds(
             action,
             model_type,
@@ -1100,7 +1063,7 @@ class WorkerManager(Worker):
                 runtime_name,
                 deployment_mode=deployment_mode,
                 metadata=route_metadata,
-                auto_start=False,
+                auto_start=auto_start,
                 timeout_seconds=action_timeout,
             )
         except RuntimeError as exc:
@@ -1120,7 +1083,7 @@ class WorkerManager(Worker):
             runtime_name,
             loaded=loaded,
             deployment_mode=deployment_mode,
-            auto_start=False,
+            auto_start=auto_start,
             timeout_seconds=wait_timeout,
         )
 
@@ -1214,12 +1177,6 @@ class WorkerManager(Worker):
     ) -> bool:
         """Run one daemon runtime action without blocking the caller."""
         if self._daemon_client() is None:
-            return False
-        if self._optional_runtime_should_use_local_fallback(
-            runtime_name,
-            action,
-            model_type,
-        ):
             return False
 
         thread = threading.Thread(
@@ -1520,17 +1477,6 @@ class WorkerManager(Worker):
         """Warm optional runtimes once the main window is ready."""
         self._start_art_runtime_prewarm()
         if not getattr(self.application_settings, "tts_enabled", False):
-            return
-
-        client = self._daemon_client()
-        if (
-            client is not None
-            and not WorkerManager._daemon_client_is_available(client)
-        ):
-            if self.logger:
-                self.logger.debug(
-                    "Deferring startup TTS load until the daemon is reachable"
-                )
             return
 
         self.on_enable_tts_signal({"source": "startup"})

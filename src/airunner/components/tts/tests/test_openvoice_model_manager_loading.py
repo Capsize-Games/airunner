@@ -1,5 +1,7 @@
 """Tests for OpenVoice model-manager warmup behavior."""
 
+import subprocess
+import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -7,6 +9,32 @@ from airunner.components.tts.managers.openvoice_model_manager import (
     OpenVoiceModelManager,
 )
 from airunner.enums import AvailableLanguage, ModelStatus, ModelType
+
+
+def test_import_openvoice_model_manager_does_not_touch_pkg_info():
+    code = """
+import builtins
+
+orig_open = builtins.open
+
+
+def traced_open(file, *args, **kwargs):
+    if str(file).endswith('PKG-INFO'):
+        print(file)
+    return orig_open(file, *args, **kwargs)
+
+
+builtins.open = traced_open
+import airunner.components.tts.managers.openvoice_model_manager
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "PKG-INFO" not in result.stdout
 
 
 def test_load_warms_model_components(monkeypatch):

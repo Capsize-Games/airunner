@@ -202,7 +202,7 @@ def test_daemon_client_falls_back_to_main_window_worker_manager():
     assert TTSGeneratorWorker._daemon_client(worker) is client
 
 
-def test_daemon_client_returns_none_when_unavailable():
+def test_daemon_client_returns_configured_client_when_unavailable():
     client = SimpleNamespace(
         is_available=lambda timeout_seconds=0.2: False,
     )
@@ -217,7 +217,7 @@ def test_daemon_client_returns_none_when_unavailable():
     )
     worker._current_api = lambda: TTSGeneratorWorker._current_api(worker)
 
-    assert TTSGeneratorWorker._daemon_client(worker) is None
+    assert TTSGeneratorWorker._daemon_client(worker) is client
 
 
 def test_streamed_text_skips_repeated_local_load_after_failure():
@@ -585,17 +585,15 @@ def test_generate_emits_local_openvoice_audio_to_vocalizer_signal():
     )
 
 
-def test_generate_falls_back_to_local_tts_after_daemon_error():
-    audio = [0.1, 0.2, 0.3]
+def test_generate_does_not_fall_back_to_local_tts_after_daemon_error():
     worker = SimpleNamespace(
         do_interrupt=False,
         logger=SimpleNamespace(
             debug=lambda *args, **kwargs: None,
-            warning=lambda *args, **kwargs: None,
         ),
         chatbot_voice_settings=SimpleNamespace(model_type="OpenVoice"),
         chatbot=SimpleNamespace(gender="male"),
-        tts=SimpleNamespace(generate=Mock(return_value=audio)),
+        tts=SimpleNamespace(generate=Mock()),
         emit_signal=Mock(),
         _daemon_client=lambda: object(),
         _generate_via_daemon=Mock(return_value=None),
@@ -607,11 +605,8 @@ def test_generate_falls_back_to_local_tts_after_daemon_error():
         "Hello there.",
         "OpenVoice",
     )
-    worker.tts.generate.assert_called_once()
-    worker.emit_signal.assert_called_once_with(
-        SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
-        {"message": audio},
-    )
+    worker.tts.generate.assert_not_called()
+    worker.emit_signal.assert_not_called()
 
 
 def test_generate_loads_local_tts_before_fallback_generation():

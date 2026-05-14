@@ -2,7 +2,6 @@ from airunner.components.stt.executors.whisper_local_executor import (
     WhisperLocalExecutor,
 )
 from airunner.components.stt.executors.stt_executor import STTExecutor
-from airunner.daemon_client.availability import daemon_client_is_available
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
 
@@ -44,10 +43,7 @@ class AudioProcessorWorker(Worker):
         api = self._current_api()
         if api is None or getattr(api, "headless", False):
             return None
-        client = getattr(api, "daemon_client", None)
-        if not daemon_client_is_available(client):
-            return None
-        return client
+        return getattr(api, "daemon_client", None)
 
     def _emit_transcription(self, transcription: str) -> None:
         """Forward one transcription to the shared UI boundary."""

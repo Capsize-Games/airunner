@@ -285,7 +285,7 @@ def test_stt_load_signal_uses_daemon_runtime():
             {
                 "deployment_mode": "sidecar",
                 "metadata": None,
-                "auto_start": False,
+                "auto_start": True,
                 "timeout_seconds": 5.0,
             },
         )
@@ -296,7 +296,7 @@ def test_stt_load_signal_uses_daemon_runtime():
             True,
             {
                 "deployment_mode": "sidecar",
-                "auto_start": False,
+                "auto_start": True,
                 "timeout_seconds": 60.0,
             },
         )
@@ -314,18 +314,21 @@ def test_stt_load_signal_uses_daemon_runtime():
     ]
 
 
-def test_stt_load_signal_falls_back_to_local_worker_when_unavailable():
+def test_stt_load_signal_keeps_daemon_path_when_unavailable():
     client = FakeDaemonClient(available=False)
-    manager, _emitted = _worker_manager(client)
-    manager._stt_audio_processor_worker = FakeQueuedWorker()
+    manager, emitted = _worker_manager(client)
 
-    WorkerManager.on_stt_load_signal(manager, {"source": "ui"})
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ):
+        WorkerManager.on_stt_load_signal(manager, {"source": "ui"})
 
-    assert client.calls == []
-    assert client.availability_checks == [0.2]
-    assert manager._stt_audio_processor_worker.messages == [
-        {"_message_type": "stt_load", "data": {"source": "ui"}}
-    ]
+    assert FakeThread.started == [True]
+    assert client.calls == [("load", "stt"), ("wait", "stt", True)]
+    assert client.availability_checks == []
+    assert emitted[-1] == (SignalCode.STT_START_CAPTURE_SIGNAL, {"source": "ui"})
 
 
 def test_stt_unload_signal_uses_daemon_runtime():
@@ -518,10 +521,10 @@ def test_main_window_loaded_starts_enabled_tts_when_daemon_available():
         WorkerManager.on_application_main_window_loaded_signal(manager, {})
 
     assert calls == ["art", ("tts", {"source": "startup"})]
-    assert client.availability_checks == [0.2]
+    assert client.availability_checks == []
 
 
-def test_main_window_loaded_defers_enabled_tts_until_daemon_available():
+def test_main_window_loaded_keeps_tts_on_daemon_path_when_unavailable():
     client = FakeDaemonClient(available=False)
     manager, _emitted = _worker_manager(client)
     calls = []
@@ -537,8 +540,8 @@ def test_main_window_loaded_defers_enabled_tts_until_daemon_available():
     ):
         WorkerManager.on_application_main_window_loaded_signal(manager, {})
 
-    assert calls == ["art"]
-    assert client.availability_checks == [0.2]
+    assert calls == ["art", ("tts", {"source": "startup"})]
+    assert client.availability_checks == []
 
 
 def test_tts_load_signal_passes_active_voice_metadata():
@@ -574,7 +577,7 @@ def test_tts_load_signal_passes_active_voice_metadata():
                     "model_type": "openvoice",
                     "model_path": "/tmp/openvoice",
                 },
-                "auto_start": False,
+                "auto_start": True,
                 "timeout_seconds": 5.0,
             },
         )
@@ -585,7 +588,7 @@ def test_tts_load_signal_passes_active_voice_metadata():
             True,
             {
                 "deployment_mode": "sidecar",
-                "auto_start": False,
+                "auto_start": True,
                 "timeout_seconds": 90.0,
             },
         )
@@ -617,7 +620,7 @@ def test_tts_enable_signal_uses_background_daemon_runtime():
     assert client.calls == [("load", "tts"), ("wait", "tts", True)]
     assert client.request_kwargs[0][0:2] == ("load", "tts")
     assert client.request_kwargs[0][2]["deployment_mode"] == "sidecar"
-    assert client.request_kwargs[0][2]["auto_start"] is False
+    assert client.request_kwargs[0][2]["auto_start"] is True
     assert client.request_kwargs[0][2]["timeout_seconds"] == 5.0
     assert isinstance(client.request_kwargs[0][2]["metadata"], dict)
     assert client.wait_kwargs == [
@@ -626,7 +629,7 @@ def test_tts_enable_signal_uses_background_daemon_runtime():
             True,
             {
                 "deployment_mode": "sidecar",
-                "auto_start": False,
+                "auto_start": True,
                 "timeout_seconds": 90.0,
             },
         )
@@ -643,17 +646,29 @@ def test_tts_enable_signal_uses_background_daemon_runtime():
     ]
 
 
-def test_tts_enable_signal_falls_back_to_local_worker_when_unavailable():
+def test_tts_enable_signal_keeps_daemon_path_when_unavailable():
     client = FakeDaemonClient(available=False)
-    manager, _emitted = _worker_manager(client)
-    manager._tts_generator_worker = FakeQueuedWorker()
+    manager, emitted = _worker_manager(client)
 
-    WorkerManager.on_enable_tts_signal(manager, {"source": "ui"})
+    FakeThread.started = []
+    with patch(
+        "airunner.components.application.gui.windows.main.worker_manager.threading.Thread",
+        FakeThread,
+    ):
+        WorkerManager.on_enable_tts_signal(manager, {"source": "ui"})
 
-    assert client.calls == []
-    assert client.availability_checks == [0.2]
-    assert manager._tts_generator_worker.messages == [
-        {"_message_type": "tts_enable", "data": {"source": "ui"}}
+    assert FakeThread.started == [True]
+    assert client.calls == [("load", "tts"), ("wait", "tts", True)]
+    assert client.availability_checks == []
+    assert emitted == [
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.TTS, "status": ModelStatus.LOADING},
+        ),
+        (
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": ModelType.TTS, "status": ModelStatus.LOADED},
+        ),
     ]
 
 

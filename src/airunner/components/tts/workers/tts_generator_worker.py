@@ -6,7 +6,6 @@ from typing import Optional, Type, Dict
 
 import soundfile as sf
 
-from airunner.daemon_client.availability import daemon_client_is_available
 from airunner.components.tts.managers.exceptions import OpenVoiceError
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
@@ -243,7 +242,7 @@ class TTSGeneratorWorker(Worker):
         if api is None or getattr(api, "headless", False):
             return None
         client = getattr(api, "daemon_client", None)
-        if client is not None and daemon_client_is_available(client):
+        if client is not None:
             return client
 
         main_window_getter = getattr(
@@ -259,7 +258,7 @@ class TTSGeneratorWorker(Worker):
         daemon_getter = getattr(worker_manager, "_daemon_client", None)
         if callable(daemon_getter):
             client = daemon_getter()
-            if client is not None and daemon_client_is_available(client):
+            if client is not None:
                 return client
 
         for candidate in (
@@ -270,7 +269,7 @@ class TTSGeneratorWorker(Worker):
             if candidate is None or getattr(candidate, "headless", False):
                 continue
             client = getattr(candidate, "daemon_client", None)
-            if client is not None and daemon_client_is_available(client):
+            if client is not None:
                 return client
         return None
 
@@ -775,11 +774,7 @@ class TTSGeneratorWorker(Worker):
                 language=self.espeak_settings.language,
             )
 
-        if response is None and self.tts and tts_req:
-            if client is not None:
-                self.logger.warning(
-                    "Falling back to local TTS generation after daemon failure"
-                )
+        if response is None and self.tts and tts_req and client is None:
             response = self.tts.generate(tts_req)
 
         if self.do_interrupt:

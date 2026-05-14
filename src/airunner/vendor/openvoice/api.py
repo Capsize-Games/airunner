@@ -7,7 +7,6 @@ from airunner.vendor.openvoice import utils
 from airunner.vendor.openvoice import commons
 import os
 import librosa
-from airunner.vendor.openvoice.text import text_to_sequence
 from airunner.vendor.openvoice.mel_processing import spectrogram_torch
 from airunner.vendor.openvoice.models import SynthesizerTrn
 
@@ -45,6 +44,8 @@ class OpenVoiceBaseClass(object):
 class BaseSpeakerTTS(OpenVoiceBaseClass):
     @staticmethod
     def get_text(text, hps, is_symbol):
+        from airunner.vendor.openvoice.text import text_to_sequence
+
         text_norm = text_to_sequence(
             text, hps.symbols, [] if is_symbol else hps.data.text_cleaners
         )
