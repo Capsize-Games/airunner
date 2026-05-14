@@ -15,6 +15,7 @@ from airunner.utils.application.create_worker import create_worker
 _OPTIONAL_LOAD_REQUEST_TIMEOUT_SECONDS = 5.0
 _OPTIONAL_UNLOAD_REQUEST_TIMEOUT_SECONDS = 2.0
 _OPTIONAL_UNLOAD_WAIT_TIMEOUT_SECONDS = 5.0
+_TTS_LOAD_WAIT_TIMEOUT_SECONDS = 180.0
 _STREAM_TTS_WORKER_SLEEP_MS = 1
 
 
@@ -908,7 +909,7 @@ class WorkerManager(Worker):
         if action == "load" and model_type is ModelType.STT:
             return 60.0
         if action == "load" and model_type is ModelType.TTS:
-            return 90.0
+            return _TTS_LOAD_WAIT_TIMEOUT_SECONDS
         return 30.0
 
     def _emit_daemon_runtime_failure(

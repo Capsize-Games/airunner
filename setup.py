@@ -7,7 +7,7 @@ README = Path("README.md").read_text(encoding="utf-8")
 CORE_REQUIREMENTS = [
     "numpy==2.2.5",
     "packaging>=24.0",
-    "pillow==12.0.0",
+    "pillow==12.2.0",
     "alembic==1.13.2",
     "aiosqlite==0.21.0",
     "sqlalchemy==2.0.38",
@@ -16,7 +16,7 @@ CORE_REQUIREMENTS = [
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "fastapi==0.115.0",
-    "python-multipart>=0.0.9",
+    "python-multipart>=0.0.27",
     "uvicorn[standard]==0.34.0",
 ]
 
@@ -33,15 +33,15 @@ ML_RUNTIME_REQUIREMENTS = [
 NVIDIA_REQUIREMENTS = ["nvidia-cuda-runtime"]
 
 HUGGINGFACE_REQUIREMENTS = [
-    "diffusers==0.35.1",
+    "diffusers==0.38.0",
     "controlnet_aux==0.0.10",
     "safetensors==0.6.2",
     "kornia",
     "timm",
     "compel==2.1.1",
-    "transformers==4.57.3",
+    "transformers==5.8.1",
     "datasets==4.0.0",
-    "peft==0.17.1",
+    "peft==0.19.1",
 ]
 
 GUI_REQUIREMENTS = [
@@ -54,9 +54,9 @@ DEVELOPMENT_REQUIREMENTS = [
     "pytest",
     "pytest-timeout",
     "responses>=0.25.0",
-    "python-dotenv==1.0.1",
+    "python-dotenv==1.2.2",
     "coverage==7.8.0",
-    "black==25.1.0",
+    "black==26.3.1",
     "pyinstaller==6.12.0",
     "flake8==7.2.0",
     "mypy==1.16.0",
@@ -76,21 +76,21 @@ LLM_NATIVE_REQUIREMENTS = [
     "llama-cpp-python==0.3.21",
     "bitsandbytes==0.45.5",
     "sentence_transformers==3.4.1",
-    "cryptography==44.0.3",
+    "cryptography==46.0.7",
     "sumy==0.11.0",
     "sentencepiece==0.2.1",
     "lingua-language-detector==2.1.0",
-    "markdown==3.8",
+    "markdown==3.8.1",
     "libzim==3.7.0",
     "mistral_common>=1.8.5",
     "rank-bm25>=0.2.2",
     "llama-cloud==0.1.23",
-    "langchain-core==1.0.0",
+    "langchain-core==1.3.3",
     "langchain-huggingface==1.0.0",
-    "langgraph==1.0.0",
-    "langsmith>=0.1.0",
+    "langgraph==1.0.10",
+    "langsmith>=0.8.0",
     "langchain-ollama==1.0.0",
-    "langchain-text-splitters==1.0.0",
+    "langchain-text-splitters==1.1.2",
     "EbookLib==0.19",
     "pypdf>=5.6.0",
 ]
@@ -160,10 +160,10 @@ GRUUT_SUPPORT_REQUIREMENTS = [
 
 SEARCH_REQUIREMENTS = [
     "ddgs>=9.0.0",
-    "aiohttp>=3.11.0",
+    "aiohttp>=3.13.4",
     "google-api-python-client>=2.170.0",
     "wikipedia>=1.4.0",
-    "scrapy==2.13.1",
+    "scrapy==2.14.2",
     "trafilatura==2.0.0",
 ]
 

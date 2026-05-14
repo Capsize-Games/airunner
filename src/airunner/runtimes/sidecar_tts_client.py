@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import threading
 from dataclasses import replace
+from urllib.parse import urlencode
 from typing import Any, Optional
 
 import requests
@@ -20,6 +21,7 @@ from airunner.runtimes.contracts import (
     RuntimeAction,
     RuntimeDescriptor,
     RuntimeHealth,
+    RuntimeHealthStatus,
     RuntimeKind,
     RuntimeMode,
     TTSInvocationRequest,
@@ -33,6 +35,7 @@ from airunner.runtimes.tts_daemon_runtime_settings import (
 )
 
 DEFAULT_PROVIDER = "local"
+_INNER_RUNTIME_STATUS_TIMEOUT_SECONDS = 1.0
 
 
 class SidecarTTSClient(RuntimeClient):
@@ -82,11 +85,22 @@ class SidecarTTSClient(RuntimeClient):
     def healthcheck(self) -> RuntimeHealth:
         """Return the health of the managed TTS runtime."""
         status, details = self._launcher.health_status()
+        metadata = self._metadata()
+        if status is RuntimeHealthStatus.READY:
+            inner_summary = self._inner_runtime_summary()
+            if inner_summary is not None:
+                status = self._summary_health_status(inner_summary)
+                details = str(
+                    inner_summary.get("details")
+                    or inner_summary.get("status")
+                    or details
+                )
+                metadata.update(inner_summary.get("metadata") or {})
         return RuntimeHealth(
             descriptor=self.descriptor,
             status=status,
             details=details,
-            metadata=self._metadata(),
+            metadata=metadata,
         )
 
     def cancel(self, request_id: str) -> ResponseEnvelope:
@@ -248,6 +262,41 @@ class SidecarTTSClient(RuntimeClient):
         self._settings = settings
         self._launcher = SidecarTTSLauncher(settings)
 
+    def _inner_runtime_summary(self) -> Optional[dict[str, Any]]:
+        """Return the nested local-fallback TTS summary from the sidecar."""
+        if not self._launcher.is_ready():
+            return None
+        query = urlencode(
+            {
+                "provider": self.descriptor.provider,
+                "deployment_mode": RuntimeMode.LOCAL_FALLBACK.value,
+            }
+        )
+        try:
+            return self._request(
+                "GET",
+                f"{self._launcher.endpoint}/api/v1/daemon/runtimes/tts?{query}",
+                timeout_seconds=_INNER_RUNTIME_STATUS_TIMEOUT_SECONDS,
+            )
+        except RuntimeError:
+            return None
+
+    @staticmethod
+    def _summary_health_status(summary: dict[str, Any]) -> RuntimeHealthStatus:
+        """Translate one nested runtime summary into runtime health."""
+        status = str(summary.get("status", "")).strip().lower()
+        if status == "ready":
+            return RuntimeHealthStatus.READY
+        if status == "starting":
+            return RuntimeHealthStatus.STARTING
+        if status == "failed":
+            return RuntimeHealthStatus.FAILED
+        if status == "stopped":
+            return RuntimeHealthStatus.STOPPED
+        if bool(summary.get("loaded")):
+            return RuntimeHealthStatus.READY
+        return RuntimeHealthStatus.UNKNOWN
+
     def _request(
         self,
         method: str,
@@ -255,6 +304,7 @@ class SidecarTTSClient(RuntimeClient):
         *,
         json_payload: Optional[dict[str, Any]] = None,
         expect_json: bool = True,
+        timeout_seconds: Optional[float] = None,
     ) -> Any:
         """Perform one HTTP request against the sidecar daemon."""
         try:
@@ -262,7 +312,11 @@ class SidecarTTSClient(RuntimeClient):
                 method,
                 url,
                 json=json_payload,
-                timeout=self._settings.request_timeout_seconds,
+                timeout=(
+                    self._settings.request_timeout_seconds
+                    if timeout_seconds is None
+                    else timeout_seconds
+                ),
             )
             response.raise_for_status()
         except requests.RequestException as exc:

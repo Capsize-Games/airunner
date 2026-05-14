@@ -14,7 +14,7 @@ from compel import (
     Compel,
     DiffusersTextualInversionManager,
 )
-from transformers import CLIPFeatureExtractor
+from transformers import CLIPImageProcessor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
 from airunner.components.art.data.embedding import Embedding
@@ -305,7 +305,7 @@ class SDModelLoadingMixin:
         Load safety checker and feature extractor for NSFW detection.
 
         Only loads if use_safety_checker is True in application settings.
-        Loads both StableDiffusionSafetyChecker and CLIPFeatureExtractor.
+        Loads both StableDiffusionSafetyChecker and CLIPImageProcessor.
         Automatically downloads missing files from HuggingFace if needed.
         """
         self.logger.info(
@@ -419,7 +419,7 @@ class SDModelLoadingMixin:
             self.logger.info(
                 f"Loading feature extractor from: {safety_checker_path}"
             )
-            self._feature_extractor = CLIPFeatureExtractor.from_pretrained(
+            self._feature_extractor = CLIPImageProcessor.from_pretrained(
                 safety_checker_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             )

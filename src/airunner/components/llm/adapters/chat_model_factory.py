@@ -38,22 +38,6 @@ class ChatModelFactory:
     )
 
     @staticmethod
-    def create_local_model(
-        model: Any,
-        tokenizer: Any,
-        model_path: Optional[str] = None,
-        max_new_tokens: int = 500,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        top_k: int = 20,  # Qwen3 recommended value
-        repetition_penalty: float = 1.15,
-        do_sample: bool = True,
-        enable_thinking: bool = True,
-    ) -> BaseChatModel:
-        """Reject the removed transformers-based local execution path."""
-        raise ValueError(ChatModelFactory._LOCAL_GGUF_ONLY_MESSAGE)
-
-    @staticmethod
     def create_gguf_model(
         model_path: str,
         n_ctx: int = 32768,  # Qwen3 native context (use YaRN for extended)
@@ -254,15 +238,6 @@ class ChatModelFactory:
                 "langchain-openai is required for OpenAI support. "
                 "Install with: pip install langchain-openai"
             )
-
-    @staticmethod
-    def _load_local_execution_components(
-        *,
-        llm_settings: Any,
-        model_path: Optional[str],
-    ) -> tuple[Any, Any]:
-        """Reject the removed transformers-based local execution path."""
-        raise ValueError(ChatModelFactory._LOCAL_GGUF_ONLY_MESSAGE)
 
     @staticmethod
     def _resolve_local_model_id(

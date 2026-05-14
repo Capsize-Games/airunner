@@ -4,7 +4,7 @@ import os
 from typing import Optional, Dict, Any
 
 import torch
-from transformers import CLIPFeatureExtractor
+from transformers import CLIPImageProcessor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
 from airunner.components.application.workers.worker import Worker
@@ -209,8 +209,8 @@ class SafetyCheckerWorker(Worker):
                 )
 
             # Load feature extractor (uses same preprocessor_config.json)
-            self.logger.info("Loading CLIPFeatureExtractor")
-            self._feature_extractor = CLIPFeatureExtractor.from_pretrained(
+            self.logger.info("Loading CLIPImageProcessor")
+            self._feature_extractor = CLIPImageProcessor.from_pretrained(
                 safety_checker_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             )

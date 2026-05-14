@@ -87,7 +87,7 @@ class WorkflowManager(
         Args:
             system_prompt: System prompt for the agent
             chat_model: LangChain ChatModel instance
-                (ChatHuggingFaceLocal, ChatOllama, etc.)
+                (ChatGGUF, ChatOllama, ChatOpenAI, etc.)
             tools: List of LangChain tools
             max_history_tokens: Maximum tokens for conversation history trimming
             conversation_id: Optional conversation ID for persistence

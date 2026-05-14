@@ -479,7 +479,7 @@ def test_prewarm_tts_runtime_uses_daemon_runtime():
             {
                 "deployment_mode": "sidecar",
                 "auto_start": False,
-                "timeout_seconds": 90.0,
+                "timeout_seconds": 180.0,
             },
         )
     ]
@@ -589,7 +589,7 @@ def test_tts_load_signal_passes_active_voice_metadata():
             {
                 "deployment_mode": "sidecar",
                 "auto_start": True,
-                "timeout_seconds": 90.0,
+                "timeout_seconds": 180.0,
             },
         )
     ]
@@ -630,7 +630,7 @@ def test_tts_enable_signal_uses_background_daemon_runtime():
             {
                 "deployment_mode": "sidecar",
                 "auto_start": True,
-                "timeout_seconds": 90.0,
+                "timeout_seconds": 180.0,
             },
         )
     ]

@@ -67,6 +67,9 @@ class FakeLauncher:
     def is_running(self):
         return True
 
+    def is_ready(self):
+        return True
+
     def health_status(self):
         return RuntimeHealthStatus.READY, "ready"
 
@@ -199,16 +202,54 @@ def test_cancel_calls_remote_tts_runtime_cancel():
 
 def test_healthcheck_reports_launcher_status():
     launcher = FakeLauncher(_settings())
+    session = FakeSession(
+        [
+            FakeResponse(
+                payload={
+                    "status": "ready",
+                    "loaded": True,
+                    "metadata": {"model_status": "loaded"},
+                }
+            )
+        ]
+    )
     client = SidecarTTSClient(
         settings=_settings(),
         launcher=launcher,
-        session=FakeSession([]),
+        session=session,
     )
 
     health = client.healthcheck()
 
     assert health.status is RuntimeHealthStatus.READY
     assert health.metadata["model_type"] == "openvoice"
+    assert health.metadata["model_status"] == "loaded"
+
+
+def test_healthcheck_prefers_inner_runtime_loading_status():
+    launcher = FakeLauncher(_settings())
+    client = SidecarTTSClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=FakeSession(
+            [
+                FakeResponse(
+                    payload={
+                        "status": "starting",
+                        "loaded": True,
+                        "details": "loading",
+                        "metadata": {"model_status": "loading"},
+                    }
+                )
+            ]
+        ),
+    )
+
+    health = client.healthcheck()
+
+    assert health.status is RuntimeHealthStatus.STARTING
+    assert health.details == "loading"
+    assert health.metadata["model_status"] == "loading"
 
 
 def test_register_sidecar_tts_client_uses_explicit_sidecar_route():
