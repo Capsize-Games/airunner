@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
+import pytest
 import requests
 
 from airunner.components.llm.managers.llm_request import LLMRequest
@@ -246,6 +247,25 @@ def test_ensure_connected_keeps_running_when_dev_token_missing():
     assert debug_messages == [
         "Daemon health payload missing dev_build_token; skipping stale-daemon recycle"
     ]
+
+
+def test_health_check_reports_helpful_stale_dev_daemon_error():
+    ready_state = {
+        "ready": True,
+        "health_payload": {
+            "status": "ready",
+            "dev_build_token": "old-token",
+        },
+    }
+    client = GuiDaemonClient(
+        launcher=FakeLauncher(ready_state),
+        session=FakeSession(ready_state),
+        detect_stale_dev_daemon=True,
+    )
+    client._expected_dev_build_token = lambda: "new-token"
+
+    with pytest.raises(RuntimeError, match="Restart the dev app"):
+        client.health_check()
 
 
 def test_is_available_uses_requested_health_timeout():

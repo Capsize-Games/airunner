@@ -26,6 +26,10 @@ from airunner.utils.application import get_logger
 
 StateCallback = Callable[[DaemonConnectionState, str], None]
 _ART_JOB_POLL_INTERVAL_SECONDS = 0.10
+_STALE_DEV_DAEMON_MESSAGE = (
+    "The dev daemon is stale because the source tree changed after "
+    "it started. Restart the dev app and try again."
+)
 
 
 class GuiDaemonClient:
@@ -615,7 +619,7 @@ class GuiDaemonClient:
             return None
         self._missing_dev_build_token_logged = False
         if observed != expected:
-            return "stale dev daemon build token mismatch"
+            return _STALE_DEV_DAEMON_MESSAGE
         return None
 
     def _recycle_stale_daemon(self, reason: str) -> bool:

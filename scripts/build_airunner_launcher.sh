@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_TYPE="${CMAKE_BUILD_TYPE:-RelWithDebInfo}"
 TARGET_PLATFORM="linux"
+STAMP_FILE_NAME=".airunner-launcher-build-stamp"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -70,5 +71,17 @@ fi
 
 cmake "${cmake_args[@]}"
 cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}"
+
+STAMP_FILE="${BUILD_DIR}/${STAMP_FILE_NAME}"
+CURRENT_HEAD=""
+if git -C "${ROOT_DIR}" rev-parse HEAD >/dev/null 2>&1; then
+  CURRENT_HEAD="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+fi
+
+cat > "${STAMP_FILE}" <<EOF
+GIT_HEAD=${CURRENT_HEAD}
+TARGET_PLATFORM=${TARGET_PLATFORM}
+BUILD_TYPE=${BUILD_TYPE}
+EOF
 
 echo "Built native launcher at ${BUILD_DIR}/${OUTPUT_NAME}"

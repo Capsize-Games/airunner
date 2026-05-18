@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build/airunner-launcher"
 LAUNCHER_BIN="${BUILD_DIR}/airunner"
+STAMP_FILE="${BUILD_DIR}/.airunner-launcher-build-stamp"
 REPO_PYTHON="${ROOT_DIR}/venv/bin/python"
 REPO_DAEMON_BIN="${ROOT_DIR}/venv/bin/airunner-daemon"
 
@@ -95,6 +96,67 @@ require_clear_runtime_ports() {
   exit 1
 }
 
+current_git_head() {
+  if ! command -v git >/dev/null 2>&1; then
+    return
+  fi
+
+  git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true
+}
+
+read_build_stamp_value() {
+  local key="$1"
+
+  if [[ ! -f "${STAMP_FILE}" ]]; then
+    return
+  fi
+
+  awk -F= -v key="${key}" '$1 == key { print $2 }' "${STAMP_FILE}"
+}
+
+launcher_build_is_stale() {
+  if [[ ! -x "${LAUNCHER_BIN}" ]]; then
+    return 0
+  fi
+
+  if [[ ! -f "${STAMP_FILE}" ]]; then
+    return 0
+  fi
+
+  local current_head stamp_head
+  current_head="$(current_git_head)"
+  stamp_head="$(read_build_stamp_value GIT_HEAD)"
+
+  if [[ -n "${current_head}" && -n "${stamp_head}" \
+    && "${current_head}" != "${stamp_head}" ]]; then
+    return 0
+  fi
+
+  local rebuild_inputs=(
+    "${ROOT_DIR}/native/airunner_launcher/src/main.cpp"
+    "${ROOT_DIR}/native/airunner_launcher/CMakeLists.txt"
+    "${ROOT_DIR}/scripts/build_airunner_launcher.sh"
+    "${ROOT_DIR}/scripts/run_airunner_dev.sh"
+  )
+  local input
+  for input in "${rebuild_inputs[@]}"; do
+    if [[ "${input}" -nt "${LAUNCHER_BIN}" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+ensure_current_launcher() {
+  if ! launcher_build_is_stale; then
+    return
+  fi
+
+  echo "Rebuilding AIRunner launcher for current repository state" >&2
+  "${ROOT_DIR}/scripts/build_airunner_launcher.sh" --clean
+}
+
 stop_runtime_port_owners() {
   local pids
   pids="$(runtime_port_listeners)"
@@ -133,9 +195,7 @@ stop_repo_daemons() {
   require_clear_runtime_ports
 }
 
-if [[ ! -x "${LAUNCHER_BIN}" ]]; then
-  "${ROOT_DIR}/scripts/build_airunner_launcher.sh"
-fi
+ensure_current_launcher
 
 stop_repo_daemons
 
