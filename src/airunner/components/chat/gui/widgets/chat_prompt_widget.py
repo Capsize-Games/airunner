@@ -516,11 +516,20 @@ class ChatPromptWidget(BaseWidget):
         rag_files = list(getattr(self, "_attached_documents", []))
         if rag_files:
             llm_request.rag_files = rag_files
+            existing_categories = list(
+                getattr(llm_request, "tool_categories", []) or []
+            )
+            if "rag" not in {
+                str(category).lower() for category in existing_categories
+            }:
+                existing_categories.append("rag")
+            llm_request.tool_categories = existing_categories
+            if not getattr(llm_request, "force_tool", None):
+                llm_request.force_tool = "rag_search"
             self.logger.info(
-                "Added %s document(s) to llm_request",
+                "Added %s document(s) to llm_request and forcing rag_search",
                 len(rag_files),
             )
-            self._clear_document_attachments()
         
         # Add attached images (manual + auto canvas) if any
         images_for_request = self._collect_images_for_llm()
@@ -530,8 +539,6 @@ class ChatPromptWidget(BaseWidget):
                 self.logger.info(
                     f"Added {len(images_for_request)} images to llm_request"
                 )
-                if self._attached_images:
-                    self._clear_image_attachments()
             else:
                 self.logger.warning(
                     "Images attached but model does not support vision - ignoring"
@@ -655,8 +662,6 @@ class ChatPromptWidget(BaseWidget):
 
     def _on_submit_shortcut(self) -> None:
         """Submit the current prompt from a keyboard shortcut."""
-        if self._disabled:
-            return
         self.do_generate()
 
     def _is_prompt_submit_keypress(self, event: QEvent) -> bool:
@@ -2657,8 +2662,7 @@ class ChatPromptWidget(BaseWidget):
         """
         if hasattr(self.ui, "prompt") and obj is self.ui.prompt:
             if self._is_prompt_submit_keypress(event):
-                if not self._disabled:
-                    self.do_generate()
+                self.do_generate()
                 return True
 
         # Handle drag events on prompt viewport

@@ -264,7 +264,6 @@ def test_submit_generation_request_attaches_rag_documents():
         _collect_images_for_llm=lambda: [],
         _is_model_vision_capable=lambda: False,
         _attached_documents=["/tmp/notes.md"],
-        _clear_document_attachments=Mock(),
         llm_generator_settings=SimpleNamespace(enable_thinking=False),
         logger=Mock(),
         _estimate_token_count=lambda _prompt: 1,
@@ -287,7 +286,54 @@ def test_submit_generation_request_attaches_rag_documents():
     assert sent_requests
     llm_request = sent_requests[0]["llm_request"]
     assert llm_request.rag_files == ["/tmp/notes.md"]
-    widget._clear_document_attachments.assert_called_once_with()
+    assert llm_request.force_tool == "rag_search"
+    assert llm_request.tool_categories == ["rag"]
+
+
+def test_submit_generation_request_keeps_document_attachments_visible():
+    """Attached document pills should persist until the user removes them."""
+    sent_requests = []
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=["/tmp/notes.md"],
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Review this document for me",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-1",
+        slash_command=None,
+    )
+
+    assert sent_requests
+    assert widget._attached_documents == ["/tmp/notes.md"]
 
 
 def test_submit_generation_request_runs_probe_after_ui_append():
@@ -434,6 +480,22 @@ def test_shift_enter_is_not_treated_as_prompt_submit():
     )
 
     assert ChatPromptWidget._is_prompt_submit_keypress(widget, event) is False
+
+
+def test_event_filter_submits_prompt_even_when_internal_flag_is_disabled():
+    """Enter should follow the same send path as the clickable button."""
+    prompt = object()
+    widget = SimpleNamespace(
+        ui=SimpleNamespace(prompt=prompt),
+        _disabled=True,
+        _is_prompt_submit_keypress=lambda event: True,
+        do_generate=Mock(),
+    )
+
+    handled = ChatPromptWidget.eventFilter(widget, prompt, object())
+
+    assert handled is True
+    widget.do_generate.assert_called_once_with()
 
 
 def test_chat_prompt_uses_chat_action_by_default():

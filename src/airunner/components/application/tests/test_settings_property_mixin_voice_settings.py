@@ -89,3 +89,42 @@ def test_openvoice_settings_replaces_stale_cached_row(monkeypatch):
     settings = mixin.openvoice_settings
 
     assert settings.id == 77
+
+
+def test_rag_settings_creates_row_without_removed_enabled_field(monkeypatch):
+    created = {}
+    rows = []
+
+    class _Objects:
+        @staticmethod
+        def first():
+            return rows[0] if rows else None
+
+        @staticmethod
+        def create(**kwargs):
+            created.update(kwargs)
+            row = SimpleNamespace(id=1, **kwargs)
+            rows.append(row)
+            return row
+
+    settings_model = type("RAGSettings", (), {"objects": _Objects()})
+
+    monkeypatch.setattr(
+        "airunner.components.application.gui.windows.main.mixins"
+        ".settings_property_mixin.get_settings_model",
+        lambda name: settings_model,
+    )
+
+    mixin = _DummySettingsMixin(
+        chatbot=SimpleNamespace(voice_id=3),
+        voice_settings=SimpleNamespace(model_type="OpenVoice", settings_id=77),
+        cache=_Cache(),
+    )
+
+    settings = mixin.rag_settings
+
+    assert settings.id == 1
+    assert created == {
+        "model_service": "local",
+        "model_path": "",
+    }

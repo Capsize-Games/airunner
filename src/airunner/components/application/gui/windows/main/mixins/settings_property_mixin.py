@@ -112,7 +112,6 @@ class SettingsPropertyMixin:
             from airunner.enums import ModelService
 
             RAGSettings.objects.create(
-                enabled=False,
                 model_service=ModelService.LOCAL.value,
                 model_path="",
             )

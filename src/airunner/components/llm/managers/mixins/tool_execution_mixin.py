@@ -108,6 +108,13 @@ class ToolExecutionMixin:
                 messages[-1] = new_ai_message
                 state = {**state, "messages": messages}
 
+        messages, tool_calls = self._normalize_tool_calls_for_execution(
+            messages,
+            tool_calls,
+        )
+        if messages is not state["messages"]:
+            state = {**state, "messages": messages}
+
         # Emit "starting" status for each tool
         self._emit_starting_status(tool_calls)
 
@@ -144,6 +151,81 @@ class ToolExecutionMixin:
                     self._bind_tools_to_model()
 
         return result_state
+
+    def _normalize_tool_calls_for_execution(
+        self,
+        messages: list,
+        tool_calls: list,
+    ) -> tuple[list, list]:
+        """Repair malformed tool arguments before ToolNode execution."""
+        normalized_calls = []
+        changed = False
+        user_query = self._get_latest_user_query(messages)
+
+        for tool_call in tool_calls:
+            normalized_call = tool_call
+            if tool_call.get("name") == "rag_search":
+                normalized_call = self._normalize_rag_search_tool_call(
+                    tool_call,
+                    user_query,
+                )
+                changed = changed or normalized_call is not tool_call
+            normalized_calls.append(normalized_call)
+
+        if not changed or not messages:
+            return messages, normalized_calls
+
+        last_message = messages[-1]
+        if last_message.__class__.__name__ != "AIMessage":
+            return messages, normalized_calls
+
+        from langchain_core.messages import AIMessage
+
+        updated_messages = list(messages)
+        updated_messages[-1] = AIMessage(
+            content=getattr(last_message, "content", ""),
+            additional_kwargs=getattr(last_message, "additional_kwargs", {})
+            or {},
+            response_metadata=getattr(
+                last_message,
+                "response_metadata",
+                {},
+            )
+            or {},
+            tool_calls=normalized_calls,
+            id=getattr(last_message, "id", None),
+        )
+        return updated_messages, normalized_calls
+
+    def _normalize_rag_search_tool_call(
+        self,
+        tool_call: dict,
+        user_query: str,
+    ) -> dict:
+        """Ensure forced RAG searches always use a real query string."""
+        args = tool_call.get("args") or {}
+        query = args.get("query") if isinstance(args, dict) else None
+        if isinstance(query, str) and query.strip():
+            return tool_call
+        if not user_query:
+            return tool_call
+
+        self.logger.info(
+            "Repairing rag_search args with latest user prompt"
+        )
+        normalized = dict(tool_call)
+        normalized["args"] = {"query": user_query}
+        return normalized
+
+    def _get_latest_user_query(self, messages: list) -> str:
+        """Return the most recent user message content."""
+        for message in reversed(messages):
+            if message.__class__.__name__ == "HumanMessage":
+                content = getattr(message, "content", "") or ""
+                if isinstance(content, str):
+                    return content.strip()
+                return str(content).strip()
+        return ""
 
     def _get_next_workflow_tool(self, _current_tool: str) -> str | None:
         """Get the next required tool in the coding workflow sequence.

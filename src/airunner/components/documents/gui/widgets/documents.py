@@ -7,6 +7,7 @@ from PySide6.QtCore import (
     Signal,
     Qt,
     QEvent,
+    QFileSystemWatcher,
 )
 from PySide6.QtGui import (
     QIcon,
@@ -52,6 +53,7 @@ class DocumentsWidget(BaseWidget):
         self._current_indexing = 0
         self._total_to_index = 0
         self._unindexed_docs = []
+        self._pending_document_index_requests: dict[str, bool] = {}
         self.file_extensions = [
             "md",
             "txt",
@@ -69,6 +71,10 @@ class DocumentsWidget(BaseWidget):
             SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
         }
         super().__init__(*args, **kwargs)
+        self._document_fs_watcher = QFileSystemWatcher(self)
+        self._document_fs_watcher.directoryChanged.connect(
+            self._on_document_library_changed
+        )
         self.knowledgeBasePanelWidget = self.ui.knowledge_base_panel_widget
         self.setup_file_explorer()
         self.kiwix_widget = KiwixWidget()
@@ -248,6 +254,10 @@ class DocumentsWidget(BaseWidget):
         display_name = (
             self._get_display_name(document_path) if document_path else ""
         )
+        activate_after_index = self._pending_document_index_requests.pop(
+            document_path,
+            None,
+        )
 
         # Handle batch indexing counter
         if (
@@ -257,7 +267,13 @@ class DocumentsWidget(BaseWidget):
             self._current_indexing += 1
             self._index_next_document()
 
+        if activate_after_index is False and document_path:
+            docs = Document.objects.filter_by(path=document_path)
+            if docs and len(docs) > 0:
+                Document.objects.update(pk=docs[0].id, active=False)
+
         # Refresh the document lists to show updated indexing status
+        self.refresh_documents_list()
         self.refresh_active_documents_list()
 
         # Log success
@@ -268,16 +284,28 @@ class DocumentsWidget(BaseWidget):
         """Handle failed document indexing."""
         document_path = data.get("path", "")
         error = data.get("error", "Unknown error")
+        deferred = bool(data.get("deferred"))
         display_name = (
             self._get_display_name(document_path) if document_path else ""
         )
 
+        if document_path and not deferred:
+            self._pending_document_index_requests.pop(document_path, None)
+
         if document_path:
-            self.logger.error(
-                f"Failed to index document {display_name}: {error}"
-            )
+            if deferred:
+                self.logger.info(
+                    "Document indexing deferred for %s: %s",
+                    display_name,
+                    error,
+                )
+            else:
+                self.logger.error(
+                    f"Failed to index document {display_name}: {error}"
+                )
 
         # Refresh the document lists - document should stay in unavailable
+        self.refresh_documents_list()
         self.refresh_active_documents_list()
 
     def eventFilter(self, obj, event):
@@ -362,6 +390,94 @@ class DocumentsWidget(BaseWidget):
                     file_path = os.path.join(root, fname)
                     self.add_document_to_active(file_path)
 
+    def index_folder_documents(
+        self,
+        folder_path: str,
+        *,
+        activate_after_index: bool = False,
+    ) -> None:
+        """Index all supported documents from a folder."""
+        validated_folder = self._validate_document_directory(folder_path)
+        if not validated_folder:
+            return
+        for root, dirs, files in os.walk(validated_folder):
+            for fname in files:
+                ext = os.path.splitext(fname)[1][1:].lower()
+                if ext in self.file_extensions:
+                    self._request_document_index(
+                        os.path.join(root, fname),
+                        activate_after_index=activate_after_index,
+                    )
+
+    def _request_document_index(
+        self,
+        file_path: str,
+        *,
+        activate_after_index: bool = False,
+    ) -> bool:
+        """Queue single-document indexing and record post-index intent."""
+        validated_path = self._validate_document_file(file_path)
+        if not validated_path:
+            return False
+
+        docs = Document.objects.filter_by(path=validated_path)
+        if docs and docs[0].indexed:
+            return False
+        if not docs:
+            Document.objects.create(
+                path=validated_path,
+                active=False,
+                indexed=False,
+            )
+
+        pending = self._pending_document_index_requests.get(validated_path)
+        if pending is not None:
+            self._pending_document_index_requests[validated_path] = (
+                pending or activate_after_index
+            )
+            return True
+
+        self._pending_document_index_requests[validated_path] = (
+            activate_after_index
+        )
+        self.emit_signal(
+            SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
+            {"file_paths": [validated_path]},
+        )
+        return True
+
+    def _refresh_document_watch_paths(self) -> None:
+        """Watch current document directories for external file changes."""
+        watcher = getattr(self, "_document_fs_watcher", None)
+        if watcher is None:
+            return
+
+        desired_paths: set[str] = set()
+        for root in (self.documents_path, self.zim_path):
+            expanded_root = os.path.expanduser(root)
+            if not os.path.isdir(expanded_root):
+                continue
+            desired_paths.add(expanded_root)
+            for current_root, _dirs, _files in os.walk(expanded_root):
+                desired_paths.add(current_root)
+
+        existing_paths = set(watcher.directories())
+        stale_paths = sorted(existing_paths - desired_paths)
+        new_paths = sorted(desired_paths - existing_paths)
+        if stale_paths:
+            watcher.removePaths(stale_paths)
+        if new_paths:
+            watcher.addPaths(new_paths)
+
+    def _on_document_library_changed(self, _path: str) -> None:
+        """Refresh document views when files are changed outside the app."""
+        self.refresh_documents_list()
+        self.refresh_active_documents_list()
+        self.emit_signal(
+            SignalCode.DOCUMENT_COLLECTION_CHANGED,
+            {"reason": "filesystem"},
+        )
+
     def _get_display_name(self, file_path: str) -> str:
         """Get human-readable display name for a file.
 
@@ -398,10 +514,9 @@ class DocumentsWidget(BaseWidget):
         # Check if indexed
         docs = Document.objects.filter_by(path=file_path)
         if not docs or not docs[0].indexed:
-            QMessageBox.information(
-                self,
-                "Cannot Add",
-                f"Document {self._get_display_name(file_path)} is not indexed yet. Please index it first.",
+            self._request_document_index(
+                file_path,
+                activate_after_index=True,
             )
             return
 
@@ -592,16 +707,19 @@ class DocumentsWidget(BaseWidget):
         if total_items == 1:
             if selected_files:
                 add_action = QAction("Add to Active Documents (RAG)", self)
+                index_action = QAction("Index", self)
                 delete_action = QAction("Delete", self)
             else:
                 add_action = QAction(
                     "Add Folder to Active Documents (RAG)", self
                 )
+                index_action = QAction("Index Folder", self)
                 delete_action = QAction("Delete Folder", self)
         else:
             add_action = QAction(
                 f"Add {total_items} Items to Active (RAG)", self
             )
+            index_action = QAction(f"Index {total_items} Items", self)
             delete_action = QAction(f"Delete {total_items} Items", self)
 
         # Add all selected files and folders
@@ -610,6 +728,12 @@ class DocumentsWidget(BaseWidget):
                 self.add_document_to_active(file_path)
             for folder_path in selected_folders:
                 self.add_folder_documents_to_active(folder_path)
+
+        def index_selected():
+            for file_path in selected_files:
+                self._request_document_index(file_path)
+            for folder_path in selected_folders:
+                self.index_folder_documents(folder_path)
 
         # Delete selected files and folders from database AND disk
         def delete_selected():
@@ -661,8 +785,10 @@ class DocumentsWidget(BaseWidget):
             self.emit_signal(SignalCode.DOCUMENT_COLLECTION_CHANGED)
 
         add_action.triggered.connect(add_selected)
+        index_action.triggered.connect(index_selected)
         delete_action.triggered.connect(delete_selected)
         menu.addAction(add_action)
+        menu.addAction(index_action)
         menu.addAction(delete_action)
         menu.exec(self.ui.documentsTreeView.viewport().mapToGlobal(position))
 
@@ -998,6 +1124,41 @@ class DocumentsWidget(BaseWidget):
         # Append to model
         self.documents_model.appendRow(indexed)
         self.documents_model.appendRow(unindexed)
+        self._refresh_document_watch_paths()
+
+        self._expand_available_document_sections(
+            indexed,
+            unindexed,
+            indexed_local,
+            indexed_zim,
+            unindexed_local,
+            unindexed_zim,
+        )
+
+    def _expand_available_document_sections(self, *items) -> None:
+        """Expand populated document tree branches so imports are visible."""
+        tree = getattr(getattr(self, "ui", None), "documentsTreeView", None)
+        model = getattr(self, "documents_model", None)
+        if tree is None or model is None:
+            return
+
+        for item in items:
+            if item is None:
+                continue
+            try:
+                should_expand = bool(item.rowCount())
+            except Exception:
+                should_expand = True
+            if not should_expand:
+                continue
+
+            try:
+                index = model.indexFromItem(item)
+            except Exception:
+                continue
+            if hasattr(index, "isValid") and not index.isValid():
+                continue
+            tree.expand(index)
 
     def on_document_double_clicked(self, index):
         item = self.documents_model.itemFromIndex(index)

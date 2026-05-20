@@ -20,6 +20,116 @@ from airunner.utils.application.log_hygiene import summarize_text
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
+def _document_label(metadata: dict[str, Any]) -> str:
+    """Return one human-readable label for a retrieved document."""
+    for key in ("file_name", "source", "file_path"):
+        value = str(metadata.get(key, "") or "").strip()
+        if not value:
+            continue
+        if key in {"source", "file_path"}:
+            return os.path.basename(value) or value
+        return value
+    return "unknown"
+
+
+def _infer_filename_details(
+    file_name: str,
+) -> tuple[str | None, str | None]:
+    """Infer one title/author hint from a filename when possible."""
+    stem = os.path.splitext(os.path.basename(file_name))[0].strip()
+    normalized_stem = stem.replace("_", " ").strip()
+    if not normalized_stem or " - " not in normalized_stem:
+        return None, None
+
+    parts = [part.strip() for part in normalized_stem.split(" - ")]
+    parts = [part for part in parts if part]
+    if len(parts) < 2:
+        return None, None
+
+    title = " - ".join(parts[:-1]).strip() or None
+    author = parts[-1].strip() or None
+    return title, author
+
+
+def _format_document_summary(
+    position: int,
+    metadata: dict[str, Any],
+) -> str:
+    """Format one matched-document summary for a RAG result."""
+    label = _document_label(metadata)
+    lines = [f"Document {position}: {label}"]
+
+    title_hint, author_hint = _infer_filename_details(label)
+    if title_hint:
+        lines.append(f"Inferred title from filename: {title_hint}")
+    if author_hint:
+        lines.append(f"Inferred author from filename: {author_hint}")
+
+    file_type = str(metadata.get("file_type", "") or "").strip()
+    if file_type:
+        lines.append(f"File type: {file_type}")
+
+    file_path = str(
+        metadata.get("file_path") or metadata.get("source") or ""
+    ).strip()
+    if file_path:
+        lines.append(f"Stored path: {file_path}")
+
+    return "\n".join(lines)
+
+
+def _format_excerpt(
+    position: int,
+    metadata: dict[str, Any],
+    content: str,
+) -> str:
+    """Format one retrieved excerpt with its document label."""
+    excerpt = content[:500] if len(content) > 500 else content
+    label = _document_label(metadata)
+    return f"[Excerpt {position} from {label}]\n{excerpt}"
+
+
+def _format_rag_search_results(results: list[Any]) -> str:
+    """Return one user-facing RAG search result string."""
+    document_summaries: list[str] = []
+    excerpt_sections: list[str] = []
+    seen_documents: set[str] = set()
+
+    for index, doc in enumerate(results, 1):
+        metadata = getattr(doc, "metadata", {}) or {}
+        document_key = str(
+            metadata.get("file_path")
+            or metadata.get("file_name")
+            or metadata.get("source")
+            or f"result-{index}"
+        )
+
+        if document_key not in seen_documents:
+            seen_documents.add(document_key)
+            document_summaries.append(
+                _format_document_summary(len(document_summaries) + 1, metadata)
+            )
+
+        excerpt_sections.append(
+            _format_excerpt(
+                index,
+                metadata,
+                str(getattr(doc, "page_content", "") or ""),
+            )
+        )
+
+    sections = []
+    if document_summaries:
+        sections.append(
+            "Matched documents:\n" + "\n\n".join(document_summaries)
+        )
+    if excerpt_sections:
+        sections.append(
+            "Relevant excerpts:\n" + "\n\n".join(excerpt_sections)
+        )
+    return "\n\n".join(sections)
+
+
 @tool(
     name="rag_search",
     category=ToolCategory.RAG,
@@ -96,23 +206,19 @@ def rag_search(
             logger.info(msg)
             return msg
 
-        context_parts = []
         for i, doc in enumerate(results, 1):
-            source = doc.metadata.get("source", "unknown")
-            content = (
-                doc.page_content[:500]
-                if len(doc.page_content) > 500
-                else doc.page_content
+            source = (getattr(doc, "metadata", {}) or {}).get(
+                "source",
+                "unknown",
             )
-            context_parts.append(f"[Source {i}: {source}]\n{content}")
             logger.debug(
                 f"Result {i} from source: {source}, "
-                f"length: {len(doc.page_content)}"
+                f"length: {len(getattr(doc, 'page_content', '') or '')}"
             )
 
-        result_text = "\n\n".join(context_parts)
+        result_text = _format_rag_search_results(results)
         logger.info(
-            f"Returning {len(context_parts)} document excerpts, "
+            f"Returning {len(results)} document excerpts, "
             f"total length: {len(result_text)}"
         )
         return result_text

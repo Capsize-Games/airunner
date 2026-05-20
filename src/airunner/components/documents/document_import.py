@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 import filecmp
 import os
 import shutil
@@ -13,6 +14,13 @@ from airunner.utils.path_policy import (
     normalize_local_path,
     resolve_existing_file,
 )
+
+try:
+    from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
+        RestrictOSAccess,
+    )
+except Exception:  # pragma: no cover - darklock may be unavailable in tests
+    RestrictOSAccess = None
 
 RAG_DOCUMENT_SUFFIXES = (
     ".epub",
@@ -97,15 +105,27 @@ def import_document_to_library(
     )
     destination_dir.mkdir(parents=True, exist_ok=True)
 
-    destination_path = _resolve_destination_path(
-        source_path,
-        destination_dir,
-    )
-    if destination_path != source_path:
-        shutil.copy2(source_path, destination_path)
+    with _user_selected_path_override([str(source_path)]):
+        destination_path = _resolve_destination_path(
+            source_path,
+            destination_dir,
+        )
+        if destination_path != source_path:
+            shutil.copy2(source_path, destination_path)
 
     _ensure_document_record(str(destination_path))
     return str(destination_path)
+
+
+def _user_selected_path_override(paths: Iterable[str]):
+    """Temporarily allow explicit user-selected paths under DarkLock."""
+    if RestrictOSAccess is None:
+        return nullcontext()
+
+    try:
+        return RestrictOSAccess().user_override(paths=list(paths))
+    except Exception:
+        return nullcontext()
 
 
 def _resolve_destination_path(

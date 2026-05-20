@@ -524,32 +524,28 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
 
         try:
-            # Build prompt with explicit user question and strong no-tool instructions
-            question_context = (
-                f"User's question: {user_question}\n\n"
-                if user_question
-                else ""
+            simple_prompt_text = self._build_search_results_prompt(
+                all_tool_content,
+                tool_name,
+                user_question,
             )
-
-            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
-
-{question_context}Search results:
-{all_tool_content}
-
-Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
 
-            # Stream response - returns full AIMessage with thinking_content
-            response_message = self._stream_model_response(
+            # Force the synthesis pass to return visible text instead of
+            # reasoning/tool scaffolding.
+            response_message = self._stream_internal_response(
                 simple_prompt, generation_kwargs
             )
 
             if response_message:
+                visible_content = self._recover_forced_response_content(
+                    response_message
+                )
                 # Ensure tool_calls is empty
                 return AIMessage(
-                    content=response_message.content or "",
+                    content=visible_content,
                     additional_kwargs=getattr(response_message, "additional_kwargs", {}),
                     tool_calls=[],
                 )
@@ -583,32 +579,24 @@ Based on the search results above, provide a clear, conversational answer to the
         )
 
         try:
-            # Build prompt with explicit user question and strong no-tool instructions
-            question_context = (
-                f"User's question: {user_question}\n\n"
-                if user_question
-                else ""
+            simple_prompt_text = self._build_search_results_prompt(
+                all_tool_content,
+                tool_name,
+                user_question,
             )
-
-            simple_prompt_text = f"""You are answering a question based on search results. Respond naturally and conversationally.
-
-{question_context}Search results:
-{all_tool_content}
-
-Based on the search results above, provide a clear, conversational answer to the user's question. Use ONLY the information from the search results. Do not call any tools, do not use JSON, just write a natural response. Avoid repetition and be concise."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
 
-            # Stream response with generation kwargs for token-by-token streaming
-            response_message = self._stream_model_response(
+            # Stream a plain answer without tool bindings or hidden thinking.
+            response_message = self._stream_internal_response(
                 simple_prompt, generation_kwargs
             )
 
             # Extract content from the response message
-            response_content = ""
-            if response_message and hasattr(response_message, "content"):
-                response_content = response_message.content or ""
+            response_content = self._recover_forced_response_content(
+                response_message
+            )
 
             self.logger.info(
                 f"Model streamed {len(response_content)} char answer"
@@ -622,6 +610,164 @@ Based on the search results above, provide a clear, conversational answer to the
             if self._token_callback:
                 self._token_callback(fallback)
             return fallback
+
+    def _build_search_results_prompt(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str = "",
+    ) -> str:
+        """Build one no-tool synthesis prompt for search results."""
+        question_context = (
+            f"User's question: {user_question}\n\n"
+            if user_question
+            else ""
+        )
+        rag_guidance = ""
+        if tool_name == "rag_search":
+            rag_guidance = (
+                "If the search results include document identity fields "
+                "such as document names, inferred titles, inferred "
+                "authors, or stored paths, and the user is asking what "
+                "the document is, identify the document first before "
+                "describing excerpt details.\n\n"
+            )
+
+        return (
+            "You are answering a question based on search results. "
+            "Respond naturally and conversationally.\n\n"
+            f"{question_context}"
+            f"{rag_guidance}"
+            "Search results:\n"
+            f"{all_tool_content}\n\n"
+            "Based on the search results above, provide a clear, "
+            "conversational answer to the user's question. Use ONLY the "
+            "information from the search results. Do not call any tools, "
+            "do not use JSON, just write a natural response. Avoid "
+            "repetition and be concise."
+        )
+
+    def _recover_forced_response_content(
+        self,
+        response_message: Optional[AIMessage],
+    ) -> str:
+        """Recover a visible answer from a reasoning-only internal pass."""
+        if response_message is None:
+            return ""
+
+        visible_content = str(getattr(response_message, "content", "") or "")
+        if visible_content.strip():
+            return visible_content
+
+        additional_kwargs = (
+            getattr(response_message, "additional_kwargs", {}) or {}
+        )
+        thinking_content = (
+            additional_kwargs.get("thinking_content")
+            or additional_kwargs.get("reasoning_content")
+            or ""
+        )
+        cleaned_thinking = strip_thinking_tags(str(thinking_content)).strip()
+        if not cleaned_thinking:
+            return ""
+
+        drafted_response = self._extract_drafted_response_from_thinking(
+            cleaned_thinking
+        )
+        if drafted_response:
+            self.logger.info(
+                "Recovered drafted forced response from reasoning-only output"
+            )
+            return drafted_response
+
+        paragraphs = [
+            paragraph.strip()
+            for paragraph in re.split(r"\n\s*\n", cleaned_thinking)
+            if paragraph.strip()
+        ]
+        for paragraph in paragraphs:
+            candidate = self._clean_reasoning_candidate(paragraph)
+            if candidate:
+                self.logger.info(
+                    "Recovered visible forced response from reasoning-only output"
+                )
+                return candidate
+
+        return ""
+
+    def _extract_drafted_response_from_thinking(
+        self,
+        cleaned_thinking: str,
+    ) -> str:
+        """Extract quoted draft sentences from structured reasoning output."""
+        section = self._extract_reasoning_section(
+            cleaned_thinking,
+            "Refining for Conciseness and Flow",
+        )
+        if not section:
+            section = self._extract_reasoning_section(
+                cleaned_thinking,
+                "Drafting the Response",
+            )
+        if not section:
+            return ""
+
+        quotes = [
+            match.strip()
+            for match in re.findall(
+                r'^\s*\*\s+"(.+?)"\s*$',
+                section,
+                flags=re.MULTILINE,
+            )
+            if match.strip()
+        ]
+        if quotes:
+            return " ".join(quotes)
+        return ""
+
+    def _extract_reasoning_section(
+        self,
+        cleaned_thinking: str,
+        heading: str,
+    ) -> str:
+        """Return one numbered reasoning section by heading label."""
+        pattern = re.compile(
+            rf"\d+\.\s+\*\*{re.escape(heading)}:\*\*\n(.*?)(?=\n\d+\.\s+\*\*|\Z)",
+            flags=re.DOTALL,
+        )
+        match = pattern.search(cleaned_thinking)
+        if not match:
+            return ""
+        return match.group(1).strip()
+
+    def _clean_reasoning_candidate(self, paragraph: str) -> str:
+        """Normalize one fallback reasoning paragraph into visible text."""
+        candidate = paragraph.strip()
+        if not candidate:
+            return ""
+        if candidate[:1] == candidate[-1:] and candidate[:1] in {'"', "'"}:
+            candidate = candidate[1:-1].strip()
+        if self._looks_like_reasoning_header(candidate):
+            return ""
+        return candidate
+
+    @staticmethod
+    def _looks_like_reasoning_header(candidate: str) -> bool:
+        """Return True when text is a planning header, not a user answer."""
+        lowered = candidate.strip().lower()
+        if lowered in {
+            "thinking process:",
+            "drafting the response:",
+            "refining for conciseness and flow:",
+            "final review against constraints:",
+            "analyze the request:",
+            "analyze the search results:",
+            "synthesize the answer:",
+        }:
+            return True
+        if re.match(r"^\d+\.\s+\*\*.*\*\*$", candidate):
+            return True
+        return False
 
     def _stream_model_response(
         self,
@@ -795,6 +941,9 @@ Based on the search results above, provide a clear, conversational answer to the
             "write_file",          # File was written - present result
             "complete_todo_item",  # Workflow item completed
         }
+        DIRECT_RESPONSE_TOOLS = {
+            "rag_search",
+        }
 
         # Check the most recent tool message to see what tool was called
         last_tool_msg = tool_messages[-1]
@@ -824,6 +973,12 @@ Based on the search results above, provide a clear, conversational answer to the
             if self._should_return_tool_direct(tool_name):
                 self.logger.info(
                     f"[ROUTE DEBUG] Tool '{tool_name}' is return_direct - routing to force_response"
+                )
+                return "force_response"
+
+            if tool_name in DIRECT_RESPONSE_TOOLS:
+                self.logger.info(
+                    f"[ROUTE DEBUG] Tool '{tool_name}' should be synthesized directly"
                 )
                 return "force_response"
             
@@ -2109,6 +2264,44 @@ Based on the search results above, provide a clear, conversational answer to the
             )
 
         return None
+
+    def _stream_internal_response(
+        self,
+        formatted_prompt,
+        generation_kwargs: Optional[Dict] = None,
+    ) -> Optional[AIMessage]:
+        """Stream one internal model pass with tools and thinking disabled."""
+        chat_model = getattr(self, "_chat_model", None)
+        if chat_model is None:
+            return self._stream_model_response(
+                formatted_prompt,
+                generation_kwargs or {},
+            )
+
+        original_values = {}
+        for attr_name, override in (
+            ("enable_thinking", False),
+            ("tools", None),
+            ("tool_choice", None),
+        ):
+            if hasattr(chat_model, attr_name):
+                original_values[attr_name] = getattr(chat_model, attr_name)
+                setattr(chat_model, attr_name, override)
+
+        try:
+            return self._stream_model_response(
+                formatted_prompt,
+                generation_kwargs or {},
+            )
+        finally:
+            for attr_name, original_value in original_values.items():
+                try:
+                    setattr(chat_model, attr_name, original_value)
+                except Exception:
+                    self.logger.debug(
+                        "Failed to restore chat model attribute %s",
+                        attr_name,
+                    )
 
     def _create_streamed_message(
         self,

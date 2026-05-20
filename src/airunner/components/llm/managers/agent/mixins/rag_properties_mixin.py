@@ -1,6 +1,8 @@
 """RAG properties and configuration management."""
 
+import json
 import os
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import torch
@@ -120,6 +122,8 @@ class RAGPropertiesMixin:
                     )
                     return None
 
+                self._ensure_local_embedding_metadata(model_name)
+
                 device = "cpu"
                 if torch.cuda.is_available():
                     device = "cuda"
@@ -156,6 +160,43 @@ class RAGPropertiesMixin:
                 return None
 
         return self._embedding
+
+    def _ensure_local_embedding_metadata(self, model_path: str) -> None:
+        """Create optional sentence-transformers metadata locally.
+
+        AIRunner does not allow sentence-transformers to fall back to
+        huggingface_hub or any hub cache path for optional metadata files.
+        Materialize the small root metadata files locally so the embedding
+        model loads entirely from the downloaded directory.
+        """
+        model_dir = Path(model_path)
+        model_dir.mkdir(parents=True, exist_ok=True)
+        self._ensure_embedding_metadata_file(
+            model_dir / "config_sentence_transformers.json",
+            {"__version__": {}},
+        )
+        self._ensure_embedding_metadata_file(
+            model_dir / "README.md",
+            "# intfloat/e5-large\n",
+        )
+
+    def _ensure_embedding_metadata_file(
+        self,
+        file_path: Path,
+        content: Dict[str, Any] | str,
+    ) -> None:
+        """Write one optional metadata file when it is absent."""
+        if file_path.exists():
+            return
+
+        if isinstance(content, dict):
+            file_path.write_text(
+                json.dumps(content, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            return
+
+        file_path.write_text(content, encoding="utf-8")
 
     @property
     def target_files(self) -> Optional[list[str]]:

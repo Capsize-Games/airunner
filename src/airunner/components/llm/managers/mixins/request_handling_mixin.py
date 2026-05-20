@@ -106,7 +106,13 @@ class RequestHandlingMixin:
         tools_filtered, selected_categories, system_prompt = (
             self._prepare_request_tooling(data, llm_request)
         )
-        self._prepare_request_rag(data, llm_request, selected_categories)
+        rag_error = self._prepare_request_rag(
+            data,
+            llm_request,
+            selected_categories,
+        )
+        if rag_error is not None:
+            return rag_error
         thinking_patches = self._apply_request_thinking_override(llm_request)
         reasoning_patches = self._apply_request_reasoning_effort_override(
             llm_request
@@ -332,10 +338,12 @@ class RequestHandlingMixin:
         data: Dict[str, Any],
         llm_request: Any,
         selected_categories: List[str],
-    ) -> None:
+    ) -> Optional[Dict[str, Any]]:
         """Ensure request-provided or inferred RAG files are indexed."""
         if llm_request and getattr(llm_request, "rag_files", None):
-            self._ensure_request_rag_files(llm_request.rag_files)
+            rag_error = self._ensure_request_rag_files(llm_request.rag_files)
+            if rag_error is not None:
+                return rag_error
 
         try:
             if llm_request and not getattr(llm_request, "rag_files", None):
@@ -358,19 +366,44 @@ class RequestHandlingMixin:
                             len(candidates),
                             candidates,
                         )
-                        self.ensure_indexed_files(candidates)
+                        rag_error = self._ensure_request_rag_files(
+                            candidates
+                        )
+                        if rag_error is not None:
+                            return rag_error
         except Exception:
             self.logger.debug(
                 "Auto attachment of RAG files failed, continuing without "
                 "local RAG."
             )
+        return None
 
-    def _ensure_request_rag_files(self, rag_files: Any) -> None:
+    def _ensure_request_rag_files(
+        self,
+        rag_files: Any,
+    ) -> Optional[Dict[str, Any]]:
         """Load and index request-provided RAG files."""
         try:
             if hasattr(self, "ensure_indexed_files"):
-                self.ensure_indexed_files(rag_files)
-                return
+                success = self.ensure_indexed_files(rag_files)
+                if success:
+                    return None
+                if getattr(self, "_rag_retry_after_download", False):
+                    error_message = (
+                        getattr(self, "_last_rag_index_error", None)
+                        or "Embedding model download in progress."
+                    )
+                    return {
+                        "response": (
+                            "Error: the embedding model required for "
+                            "document search is still downloading. "
+                            "AIRunner will retry your request "
+                            "automatically when the download finishes."
+                        ),
+                        "error": error_message,
+                        "retry_after_download": True,
+                    }
+                return None
 
             for doc in rag_files:
                 if isinstance(doc, str):
@@ -384,6 +417,7 @@ class RequestHandlingMixin:
                 "Error ensuring rag files are indexed: %s",
                 exc,
             )
+        return None
 
     def _load_rag_document_payload(self, doc: Dict[str, Any]) -> None:
         """Load one request-provided document payload into RAG."""

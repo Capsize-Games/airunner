@@ -784,6 +784,96 @@ class TestChatGGUFNativeTools:
         assert chunks[-1].message.tool_calls[0]["name"] == "get_current_datetime"
         assert chunks[-1].message.tool_calls[0]["args"] == {}
 
+    def test_stream_deduplicates_repeated_native_tool_name_deltas(self):
+        fake_llama = FakeLlama(
+            stream_chunks=[
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [
+                                    {
+                                        "index": 0,
+                                        "id": "call_1",
+                                        "type": "function",
+                                        "function": {
+                                            "name": "get_current_datetime",
+                                            "arguments": "{",
+                                        },
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "tool_calls": [
+                                    {
+                                        "index": 0,
+                                        "function": {
+                                            "name": "get_current_datetime",
+                                            "arguments": "}",
+                                        },
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+            ]
+        )
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice={
+                "type": "function",
+                "function": {"name": "get_current_datetime"},
+            },
+        )
+
+        chunks = list(chat_model._stream([HumanMessage(content="what time is it?")]))
+
+        assert chunks[-1].message.tool_calls[0]["name"] == (
+            "get_current_datetime"
+        )
+        assert chunks[-1].message.tool_calls[0]["args"] == {}
+
+    def test_convert_messages_keeps_empty_content_for_tool_history(self):
+        fake_llama = FakeLlama()
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice={
+                "type": "function",
+                "function": {"name": "get_current_datetime"},
+            },
+        )
+
+        assistant = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_1",
+                    "name": "get_current_datetime",
+                    "args": {},
+                    "type": "tool_call",
+                }
+            ],
+        )
+
+        converted = chat_model._convert_messages(
+            [HumanMessage(content="what time is it?"), assistant]
+        )
+
+        assert converted[1]["role"] == "assistant"
+        assert converted[1]["content"] == ""
+        assert converted[1]["tool_calls"][0]["function"]["name"] == (
+            "get_current_datetime"
+        )
+
     def test_stream_parses_gpt_oss_commentary_tool_call(self):
         fake_llama = FakeLlama(
             stream_chunks=[

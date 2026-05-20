@@ -8,6 +8,9 @@ from airunner.enums import SignalCode
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
+from airunner.components.llm.managers.agent.mixins.rag_indexing_mixin import (
+    EmbeddingModelDownloadPendingError,
+)
 from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 
@@ -200,19 +203,32 @@ class RAGIndexingMixin:
         """
         total = len(file_paths)
         indexed_total = 0
+        retry_pending = False
         for idx, file_path in enumerate(file_paths):
             self._emit_indexing_progress(idx, total)
             validated_path = self._validate_document_path(file_path)
             if not validated_path:
                 continue
-            indexed_total += 1
-            self._index_single_file(validated_path, idx, total)
+            result = self._index_single_file(validated_path, idx, total)
+            if result is True:
+                indexed_total += 1
+            elif result is None:
+                retry_pending = True
+                for pending_path in file_paths[idx + 1 :]:
+                    self._queue_pending_document_index(pending_path)
+                break
 
         self.emit_signal(
             SignalCode.RAG_INDEXING_COMPLETE,
             {
-                "success": True,
-                "message": f"Indexed {indexed_total} of {total} documents",
+                "success": not retry_pending,
+                "message": (
+                    "Embedding model download in progress. AIRunner will "
+                    "retry indexing automatically when the download "
+                    "finishes."
+                    if retry_pending
+                    else f"Indexed {indexed_total} of {total} documents"
+                ),
             },
         )
 
@@ -232,7 +248,12 @@ class RAGIndexingMixin:
             },
         )
 
-    def _index_single_file(self, file_path: str, idx: int, total: int) -> None:
+    def _index_single_file(
+        self,
+        file_path: str,
+        idx: int,
+        total: int,
+    ) -> bool | None:
         """Index a single document file.
 
         Args:
@@ -243,7 +264,7 @@ class RAGIndexingMixin:
         try:
             db_doc = self._get_document_from_db(file_path)
             if not db_doc:
-                return
+                return False
 
             self.logger.info(
                 f"Indexing document {idx + 1}/{total}: {file_path}"
@@ -259,14 +280,57 @@ class RAGIndexingMixin:
                 self.emit_signal(
                     SignalCode.DOCUMENT_INDEXED, {"path": file_path}
                 )
+                return True
             else:
                 self._emit_index_failed(
-                    file_path, "No content could be extracted"
+                    file_path,
+                    "No content could be extracted",
                 )
+                return False
+
+        except EmbeddingModelDownloadPendingError:
+            self._queue_pending_document_index(file_path)
+            self._emit_index_failed(
+                file_path,
+                "Embedding model download in progress. AIRunner will retry "
+                "indexing automatically when the download finishes.",
+                deferred=True,
+            )
+            return None
 
         except Exception as e:
             self.logger.error(f"Failed to index {file_path}: {e}")
             self._emit_index_failed(file_path, str(e))
+            return False
+
+    def _queue_pending_document_index(self, file_path: str) -> None:
+        """Store one document path for automatic retry after download."""
+        pending_paths = getattr(self, "_pending_document_index_paths", None)
+        if pending_paths is None:
+            pending_paths = []
+            self._pending_document_index_paths = pending_paths
+        if file_path not in pending_paths:
+            pending_paths.append(file_path)
+
+    def _retry_pending_document_index_requests(self) -> None:
+        """Retry queued document indexing after embedding download."""
+        pending_paths = list(
+            getattr(self, "_pending_document_index_paths", [])
+        )
+        if not pending_paths:
+            return
+
+        self._pending_document_index_paths = []
+        self.logger.info(
+            "Retrying %s pending document index request(s) after "
+            "embedding download",
+            len(pending_paths),
+        )
+        indexing_thread = threading.Thread(
+            target=self._index_selected_documents_thread,
+            args=(pending_paths,),
+        )
+        indexing_thread.start()
 
     def _get_document_from_db(self, file_path: str):
         """Get document from database.
@@ -286,7 +350,13 @@ class RAGIndexingMixin:
             return None
         return db_docs[0]
 
-    def _emit_index_failed(self, path: str, error: str) -> None:
+    def _emit_index_failed(
+        self,
+        path: str,
+        error: str,
+        *,
+        deferred: bool = False,
+    ) -> None:
         """Emit document index failed signal.
 
         Args:
@@ -295,7 +365,7 @@ class RAGIndexingMixin:
         """
         self.emit_signal(
             SignalCode.DOCUMENT_INDEX_FAILED,
-            {"path": path, "error": error},
+            {"path": path, "error": error, "deferred": deferred},
         )
 
     def on_rag_index_cancel_signal(self, data: Dict) -> None:

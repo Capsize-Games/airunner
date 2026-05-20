@@ -183,13 +183,7 @@ class ModelDownloadMixin:
                   For GGUF models, also contains gguf_filename
                   May contain convert_to_gguf flag to trigger conversion after download
         """
-        # Skip embedding model downloads - those are handled by RAGPropertiesMixin
         model_type = data.get("model_type", "llm")
-        if model_type == "embedding":
-            self.logger.debug(
-                "Ignoring embedding model download request - handled by RAG system"
-            )
-            return
 
         if self._download_dialog_showing:
             self.logger.debug(
@@ -234,6 +228,12 @@ class ModelDownloadMixin:
         self.logger.info(
             f"Model download required: {model_name} at {model_path} (GGUF: {is_gguf}, convert_after: {convert_to_gguf})"
         )
+
+        if model_type == "embedding":
+            self.logger.info(
+                "Starting embedding model download for %s",
+                repo_id,
+            )
 
         if not repo_id:
             self.logger.error("No repo_id provided in download request")
@@ -562,7 +562,11 @@ class ModelDownloadMixin:
 
         # Skip auto-load for embedding models - they're handled by RAGPropertiesMixin
         if repo_id == "intfloat/e5-large":
-            self.logger.debug("Skipping auto-load for embedding model")
+            self.logger.debug("Embedding model download complete")
+            self._retry_pending_document_indexes_after_download()
+            self._retry_pending_request_after_download(
+                "embedding model download"
+            )
             return
         
         # Check if we need to convert to GGUF after download
@@ -582,6 +586,33 @@ class ModelDownloadMixin:
 
         self._emit_download_complete_message()
         self._auto_load_downloaded_model()
+
+    def _retry_pending_request_after_download(self, reason: str) -> None:
+        """Retry any queued LLM request after a required download."""
+        if not getattr(self, "_pending_llm_request", None):
+            self.logger.info(
+                "No pending request to retry after %s",
+                reason,
+            )
+            return
+
+        self.logger.info(
+            "Retrying pending LLM request after %s",
+            reason,
+        )
+        pending_request = self._pending_llm_request
+        self._pending_llm_request = None
+        self.handle_message(pending_request)
+
+    def _retry_pending_document_indexes_after_download(self) -> None:
+        """Retry queued document indexes when the embedding model is ready."""
+        retry_pending = getattr(
+            self,
+            "_retry_pending_document_index_requests",
+            None,
+        )
+        if callable(retry_pending):
+            retry_pending()
 
     def _emit_download_complete_message(self) -> None:
         """Emit download completion message to user."""
@@ -641,12 +672,9 @@ class ModelDownloadMixin:
                 hasattr(self, "_pending_llm_request")
                 and self._pending_llm_request
             ):
-                self.logger.info(
-                    "Retrying pending LLM request after model download"
+                self._retry_pending_request_after_download(
+                    "model download"
                 )
-                # Add the request back to the queue
-                self.handle_message(self._pending_llm_request)
-                self._pending_llm_request = None
             else:
                 self.logger.info("No pending request to retry")
         else:

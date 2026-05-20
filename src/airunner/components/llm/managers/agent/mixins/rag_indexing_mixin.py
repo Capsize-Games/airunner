@@ -18,6 +18,10 @@ from airunner.components.documents.data.models.document import (
 from airunner.enums import SignalCode
 
 
+class EmbeddingModelDownloadPendingError(RuntimeError):
+    """Raised when indexing must wait for the embedding model download."""
+
+
 class RAGIndexingMixin:
     """Mixin for RAG document indexing operations."""
 
@@ -79,7 +83,12 @@ class RAGIndexingMixin:
         """
         try:
             self._setup_rag()
-            if self.embedding is None:
+            embedding = self.embedding
+            if embedding is None:
+                if getattr(self, "_embedding_download_pending", False):
+                    raise EmbeddingModelDownloadPendingError(
+                        "Embedding model download in progress."
+                    )
                 return False
 
             doc_id = self._generate_doc_id(db_doc.path)
@@ -94,7 +103,7 @@ class RAGIndexingMixin:
 
             doc_index = DocumentVectorIndex.from_documents(
                 docs,
-                self.embedding,
+                embedding,
                 self.text_splitter,
             )
 
@@ -114,6 +123,8 @@ class RAGIndexingMixin:
                 pass
             return True
 
+        except EmbeddingModelDownloadPendingError:
+            raise
         except Exception as e:
             self.logger.error(f"Failed to index {db_doc.path}: {e}")
             return False
@@ -132,41 +143,169 @@ class RAGIndexingMixin:
             self.logger.debug("No file paths provided to ensure_indexed_files")
             return True
 
+        self._rag_retry_after_download = False
+        self._last_rag_index_error = None
+
         # Lazy initialize RAG system (loads embedding model)
         if hasattr(self, "_setup_rag"):
             self._setup_rag()
 
         success = True
+        indexed_paths: List[str] = []
+        changed_paths: List[str] = []
         for path in file_paths:
-            # Skip if already tracked as loaded/indexed
             try:
-                if path in getattr(self, "_loaded_doc_ids", []):
-                    self.logger.debug(f"Skipping already indexed path: {path}")
-                    continue
-            except Exception:
-                pass
-
-            if not os.path.exists(path):
-                self.logger.warning(
-                    f"File does not exist for indexing: {path}"
+                ok, indexed_now, changed, event_path = (
+                    self._ensure_request_document_ready(path)
                 )
+            except EmbeddingModelDownloadPendingError as error:
+                success = False
+                self._rag_retry_after_download = True
+                self._last_rag_index_error = str(error)
+                self.logger.info(
+                    "Deferring request document indexing for %s until "
+                    "embedding download completes",
+                    path,
+                )
+                break
+            if not ok:
                 success = False
                 continue
-
-            # Use the load_file_into_rag to index - it will update _loaded_doc_ids
-            try:
-                self.logger.info(f"Ensuring indexing for file: {path}")
-                self.load_file_into_rag(path)
-            except Exception as e:
-                self.logger.error(f"Failed to ensure index for {path}: {e}")
-                success = False
+            if indexed_now and event_path not in indexed_paths:
+                indexed_paths.append(event_path)
+            if changed and event_path not in changed_paths:
+                changed_paths.append(event_path)
 
         # Recreate retriever after any indexing operations
         try:
             self._retriever = None
         except Exception:
             pass
+
+        self._emit_request_document_updates(indexed_paths, changed_paths)
         return success
+
+    def _ensure_request_document_ready(
+        self,
+        path: str,
+    ) -> tuple[bool, bool, bool, str]:
+        """Persist one request-attached file into indexed/active document state."""
+        resolved_path = self._resolve_request_document_path(path)
+        if not os.path.exists(resolved_path):
+            self.logger.warning(
+                "File does not exist for indexing: %s",
+                path,
+            )
+            return False, False, False, path
+
+        db_doc, created = self._get_or_create_request_document(resolved_path)
+        if db_doc is None:
+            return False, False, False, resolved_path
+
+        was_indexed = bool(getattr(db_doc, "indexed", False))
+        was_active = bool(getattr(db_doc, "active", False))
+        if not was_indexed:
+            self.logger.info(
+                "Ensuring indexing for file: %s",
+                resolved_path,
+            )
+            if not self._index_single_document(db_doc):
+                self.logger.error(
+                    "Failed to ensure index for %s",
+                    resolved_path,
+                )
+                return False, False, False, resolved_path
+            refreshed_docs = DBDocument.objects.filter_by(
+                path=resolved_path
+            )
+            if refreshed_docs:
+                db_doc = refreshed_docs[0]
+
+        if not was_active:
+            DBDocument.objects.update(pk=db_doc.id, active=True)
+
+        changed = created or not was_indexed or not was_active
+        return True, not was_indexed, changed, db_doc.path
+
+    def _resolve_request_document_path(self, path: str) -> str:
+        """Return the best existing managed path for one request document."""
+        normalized_path = os.path.normpath(os.path.expanduser(path))
+        if os.path.exists(normalized_path):
+            return normalized_path
+
+        db_doc = self._find_existing_request_document(normalized_path)
+        if db_doc is None:
+            return normalized_path
+
+        self.logger.info(
+            "Resolved missing request document %s to %s",
+            path,
+            db_doc.path,
+        )
+        return db_doc.path
+
+    def _find_existing_request_document(self, path: str):
+        """Find one existing document row for a missing request path."""
+        db_docs = DBDocument.objects.filter_by(path=path)
+        if db_docs and len(db_docs) > 0:
+            return db_docs[0]
+
+        file_name = os.path.basename(path)
+        try:
+            for db_doc in DBDocument.objects.all():
+                doc_path = getattr(db_doc, "path", "")
+                if not doc_path:
+                    continue
+                if os.path.basename(doc_path) != file_name:
+                    continue
+                if os.path.exists(doc_path):
+                    return db_doc
+        except Exception as error:
+            self.logger.debug(
+                "Failed to resolve managed request document %s: %s",
+                path,
+                error,
+            )
+        return None
+
+    def _get_or_create_request_document(self, path: str):
+        """Return one document row for request-attached indexing."""
+        db_docs = DBDocument.objects.filter_by(path=path)
+        if db_docs and len(db_docs) > 0:
+            return db_docs[0], False
+
+        try:
+            db_doc = DBDocument.objects.create(
+                path=path,
+                active=False,
+                indexed=False,
+            )
+        except Exception as error:
+            self.logger.error(
+                "Failed to create document record for %s: %s",
+                path,
+                error,
+            )
+            return None, False
+        return db_doc, True
+
+    def _emit_request_document_updates(
+        self,
+        indexed_paths: List[str],
+        changed_paths: List[str],
+    ) -> None:
+        """Notify GUI consumers when request-attached docs changed state."""
+        emitter = getattr(self, "emit_signal", None)
+        if not callable(emitter):
+            return
+
+        for path in indexed_paths:
+            emitter(SignalCode.DOCUMENT_INDEXED, {"path": path})
+        if changed_paths:
+            emitter(
+                SignalCode.DOCUMENT_COLLECTION_CHANGED,
+                {"paths": changed_paths},
+            )
 
     def index_all_documents(self) -> bool:
         """Manually index all documents with progress reporting.

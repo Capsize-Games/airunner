@@ -3,6 +3,9 @@ from unittest.mock import Mock
 from airunner.components.llm.workers.mixins.rag_indexing_mixin import (
     RAGIndexingMixin,
 )
+from airunner.components.llm.managers.agent.mixins.rag_indexing_mixin import (
+    EmbeddingModelDownloadPendingError,
+)
 from airunner.utils.path_policy import PathPolicyError
 from unittest.mock import Mock
 
@@ -156,3 +159,78 @@ def test_rag_mixin_rejects_invalid_document_paths(monkeypatch):
     assert worker._signals[-1][1]["error"] == (
         "Document path must be inside an approved directory"
     )
+
+
+def test_rag_mixin_defers_index_while_embedding_downloads():
+    class DummyWorker(RAGIndexingMixin):
+        def __init__(self):
+            self.logger = Mock()
+            self._model_manager = None
+            self._signals = []
+
+        @property
+        def model_manager(self):
+            return self._model_manager
+
+        def emit_signal(self, code, data=None):
+            self._signals.append((code, data))
+
+    class StubAgent:
+        def _index_single_document(self, _db_doc):
+            raise EmbeddingModelDownloadPendingError()
+
+    class StubManagerWithAgent:
+        def __init__(self, agent):
+            self.agent = agent
+
+    worker = DummyWorker()
+    worker._model_manager = StubManagerWithAgent(StubAgent())
+
+    fake_db_doc = Mock()
+    fake_db_doc.path = "/tmp/test3.txt"
+    fake_db_doc.id = 3
+    worker._get_document_from_db = lambda _path: fake_db_doc
+
+    result = worker._index_single_file(fake_db_doc.path, 0, 1)
+
+    assert result is None
+    assert worker._pending_document_index_paths == ["/tmp/test3.txt"]
+    assert worker._signals[-1][1]["error"] == (
+        "Embedding model download in progress. AIRunner will retry "
+        "indexing automatically when the download finishes."
+    )
+
+
+def test_rag_mixin_queues_remaining_paths_when_retry_is_pending():
+    class DummyWorker(RAGIndexingMixin):
+        def __init__(self):
+            self.logger = Mock()
+            self._signals = []
+
+        def emit_signal(self, code, data=None):
+            self._signals.append((code, data))
+
+        def _emit_indexing_progress(self, _idx, _total):
+            return None
+
+        def _validate_document_path(self, path):
+            return path
+
+        def _index_single_file(self, _file_path, _idx, _total):
+            return None
+
+    worker = DummyWorker()
+
+    worker._index_documents(["/tmp/a.pdf", "/tmp/b.pdf", "/tmp/c.pdf"])
+
+    assert worker._pending_document_index_paths == [
+        "/tmp/b.pdf",
+        "/tmp/c.pdf",
+    ]
+    assert worker._signals[-1][1] == {
+        "success": False,
+        "message": (
+            "Embedding model download in progress. AIRunner will retry "
+            "indexing automatically when the download finishes."
+        ),
+    }

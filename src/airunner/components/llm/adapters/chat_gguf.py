@@ -702,7 +702,11 @@ class ChatGGUF(BaseChatModel):
                 tool_calls = self._convert_langchain_tool_calls(
                     getattr(msg, "tool_calls", []) or []
                 )
-                content = msg.content or ""
+                content = msg.content
+                if content is None:
+                    content = ""
+                elif not isinstance(content, str):
+                    content = str(content)
                 if (
                     self._uses_gpt_oss_parser()
                     and tool_calls
@@ -711,10 +715,7 @@ class ChatGGUF(BaseChatModel):
                     content = str(
                         msg.additional_kwargs.get("thinking_content") or ""
                     )
-                if content:
-                    msg_dict["content"] = content
-                elif not tool_calls:
-                    msg_dict["content"] = ""
+                msg_dict["content"] = content
                 if tool_calls:
                     msg_dict["tool_calls"] = tool_calls
                 converted.append(msg_dict)
@@ -1676,6 +1677,30 @@ For each function call, return a json object with function name and arguments wi
 
         return tool_calls
 
+    def _merge_streamed_tool_delta_text(
+        self,
+        current: str,
+        incoming: str,
+    ) -> str:
+        """Merge one streamed tool delta field.
+
+        llama.cpp can stream either incremental fragments or repeated
+        cumulative values for native tool calls. Prefer the longest prefix
+        when chunks overlap, and only append when the incoming value is a
+        genuine suffix fragment.
+        """
+        current = current or ""
+        incoming = incoming or ""
+        if not incoming:
+            return current
+        if not current:
+            return incoming
+        if incoming == current or current.startswith(incoming):
+            return current
+        if incoming.startswith(current):
+            return incoming
+        return f"{current}{incoming}"
+
     def _merge_native_tool_call_deltas(
         self,
         tool_call_buffers: Dict[int, Dict[str, Any]],
@@ -1700,9 +1725,19 @@ For each function call, return a json object with function name and arguments wi
 
             function = raw_call.get("function") or {}
             if function.get("name"):
-                buffer["function"]["name"] += function["name"]
+                buffer["function"]["name"] = (
+                    self._merge_streamed_tool_delta_text(
+                        buffer["function"]["name"],
+                        function["name"],
+                    )
+                )
             if function.get("arguments"):
-                buffer["function"]["arguments"] += function["arguments"]
+                buffer["function"]["arguments"] = (
+                    self._merge_streamed_tool_delta_text(
+                        buffer["function"]["arguments"],
+                        function["arguments"],
+                    )
+                )
 
     def _finalize_native_tool_call_deltas(
         self, tool_call_buffers: Dict[int, Dict[str, Any]]
