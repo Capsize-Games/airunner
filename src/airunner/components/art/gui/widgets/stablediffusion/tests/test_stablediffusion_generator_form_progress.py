@@ -57,6 +57,27 @@ def test_generate_click_uses_determinate_progress_for_loaded_model():
     form.generate.assert_called_once_with({"image_request": image_request})
 
 
+def test_generate_click_shows_interrupt_button_immediately():
+    """Art generation should swap submit and interrupt controls."""
+    form = StableDiffusionGeneratorForm.__new__(
+        StableDiffusionGeneratorForm
+    )
+    form._waiting_for_backend_progress = False
+    form._build_generate_request = Mock(return_value=None)
+    form.start_progress_bar = Mock()
+    form.set_progress_bar_value = Mock()
+    form.generate = Mock()
+    form.ui = SimpleNamespace(
+        generate_button=Mock(),
+        interrupt_button=Mock(),
+    )
+
+    StableDiffusionGeneratorForm.handle_generate_button_clicked(form)
+
+    form.ui.generate_button.setVisible.assert_called_once_with(False)
+    form.ui.interrupt_button.setVisible.assert_called_once_with(True)
+
+
 def test_model_loaded_does_not_clear_spinner_while_waiting():
     """Loading completion should not clear the spinner before step updates."""
     form = StableDiffusionGeneratorForm.__new__(
@@ -172,6 +193,49 @@ def test_zero_progress_keeps_spinner_pending():
     assert form._backend_progress_started is False
     progress_bar.setRange.assert_not_called()
     progress_bar.setValue.assert_not_called()
+
+
+def test_stop_signal_restores_generate_button_visibility():
+    """Stopping art progress should hide interrupt and show generate."""
+    progress_bar = Mock()
+    form = StableDiffusionGeneratorForm.__new__(
+        StableDiffusionGeneratorForm
+    )
+    form.ui = SimpleNamespace(
+        progress_bar=progress_bar,
+        generate_button=Mock(),
+        interrupt_button=Mock(),
+    )
+
+    StableDiffusionGeneratorForm.on_stop_image_generator_progress_bar_signal(
+        form,
+        None,
+    )
+
+    form.ui.generate_button.setVisible.assert_called_once_with(True)
+    form.ui.interrupt_button.setVisible.assert_called_once_with(False)
+
+
+def test_interrupt_click_restores_generate_button_immediately():
+    """Manual interrupt should swap controls before backend teardown."""
+    form = StableDiffusionGeneratorForm.__new__(
+        StableDiffusionGeneratorForm
+    )
+    form.api = SimpleNamespace(
+        art=SimpleNamespace(
+            canvas=SimpleNamespace(interrupt_image_generation=Mock())
+        )
+    )
+    form.ui = SimpleNamespace(
+        generate_button=Mock(),
+        interrupt_button=Mock(),
+    )
+
+    StableDiffusionGeneratorForm.on_interrupt_button_clicked(form)
+
+    form.api.art.canvas.interrupt_image_generation.assert_called_once_with()
+    form.ui.generate_button.setVisible.assert_called_once_with(True)
+    form.ui.interrupt_button.setVisible.assert_called_once_with(False)
 
 
 def test_enable_image_to_image_mode_updates_enabled_state():

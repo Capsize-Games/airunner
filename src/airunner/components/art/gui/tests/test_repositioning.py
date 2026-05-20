@@ -98,6 +98,120 @@ def test_update_active_grid_area_position_applies_offsets():
     assert int(round(pos.y())) == int(round(expected_y))
 
 
+def test_show_active_grid_area_seeds_none_position_from_viewport_center():
+    view = CustomGraphicsView()
+
+    active, grid, app_settings = make_settings(
+        pos_x=None,
+        pos_y=None,
+        working_width=512,
+        working_height=512,
+    )
+
+    def fake_get_or_cache_settings(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    view._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings, view
+    )
+
+    settings_store = {}
+    view.settings = SimpleNamespace(
+        value=lambda key, default=None: settings_store.get(key, default),
+        sync=lambda: None,
+    )
+
+    def apply_active_grid_update(**kwargs):
+        if "pos_x" in kwargs:
+            active.pos_x = kwargs["pos_x"]
+        if "pos_y" in kwargs:
+            active.pos_y = kwargs["pos_y"]
+        active.pos = (active.pos_x, active.pos_y)
+
+    view.update_active_grid_settings = apply_active_grid_update
+
+    view.setProperty("canvas_type", "image")
+    _ = view.scene
+    view.viewport().resize(800, 600)
+
+    view.show_active_grid_area()
+
+    aga = view.active_grid_area
+    assert aga is not None
+    assert (active.pos_x, active.pos_y) == (144, 44)
+    assert view.center_pos == QPointF(144, 44)
+
+    pos = aga.scenePos()
+    assert int(round(pos.x())) == 144
+    assert int(round(pos.y())) == 44
+
+
+def test_show_active_grid_area_repairs_legacy_zero_position_from_anchor():
+    view = CustomGraphicsView()
+
+    active, grid, app_settings = make_settings(
+        pos_x=0,
+        pos_y=0,
+        working_width=512,
+        working_height=512,
+    )
+
+    def fake_get_or_cache_settings(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    view._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings, view
+    )
+
+    settings_store = {
+        "center_pos_x": 144.0,
+        "center_pos_y": 44.0,
+    }
+    view.settings = SimpleNamespace(
+        value=lambda key, default=None: settings_store.get(key, default),
+        sync=lambda: None,
+    )
+
+    def apply_active_grid_update(**kwargs):
+        if "pos_x" in kwargs:
+            active.pos_x = kwargs["pos_x"]
+        if "pos_y" in kwargs:
+            active.pos_y = kwargs["pos_y"]
+        active.pos = (active.pos_x, active.pos_y)
+
+    view.update_active_grid_settings = apply_active_grid_update
+
+    view.setProperty("canvas_type", "image")
+    _ = view.scene
+    view.viewport().resize(800, 600)
+    view.center_pos = QPointF(144, 44)
+
+    view.show_active_grid_area()
+
+    aga = view.active_grid_area
+    assert aga is not None
+    assert (active.pos_x, active.pos_y) == (144, 44)
+    assert view.center_pos == QPointF(144, 44)
+
+    pos = aga.scenePos()
+    assert int(round(pos.x())) == 144
+    assert int(round(pos.y())) == 44
+
+
 def test_active_grid_area_drag_updates_settings_and_display():
     view = CustomGraphicsView()
 

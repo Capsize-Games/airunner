@@ -46,3 +46,34 @@ def test_documents_widget_exposes_index_all_and_emits_signal():
     # Trigger the emit via the panel widget
     doc_widget.knowledgeBasePanelWidget._on_index_button_clicked()
     assert received["count"] == 1
+
+
+def test_knowledge_base_panel_import_emits_collection_signal(monkeypatch):
+    """Importing documents should notify the document collection UI."""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from airunner.components.documents.gui.widgets.knowledge_base_panel_widget import (
+        KnowledgeBasePanelWidget,
+    )
+    from airunner.components.documents.gui.widgets import (
+        knowledge_base_panel_widget as module,
+    )
+
+    app = QApplication.instance() or QApplication([])
+    widget = KnowledgeBasePanelWidget()
+    received = {"count": 0}
+
+    monkeypatch.setattr(
+        module,
+        "import_documents_to_library",
+        lambda file_paths, destination_root: [
+            "/tmp/imported-notes.md"
+        ],
+    )
+
+    def handler(data):
+        received["count"] += 1
+
+    widget.register(SignalCode.DOCUMENT_COLLECTION_CHANGED, handler)
+    widget._import_documents(["/tmp/source-notes.md"])
+
+    assert received["count"] == 1

@@ -38,6 +38,54 @@ class ActiveGridAreaMixin:
         - self.update_active_grid_area_position(): Position update callback
     """
 
+    def _get_saved_center_anchor(self):
+        """Return the persisted home anchor when one exists."""
+        center_x = self.settings.value("center_pos_x", None)
+        center_y = self.settings.value("center_pos_y", None)
+        if center_x is None or center_y is None:
+            return None
+        return QPointF(float(center_x), float(center_y))
+
+    def _get_existing_grid_anchor(self):
+        """Return the current home anchor for the canvas grid."""
+        if self.center_pos != QPointF(0, 0):
+            return QPointF(self.center_pos)
+        return self._get_saved_center_anchor()
+
+    def _should_initialize_active_grid_position(self, pos_x, pos_y):
+        """Return whether the grid position still needs startup seeding."""
+        if pos_x is None or pos_y is None:
+            return True
+        if pos_x != 0 or pos_y != 0:
+            return False
+
+        anchor = self._get_existing_grid_anchor()
+        if anchor is None:
+            return True
+        if not getattr(self.grid_settings, "snap_to_grid", False):
+            return False
+
+        cell_size = getattr(self.grid_settings, "cell_size", 0) or 0
+        if cell_size <= 0:
+            return False
+
+        offset_x = int(round(pos_x - anchor.x()))
+        offset_y = int(round(pos_y - anchor.y()))
+        return offset_x % cell_size != 0 or offset_y % cell_size != 0
+
+    def _get_initial_active_grid_anchor(self) -> QPointF:
+        """Return the startup anchor for a fresh active grid position."""
+        anchor = self._get_existing_grid_anchor()
+        if anchor is None:
+            target_x, target_y = self.get_recentered_position(
+                self.application_settings.working_width,
+                self.application_settings.working_height,
+            )
+            anchor = QPointF(target_x, target_y)
+
+        self.center_pos = QPointF(anchor)
+        return anchor
+
     def show_active_grid_area(self):
         """Show or hide the active grid area based on settings.
 
@@ -78,24 +126,18 @@ class ActiveGridAreaMixin:
             f"[LOAD GRID] Active grid absolute position from DB: x={absolute_x}, y={absolute_y}, canvas_offset=({self.canvas_offset_x}, {self.canvas_offset_y})"
         )
 
-        # If settings are somehow None (e.g., first run), default and save
-        if absolute_x is None or absolute_y is None:
-            # Default to centering in the initial view, considering the initial offset
-            viewport_center_x = self.viewport().width() / 2
-            viewport_center_y = self.viewport().height() / 2
-            # Calculate absolute position needed to appear centered with current offset
-            absolute_x = (
-                viewport_center_x
-                + self.canvas_offset_x
-                - (self.application_settings.working_width / 2)
-            )
-            absolute_y = (
-                viewport_center_y
-                + self.canvas_offset_y
-                - (self.application_settings.working_height / 2)
-            )
+        # Fresh databases create a default row before the viewport home anchor
+        # has been written. Seed the first absolute position from the current
+        # home anchor so the grid border, grid lines, and centered viewport all
+        # share the same basis.
+        if self._should_initialize_active_grid_position(
+            absolute_x,
+            absolute_y,
+        ):
+            anchor = self._get_initial_active_grid_anchor()
+            absolute_x = anchor.x()
+            absolute_y = anchor.y()
 
-            # Save this initial absolute position
             self.update_active_grid_settings(
                 pos_x=int(round(absolute_x)), pos_y=int(round(absolute_y))
             )

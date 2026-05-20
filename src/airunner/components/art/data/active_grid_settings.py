@@ -13,8 +13,8 @@ class ActiveGridSettings(BaseModel):
     fill_opacity = Column(Integer, default=50)
     border_color = Column(String, default="#00FF00")
     fill_color = Column(String, default="#FF0000")
-    pos_x = Column(Integer, default=0)
-    pos_y = Column(Integer, default=0)
+    pos_x = Column(Integer, nullable=True)
+    pos_y = Column(Integer, nullable=True)
     width = Column(Integer, default=1024)
     height = Column(Integer, default=1024)
 

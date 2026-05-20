@@ -27,8 +27,15 @@ from langchain_core.messages.utils import count_tokens_approximately
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
 )
-from airunner.components.chat.gui.widgets.image_attachment_widget import (
-    ImageAttachmentWidget,
+from airunner.components.chat.gui.widgets.chat_attachment_pill_widget import (
+    ChatAttachmentPillWidget,
+)
+from airunner.components.documents.document_import import (
+    chat_image_suffixes,
+    import_document_to_library,
+    is_chat_image_path,
+    is_rag_document_path,
+    rag_document_suffixes,
 )
 from airunner.components.llm.data.conversation import Conversation
 from airunner.enums import (
@@ -140,7 +147,11 @@ class ChatPromptWidget(BaseWidget):
         
         # Image attachments for vision-capable models
         self._attached_images: List[Tuple[Image.Image, Optional[str]]] = []
-        self._attachment_widgets: List[ImageAttachmentWidget] = []
+        self._image_attachment_widgets: List[ChatAttachmentPillWidget] = []
+        self._attached_documents: List[str] = []
+        self._document_attachment_widgets: List[
+            ChatAttachmentPillWidget
+        ] = []
         self._attachments_spacer: Optional[QSpacerItem] = None
         self._startup_controls_loaded = False
         self._model_dropdown_line_edit = None
@@ -173,7 +184,7 @@ class ChatPromptWidget(BaseWidget):
         self._setup_slash_command_completer()
         self._configure_prompt_shortcuts()
         
-        # Setup image attachment handling
+        # Setup file attachment handling
         self._setup_image_attachments()
         
         self._llm_response_worker = create_worker(
@@ -195,6 +206,23 @@ class ChatPromptWidget(BaseWidget):
         
         # Initialize token tracking labels
         self._update_token_tracking_labels()
+        self._set_generation_button_visibility(False)
+
+    def _set_generation_button_visibility(
+        self, is_generating: bool
+    ) -> None:
+        """Show only the action button that matches request state."""
+        ui = getattr(self, "ui", None)
+        if ui is None:
+            return
+
+        send_button = getattr(ui, "send_button", None)
+        stop_button = getattr(ui, "stop_button", None)
+
+        if send_button is not None:
+            send_button.setVisible(not is_generating)
+        if stop_button is not None:
+            stop_button.setVisible(is_generating)
 
     def _apply_default_splitter_settings(self):
         if hasattr(self, "ui") and self.ui is not None:
@@ -341,6 +369,7 @@ class ChatPromptWidget(BaseWidget):
 
     def enable_generate(self):
         self.generating = False
+        self._set_generation_button_visibility(False)
         if self.held_message is not None:
             self.do_generate(prompt_override=self.held_message)
             self.held_message = None
@@ -351,6 +380,7 @@ class ChatPromptWidget(BaseWidget):
         self.api.llm.interrupt()
         self.stop_progress_bar()
         self.generating = False
+        self._set_generation_button_visibility(False)
         self.enable_send_button()
 
     def do_generate(self, prompt_override=None):
@@ -370,6 +400,7 @@ class ChatPromptWidget(BaseWidget):
                 self.on_stop_button_clicked()
             return
         self.generating = True
+        self._set_generation_button_visibility(True)
 
         request_id = str(uuid4())
 
@@ -481,6 +512,15 @@ class ChatPromptWidget(BaseWidget):
         if force_tool:
             llm_request.force_tool = force_tool
             self.logger.info(f"Set force_tool={force_tool} on llm_request")
+
+        rag_files = list(getattr(self, "_attached_documents", []))
+        if rag_files:
+            llm_request.rag_files = rag_files
+            self.logger.info(
+                "Added %s document(s) to llm_request",
+                len(rag_files),
+            )
+            self._clear_document_attachments()
         
         # Add attached images (manual + auto canvas) if any
         images_for_request = self._collect_images_for_llm()
@@ -1392,10 +1432,12 @@ class ChatPromptWidget(BaseWidget):
         self.ui.progressBar.reset()
 
     def disable_send_button(self):
-        pass
+        self._disabled = True
 
     def enable_send_button(self):
-        self.ui.send_button.setEnabled(True)
+        send_button = getattr(getattr(self, "ui", None), "send_button", None)
+        if send_button is not None:
+            send_button.setEnabled(True)
         self._disabled = False
 
     def hide_action_menu(self):
@@ -1431,6 +1473,8 @@ class ChatPromptWidget(BaseWidget):
         
         if getattr(llm_response, "is_first_message", False):
             self.stop_progress_bar()
+
+        if getattr(llm_response, "is_end_of_message", False):
             self.enable_generate()
 
     def on_llm_text_generate_request_signal(self, data: Dict):
@@ -2247,7 +2291,7 @@ class ChatPromptWidget(BaseWidget):
     # =========================================================================
 
     def _setup_image_attachments(self) -> None:
-        """Set up image attachment handling (drag-drop, attach button)."""
+        """Set up document and image attachment handling."""
         # Enable drag-drop on the prompt widget
         self.setAcceptDrops(True)
         if hasattr(self.ui, "prompt"):
@@ -2275,20 +2319,47 @@ class ChatPromptWidget(BaseWidget):
             self.ui.attachments_layout.addItem(self._attachments_spacer)
 
     def _update_attach_button_visibility(self) -> None:
-        """Update attach button visibility based on model vision capability."""
+        """Update attach button state and tooltip for available file types."""
         if not hasattr(self.ui, "attach_button"):
             return
-        
+
         is_vision_capable = self._is_model_vision_capable()
-        self.ui.attach_button.setEnabled(is_vision_capable)
-        
+        self.ui.attach_button.setEnabled(True)
+
         if is_vision_capable:
-            self.ui.attach_button.setToolTip("Attach image for vision analysis")
-        else:
             self.ui.attach_button.setToolTip(
-                "Image attachment requires a vision-capable model "
-                "(e.g., Ministral-3-8B)"
+                "Attach documents for RAG or images for vision analysis"
             )
+            return
+
+        self.ui.attach_button.setToolTip("Attach documents for RAG")
+
+    @property
+    def documents_path(self) -> str:
+        """Return the local document library used by the knowledge base."""
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "text/other/documents",
+        )
+
+    def _attachment_file_dialog_filter(self) -> str:
+        """Return the file dialog filter for the current attachment mode."""
+        document_patterns = " ".join(
+            f"*{suffix}" for suffix in rag_document_suffixes()
+        )
+        if not self._is_model_vision_capable():
+            return f"Documents ({document_patterns});;All Files (*)"
+
+        image_patterns = " ".join(
+            f"*{suffix}" for suffix in chat_image_suffixes()
+        )
+        return (
+            "Supported Attachments "
+            f"({document_patterns} {image_patterns});;"
+            f"Documents ({document_patterns});;"
+            f"Images ({image_patterns});;"
+            "All Files (*)"
+        )
 
     def _is_model_vision_capable(self) -> bool:
         """Check if the currently selected model supports vision/images.
@@ -2333,20 +2404,94 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot()
     def _on_attach_button_clicked(self) -> None:
-        """Handle attach button click - open file dialog for images."""
-        if not self._is_model_vision_capable():
-            self.logger.warning("Cannot attach images: model does not support vision")
-            return
-        
+        """Open the attachment picker for RAG documents and images."""
         file_paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Attach Images",
+            "Attach Files",
             "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All Files (*)",
+            self._attachment_file_dialog_filter(),
         )
-        
+
+        self._handle_selected_attachment_paths(file_paths)
+
+    def _handle_selected_attachment_paths(
+        self,
+        file_paths: List[str],
+    ) -> None:
+        """Attach supported document and image paths for one chat request."""
         for file_path in file_paths:
-            self._add_image_attachment_from_path(file_path)
+            if is_rag_document_path(file_path):
+                self._add_document_attachment_from_path(file_path)
+                continue
+
+            if self._is_model_vision_capable() and is_chat_image_path(
+                file_path
+            ):
+                self._add_image_attachment_from_path(file_path)
+                continue
+
+            self.logger.warning(
+                "Skipped unsupported attachment path: %s",
+                file_path,
+            )
+
+    def _add_document_attachment_from_path(self, file_path: str) -> None:
+        """Import one document into the local library and attach it."""
+        try:
+            imported_path = import_document_to_library(
+                file_path,
+                self.documents_path,
+            )
+        except Exception as exc:
+            self.logger.error(
+                "Failed to attach document from %s: %s",
+                file_path,
+                exc,
+            )
+            return
+
+        self._add_document_attachment(imported_path)
+        self.emit_signal(
+            SignalCode.DOCUMENT_COLLECTION_CHANGED,
+            {"paths": [imported_path]},
+        )
+
+    def _add_document_attachment(self, file_path: str) -> None:
+        """Attach one imported document path to the current chat request."""
+        if file_path in self._attached_documents:
+            return
+
+        self._attached_documents.append(file_path)
+        widget = ChatAttachmentPillWidget(
+            os.path.basename(file_path),
+            tooltip=file_path,
+            parent=self,
+        )
+        widget.removed.connect(
+            lambda: self._remove_document_attachment(widget, file_path)
+        )
+        self._document_attachment_widgets.append(widget)
+        self._add_attachment_widget(widget)
+
+    def _remove_document_attachment(
+        self,
+        widget: ChatAttachmentPillWidget,
+        file_path: str,
+    ) -> None:
+        """Detach one document from the current chat request only."""
+        if file_path in self._attached_documents:
+            self._attached_documents.remove(file_path)
+        if widget in self._document_attachment_widgets:
+            self._document_attachment_widgets.remove(widget)
+        self._remove_attachment_widget(widget)
+
+    def _clear_document_attachments(self) -> None:
+        """Clear the document attachments for the current chat request."""
+        for widget in self._document_attachment_widgets:
+            widget.deleteLater()
+        self._document_attachment_widgets.clear()
+        self._attached_documents.clear()
+        self._update_attachments_visibility()
 
     def _add_image_attachment_from_path(self, file_path: str) -> None:
         """Add an image attachment from a file path.
@@ -2380,56 +2525,81 @@ class ChatPromptWidget(BaseWidget):
         
         # Store the image
         self._attached_images.append((image, image_path))
-        
-        # Create thumbnail widget
-        widget = ImageAttachmentWidget(image, image_path, self)
+
+        label = os.path.basename(image_path) if image_path else "Pasted image"
+        if image_path:
+            tooltip = f"{image_path}\n{image.width}x{image.height}"
+        else:
+            tooltip = f"Image: {image.width}x{image.height}"
+
+        widget = ChatAttachmentPillWidget(
+            label,
+            tooltip=tooltip,
+            parent=self,
+        )
         widget.removed.connect(lambda: self._remove_image_attachment(widget))
-        self._attachment_widgets.append(widget)
-        
-        # Add to layout (before the spacer)
-        if hasattr(self.ui, "attachments_layout"):
-            # Remove spacer, add widget, re-add spacer
-            if self._attachments_spacer:
-                self.ui.attachments_layout.removeItem(self._attachments_spacer)
-            self.ui.attachments_layout.addWidget(widget)
-            if self._attachments_spacer:
-                self.ui.attachments_layout.addItem(self._attachments_spacer)
-        
-        # Show attachments container
-        self._update_attachments_visibility()
+        self._image_attachment_widgets.append(widget)
+        self._add_attachment_widget(widget)
         
         self.logger.debug(
             f"Added image attachment: {image_path or 'in-memory'} "
             f"({image.width}x{image.height})"
         )
 
-    def _remove_image_attachment(self, widget: ImageAttachmentWidget) -> None:
+    def _add_attachment_widget(
+        self,
+        widget: ChatAttachmentPillWidget,
+    ) -> None:
+        """Insert one attachment pill before the trailing spacer."""
+        if hasattr(self.ui, "attachments_layout"):
+            if self._attachments_spacer:
+                self.ui.attachments_layout.removeItem(self._attachments_spacer)
+            self.ui.attachments_layout.addWidget(widget)
+            if self._attachments_spacer:
+                self.ui.attachments_layout.addItem(self._attachments_spacer)
+
+        self._update_attachments_visibility()
+
+    def _remove_attachment_widget(
+        self,
+        widget: ChatAttachmentPillWidget,
+    ) -> None:
+        """Remove one attachment pill from the UI."""
+        widget.deleteLater()
+        self._update_attachments_visibility()
+
+    def _remove_image_attachment(
+        self,
+        widget: ChatAttachmentPillWidget,
+    ) -> None:
         """Remove an image attachment.
         
         Args:
             widget: The attachment widget to remove.
         """
-        if widget in self._attachment_widgets:
-            idx = self._attachment_widgets.index(widget)
-            self._attachment_widgets.remove(widget)
+        if widget in self._image_attachment_widgets:
+            idx = self._image_attachment_widgets.index(widget)
+            self._image_attachment_widgets.remove(widget)
             if idx < len(self._attached_images):
                 self._attached_images.pop(idx)
-            widget.deleteLater()
-        
-        self._update_attachments_visibility()
+
+        self._remove_attachment_widget(widget)
 
     def _clear_image_attachments(self) -> None:
         """Clear all image attachments."""
-        for widget in self._attachment_widgets:
+        for widget in self._image_attachment_widgets:
             widget.deleteLater()
-        self._attachment_widgets.clear()
+        self._image_attachment_widgets.clear()
         self._attached_images.clear()
         self._update_attachments_visibility()
 
     def _update_attachments_visibility(self) -> None:
         """Update visibility of attachments container based on content."""
         if hasattr(self.ui, "attachments_scroll_area"):
-            has_attachments = len(self._attachment_widgets) > 0
+            has_attachments = bool(
+                self._document_attachment_widgets
+                or self._image_attachment_widgets
+            )
             self.ui.attachments_scroll_area.setVisible(has_attachments)
 
     def _get_attached_images(self) -> List[Image.Image]:
@@ -2516,7 +2686,7 @@ class ChatPromptWidget(BaseWidget):
         super().dropEvent(event)
 
     def _handle_drag_enter(self, event: QDragEnterEvent) -> bool:
-        """Handle drag enter for images.
+        """Handle drag enter for supported documents and images.
         
         Args:
             event: The drag enter event.
@@ -2524,89 +2694,97 @@ class ChatPromptWidget(BaseWidget):
         Returns:
             True if the drag was accepted, False otherwise.
         """
-        if not self._is_model_vision_capable():
-            return False
-        
+        vision_capable = self._is_model_vision_capable()
         mime = event.mimeData()
-        
+
         # Accept internal image panel drags
-        if mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
+        if vision_capable and mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
             event.acceptProposedAction()
             return True
-        
-        # Accept image URLs
+
+        # Accept supported local document or image URLs
         if mime.hasUrls():
             for url in mime.urls():
-                url_str = url.toString().lower()
-                if url_str.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')):
+                path = url.toLocalFile()
+                if not path:
+                    continue
+                if is_rag_document_path(path):
                     event.acceptProposedAction()
                     return True
-        
+                if vision_capable and is_chat_image_path(path):
+                    event.acceptProposedAction()
+                    return True
+
         # Accept raw image data
-        for fmt in mime.formats():
-            if fmt.startswith("image/"):
-                event.acceptProposedAction()
-                return True
-        
+        if vision_capable:
+            for fmt in mime.formats():
+                if fmt.startswith("image/"):
+                    event.acceptProposedAction()
+                    return True
+
         return False
 
     def _handle_drop(self, event: QDropEvent) -> bool:
-        """Handle drop event for images.
-        
-        Args:
-            event: The drop event.
-            
-        Returns:
-            True if the drop was handled, False otherwise.
-        """
-        if not self._is_model_vision_capable():
-            return False
-        
+        """Handle dropped documents and images for the current chat."""
+        vision_capable = self._is_model_vision_capable()
         mime = event.mimeData()
-        
+
         # Try internal image panel drag first
-        if mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
+        if vision_capable and mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
             try:
                 import json
+
                 data = mime.data(IMAGE_METADATA_MIME_TYPE)
                 metadata_str = bytes(data.data()).decode("utf-8")
                 metadata = json.loads(metadata_str)
                 image_path = metadata.get("path")
-                
+
                 if image_path and os.path.exists(image_path):
                     self._add_image_attachment_from_path(image_path)
                     event.acceptProposedAction()
                     return True
             except Exception as e:
-                self.logger.error(f"Failed to handle image metadata drop: {e}")
-        
-        # Try URLs
+                self.logger.error(
+                    f"Failed to handle image metadata drop: {e}"
+                )
+
         if mime.hasUrls():
+            handled = False
             for url in mime.urls():
                 path = url.toLocalFile()
-                if path and os.path.exists(path):
-                    url_str = path.lower()
-                    if url_str.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')):
-                        self._add_image_attachment_from_path(path)
-                        event.acceptProposedAction()
-                        return True
-        
-        # Try raw image data
-        import io
-        for fmt in mime.formats():
-            if not fmt.startswith("image/"):
-                continue
-            data = mime.data(fmt)
-            if data.size() < 10:
-                continue
-            try:
-                data_bytes = data.data()
-                img = Image.open(io.BytesIO(data_bytes))
-                self._add_image_attachment(img)
+                if not path or not os.path.exists(path):
+                    continue
+                if is_rag_document_path(path):
+                    self._add_document_attachment_from_path(path)
+                    handled = True
+                    continue
+                if vision_capable and is_chat_image_path(path):
+                    self._add_image_attachment_from_path(path)
+                    handled = True
+            if handled:
                 event.acceptProposedAction()
                 return True
-            except Exception as e:
-                self.logger.debug(f"Failed to load image from {fmt}: {e}")
-        
+
+        # Try raw image data
+        if vision_capable:
+            import io
+
+            for fmt in mime.formats():
+                if not fmt.startswith("image/"):
+                    continue
+                data = mime.data(fmt)
+                if data.size() < 10:
+                    continue
+                try:
+                    data_bytes = data.data()
+                    img = Image.open(io.BytesIO(data_bytes))
+                    self._add_image_attachment(img)
+                    event.acceptProposedAction()
+                    return True
+                except Exception as e:
+                    self.logger.debug(
+                        f"Failed to load image from {fmt}: {e}"
+                    )
+
         return False
 

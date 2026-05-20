@@ -1,8 +1,16 @@
-from typing import Dict
+import os
+from typing import Dict, List
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QFileDialog, QPushButton
 
+from airunner.components.documents.data.models.document import Document
+from airunner.components.documents.document_import import (
+    import_documents_to_library,
+    is_rag_document_path,
+    rag_document_suffixes,
+)
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.gui.widgets.templates.knowledge_base_panel_ui import (
@@ -27,10 +35,14 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self._current = 0
         self._document_name = ""
         self.signal_handlers = {
+            SignalCode.DOCUMENT_COLLECTION_CHANGED: self.on_document_collection_changed,
             SignalCode.RAG_INDEXING_PROGRESS: self.on_indexing_progress,
             SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
         }
         super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
+        self._add_import_button()
+        self._refresh_statistics()
 
         # Wire up buttons
         try:
@@ -43,6 +55,82 @@ class KnowledgeBasePanelWidget(BaseWidget):
             )
         except Exception:
             pass
+
+    @property
+    def documents_path(self) -> str:
+        """Return the local AIRunner document library path."""
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "text/other/documents",
+        )
+
+    def _add_import_button(self) -> None:
+        """Insert the knowledge-base import button into the existing panel."""
+        button = QPushButton("Import document(s)", self)
+        button.setObjectName("import_button")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.clicked.connect(self._on_import_button_clicked)
+        self.ui.verticalLayout.insertWidget(2, button)
+        self.ui.import_button = button
+
+    def _document_dialog_filter(self) -> str:
+        """Return the file dialog filter for supported RAG documents."""
+        document_patterns = " ".join(
+            f"*{suffix}" for suffix in rag_document_suffixes()
+        )
+        return f"Documents ({document_patterns});;All Files (*)"
+
+    @Slot()
+    def _on_import_button_clicked(self) -> None:
+        """Import supported documents into the local AIRunner library."""
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Import document(s)",
+            "",
+            self._document_dialog_filter(),
+        )
+        self._import_documents(file_paths)
+
+    def _import_documents(self, file_paths: List[str]) -> list[str]:
+        """Copy selected files into the local knowledge-base folder."""
+        if not file_paths:
+            return []
+
+        file_paths = [
+            file_path
+            for file_path in file_paths
+            if is_rag_document_path(file_path)
+        ]
+        if not file_paths:
+            return []
+
+        imported_paths = import_documents_to_library(
+            file_paths,
+            self.documents_path,
+        )
+        if imported_paths:
+            self.emit_signal(
+                SignalCode.DOCUMENT_COLLECTION_CHANGED,
+                {"paths": imported_paths},
+            )
+            self._refresh_statistics()
+        return imported_paths
+
+    def _refresh_statistics(self) -> None:
+        """Refresh the displayed document counts from the document table."""
+        total = 0
+        indexed = 0
+        for document in Document.objects.all():
+            file_path = getattr(document, "path", None)
+            if not file_path or not os.path.exists(file_path):
+                continue
+            total += 1
+            if getattr(document, "indexed", False):
+                indexed += 1
+
+        self.ui.total_docs_value.setText(str(total))
+        self.ui.indexed_docs_value.setText(str(indexed))
+        self.ui.unindexed_docs_value.setText(str(max(total - indexed, 0)))
 
     @Slot()
     def _on_index_button_clicked(self):
@@ -57,6 +145,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         )
         # show infinite progress bar
         self.ui.progress_bar.setRange(0, 0)
+        self.ui.cancel_button.setEnabled(True)
         self.emit_signal(SignalCode.RAG_INDEX_ALL_DOCUMENTS, {})
 
     @Slot()
@@ -65,6 +154,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self.logger.info(
             "KnowledgeBasePanel::Cancel clicked - emitting RAG_INDEX_CANCEL"
         )
+        self.ui.cancel_button.setEnabled(False)
         self.emit_signal(SignalCode.RAG_INDEX_CANCEL, {})
 
     def on_indexing_progress(self, data: Dict):
@@ -79,12 +169,54 @@ class KnowledgeBasePanelWidget(BaseWidget):
             if self.ui.progress_bar.maximum() == 0:
                 self.ui.progress_bar.setRange(0, 100)
             self.ui.progress_bar.setValue(progress)
+            self.ui.cancel_button.setEnabled(True)
         except Exception:
             pass
 
     def on_indexing_complete(self, data: Dict):
         try:
+            self.ui.progress_bar.setRange(0, 100)
             self.ui.progress_bar.setValue(100)
-            self.ui.progress_text.setText("Complete")
         except Exception:
             pass
+        self.ui.cancel_button.setEnabled(False)
+        self._refresh_statistics()
+
+    def on_document_collection_changed(self, _data: Dict):
+        """Refresh counts after imported or deleted document changes."""
+        self._refresh_statistics()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._refresh_statistics()
+
+    def dragEnterEvent(self, event) -> None:
+        """Accept supported document drags for knowledge-base import."""
+        if self._extract_importable_paths(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dropEvent(self, event) -> None:
+        """Import supported documents dropped onto the panel widget."""
+        file_paths = self._extract_importable_paths(event.mimeData())
+        if not file_paths:
+            super().dropEvent(event)
+            return
+        self._import_documents(file_paths)
+        event.acceptProposedAction()
+
+    def _extract_importable_paths(self, mime_data) -> list[str]:
+        """Return supported local document paths from one mime payload."""
+        if not mime_data.hasUrls():
+            return []
+
+        file_paths: list[str] = []
+        for url in mime_data.urls():
+            path = url.toLocalFile()
+            if not path or not os.path.exists(path):
+                continue
+            if not is_rag_document_path(path):
+                continue
+            file_paths.append(path)
+        return file_paths

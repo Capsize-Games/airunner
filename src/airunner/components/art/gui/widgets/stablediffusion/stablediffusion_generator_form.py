@@ -155,7 +155,24 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
         self.ui.infinite_images_button.blockSignals(False)
         self._set_progress_bar_idle()
+        self._set_generation_button_visibility(False)
         self._initialize_image_mode()
+
+    def _set_generation_button_visibility(
+        self, is_generating: bool
+    ) -> None:
+        """Show only the active action button for art generation."""
+        ui = getattr(self, "ui", None)
+        if ui is None:
+            return
+
+        generate_button = getattr(ui, "generate_button", None)
+        interrupt_button = getattr(ui, "interrupt_button", None)
+
+        if generate_button is not None:
+            generate_button.setVisible(not is_generating)
+        if interrupt_button is not None:
+            interrupt_button.setVisible(is_generating)
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -305,6 +322,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @Slot()
     def on_interrupt_button_clicked(self):
+        self._set_generation_button_visibility(False)
         self.api.art.canvas.interrupt_image_generation()
 
     def on_delete_prompt_clicked(self, data: Dict):
@@ -432,6 +450,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.handle_generate_button_clicked()
 
     def on_stop_image_generator_progress_bar_signal(self, data: Dict):
+        data = data or {}
         self.stop_progress_bar(data.get("do_clear", False))
 
     def on_progress_signal(self, message):
@@ -606,6 +625,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._generation_in_progress = True
         self._backend_progress_started = False
         self._waiting_for_backend_progress = True
+        self._set_generation_button_visibility(True)
         if self._uses_loaded_generation_progress(image_request):
             self.set_progress_bar_value(0)
         else:
@@ -830,6 +850,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._generation_in_progress = False
         self._backend_progress_started = False
         self._waiting_for_backend_progress = False
+        self._set_generation_button_visibility(False)
         progressbar = self.ui.progress_bar
         if not progressbar:
             return

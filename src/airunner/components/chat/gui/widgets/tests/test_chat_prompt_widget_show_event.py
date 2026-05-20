@@ -116,6 +116,7 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
         logger=Mock(),
         enable_send_button=Mock(),
         disable_send_button=Mock(),
+        _set_generation_button_visibility=Mock(),
         on_stop_button_clicked=Mock(),
         _submit_generation_request=lambda **kwargs: call_order.append(
             ("submit", kwargs["actual_prompt"], kwargs["request_id"])
@@ -135,6 +136,7 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
 
     ChatPromptWidget.do_generate(widget)
 
+    widget._set_generation_button_visibility.assert_called_once_with(True)
     assert call_order == [
         "clear",
         ("append", "Hello", True),
@@ -144,6 +146,148 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
     scheduled[0][1]()
 
     assert call_order[-1][0] == "submit"
+
+
+def test_stop_button_restores_submit_immediately():
+    """Stopping a chat request should swap controls back right away."""
+    widget = SimpleNamespace(
+        api=SimpleNamespace(llm=SimpleNamespace(interrupt=Mock())),
+        stop_progress_bar=Mock(),
+        enable_send_button=Mock(),
+        _set_generation_button_visibility=Mock(),
+        generating=True,
+    )
+
+    ChatPromptWidget.on_stop_button_clicked(widget)
+
+    widget.api.llm.interrupt.assert_called_once_with()
+    widget.stop_progress_bar.assert_called_once_with()
+    widget._set_generation_button_visibility.assert_called_once_with(False)
+    widget.enable_send_button.assert_called_once_with()
+    assert widget.generating is False
+
+
+def test_disable_send_button_keeps_ui_button_clickable():
+    """Chat disable state should not hard-disable the visible send button."""
+    send_button = Mock()
+    widget = SimpleNamespace(
+        ui=SimpleNamespace(send_button=send_button),
+        _disabled=False,
+    )
+
+    ChatPromptWidget.disable_send_button(widget)
+
+    send_button.setEnabled.assert_not_called()
+    assert widget._disabled is True
+
+
+def test_chat_completion_waits_for_end_of_message():
+    """The stop control should remain until the streamed reply finishes."""
+    widget = SimpleNamespace(
+        stop_progress_bar=Mock(),
+        enable_generate=Mock(),
+        _estimate_token_count=lambda _message: 2,
+        _current_response_tokens=0,
+        _tokens_received_last=0,
+        _tokens_received_total=0,
+        _update_token_tracking_labels=Mock(),
+    )
+
+    ChatPromptWidget.on_add_bot_message_to_conversation(
+        widget,
+        {
+            "response": SimpleNamespace(
+                message="Hi",
+                is_first_message=True,
+                is_end_of_message=False,
+            )
+        },
+    )
+
+    widget.stop_progress_bar.assert_called_once_with()
+    widget.enable_generate.assert_not_called()
+    widget._update_token_tracking_labels.assert_not_called()
+
+    ChatPromptWidget.on_add_bot_message_to_conversation(
+        widget,
+        {
+            "response": SimpleNamespace(
+                message=" there",
+                is_first_message=False,
+                is_end_of_message=True,
+            )
+        },
+    )
+
+    widget.enable_generate.assert_called_once_with()
+    widget._update_token_tracking_labels.assert_called_once_with()
+    assert widget._tokens_received_last == 4
+    assert widget._tokens_received_total == 4
+
+
+def test_attach_button_allows_documents_without_vision_support():
+    """Document attachment should stay available on text-only models."""
+    attach_button = Mock()
+    widget = SimpleNamespace(
+        ui=SimpleNamespace(attach_button=attach_button),
+        _is_model_vision_capable=lambda: False,
+    )
+
+    ChatPromptWidget._update_attach_button_visibility(widget)
+
+    attach_button.setEnabled.assert_called_once_with(True)
+    attach_button.setToolTip.assert_called_once_with(
+        "Attach documents for RAG"
+    )
+
+
+def test_submit_generation_request_attaches_rag_documents():
+    """Attached documents should be forwarded via rag_files."""
+    sent_requests = []
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=["/tmp/notes.md"],
+        _clear_document_attachments=Mock(),
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Search these notes",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-1",
+        slash_command=None,
+    )
+
+    assert sent_requests
+    llm_request = sent_requests[0]["llm_request"]
+    assert llm_request.rag_files == ["/tmp/notes.md"]
+    widget._clear_document_attachments.assert_called_once_with()
 
 
 def test_submit_generation_request_runs_probe_after_ui_append():
