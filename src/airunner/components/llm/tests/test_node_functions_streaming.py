@@ -393,16 +393,27 @@ def test_forced_response_prompt_requests_thorough_summary():
     mixin._chat_model = _PromptCapturingChatModel()
 
     mixin._generate_response_message_from_results(
-        "Relevant excerpts:\nA substantive passage.",
+        "Matched documents:\n"
+        "Document 1: The Satanic Bible - Anton LaVey.pdf\n"
+        "Stored path: /sensitive/path/The Satanic Bible - Anton LaVey.pdf\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from The Satanic Bible - Anton LaVey.pdf]\n"
+        "The philosophy contrasts the real world with Christian mysticism.\n\n"
+        "[Excerpt 2 from The Satanic Bible - Anton LaVey.pdf]\n"
+        "It emphasizes a church of realists and practical ritual.",
         "rag_search",
         "summarize the document for me",
     )
 
     prompt = mixin._chat_model.prompts[0]
-    assert "fuller multi-sentence summary" in prompt
+    assert "synthesize the evidence below into a substantive overview" in prompt
+    assert "Write 4 to 6 sentences in one or two short paragraphs" in prompt
     assert "Do not repeat the document title, author, or structure" in prompt
-    assert "not bullet points, numbered lists, or excerpt inventories" in prompt
-    assert "Avoid repetition and be thorough." in prompt
+    assert "Do not mention file names, stored paths, excerpt numbers" in prompt
+    assert "Evidence excerpts:" in prompt
+    assert "Stored path:" not in prompt
+    assert "[Excerpt 1 from" not in prompt
+    assert "Start directly with the substance." in prompt
 
 
 class _InternalSynthesisReasoningChatModel:

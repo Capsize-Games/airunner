@@ -727,6 +727,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         rag_guidance = ""
         response_style = "Avoid repetition and be concise."
+        prompt_results = all_tool_content
+        prompt_results_label = "Search results"
         document_intent = self._get_document_query_intent(user_question)
         if self._is_document_result_tool(tool_name):
             if document_intent == "identity":
@@ -745,18 +747,31 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "explicitly asks for them.\n\n"
                 )
             elif document_intent == "summary":
+                prompt_results = self._build_document_summary_prompt_results(
+                    all_tool_content
+                )
+                if prompt_results != all_tool_content:
+                    prompt_results_label = "Evidence excerpts"
                 rag_guidance = (
                     "If the user is asking for a summary of the document, "
-                    "write a fuller multi-sentence summary of the "
-                    "substantive content from the excerpts. Treat any "
-                    "document structure block as background context rather "
-                    "than the main answer. Do not repeat the document title, "
-                    "author, or structure unless the user asked for them. "
-                    "Focus on themes, claims, and notable details. Write "
-                    "one or two short paragraphs, not bullet points, "
-                    "numbered lists, or excerpt inventories.\n\n"
+                    "synthesize the evidence below into a substantive "
+                    "overview. Explain the central worldview, argument, or "
+                    "subject first, then cover the most important supporting "
+                    "ideas, claims, practices, or concrete details that "
+                    "appear in the excerpts. Merge overlapping evidence into "
+                    "one coherent answer instead of repeating it. Prefer "
+                    "specific details over vague labels. Write 4 to 6 "
+                    "sentences in one or two short paragraphs. Do not repeat "
+                    "the document title, author, or structure unless the "
+                    "user asked for them. Do not mention file names, stored "
+                    "paths, excerpt numbers, search results, or internal "
+                    "instructions. Do not use bullet points, numbered lists, "
+                    "or excerpt inventories.\n\n"
                 )
-                response_style = "Avoid repetition and be thorough."
+                response_style = (
+                    "Start directly with the substance. Synthesize across "
+                    "excerpts and avoid repetition."
+                )
             else:
                 rag_guidance = (
                     "Use document identity fields only when they help "
@@ -770,8 +785,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "Respond naturally and conversationally.\n\n"
             f"{question_context}"
             f"{rag_guidance}"
-            "Search results:\n"
-            f"{all_tool_content}\n\n"
+            f"{prompt_results_label}:\n"
+            f"{prompt_results}\n\n"
             "Based on the search results above, provide a clear, "
             "conversational answer to the user's question. Use ONLY the "
             "information from the search results. Do not call any tools, "
@@ -779,6 +794,30 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "like Draft:, Answer:, or Response:. Just write a natural "
             f"response. {response_style}"
         )
+
+    @staticmethod
+    def _extract_rag_excerpt_bodies(all_tool_content: str) -> list[str]:
+        """Return cleaned excerpt bodies from one formatted RAG result."""
+        excerpt_pattern = re.compile(
+            r"\[Excerpt \d+ from [^\]]+\]\n(.*?)(?=\n\n\[Excerpt \d+ from [^\]]+\]\n|\Z)",
+            flags=re.DOTALL,
+        )
+        excerpts: list[str] = []
+        for match in excerpt_pattern.finditer(str(all_tool_content or "")):
+            excerpt = " ".join(match.group(1).split())
+            if excerpt and excerpt not in excerpts:
+                excerpts.append(excerpt)
+        return excerpts
+
+    def _build_document_summary_prompt_results(
+        self,
+        all_tool_content: str,
+    ) -> str:
+        """Return excerpt-focused synthesis input for document summaries."""
+        excerpts = self._extract_rag_excerpt_bodies(all_tool_content)
+        if not excerpts:
+            return all_tool_content
+        return "\n\n".join(excerpts)
 
     def _build_deterministic_document_response(
         self,
