@@ -36,16 +36,17 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
         return False
 
     prev_is_word = prev.isalnum() or prev in _WORD_CONTINUATION
-    prev_is_word = prev_is_word or prev in _WORD_ENDERS
     next_is_word = next_char.isalnum() or next_char in _WORD_CONTINUATION
     prev_is_symbol = _is_space_separated_symbol(prev)
     next_is_symbol = _is_space_separated_symbol(next_char)
 
-    if (prev_is_word or prev_is_symbol) and (
-        next_is_word or next_is_symbol
-    ):
-        return True
     if prev in _SENTENCE_ENDERS and (next_is_word or next_is_symbol):
+        return True
+    if prev in _WORD_ENDERS and (next_is_word or next_is_symbol):
+        return True
+    if prev_is_symbol and (next_is_word or next_is_symbol):
+        return True
+    if next_is_symbol and prev_is_word:
         return True
     return False
 

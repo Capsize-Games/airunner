@@ -3,9 +3,14 @@
 from airunner.components.llm.utils.stream_text import combine_stream_chunks
 
 
-def test_combine_stream_chunks_inserts_word_boundary_spaces():
-    """Adjacent word chunks should remain readable."""
-    assert combine_stream_chunks(["Hello", "world", "!"]) == "Hello world!"
+def test_combine_stream_chunks_keeps_subword_boundaries_tight():
+    """Subword chunks should not gain spaces inside one word."""
+    assert combine_stream_chunks(["Sat", "anic"]) == "Satanic"
+
+
+def test_combine_stream_chunks_keeps_mixed_case_name_chunks_tight():
+    """Name fragments should remain contiguous across chunk splits."""
+    assert combine_stream_chunks(["La", "V", "ey"]) == "LaVey"
 
 
 def test_combine_stream_chunks_preserves_existing_spacing():
