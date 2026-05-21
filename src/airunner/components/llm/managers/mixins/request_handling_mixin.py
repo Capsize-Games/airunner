@@ -271,7 +271,15 @@ class RequestHandlingMixin:
         action: Any,
     ) -> None:
         """Cache one request-scoped document route and force its tool."""
-        assume_document_mode = action == LLMActionType.PERFORM_RAG_SEARCH
+        category_names = {
+            str(category).lower()
+            for category in getattr(llm_request, "tool_categories", []) or []
+        }
+        assume_document_mode = (
+            action == LLMActionType.PERFORM_RAG_SEARCH
+            or bool(getattr(llm_request, "rag_files", None))
+            or "rag" in category_names
+        )
         route = route_document_query(
             prompt,
             assume_document_mode=assume_document_mode,
@@ -279,7 +287,8 @@ class RequestHandlingMixin:
         self._current_document_query_route = route
         if not llm_request or not route:
             return
-        if getattr(llm_request, "force_tool", None) is None:
+        current_force_tool = getattr(llm_request, "force_tool", None)
+        if current_force_tool in (None, "rag_search"):
             llm_request.force_tool = route.force_tool
         if getattr(llm_request, "tool_categories", None) is None:
             llm_request.tool_categories = ["rag", "search"]

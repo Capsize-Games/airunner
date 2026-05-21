@@ -524,10 +524,8 @@ class ChatPromptWidget(BaseWidget):
             }:
                 existing_categories.append("rag")
             llm_request.tool_categories = existing_categories
-            if not getattr(llm_request, "force_tool", None):
-                llm_request.force_tool = "rag_search"
             self.logger.info(
-                "Added %s document(s) to llm_request and forcing rag_search",
+                "Added %s document(s) to llm_request for document routing",
                 len(rag_files),
             )
         

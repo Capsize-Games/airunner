@@ -286,7 +286,7 @@ def test_submit_generation_request_attaches_rag_documents():
     assert sent_requests
     llm_request = sent_requests[0]["llm_request"]
     assert llm_request.rag_files == ["/tmp/notes.md"]
-    assert llm_request.force_tool == "rag_search"
+    assert llm_request.force_tool is None
     assert llm_request.tool_categories == ["rag"]
 
 

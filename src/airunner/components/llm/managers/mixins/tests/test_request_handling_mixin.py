@@ -84,3 +84,52 @@ def test_prepare_request_tooling_forces_document_retrieval_tool():
 
     assert llm_request.force_tool == "rag_search"
     assert mixin._current_document_query_route.intent == "summary"
+
+
+def test_prepare_request_tooling_treats_attached_docs_as_document_mode():
+    """Attached documents should enable document routing even in chat mode."""
+    mixin = _DummyRequestHandlingMixin()
+    llm_request = SimpleNamespace(
+        tool_categories=["rag"],
+        force_tool=None,
+        system_prompt=None,
+        rag_files=["/tmp/doc.pdf"],
+    )
+    data = {
+        "request_data": {
+            "prompt": "what chapters are in it?",
+            "action": LLMActionType.CHAT,
+        }
+    }
+
+    mixin._prepare_request_tooling(data, llm_request)
+
+    assert llm_request.force_tool == "inspect_loaded_documents"
+    assert mixin._current_document_query_route.intent == "structure"
+    mixin._apply_tool_filter.assert_called_once_with(
+        ["rag"],
+        action=LLMActionType.CHAT,
+        force_tool="inspect_loaded_documents",
+    )
+
+
+def test_prepare_request_tooling_overrides_stale_rag_search_force_tool():
+    """Backend routing should correct generic rag_search forcing for identity queries."""
+    mixin = _DummyRequestHandlingMixin()
+    llm_request = SimpleNamespace(
+        tool_categories=["rag"],
+        force_tool="rag_search",
+        system_prompt=None,
+        rag_files=["/tmp/doc.pdf"],
+    )
+    data = {
+        "request_data": {
+            "prompt": "what is this document?",
+            "action": LLMActionType.CHAT,
+        }
+    }
+
+    mixin._prepare_request_tooling(data, llm_request)
+
+    assert llm_request.force_tool == "inspect_loaded_documents"
+    assert mixin._current_document_query_route.intent == "identity"
