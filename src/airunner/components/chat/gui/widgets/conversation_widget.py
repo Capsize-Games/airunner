@@ -22,6 +22,7 @@ from airunner.components.chat.gui.widgets.templates.conversation_ui import (
 )
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.llm.utils.stream_text import combine_stream_chunks
 from airunner.components.llm.utils import strip_names_from_message
 from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.text.formatter_extended import FormatterExtended
@@ -1103,7 +1104,9 @@ class ConversationWidget(BaseWidget):
 
         # Update the conversation display only once after processing all available tokens
         if processed_any:
-            combined_content = "".join(self._current_stream_tokens)
+            combined_content = combine_stream_chunks(
+                self._current_stream_tokens
+            )
 
             if not self._streamed_messages:
                 self._streamed_messages = []

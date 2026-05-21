@@ -543,6 +543,10 @@ class DocumentsWidget(BaseWidget):
             Document.objects.create(path=file_path, active=True, indexed=True)
 
         self.logger.info(f"Added to active documents: {display_name}")
+        self.emit_signal(
+            SignalCode.DOCUMENT_COLLECTION_CHANGED,
+            {"paths": [file_path]},
+        )
 
     def _validate_document_directory(self, folder_path: str) -> str | None:
         """Validate one directory before recursive document import."""
@@ -597,6 +601,10 @@ class DocumentsWidget(BaseWidget):
 
         display_name = self._get_display_name(file_path)
         self.logger.info(f"Removed from active documents: {display_name}")
+        self.emit_signal(
+            SignalCode.DOCUMENT_COLLECTION_CHANGED,
+            {"paths": [file_path]},
+        )
 
     def refresh_active_documents_list(self):
         """Load active and unavailable documents from database into the tree views."""

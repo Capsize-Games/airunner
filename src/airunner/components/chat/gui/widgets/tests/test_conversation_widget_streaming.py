@@ -147,6 +147,70 @@ def test_process_sequential_tokens_updates_message_with_request_id(
     assert widget._streamed_messages[0]["content"] == "Hello world"
 
 
+def test_process_sequential_tokens_combines_markdown_boundaries(
+    monkeypatch,
+):
+    """Streaming updates should normalize markdown title boundaries."""
+    dispatch = Mock()
+    monkeypatch.setattr(
+        module.FormatterExtended,
+        "format_content",
+        Mock(side_effect=lambda content: {"content": content}),
+    )
+    widget = SimpleNamespace(
+        _expected_sequence=1,
+        _sequence_buffer={
+            1: LLMResponse(message="to", sequence_number=1, request_id="req-4"),
+            2: LLMResponse(
+                message="*The",
+                sequence_number=2,
+                request_id="req-4",
+            ),
+            3: LLMResponse(
+                message="Sat",
+                sequence_number=3,
+                request_id="req-4",
+            ),
+            4: LLMResponse(
+                message=" anic",
+                sequence_number=4,
+                request_id="req-4",
+            ),
+            5: LLMResponse(
+                message="Bible*",
+                sequence_number=5,
+                request_id="req-4",
+            ),
+        },
+        _current_stream_tokens=["According"],
+        _streamed_messages=[
+            {
+                "id": 0,
+                "name": "Assistant",
+                "content": "According",
+                "role": "assistant",
+                "is_bot": True,
+                "request_id": "req-4",
+            }
+        ],
+        _active_stream_message_index=0,
+        _conversation=None,
+        _assign_message_ids=lambda messages: messages,
+        _dispatch_chat_bridge_call=dispatch,
+    )
+
+    ConversationWidget._process_sequential_tokens(widget)
+
+    dispatch.assert_called_once_with(
+        "update_last_message_content",
+        "req-4",
+        "According to *The Satanic Bible*",
+    )
+    assert widget._streamed_messages[0]["content"] == (
+        "According to *The Satanic Bible*"
+    )
+
+
 def test_dispatch_chat_bridge_call_flushes_when_js_is_ready():
     """Bridge events queue until the conversation web view is ready."""
     bridge = SimpleNamespace(append_message=Mock())

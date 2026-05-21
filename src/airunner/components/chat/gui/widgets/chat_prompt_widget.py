@@ -30,6 +30,7 @@ from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
 from airunner.components.chat.gui.widgets.chat_attachment_pill_widget import (
     ChatAttachmentPillWidget,
 )
+from airunner.components.documents.data.models.document import Document
 from airunner.components.documents.document_import import (
     chat_image_suffixes,
     import_document_to_library,
@@ -62,11 +63,18 @@ from airunner.settings import (
     SLASH_COMMANDS,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
+from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 from airunner.utils.image import convert_binary_to_image
 
 
 # MIME type used by ImageWidget for drag operations
 IMAGE_METADATA_MIME_TYPE = "application/x-qt-image-metadata"
+KNOWLEDGE_BASE_DOCUMENT_SUFFIXES = rag_document_suffixes() + (
+    ".doc",
+    ".docx",
+    ".odt",
+    ".zim",
+)
 
 
 class ChatPromptWidget(BaseWidget):
@@ -117,6 +125,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed,
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
+            SignalCode.DOCUMENT_COLLECTION_CHANGED: self.on_document_collection_changed,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
         }
         self._splitters = ["chat_prompt_splitter"]
@@ -431,16 +440,6 @@ class ChatPromptWidget(BaseWidget):
                 action = action_override
         self.logger.info(f"Final action: {action}")
 
-        conversation_id = self._ensure_conversation_context()
-        if conversation_id is None:
-            self.logger.error(
-                "Aborting chat request - unable to determine conversation ID"
-            )
-            self.ui.prompt.setPlainText(prompt)
-            self.prompt = prompt
-            self.generating = False
-            return
-
         if hasattr(self.ui, "conversation"):
             self.ui.conversation.append_user_message_for_request(
                 cleaned_prompt,
@@ -453,7 +452,7 @@ class ChatPromptWidget(BaseWidget):
             lambda: self._submit_generation_request(
                 actual_prompt=request_prompt,
                 action=action,
-                conversation_id=conversation_id,
+                conversation_id=self.conversation_id,
                 request_id=request_id,
                 slash_command=slash_command,
             ),
@@ -469,11 +468,24 @@ class ChatPromptWidget(BaseWidget):
         *,
         actual_prompt: str,
         action: LLMActionType,
-        conversation_id: int,
+        conversation_id: Optional[int],
         request_id: str,
         slash_command: Optional[str],
     ) -> None:
         """Run the heavier generation setup after the UI has a paint turn."""
+
+        if conversation_id is None:
+            conversation_id = self._ensure_conversation_context()
+        if conversation_id is None:
+            self.logger.error(
+                "Aborting chat request - unable to determine conversation ID"
+            )
+            self.ui.prompt.setPlainText(actual_prompt)
+            self.prompt = actual_prompt
+            self.generating = False
+            self._set_generation_button_visibility(False)
+            self.enable_send_button()
+            return
 
         model_load_balancer = getattr(self.api, "model_load_balancer", None)
         loaded_models = set(
@@ -595,6 +607,7 @@ class ChatPromptWidget(BaseWidget):
         super().showEvent(event)
         self._schedule_default_splitter_settings()
         self._configure_prompt_shortcuts()
+        self._sync_document_attachments_from_active_documents()
 
         if not self.chat_loaded:
             self.disable_send_button()
@@ -752,6 +765,10 @@ class ChatPromptWidget(BaseWidget):
         if self.loading and hasattr(self.ui, "conversation"):
             QTimer.singleShot(0, self._load_initial_conversation)
             self.loading = False
+
+    def on_document_collection_changed(self, _data=None) -> None:
+        """Mirror the active document collection in the prompt pills."""
+        self._sync_document_attachments_from_active_documents()
 
     def _load_initial_conversation(self) -> None:
         """Load the initial conversation after the UI has settled."""
@@ -2345,6 +2362,81 @@ class ChatPromptWidget(BaseWidget):
             "text/other/documents",
         )
 
+    @property
+    def zim_path(self) -> str:
+        """Return the local ZIM library used by the knowledge base."""
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "zim",
+        )
+
+    def _validate_knowledge_base_document_path(
+        self,
+        file_path: str,
+        *,
+        log_rejection: bool = True,
+    ) -> Optional[str]:
+        """Validate one existing knowledge-base document path."""
+        try:
+            return resolve_existing_file(
+                file_path,
+                label="Attached document path",
+                allowed_suffixes=KNOWLEDGE_BASE_DOCUMENT_SUFFIXES,
+                allowed_roots=(self.documents_path, self.zim_path),
+            )
+        except PathPolicyError as exc:
+            if log_rejection:
+                self.logger.warning(
+                    "Rejected dropped document path: %s",
+                    exc,
+                )
+            return None
+
+    def _active_document_paths(self) -> List[str]:
+        """Return active knowledge-base documents for prompt pills."""
+        active_paths: List[str] = []
+        seen: set[str] = set()
+        for document in Document.objects.all():
+            file_path = getattr(document, "path", None)
+            if not getattr(document, "active", False) or not file_path:
+                continue
+            validated_path = self._validate_knowledge_base_document_path(
+                file_path,
+                log_rejection=False,
+            )
+            if not validated_path or validated_path in seen:
+                continue
+            seen.add(validated_path)
+            active_paths.append(validated_path)
+        return active_paths
+
+    def _set_document_attachments(self, file_paths: List[str]) -> None:
+        """Replace prompt document pills with one ordered path set."""
+        unique_paths: List[str] = []
+        seen: set[str] = set()
+        for file_path in file_paths:
+            if not file_path or file_path in seen:
+                continue
+            seen.add(file_path)
+            unique_paths.append(file_path)
+
+        if unique_paths == self._attached_documents:
+            return
+
+        for widget in self._document_attachment_widgets:
+            widget.deleteLater()
+        self._document_attachment_widgets.clear()
+        self._attached_documents.clear()
+
+        for file_path in unique_paths:
+            self._add_document_attachment(file_path)
+
+        self._update_attachments_visibility()
+
+    def _sync_document_attachments_from_active_documents(self) -> None:
+        """Sync prompt document pills from the active document set."""
+        self._set_document_attachments(self._active_document_paths())
+
     def _attachment_file_dialog_filter(self) -> str:
         """Return the file dialog filter for the current attachment mode."""
         document_patterns = " ".join(
@@ -2453,11 +2545,7 @@ class ChatPromptWidget(BaseWidget):
             )
             return
 
-        self._add_document_attachment(imported_path)
-        self.emit_signal(
-            SignalCode.DOCUMENT_COLLECTION_CHANGED,
-            {"paths": [imported_path]},
-        )
+        self._attach_knowledge_base_document(imported_path)
 
     def _add_document_attachment(self, file_path: str) -> None:
         """Attach one imported document path to the current chat request."""
@@ -2476,17 +2564,50 @@ class ChatPromptWidget(BaseWidget):
         self._document_attachment_widgets.append(widget)
         self._add_attachment_widget(widget)
 
+    def _attach_knowledge_base_document(self, file_path: str) -> None:
+        """Attach one existing knowledge-base document and mark it active."""
+        validated_path = self._validate_knowledge_base_document_path(
+            file_path
+        )
+        if not validated_path:
+            return
+
+        docs = Document.objects.filter_by(path=validated_path)
+        if docs:
+            Document.objects.update(pk=docs[0].id, active=True)
+        else:
+            Document.objects.create(
+                path=validated_path,
+                active=True,
+                indexed=False,
+            )
+
+        self._add_document_attachment(validated_path)
+        self.emit_signal(
+            SignalCode.DOCUMENT_COLLECTION_CHANGED,
+            {"paths": [validated_path]},
+        )
+
     def _remove_document_attachment(
         self,
         widget: ChatAttachmentPillWidget,
         file_path: str,
     ) -> None:
-        """Detach one document from the current chat request only."""
+        """Detach one document and deactivate it in the knowledge base."""
         if file_path in self._attached_documents:
             self._attached_documents.remove(file_path)
         if widget in self._document_attachment_widgets:
             self._document_attachment_widgets.remove(widget)
         self._remove_attachment_widget(widget)
+
+        docs = Document.objects.filter_by(path=file_path)
+        if docs:
+            Document.objects.update(pk=docs[0].id, active=False)
+
+        self.emit_signal(
+            SignalCode.DOCUMENT_COLLECTION_CHANGED,
+            {"paths": [file_path]},
+        )
 
     def _clear_document_attachments(self) -> None:
         """Clear the document attachments for the current chat request."""
@@ -2704,6 +2825,10 @@ class ChatPromptWidget(BaseWidget):
             event.acceptProposedAction()
             return True
 
+        if self._extract_dragged_knowledge_base_paths(event):
+            event.acceptProposedAction()
+            return True
+
         # Accept supported local document or image URLs
         if mime.hasUrls():
             for url in mime.urls():
@@ -2750,6 +2875,13 @@ class ChatPromptWidget(BaseWidget):
                     f"Failed to handle image metadata drop: {e}"
                 )
 
+        internal_paths = self._extract_dragged_knowledge_base_paths(event)
+        if internal_paths:
+            for path in internal_paths:
+                self._attach_knowledge_base_document(path)
+            event.acceptProposedAction()
+            return True
+
         if mime.hasUrls():
             handled = False
             for url in mime.urls():
@@ -2789,4 +2921,28 @@ class ChatPromptWidget(BaseWidget):
                     )
 
         return False
+
+    def _extract_dragged_knowledge_base_paths(
+        self,
+        event: QDragEnterEvent | QDropEvent,
+    ) -> List[str]:
+        """Return existing document paths from one internal tree drag."""
+        source = event.source()
+        if source is None or not hasattr(source, "selectedIndexes"):
+            return []
+
+        paths: List[str] = []
+        seen: set[str] = set()
+        for index in source.selectedIndexes():
+            try:
+                path = index.data(Qt.ItemDataRole.UserRole)
+            except Exception:
+                path = None
+            if not isinstance(path, str) or not path or path in seen:
+                continue
+            if not os.path.exists(path):
+                continue
+            seen.add(path)
+            paths.append(path)
+        return paths
 

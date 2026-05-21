@@ -238,6 +238,89 @@ def test_add_document_to_active_auto_indexes_unindexed_document(monkeypatch):
     )
 
 
+def test_add_document_to_active_emits_collection_changed(monkeypatch):
+    """Active-document adds should notify other widgets to sync."""
+    from airunner.components.documents.gui.widgets import documents as module
+    from airunner.components.documents.gui.widgets.documents import (
+        DocumentsWidget,
+    )
+
+    update = Mock()
+    monkeypatch.setattr(
+        module,
+        "Document",
+        SimpleNamespace(
+            objects=SimpleNamespace(
+                filter_by=lambda path: [SimpleNamespace(id=5, indexed=True)],
+                update=update,
+                create=Mock(),
+            )
+        ),
+    )
+
+    active_model = SimpleNamespace(
+        rowCount=lambda: 0,
+        appendRow=Mock(),
+    )
+    widget = SimpleNamespace(
+        _validate_document_file=lambda file_path: file_path,
+        active_documents_model=active_model,
+        _get_display_name=lambda path: "doc.pdf",
+        logger=Mock(),
+        emit_signal=Mock(),
+    )
+
+    DocumentsWidget.add_document_to_active(widget, "/tmp/doc.pdf")
+
+    update.assert_called_once_with(pk=5, active=True)
+    widget.emit_signal.assert_called_once_with(
+        SignalCode.DOCUMENT_COLLECTION_CHANGED,
+        {"paths": ["/tmp/doc.pdf"]},
+    )
+
+
+def test_remove_document_from_active_emits_collection_changed(monkeypatch):
+    """Active-document removals should notify the chat prompt to detach."""
+    from airunner.components.documents.gui.widgets import documents as module
+    from airunner.components.documents.gui.widgets.documents import (
+        DocumentsWidget,
+    )
+
+    update = Mock()
+    monkeypatch.setattr(
+        module,
+        "Document",
+        SimpleNamespace(
+            objects=SimpleNamespace(
+                filter_by=lambda path: [SimpleNamespace(id=7)],
+                update=update,
+            )
+        ),
+    )
+
+    item = SimpleNamespace(data=lambda: "/tmp/doc.pdf")
+    active_model = SimpleNamespace(
+        rowCount=lambda: 1,
+        item=lambda row, column: item,
+        removeRow=Mock(),
+    )
+    widget = SimpleNamespace(
+        active_documents_model=active_model,
+        logger=Mock(),
+        _get_display_name=lambda path: "doc.pdf",
+        emit_signal=Mock(),
+    )
+
+    DocumentsWidget.remove_document_from_active(widget, "/tmp/doc.pdf")
+
+    active_model.removeRow.assert_called_once_with(0)
+    update.assert_called_once_with(pk=7, active=False)
+    widget.emit_signal.assert_called_once_with(
+        SignalCode.DOCUMENT_COLLECTION_CHANGED,
+        {"paths": ["/tmp/doc.pdf"]},
+    )
+
+
 def test_on_document_indexed_refreshes_lists_for_index_only_requests(
     monkeypatch,
 ):

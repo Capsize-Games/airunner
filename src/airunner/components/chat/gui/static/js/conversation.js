@@ -526,6 +526,13 @@ function setThinkingPreviewLine(widget, content) {
         if (header) header.after(previewLine);
     }
 
+    previewLine.onclick = () => {
+        setStatusWidgetExpanded(
+            widget.dataset.requestId || 'legacy',
+            !widget.classList.contains('expanded'),
+        );
+    };
+
     previewLine.textContent = previewText;
     previewLine.style.display = 'block';
 }
@@ -654,9 +661,11 @@ function getStatusState(requestId) {
             requestId: key,
             items: [],
             maxVisible: STATUS_WIDGET_MAX_VISIBLE,
+            expanded: false,
             thinkingAnimationInterval: null,
             thinkingDotCount: 0,
-            currentThinkingContent: ''
+            currentThinkingContent: '',
+            pendingThinkingRender: null,
         });
     }
     return statusWidgets.get(key);
@@ -664,6 +673,33 @@ function getStatusState(requestId) {
 
 function getStatusWidgetDomId(requestId) {
     return `unified-status-widget-${getStatusRequestId(requestId)}`;
+}
+
+function setStatusWidgetExpanded(requestId, expanded) {
+    const state = getStatusState(requestId);
+    state.expanded = !!expanded;
+
+    const widget = document.getElementById(
+        getStatusWidgetDomId(requestId)
+    );
+    if (widget) {
+        widget.classList.toggle('expanded', state.expanded);
+        if (state.expanded) {
+            widget.querySelectorAll('.status-item.thinking-item').forEach(
+                (element) => scrollThinkingContentToBottom(element)
+            );
+        }
+    }
+
+    if (state.expanded) {
+        disableAutoScroll();
+        return;
+    }
+
+    const container = document.getElementById('conversation-container');
+    if (container && isScrolledToBottom(container)) {
+        enableAutoScroll();
+    }
 }
 
 function getRequestSelectorValue(requestId) {
@@ -722,7 +758,10 @@ function getOrCreateStatusWidget(requestId) {
         const header = widget.querySelector('.unified-status-header');
         if (header) {
             header.addEventListener('click', () => {
-                widget.classList.toggle('expanded');
+                setStatusWidgetExpanded(
+                    requestId,
+                    !getStatusState(requestId).expanded,
+                );
             });
         }
     }
@@ -746,7 +785,10 @@ function getOrCreateStatusWidget(requestId) {
 function toggleStatusWidget() {
     const widget = document.querySelector('.unified-status-widget');
     if (widget) {
-        widget.classList.toggle('expanded');
+        setStatusWidgetExpanded(
+            widget.dataset.requestId || 'legacy',
+            !widget.classList.contains('expanded'),
+        );
     }
 }
 
@@ -805,6 +847,7 @@ function renderStatusWidget(requestId) {
 
     const hasThinking = state.items.some((item) => item.type === 'thinking');
     widget.classList.toggle('has-thinking', hasThinking);
+    widget.classList.toggle('expanded', !!state.expanded);
 
     const activeItems = state.items.filter((item) => item.status === 'active');
     if (activeItems.length > 0) {
@@ -848,7 +891,9 @@ function renderStatusWidget(requestId) {
         state.items.slice(state.maxVisible),
     );
 
-    if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+    if (window.autoScrollEnabled && !state.expanded) {
+        setTimeout(smoothScrollToBottom, 0);
+    }
 }
 
 /**
@@ -1016,6 +1061,9 @@ function clearStatusWidgets() {
         if (state.thinkingAnimationInterval) {
             clearInterval(state.thinkingAnimationInterval);
         }
+        if (state.pendingThinkingRender) {
+            clearTimeout(state.pendingThinkingRender);
+        }
     });
     statusWidgets.clear();
     document.querySelectorAll('.unified-status-widget').forEach((widget) => {
@@ -1049,11 +1097,36 @@ function stopThinkingAnimation(requestId) {
     state.thinkingAnimationInterval = null;
 }
 
+function flushThinkingRender(requestId) {
+    const state = getStatusState(requestId);
+    if (state.pendingThinkingRender) {
+        clearTimeout(state.pendingThinkingRender);
+        state.pendingThinkingRender = null;
+    }
+    updateStatusItem(requestId, getThinkingItemId(requestId), {
+        content: state.currentThinkingContent
+    });
+}
+
+function scheduleThinkingRender(requestId) {
+    const state = getStatusState(requestId);
+    if (state.pendingThinkingRender) {
+        return;
+    }
+    state.pendingThinkingRender = setTimeout(() => {
+        state.pendingThinkingRender = null;
+        updateStatusItem(requestId, getThinkingItemId(requestId), {
+            content: state.currentThinkingContent
+        });
+    }, 75);
+}
+
 function handleThinkingStatusUpdate(requestId, status, content) {
     const state = getStatusState(requestId);
     const thinkingItemId = getThinkingItemId(requestId);
 
     if (status === 'started') {
+        flushThinkingRender(requestId);
         state.currentThinkingContent = '';
         addStatusItem(requestId, {
             id: thinkingItemId,
@@ -1068,9 +1141,7 @@ function handleThinkingStatusUpdate(requestId, status, content) {
 
     if (status === 'streaming') {
         state.currentThinkingContent += content;
-        updateStatusItem(requestId, thinkingItemId, {
-            content: state.currentThinkingContent
-        });
+        scheduleThinkingRender(requestId);
         return;
     }
 
@@ -1079,6 +1150,7 @@ function handleThinkingStatusUpdate(requestId, status, content) {
         if (content) {
             state.currentThinkingContent = content;
         }
+        flushThinkingRender(requestId);
         updateStatusItem(requestId, thinkingItemId, {
             text: 'Completed',
             status: 'completed',
@@ -1091,7 +1163,10 @@ function handleThinkingStatusUpdate(requestId, status, content) {
 function toggleThinkingBlock() {
     const widget = document.querySelector('.unified-status-widget');
     if (widget) {
-        widget.classList.toggle('expanded');
+        setStatusWidgetExpanded(
+            widget.dataset.requestId || 'legacy',
+            !widget.classList.contains('expanded'),
+        );
     }
 }
 

@@ -519,6 +519,14 @@ mjx-container[display="true"] {
 
 .status-item.thinking-item {
     background: rgba(147, 51, 234, 0.05);
+    display: block;
+}
+
+.status-item.thinking-item .status-item-text {
+    display: block;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .status-item.tool-item {
@@ -624,6 +632,7 @@ mjx-container[display="true"] {
     font-size: 0.8em;
     color: var(--dim-color);
     font-style: italic;
+    cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -651,6 +660,7 @@ mjx-container[display="true"] {
 
 /* Thinking content expandable */
 .thinking-content-wrapper {
+    width: 100%;
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease;

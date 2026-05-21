@@ -407,13 +407,15 @@ def test_forced_response_prompt_requests_thorough_summary():
 
     prompt = mixin._chat_model.prompts[0]
     assert "synthesize the evidence below into a substantive overview" in prompt
-    assert "Write 4 to 6 sentences in one or two short paragraphs" in prompt
+    assert "Write 7 to 10 sentences in 2 to 4 short paragraphs" in prompt
     assert "Do not repeat the document title, author, or structure" in prompt
     assert "Do not mention file names, stored paths, excerpt numbers" in prompt
+    assert "front-matter anecdotes or biographical trivia secondary" in prompt
+    assert "Do not infer divine, supernatural, or hidden-authority beliefs" in prompt
     assert "Evidence excerpts:" in prompt
     assert "Stored path:" not in prompt
     assert "[Excerpt 1 from" not in prompt
-    assert "Start directly with the substance." in prompt
+    assert "Start with the central themes, not opening trivia." in prompt
 
 
 class _SummaryBudgetCapturingChatModel:

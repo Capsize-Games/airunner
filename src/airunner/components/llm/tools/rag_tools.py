@@ -28,7 +28,13 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 _SUMMARY_RETRIEVAL_K = 12
 _STANDARD_RETRIEVAL_K = 6
-_SUMMARY_EVIDENCE_LIMIT = 6
+_SUMMARY_EVIDENCE_LIMIT = 8
+_FRONT_MATTER_HEADINGS = {
+    "INTRODUCTION",
+    "PROLOGUE",
+    "FOREWORD",
+    "PREFACE",
+}
 
 
 def _coerce_active_values(values: Any) -> list[str]:
@@ -403,6 +409,11 @@ def _split_document_paragraphs(text: str) -> list[str]:
     return paragraphs
 
 
+def _normalize_section_title(title: str) -> str:
+    """Return one normalized section title for summary heuristics."""
+    return " ".join(str(title or "").upper().split())
+
+
 def _select_evenly_spaced_items(items: list[Any], limit: int) -> list[Any]:
     """Return up to `limit` items distributed across the input list."""
     if len(items) <= limit:
@@ -416,6 +427,43 @@ def _select_evenly_spaced_items(items: list[Any], limit: int) -> list[Any]:
         for index in range(limit)
     ]
     return selected
+
+
+def _select_section_summary_paragraphs(
+    title: str,
+    paragraphs: list[str],
+) -> list[str]:
+    """Return paragraph samples that best represent one section."""
+    if not paragraphs:
+        return []
+
+    normalized_title = _normalize_section_title(title)
+    if normalized_title in _FRONT_MATTER_HEADINGS and len(paragraphs) > 1:
+        return [paragraphs[len(paragraphs) // 2]]
+
+    limit = 1 if normalized_title in _FRONT_MATTER_HEADINGS else 2
+    return _select_evenly_spaced_items(paragraphs, min(limit, len(paragraphs)))
+
+
+def _build_section_summary_units(
+    sections: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """Return paragraph-level units distributed across document sections."""
+    units: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for title, body in sections:
+        paragraphs = _split_document_paragraphs(body)
+        if not paragraphs:
+            cleaned = " ".join(str(body or "").split())
+            if cleaned:
+                paragraphs = [cleaned]
+        for paragraph in _select_section_summary_paragraphs(title, paragraphs):
+            key = (title, paragraph)
+            if key in seen:
+                continue
+            seen.add(key)
+            units.append(key)
+    return units
 
 
 def _truncate_summary_evidence(text: str, limit: int = 420) -> str:
@@ -440,7 +488,13 @@ def _build_summary_evidence_text(
     position: int,
 ) -> str:
     """Format one section or region as summary evidence text."""
-    prefix = f"Section: {title}. " if title else f"Document region {position}. "
+    normalized_title = _normalize_section_title(title)
+    if title and normalized_title in _FRONT_MATTER_HEADINGS:
+        prefix = f"Front matter ({title}). "
+    elif title:
+        prefix = f"Section: {title}. "
+    else:
+        prefix = f"Document region {position}. "
     return prefix + _truncate_summary_evidence(body)
 
 
@@ -452,7 +506,7 @@ def _build_summary_evidence_documents(
     sections = _split_document_sections(text)
     if sections:
         selected_sections = _select_evenly_spaced_items(
-            sections,
+            _build_section_summary_units(sections),
             _SUMMARY_EVIDENCE_LIMIT,
         )
         return [

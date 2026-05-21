@@ -81,6 +81,10 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
     def append_user_message_for_request(prompt, request_id=None):
         call_order.append(("append", prompt, bool(request_id)))
 
+    def ensure_conversation_context():
+        call_order.append("ensure")
+        return 1
+
     def get_loaded_models():
         call_order.append("probe")
         return []
@@ -105,7 +109,8 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
             llm=SimpleNamespace(send_request=Mock()),
         ),
         clear_prompt=clear_prompt,
-        _ensure_conversation_context=lambda: 1,
+        _ensure_conversation_context=ensure_conversation_context,
+        conversation_id=None,
         start_progress_bar=Mock(),
         _parse_slash_command=lambda prompt: (None, prompt, None, False),
         _estimate_token_count=lambda _prompt: 1,
@@ -146,6 +151,67 @@ def test_do_generate_clears_and_renders_user_message_first(monkeypatch):
     scheduled[0][1]()
 
     assert call_order[-1][0] == "submit"
+
+
+def test_submit_generation_request_bootstraps_conversation_after_ui_turn():
+    """Conversation bootstrap should happen in the queued submit phase."""
+    call_order = []
+    sent_requests = []
+
+    def ensure_conversation_context():
+        call_order.append("ensure")
+        return 7
+
+    def get_loaded_models():
+        call_order.append("probe")
+        return []
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=get_loaded_models,
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            prompt=SimpleNamespace(setPlainText=Mock()),
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        _ensure_conversation_context=ensure_conversation_context,
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[],
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        enable_send_button=Mock(),
+        _set_generation_button_visibility=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+        generating=True,
+        prompt="",
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Hello",
+        action=LLMActionType.CHAT,
+        conversation_id=None,
+        request_id="req-1",
+        slash_command=None,
+    )
+
+    assert call_order == ["ensure", "probe"]
+    assert sent_requests[0]["conversation_id"] == 7
 
 
 def test_stop_button_restores_submit_immediately():
@@ -334,6 +400,223 @@ def test_submit_generation_request_keeps_document_attachments_visible():
 
     assert sent_requests
     assert widget._attached_documents == ["/tmp/notes.md"]
+
+
+def test_attach_knowledge_base_document_marks_document_active(
+    monkeypatch,
+):
+    """Knowledge-base drops should mark the document active and attach it."""
+    update = Mock()
+    create = Mock()
+    monkeypatch.setattr(
+        module,
+        "Document",
+        SimpleNamespace(
+            objects=SimpleNamespace(
+                filter_by=lambda path: [SimpleNamespace(id=9, indexed=True)],
+                update=update,
+                create=create,
+            )
+        ),
+    )
+
+    widget = SimpleNamespace(
+        _validate_knowledge_base_document_path=lambda path: path,
+        _add_document_attachment=Mock(),
+        emit_signal=Mock(),
+    )
+
+    ChatPromptWidget._attach_knowledge_base_document(
+        widget,
+        "/tmp/doc.pdf",
+    )
+
+    update.assert_called_once_with(pk=9, active=True)
+    create.assert_not_called()
+    widget._add_document_attachment.assert_called_once_with(
+        "/tmp/doc.pdf"
+    )
+    widget.emit_signal.assert_called_once_with(
+        module.SignalCode.DOCUMENT_COLLECTION_CHANGED,
+        {"paths": ["/tmp/doc.pdf"]},
+    )
+
+
+def test_add_document_attachment_from_path_activates_imported_document(
+    monkeypatch,
+):
+    """Imported attachments should flow through active-document sync."""
+    monkeypatch.setattr(
+        module,
+        "import_document_to_library",
+        Mock(return_value="/tmp/imported.md"),
+    )
+    widget = SimpleNamespace(
+        documents_path="/tmp/library",
+        logger=Mock(),
+        _attach_knowledge_base_document=Mock(),
+    )
+
+    ChatPromptWidget._add_document_attachment_from_path(
+        widget,
+        "/tmp/source.md",
+    )
+
+    widget._attach_knowledge_base_document.assert_called_once_with(
+        "/tmp/imported.md"
+    )
+
+
+def test_set_document_attachments_rebuilds_from_active_documents():
+    """Prompt pills should be rebuilt from the active document set."""
+    old_widget = SimpleNamespace(deleteLater=Mock())
+    added = []
+    widget = SimpleNamespace(
+        _document_attachment_widgets=[old_widget],
+        _attached_documents=["/tmp/old.md"],
+        _update_attachments_visibility=Mock(),
+    )
+
+    def add_document_attachment(file_path):
+        added.append(file_path)
+        widget._attached_documents.append(file_path)
+
+    widget._add_document_attachment = add_document_attachment
+
+    ChatPromptWidget._set_document_attachments(
+        widget,
+        ["/tmp/a.md", "/tmp/a.md", "/tmp/b.md"],
+    )
+
+    old_widget.deleteLater.assert_called_once_with()
+    assert widget._attached_documents == ["/tmp/a.md", "/tmp/b.md"]
+    assert added == ["/tmp/a.md", "/tmp/b.md"]
+
+
+def test_on_document_collection_changed_syncs_prompt_attachments():
+    """Prompt pills should refresh when the active collection changes."""
+    widget = SimpleNamespace(
+        _sync_document_attachments_from_active_documents=Mock(),
+    )
+
+    ChatPromptWidget.on_document_collection_changed(widget, {})
+
+    widget._sync_document_attachments_from_active_documents.assert_called_once_with()
+
+
+def test_remove_document_attachment_deactivates_document(monkeypatch):
+    """Removing a prompt pill should deactivate the document globally."""
+    update = Mock()
+    monkeypatch.setattr(
+        module,
+        "Document",
+        SimpleNamespace(
+            objects=SimpleNamespace(
+                filter_by=lambda path: [SimpleNamespace(id=13)],
+                update=update,
+            )
+        ),
+    )
+    pill = SimpleNamespace()
+    widget = SimpleNamespace(
+        _attached_documents=["/tmp/doc.md"],
+        _document_attachment_widgets=[pill],
+        _remove_attachment_widget=Mock(),
+        emit_signal=Mock(),
+    )
+
+    ChatPromptWidget._remove_document_attachment(
+        widget,
+        pill,
+        "/tmp/doc.md",
+    )
+
+    assert widget._attached_documents == []
+    assert widget._document_attachment_widgets == []
+    widget._remove_attachment_widget.assert_called_once_with(pill)
+    update.assert_called_once_with(pk=13, active=False)
+    widget.emit_signal.assert_called_once_with(
+        module.SignalCode.DOCUMENT_COLLECTION_CHANGED,
+        {"paths": ["/tmp/doc.md"]},
+    )
+
+
+def test_handle_drag_enter_accepts_knowledge_base_tree_document_drag():
+    """Prompt drags should accept document items from the knowledge tree."""
+    path = "/home/joe/Projects/airunner/README.md"
+    source = SimpleNamespace(
+        selectedIndexes=lambda: [
+            SimpleNamespace(
+                data=lambda role=None: (
+                    path
+                    if role == Qt.ItemDataRole.UserRole
+                    else None
+                )
+            )
+        ]
+    )
+    event = SimpleNamespace(
+        mimeData=lambda: SimpleNamespace(
+            hasFormat=lambda _fmt: False,
+            hasUrls=lambda: False,
+            formats=lambda: [],
+        ),
+        source=lambda: source,
+        acceptProposedAction=Mock(),
+    )
+    widget = SimpleNamespace(_is_model_vision_capable=lambda: False)
+    widget._extract_dragged_knowledge_base_paths = (
+        lambda drag_event: ChatPromptWidget._extract_dragged_knowledge_base_paths(
+            widget,
+            drag_event,
+        )
+    )
+
+    handled = ChatPromptWidget._handle_drag_enter(widget, event)
+
+    assert handled is True
+    event.acceptProposedAction.assert_called_once_with()
+
+
+def test_handle_drop_attaches_knowledge_base_tree_document():
+    """Prompt drops should attach document items from the knowledge tree."""
+    path = "/home/joe/Projects/airunner/README.md"
+    source = SimpleNamespace(
+        selectedIndexes=lambda: [
+            SimpleNamespace(
+                data=lambda role=None: (
+                    path
+                    if role == Qt.ItemDataRole.UserRole
+                    else None
+                )
+            )
+        ]
+    )
+    event = SimpleNamespace(
+        mimeData=lambda: SimpleNamespace(
+            hasFormat=lambda _fmt: False,
+            hasUrls=lambda: False,
+            formats=lambda: [],
+        ),
+        source=lambda: source,
+        acceptProposedAction=Mock(),
+    )
+    widget = SimpleNamespace(
+        _is_model_vision_capable=lambda: False,
+        _attach_knowledge_base_document=Mock(),
+    )
+    widget._extract_dragged_knowledge_base_paths = (
+        lambda drop_event: ChatPromptWidget._extract_dragged_knowledge_base_paths(
+            widget,
+            drop_event,
+        )
+    )
+
+    handled = ChatPromptWidget._handle_drop(widget, event)
+
+    assert handled is True
+    widget._attach_knowledge_base_document.assert_called_once_with(path)
+    event.acceptProposedAction.assert_called_once_with()
 
 
 def test_submit_generation_request_runs_probe_after_ui_append():

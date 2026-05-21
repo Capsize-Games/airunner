@@ -13,6 +13,7 @@ _NO_SPACE_BEFORE = frozenset(
     ".,!?;:%)]}>/\\"
 )
 _OPENING_CHARS = frozenset("([{</\\")
+_MARKDOWN_DELIMITERS = frozenset("*_`")
 _WORD_CONTINUATION = frozenset("_")
 _WORD_ENDERS = frozenset(")]}\"'")
 _SENTENCE_ENDERS = frozenset(".!?;:")
@@ -95,6 +96,11 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
     prev_is_symbol = _is_space_separated_symbol(prev)
     next_is_symbol = _is_space_separated_symbol(next_char)
 
+    if prev_is_word and next_char in _MARKDOWN_DELIMITERS:
+        return True
+    if prev in _MARKDOWN_DELIMITERS and next_is_word:
+        return existing.count(prev) % 2 == 0
+
     if prev_is_word and next_is_word:
         return _needs_plain_word_boundary(existing, chunk)
 
@@ -113,6 +119,16 @@ def prepare_stream_chunk(existing: str, chunk: str) -> str:
     """Prefix one chunk with a spacer when the boundary needs it."""
     if not chunk:
         return ""
+    if chunk[:1].isspace():
+        stripped = chunk.lstrip()
+        if (
+            stripped
+            and existing
+            and existing[-1].isalpha()
+            and stripped[0].islower()
+            and not _needs_plain_word_boundary(existing, stripped)
+        ):
+            chunk = stripped
     if needs_stream_space(existing, chunk):
         return f" {chunk}"
     return chunk

@@ -42,3 +42,29 @@ def test_combine_stream_chunks_inserts_spaces_around_emojis():
         combine_stream_chunks(["Computer!", "😊", "How can I help?"])
         == "Computer! 😊 How can I help?"
     )
+
+
+def test_combine_stream_chunks_handles_markdown_title_boundaries():
+    """Markdown emphasis should keep surrounding boundaries readable."""
+    assert (
+        combine_stream_chunks(
+            [
+                "According",
+                "to",
+                "*The",
+                "Sat",
+                " anic",
+                "Bible*",
+                "by",
+                "Anton",
+                "La",
+                "Vey,",
+            ]
+        )
+        == "According to *The Satanic Bible* by Anton LaVey,"
+    )
+
+
+def test_combine_stream_chunks_removes_spurious_subword_leading_space():
+    """Subword continuations should drop bogus leading spaces."""
+    assert combine_stream_chunks(["Sat", " anic"]) == "Satanic"

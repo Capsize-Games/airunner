@@ -95,11 +95,52 @@ def test_rag_search_builds_summary_evidence_across_document(
 
     result = rag_search("summarize the document for me", api=api)
 
-    assert "Section: INTRODUCTION." in result
+    assert "Front matter (INTRODUCTION)." in result
     assert "Section: THE BOOK OF SATAN." in result
     assert "Section: THE BOOK OF BELIAL." in result
     assert "Section: THE BOOK OF LEVIATHAN." in result
     search.assert_not_called()
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_summary_avoids_opening_front_matter_bias(
+    mock_resolve,
+    mock_extract,
+):
+    """Summary evidence should not prefer the first intro anecdote."""
+    file_path = "/library/The Satanic Bible - Anton LaVey.pdf"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "INTRODUCTION\n\n"
+        "Anton LaVey was sixteen years old when he began the road to "
+        "High Priesthood while playing organ in a carnival.\n\n"
+        "The introduction frames the work as a realist philosophy rooted "
+        "in the tangible world rather than spiritual promises.\n\n"
+        "THE BOOK OF SATAN\n\n"
+        "This section inverts Christian moral assumptions and praises "
+        "strength over humility.\n\n"
+        "THE BOOK OF LUCIFER\n\n"
+        "This section develops the argument in practical and rhetorical "
+        "terms.\n\n"
+        "THE BOOK OF BELIAL\n\n"
+        "This section focuses on ritual and applied practice.\n\n"
+        "THE BOOK OF LEVIATHAN\n\n"
+        "This section covers ceremony, symbolism, and later material."
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "The Satanic Bible - Anton LaVey.pdf"
+        ],
+    )
+
+    result = rag_search("summarize the document for me", api=api)
+
+    assert "Front matter (INTRODUCTION)." in result
+    assert "realist philosophy rooted in the tangible world" in result
+    assert "sixteen years old" not in result
 
 
 def test_rag_search_expands_single_document_pronoun_queries():
