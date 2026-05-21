@@ -7,9 +7,13 @@ and saving new content to the knowledge base.
 
 import os
 import re
+from types import SimpleNamespace
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
+from airunner.components.llm.utils.document_query_routing import (
+    route_document_query,
+)
 from airunner.components.documents.data.models.document import Document
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.utils.document_extraction import extract_text
@@ -21,6 +25,10 @@ from airunner.utils.application.log_hygiene import summarize_text
 from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+_SUMMARY_RETRIEVAL_K = 12
+_STANDARD_RETRIEVAL_K = 6
+_SUMMARY_EVIDENCE_LIMIT = 6
 
 
 def _coerce_active_values(values: Any) -> list[str]:
@@ -224,6 +232,12 @@ def _expand_query_with_active_document(
     return f"{query.strip()} Document context: {context}"
 
 
+def _is_summary_query(query: str) -> bool:
+    """Return whether the query is asking for a document summary."""
+    route = route_document_query(query, assume_document_mode=True)
+    return route is not None and route.intent == "summary"
+
+
 def _document_label(metadata: dict[str, Any]) -> str:
     """Return one human-readable label for a retrieved document."""
     for key in ("file_name", "source", "file_path"):
@@ -337,6 +351,162 @@ def _format_rag_search_results(
             "Relevant excerpts:\n" + "\n\n".join(excerpt_sections)
         )
     return "\n\n".join(sections)
+
+
+def _append_section(
+    sections: list[tuple[str, str]],
+    title: str,
+    lines: list[str],
+) -> None:
+    """Append one non-empty section body to the section list."""
+    body = "\n".join(lines).strip()
+    if not body:
+        return
+    section_title = title or "Opening context"
+    sections.append((section_title, body))
+
+
+def _split_document_sections(text: str) -> list[tuple[str, str]]:
+    """Split one document into heading-oriented sections when possible."""
+    headings = _extract_document_structure_headings(text)
+    if not headings:
+        return []
+
+    sections: list[tuple[str, str]] = []
+    heading_set = set(headings)
+    current_title = ""
+    current_lines: list[str] = []
+    for raw_line in str(text or "").splitlines():
+        line = " ".join(raw_line.strip().split())
+        if not line:
+            if current_lines and current_lines[-1] != "":
+                current_lines.append("")
+            continue
+        if line in heading_set:
+            _append_section(sections, current_title, current_lines)
+            current_title = line
+            current_lines = []
+            continue
+        current_lines.append(line)
+
+    _append_section(sections, current_title, current_lines)
+    return sections
+
+
+def _split_document_paragraphs(text: str) -> list[str]:
+    """Return substantive paragraphs from one extracted document."""
+    paragraphs: list[str] = []
+    for paragraph in re.split(r"\n\s*\n", str(text or "")):
+        cleaned = " ".join(paragraph.split())
+        if len(cleaned.split()) >= 12:
+            paragraphs.append(cleaned)
+    return paragraphs
+
+
+def _select_evenly_spaced_items(items: list[Any], limit: int) -> list[Any]:
+    """Return up to `limit` items distributed across the input list."""
+    if len(items) <= limit:
+        return list(items)
+    if limit <= 1:
+        return [items[0]]
+
+    last_index = len(items) - 1
+    selected = [
+        items[int(index * last_index / (limit - 1))]
+        for index in range(limit)
+    ]
+    return selected
+
+
+def _truncate_summary_evidence(text: str, limit: int = 420) -> str:
+    """Trim one evidence snippet to a readable prompt-sized span."""
+    cleaned = " ".join(str(text or "").split())
+    if len(cleaned) <= limit:
+        return cleaned
+
+    snippet = cleaned[:limit].rsplit(" ", 1)[0].strip()
+    sentence_breaks = [snippet.rfind(marker) for marker in (". ", "! ", "? ")]
+    best_break = max(sentence_breaks)
+    if best_break >= 120:
+        snippet = snippet[: best_break + 1].strip()
+    if snippet.endswith((".", "!", "?")):
+        return snippet
+    return snippet + "..."
+
+
+def _build_summary_evidence_text(
+    title: str,
+    body: str,
+    position: int,
+) -> str:
+    """Format one section or region as summary evidence text."""
+    prefix = f"Section: {title}. " if title else f"Document region {position}. "
+    return prefix + _truncate_summary_evidence(body)
+
+
+def _build_summary_evidence_documents(
+    metadata: dict[str, Any],
+    text: str,
+) -> list[Any]:
+    """Build distributed summary evidence from one document text."""
+    sections = _split_document_sections(text)
+    if sections:
+        selected_sections = _select_evenly_spaced_items(
+            sections,
+            _SUMMARY_EVIDENCE_LIMIT,
+        )
+        return [
+            SimpleNamespace(
+                metadata=dict(metadata),
+                page_content=_build_summary_evidence_text(
+                    title,
+                    body,
+                    index,
+                ),
+            )
+            for index, (title, body) in enumerate(selected_sections, 1)
+        ]
+
+    paragraphs = _split_document_paragraphs(text)
+    if not paragraphs:
+        return []
+    selected_paragraphs = _select_evenly_spaced_items(
+        paragraphs,
+        _SUMMARY_EVIDENCE_LIMIT,
+    )
+    return [
+        SimpleNamespace(
+            metadata=dict(metadata),
+            page_content=_build_summary_evidence_text(
+                "",
+                paragraph,
+                index,
+            ),
+        )
+        for index, paragraph in enumerate(selected_paragraphs, 1)
+    ]
+
+
+def _build_single_document_summary_results(rag_manager: Any) -> list[Any]:
+    """Return document-wide summary evidence for one active document."""
+    file_path = _get_single_active_document_path(rag_manager)
+    if not file_path:
+        return []
+
+    try:
+        resolved_path = resolve_existing_file(file_path, label="Document path")
+    except PathPolicyError as error:
+        logger.warning("Skipping summary evidence extraction: %s", error)
+        return []
+
+    text = extract_text(resolved_path) or ""
+    if not text.strip():
+        return []
+
+    entries = _get_active_document_entries(rag_manager)
+    if not entries:
+        return []
+    return _build_summary_evidence_documents(entries[0], text)
 
 
 def _format_loaded_document_results(
@@ -457,6 +627,21 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
+        if _is_summary_query(query):
+            summary_results = _build_single_document_summary_results(
+                rag_manager,
+            )
+            if summary_results:
+                result_text = _format_rag_search_results(
+                    summary_results,
+                    include_excerpts=True,
+                )
+                logger.info(
+                    "Returning %s summary evidence excerpts built from full document text",
+                    len(summary_results),
+                )
+                return result_text
+
         effective_query = _expand_query_with_active_document(
             query,
             rag_manager,
@@ -472,7 +657,11 @@ def rag_search(
 
         results = rag_manager.search(
             effective_query,
-            k=6,
+            k=(
+                _SUMMARY_RETRIEVAL_K
+                if _is_summary_query(query)
+                else _STANDARD_RETRIEVAL_K
+            ),
         )
         logger.info(
             f"rag_manager.search returned "

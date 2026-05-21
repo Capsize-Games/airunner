@@ -29,23 +29,56 @@ class RAGSearchMixin:
         Returns:
             List of Document objects with page_content and metadata
         """
-        if not self.retriever:
+        requested_k = max(int(k or 0), 1)
+        retriever = self._get_search_retriever(requested_k)
+        if not retriever:
             self.logger.warning("No retriever available for search")
             return []
 
         try:
-            results = self.retriever.retrieve(query)
+            results = retriever.retrieve(query)
 
             self.logger.info(
                 f"Search for '{query[:100]}' returned {len(results)} results, "
                 f"{sum(1 for r in results if r.page_content)} with content"
             )
 
-            return results[:k]
+            return results[:requested_k]
 
         except Exception as e:
             self.logger.error(f"Error during search: {e}")
             return []
+
+    def _build_retriever(self, similarity_top_k: int) -> Optional[Any]:
+        """Create one retriever configured for the requested breadth."""
+        active_doc_ids = self._get_active_document_ids()
+        if active_doc_ids and len(active_doc_ids) > 0:
+            return MultiIndexRetriever(
+                rag_mixin=self,
+                similarity_top_k=similarity_top_k,
+            )
+        if not self._index:
+            return None
+        return DocumentIndexRetriever(
+            index=self._index,
+            embedding_model=self.embedding,
+            similarity_top_k=similarity_top_k,
+        )
+
+    def _get_search_retriever(self, requested_k: int) -> Optional[Any]:
+        """Return one retriever that can satisfy the requested breadth."""
+        retriever = getattr(self, "_retriever", None)
+        retriever_top_k = getattr(retriever, "_similarity_top_k", None)
+        if retriever is not None and not (
+            isinstance(retriever_top_k, int)
+            and retriever_top_k < requested_k
+        ):
+            return retriever
+
+        retriever = self._build_retriever(max(requested_k, 5))
+        if requested_k <= 5:
+            self._retriever = retriever
+        return retriever
 
     def get_retriever_for_query(
         self,
@@ -98,33 +131,20 @@ class RAGSearchMixin:
             VectorIndexRetriever instance or None
         """
         if not self._retriever:
-            active_doc_ids = self._get_active_document_ids()
-            if active_doc_ids and len(active_doc_ids) > 0:
-                try:
-                    self._retriever = MultiIndexRetriever(
-                        rag_mixin=self,
-                        similarity_top_k=5,
-                    )
+            try:
+                self._retriever = self._build_retriever(5)
+                if self._retriever is None:
+                    return None
+                active_doc_ids = self._get_active_document_ids()
+                if active_doc_ids and len(active_doc_ids) > 0:
                     self.logger.debug(
                         f"Created retriever for {len(active_doc_ids)} active document(s)"
                     )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error creating multi-index retriever: {e}"
-                    )
-            elif self._index:
-                try:
-                    self._retriever = DocumentIndexRetriever(
-                        index=self._index,
-                        embedding_model=self.embedding,
-                        similarity_top_k=5,
-                    )
+                else:
                     self.logger.debug(
                         "Created retriever for unified index (dynamically loaded content)"
                     )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error creating unified index retriever: {e}"
-                    )
+            except Exception as e:
+                self.logger.error(f"Error creating retriever: {e}")
 
         return self._retriever

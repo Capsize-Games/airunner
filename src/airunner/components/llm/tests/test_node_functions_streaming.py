@@ -416,6 +416,51 @@ def test_forced_response_prompt_requests_thorough_summary():
     assert "Start directly with the substance." in prompt
 
 
+class _SummaryBudgetCapturingChatModel:
+    """Fake model that records internal synthesis generation kwargs."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.observed_kwargs = []
+
+    def stream(self, *_args, **kwargs):
+        self.observed_kwargs.append(dict(kwargs))
+        return iter(
+            [
+                _reasoning_chunk(
+                    "",
+                    (
+                        '"Let\'s focus on the substantive content:" '
+                        "The document presents a realist philosophy that "
+                        "rejects mystical morality."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_uses_larger_internal_budget():
+    """Summary synthesis should not inherit the tiny outer RAG budget."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _SummaryBudgetCapturingChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+        generation_kwargs={"max_new_tokens": 300, "reasoning_effort": "high"},
+    )
+
+    assert message.content == (
+        "The document presents a realist philosophy that rejects "
+        "mystical morality."
+    )
+    assert mixin._chat_model.observed_kwargs[0]["max_new_tokens"] == 1024
+    assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "low"
+
+
 class _InternalSynthesisReasoningChatModel:
     """Fake model that still emits reasoning during internal synthesis."""
 
@@ -626,6 +671,199 @@ def test_forced_response_summary_recovers_constraint_heavy_reasoning():
         "as tools for a self-directed worldview rather than mystical "
         "revelation."
     )
+
+
+class _MalformedVisibleFragmentSummaryChatModel:
+    """Fake model that leaks a truncated label tail as visible text."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    '", "Answer:").',
+                    (
+                        '"Let\'s focus on the substantive content:" '
+                        "The document argues for strength, realism, and "
+                        "ritualized self-determination instead of Christian "
+                        "humility and universal love. It presents LaVeyan "
+                        "Satanism as a deliberate inversion of conventional "
+                        "religious morality."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_ignores_malformed_visible_fragment():
+    """Malformed prompt-tail fragments should not override drafted summary."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _MalformedVisibleFragmentSummaryChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    assert message.content == (
+        "The document argues for strength, realism, and ritualized "
+        "self-determination instead of Christian humility and universal "
+        "love. It presents LaVeyan Satanism as a deliberate inversion of "
+        "conventional religious morality."
+    )
+
+
+class _PersistedMalformedSummaryChatModel:
+    """Fake model that mirrors the malformed persisted runtime summary."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    '", "Answer:").',
+                    (
+                        "Thinking Process:\n\n"
+                        "1.  **Analyze the Request:**\n"
+                        "    *   Task: Summarize the provided document excerpts.\n"
+                        "    *   Tone: Natural and conversational.\n"
+                        "    *   Constraints:\n"
+                        "        *   Length: 4 to 6 sentences in one or two "
+                        "short paragraphs.\n"
+                        "        *   Start directly with the substance (no "
+                        "labels like \"Draft:\", \"Answer:\").\n\n"
+                        "2.  **Analyze the Evidence:**\n"
+                        "    *   *Excerpt 1:* Anton LaVey, \"Black Pope,\" "
+                        "started Church of Satan at 16.\n"
+                        "    *   *Excerpt 2:* The text rejects traditional "
+                        "religious morality.\n\n"
+                        "3.  **Synthesize and Draft:**\n"
+                        "    *   *Drafting sentences (aiming for 4-6):*\n"
+                        "        1.  Anton LaVey, known as the \"Black Pope,\" "
+                        "founded the Church of Satan at age sixteen, drawing "
+                        "inspiration from the stark contrasts he witnessed "
+                        "between carnal indulgence and religious preaching "
+                        "during his carnival days.\n"
+                        "        2.  The central argument rejects traditional "
+                        "religious morality, questioning the rational "
+                        "authority of loving one's enemies and suggesting "
+                        "that wisdom-defiled gods have exhausted their "
+                        "millennium.\n"
+                        "        3.  Instead, the text advocates for a "
+                        "worldview where the strong, powerful, and bold are "
+                        "blessed with wealth and mastery, while the weak, "
+                        "feeble, and righteously humble are cursed to "
+                        "inherit the yoke.\n"
+                        "        4.  This philosophy extends to ritual "
+                        "practice, asserting that verbal communication can "
+                        "evoke emotional ecstasy and that words serve as "
+                        "monuments to thoughts within magical ceremonies.\n"
+                        "        5.  Ultimately, the work calls for "
+                        "awakening men of \"mildewed minds\" to a new "
+                        "reality where death is declared to the weakling and "
+                        "wealth is promised to the strong.\n\n"
+                        "    *   *Review against constraints:*\n"
+                        "        *   4-6 sentences? Yes (5 sentences).\n"
+                        "        *   Specific details? Yes ("
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_recovers_numbered_draft_block():
+    """Recovery should extract numbered draft sentences from thinking."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _PersistedMalformedSummaryChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    assert message.content == (
+        "Anton LaVey, known as the \"Black Pope,\" founded the Church "
+        "of Satan at age sixteen, drawing inspiration from the stark "
+        "contrasts he witnessed between carnal indulgence and religious "
+        "preaching during his carnival days. The central argument rejects "
+        "traditional religious morality, questioning the rational "
+        "authority of loving one's enemies and suggesting that "
+        "wisdom-defiled gods have exhausted their millennium. Instead, "
+        "the text advocates for a worldview where the strong, powerful, "
+        "and bold are blessed with wealth and mastery, while the weak, "
+        "feeble, and righteously humble are cursed to inherit the yoke. "
+        "This philosophy extends to ritual practice, asserting that "
+        "verbal communication can evoke emotional ecstasy and that words "
+        "serve as monuments to thoughts within magical ceremonies. "
+        "Ultimately, the work calls for awakening men of \"mildewed "
+        "minds\" to a new reality where death is declared to the "
+        "weakling and wealth is promised to the strong."
+    )
+
+
+class _ExcerptOnlyVisibleSummaryChatModel:
+    """Fake model that leaks only excerpt bullets as visible content."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    (
+                        "- Excerpt 1: Discusses Satanism as a realistic "
+                        "philosophy grounded in the real world.\n"
+                        "  - Excerpt 2: States LaVey's books are the only "
+                        "authentic guides to the practice.\n"
+                        "- Excerpt 3: Mentions public visibility, church "
+                        "activity, and later editions."
+                    ),
+                    (
+                        '"Let\'s focus on the substantive content:" '
+                        "The document presents Satanism as a practical "
+                        "philosophy rooted in realism rather than mystical "
+                        "religious promises. It emphasizes LaVey's books and "
+                        "ritual practice as the authoritative expression of "
+                        "that worldview, while also pointing to the movement's "
+                        "public visibility and institutional presence."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_ignores_excerpt_only_visible_inventory():
+    """Summary recovery should reject excerpt-only bullet inventories."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _ExcerptOnlyVisibleSummaryChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    assert message.content == (
+        "The document presents Satanism as a practical philosophy rooted "
+        "in realism rather than mystical religious promises. It "
+        "emphasizes LaVey's books and ritual practice as the authoritative "
+        "expression of that worldview, while also pointing to the "
+        "movement's public visibility and institutional presence."
+    )
+    assert "Excerpt 1:" not in message.content
 
 
 class _MetaIdentityResponseChatModel:

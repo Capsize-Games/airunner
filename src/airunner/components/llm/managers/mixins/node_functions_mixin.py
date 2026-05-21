@@ -550,6 +550,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
 
         try:
+            document_intent = self._get_document_query_intent(user_question)
             deterministic_response = (
                 self._build_deterministic_document_response(
                     all_tool_content,
@@ -574,20 +575,24 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
+            internal_generation_kwargs = (
+                self._prepare_internal_response_generation_kwargs(
+                    generation_kwargs,
+                    tool_name=tool_name,
+                    user_question=user_question,
+                )
+            )
 
             # Force the synthesis pass to return visible text instead of
             # reasoning/tool scaffolding.
             response_message = self._stream_internal_response(
                 simple_prompt,
-                generation_kwargs,
+                internal_generation_kwargs,
                 buffer_visible_output=True,
             )
             self._emit_final_thinking_signal(response_message)
 
             if response_message:
-                document_intent = self._get_document_query_intent(
-                    user_question
-                )
                 document_tool = self._is_document_result_tool(tool_name)
                 visible_content = self._recover_forced_response_content(
                     response_message,
@@ -625,6 +630,33 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         except Exception as e:
             self.logger.error(f"Failed to generate forced response message: {e}")
             return None
+
+    def _prepare_internal_response_generation_kwargs(
+        self,
+        generation_kwargs: Optional[Dict],
+        *,
+        tool_name: str,
+        user_question: str,
+    ) -> Dict:
+        """Return generation kwargs tuned for one internal synthesis pass."""
+        prepared = dict(generation_kwargs or {})
+        if not self._is_document_result_tool(tool_name):
+            return prepared
+        if self._get_document_query_intent(user_question) != "summary":
+            return prepared
+
+        for key in ("max_new_tokens", "max_tokens"):
+            value = prepared.get(key)
+            if isinstance(value, int):
+                prepared[key] = max(value, 1024)
+
+        if "max_new_tokens" not in prepared and "max_tokens" not in prepared:
+            prepared["max_new_tokens"] = 1024
+
+        if "reasoning_effort" in prepared:
+            prepared["reasoning_effort"] = "low"
+
+        return prepared
 
     def _generate_response_from_results(
         self,
@@ -1099,6 +1131,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             )
             if not self._looks_like_instruction_reflection(
                 cleaned_visible
+            ) and not self._looks_like_malformed_forced_response_fragment(
+                cleaned_visible
             ) and not (
                 reject_structure_only
                 and self._looks_like_summary_scaffolding_response(
@@ -1163,6 +1197,29 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
         return ""
 
+    @staticmethod
+    def _looks_like_malformed_forced_response_fragment(text: str) -> bool:
+        """Return True for tiny prompt-tail fragments, not user answers."""
+        normalized = " ".join(str(text or "").split())
+        if not normalized:
+            return False
+
+        lowered = normalized.lower()
+        if any(
+            marker in lowered for marker in ("draft:", "answer:", "response:")
+        ):
+            if len(normalized) <= 80:
+                return True
+            if normalized[:1] in {'"', "'", ",", ".", ")"}:
+                return True
+
+        alpha_chars = sum(1 for char in normalized if char.isalpha())
+        if len(normalized) <= 24 and alpha_chars < 8:
+            if any(char in normalized for char in ('"', "'", "(", ")", ",")):
+                return True
+
+        return False
+
     def _extract_drafted_response_from_thinking(
         self,
         cleaned_thinking: str,
@@ -1203,7 +1260,55 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if labelled_response:
             return labelled_response
 
+        numbered_draft = self._extract_numbered_draft_sentences(
+            cleaned_thinking
+        )
+        if numbered_draft:
+            return numbered_draft
+
         return ""
+
+    def _extract_numbered_draft_sentences(
+        self,
+        cleaned_thinking: str,
+    ) -> str:
+        """Extract one numbered draft sentence block from reasoning text."""
+        capture = False
+        current_item = ""
+        sentences: list[str] = []
+
+        def flush_current() -> None:
+            nonlocal current_item
+            candidate = self._clean_reasoning_candidate(current_item)
+            if candidate:
+                sentences.append(candidate)
+            current_item = ""
+
+        for raw_line in cleaned_thinking.splitlines():
+            stripped = raw_line.strip()
+            lowered = stripped.lower()
+            if not capture:
+                if "drafting sentences" in lowered:
+                    capture = True
+                continue
+
+            if current_item and re.match(r"^\d+\.\s+", stripped):
+                flush_current()
+            if "review against constraints" in lowered:
+                break
+            match = re.match(r"^\d+\.\s+(.+)$", stripped)
+            if match:
+                current_item = match.group(1).strip()
+                continue
+            if current_item and raw_line[:1].isspace() and stripped:
+                current_item = f"{current_item} {stripped}"
+                continue
+            if current_item and not stripped:
+                flush_current()
+
+        if current_item:
+            flush_current()
+        return " ".join(sentences)
 
     def _extract_labelled_reasoning_response(
         self,
@@ -1218,7 +1323,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 continue
             label, body = parsed
             candidate = self._clean_reasoning_candidate(body)
-            if not candidate:
+            if not candidate or self._looks_like_malformed_forced_response_fragment(
+                candidate
+            ):
                 continue
 
             lowered_label = label.lower()
@@ -1438,6 +1545,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if len(list_lines) < 2:
             return False
 
+        excerpt_line_hits = sum(
+            1
+            for line in list_lines
+            if re.search(r"\bexcerpt\s+\d+", line, flags=re.IGNORECASE)
+        )
+        if excerpt_line_hits >= 2:
+            return True
+
         lowered = "\n".join(lines).lower()
         markers = (
             "document:",
@@ -1504,6 +1619,12 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "concise?",
             "self-correction",
             "wait, one more check:",
+            "review against constraints",
+            "4-6 sentences? yes",
+            "one or two short paragraphs? yes",
+            "no bullet points? yes",
+            "conversational? yes",
+            "specific details? yes",
         )
         if any(marker in lowered for marker in reasoning_markers):
             return True

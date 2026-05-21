@@ -40,7 +40,7 @@ def test_rag_search_returns_metadata_and_excerpts_for_document_queries():
 
 
 def test_rag_search_uses_standard_retrieval_breadth():
-    """Document retrieval breadth should not depend on query phrasing."""
+    """Summary fallback retrieval should request a wider result set."""
     doc = SimpleNamespace(
         metadata={
             "source": "/library/The Satanic Bible - Anton LaVey.pdf",
@@ -60,7 +60,46 @@ def test_rag_search_uses_standard_retrieval_breadth():
 
     rag_search("summarize the document for me", api=api)
 
-    assert search.call_args.kwargs["k"] == 6
+    assert search.call_args.kwargs["k"] == 12
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_builds_summary_evidence_across_document(
+    mock_resolve,
+    mock_extract,
+):
+    """Summary intent should cover multiple document regions when possible."""
+    file_path = "/library/The Satanic Bible - Anton LaVey.pdf"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "INTRODUCTION\n\n"
+        "The introduction frames Satanism as a realism-first philosophy.\n\n"
+        "THE BOOK OF SATAN\n\n"
+        "This section rejects Christian mysticism and centers the real world.\n\n"
+        "THE BOOK OF LUCIFER\n\n"
+        "This section presents key arguments and practical philosophy.\n\n"
+        "THE BOOK OF BELIAL\n\n"
+        "This section focuses on ritual as applied practice.\n\n"
+        "THE BOOK OF LEVIATHAN\n\n"
+        "This section contains later material and ceremonial text."
+    )
+    search = Mock()
+    api = SimpleNamespace(
+        search=search,
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "The Satanic Bible - Anton LaVey.pdf"
+        ],
+    )
+
+    result = rag_search("summarize the document for me", api=api)
+
+    assert "Section: INTRODUCTION." in result
+    assert "Section: THE BOOK OF SATAN." in result
+    assert "Section: THE BOOK OF BELIAL." in result
+    assert "Section: THE BOOK OF LEVIATHAN." in result
+    search.assert_not_called()
 
 
 def test_rag_search_expands_single_document_pronoun_queries():

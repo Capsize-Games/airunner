@@ -105,6 +105,36 @@ class TestUnifiedIndexSearch:
 class TestRAGContentExtraction:
     """Test RAG content extraction from nodes."""
 
+    def test_search_honors_requested_k_when_building_retriever(self):
+        """Search should widen retriever breadth when callers ask for more."""
+        from airunner.components.llm.managers.agent.mixins.rag_search_mixin import (
+            RAGSearchMixin,
+        )
+
+        class TestRAG(RAGSearchMixin):
+            def __init__(self):
+                self.logger = Mock()
+                self._retriever = None
+                self.embedding = FakeEmbeddings()
+                self._get_active_document_ids = Mock(return_value=[])
+                self._index = DocumentVectorIndex.from_documents(
+                    [
+                        Document(page_content=f"alpha content {index}")
+                        for index in range(10)
+                    ],
+                    self.embedding,
+                    RecursiveCharacterTextSplitter(
+                        chunk_size=100,
+                        chunk_overlap=0,
+                    ),
+                )
+
+        rag = TestRAG()
+
+        results = rag.search("alpha", k=8)
+
+        assert len(results) == 8
+
     def test_search_returns_documents_from_retriever(self):
         """Should return LangChain documents from the retriever."""
         from airunner.components.llm.managers.agent.mixins.rag_search_mixin import (
