@@ -6,7 +6,8 @@ class ChatBridge(QObject):
     clearMessages = Signal()
     setMessages = Signal(list)
     updateLastMessageContent = Signal(
-        str
+        str,
+        str,
     )  # Update last message content during streaming
     scrollRequested = Signal()
     contentHeightChanged = Signal(int)
@@ -28,14 +29,15 @@ class ChatBridge(QObject):
     def append_message(self, msg):
         self.appendMessage.emit(msg)
 
-    @Slot(str)
-    def update_last_message_content(self, content):
+    @Slot(str, str)
+    def update_last_message_content(self, request_id, content):
         """Update the content of the last message (for streaming).
 
         Args:
+            request_id: Request identifier for the active streamed response
             content: New content for the last message
         """
-        self.updateLastMessageContent.emit(content)
+        self.updateLastMessageContent.emit(request_id, content)
 
     @Slot()
     def clear_messages(self):

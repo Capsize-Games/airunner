@@ -35,6 +35,18 @@ class _CapturingNodeFunctions(_DummyNodeFunctions):
         return AIMessage(content="forced response", tool_calls=[])
 
 
+class _NoModelNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._token_callback = Mock()
+        self.stream_internal_calls = 0
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        self.stream_internal_calls += 1
+        raise AssertionError("model synthesis should not run")
+
+
 def test_route_after_tools_returns_model_for_rag_search():
     """RAG search results should return to the model for a streamed answer."""
     mixin = _DummyNodeFunctions()
@@ -321,3 +333,60 @@ def test_build_search_results_prompt_uses_document_route_for_inspection():
 
     assert "answer directly and briefly" in prompt
     assert "Do not mention search results or instructions" in prompt
+
+
+def test_generate_response_message_uses_deterministic_structure_answer():
+    """Structure answers should not invoke model synthesis."""
+    mixin = _NoModelNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="structure",
+        document_primary_tool="inspect_loaded_documents",
+        document_answer_mode="deterministic",
+    )
+
+    response = mixin._generate_response_message_from_results(
+        "Document structure:\n1. INTRODUCTION\n2. PROLOGUE",
+        "inspect_loaded_documents",
+        "what chapters are in it?",
+    )
+
+    assert response is not None
+    assert response.content == "INTRODUCTION\nPROLOGUE"
+    assert mixin.stream_internal_calls == 0
+    mixin._token_callback.assert_called_once_with("INTRODUCTION\nPROLOGUE")
+
+
+def test_generate_response_message_uses_deterministic_identity_answer():
+    """Identity answers should not invoke model synthesis."""
+    mixin = _NoModelNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="identity",
+        document_primary_tool="inspect_loaded_documents",
+        document_answer_mode="deterministic",
+    )
+
+    response = mixin._generate_response_message_from_results(
+        "Loaded documents:\n\nDocument 1: The Satanic Bible - Anton LaVey.pdf\n"
+        "Inferred title from filename: The Satanic Bible\n"
+        "Inferred author from filename: Anton LaVey\n"
+        "File type: .pdf",
+        "inspect_loaded_documents",
+        "what is this document?",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "This document is a PDF document titled 'The Satanic Bible' by Anton LaVey."
+    )
+    assert mixin.stream_internal_calls == 0
+
+
+def test_get_document_query_intent_prefers_request_metadata():
+    """Request-scoped metadata should override manager-cached document intent."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_query_intent="structure")
+    mixin._current_document_query_route = SimpleNamespace(intent="identity")
+
+    assert mixin._get_document_query_intent("what is this document?") == (
+        "structure"
+    )

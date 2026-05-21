@@ -1154,6 +1154,9 @@ class ConversationWidget(BaseWidget):
                 fmt = FormatterExtended.format_content(combined_content)
                 self._dispatch_chat_bridge_call(
                     "update_last_message_content",
+                    self._streamed_messages[
+                        self._active_stream_message_index
+                    ].get("request_id", ""),
                     fmt["content"],
                 )
 

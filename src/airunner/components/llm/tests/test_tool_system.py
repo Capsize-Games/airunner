@@ -179,6 +179,20 @@ class TestRequestProcessor:
         assert isinstance(request, LLMRequest)
         assert request.temperature == 0.9
 
+    def test_request_to_dict_omits_document_routing_fields(self):
+        """Document routing metadata should not leak into model kwargs."""
+        request = LLMRequest(
+            document_query_intent="identity",
+            document_primary_tool="inspect_loaded_documents",
+            document_answer_mode="deterministic",
+        )
+
+        data = request.to_dict()
+
+        assert "document_query_intent" not in data
+        assert "document_primary_tool" not in data
+        assert "document_answer_mode" not in data
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

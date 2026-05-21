@@ -57,6 +57,9 @@ def test_prepare_request_tooling_forces_document_inspection_tool():
     assert result[0] is True
     assert result[1] == ["RAG", "SEARCH"]
     assert llm_request.force_tool == "inspect_loaded_documents"
+    assert llm_request.document_query_intent == "identity"
+    assert llm_request.document_primary_tool == "inspect_loaded_documents"
+    assert llm_request.document_answer_mode == "deterministic"
     assert mixin._current_document_query_route.intent == "identity"
     mixin._apply_tool_filter.assert_called_once_with(
         ["RAG", "SEARCH"],
@@ -83,6 +86,9 @@ def test_prepare_request_tooling_forces_document_retrieval_tool():
     mixin._prepare_request_tooling(data, llm_request)
 
     assert llm_request.force_tool == "rag_search"
+    assert llm_request.document_query_intent == "summary"
+    assert llm_request.document_primary_tool == "rag_search"
+    assert llm_request.document_answer_mode == "synthesized"
     assert mixin._current_document_query_route.intent == "summary"
 
 
@@ -105,6 +111,9 @@ def test_prepare_request_tooling_treats_attached_docs_as_document_mode():
     mixin._prepare_request_tooling(data, llm_request)
 
     assert llm_request.force_tool == "inspect_loaded_documents"
+    assert llm_request.document_query_intent == "structure"
+    assert llm_request.document_primary_tool == "inspect_loaded_documents"
+    assert llm_request.document_answer_mode == "deterministic"
     assert mixin._current_document_query_route.intent == "structure"
     mixin._apply_tool_filter.assert_called_once_with(
         ["rag"],
@@ -132,4 +141,7 @@ def test_prepare_request_tooling_overrides_stale_rag_search_force_tool():
     mixin._prepare_request_tooling(data, llm_request)
 
     assert llm_request.force_tool == "inspect_loaded_documents"
+    assert llm_request.document_query_intent == "identity"
+    assert llm_request.document_primary_tool == "inspect_loaded_documents"
+    assert llm_request.document_answer_mode == "deterministic"
     assert mixin._current_document_query_route.intent == "identity"

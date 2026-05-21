@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, Optional
 from dataclasses import dataclass
 
 from airunner.enums import LLMActionType
@@ -34,6 +34,11 @@ class LLMResponse:
     request_id: Optional[str] = None
     tools: Optional[list] = None
     is_system_message: bool = False
+    message_type: Optional[str] = None
+    thinking_content: Optional[str] = None
+    tool_name: Optional[str] = None
+    tool_arguments: Optional[Dict[str, Any]] = None
+    tool_status: Optional[str] = None
 
     # Optional usage metadata (for API providers like OpenRouter/OpenAI).
     # Included on terminal messages when available.

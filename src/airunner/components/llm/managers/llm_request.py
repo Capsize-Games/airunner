@@ -92,6 +92,9 @@ class LLMRequest:
     force_tool: Optional[str] = (
         None  # Force a specific tool to be called (from slash commands)
     )
+    document_query_intent: Optional[str] = None
+    document_primary_tool: Optional[str] = None
+    document_answer_mode: Optional[str] = None
     images: Optional[List[Any]] = field(
         default_factory=list
     )  # List of PIL Image objects for vision-capable models
@@ -140,6 +143,9 @@ class LLMRequest:
         data.pop("api_model", None)
         data.pop("dtype", None)
         data.pop("reasoning_effort", None)
+        data.pop("document_query_intent", None)
+        data.pop("document_primary_tool", None)
+        data.pop("document_answer_mode", None)
         # Prompt augmentation toggles are consumed by workflow setup, not passed to the model
         data.pop("include_mood", None)
         data.pop("include_datetime", None)

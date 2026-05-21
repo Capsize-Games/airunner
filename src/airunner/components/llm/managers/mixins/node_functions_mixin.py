@@ -548,6 +548,22 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
 
         try:
+            deterministic_response = (
+                self._build_deterministic_document_response(
+                    all_tool_content,
+                    tool_name,
+                    user_question,
+                )
+            )
+            if deterministic_response:
+                if self._token_callback:
+                    self._token_callback(deterministic_response)
+                return AIMessage(
+                    content=deterministic_response,
+                    additional_kwargs={},
+                    tool_calls=[],
+                )
+
             simple_prompt_text = self._build_search_results_prompt(
                 all_tool_content,
                 tool_name,
@@ -626,6 +642,18 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
 
         try:
+            deterministic_response = (
+                self._build_deterministic_document_response(
+                    all_tool_content,
+                    tool_name,
+                    user_question,
+                )
+            )
+            if deterministic_response:
+                if self._token_callback:
+                    self._token_callback(deterministic_response)
+                return deterministic_response
+
             simple_prompt_text = self._build_search_results_prompt(
                 all_tool_content,
                 tool_name,
@@ -738,6 +766,26 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             f"response. {response_style}"
         )
 
+    def _build_deterministic_document_response(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str,
+    ) -> str:
+        """Return one direct document answer when synthesis is unnecessary."""
+        if not self._is_document_result_tool(tool_name):
+            return ""
+
+        if self._get_document_answer_mode() not in (None, "deterministic"):
+            return ""
+
+        document_intent = self._get_document_query_intent(user_question)
+        if document_intent == "identity":
+            return self._build_document_identity_response(all_tool_content)
+        if document_intent == "structure":
+            return self._build_document_structure_response(all_tool_content)
+        return ""
+
     @staticmethod
     def _is_document_result_tool(tool_name: str) -> bool:
         """Return whether one tool is part of the document QA pipeline."""
@@ -747,11 +795,19 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         """Return whether one document tool should bypass replanning."""
         if tool_name == "inspect_loaded_documents":
             return True
+        llm_request = getattr(self, "llm_request", None)
+        primary_tool = getattr(llm_request, "document_primary_tool", None)
+        if isinstance(primary_tool, str) and primary_tool:
+            return tool_name == primary_tool
         route = getattr(self, "_current_document_query_route", None)
         return tool_name == "rag_search" and route is not None
 
     def _get_document_query_intent(self, user_question: str) -> str | None:
         """Return the request-scoped document intent when available."""
+        llm_request = getattr(self, "llm_request", None)
+        intent = getattr(llm_request, "document_query_intent", None)
+        if isinstance(intent, str) and intent:
+            return intent
         route = getattr(self, "_current_document_query_route", None)
         intent = getattr(route, "intent", None)
         if isinstance(intent, str) and intent:
@@ -762,6 +818,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             return "summary"
         if self._is_document_identity_question(user_question):
             return "identity"
+        return None
+
+    def _get_document_answer_mode(self) -> str | None:
+        """Return the request-scoped document answer mode when available."""
+        llm_request = getattr(self, "llm_request", None)
+        mode = getattr(llm_request, "document_answer_mode", None)
+        if isinstance(mode, str) and mode:
+            return mode
         return None
 
     @staticmethod

@@ -535,6 +535,15 @@ class LLMAPIService(APIServiceBase):
             )
             return
 
+        if self._forward_structured_daemon_chunk(
+            chunk,
+            state=state,
+            request_id=request_id,
+            action=action,
+            node_id=node_id,
+        ):
+            return
+
         if (
             state.hold_visible_output
             and bool(chunk.get("is_first_message", False))
@@ -590,6 +599,117 @@ class LLMAPIService(APIServiceBase):
             )
             return
 
+        if state.visible_sequence_number > 0 and bool(
+            chunk.get("is_end_of_message", False)
+        ):
+            self.send_llm_text_streamed_signal(
+                self._build_visible_daemon_response(
+                    chunk,
+                    state=state,
+                    message="",
+                    is_end_of_message=True,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
+            )
+
+    def _forward_structured_daemon_chunk(
+        self,
+        chunk: dict,
+        *,
+        state: _DaemonStreamState,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> bool:
+        """Prefer typed daemon chunk metadata when it is available."""
+        message_type = self._daemon_message_type(chunk)
+        if message_type is None:
+            return False
+        if message_type == "thinking":
+            self._forward_structured_thinking_chunk(
+                chunk,
+                state=state,
+                request_id=request_id,
+            )
+            return True
+        if message_type == "assistant":
+            self._forward_structured_assistant_chunk(
+                chunk,
+                state=state,
+                request_id=request_id,
+                action=action,
+                node_id=node_id,
+            )
+            return True
+        if message_type in {"tool_call", "tool_result", "tool_status"}:
+            self._reset_structured_hidden_output(state)
+            if bool(chunk.get("is_end_of_message", False)):
+                self._finish_daemon_thinking(state, request_id=request_id)
+            return True
+        return False
+
+    @staticmethod
+    def _daemon_message_type(chunk: dict) -> str | None:
+        """Return one normalized daemon message type."""
+        message_type = chunk.get("message_type")
+        if not isinstance(message_type, str):
+            return None
+        normalized = message_type.strip().lower()
+        return normalized or None
+
+    @staticmethod
+    def _reset_structured_hidden_output(state: _DaemonStreamState) -> None:
+        """Clear any buffered compatibility state for typed chunks."""
+        state.hold_visible_output = False
+        state.pending_visible_parts = []
+
+    def _forward_structured_thinking_chunk(
+        self,
+        chunk: dict,
+        *,
+        state: _DaemonStreamState,
+        request_id: str,
+    ) -> None:
+        """Forward one typed thinking chunk to the existing thinking UI."""
+        content = chunk.get("thinking_content")
+        if not isinstance(content, str):
+            content = chunk.get("message", "") or ""
+        if bool(chunk.get("is_first_message", False)) or not state.in_thinking_block:
+            self._start_daemon_thinking(
+                state,
+                "structured",
+                request_id=request_id,
+            )
+        self._append_daemon_thinking(state, content, request_id=request_id)
+        if bool(chunk.get("is_end_of_message", False)):
+            self._finish_daemon_thinking(state, request_id=request_id)
+
+    def _forward_structured_assistant_chunk(
+        self,
+        chunk: dict,
+        *,
+        state: _DaemonStreamState,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> None:
+        """Forward one typed assistant chunk without legacy heuristics."""
+        if state.in_thinking_block:
+            self._finish_daemon_thinking(state, request_id=request_id)
+        self._reset_structured_hidden_output(state)
+        message = chunk.get("message", "") or ""
+        if message:
+            self._emit_visible_daemon_parts(
+                [message],
+                chunk=chunk,
+                state=state,
+                request_id=request_id,
+                action=action,
+                node_id=node_id,
+            )
+            return
         if state.visible_sequence_number > 0 and bool(
             chunk.get("is_end_of_message", False)
         ):
@@ -903,6 +1023,11 @@ class LLMAPIService(APIServiceBase):
             request_id=request_id,
             tools=chunk.get("tools") or chunk.get("tool_calls"),
             is_system_message=bool(chunk.get("error", False)),
+            message_type=chunk.get("message_type"),
+            thinking_content=chunk.get("thinking_content"),
+            tool_name=chunk.get("tool_name"),
+            tool_arguments=chunk.get("tool_arguments"),
+            tool_status=chunk.get("tool_status"),
         )
         usage = chunk.get("usage") or {}
         response.prompt_tokens = usage.get("prompt_tokens")

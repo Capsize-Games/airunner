@@ -285,7 +285,24 @@ class RequestHandlingMixin:
             assume_document_mode=assume_document_mode,
         )
         self._current_document_query_route = route
-        if not llm_request or not route:
+        if not llm_request:
+            return
+
+        llm_request.document_query_intent = (
+            route.intent if route is not None else None
+        )
+        llm_request.document_primary_tool = (
+            route.force_tool if route is not None else None
+        )
+        llm_request.document_answer_mode = (
+            "deterministic"
+            if route is not None and route.intent in {"identity", "structure"}
+            else "synthesized"
+            if route is not None
+            else None
+        )
+
+        if not route:
             return
         current_force_tool = getattr(llm_request, "force_tool", None)
         if current_force_tool in (None, "rag_search"):

@@ -491,74 +491,7 @@ def test_stream_daemon_request_converts_thinking_to_ui_signal():
     ]
     emitted_responses = []
     emitted_signals = []
-    service = SimpleNamespace(
-        send_llm_text_streamed_signal=lambda response: emitted_responses.append(
-            response
-        ),
-        send_llm_thinking_signal=lambda status, content, request_id=None: emitted_signals.append(
-            (request_id, status, content)
-        ),
-        _forward_daemon_chunk=(
-            lambda chunk, **kwargs: LLMAPIService._forward_daemon_chunk(
-                service,
-                chunk,
-                **kwargs,
-            )
-        ),
-        _extract_visible_daemon_text=(
-            lambda message, state, request_id: LLMAPIService._extract_visible_daemon_text(
-                service,
-                message,
-                state,
-                request_id=request_id,
-            )
-        ),
-        _finish_daemon_thinking=lambda state, request_id: (
-            LLMAPIService._finish_daemon_thinking(
-                service,
-                state,
-                request_id=request_id,
-            )
-        ),
-        _emit_visible_daemon_parts=(
-            lambda visible_parts, **kwargs: (
-                LLMAPIService._emit_visible_daemon_parts(
-                    service,
-                    visible_parts,
-                    **kwargs,
-                )
-            )
-        ),
-        _build_visible_daemon_response=(
-            lambda chunk, **kwargs: LLMAPIService._build_visible_daemon_response(
-                service,
-                chunk,
-                **kwargs,
-            )
-        ),
-        _response_from_daemon_chunk=(
-            lambda chunk, **kwargs: LLMAPIService._response_from_daemon_chunk(
-                chunk,
-                **kwargs,
-            )
-        ),
-        _start_daemon_thinking=lambda state, tag_format, request_id: (
-            LLMAPIService._start_daemon_thinking(
-                service,
-                state,
-                tag_format,
-                request_id=request_id,
-            )
-        ),
-        _append_daemon_thinking=lambda state, content, request_id: (
-            LLMAPIService._append_daemon_thinking(
-                service,
-                state,
-                content,
-                request_id=request_id,
-            )
-        ),
-    )
+    service = _daemon_bridge_service(emitted_responses, emitted_signals)
     client = SimpleNamespace(
         stream_llm_request=lambda *args, **kwargs: iter(chunks)
     )
@@ -652,72 +585,7 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
         },
     ]
     emitted_responses = []
-    service = SimpleNamespace(
-        send_llm_text_streamed_signal=lambda response: emitted_responses.append(
-            response
-        ),
-        send_llm_thinking_signal=lambda status, content, request_id=None: None,
-        _forward_daemon_chunk=(
-            lambda chunk, **kwargs: LLMAPIService._forward_daemon_chunk(
-                service,
-                chunk,
-                **kwargs,
-            )
-        ),
-        _extract_visible_daemon_text=(
-            lambda message, state, request_id: LLMAPIService._extract_visible_daemon_text(
-                service,
-                message,
-                state,
-                request_id=request_id,
-            )
-        ),
-        _finish_daemon_thinking=lambda state, request_id: (
-            LLMAPIService._finish_daemon_thinking(
-                service,
-                state,
-                request_id=request_id,
-            )
-        ),
-        _emit_visible_daemon_parts=(
-            lambda visible_parts, **kwargs: (
-                LLMAPIService._emit_visible_daemon_parts(
-                    service,
-                    visible_parts,
-                    **kwargs,
-                )
-            )
-        ),
-        _build_visible_daemon_response=(
-            lambda chunk, **kwargs: LLMAPIService._build_visible_daemon_response(
-                service,
-                chunk,
-                **kwargs,
-            )
-        ),
-        _response_from_daemon_chunk=(
-            lambda chunk, **kwargs: LLMAPIService._response_from_daemon_chunk(
-                chunk,
-                **kwargs,
-            )
-        ),
-        _start_daemon_thinking=lambda state, tag_format, request_id: (
-            LLMAPIService._start_daemon_thinking(
-                service,
-                state,
-                tag_format,
-                request_id=request_id,
-            )
-        ),
-        _append_daemon_thinking=lambda state, content, request_id: (
-            LLMAPIService._append_daemon_thinking(
-                service,
-                state,
-                content,
-                request_id=request_id,
-            )
-        ),
-    )
+    service = _daemon_bridge_service(emitted_responses)
     client = SimpleNamespace(
         stream_llm_request=lambda *args, **kwargs: iter(chunks)
     )
@@ -741,6 +609,122 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
     ]
 
 
+def test_response_from_daemon_chunk_preserves_structured_fields():
+    response = LLMAPIService._response_from_daemon_chunk(
+        {
+            "message": "",
+            "message_type": "tool_call",
+            "thinking_content": "plan",
+            "tool_name": "inspect_loaded_documents",
+            "tool_arguments": {"query": "what is this document"},
+            "tool_status": "started",
+        },
+        request_id="req-123",
+        action=LLMActionType.CHAT,
+        node_id=None,
+    )
+
+    assert response.message_type == "tool_call"
+    assert response.thinking_content == "plan"
+    assert response.tool_name == "inspect_loaded_documents"
+    assert response.tool_arguments == {
+        "query": "what is this document"
+    }
+    assert response.tool_status == "started"
+
+
+def test_stream_daemon_request_prefers_structured_tool_call_chunks():
+    chunks = [
+        {
+            "message": "I am calling the search tool.",
+            "message_type": "tool_call",
+            "tool_name": "rag_search",
+            "tool_arguments": {"query": "document title"},
+            "is_first_message": True,
+            "is_end_of_message": True,
+            "sequence_number": 1,
+        },
+        {
+            "message": "This document is a PDF titled Sample.",
+            "message_type": "assistant",
+            "is_first_message": True,
+            "is_end_of_message": True,
+            "sequence_number": 2,
+        },
+    ]
+    emitted_responses = []
+    service = _daemon_bridge_service(emitted_responses)
+    client = SimpleNamespace(
+        stream_llm_request=lambda *args, **kwargs: iter(chunks)
+    )
+    llm_request = LLMRequest()
+    llm_request.force_tool = "rag_search"
+
+    LLMAPIService._stream_daemon_request(
+        service,
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        7,
+        None,
+        None,
+    )
+
+    assert [response.message for response in emitted_responses] == [
+        "This document is a PDF titled Sample.",
+    ]
+    assert emitted_responses[0].message_type == "assistant"
+
+
+def test_stream_daemon_request_uses_structured_thinking_chunks():
+    chunks = [
+        {
+            "message": "",
+            "message_type": "thinking",
+            "thinking_content": "plan",
+            "is_first_message": True,
+            "is_end_of_message": False,
+            "sequence_number": 1,
+        },
+        {
+            "message": "Hello",
+            "message_type": "assistant",
+            "is_first_message": True,
+            "is_end_of_message": True,
+            "sequence_number": 2,
+        },
+    ]
+    emitted_responses = []
+    emitted_signals = []
+    service = _daemon_bridge_service(emitted_responses, emitted_signals)
+    client = SimpleNamespace(
+        stream_llm_request=lambda *args, **kwargs: iter(chunks)
+    )
+
+    LLMAPIService._stream_daemon_request(
+        service,
+        client,
+        "hello",
+        LLMRequest(),
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        7,
+        None,
+        None,
+    )
+
+    assert emitted_signals == [
+        ("req-123", "started", ""),
+        ("req-123", "streaming", "plan"),
+        ("req-123", "completed", "plan"),
+    ]
+    assert [response.message for response in emitted_responses] == ["Hello"]
+
+
 def _daemon_bridge_service(emitted_responses, emitted_signals=None):
     """Return a daemon-bridge test double with bound helper methods."""
     emitted_signals = emitted_signals if emitted_signals is not None else []
@@ -755,6 +739,31 @@ def _daemon_bridge_service(emitted_responses, emitted_signals=None):
     )
     service._forward_daemon_chunk = lambda chunk, **kwargs: (
         LLMAPIService._forward_daemon_chunk(service, chunk, **kwargs)
+    )
+    service._forward_structured_daemon_chunk = lambda chunk, **kwargs: (
+        LLMAPIService._forward_structured_daemon_chunk(
+            service,
+            chunk,
+            **kwargs,
+        )
+    )
+    service._forward_structured_thinking_chunk = (
+        lambda chunk, **kwargs: (
+            LLMAPIService._forward_structured_thinking_chunk(
+                service,
+                chunk,
+                **kwargs,
+            )
+        )
+    )
+    service._forward_structured_assistant_chunk = (
+        lambda chunk, **kwargs: (
+            LLMAPIService._forward_structured_assistant_chunk(
+                service,
+                chunk,
+                **kwargs,
+            )
+        )
     )
     service._extract_visible_daemon_text = (
         lambda message, state, request_id: (
@@ -795,6 +804,12 @@ def _daemon_bridge_service(emitted_responses, emitted_signals=None):
             chunk,
             **kwargs,
         )
+    )
+    service._daemon_message_type = lambda chunk: (
+        LLMAPIService._daemon_message_type(chunk)
+    )
+    service._reset_structured_hidden_output = lambda state: (
+        LLMAPIService._reset_structured_hidden_output(state)
     )
     service._response_from_daemon_chunk = lambda chunk, **kwargs: (
         LLMAPIService._response_from_daemon_chunk(chunk, **kwargs)
