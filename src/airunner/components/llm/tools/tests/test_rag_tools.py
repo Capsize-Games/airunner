@@ -1,6 +1,7 @@
 """Unit tests for RAG tool result formatting."""
 
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 from airunner.components.llm.tools.rag_tools import rag_search
 
@@ -54,3 +55,30 @@ def test_rag_search_keeps_excerpts_for_content_queries():
     assert (
         "[Excerpt 1 from The Satanic Bible - Anton LaVey.pdf]" in result
     )
+
+
+def test_rag_search_expands_single_document_pronoun_queries():
+    """Single-document follow-ups should include the active doc name."""
+    doc = SimpleNamespace(
+        metadata={
+            "source": "/library/The Satanic Bible - Anton LaVey.pdf",
+            "file_name": "The Satanic Bible - Anton LaVey.pdf",
+            "file_type": ".pdf",
+            "file_path": "/library/The Satanic Bible - Anton LaVey.pdf",
+        },
+        page_content="Contents page excerpt.",
+    )
+    search = Mock(return_value=[doc])
+    api = SimpleNamespace(
+        search=search,
+        _get_active_document_names=lambda: [
+            "The Satanic Bible - Anton LaVey.pdf"
+        ],
+    )
+
+    rag_search("what are the chapters in it?", api=api)
+
+    effective_query = search.call_args.args[0]
+    assert "what are the chapters in it?" in effective_query
+    assert "The Satanic Bible" in effective_query
+    assert "Anton LaVey" in effective_query

@@ -656,6 +656,7 @@ mjx-container[display="true"] {
 .unified-status-widget.expanded .thinking-content-wrapper {
     max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .thinking-content-inner {
@@ -667,8 +668,8 @@ mjx-container[display="true"] {
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: 180px;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
 }
 
 /* Legacy support - keep old classes working */

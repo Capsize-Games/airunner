@@ -253,6 +253,7 @@ def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     assert "answer directly and briefly by naming the document" in prompt
     assert "Do not mention search results or instructions" in prompt
     assert "author" in prompt
+    assert "labels like Draft:, Answer:, or Response:" in prompt
 
 
 class _InternalSynthesisReasoningChatModel:
@@ -336,6 +337,41 @@ def test_forced_response_identity_falls_back_from_meta_visible_text():
     assert message.content == (
         "This document is a PDF document titled 'The Satanic Bible' "
         "by Anton LaVey."
+    )
+
+
+class _DraftPrefixedVisibleResponseChatModel:
+    """Fake model that prefixes a visible answer with a draft label."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _chunk(
+                    "Draft: Based on the retrieved passages, I can see "
+                    "two section titles."
+                )
+            ]
+        )
+
+
+def test_forced_response_strips_visible_draft_label():
+    """Visible forced responses should drop synthetic draft prefixes."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _DraftPrefixedVisibleResponseChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\nDocument 1: Example.pdf",
+        "rag_search",
+        "what are the chapters in it?",
+    )
+
+    assert message.content == (
+        "Based on the retrieved passages, I can see two section titles."
     )
 
 

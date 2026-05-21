@@ -6,6 +6,7 @@ and saving new content to the knowledge base.
 """
 
 import os
+import re
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
@@ -47,6 +48,71 @@ def _is_document_identity_query(query: str) -> bool:
     )
     mentions_document = "document" in normalized or "file" in normalized
     return asks_identity and mentions_document
+
+
+def _query_mentions_document_reference(query: str) -> bool:
+    """Return whether one query refers to one implied document."""
+    normalized = " ".join(str(query or "").lower().split())
+    if not normalized:
+        return False
+
+    patterns = (
+        r"\bit\b",
+        r"\bits\b",
+        r"\bthis document\b",
+        r"\bthat document\b",
+        r"\bthe document\b",
+        r"\bthis file\b",
+        r"\bthat file\b",
+        r"\bthe file\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in patterns)
+
+
+def _document_query_context(document_name: str) -> str:
+    """Return one compact document label for query augmentation."""
+    label = os.path.basename(str(document_name or "")).strip()
+    if not label:
+        return ""
+
+    title_hint, author_hint = _infer_filename_details(label)
+    if title_hint and author_hint:
+        return f"{title_hint} by {author_hint}"
+    if title_hint:
+        return title_hint
+
+    stem = os.path.splitext(label)[0].replace("_", " ").strip()
+    return stem or label
+
+
+def _expand_query_with_active_document(
+    query: str,
+    rag_manager: Any,
+) -> str:
+    """Augment one pronoun query with the single active document name."""
+    if _is_document_identity_query(query):
+        return query
+    if not _query_mentions_document_reference(query):
+        return query
+
+    get_names = getattr(rag_manager, "_get_active_document_names", None)
+    if not callable(get_names):
+        return query
+
+    active_names = [
+        str(name).strip()
+        for name in get_names()
+        if str(name or "").strip()
+    ]
+    active_names = list(dict.fromkeys(active_names))
+    if len(active_names) != 1:
+        return query
+
+    context = _document_query_context(active_names[0])
+    if not context:
+        return query
+
+    return f"{query.strip()} Document context: {context}"
 
 
 def _document_label(metadata: dict[str, Any]) -> str:
@@ -225,7 +291,20 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
-        results = rag_manager.search(query, k=3)
+        effective_query = _expand_query_with_active_document(
+            query,
+            rag_manager,
+        )
+        if effective_query != query:
+            logger.info(
+                "Expanded RAG query with active document context (%s)",
+                summarize_text(
+                    effective_query,
+                    label="effective_query",
+                ),
+            )
+
+        results = rag_manager.search(effective_query, k=3)
         logger.info(
             f"rag_manager.search returned "
             f"{len(results) if results else 0} results"

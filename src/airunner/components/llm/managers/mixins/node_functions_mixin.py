@@ -673,7 +673,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "Based on the search results above, provide a clear, "
             "conversational answer to the user's question. Use ONLY the "
             "information from the search results. Do not call any tools, "
-            "do not use JSON, just write a natural response. Avoid "
+            "do not use JSON, and do not prefix the reply with labels "
+            "like Draft:, Answer:, or Response:. Just write a natural "
+            "response. Avoid "
             "repetition and be concise."
         )
 
@@ -742,6 +744,31 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         return ""
 
     @staticmethod
+    def _strip_forced_response_label(text: str) -> str:
+        """Remove one synthetic response label from visible text."""
+        cleaned = str(text or "").strip()
+        if not cleaned:
+            return ""
+
+        patterns = (
+            r"^(?:\*\*)?draft(?:\*\*)?\s*:\s*(.+)$",
+            r"^(?:\*\*)?answer(?:\*\*)?\s*:\s*(.+)$",
+            r"^(?:\*\*)?response(?:\*\*)?\s*:\s*(.+)$",
+            r"^(?:\*\*)?final answer(?:\*\*)?\s*:\s*(.+)$",
+            r"^(?:\*\*)?final response(?:\*\*)?\s*:\s*(.+)$",
+        )
+        for pattern in patterns:
+            match = re.match(
+                pattern,
+                cleaned,
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            if match:
+                return match.group(1).strip()
+
+        return cleaned
+
+    @staticmethod
     def _looks_like_instruction_reflection(text: str) -> bool:
         """Return True for meta self-corrections, not user-facing answers."""
         lowered = " ".join(str(text or "").lower().split())
@@ -793,7 +820,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
         visible_content = str(getattr(response_message, "content", "") or "")
         if visible_content.strip():
-            cleaned_visible = visible_content.strip()
+            cleaned_visible = self._strip_forced_response_label(
+                visible_content
+            )
             if not self._looks_like_instruction_reflection(
                 cleaned_visible
             ):
@@ -950,6 +979,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             return ""
         if candidate[:1] == candidate[-1:] and candidate[:1] in {'"', "'"}:
             candidate = candidate[1:-1].strip()
+        candidate = self._strip_forced_response_label(candidate)
         if self._looks_like_instruction_reflection(candidate):
             return ""
         if self._looks_like_reasoning_header(candidate):

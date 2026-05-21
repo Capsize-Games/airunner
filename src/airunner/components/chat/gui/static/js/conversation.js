@@ -849,6 +849,25 @@ function updateStatusContainer(container, items) {
                 container.appendChild(element);
             }
         }
+
+        if (item.type === 'thinking' && item.content) {
+            scrollThinkingContentToBottom(element);
+        }
+    });
+}
+
+function scrollThinkingContentToBottom(element) {
+    if (!element) return;
+
+    const wrapper = element.querySelector('.thinking-content-wrapper');
+    if (!wrapper) return;
+
+    const inner = wrapper.querySelector('.thinking-content-inner');
+    requestAnimationFrame(() => {
+        wrapper.scrollTop = wrapper.scrollHeight;
+        if (inner) {
+            inner.scrollTop = inner.scrollHeight;
+        }
     });
 }
 
