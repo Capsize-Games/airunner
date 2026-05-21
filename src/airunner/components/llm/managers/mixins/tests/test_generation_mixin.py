@@ -195,6 +195,7 @@ class TestCreateStreamingCallback:
         assert call_args.is_end_of_message is False
         assert call_args.is_first_message is True
         assert call_args.sequence_number == 1
+        assert call_args.message_type == "assistant"
 
     def test_callback_marks_first_message(self, mixin, llm_request):
         """Should mark first message correctly."""
@@ -289,6 +290,7 @@ class TestHandleInterruptedGeneration:
         assert call_args.message == ""
         assert call_args.is_end_of_message is True
         assert call_args.sequence_number == 6  # counter + 1
+        assert call_args.message_type == "assistant"
 
     def test_handles_none_request(self, mixin):
         """Should handle None request gracefully."""
@@ -354,6 +356,7 @@ class TestHandleGenerationError:
         assert isinstance(call_args, LLMResponse)
         assert call_args.message == "Error: Test error"
         assert call_args.is_end_of_message is False
+        assert call_args.message_type == "system"
 
     def test_handles_none_request(self, mixin):
         """Should handle None request gracefully."""

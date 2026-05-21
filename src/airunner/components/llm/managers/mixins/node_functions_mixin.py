@@ -5,6 +5,7 @@ These are broken into focused helper methods for maintainability.
 """
 
 import os
+import json
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
@@ -24,6 +25,7 @@ from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_close_tag,
 )
 from airunner.components.llm.utils.stream_text import combine_stream_chunks
+from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.enums import SignalCode
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
@@ -2517,6 +2519,81 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             getattr(self, "_force_tool", None) or forced_tool_choice
         )
         pending_visible_chunks: List[str] = []
+        headless_thinking_open = False
+        emitted_tool_call_keys: set[str] = set()
+
+        def emit_headless_phase_chunk(
+            response: LLMResponse,
+        ) -> None:
+            """Route one typed phase chunk through the headless NDJSON path."""
+            if not is_headless or not has_emitter:
+                return
+            self._signal_emitter.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                {
+                    "response": response,
+                    "request_id": request_id,
+                },
+            )
+
+        def emit_headless_thinking_chunk(
+            content: str,
+            *,
+            is_end: bool = False,
+        ) -> None:
+            """Emit one typed thinking chunk for the daemon stream."""
+            nonlocal headless_thinking_open
+            if not is_headless or not has_emitter:
+                return
+            if not headless_thinking_open and not content and not is_end:
+                return
+            emit_headless_phase_chunk(
+                LLMResponse(
+                    message="",
+                    is_first_message=not headless_thinking_open,
+                    is_end_of_message=is_end,
+                    request_id=request_id,
+                    message_type="thinking",
+                    thinking_content=content,
+                )
+            )
+            if not headless_thinking_open:
+                headless_thinking_open = True
+            if is_end:
+                headless_thinking_open = False
+
+        def emit_headless_tool_call_chunk(tool_call: Dict[str, Any]) -> None:
+            """Emit one typed tool-call chunk for the daemon stream."""
+            if not is_headless or not has_emitter:
+                return
+            tool_name = str(tool_call.get("name") or "").strip()
+            if not tool_name:
+                return
+            tool_args = tool_call.get("args") or tool_call.get("arguments")
+            dedupe_key = json.dumps(
+                {
+                    "id": tool_call.get("id"),
+                    "name": tool_name,
+                    "arguments": tool_args,
+                },
+                sort_keys=True,
+                default=str,
+            )
+            if dedupe_key in emitted_tool_call_keys:
+                return
+            emitted_tool_call_keys.add(dedupe_key)
+            emit_headless_phase_chunk(
+                LLMResponse(
+                    message="",
+                    is_first_message=True,
+                    is_end_of_message=True,
+                    request_id=request_id,
+                    message_type="tool_call",
+                    tool_name=tool_name,
+                    tool_arguments=(tool_args if isinstance(tool_args, dict) else None),
+                    tool_status="completed",
+                )
+            )
 
         def emit_thinking_signal(status: str, content: str) -> None:
             """Emit one request-scoped thinking update to the GUI."""
@@ -2600,6 +2677,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 chunk_tool_calls = getattr(chunk_message, "tool_calls", None)
                 if chunk_tool_calls:
                     collected_tool_calls.extend(chunk_tool_calls)
+                    for tool_call in chunk_tool_calls:
+                        if isinstance(tool_call, dict):
+                            emit_headless_tool_call_chunk(tool_call)
 
                 # Only skip if content, tool calls, and reasoning are all empty.
                 if not text and not chunk_tool_calls and not reasoning_delta:
@@ -2616,6 +2696,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
                     thinking_content.append(reasoning_delta)
                     emit_thinking_signal("streaming", reasoning_delta)
+                    emit_headless_thinking_chunk(reasoning_delta)
 
                     if not text:
                         continue
@@ -2627,6 +2708,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                         "completed",
                         final_thinking_content,
                     )
+                    emit_headless_thinking_chunk("", is_end=True)
                     thinking_content = []
 
                 found_open, tag_format, before_open, after_think = (
@@ -2656,6 +2738,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                                 "streaming",
                                 before_close,
                             )
+                            emit_headless_thinking_chunk(before_close)
 
                         in_thinking_block = False
                         final_thinking_content = "".join(thinking_content)
@@ -2663,6 +2746,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                             "completed",
                             final_thinking_content,
                         )
+                        emit_headless_thinking_chunk("", is_end=True)
                         thinking_content = []
 
                         if after_close:
@@ -2676,6 +2760,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                             "streaming",
                             after_think,
                         )
+                        emit_headless_thinking_chunk(after_think)
                     continue
 
                 if in_thinking_block:
@@ -2692,6 +2777,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                                 "streaming",
                                 before_close,
                             )
+                            emit_headless_thinking_chunk(before_close)
 
                         in_thinking_block = False
                         final_thinking_content = "".join(thinking_content)
@@ -2699,6 +2785,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                             "completed",
                             final_thinking_content,
                         )
+                        emit_headless_thinking_chunk("", is_end=True)
                         thinking_content = []
 
                         if after_close:
@@ -2709,6 +2796,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     else:
                         emit_thinking_signal("streaming", text)
                         thinking_content.append(text)
+                        emit_headless_thinking_chunk(text)
                     continue
                 
                 text_to_stream = text
@@ -2792,6 +2880,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "completed",
                     final_thinking_content,
                 )
+                emit_headless_thinking_chunk("", is_end=True)
 
             if hold_visible_output and not collected_tool_calls:
                 combined_visible = combine_stream_chunks(pending_visible_chunks)

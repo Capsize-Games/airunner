@@ -33,6 +33,7 @@ class StatusManagementMixin:
             is_end_of_message=True,
             is_system_message=True,
             request_id=getattr(self, "_current_request_id", None),
+            message_type="system",
         )
 
         try:
@@ -60,6 +61,7 @@ class StatusManagementMixin:
             is_end_of_message=False,
             is_system_message=True,
             request_id=getattr(self, "_current_request_id", None),
+            message_type="system",
         )
 
         try:
@@ -91,6 +93,7 @@ class StatusManagementMixin:
             action=LLMActionType.CHAT,
             is_system_message=True,
             request_id=getattr(self, "_current_request_id", None),
+            message_type="system",
         )
 
         self.emit_signal(

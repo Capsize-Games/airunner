@@ -87,6 +87,7 @@ class GenerationMixin:
                 is_first_message=(sequence_counter[0] == 1),
                 sequence_number=sequence_counter[0],
                 request_id=getattr(self, "_current_request_id", None),
+                    message_type="assistant",
             )
         )
 
@@ -337,6 +338,7 @@ class GenerationMixin:
                     is_first_message=(sequence_counter[0] == 1),
                     sequence_number=sequence_counter[0],
                     request_id=getattr(self, "_current_request_id", None),
+                    message_type="assistant",
                 )
             )
 
@@ -363,6 +365,7 @@ class GenerationMixin:
                 is_end_of_message=True,
                 sequence_number=sequence_counter + 1,
                 request_id=getattr(self, "_current_request_id", None),
+                message_type="assistant",
             )
         )
         return ""
@@ -421,6 +424,7 @@ class GenerationMixin:
                 message=error_message,
                 is_end_of_message=False,
                 request_id=getattr(self, "_current_request_id", None),
+                message_type="system",
             )
         )
         return error_message
@@ -844,6 +848,7 @@ class GenerationMixin:
                 sequence_number=sequence_counter[0],
                 request_id=getattr(self, "_current_request_id", None),
                 tools=executed_tools,  # Include the tools here!
+                message_type="assistant",
                 prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
                 completion_tokens=int(completion_tokens) if completion_tokens is not None else None,
                 total_tokens=int(total_tokens) if total_tokens is not None else None,
@@ -874,6 +879,7 @@ class GenerationMixin:
                 is_end_of_message=True,
                 request_id=getattr(self, "_current_request_id", None),
                 tools=executed_tools,
+                message_type="assistant",
             )
         )
 

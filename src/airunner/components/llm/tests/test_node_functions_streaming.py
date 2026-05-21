@@ -112,6 +112,51 @@ def test_headless_reasoning_deltas_still_persist_thinking_content():
     mixin._token_callback.assert_called_once_with("Hello!")
 
 
+def test_headless_streaming_emits_structured_thinking_phase_chunks(
+    monkeypatch,
+):
+    """Headless streams should emit typed thinking chunks for daemon NDJSON."""
+    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
+    mixin = NodeFunctionsMixinDouble([_reasoning_chunk("Hello!", "plan")])
+
+    mixin._generate_streaming_response([], {})
+
+    thinking_chunks = [
+        call.args[1]["response"]
+        for call in mixin._signal_emitter.emit_signal.call_args_list
+        if call.args[0] == SignalCode.LLM_TEXT_STREAMED_SIGNAL
+    ]
+
+    assert [chunk.message_type for chunk in thinking_chunks] == [
+        "thinking",
+        "thinking",
+    ]
+    assert thinking_chunks[0].thinking_content == "plan"
+    assert thinking_chunks[0].is_first_message is True
+    assert thinking_chunks[-1].is_end_of_message is True
+
+
+def test_headless_streaming_emits_structured_tool_call_chunks(monkeypatch):
+    """Headless streams should emit typed tool-call chunks for daemon NDJSON."""
+    monkeypatch.setenv("AIRUNNER_HEADLESS", "1")
+    mixin = NodeFunctionsMixinDouble([_tool_call_chunk("rag_search")])
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.tool_calls[0]["name"] == "rag_search"
+    phase_chunks = [
+        call.args[1]["response"]
+        for call in mixin._signal_emitter.emit_signal.call_args_list
+        if call.args[0] == SignalCode.LLM_TEXT_STREAMED_SIGNAL
+    ]
+    assert len(phase_chunks) == 1
+    assert phase_chunks[0].message_type == "tool_call"
+    assert phase_chunks[0].tool_name == "rag_search"
+    assert phase_chunks[0].tool_arguments == {
+        "query": "what is this document?"
+    }
+
+
 def test_force_tool_turn_suppresses_visible_planning_text():
     """Forced tool turns should not stream planning prose into chat."""
     mixin = NodeFunctionsMixinDouble(
@@ -317,15 +362,12 @@ class _PromptCapturingChatModel:
 def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     """RAG synthesis prompt should prioritize document identity cues."""
     mixin = NodeFunctionsMixinDouble([])
-    mixin._chat_model = _PromptCapturingChatModel()
-
-    mixin._generate_response_message_from_results(
+    prompt = mixin._build_search_results_prompt(
         "Matched documents:\nDocument 1: The Satanic Bible - Anton LaVey.pdf",
         "rag_search",
         "What is this document?",
     )
 
-    prompt = mixin._chat_model.prompts[0]
     assert "answer directly and briefly by naming the document" in prompt
     assert "Do not mention search results or instructions" in prompt
     assert "author" in prompt
@@ -335,15 +377,12 @@ def test_forced_response_prompt_prioritizes_document_identity_for_rag():
 def test_forced_response_prompt_avoids_metadata_repetition_for_structure():
     """Structure prompts should not force repeated document identity."""
     mixin = NodeFunctionsMixinDouble([])
-    mixin._chat_model = _PromptCapturingChatModel()
-
-    mixin._generate_response_message_from_results(
+    prompt = mixin._build_search_results_prompt(
         "Document structure:\n1. INTRODUCTION\n2. PROLOGUE",
         "rag_search",
         "what chapters are in it?",
     )
 
-    prompt = mixin._chat_model.prompts[0]
     assert "answer with the section names only" in prompt
     assert "Do not restate the document title" in prompt
 
@@ -390,9 +429,9 @@ def test_forced_response_keeps_thinking_updates_and_completes():
     mixin._chat_model = _InternalSynthesisReasoningChatModel()
 
     message = mixin._generate_response_message_from_results(
-        "Matched documents:\nDocument 1: Example.pdf",
+        "Relevant excerpts:\nA substantive passage.",
         "rag_search",
-        "What is this document?",
+        "summarize the document for me",
     )
 
     assert message.content == "Visible answer"
