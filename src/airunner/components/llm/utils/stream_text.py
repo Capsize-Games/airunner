@@ -17,6 +17,28 @@ _WORD_CONTINUATION = frozenset("_")
 _WORD_ENDERS = frozenset(")]}\"'")
 _SENTENCE_ENDERS = frozenset(".!?;:")
 _SINGLE_LETTER_WORDS = frozenset({"a", "i"})
+_OPENING_QUOTE_CHARS = frozenset({'"', "'", "“"})
+_COMPOUND_SUFFIX_FRAGMENTS = frozenset(
+    {
+        "anic",
+        "ative",
+        "ibility",
+        "cident",
+        "ding",
+        "ful",
+        "ical",
+        "ically",
+        "like",
+        "loss",
+        "ment",
+        "mystery",
+        "ness",
+        "olic",
+        "pective",
+        "ship",
+        "tion",
+    }
+)
 _COMMON_WORDS = frozenset(
     {
         "a",
@@ -41,12 +63,18 @@ _COMMON_WORDS = frozenset(
         "but",
         "by",
         "can",
+        "car",
+        "character",
+        "characters",
         "city",
+        "cold",
+        "collection",
         "dead",
         "death",
         "document",
         "distinct",
         "divided",
+        "dreamlike",
         "for",
         "front",
         "from",
@@ -77,12 +105,16 @@ _COMMON_WORDS = frozenset(
         "lunatics",
         "maximus",
         "me",
+        "melancholic",
         "memory",
         "more",
+        "mystery",
         "narrator",
         "night",
+        "noir",
         "no",
         "not",
+        "now",
         "of",
         "on",
         "one",
@@ -94,6 +126,8 @@ _COMMON_WORDS = frozenset(
         "results",
         "sat",
         "search",
+        "seem",
+        "seems",
         "set",
         "she",
         "someone",
@@ -121,6 +155,7 @@ _COMMON_WORDS = frozenset(
         "when",
         "where",
         "which",
+        "whimsical",
         "who",
         "why",
         "will",
@@ -135,7 +170,7 @@ _COMMON_WORDS = frozenset(
         "anton",
     }
 )
-_WORD_PATTERN = re.compile(r"[A-Za-z]+")
+_WORD_PATTERN = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
 
 
 def _is_space_separated_symbol(char: str) -> bool:
@@ -170,16 +205,43 @@ def _is_known_word(word: str) -> bool:
     return word.isalpha() and word.lower() in _load_known_words()
 
 
+def _looks_like_compound_suffix_fragment(fragment: str) -> bool:
+    """Return whether one fragment looks like a split-word suffix."""
+    lowered = str(fragment or "").lower()
+    if lowered in _COMPOUND_SUFFIX_FRAGMENTS:
+        return True
+    return len(lowered) >= 4 and any(
+        lowered.endswith(suffix)
+        for suffix in ("like", "olic", "anic", "ment", "ness", "tion")
+    )
+
+
+def _ends_with_opening_quote(existing: str) -> bool:
+    """Return whether the current buffer ends with an opening quote."""
+    if not existing:
+        return False
+    if existing[-1] not in _OPENING_QUOTE_CHARS:
+        return False
+    if len(existing) == 1:
+        return True
+    prev_char = existing[-2]
+    return prev_char.isspace() or prev_char in _OPENING_CHARS
+
+
 def _should_strip_leading_space(existing: str, stripped: str) -> bool:
     """Return whether one leading space looks like a split-word artifact."""
     left = _trailing_word(existing)
     right = _leading_word(stripped)
     if not left or not right:
         return False
+    if _ends_with_opening_quote(existing):
+        return True
     if _is_known_word(left + right):
         return True
     if _is_known_word(left) or _is_known_word(right):
         return False
+    if _looks_like_compound_suffix_fragment(right):
+        return True
     return len(left) <= 3 and len(right) >= 4
 
 
@@ -234,6 +296,8 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
         return True
     if prev in _MARKDOWN_DELIMITERS and next_is_word:
         return existing.count(prev) % 2 == 0
+    if _ends_with_opening_quote(existing):
+        return False
 
     if prev_is_word and next_is_word:
         return _needs_plain_word_boundary(existing, chunk)
@@ -255,16 +319,23 @@ def prepare_stream_chunk(existing: str, chunk: str) -> str:
     """Prefix one chunk with a spacer when the boundary needs it."""
     if not chunk:
         return ""
+    stripped_split_word = False
     if chunk[:1].isspace():
         stripped = chunk.lstrip()
         if (
             stripped
             and existing
-            and existing[-1].isalpha()
+            and (
+                existing[-1].isalpha()
+                or _ends_with_opening_quote(existing)
+            )
             and stripped[0].islower()
             and _should_strip_leading_space(existing, stripped)
         ):
             chunk = stripped
+            stripped_split_word = True
+    if stripped_split_word:
+        return chunk
     if needs_stream_space(existing, chunk):
         return f" {chunk}"
     return chunk

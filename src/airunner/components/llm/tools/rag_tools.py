@@ -60,6 +60,47 @@ _PREMISE_CONTEXT_MARKERS = (
     "hollywood",
     "studio",
 )
+_PREMISE_GROUNDED_MYSTERY_MARKERS = (
+    "accident",
+    "apparently",
+    "corruption",
+    "disguise",
+    "effects",
+    "fake",
+    "hoax",
+    "illusion",
+    "illusions",
+    "investigat",
+    "makeup",
+    "murder",
+    "mystery",
+    "noir",
+    "return",
+    "roller skates",
+    "remember",
+    "scheme",
+    "schemes",
+    "special effects",
+    "supposedly",
+    "trick",
+    "wall",
+)
+_PREMISE_DIALOGUE_MARKERS = (
+    " asked ",
+    " cried ",
+    " said ",
+    " says ",
+    " shouted ",
+    " yelled ",
+    " you ",
+    " your ",
+)
+_PREMISE_DIALOGUE_SCENE_MARKERS = (
+    "career",
+    "drink",
+    "drunk",
+    "lifestyle",
+)
 
 
 def _coerce_active_values(values: Any) -> list[str]:
@@ -342,9 +383,13 @@ def _format_excerpt(
     position: int,
     metadata: dict[str, Any],
     content: str,
+    *,
+    include_document_label: bool = True,
 ) -> str:
     """Format one retrieved excerpt with its document label."""
     excerpt = content[:500] if len(content) > 500 else content
+    if not include_document_label:
+        return excerpt
     label = _document_label(metadata)
     return f"[Excerpt {position} from {label}]\n{excerpt}"
 
@@ -353,6 +398,8 @@ def _format_rag_search_results(
     results: list[Any],
     *,
     include_excerpts: bool = True,
+    include_document_summaries: bool = True,
+    include_excerpt_labels: bool = True,
 ) -> str:
     """Return one user-facing RAG search result string."""
     document_summaries: list[str] = []
@@ -368,7 +415,7 @@ def _format_rag_search_results(
             or f"result-{index}"
         )
 
-        if document_key not in seen_documents:
+        if include_document_summaries and document_key not in seen_documents:
             seen_documents.add(document_key)
             document_summaries.append(
                 _format_document_summary(len(document_summaries) + 1, metadata)
@@ -380,6 +427,7 @@ def _format_rag_search_results(
                     index,
                     metadata,
                     str(getattr(doc, "page_content", "") or ""),
+                    include_document_label=include_excerpt_labels,
                 )
             )
 
@@ -435,12 +483,16 @@ def _split_document_sections(text: str) -> list[tuple[str, str]]:
     return sections
 
 
-def _split_document_paragraphs(text: str) -> list[str]:
+def _split_document_paragraphs(
+    text: str,
+    *,
+    min_words: int = 12,
+) -> list[str]:
     """Return substantive paragraphs from one extracted document."""
     paragraphs: list[str] = []
     for paragraph in re.split(r"\n\s*\n", str(text or "")):
         cleaned = " ".join(paragraph.split())
-        if len(cleaned.split()) >= 12:
+        if len(cleaned.split()) >= min_words:
             paragraphs.append(cleaned)
     return paragraphs
 
@@ -536,7 +588,8 @@ def _build_summary_evidence_text(
 
 def _premise_paragraph_score(paragraph: str) -> int:
     """Score one paragraph for premise-level summary usefulness."""
-    lowered = str(paragraph or "").lower()
+    source = str(paragraph or "")
+    lowered = source.lower()
     if not lowered:
         return 0
 
@@ -549,9 +602,58 @@ def _premise_paragraph_score(paragraph: str) -> int:
     context_hits = sum(
         marker in lowered for marker in _PREMISE_CONTEXT_MARKERS
     )
+    grounded_hits = sum(
+        marker in lowered
+        for marker in _PREMISE_GROUNDED_MYSTERY_MARKERS
+    )
+    dialogue_penalty = _premise_dialogue_penalty(source)
     word_count = len(lowered.split())
     length_bonus = 1 if 20 <= word_count <= 140 else 0
-    return plot_hits * 5 + atmosphere_hits + context_hits + length_bonus
+    score = (
+        plot_hits * 5
+        + grounded_hits * 3
+        + atmosphere_hits
+        + context_hits
+        + length_bonus
+    )
+    return max(0, score - dialogue_penalty)
+
+
+def _premise_dialogue_penalty(paragraph: str) -> int:
+    """Return one penalty for dialogue-heavy or accusatory side scenes."""
+    source = str(paragraph or "")
+    lowered = f" {source.lower()} "
+    if not lowered.strip():
+        return 0
+    quote_hits = sum(source.count(char) for char in ('"', "“", "”"))
+    dialogue_hits = sum(
+        marker in lowered for marker in _PREMISE_DIALOGUE_MARKERS
+    )
+    scene_hits = sum(
+        marker in lowered for marker in _PREMISE_DIALOGUE_SCENE_MARKERS
+    )
+    penalty = quote_hits * 2 + dialogue_hits * 3 + scene_hits * 2
+    if quote_hits and (dialogue_hits or scene_hits):
+        penalty += 6
+    return penalty
+
+
+def _premise_opening_score(paragraph: str) -> int:
+    """Score one early paragraph for premise-level opening usefulness."""
+    lowered = str(paragraph or "").lower()
+    if not lowered:
+        return 0
+    context_hits = sum(
+        marker in lowered for marker in _PREMISE_CONTEXT_MARKERS
+    )
+    grounded_hits = sum(
+        marker in lowered
+        for marker in _PREMISE_GROUNDED_MYSTERY_MARKERS
+    )
+    atmosphere_hits = sum(
+        marker in lowered for marker in _PREMISE_ATMOSPHERE_MARKERS
+    )
+    return context_hits * 3 + grounded_hits * 2 + atmosphere_hits
 
 
 def _build_premise_evidence_documents(
@@ -559,6 +661,7 @@ def _build_premise_evidence_documents(
     text: str,
 ) -> list[Any]:
     """Build premise-focused evidence for book/document about queries."""
+    raw_paragraphs = _split_document_paragraphs(text, min_words=1)
     paragraphs = _split_document_paragraphs(text)
     if not paragraphs:
         return []
@@ -574,8 +677,31 @@ def _build_premise_evidence_documents(
         seen.add(cleaned)
         selected.append((label, cleaned))
 
-    for paragraph in paragraphs[:3]:
+    opening_window = [
+        paragraph
+        for paragraph in raw_paragraphs[:3]
+        if len(paragraph.split()) >= 8
+    ]
+    if not opening_window:
+        opening_window = paragraphs[: min(len(paragraphs), 3)]
+    scored_openings = sorted(
+        (
+            (_premise_opening_score(paragraph), index, paragraph)
+            for index, paragraph in enumerate(opening_window)
+        ),
+        key=lambda item: (-item[0], item[1]),
+    )
+    opening_limit = 2 if len(opening_window) > 3 else 1
+    added_openings = 0
+    for score, _index, paragraph in scored_openings:
+        if score < 2:
+            continue
         add("Opening context", paragraph)
+        added_openings += 1
+        if added_openings >= opening_limit:
+            break
+    if not selected and opening_window:
+        add("Opening context", opening_window[0])
 
     hook_window = paragraphs[: min(len(paragraphs), 120)]
     scored_hooks = [
@@ -589,16 +715,30 @@ def _build_premise_evidence_documents(
         if len(selected) >= premise_limit:
             break
 
-    if len(selected) < 4:
+    if len(selected) < 3:
         opening_window_size = min(
             len(paragraphs),
             max(3, min(12, len(paragraphs) // 3)),
         )
         early_window = paragraphs[:opening_window_size]
-        for paragraph in _select_evenly_spaced_items(
-            early_window,
-            min(len(early_window), premise_limit),
-        ):
+        scored_early_window = sorted(
+            (
+                (
+                    max(
+                        _premise_paragraph_score(paragraph),
+                        _premise_opening_score(paragraph)
+                        - _premise_dialogue_penalty(paragraph),
+                    ),
+                    index,
+                    paragraph,
+                )
+                for index, paragraph in enumerate(early_window)
+            ),
+            key=lambda item: (-item[0], item[1]),
+        )
+        for score, _index, paragraph in scored_early_window:
+            if score <= 0:
+                continue
             add("Opening context", paragraph)
             if len(selected) >= premise_limit:
                 break
@@ -795,6 +935,7 @@ def rag_search(
         "rag_search called (%s)",
         summarize_text(query, label="query"),
     )
+    summary_query = _is_summary_query(query)
 
     # For RAG tools, api IS the rag_manager (LLMModelManager with RAG search methods)
     rag_manager = api
@@ -815,7 +956,7 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
-        if _is_summary_query(query):
+        if summary_query:
             summary_results = _build_single_document_summary_results(
                 rag_manager,
                 query=query,
@@ -824,6 +965,8 @@ def rag_search(
                 result_text = _format_rag_search_results(
                     summary_results,
                     include_excerpts=True,
+                    include_document_summaries=False,
+                    include_excerpt_labels=False,
                 )
                 logger.info(
                     "Returning %s summary evidence excerpts built from full document text",
@@ -848,7 +991,7 @@ def rag_search(
             effective_query,
             k=(
                 _SUMMARY_RETRIEVAL_K
-                if _is_summary_query(query)
+                if summary_query
                 else _STANDARD_RETRIEVAL_K
             ),
         )
@@ -879,6 +1022,8 @@ def rag_search(
         result_text = _format_rag_search_results(
             results,
             include_excerpts=True,
+            include_document_summaries=not summary_query,
+            include_excerpt_labels=not summary_query,
         )
         logger.info(
             f"Returning {len(results)} document excerpts, "

@@ -95,6 +95,9 @@ def test_rag_search_builds_summary_evidence_across_document(
 
     result = rag_search("summarize the document for me", api=api)
 
+    assert "Matched documents:" not in result
+    assert "Inferred title from filename:" not in result
+    assert "[Excerpt 1 from" not in result
     assert "Front matter (INTRODUCTION)." in result
     assert "Section: THE BOOK OF SATAN." in result
     assert "Section: THE BOOK OF BELIAL." in result
@@ -185,9 +188,107 @@ def test_rag_search_book_about_query_prefers_premise_over_late_scene_noise(
 
     result = rag_search("what is this book about?", api=api)
 
+    assert "Matched documents:" not in result
+    assert "Inferred title from filename:" not in result
     assert "haunted Hollywood setting" in result
     assert "central conflict" in result
     assert "Madrid, Rome, and Calcutta" not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_prefers_grounded_mystery_hooks(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise evidence should favor grounded mystery hooks over eerie framing."""
+    file_path = "/library/A Graveyard for Lunatics - Ray Bradbury.mobi"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            "The city is described as if the living and the dead occupy neighboring realms.",
+            "Anything could happen in this dreamlike studio town where cemetery walls meet movie lots.",
+            "The atmosphere is eerie, theatrical, and full of memory.",
+            "A supposedly dead studio figure appears on a wall, forcing the narrator into a mystery tied to the studio's past.",
+            "The narrator remembers seeing the man years earlier on roller skates outside Maximus Films after a car accident.",
+            "Movie illusions, studio tricks, and human schemes shape the unfolding investigation across the lot.",
+        ]
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "supposedly dead studio figure" in result
+    assert "studio tricks, and human schemes" in result
+    assert "living and the dead occupy neighboring realms" not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_deprioritizes_stray_dialogue(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise evidence should not elevate quoted accusations over the mystery."""
+    file_path = "/library/A Graveyard for Lunatics - Ray Bradbury.mobi"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            "Maximus Films sits beside a cemetery, giving the story a haunted Hollywood setting.",
+            '"You write junk, you drink too much, and you still brood over the crash," someone says while recalling five people killed on the road.',
+            "A supposedly dead studio magnate on the cemetery wall pulls the narrator into a murder mystery tied to the studio's past.",
+            "The investigation turns toward studio corruption, special effects, makeup, and human schemes rather than a literal haunting.",
+        ]
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "supposedly dead studio magnate" in result
+    assert "studio corruption, special effects, makeup, and human schemes" in result
+    assert '"You write junk' not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_summary_omits_filename_inference_metadata(
+    mock_resolve,
+    mock_extract,
+):
+    """Summary evidence should not expose inferred filename bibliography."""
+    file_path = (
+        "/library/A Graveyard for Lunatics_ Another Tale of - Ray Bradbury.mobi"
+    )
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "Maximus Films stands beside a cemetery in a surreal Hollywood setting.\n\n"
+        "A supposedly dead studio figure appears to return, creating the central mystery."
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics_ Another Tale of - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "Inferred title from filename:" not in result
+    assert "Inferred author from filename:" not in result
+    assert "Another Tale of" not in result
 
 
 def test_rag_search_expands_single_document_pronoun_queries():

@@ -115,3 +115,49 @@ def test_combine_stream_chunks_preserves_model_emitted_spaces():
         )
         == "Based on the document, it appears to be a story"
     )
+
+
+def test_combine_stream_chunks_restores_common_word_boundaries():
+    """Common prose chunks should recover missing spaces between words."""
+    assert combine_stream_chunks(["car", "accident"]) == "car accident"
+
+
+def test_combine_stream_chunks_removes_split_word_suffix_spaces():
+    """Split-word suffix fragments should stay attached to the base word."""
+    assert combine_stream_chunks(["melanch", " olic"]) == "melancholic"
+
+
+def test_combine_stream_chunks_drops_space_after_opening_quote():
+    """Opening quotes should not keep an extra interior leading space."""
+    assert (
+        combine_stream_chunks(["He said", ' "', " hello", '"'])
+        == 'He said "hello"'
+    )
+
+
+def test_combine_stream_chunks_restores_missing_space_between_plain_words():
+    """Common lowercase words should not collapse into one token."""
+    assert combine_stream_chunks(["now", "seems"]) == "now seems"
+
+
+def test_combine_stream_chunks_removes_split_ibility_space():
+    """Split words ending in -ibility should stay contiguous."""
+    assert combine_stream_chunks(["imposs", " ibility"]) == "impossibility"
+
+
+def test_combine_stream_chunks_preserves_space_after_possessive_word():
+    """Possessive words should still keep a boundary before the next word."""
+    assert combine_stream_chunks(["writer's", "career"]) == "writer's career"
+
+
+def test_combine_stream_chunks_preserves_space_after_split_possessive():
+    """Possessive suffix chunks should attach left without collapsing right."""
+    assert (
+        combine_stream_chunks(["The narrator", "'s", "career"])
+        == "The narrator's career"
+    )
+
+
+def test_combine_stream_chunks_removes_split_pective_space():
+    """Split words ending in -pective should stay contiguous."""
+    assert combine_stream_chunks(["intros", " pective"]) == "introspective"

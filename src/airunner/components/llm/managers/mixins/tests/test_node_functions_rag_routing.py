@@ -389,6 +389,39 @@ def test_post_tool_instructions_specialize_rag_structure_answers():
     assert "Do NOT discuss your reasoning" in prompt
 
 
+def test_post_tool_instructions_specialize_rag_summary_answers():
+    """Summary answers should avoid genre and series hallucinations."""
+    mixin = _DummyNodeFunctions()
+    mixin._chat_model = SimpleNamespace(tool_calling_mode="json")
+
+    prompt = mixin._add_post_tool_instructions(
+        "Base prompt",
+        [
+            HumanMessage(content="what is this book about?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "rag_search",
+                        "args": {"query": "what is this book about?"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Opening context. Haunted Hollywood studio mystery.",
+                tool_call_id="tool-1",
+                name="rag_search",
+            ),
+        ],
+    )
+
+    assert "Do NOT infer a genre, series, trilogy, collection, or bibliography" in prompt
+    assert "Treat uncanny or dreamlike atmosphere as mood" in prompt
+    assert "Do NOT attribute quoted criticism, accusations, or stray dialogue" in prompt
+    assert "Do NOT call another tool" in prompt
+
+
 def test_build_search_results_prompt_uses_document_route_for_inspection():
     """Forced synthesis should honor the request-scoped inspection intent."""
     mixin = _DummyNodeFunctions()
@@ -423,6 +456,10 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
 
     assert "lead with the premise, setting, central conflict" in prompt
     assert "Treat isolated later scenes" in prompt
+    assert "Do not infer genre, series, trilogy, collection" in prompt
+    assert "prefer a grounded mystery or noir framing" in prompt
+    assert "Do not describe literal resurrection" in prompt
+    assert "Do not attribute criticism, accusations, or quoted dialogue" in prompt
 
 
 def test_build_search_results_prompt_specializes_compare_document_tasks():
