@@ -1013,6 +1013,28 @@ class ConversationWidget(BaseWidget):
             content,
         )
 
+    def show_model_loading_status(
+        self,
+        request_id: str,
+        message: str = "Loading model",
+    ) -> None:
+        """Show one request-scoped model loading status in the web view."""
+        self._dispatch_chat_bridge_call(
+            "updateModelLoadStatus",
+            request_id,
+            "started",
+            message,
+        )
+
+    def clear_model_loading_status(self, request_id: str) -> None:
+        """Remove one request-scoped model loading status from the web view."""
+        self._dispatch_chat_bridge_call(
+            "updateModelLoadStatus",
+            request_id,
+            "completed",
+            "",
+        )
+
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
         return self.ui.stage if self.ui and hasattr(self.ui, "stage") else None

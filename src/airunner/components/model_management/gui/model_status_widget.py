@@ -29,6 +29,7 @@ _UNLOAD_SIGNALS = {
     "controlnet": SignalCode.CONTROLNET_UNLOAD_SIGNAL,
     "llm": SignalCode.LLM_UNLOAD_SIGNAL,
     "llmmodel": SignalCode.LLM_UNLOAD_SIGNAL,
+    "ragembedding": SignalCode.RAG_UNLOAD_SIGNAL,
     "rmbg": SignalCode.RMBG_UNLOAD_SIGNAL,
     "rmbgmodel": SignalCode.RMBG_UNLOAD_SIGNAL,
     "safetychecker": SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL,
@@ -230,6 +231,9 @@ class ModelStatusWidget(QWidget):
         normalized_type = cls._normalize_model_type(
             getattr(model_info, "model_type", "")
         )
+        if normalized_type == "ragembedding":
+            short_name = cls._short_model_name(raw_model_id) or "e5-large"
+            return f"RAG Embeddings ({short_name})"[:30]
         if normalized_type in {"llm", "llmmodel"}:
             display_name = cls._resolve_llm_display_name(raw_model_id)
             if display_name:
@@ -339,6 +343,9 @@ class ModelStatusWidget(QWidget):
         if signal_code is SignalCode.LLM_UNLOAD_SIGNAL:
             if ModelStatusWidget._unload_llm_via_api(self, payload):
                 return True
+        if signal_code is SignalCode.RAG_UNLOAD_SIGNAL:
+            if ModelStatusWidget._unload_rag_via_api(self):
+                return True
         self.signal_mediator.emit_signal(signal_code, payload)
         return True
 
@@ -407,6 +414,19 @@ class ModelStatusWidget(QWidget):
         if not callable(unload):
             return False
         unload(dict(payload))
+        return True
+
+    @staticmethod
+    def _unload_rag_via_api(widget) -> bool:
+        """Send one RAG embedding unload through the LLM service boundary."""
+        api = ModelStatusWidget._current_gui_api(widget)
+        if api is None:
+            return False
+        llm_service = getattr(api, "llm", None)
+        unload_rag = getattr(llm_service, "unload_rag", None)
+        if not callable(unload_rag):
+            return False
+        unload_rag()
         return True
 
     def _unload_icon(self):

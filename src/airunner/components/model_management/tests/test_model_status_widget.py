@@ -36,6 +36,18 @@ def test_resolve_unload_request_maps_text_to_image_to_sd_unload():
     assert request == (SignalCode.SD_UNLOAD_SIGNAL, {})
 
 
+def test_resolve_unload_request_maps_rag_embedding_row():
+    """RAG embedding rows should resolve to the dedicated unload signal."""
+    request = ModelStatusWidget._resolve_unload_request(
+        SimpleNamespace(
+            model_id="/models/text/embedding/intfloat/e5-large",
+            model_type="rag_embedding",
+        )
+    )
+
+    assert request == (SignalCode.RAG_UNLOAD_SIGNAL, {})
+
+
 def test_unload_model_emits_resolved_signal():
     """Widget unload requests should flow through the shared mediator."""
     mediator = Mock()
@@ -70,6 +82,31 @@ def test_unload_model_routes_llm_through_api_service(monkeypatch):
 
     assert result is True
     llm_service.unload.assert_called_once_with({})
+    mediator.emit_signal.assert_not_called()
+
+
+def test_unload_model_routes_rag_embedding_through_api_service(monkeypatch):
+    """RAG embedding rows should use the LLM service unload hook first."""
+    mediator = Mock()
+    widget = SimpleNamespace(signal_mediator=mediator)
+    llm_service = SimpleNamespace(unload_rag=Mock())
+
+    monkeypatch.setattr(
+        ModelStatusWidget,
+        "_current_gui_api",
+        staticmethod(lambda _widget=None: SimpleNamespace(llm=llm_service)),
+    )
+
+    result = ModelStatusWidget._unload_model(
+        widget,
+        SimpleNamespace(
+            model_id="/models/text/embedding/intfloat/e5-large",
+            model_type="rag_embedding",
+        ),
+    )
+
+    assert result is True
+    llm_service.unload_rag.assert_called_once_with()
     mediator.emit_signal.assert_not_called()
 
 

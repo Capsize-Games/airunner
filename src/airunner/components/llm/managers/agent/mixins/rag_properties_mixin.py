@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 import torch
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -12,8 +12,112 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 
+_EMBEDDING_REPO_ID = "intfloat/e5-large"
+_RAG_EMBEDDING_MODEL_TYPE = "rag_embedding"
+_QUERY_PREFIX = "query: "
+_PASSAGE_PREFIX = "passage: "
+
+
+def _apply_embedding_prefix(text: str, prefix: str) -> str:
+    """Return text with one E5-compatible prefix when needed."""
+    value = str(text or "")
+    lowered = value.lstrip().lower()
+    if lowered.startswith(_QUERY_PREFIX) or lowered.startswith(
+        _PASSAGE_PREFIX
+    ):
+        return value
+    return f"{prefix}{value}"
+
+
+class _PrefixedEmbeddingAdapter:
+    """Delegate embedding calls while applying model-specific prefixes."""
+
+    def __init__(
+        self,
+        backend: HuggingFaceEmbeddings,
+        *,
+        query_prefix: str = "",
+        document_prefix: str = "",
+    ) -> None:
+        self._backend = backend
+        self._query_prefix = query_prefix
+        self._document_prefix = document_prefix
+
+    def embed_query(self, text: str):
+        """Embed one retrieval query with the configured query prefix."""
+        prepared = text
+        if self._query_prefix:
+            prepared = _apply_embedding_prefix(text, self._query_prefix)
+        return self._backend.embed_query(prepared)
+
+    def embed_documents(self, texts: Sequence[str]):
+        """Embed retrieval passages with the configured passage prefix."""
+        prepared = list(texts)
+        if self._document_prefix:
+            prepared = [
+                _apply_embedding_prefix(text, self._document_prefix)
+                for text in texts
+            ]
+        return self._backend.embed_documents(prepared)
+
+    def __getattr__(self, name: str) -> Any:
+        """Forward all other attributes to the wrapped embeddings backend."""
+        return getattr(self._backend, name)
+
+
 class RAGPropertiesMixin:
     """Mixin for RAG properties and configuration."""
+
+    def _embedding_model_path(self) -> str:
+        """Return the local filesystem path for the RAG embedding model."""
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "models",
+                "llm",
+                "embedding",
+                _EMBEDDING_REPO_ID,
+            )
+        )
+
+    def _set_embedding_resource_state(self, state: str) -> None:
+        """Mirror one embedding runtime state into ModelResourceManager."""
+        try:
+            from airunner.components.model_management.model_resource_manager import (
+                ModelResourceManager,
+            )
+            from airunner.components.model_management.types import ModelState
+        except Exception:
+            return
+
+        manager = ModelResourceManager()
+        model_id = self._embedding_model_path()
+        if state == "loading":
+            manager.set_model_state(
+                model_id,
+                ModelState.LOADING,
+                _RAG_EMBEDDING_MODEL_TYPE,
+            )
+            return
+        if state == "loaded":
+            manager.model_loaded(model_id, _RAG_EMBEDDING_MODEL_TYPE)
+            return
+        manager.cleanup_model(model_id, _RAG_EMBEDDING_MODEL_TYPE)
+
+    def _wrap_embedding_backend(
+        self,
+        backend: HuggingFaceEmbeddings,
+    ) -> Any:
+        """Return the configured embedding backend with RAG-specific tweaks."""
+        model_path = self._embedding_model_path().lower()
+        if model_path.endswith("e5-large"):
+            return _PrefixedEmbeddingAdapter(
+                backend,
+                query_prefix=_QUERY_PREFIX,
+                document_prefix=_PASSAGE_PREFIX,
+            )
+        return backend
 
     @property
     def text_splitter(self) -> RecursiveCharacterTextSplitter:
@@ -102,18 +206,8 @@ class RAGPropertiesMixin:
         """
         if self._embedding is None:
             try:
-                # Construct local path to embedding model files
-                # Must use local filesystem path, not HuggingFace repo ID
-                model_name = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "text",
-                        "models",
-                        "llm",
-                        "embedding",
-                        "intfloat/e5-large",
-                    )
-                )
+                model_name = self._embedding_model_path()
+                self._set_embedding_resource_state("loading")
 
                 # Check if model files exist and trigger download if needed
                 if not self._check_and_download_embedding_model(model_name):
@@ -143,15 +237,18 @@ class RAGPropertiesMixin:
                 model_kwargs["trust_remote_code"] = True
                 model_kwargs["local_files_only"] = AIRUNNER_LOCAL_FILES_ONLY
 
-                self._embedding = HuggingFaceEmbeddings(
+                backend = HuggingFaceEmbeddings(
                     model_name=model_name,
                     model_kwargs=model_kwargs,
                     encode_kwargs={"normalize_embeddings": True},
                 )
+                self._embedding = self._wrap_embedding_backend(backend)
+                self._set_embedding_resource_state("loaded")
 
                 self.logger.info("Embedding model initialized successfully")
 
             except Exception as e:
+                self._set_embedding_resource_state("unloaded")
                 self.logger.error(
                     f"Failed to initialize embedding model: {e}",
                     exc_info=True,
@@ -275,7 +372,7 @@ class RAGPropertiesMixin:
             self._embedding_download_handler_registered = False
 
         # Use llm_file_bootstrap_data as source of truth
-        repo_id = "intfloat/e5-large"
+        repo_id = _EMBEDDING_REPO_ID
 
         if repo_id not in LLM_FILE_BOOTSTRAP_DATA:
             self.logger.error(
@@ -314,6 +411,7 @@ class RAGPropertiesMixin:
         # Emit signal to trigger download dialog
         # Avoid triggering multiple simultaneous downloads
         if not getattr(self, "_embedding_download_pending", False):
+            self._set_embedding_resource_state("loading")
             self.emit_signal(
                 SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
                 {
@@ -345,13 +443,14 @@ class RAGPropertiesMixin:
             data: Download completion data
         """
         repo_id = data.get("repo_id")
-        if repo_id == "intfloat/e5-large":
+        if repo_id == _EMBEDDING_REPO_ID:
             self.logger.info(
                 "Embedding model download complete - will initialize on next access"
             )
             # Clear cached embedding so it will be re-initialized on next access
             self._embedding = None
             self._embedding_download_pending = False
+            self._set_embedding_resource_state("unloaded")
             # Unregister this handler
             if hasattr(self, "unregister"):
                 from airunner.enums import SignalCode

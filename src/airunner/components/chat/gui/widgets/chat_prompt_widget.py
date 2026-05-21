@@ -161,6 +161,7 @@ class ChatPromptWidget(BaseWidget):
         self._document_attachment_widgets: List[
             ChatAttachmentPillWidget
         ] = []
+        self._pending_model_loading_request_ids: set[str] = set()
         self._attachments_spacer: Optional[QSpacerItem] = None
         self._startup_controls_loaded = False
         self._model_dropdown_line_edit = None
@@ -365,11 +366,55 @@ class ChatPromptWidget(BaseWidget):
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:
             self.chat_loaded = data["status"] is ModelStatus.LOADED
+            if self.chat_loaded:
+                clear_loading = getattr(
+                    self,
+                    "_clear_model_loading_indicators",
+                    None,
+                )
+                if callable(clear_loading):
+                    clear_loading()
 
         if not self.chat_loaded:
             self.disable_send_button()
         else:
             self.enable_send_button()
+
+    def _show_model_loading_indicator(self, request_id: str) -> None:
+        """Show an inline request-scoped model loading indicator."""
+        if not request_id:
+            return
+        conversation = getattr(self.ui, "conversation", None)
+        if conversation is None:
+            return
+        self._pending_model_loading_request_ids.add(request_id)
+        show_loading = getattr(conversation, "show_model_loading_status", None)
+        if callable(show_loading):
+            show_loading(request_id, "Loading model")
+
+    def _clear_model_loading_indicators(
+        self,
+        request_id: Optional[str] = None,
+    ) -> None:
+        """Clear one or all inline model loading indicators."""
+        if request_id is None:
+            request_ids = tuple(self._pending_model_loading_request_ids)
+        elif request_id in self._pending_model_loading_request_ids:
+            request_ids = (request_id,)
+        else:
+            request_ids = ()
+
+        if not request_ids:
+            return
+
+        conversation = getattr(self.ui, "conversation", None)
+        clear_loading = getattr(conversation, "clear_model_loading_status", None)
+        for current_request_id in request_ids:
+            if callable(clear_loading):
+                clear_loading(current_request_id)
+            self._pending_model_loading_request_ids.discard(
+                current_request_id
+            )
 
     def on_hear_signal(self, data: Dict):
         transcription = data["transcription"]
@@ -390,6 +435,13 @@ class ChatPromptWidget(BaseWidget):
         self.stop_progress_bar()
         self.generating = False
         self._set_generation_button_visibility(False)
+        clear_loading = getattr(
+            self,
+            "_clear_model_loading_indicators",
+            None,
+        )
+        if callable(clear_loading):
+            clear_loading()
         self.enable_send_button()
 
     def do_generate(self, prompt_override=None):
@@ -497,6 +549,14 @@ class ChatPromptWidget(BaseWidget):
         llm_loaded = ModelType.LLM in loaded_models
         if art_model_loaded and not llm_loaded:
             model_load_balancer.switch_to_non_art_mode()
+        if not llm_loaded:
+            show_loading = getattr(
+                self,
+                "_show_model_loading_indicator",
+                None,
+            )
+            if callable(show_loading):
+                show_loading(request_id)
 
         self.start_progress_bar()
         
@@ -1492,6 +1552,21 @@ class ChatPromptWidget(BaseWidget):
             self._update_token_tracking_labels()
         
         if getattr(llm_response, "is_first_message", False):
+            pending_request_ids = getattr(
+                self,
+                "_pending_model_loading_request_ids",
+                set(),
+            )
+            clear_loading = getattr(
+                self,
+                "_clear_model_loading_indicators",
+                None,
+            )
+            response_request_id = getattr(llm_response, "request_id", None)
+            if response_request_id and callable(clear_loading):
+                clear_loading(response_request_id)
+            elif len(pending_request_ids) == 1 and callable(clear_loading):
+                clear_loading(next(iter(pending_request_ids)))
             self.stop_progress_bar()
 
         if getattr(llm_response, "is_end_of_message", False):

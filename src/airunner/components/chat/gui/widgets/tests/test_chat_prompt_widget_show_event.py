@@ -9,7 +9,7 @@ from airunner.components.chat.gui.widgets import chat_prompt_widget as module
 from airunner.components.chat.gui.widgets.chat_prompt_widget import (
     ChatPromptWidget,
 )
-from airunner.enums import LLMActionType
+from airunner.enums import LLMActionType, ModelStatus, ModelType
 
 
 def test_chat_prompt_splitter_restore_is_deferred(monkeypatch):
@@ -212,6 +212,95 @@ def test_submit_generation_request_bootstraps_conversation_after_ui_turn():
 
     assert call_order == ["ensure", "probe"]
     assert sent_requests[0]["conversation_id"] == 7
+
+
+def test_submit_generation_request_shows_loading_indicator_when_llm_is_cold():
+    """Cold-started LLM requests should show inline loading status."""
+    sent_requests = []
+    conversation = SimpleNamespace(show_model_loading_status=Mock())
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            conversation=conversation,
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        _pending_model_loading_request_ids=set(),
+        _show_model_loading_indicator=(
+            lambda request_id: ChatPromptWidget._show_model_loading_indicator(
+                widget,
+                request_id,
+            )
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[],
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Hello",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-cold",
+        slash_command=None,
+    )
+
+    conversation.show_model_loading_status.assert_called_once_with(
+        "req-cold",
+        "Loading model",
+    )
+    assert widget._pending_model_loading_request_ids == {"req-cold"}
+    assert sent_requests
+
+
+def test_model_loaded_clears_pending_inline_loading_indicator():
+    """Loaded LLM status should remove any pending inline loading widgets."""
+    conversation = SimpleNamespace(clear_model_loading_status=Mock())
+    widget = SimpleNamespace(
+        chat_loaded=False,
+        ui=SimpleNamespace(conversation=conversation),
+        _pending_model_loading_request_ids={"req-cold"},
+        _clear_model_loading_indicators=(
+            lambda request_id=None: (
+                ChatPromptWidget._clear_model_loading_indicators(
+                    widget,
+                    request_id,
+                )
+            )
+        ),
+        disable_send_button=Mock(),
+        enable_send_button=Mock(),
+    )
+
+    ChatPromptWidget.on_model_status_changed_signal(
+        widget,
+        {"model": ModelType.LLM, "status": ModelStatus.LOADED},
+    )
+
+    conversation.clear_model_loading_status.assert_called_once_with(
+        "req-cold"
+    )
+    widget.enable_send_button.assert_called_once_with()
+    assert widget._pending_model_loading_request_ids == set()
 
 
 def test_stop_button_restores_submit_immediately():

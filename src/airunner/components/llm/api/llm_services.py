@@ -162,6 +162,10 @@ class LLMAPIService(APIServiceBase):
             {"target_files": target_files} if target_files else None,
         )
 
+    def unload_rag(self) -> None:
+        """Unload the RAG embedding runtime without unloading the LLM."""
+        self.emit_signal(SignalCode.RAG_UNLOAD_SIGNAL, {})
+
     def load_conversation(self, conversation_id: int):
         self.emit_signal(
             SignalCode.QUEUE_LOAD_CONVERSATION,

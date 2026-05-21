@@ -58,6 +58,7 @@ function initializeChatView() {
         chatBridge.appendMessage.connect(appendMessage);
         chatBridge.clearMessages.connect(clearMessages);
         chatBridge.toolStatusUpdate.connect(handleToolStatusUpdate);
+        chatBridge.modelLoadStatusUpdate.connect(handleModelLoadStatusUpdate);
         chatBridge.setMessages.connect(function (msgs) {
             // Clear everything when setting messages (loading from saved data)
             // Tool status and thinking widgets will be recreated from saved message data
@@ -513,7 +514,7 @@ function setThinkingPreviewLine(widget, content) {
     let previewLine = widget.querySelector('.thinking-preview-line');
 
     if (!previewText) {
-        if (previewLine) {
+        if (previewLine && !String(content || '').length) {
             previewLine.style.display = 'none';
         }
         return;
@@ -535,6 +536,35 @@ function setThinkingPreviewLine(widget, content) {
 
     previewLine.textContent = previewText;
     previewLine.style.display = 'block';
+}
+
+function syncThinkingContent(requestId) {
+    const state = getStatusState(requestId);
+    let widget = document.getElementById(
+        getStatusWidgetDomId(requestId)
+    );
+    if (!widget) {
+        widget = getOrCreateStatusWidget(requestId);
+    }
+    if (!widget) return;
+
+    const thinkingItemId = getThinkingItemId(requestId);
+    const thinkingItem = state.items.find((item) => item.id === thinkingItemId);
+    if (!thinkingItem) return;
+
+    thinkingItem.content = state.currentThinkingContent;
+    setThinkingPreviewLine(widget, state.currentThinkingContent);
+
+    const selectorId = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(thinkingItemId)
+        : thinkingItemId.replace(/"/g, '\\"');
+    const element = widget.querySelector(`.status-item[data-id="${selectorId}"]`);
+    if (element) {
+        updateStatusElement(element, thinkingItem);
+        if (state.expanded) {
+            scrollThinkingContentToBottom(element);
+        }
+    }
 }
 
 /**
@@ -819,6 +849,16 @@ function updateStatusItem(requestId, id, updates) {
     renderStatusWidget(requestId);
 }
 
+function removeStatusItem(requestId, id) {
+    const state = getStatusState(requestId);
+    const nextItems = state.items.filter((item) => item.id !== id);
+    if (nextItems.length === state.items.length) {
+        return;
+    }
+    state.items = nextItems;
+    renderStatusWidget(requestId);
+}
+
 function removeStatusWidget(requestId) {
     const domId = getStatusWidgetDomId(requestId);
     const widget = document.getElementById(domId);
@@ -852,11 +892,15 @@ function renderStatusWidget(requestId) {
     const activeItems = state.items.filter((item) => item.status === 'active');
     if (activeItems.length > 0) {
         const activeItem = activeItems[0];
-        const newIcon = activeItem.type === 'thinking' ? '🧠' : '⚙️';
-        const baseTitle = activeItem.type === 'thinking' ? 'Thinking' : 'Working...';
+        const isThinking = activeItem.type === 'thinking';
+        const isModelLoading = activeItem.type === 'model_loading';
+        const newIcon = isThinking ? '🧠' : (isModelLoading ? '⏳' : '⚙️');
+        const baseTitle = isThinking
+            ? 'Thinking'
+            : (isModelLoading ? activeItem.text : 'Working...');
         if (iconSpan.textContent !== newIcon) iconSpan.textContent = newIcon;
 
-        if (activeItem.type === 'thinking') {
+        if (isThinking || isModelLoading) {
             titleSpan.textContent = baseTitle;
             titleSpan.classList.add('animated-dots');
         } else {
@@ -969,7 +1013,9 @@ function updateStatusElement(element, item) {
     const isActive = item.status === 'active';
     const icon = item.type === 'thinking'
         ? (isActive ? '🧠' : '💭')
-        : (isActive ? '⏳' : '✅');
+        : (item.type === 'model_loading'
+            ? (isActive ? '⏳' : '✅')
+            : (isActive ? '⏳' : '✅'));
 
     // Update classes
     element.classList.toggle('active', isActive);
@@ -1009,7 +1055,9 @@ function renderStatusItem(item, isNew = false) {
     const isActive = item.status === 'active';
     const icon = item.type === 'thinking'
         ? (isActive ? '🧠' : '💭')
-        : (isActive ? '⏳' : '✅');
+        : (item.type === 'model_loading'
+            ? (isActive ? '⏳' : '✅')
+            : (isActive ? '⏳' : '✅'));
 
     const classes = [
         'status-item',
@@ -1075,17 +1123,8 @@ function startThinkingAnimation(requestId) {
     const state = getStatusState(requestId);
     if (state.thinkingAnimationInterval) {
         clearInterval(state.thinkingAnimationInterval);
+        state.thinkingAnimationInterval = null;
     }
-    state.thinkingDotCount = 0;
-    state.thinkingAnimationInterval = setInterval(() => {
-        state.thinkingDotCount = (state.thinkingDotCount + 1) % 4;
-        const dots = '.'.repeat(state.thinkingDotCount);
-        updateStatusItem(
-            requestId,
-            getThinkingItemId(requestId),
-            { text: `Thinking${dots}` },
-        );
-    }, 400);
 }
 
 function stopThinkingAnimation(requestId) {
@@ -1103,9 +1142,7 @@ function flushThinkingRender(requestId) {
         clearTimeout(state.pendingThinkingRender);
         state.pendingThinkingRender = null;
     }
-    updateStatusItem(requestId, getThinkingItemId(requestId), {
-        content: state.currentThinkingContent
-    });
+    syncThinkingContent(requestId);
 }
 
 function scheduleThinkingRender(requestId) {
@@ -1115,9 +1152,7 @@ function scheduleThinkingRender(requestId) {
     }
     state.pendingThinkingRender = setTimeout(() => {
         state.pendingThinkingRender = null;
-        updateStatusItem(requestId, getThinkingItemId(requestId), {
-            content: state.currentThinkingContent
-        });
+        syncThinkingContent(requestId);
     }, 75);
 }
 
@@ -1157,6 +1192,20 @@ function handleThinkingStatusUpdate(requestId, status, content) {
             content: state.currentThinkingContent
         });
     }
+}
+
+function handleModelLoadStatusUpdate(requestId, status, message) {
+    const itemId = `model-loading-${getStatusRequestId(requestId)}`;
+    if (status === 'started') {
+        addStatusItem(requestId, {
+            id: itemId,
+            type: 'model_loading',
+            text: message || 'Loading model',
+            status: 'active'
+        });
+        return;
+    }
+    removeStatusItem(requestId, itemId);
 }
 
 // Keep for backwards compatibility

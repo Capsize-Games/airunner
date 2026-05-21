@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Optional
 
 from airunner.components.llm.managers.agent.document_loader import (
@@ -189,6 +190,49 @@ def extract_text_from_pdf(path: str) -> Optional[str]:
     return _clean_text(text)
 
 
+def extract_text_from_html(path: str) -> Optional[str]:
+    """Extract readable text from one HTML-like document."""
+    try:
+        with open(path, "rb") as handle:
+            raw = handle.read()
+        html = raw.decode("utf-8", errors="ignore")
+    except Exception:
+        return None
+
+    try:
+        from bs4 import BeautifulSoup
+
+        text = BeautifulSoup(html, "html.parser").get_text(separator="\n")
+    except Exception:
+        import re
+
+        text = re.sub(r"<[^>]+>", " ", html)
+    return _clean_text(text)
+
+
+def extract_text_from_mobi(path: str) -> Optional[str]:
+    """Extract text from MOBI via temporary EPUB/HTML/PDF conversion."""
+    try:
+        import mobi
+    except Exception:
+        return _naive_read(path)
+
+    tempdir = None
+    try:
+        tempdir, extracted_path = mobi.extract(path)
+        _, ext = os.path.splitext(extracted_path.lower())
+        if ext == ".epub":
+            return extract_text_from_epub(extracted_path)
+        if ext == ".pdf":
+            return extract_text_from_pdf(extracted_path)
+        return extract_text_from_html(extracted_path)
+    except Exception:
+        return _naive_read(path)
+    finally:
+        if tempdir:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
+
 def extract_text(path: str) -> Optional[str]:
     """Dispatch extraction based on file extension with graceful fallback."""
     if not os.path.exists(path):
@@ -196,6 +240,8 @@ def extract_text(path: str) -> Optional[str]:
     _, ext = os.path.splitext(path.lower())
     if ext == ".epub":
         return extract_text_from_epub(path)
+    if ext == ".mobi":
+        return extract_text_from_mobi(path)
     if ext == ".pdf":
         return extract_text_from_pdf(path)
     # default: read as text

@@ -20,6 +20,7 @@ _DOCUMENT_FILE_SUFFIXES = (
     ".docx",
     ".doc",
     ".odt",
+    ".mobi",
     ".pdf",
     ".epub",
     ".zim",
@@ -41,6 +42,11 @@ class RAGIndexingMixin:
         """Reload the RAG engine index."""
         if self._model_manager:
             self._model_manager.reload_rag_engine()
+
+    def on_llm_unload_rag_signal(self, _data: Dict | None = None) -> None:
+        """Unload the RAG embedding runtime when requested by the UI."""
+        if self._model_manager:
+            self._model_manager.unload_rag()
 
     def on_rag_index_all_documents_signal(self, data: Dict) -> None:
         """Handle manual document indexing request.

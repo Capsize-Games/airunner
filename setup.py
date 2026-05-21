@@ -92,6 +92,7 @@ LLM_NATIVE_REQUIREMENTS = [
     "langchain-ollama==1.0.0",
     "langchain-text-splitters==1.1.2",
     "EbookLib==0.19",
+    "mobi==0.4.1",
     "pypdf>=5.6.0",
 ]
 

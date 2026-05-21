@@ -848,6 +848,7 @@ def search_knowledge_base_documents(
                             for fname in files:
                                 ext = os.path.splitext(fname)[1].lower()
                                 if ext in [
+                                    ".mobi",
                                     ".pdf",
                                     ".epub",
                                     ".html",
@@ -957,6 +958,7 @@ def search_knowledge_base_documents(
                                             1
                                         ].lower()
                                         if ext in [
+                                            ".mobi",
                                             ".pdf",
                                             ".epub",
                                             ".html",
@@ -1068,6 +1070,7 @@ def search_knowledge_base_documents(
                                             1
                                         ].lower()
                                         if ext in [
+                                            ".mobi",
                                             ".pdf",
                                             ".epub",
                                             ".html",

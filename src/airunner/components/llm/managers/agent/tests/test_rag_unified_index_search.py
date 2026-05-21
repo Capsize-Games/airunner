@@ -1,11 +1,15 @@
 """Unit tests for LangChain-native RAG search."""
 
+import json
 from unittest.mock import Mock
 
 import pytest
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from airunner.components.llm.managers.agent.mixins.rag_properties_mixin import (
+    _PrefixedEmbeddingAdapter,
+)
 from airunner.components.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
 )
@@ -27,6 +31,34 @@ class FakeEmbeddings:
             float("beta" in lowered),
             float("gamma" in lowered),
         ]
+
+
+class LegacyEmbeddings:
+    """Embedding stub representing the pre-prefix persisted strategy."""
+
+    def embed_documents(self, texts):
+        return [[0.0, 1.0] for _text in texts]
+
+    def embed_query(self, text):
+        del text
+        return [0.0, 1.0]
+
+
+class PrefixSensitiveEmbeddings:
+    """Embedding stub that changes output when E5 prefixes are present."""
+
+    def embed_documents(self, texts):
+        return [
+            [1.0, 0.0]
+            if text.startswith("passage: ")
+            else [0.0, 1.0]
+            for text in texts
+        ]
+
+    def embed_query(self, text):
+        if text.startswith("query: "):
+            return [1.0, 0.0]
+        return [0.0, 1.0]
 
 
 class TestUnifiedIndexSearch:
@@ -210,6 +242,63 @@ class TestRAGContentExtraction:
 
         assert len(results) == 1
         assert "alpha content" in results[0].document.page_content
+
+    def test_vector_index_refreshes_legacy_embeddings_on_search(
+        self,
+        tmp_path,
+    ):
+        """Legacy indexes should be upgraded lazily on the next search."""
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=100,
+            chunk_overlap=0,
+        )
+        index = DocumentVectorIndex.from_documents(
+            [Document(page_content="alpha content for upgrade")],
+            LegacyEmbeddings(),
+            splitter,
+        )
+
+        persist_dir = tmp_path / "legacy-index"
+        index.persist(str(persist_dir))
+        metadata_path = persist_dir / "index_metadata.json"
+        metadata_path.unlink()
+
+        loaded = DocumentVectorIndex.load(str(persist_dir))
+        embedding = _PrefixedEmbeddingAdapter(
+            PrefixSensitiveEmbeddings(),
+            query_prefix="query: ",
+            document_prefix="passage: ",
+        )
+
+        loaded.similarity_search("alpha", embedding, 1)
+
+        assert loaded.embeddings[0].tolist() == [1.0, 0.0]
+        assert json.loads(metadata_path.read_text(encoding="utf-8")) == {
+            "embedding_strategy": "e5-prefix-v1"
+        }
+
+    def test_retriever_refreshes_persistent_indexes_before_search(self):
+        """Per-document indexes should refresh legacy embeddings on use."""
+        from airunner.components.llm.managers.agent.retriever import (
+            MultiIndexRetriever,
+        )
+
+        mock_rag = Mock()
+        mock_rag.logger = Mock()
+        mock_rag.embedding = FakeEmbeddings()
+        mock_rag._index = None
+        mock_rag._get_active_document_ids = Mock(return_value=["doc1"])
+
+        mock_doc_index = Mock()
+        mock_doc_index.similarity_search_by_vector.return_value = []
+        mock_rag._load_doc_index = Mock(return_value=mock_doc_index)
+
+        retriever = MultiIndexRetriever(mock_rag, similarity_top_k=5)
+        retriever.retrieve("alpha")
+
+        mock_doc_index.ensure_current_embeddings.assert_called_once_with(
+            mock_rag.embedding
+        )
 
 
 class TestEnsureIndexedFiles:

@@ -475,7 +475,7 @@ class RequestHandlingMixin:
         file_type = str(doc.get("file_type", "")).lower()
         content = doc.get("content")
         source_name = doc.get("source_name", "web_content")
-        if file_type in [".epub", ".pdf"]:
+        if file_type in [".epub", ".mobi", ".pdf"]:
             payload = content
             if not isinstance(payload, (bytes, bytearray)):
                 payload = str(payload).encode("utf-8")

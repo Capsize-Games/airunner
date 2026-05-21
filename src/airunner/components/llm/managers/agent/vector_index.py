@@ -13,6 +13,8 @@ from langchain_core.documents import Document
 
 DOCUMENTS_FILE = "documents.json"
 EMBEDDINGS_FILE = "embeddings.npy"
+METADATA_FILE = "index_metadata.json"
+CURRENT_EMBEDDING_STRATEGY = "e5-prefix-v1"
 
 
 @dataclass(slots=True)
@@ -30,9 +32,14 @@ class DocumentVectorIndex:
         self,
         documents: Optional[Sequence[Document]] = None,
         embeddings: Optional[np.ndarray] = None,
+        *,
+        metadata: Optional[dict[str, Any]] = None,
+        persist_dir: Optional[str] = None,
     ):
         self.documents = list(documents or [])
         self.embeddings = _as_matrix(embeddings)
+        self._metadata = dict(metadata or {})
+        self._persist_dir = persist_dir
 
     @classmethod
     def from_documents(
@@ -43,14 +50,23 @@ class DocumentVectorIndex:
     ) -> "DocumentVectorIndex":
         chunks = _chunk_documents(documents, text_splitter)
         embeddings = _embed_documents(chunks, embedding_model)
-        return cls(chunks, embeddings)
+        return cls(
+            chunks,
+            embeddings,
+            metadata=_default_index_metadata(),
+        )
 
     @classmethod
     def load(cls, persist_dir: str) -> "DocumentVectorIndex":
         payload = _load_payload(persist_dir)
         documents = [_payload_to_document(item) for item in payload]
         embeddings = np.load(_embeddings_path(persist_dir), allow_pickle=False)
-        return cls(documents, embeddings)
+        return cls(
+            documents,
+            embeddings,
+            metadata=_load_metadata(persist_dir),
+            persist_dir=persist_dir,
+        )
 
     @classmethod
     def is_persisted(cls, persist_dir: str) -> bool:
@@ -71,6 +87,7 @@ class DocumentVectorIndex:
         embeddings = _embed_documents(chunks, embedding_model)
         self.documents.extend(chunks)
         self.embeddings = _combine_embeddings(self.embeddings, embeddings)
+        self._metadata = _default_index_metadata()
 
     def similarity_search(
         self,
@@ -79,8 +96,21 @@ class DocumentVectorIndex:
         k: int,
         doc_ids: Optional[Sequence[str]] = None,
     ) -> list[ScoredDocument]:
+        self.ensure_current_embeddings(embedding_model)
         query_vector = embedding_model.embed_query(query)
         return self.similarity_search_by_vector(query_vector, k, doc_ids)
+
+    def ensure_current_embeddings(self, embedding_model: Any) -> None:
+        """Refresh persisted embeddings when the strategy changes."""
+        if self._metadata.get("embedding_strategy") == (
+            CURRENT_EMBEDDING_STRATEGY
+        ):
+            return
+
+        self.embeddings = _embed_documents(self.documents, embedding_model)
+        self._metadata = _default_index_metadata()
+        if self._persist_dir:
+            self.persist(self._persist_dir)
 
     def similarity_search_by_vector(
         self,
@@ -103,16 +133,23 @@ class DocumentVectorIndex:
 
     def persist(self, persist_dir: str) -> None:
         """Persist documents and embeddings to disk."""
+        self._persist_dir = persist_dir
         os.makedirs(persist_dir, exist_ok=True)
         payload = [_document_to_payload(doc) for doc in self.documents]
         with open(_documents_path(persist_dir), "w", encoding="utf-8") as file:
             json.dump(payload, file, indent=2, ensure_ascii=False, default=str)
         np.save(_embeddings_path(persist_dir), self.embeddings)
+        with open(_metadata_path(persist_dir), "w", encoding="utf-8") as file:
+            json.dump(self._metadata or _default_index_metadata(), file, indent=2)
 
 
 def _chunk_documents(documents: Sequence[Document], text_splitter: Any) -> list[Document]:
     chunks = text_splitter.split_documents(list(documents))
     return [chunk for chunk in chunks if chunk.page_content.strip()]
+
+
+def _default_index_metadata() -> dict[str, str]:
+    return {"embedding_strategy": CURRENT_EMBEDDING_STRATEGY}
 
 
 def _embed_documents(documents: Sequence[Document], embedding_model: Any) -> np.ndarray:
@@ -205,9 +242,21 @@ def _load_payload(persist_dir: str) -> list[dict[str, Any]]:
         return json.load(file)
 
 
+def _load_metadata(persist_dir: str) -> dict[str, Any]:
+    path = _metadata_path(persist_dir)
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
 def _documents_path(persist_dir: str) -> str:
     return os.path.join(persist_dir, DOCUMENTS_FILE)
 
 
 def _embeddings_path(persist_dir: str) -> str:
     return os.path.join(persist_dir, EMBEDDINGS_FILE)
+
+
+def _metadata_path(persist_dir: str) -> str:
+    return os.path.join(persist_dir, METADATA_FILE)

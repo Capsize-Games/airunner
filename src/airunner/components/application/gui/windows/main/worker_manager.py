@@ -56,6 +56,7 @@ class WorkerManager(Worker):
             SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
             SignalCode.LLM_CONVERT_TO_GGUF_SIGNAL: self.on_llm_convert_to_gguf_signal,
             SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
+            SignalCode.RAG_UNLOAD_SIGNAL: self.on_llm_unload_rag_signal,
             SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
             SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: self.on_rag_index_selected_documents_signal,
             SignalCode.RAG_INDEX_CANCEL: self.on_rag_index_cancel_signal,
@@ -1923,6 +1924,10 @@ class WorkerManager(Worker):
     def on_llm_reload_rag_index_signal(self, data):
         if self._llm_generate_worker is not None:
             self.llm_generate_worker.on_llm_reload_rag_index_signal(data)
+
+    def on_llm_unload_rag_signal(self, data):
+        if self._llm_generate_worker is not None:
+            self.llm_generate_worker.on_llm_unload_rag_signal(data)
 
     def on_rag_index_all_documents_signal(self, data):
         if self.llm_generate_worker is not None:

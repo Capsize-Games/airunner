@@ -18,6 +18,7 @@ class DocumentWorker(Worker):
             "docx",
             "doc",
             "odt",
+            "mobi",
             "pdf",
             "epub",
             "zim",

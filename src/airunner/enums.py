@@ -63,6 +63,7 @@ class SignalCode(Enum):
     WIDGET_ELEMENT_CHANGED_SIGNAL = "widget_element_changed_signal"
     REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
+    RAG_UNLOAD_SIGNAL = "rag_unload_signal"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"

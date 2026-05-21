@@ -81,38 +81,25 @@ def test_knowledge_base_panel_import_emits_collection_signal(monkeypatch):
     assert received["count"] == 1
 
 
-def test_documents_widget_expands_populated_sections():
-    """Imported documents should be visible without manual tree expansion."""
+def test_refresh_documents_list_updates_table_and_watch_paths():
+    """Refreshing documents should update the table and watcher roots."""
     from airunner.components.documents.gui.widgets.documents import (
         DocumentsWidget,
     )
 
-    expanded = []
-    tree = SimpleNamespace(expand=lambda index: expanded.append(index))
-    root_item = SimpleNamespace(rowCount=lambda: 2)
-    populated_item = SimpleNamespace(rowCount=lambda: 1)
-    empty_item = SimpleNamespace(rowCount=lambda: 0)
-    model = SimpleNamespace(indexFromItem=lambda item: f"index:{id(item)}")
     widget = SimpleNamespace(
-        ui=SimpleNamespace(documentsTreeView=tree),
-        documents_model=model,
+        refresh_active_documents_list=Mock(),
+        _refresh_document_watch_paths=Mock(),
     )
 
-    DocumentsWidget._expand_available_document_sections(
-        widget,
-        root_item,
-        populated_item,
-        empty_item,
-    )
+    DocumentsWidget.refresh_documents_list(widget)
 
-    assert expanded == [
-        f"index:{id(root_item)}",
-        f"index:{id(populated_item)}",
-    ]
+    widget.refresh_active_documents_list.assert_called_once_with()
+    widget._refresh_document_watch_paths.assert_called_once_with()
 
 
-def test_available_documents_context_menu_offers_index(monkeypatch):
-    """Unindexed available documents should expose an Index action."""
+def test_documents_table_context_menu_offers_index(monkeypatch):
+    """Unindexed table rows should expose an Index action."""
     from airunner.components.documents.gui.widgets import documents as module
     from airunner.components.documents.gui.widgets.documents import (
         DocumentsWidget,
@@ -141,23 +128,45 @@ def test_available_documents_context_menu_offers_index(monkeypatch):
 
     monkeypatch.setattr(module, "QAction", FakeAction)
     monkeypatch.setattr(module, "QMenu", FakeMenu)
-
-    index = SimpleNamespace(isValid=lambda: True)
-    item = SimpleNamespace(
-        hasChildren=lambda: False,
-        data=lambda role=None: "/tmp/doc.pdf",
+    monkeypatch.setattr(
+        module,
+        "Document",
+        SimpleNamespace(
+            objects=SimpleNamespace(
+                filter_by=lambda path: [
+                    SimpleNamespace(active=False, indexed=False)
+                ]
+            )
+        ),
     )
-    view = SimpleNamespace(
+
+    index = SimpleNamespace(isValid=lambda: True, row=lambda: 0)
+    table = SimpleNamespace(
         indexAt=lambda position: index,
-        selectedIndexes=lambda: [index],
+        selectionModel=lambda: SimpleNamespace(
+            selectedRows=lambda column: [index]
+        ),
+        item=lambda row, column: SimpleNamespace(
+            data=lambda role=None: (
+                "/tmp/doc.pdf"
+                if role == Qt.ItemDataRole.UserRole and column == 0
+                else None
+            )
+        ),
         viewport=lambda: SimpleNamespace(mapToGlobal=lambda position: position),
     )
     widget = SimpleNamespace(
-        ui=SimpleNamespace(documentsTreeView=view),
-        documents_model=SimpleNamespace(itemFromIndex=lambda _index: item),
+        ui=SimpleNamespace(documentsTableWidget=table),
+        _selected_document_table_paths=lambda: ["/tmp/doc.pdf"],
+        _request_document_index=Mock(),
+        add_document_to_active=Mock(),
+        remove_document_from_active=Mock(),
+        _get_display_name=lambda path: "doc.pdf",
+        logger=Mock(),
+        emit_signal=Mock(),
     )
 
-    DocumentsWidget.show_available_doc_context_menu(widget, object())
+    DocumentsWidget.show_documents_table_context_menu(widget, object())
 
     assert "Index" in action_labels
 
@@ -226,6 +235,7 @@ def test_add_document_to_active_auto_indexes_unindexed_document(monkeypatch):
     )
 
     widget = SimpleNamespace(
+        _document_index_failures={},
         _validate_document_file=lambda file_path: file_path,
         _request_document_index=Mock(),
     )
@@ -258,14 +268,11 @@ def test_add_document_to_active_emits_collection_changed(monkeypatch):
         ),
     )
 
-    active_model = SimpleNamespace(
-        rowCount=lambda: 0,
-        appendRow=Mock(),
-    )
     widget = SimpleNamespace(
+        _document_index_failures={},
         _validate_document_file=lambda file_path: file_path,
-        active_documents_model=active_model,
         _get_display_name=lambda path: "doc.pdf",
+        refresh_active_documents_list=Mock(),
         logger=Mock(),
         emit_signal=Mock(),
     )
@@ -273,6 +280,7 @@ def test_add_document_to_active_emits_collection_changed(monkeypatch):
     DocumentsWidget.add_document_to_active(widget, "/tmp/doc.pdf")
 
     update.assert_called_once_with(pk=5, active=True)
+    widget.refresh_active_documents_list.assert_called_once_with()
     widget.emit_signal.assert_called_once_with(
         SignalCode.DOCUMENT_COLLECTION_CHANGED,
         {"paths": ["/tmp/doc.pdf"]},
@@ -298,23 +306,17 @@ def test_remove_document_from_active_emits_collection_changed(monkeypatch):
         ),
     )
 
-    item = SimpleNamespace(data=lambda: "/tmp/doc.pdf")
-    active_model = SimpleNamespace(
-        rowCount=lambda: 1,
-        item=lambda row, column: item,
-        removeRow=Mock(),
-    )
     widget = SimpleNamespace(
-        active_documents_model=active_model,
         logger=Mock(),
         _get_display_name=lambda path: "doc.pdf",
+        refresh_active_documents_list=Mock(),
         emit_signal=Mock(),
     )
 
     DocumentsWidget.remove_document_from_active(widget, "/tmp/doc.pdf")
 
-    active_model.removeRow.assert_called_once_with(0)
     update.assert_called_once_with(pk=7, active=False)
+    widget.refresh_active_documents_list.assert_called_once_with()
     widget.emit_signal.assert_called_once_with(
         SignalCode.DOCUMENT_COLLECTION_CHANGED,
         {"paths": ["/tmp/doc.pdf"]},
@@ -343,11 +345,11 @@ def test_on_document_indexed_refreshes_lists_for_index_only_requests(
     )
 
     widget = SimpleNamespace(
+        _document_index_failures={"/tmp/doc.pdf": "boom"},
         _pending_document_index_requests={"/tmp/doc.pdf": False},
         _total_to_index=0,
         _current_indexing=0,
         refresh_documents_list=Mock(),
-        refresh_active_documents_list=Mock(),
         logger=Mock(),
         _get_display_name=lambda path: "doc.pdf",
     )
@@ -356,7 +358,7 @@ def test_on_document_indexed_refreshes_lists_for_index_only_requests(
 
     update.assert_called_once_with(pk=11, active=False)
     widget.refresh_documents_list.assert_called_once_with()
-    widget.refresh_active_documents_list.assert_called_once_with()
+    assert widget._document_index_failures == {}
     assert widget._pending_document_index_requests == {}
 
 
@@ -368,14 +370,12 @@ def test_document_library_changed_refreshes_views_and_emits_signal():
 
     widget = SimpleNamespace(
         refresh_documents_list=Mock(),
-        refresh_active_documents_list=Mock(),
         emit_signal=Mock(),
     )
 
     DocumentsWidget._on_document_library_changed(widget, "/tmp/documents")
 
     widget.refresh_documents_list.assert_called_once_with()
-    widget.refresh_active_documents_list.assert_called_once_with()
     widget.emit_signal.assert_called_once_with(
         SignalCode.DOCUMENT_COLLECTION_CHANGED,
         {"reason": "filesystem"},
@@ -389,9 +389,9 @@ def test_on_document_index_failed_keeps_pending_request_for_deferred_retry():
     )
 
     widget = SimpleNamespace(
+        _document_index_failures={},
         _pending_document_index_requests={"/tmp/doc.pdf": False},
         refresh_documents_list=Mock(),
-        refresh_active_documents_list=Mock(),
         logger=Mock(),
         _get_display_name=lambda path: "doc.pdf",
     )
@@ -411,4 +411,34 @@ def test_on_document_index_failed_keeps_pending_request_for_deferred_retry():
     widget.logger.info.assert_called_once()
     widget.logger.error.assert_not_called()
     widget.refresh_documents_list.assert_called_once_with()
-    widget.refresh_active_documents_list.assert_called_once_with()
+
+
+def test_on_document_index_failed_records_error_for_documents_table():
+    """Non-deferred indexing failures should surface in the error column."""
+    from airunner.components.documents.gui.widgets.documents import (
+        DocumentsWidget,
+    )
+
+    widget = SimpleNamespace(
+        _document_index_failures={},
+        _pending_document_index_requests={"/tmp/doc.pdf": True},
+        refresh_documents_list=Mock(),
+        refresh_active_documents_list=Mock(),
+        logger=Mock(),
+        _get_display_name=lambda path: "doc.pdf",
+    )
+
+    DocumentsWidget.on_document_index_failed(
+        widget,
+        {
+            "path": "/tmp/doc.pdf",
+            "error": "embedding failure",
+            "deferred": False,
+        },
+    )
+
+    assert widget._pending_document_index_requests == {}
+    assert widget._document_index_failures == {
+        "/tmp/doc.pdf": "embedding failure"
+    }
+    widget.logger.error.assert_called_once()

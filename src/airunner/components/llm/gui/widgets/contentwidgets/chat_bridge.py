@@ -17,6 +17,9 @@ class ChatBridge(QObject):
     toolStatusUpdate = Signal(
         str, str, str, str, str, str
     )  # request_id, tool_id, tool_name, query, status, details
+    modelLoadStatusUpdate = Signal(
+        str, str, str
+    )  # request_id, status, message
     thinkingStatusUpdate = Signal(
         str, str, str
     )  # request_id, status, content - for Qwen3 <think> blocks
@@ -93,6 +96,11 @@ class ChatBridge(QObject):
             status,
             details,
         )
+
+    @Slot(str, str, str)
+    def updateModelLoadStatus(self, request_id, status, message):
+        """Emit one request-scoped model loading update to JavaScript."""
+        self.modelLoadStatusUpdate.emit(request_id, status, message)
 
     @Slot(str, str, str)
     def updateThinkingStatus(self, request_id, status, content):

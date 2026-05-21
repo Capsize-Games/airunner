@@ -70,7 +70,11 @@ class KnowledgeBasePanelWidget(BaseWidget):
         button.setObjectName("import_button")
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.clicked.connect(self._on_import_button_clicked)
-        self.ui.verticalLayout.insertWidget(2, button)
+        controls_layout = getattr(self.ui, "controlsLayout", None)
+        if controls_layout is not None:
+            controls_layout.insertWidget(1, button)
+        else:
+            self.ui.verticalLayout.insertWidget(2, button)
         self.ui.import_button = button
 
     def _document_dialog_filter(self) -> str:

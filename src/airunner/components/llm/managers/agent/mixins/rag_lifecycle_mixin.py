@@ -122,6 +122,8 @@ class RAGLifecycleMixin:
                     self.logger.warning(f"Error deleting embedding: {e}")
             self._embedding = None
             self._text_splitter = None
+            if hasattr(self, "_set_embedding_resource_state"):
+                self._set_embedding_resource_state("unloaded")
 
             # Force garbage collection
             gc.collect()

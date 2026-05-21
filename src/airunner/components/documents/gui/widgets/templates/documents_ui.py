@@ -18,8 +18,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFrame,
     QGridLayout, QHBoxLayout, QHeaderView, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QPushButton,
-    QSizePolicy, QSplitter, QTabWidget, QTreeView,
-    QVBoxLayout, QWidget)
+    QSizePolicy, QSplitter, QTabWidget, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget)
 
 from airunner.components.documents.gui.widgets.knowledge_base_panel_widget import KnowledgeBasePanelWidget
 
@@ -45,15 +45,6 @@ class Ui_documents(object):
 
         self.gridLayout.addLayout(self.verticalLayout, 2, 0, 1, 1)
 
-        self.knowledgeBasePanelContainer = QWidget(documents)
-        self.knowledgeBasePanelContainer.setObjectName(u"knowledgeBasePanelContainer")
-        self.knowledgeBasePanelLayout = QVBoxLayout(self.knowledgeBasePanelContainer)
-        self.knowledgeBasePanelLayout.setSpacing(0)
-        self.knowledgeBasePanelLayout.setObjectName(u"knowledgeBasePanelLayout")
-        self.knowledgeBasePanelLayout.setContentsMargins(10, 10, 10, 0)
-
-        self.gridLayout.addWidget(self.knowledgeBasePanelContainer, 3, 0, 1, 1)
-
         self.tabWidget = QTabWidget(documents)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tabDocuments = QWidget()
@@ -62,72 +53,40 @@ class Ui_documents(object):
         self.verticalLayoutDocuments.setSpacing(10)
         self.verticalLayoutDocuments.setObjectName(u"verticalLayoutDocuments")
         self.verticalLayoutDocuments.setContentsMargins(10, 10, 10, 10)
-        self.documentsSplitter = QSplitter(self.tabDocuments)
-        self.documentsSplitter.setObjectName(u"documentsSplitter")
-        self.documentsSplitter.setOrientation(Qt.Orientation.Vertical)
-        self.availableDocsWidget = QWidget(self.documentsSplitter)
-        self.availableDocsWidget.setObjectName(u"availableDocsWidget")
-        self.verticalLayoutAvailable = QVBoxLayout(self.availableDocsWidget)
-        self.verticalLayoutAvailable.setSpacing(5)
-        self.verticalLayoutAvailable.setObjectName(u"verticalLayoutAvailable")
-        self.verticalLayoutAvailable.setContentsMargins(0, 0, 0, 0)
-        self.labelAvailable = QLabel(self.availableDocsWidget)
-        self.labelAvailable.setObjectName(u"labelAvailable")
+        self.documentsStatusWidget = QWidget(self.tabDocuments)
+        self.documentsStatusWidget.setObjectName(u"documentsStatusWidget")
+        self.verticalLayoutDocumentsStatus = QVBoxLayout(self.documentsStatusWidget)
+        self.verticalLayoutDocumentsStatus.setSpacing(5)
+        self.verticalLayoutDocumentsStatus.setObjectName(u"verticalLayoutDocumentsStatus")
+        self.verticalLayoutDocumentsStatus.setContentsMargins(0, 0, 0, 0)
+        self.labelDocuments = QLabel(self.documentsStatusWidget)
+        self.labelDocuments.setObjectName(u"labelDocuments")
 
-        self.verticalLayoutAvailable.addWidget(self.labelAvailable)
+        self.verticalLayoutDocumentsStatus.addWidget(self.labelDocuments)
 
-        self.documentsTreeView = QTreeView(self.availableDocsWidget)
-        self.documentsTreeView.setObjectName(u"documentsTreeView")
-        self.documentsTreeView.setDragEnabled(True)
-        self.documentsTreeView.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
-        self.documentsTreeView.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.documentsTableWidget = QTableWidget(self.documentsStatusWidget)
+        if (self.documentsTableWidget.columnCount() < 4):
+            self.documentsTableWidget.setColumnCount(4)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.documentsTableWidget.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.documentsTableWidget.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        __qtablewidgetitem2 = QTableWidgetItem()
+        self.documentsTableWidget.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        __qtablewidgetitem3 = QTableWidgetItem()
+        self.documentsTableWidget.setHorizontalHeaderItem(3, __qtablewidgetitem3)
+        self.documentsTableWidget.setObjectName(u"documentsTableWidget")
+        self.documentsTableWidget.setDragEnabled(True)
+        self.documentsTableWidget.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.documentsTableWidget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.documentsTableWidget.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.documentsTableWidget.setSortingEnabled(True)
+        self.documentsTableWidget.setColumnCount(4)
 
-        self.verticalLayoutAvailable.addWidget(self.documentsTreeView)
+        self.verticalLayoutDocumentsStatus.addWidget(self.documentsTableWidget)
 
-        self.documentsSplitter.addWidget(self.availableDocsWidget)
-        self.activeDocsWidget = QWidget(self.documentsSplitter)
-        self.activeDocsWidget.setObjectName(u"activeDocsWidget")
-        self.verticalLayoutActive = QVBoxLayout(self.activeDocsWidget)
-        self.verticalLayoutActive.setSpacing(5)
-        self.verticalLayoutActive.setObjectName(u"verticalLayoutActive")
-        self.verticalLayoutActive.setContentsMargins(0, 0, 0, 0)
-        self.labelActive = QLabel(self.activeDocsWidget)
-        self.labelActive.setObjectName(u"labelActive")
 
-        self.verticalLayoutActive.addWidget(self.labelActive)
-
-        self.activeDocumentsTreeView = QTreeView(self.activeDocsWidget)
-        self.activeDocumentsTreeView.setObjectName(u"activeDocumentsTreeView")
-        self.activeDocumentsTreeView.setAcceptDrops(True)
-        self.activeDocumentsTreeView.setDragEnabled(True)
-        self.activeDocumentsTreeView.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
-        self.activeDocumentsTreeView.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-
-        self.verticalLayoutActive.addWidget(self.activeDocumentsTreeView)
-
-        self.documentsSplitter.addWidget(self.activeDocsWidget)
-        self.unavailableDocsWidget = QWidget(self.documentsSplitter)
-        self.unavailableDocsWidget.setObjectName(u"unavailableDocsWidget")
-        self.verticalLayoutUnavailable = QVBoxLayout(self.unavailableDocsWidget)
-        self.verticalLayoutUnavailable.setSpacing(5)
-        self.verticalLayoutUnavailable.setObjectName(u"verticalLayoutUnavailable")
-        self.verticalLayoutUnavailable.setContentsMargins(0, 0, 0, 0)
-        self.labelUnavailable = QLabel(self.unavailableDocsWidget)
-        self.labelUnavailable.setObjectName(u"labelUnavailable")
-
-        self.verticalLayoutUnavailable.addWidget(self.labelUnavailable)
-
-        self.unavailableDocumentsTreeView = QTreeView(self.unavailableDocsWidget)
-        self.unavailableDocumentsTreeView.setObjectName(u"unavailableDocumentsTreeView")
-        self.unavailableDocumentsTreeView.setDragEnabled(False)
-        self.unavailableDocumentsTreeView.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
-        self.unavailableDocumentsTreeView.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-
-        self.verticalLayoutUnavailable.addWidget(self.unavailableDocumentsTreeView)
-
-        self.documentsSplitter.addWidget(self.unavailableDocsWidget)
-
-        self.verticalLayoutDocuments.addWidget(self.documentsSplitter)
+        self.verticalLayoutDocuments.addWidget(self.documentsStatusWidget)
 
         self.tabWidget.addTab(self.tabDocuments, "")
         self.tabZim = QWidget()
@@ -219,19 +178,19 @@ class Ui_documents(object):
 
         self.tabWidget.addTab(self.tabKnowledge, "")
 
-        self.gridLayout.addWidget(self.tabWidget, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.tabWidget, 3, 0, 1, 1)
 
         self.line = QFrame(documents)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.Shape.HLine)
         self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.gridLayout.addWidget(self.line, 3, 0, 1, 1)
+        self.gridLayout.addWidget(self.line, 4, 0, 1, 1)
 
         self.knowledge_base_panel_widget = KnowledgeBasePanelWidget(documents)
         self.knowledge_base_panel_widget.setObjectName(u"knowledge_base_panel_widget")
 
-        self.gridLayout.addWidget(self.knowledge_base_panel_widget, 4, 0, 1, 1)
+        self.gridLayout.addWidget(self.knowledge_base_panel_widget, 5, 0, 1, 1)
 
 
         self.retranslateUi(documents)
@@ -245,12 +204,16 @@ class Ui_documents(object):
     def retranslateUi(self, documents):
         documents.setWindowTitle(QCoreApplication.translate("documents", u"Documents", None))
         self.label.setText(QCoreApplication.translate("documents", u"LLM knowledge base", None))
-        self.labelAvailable.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
-        self.labelAvailable.setText(QCoreApplication.translate("documents", u"Available Documents", None))
-        self.labelActive.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
-        self.labelActive.setText(QCoreApplication.translate("documents", u"Active Documents (RAG)", None))
-        self.labelUnavailable.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
-        self.labelUnavailable.setText(QCoreApplication.translate("documents", u"Unavailable Documents (Failed to Index)", None))
+        self.labelDocuments.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
+        self.labelDocuments.setText(QCoreApplication.translate("documents", u"Documents", None))
+        ___qtablewidgetitem = self.documentsTableWidget.horizontalHeaderItem(0)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("documents", u"Title", None));
+        ___qtablewidgetitem1 = self.documentsTableWidget.horizontalHeaderItem(1)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("documents", u"Active", None));
+        ___qtablewidgetitem2 = self.documentsTableWidget.horizontalHeaderItem(2)
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("documents", u"Indexed", None));
+        ___qtablewidgetitem3 = self.documentsTableWidget.horizontalHeaderItem(3)
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("documents", u"Error", None));
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabDocuments), QCoreApplication.translate("documents", u"Documents", None))
         self.labelRemote.setText(QCoreApplication.translate("documents", u"Kiwix Library Search Results", None))
         self.kiwixSearchBar.setPlaceholderText(QCoreApplication.translate("documents", u"Search Kiwix Library (title, keyword, language code)...", None))

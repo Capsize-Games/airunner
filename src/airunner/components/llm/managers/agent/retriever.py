@@ -81,6 +81,14 @@ class MultiIndexRetriever:
                         "Searching unified in-memory index"
                     )
 
+                ensure_current = getattr(
+                    self._rag_mixin._index,
+                    "ensure_current_embeddings",
+                    None,
+                )
+                if callable(ensure_current):
+                    ensure_current(self._rag_mixin.embedding)
+
                 all_documents.extend(
                     self._rag_mixin._index.similarity_search_by_vector(
                         query_vector,
@@ -118,6 +126,14 @@ class MultiIndexRetriever:
                 doc_index = self._rag_mixin._load_doc_index(doc_id)
                 if not doc_index:
                     continue
+
+                ensure_current = getattr(
+                    doc_index,
+                    "ensure_current_embeddings",
+                    None,
+                )
+                if callable(ensure_current):
+                    ensure_current(self._rag_mixin.embedding)
 
                 all_documents.extend(
                     doc_index.similarity_search_by_vector(

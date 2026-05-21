@@ -1,7 +1,7 @@
 """Tests for incremental conversation updates."""
 
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 from airunner.components.chat.gui.widgets import conversation_widget as module
 from airunner.components.chat.gui.widgets.conversation_widget import (
@@ -99,6 +99,33 @@ def test_thinking_updates_include_request_id():
         "streaming",
         "plan",
     )
+
+
+def test_model_loading_updates_include_request_id():
+    """Model-loading bridge updates stay scoped to the active request."""
+    widget = SimpleNamespace(_dispatch_chat_bridge_call=Mock())
+
+    ConversationWidget.show_model_loading_status(
+        widget,
+        "req-4",
+        "Loading model",
+    )
+    ConversationWidget.clear_model_loading_status(widget, "req-4")
+
+    assert widget._dispatch_chat_bridge_call.call_args_list == [
+        call(
+            "updateModelLoadStatus",
+            "req-4",
+            "started",
+            "Loading model",
+        ),
+        call(
+            "updateModelLoadStatus",
+            "req-4",
+            "completed",
+            "",
+        ),
+    ]
 
 
 def test_process_sequential_tokens_updates_message_with_request_id(

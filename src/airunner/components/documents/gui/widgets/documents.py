@@ -11,13 +11,16 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QIcon,
+    QColor,
     QStandardItem,
     QAction,
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QHeaderView,
     QMenu,
     QMessageBox,
+    QTableWidgetItem,
 )
 
 from airunner.enums import SignalCode
@@ -53,6 +56,7 @@ class DocumentsWidget(BaseWidget):
         self._current_indexing = 0
         self._total_to_index = 0
         self._unindexed_docs = []
+        self._document_index_failures: dict[str, str] = {}
         self._pending_document_index_requests: dict[str, bool] = {}
         self.file_extensions = [
             "md",
@@ -60,6 +64,7 @@ class DocumentsWidget(BaseWidget):
             "docx",
             "doc",
             "odt",
+            "mobi",
             "pdf",
             "epub",
             "zim",
@@ -103,81 +108,36 @@ class DocumentsWidget(BaseWidget):
         self.ui.knowledgeFolderLayout.addWidget(self.knowledge_file_explorer)
 
     def setup_file_explorer(self):
-        # Setup available documents tree (use a QStandardItemModel so we can
-        # inject a virtual "Kiwix Zim Files" folder without creating it on
-        # disk). We'll list local documents from `documents_path` and add a
-        # top-level virtual folder for ZIM files stored in the ZimFile model.
-        self.documents_model = QStandardItemModel(self)
-        self.ui.documentsTreeView.setModel(self.documents_model)
-        self.ui.documentsTreeView.setHeaderHidden(True)
-        self.ui.documentsTreeView.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
-        self.ui.documentsTreeView.setDragEnabled(True)
-        self.ui.documentsTreeView.setDragDropMode(
-            QAbstractItemView.DragDropMode.DragOnly
-        )
+        """Configure the table-only document management surface."""
+        self._configure_documents_table()
+        self.ui.documentsTableWidget.viewport().installEventFilter(self)
 
-        # Setup active documents tree (manual selection)
-        self.active_documents_model = QStandardItemModel(self)
-        self.ui.activeDocumentsTreeView.setModel(self.active_documents_model)
-        self.ui.activeDocumentsTreeView.setHeaderHidden(True)
-        self.ui.activeDocumentsTreeView.setAcceptDrops(True)
-        self.ui.activeDocumentsTreeView.setDragEnabled(True)
-        self.ui.activeDocumentsTreeView.setDragDropMode(
-            QAbstractItemView.DragDropMode.DragDrop
-        )
-        self.ui.activeDocumentsTreeView.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
-
-        # Setup unavailable documents tree (failed to index)
-        self.unavailable_documents_model = QStandardItemModel(self)
-        self.ui.unavailableDocumentsTreeView.setModel(
-            self.unavailable_documents_model
-        )
-        self.ui.unavailableDocumentsTreeView.setHeaderHidden(True)
-        self.ui.unavailableDocumentsTreeView.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
-
-        # Connect drag-and-drop signals
-        self.ui.documentsTreeView.clicked.connect(
-            self.on_available_doc_clicked
-        )
-        self.ui.activeDocumentsTreeView.clicked.connect(
-            self.on_active_doc_clicked
-        )
-
-        # Add context menus
-        self.ui.documentsTreeView.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
-        self.ui.documentsTreeView.customContextMenuRequested.connect(
-            self.show_available_doc_context_menu
-        )
-        self.ui.activeDocumentsTreeView.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
-        self.ui.activeDocumentsTreeView.customContextMenuRequested.connect(
-            self.show_active_doc_context_menu
-        )
-        self.ui.unavailableDocumentsTreeView.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
-        self.ui.unavailableDocumentsTreeView.customContextMenuRequested.connect(
-            self.show_unavailable_doc_context_menu
-        )
-
-        # Enable custom drag and drop handling
-        self.ui.documentsTreeView.setDefaultDropAction(
-            Qt.DropAction.CopyAction
-        )
-        self.ui.activeDocumentsTreeView.viewport().installEventFilter(self)
-
-        # Load active documents from database and populate available list
+        # Load document state into the table.
         self.refresh_active_documents_list()
         self.refresh_documents_list()
+
+    def _configure_documents_table(self) -> None:
+        """Configure the sortable document status table."""
+        table = self.ui.documentsTableWidget
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setAcceptDrops(True)
+        table.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        table.setDragEnabled(True)
+        table.setDefaultDropAction(Qt.DropAction.CopyAction)
+        table.setSortingEnabled(True)
+        table.verticalHeader().setVisible(False)
+        header = table.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column in range(1, table.columnCount()):
+            header.setSectionResizeMode(
+                column,
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
+        table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        table.customContextMenuRequested.connect(
+            self.show_documents_table_context_menu
+        )
 
     def setup_kiwix_widget(self):
         """Initialize the Kiwix widget with UI components."""
@@ -271,10 +231,11 @@ class DocumentsWidget(BaseWidget):
             docs = Document.objects.filter_by(path=document_path)
             if docs and len(docs) > 0:
                 Document.objects.update(pk=docs[0].id, active=False)
+        if document_path:
+            self._document_index_failures.pop(document_path, None)
 
         # Refresh the document lists to show updated indexing status
         self.refresh_documents_list()
-        self.refresh_active_documents_list()
 
         # Log success
         if document_path:
@@ -291,6 +252,7 @@ class DocumentsWidget(BaseWidget):
 
         if document_path and not deferred:
             self._pending_document_index_requests.pop(document_path, None)
+            self._document_index_failures[document_path] = error
 
         if document_path:
             if deferred:
@@ -306,16 +268,15 @@ class DocumentsWidget(BaseWidget):
 
         # Refresh the document lists - document should stay in unavailable
         self.refresh_documents_list()
-        self.refresh_active_documents_list()
 
     def eventFilter(self, obj, event):
-        """Handle drag-and-drop events for the active documents tree."""
-        if obj == self.ui.activeDocumentsTreeView.viewport():
+        """Handle drag-and-drop events for the document status table."""
+        if obj == self.ui.documentsTableWidget.viewport():
             if event.type() == QEvent.Type.DragEnter:
                 event.acceptProposedAction()
                 return True
             elif event.type() == QEvent.Type.Drop:
-                self.handle_drop_on_active_list(event)
+                self.handle_drop_on_documents_table(event)
                 return True
         return super().eventFilter(obj, event)
 
@@ -323,18 +284,14 @@ class DocumentsWidget(BaseWidget):
         """Handle double-click on available documents to add to active list."""
         pass  # Single click does nothing, use drag-and-drop
 
-    def on_active_doc_clicked(self, index):
-        """Handle click on active documents."""
-        pass  # Can be extended for context menu, etc.
-
-    def handle_drop_on_active_list(self, event):
-        """Handle files dropped onto the active documents list."""
+    def handle_drop_on_documents_table(self, event):
+        """Handle files dropped onto the document status table."""
         mime_data = event.mimeData()
 
         # Handle file paths from file system view
         handled = False
 
-        # 1) Standard file-system drags (URLs)
+        # Standard file-system drags (URLs)
         if mime_data.hasUrls():
             for url in mime_data.urls():
                 file_path = url.toLocalFile()
@@ -344,36 +301,6 @@ class DocumentsWidget(BaseWidget):
                     # Handle dropped folder - add all documents within it
                     self.add_folder_documents_to_active(file_path)
             handled = True
-
-        # 2) Drags from our own documentsTreeView which uses QStandardItemModel
-        # Extract source widget and if it's the documentsTreeView, pull selected
-        # items and add their stored paths (Qt.UserRole)
-        try:
-            src = event.source()
-            if src is self.ui.documentsTreeView:
-                sel = src.selectedIndexes()
-                for idx in sel:
-                    item = self.documents_model.itemFromIndex(idx)
-                    if not item:
-                        continue
-                    # If it's a folder node, expand children
-                    if item.hasChildren():
-                        for r in range(item.rowCount()):
-                            child = item.child(r, 0)
-                            if child:
-                                data = child.data(Qt.UserRole)
-                                if isinstance(data, str):
-                                    if os.path.isfile(data):
-                                        self.add_document_to_active(data)
-                    else:
-                        data = item.data(Qt.UserRole)
-                        if isinstance(data, str):
-                            if os.path.isfile(data):
-                                self.add_document_to_active(data)
-                handled = True
-        except Exception:
-            # Fall back silently to URL handling
-            pass
 
         if handled:
             event.acceptProposedAction()
@@ -437,6 +364,9 @@ class DocumentsWidget(BaseWidget):
             )
             return True
 
+        failures = getattr(self, "_document_index_failures", None)
+        if isinstance(failures, dict):
+            failures.pop(validated_path, None)
         self._pending_document_index_requests[validated_path] = (
             activate_after_index
         )
@@ -472,7 +402,6 @@ class DocumentsWidget(BaseWidget):
     def _on_document_library_changed(self, _path: str) -> None:
         """Refresh document views when files are changed outside the app."""
         self.refresh_documents_list()
-        self.refresh_active_documents_list()
         self.emit_signal(
             SignalCode.DOCUMENT_COLLECTION_CHANGED,
             {"reason": "filesystem"},
@@ -514,27 +443,20 @@ class DocumentsWidget(BaseWidget):
         # Check if indexed
         docs = Document.objects.filter_by(path=file_path)
         if not docs or not docs[0].indexed:
+            self._document_index_failures.pop(file_path, None)
             self._request_document_index(
                 file_path,
                 activate_after_index=True,
             )
             return
 
-        # Check if already in active list
-        for row in range(self.active_documents_model.rowCount()):
-            item = self.active_documents_model.item(row, 0)
-            if item and item.data() == file_path:
-                self.logger.info(
-                    f"Document already active: {self._get_display_name(file_path)}"
-                )
-                return
-
-        # Add to model with display name
+        if docs and getattr(docs[0], "active", False):
+            self.logger.info(
+                "Document already active: %s",
+                self._get_display_name(file_path),
+            )
+            return
         display_name = self._get_display_name(file_path)
-        item = QStandardItem(display_name)
-        item.setData(file_path)
-        item.setEditable(False)
-        self.active_documents_model.appendRow(item)
 
         # Update database
         if docs:
@@ -543,6 +465,7 @@ class DocumentsWidget(BaseWidget):
             Document.objects.create(path=file_path, active=True, indexed=True)
 
         self.logger.info(f"Added to active documents: {display_name}")
+        self.refresh_active_documents_list()
         self.emit_signal(
             SignalCode.DOCUMENT_COLLECTION_CHANGED,
             {"paths": [file_path]},
@@ -587,13 +510,6 @@ class DocumentsWidget(BaseWidget):
             self.logger.warning("Attempted to remove document with None path")
             return
 
-        # Remove from model
-        for row in range(self.active_documents_model.rowCount()):
-            item = self.active_documents_model.item(row, 0)
-            if item and item.data() == file_path:
-                self.active_documents_model.removeRow(row)
-                break
-
         # Update database
         docs = Document.objects.filter_by(path=file_path)
         if docs and len(docs) > 0:
@@ -601,58 +517,193 @@ class DocumentsWidget(BaseWidget):
 
         display_name = self._get_display_name(file_path)
         self.logger.info(f"Removed from active documents: {display_name}")
+        self.refresh_active_documents_list()
         self.emit_signal(
             SignalCode.DOCUMENT_COLLECTION_CHANGED,
             {"paths": [file_path]},
         )
 
+    def _selected_document_table_paths(self) -> list[str]:
+        """Return selected document paths from the status table."""
+        table = getattr(self.ui, "documentsTableWidget", None)
+        if table is None or table.selectionModel() is None:
+            return []
+        paths = []
+        for index in table.selectionModel().selectedRows(0):
+            item = table.item(index.row(), 0)
+            path = item.data(Qt.ItemDataRole.UserRole) if item else None
+            if isinstance(path, str):
+                paths.append(path)
+        return paths
+
+    def _status_table_item(
+        self,
+        text: str = "",
+        *,
+        tooltip: str = "",
+        color: str | None = None,
+    ) -> QTableWidgetItem:
+        """Return one centered, non-editable status cell."""
+        item = QTableWidgetItem(text)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        if tooltip:
+            item.setToolTip(tooltip)
+        if color:
+            item.setForeground(QColor(color))
+        return item
+
+    def _insert_document_table_row(self, row: int, document: Document) -> None:
+        """Insert one document row into the status table."""
+        table = self.ui.documentsTableWidget
+        display_name = self._get_display_name(document.path)
+        error_text = self._document_index_failures.get(document.path, "")
+        title_item = QTableWidgetItem(display_name)
+        title_item.setData(Qt.ItemDataRole.UserRole, document.path)
+        title_item.setToolTip(document.path)
+        title_item.setFlags(title_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        table.insertRow(row)
+        table.setItem(row, 0, title_item)
+        table.setItem(
+            row,
+            1,
+            self._status_table_item(
+                "✓" if document.active else "",
+                color="#22c55e" if document.active else None,
+            ),
+        )
+        table.setItem(
+            row,
+            2,
+            self._status_table_item(
+                "✓" if document.indexed else "",
+                color="#22c55e" if document.indexed else None,
+            ),
+        )
+        table.setItem(
+            row,
+            3,
+            self._status_table_item(
+                "✗" if error_text else "",
+                tooltip=error_text,
+                color="#ef4444" if error_text else None,
+            ),
+        )
+
     def refresh_active_documents_list(self):
-        """Load active and unavailable documents from database into the tree views."""
-        self.active_documents_model.clear()
-        self.unavailable_documents_model.clear()
+        """Load all document states into the sortable status table."""
+        table = getattr(self.ui, "documentsTableWidget", None)
+        if table is None:
+            return
 
-        # Get all documents from database
-        all_docs = Document.objects.all()
+        documents = [
+            doc for doc in Document.objects.all() if os.path.exists(doc.path)
+        ]
+        documents.sort(key=lambda doc: self._get_display_name(doc.path).lower())
+        self._document_index_failures = {
+            path: error
+            for path, error in self._document_index_failures.items()
+            if os.path.exists(path)
+        }
 
-        for doc in all_docs:
-            if not os.path.exists(doc.path):
-                continue
-
-            display_name = self._get_display_name(doc.path)
-            item = QStandardItem(display_name)
-            item.setData(doc.path)
-            item.setEditable(False)
-
-            # Determine which list to add to
-            if doc.active and doc.indexed:
-                # Active and indexed - add to active list
-                item.setToolTip(f"{display_name}\n✓ Indexed and ready for RAG")
-                self.active_documents_model.appendRow(item)
-            elif doc.active and not doc.indexed:
-                # Active but not indexed - try to index
-                # If it repeatedly fails to index, it might be unavailable
-                # For now, keep it in active list with warning
-                item.setToolTip(f"{display_name}\n⚠ Not yet indexed")
-                self.active_documents_model.appendRow(item)
-            elif not doc.active and not doc.indexed:
-                # Not active and not indexed - reserved for failed indexing attempts
-                # For now, don't show new unindexed documents here
-                pass
+        table.setSortingEnabled(False)
+        table.setRowCount(0)
+        for document in documents:
+            if document.indexed:
+                self._document_index_failures.pop(document.path, None)
+            self._insert_document_table_row(table.rowCount(), document)
+        table.setSortingEnabled(True)
 
     def keyPressEvent(self, event):
-        """Handle keyboard shortcuts (Delete key to remove from active list)."""
+        """Handle keyboard shortcuts for the document table."""
         if event.key() == Qt.Key.Key_Delete:
-            # Check which tree view has focus
-            if self.ui.activeDocumentsTreeView.hasFocus():
-                selected = self.ui.activeDocumentsTreeView.selectedIndexes()
-                for index in selected:
-                    item = self.active_documents_model.itemFromIndex(index)
-                    if item:
-                        file_path = item.data()
-                        self.remove_document_from_active(file_path)
+            if self.ui.documentsTableWidget.hasFocus():
+                for file_path in self._selected_document_table_paths():
+                    self.remove_document_from_active(file_path)
                 return
 
         super().keyPressEvent(event)
+
+    def show_documents_table_context_menu(self, position):
+        """Show activation and indexing actions for the document table."""
+        table = self.ui.documentsTableWidget
+        if not table.indexAt(position).isValid():
+            return
+
+        selected_paths = self._selected_document_table_paths()
+        if not selected_paths:
+            return
+
+        docs_by_path = {}
+        for path in selected_paths:
+            matches = Document.objects.filter_by(path=path)
+            docs_by_path[path] = matches[0] if matches else None
+
+        menu = QMenu(self)
+        inactive_paths = [
+            path
+            for path, document in docs_by_path.items()
+            if not getattr(document, "active", False)
+        ]
+        active_paths = [
+            path
+            for path, document in docs_by_path.items()
+            if getattr(document, "active", False)
+        ]
+        unindexed_paths = [
+            path
+            for path, document in docs_by_path.items()
+            if not getattr(document, "indexed", False)
+        ]
+
+        if inactive_paths:
+            add_action = QAction("Add to Active Documents (RAG)", self)
+            add_action.triggered.connect(
+                lambda: [self.add_document_to_active(path) for path in inactive_paths]
+            )
+            menu.addAction(add_action)
+        if active_paths:
+            remove_action = QAction("Remove from Active Documents", self)
+            remove_action.triggered.connect(
+                lambda: [
+                    self.remove_document_from_active(path)
+                    for path in active_paths
+                ]
+            )
+            menu.addAction(remove_action)
+        if unindexed_paths:
+            index_action = QAction("Index", self)
+            index_action.triggered.connect(
+                lambda: [self._request_document_index(path) for path in unindexed_paths]
+            )
+            menu.addAction(index_action)
+
+        delete_action = QAction("Delete", self)
+
+        def delete_selected():
+            for file_path in selected_paths:
+                self._document_index_failures.pop(file_path, None)
+                docs = Document.objects.filter_by(path=file_path)
+                if docs and len(docs) > 0:
+                    Document.objects.delete(pk=docs[0].id)
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as exc:
+                    display_name = self._get_display_name(file_path)
+                    self.logger.error(
+                        "Failed to delete file from disk %s: %s",
+                        display_name,
+                        exc,
+                    )
+
+            self.refresh_documents_list()
+            self.refresh_active_documents_list()
+            self.emit_signal(SignalCode.DOCUMENT_COLLECTION_CHANGED)
+
+        delete_action.triggered.connect(delete_selected)
+        menu.addAction(delete_action)
+        menu.exec(table.viewport().mapToGlobal(position))
 
     def show_available_doc_context_menu(self, position):
         """Show context menu for available documents."""
@@ -746,6 +797,7 @@ class DocumentsWidget(BaseWidget):
         # Delete selected files and folders from database AND disk
         def delete_selected():
             for file_path in selected_files:
+                self._document_index_failures.pop(file_path, None)
                 # Delete from database
                 docs = Document.objects.filter_by(path=file_path)
                 if docs and len(docs) > 0:
@@ -773,6 +825,10 @@ class DocumentsWidget(BaseWidget):
                         for root, dirs, files in os.walk(folder_path):
                             for fname in files:
                                 file_path = os.path.join(root, fname)
+                                self._document_index_failures.pop(
+                                    file_path,
+                                    None,
+                                )
                                 docs = Document.objects.filter_by(
                                     path=file_path
                                 )
@@ -976,14 +1032,12 @@ class DocumentsWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.refresh_active_documents_list()
+        self.refresh_documents_list()
         # self._request_index_for_unindexed_documents()
 
     def on_document_collection_changed(self, data: dict):
-        print("ON DOCUMENT COLLECTION CHANGED: documents.py")
         """Handle document collection changes from the worker."""
         self.refresh_documents_list()
-        self.refresh_active_documents_list()
 
     def _request_index_for_unindexed_documents(self):
         # Query all documents that are not indexed
@@ -1004,144 +1058,9 @@ class DocumentsWidget(BaseWidget):
             self.emit_signal(SignalCode.INDEX_DOCUMENT, {"path": doc})
 
     def refresh_documents_list(self):
-        """Rebuild the available documents model.
-
-        Structure:
-          - Indexed
-            - Local (mirrors folders from documents_path)
-            - Zim (ZimFile entries that are indexed)
-          - Unindexed
-            - Local
-            - Zim
-        """
-        self.documents_model.clear()
-
-        # Top-level containers
-        indexed = QStandardItem("Indexed")
-        indexed.setEditable(False)
-        unindexed = QStandardItem("Unindexed")
-        unindexed.setEditable(False)
-
-        indexed_local = QStandardItem("Local")
-        indexed_local.setEditable(False)
-        indexed_zim = QStandardItem("Zim")
-        indexed_zim.setEditable(False)
-
-        unindexed_local = QStandardItem("Local")
-        unindexed_local.setEditable(False)
-        unindexed_zim = QStandardItem("Zim")
-        unindexed_zim.setEditable(False)
-
-        indexed.appendRow(indexed_local)
-        indexed.appendRow(indexed_zim)
-        unindexed.appendRow(unindexed_local)
-        unindexed.appendRow(unindexed_zim)
-
-        def is_indexed(path: str) -> bool:
-            try:
-                docs = Document.objects.filter_by(path=path)
-                if docs and len(docs) > 0:
-                    return bool(docs[0].indexed)
-            except Exception:
-                pass
-            return False
-
-        # Populate local files (preserve folder structure)
-        doc_dir = self.documents_path
-        if not os.path.exists(doc_dir):
-            os.makedirs(doc_dir, exist_ok=True)
-
-        folder_map_indexed = {"": indexed_local}
-        folder_map_unindexed = {"": unindexed_local}
-
-        for root, dirs, files in os.walk(doc_dir):
-            rel_root = os.path.relpath(root, doc_dir)
-            if rel_root == ".":
-                rel_root = ""
-
-            for fname in sorted(files):
-                ext = os.path.splitext(fname)[1][1:].lower()
-                if ext not in self.file_extensions:
-                    continue
-                full_path = os.path.join(root, fname)
-                target_indexed = is_indexed(full_path)
-
-                folder_map = (
-                    folder_map_indexed
-                    if target_indexed
-                    else folder_map_unindexed
-                )
-                target_root = rel_root
-
-                if target_root not in folder_map:
-                    parts = target_root.split(os.sep) if target_root else []
-                    cur = ""
-                    parent_item = (
-                        indexed_local if target_indexed else unindexed_local
-                    )
-                    for p in parts:
-                        cur = os.path.join(cur, p) if cur else p
-                        if cur not in folder_map:
-                            node = QStandardItem(p)
-                            node.setEditable(False)
-                            node.setData(
-                                os.path.join(doc_dir, cur), Qt.UserRole
-                            )
-                            parent_item.appendRow(node)
-                            folder_map[cur] = node
-                            parent_item = node
-                        else:
-                            parent_item = folder_map[cur]
-
-                parent = folder_map.get(
-                    target_root,
-                    indexed_local if target_indexed else unindexed_local,
-                )
-                file_item = QStandardItem(self._get_display_name(full_path))
-                file_item.setEditable(False)
-                file_item.setData(full_path, Qt.UserRole)
-                parent.appendRow(file_item)
-
-        # Populate ZIM files into Zim subtrees
-        try:
-            local_zim_names = set()
-            zim_dir = os.path.join(
-                os.path.expanduser(self.path_settings.base_path), "zim"
-            )
-            if os.path.exists(zim_dir):
-                for f in os.listdir(zim_dir):
-                    if f.lower().endswith(".zim"):
-                        local_zim_names.add(f)
-
-            for zim in ZimFile.objects.all():
-                display = zim.title or zim.name or os.path.basename(zim.path)
-                item = QStandardItem(display)
-                item.setEditable(False)
-                item.setData(zim.path, Qt.UserRole)
-                tip = f"{display}\n{zim.summary or ''}".strip()
-                if os.path.basename(zim.path) in local_zim_names:
-                    tip += "\n✓ Downloaded"
-                item.setToolTip(tip)
-                if is_indexed(zim.path):
-                    indexed_zim.appendRow(item)
-                else:
-                    unindexed_zim.appendRow(item)
-        except Exception:
-            pass
-
-        # Append to model
-        self.documents_model.appendRow(indexed)
-        self.documents_model.appendRow(unindexed)
+        """Refresh the table-driven document state and watcher roots."""
+        self.refresh_active_documents_list()
         self._refresh_document_watch_paths()
-
-        self._expand_available_document_sections(
-            indexed,
-            unindexed,
-            indexed_local,
-            indexed_zim,
-            unindexed_local,
-            unindexed_zim,
-        )
 
     def _expand_available_document_sections(self, *items) -> None:
         """Expand populated document tree branches so imports are visible."""
@@ -1179,4 +1098,3 @@ class DocumentsWidget(BaseWidget):
     def on_indexing_complete(self, data: dict):
         """Handle indexing completion - refresh lists to move indexed docs."""
         self.refresh_documents_list()
-        self.refresh_active_documents_list()

@@ -27,6 +27,7 @@ RAG_DOCUMENT_SUFFIXES = (
     ".htm",
     ".html",
     ".md",
+    ".mobi",
     ".pdf",
     ".txt",
 )

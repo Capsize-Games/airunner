@@ -228,6 +228,7 @@ class LLMModelManager(
 
         self._last_load_error = None
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self.unload_rag()
         self._unload_components()
 
         resource_manager = ModelResourceManager()

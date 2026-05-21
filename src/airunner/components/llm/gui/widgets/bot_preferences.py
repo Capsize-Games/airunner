@@ -186,7 +186,9 @@ class BotPreferencesWidget(BaseWidget):
         file_path, _ = open_file_path(
             self,
             label="Select Document",
-            file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)",
+            file_type=(
+                "Text Files (*.md *.html *.htm *.epub *.mobi *.pdf *.txt)"
+            ),
         )
 
         # validate file path
@@ -199,6 +201,7 @@ class BotPreferencesWidget(BaseWidget):
                     ".html",
                     ".htm",
                     ".epub",
+                    ".mobi",
                     ".pdf",
                     ".txt",
                 )

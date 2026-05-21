@@ -244,8 +244,13 @@ class LLMGenerateWorker(
                             content,
                             source_name=doc.get("source_name", "web_content"),
                         )
-                    elif file_type.lower() in [".epub", "epub"]:
-                        # content should be bytes for epub; try to coerce
+                    elif file_type.lower() in [
+                        ".epub",
+                        "epub",
+                        ".mobi",
+                        "mobi",
+                    ]:
+                        # content should be bytes for ebook uploads; try to coerce
                         content_bytes = (
                             content
                             if isinstance(content, (bytes, bytearray))
@@ -253,8 +258,12 @@ class LLMGenerateWorker(
                         )
                         self.model_manager.load_bytes_into_rag(
                             content_bytes,
-                            source_name=doc.get("source_name", "epub_upload"),
-                            file_ext=".epub",
+                            source_name=doc.get("source_name", "ebook_upload"),
+                            file_ext=(
+                                ".mobi"
+                                if file_type.lower() in [".mobi", "mobi"]
+                                else ".epub"
+                            ),
                         )
                     else:
                         # Fallback to treating as HTML text

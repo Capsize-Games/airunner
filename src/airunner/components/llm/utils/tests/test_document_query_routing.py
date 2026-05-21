@@ -63,3 +63,15 @@ def test_route_document_query_defaults_to_retrieval_in_document_mode():
     assert route is not None
     assert route.intent == "retrieval"
     assert route.force_tool == "rag_search"
+
+
+def test_route_document_query_treats_tell_me_more_as_summary():
+    """Follow-up document prompts should stay on the summary path."""
+    route = route_document_query(
+        "tell me more about the book",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "summary"
+    assert route.force_tool == "rag_search"

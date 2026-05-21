@@ -49,6 +49,8 @@ _SUMMARY_PATTERNS = (
     r"\boverview\b",
     r"\bmain\s+(?:idea|topic|theme)\b",
     r"\bwhat\s+is\s+(?:this|the)\s+(?:document|book)\s+about\b",
+    r"\btell\s+me\s+more\s+about\s+(?:this|the)\s+(?:document|book|file)\b",
+    r"\bmore\s+about\s+(?:this|the)\s+(?:document|book|file)\b",
 )
 
 

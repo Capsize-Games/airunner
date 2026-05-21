@@ -533,6 +533,10 @@ mjx-container[display="true"] {
     background: rgba(59, 130, 246, 0.05);
 }
 
+.status-item.model_loading-item {
+    background: rgba(245, 158, 11, 0.08);
+}
+
 .status-item.completed {
     opacity: 0.7;
 }
@@ -639,11 +643,10 @@ mjx-container[display="true"] {
     max-width: 100%;
     border-top: 1px solid rgba(147, 51, 234, 0.2);
     background: rgba(147, 51, 234, 0.03);
-    animation: fadeSlideIn 0.2s ease;
 }
 
 .unified-status-widget.expanded .thinking-preview-line {
-    opacity: 0.9;
+    display: none;
 }
 
 @keyframes fadeSlideIn {

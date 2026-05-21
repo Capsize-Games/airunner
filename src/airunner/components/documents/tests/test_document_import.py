@@ -49,3 +49,11 @@ def test_import_document_uses_darklock_user_override(monkeypatch, tmp_path):
         }
     ]
     assert (destination_root / source_path.name).read_bytes() == b"pdf-data"
+
+
+def test_rag_document_suffixes_include_mobi():
+    """MOBI files should be accepted anywhere RAG documents are filtered."""
+    from airunner.components.documents import document_import as module
+
+    assert ".mobi" in module.rag_document_suffixes()
+    assert module.is_rag_document_path("/tmp/book.mobi") is True
