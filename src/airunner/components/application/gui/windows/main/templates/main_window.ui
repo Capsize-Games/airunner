@@ -157,6 +157,47 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="knowledgebase_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Knowledgebase</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/book.svg</normaloff>:/light/icons/feather/light/book.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Orientation::Vertical</enum>
@@ -274,47 +315,6 @@
            <number>5</number>
           </property>
           <item>
-           <widget class="QPushButton" name="knowledgebase_button">
-            <property name="minimumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="toolTip">
-             <string>Toggle Knowledgebase</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/book.svg</normaloff>:/light/icons/feather/light/book.svg</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QPushButton" name="stats_button">
             <property name="minimumSize">
              <size>
@@ -408,6 +408,37 @@
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
          </property>
+           <widget class="QWidget" name="documents_sidebar" native="true">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>64</width>
+              <height>0</height>
+             </size>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_documents_sidebar">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QWidget" name="documents_placeholder" native="true"/>
+             </item>
+            </layout>
+           </widget>
          <widget class="GeneratorForm" name="generator_widget" native="true">
           <property name="enabled">
            <bool>true</bool>
@@ -545,11 +576,6 @@
              <property name="currentIndex">
               <number>0</number>
              </property>
-             <widget class="QWidget" name="documents_placeholder" native="true">
-              <attribute name="title">
-               <string/>
-              </attribute>
-             </widget>
              <widget class="QWidget" name="stats_placeholder">
               <attribute name="title">
                <string>Page</string>

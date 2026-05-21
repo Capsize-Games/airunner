@@ -390,3 +390,38 @@ def test_get_document_query_intent_prefers_request_metadata():
     assert mixin._get_document_query_intent("what is this document?") == (
         "structure"
     )
+
+
+def test_recover_forced_response_content_rejects_summary_prompt_echo():
+    """Summary prompt guidance should not leak into the final visible answer."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            "Explain the central worldview/argument/subject first, then "
+            "cover supporting ideas/details. Merge overlapping evidence. "
+            "Prefer specific details."
+        ),
+        additional_kwargs={
+            "thinking_content": (
+                "1. The book presents a darkly comic cemetery mystery where "
+                "the living and dead constantly brush against each other.\n"
+                "2. It follows eccentric characters as they investigate "
+                "crypts, danger, memory, and grief in a setting where the "
+                "past keeps intruding on the present."
+            )
+        },
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == (
+        "The book presents a darkly comic cemetery mystery where the "
+        "living and dead constantly brush against each other. It follows "
+        "eccentric characters as they investigate crypts, danger, memory, "
+        "and grief in a setting where the past keeps intruding on the "
+        "present."
+    )

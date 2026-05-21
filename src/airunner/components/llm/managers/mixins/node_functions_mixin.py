@@ -1091,6 +1091,26 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         return any(marker in lowered for marker in markers)
 
+    @staticmethod
+    def _looks_like_summary_prompt_echo(text: str) -> bool:
+        """Return True when visible text is just our summary guidance echoed back."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+
+        markers = (
+            "explain the central worldview",
+            "explain the central argument",
+            "explain the central subject",
+            "cover supporting ideas",
+            "cover the most important supporting ideas",
+            "merge overlapping evidence",
+            "prefer specific details",
+            "keep isolated front-matter anecdotes",
+            "stay anchored to what the excerpts explicitly say",
+        )
+        return sum(marker in lowered for marker in markers) >= 2
+
     def _emit_final_thinking_signal(
         self,
         response_message: Optional[AIMessage],
@@ -1136,6 +1156,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             )
             if not self._looks_like_instruction_reflection(
                 cleaned_visible
+            ) and not self._looks_like_summary_prompt_echo(
+                cleaned_visible
             ) and not self._looks_like_malformed_forced_response_fragment(
                 cleaned_visible
             ) and not (
@@ -1172,6 +1194,16 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 "Recovered drafted forced response from reasoning-only output"
             )
             return drafted_response
+
+        if reject_structure_only:
+            normalized_reasoning_summary = (
+                self._normalize_numbered_summary_response(cleaned_thinking)
+            )
+            if normalized_reasoning_summary:
+                self.logger.info(
+                    "Recovered summary prose from numbered reasoning output"
+                )
+                return normalized_reasoning_summary
 
         paragraphs = [
             paragraph.strip()
@@ -1491,6 +1523,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             candidate = section_body_match.group(1).strip()
         if self._looks_like_instruction_reflection(candidate):
             return ""
+        if self._looks_like_summary_prompt_echo(candidate):
+            return ""
         if self._looks_like_reasoning_header(candidate):
             return ""
         return candidate
@@ -1590,6 +1624,40 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 fragments.append(line)
 
         if not fragments:
+            return ""
+        return " ".join(fragments)
+
+    @classmethod
+    def _normalize_numbered_summary_response(cls, text: str) -> str:
+        """Flatten one numbered reasoning list into plain summary prose."""
+        fragments: list[str] = []
+        for raw_line in str(text or "").splitlines():
+            match = re.match(r"^\s*\d+\.\s+(.+)$", raw_line)
+            if not match:
+                continue
+            line = cls._clean_reasoning_candidate(cls, match.group(1).strip())
+            if not line:
+                continue
+
+            lowered = line.lower()
+            if any(
+                marker in lowered
+                for marker in (
+                    "constraint",
+                    "instruction",
+                    "review against constraints",
+                    "do not call another tool",
+                    "respond now",
+                )
+            ):
+                continue
+
+            if line[-1] not in ".!?":
+                line = f"{line}."
+            if line not in fragments:
+                fragments.append(line)
+
+        if len(fragments) < 2:
             return ""
         return " ".join(fragments)
 

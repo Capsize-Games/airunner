@@ -177,8 +177,11 @@ class MainWindow(
     _window_title = f"AI Runner"
     _daemon_status_request_timeout_seconds = 0.75
     _runtime_preference_retry_seconds = 5.0
-    _documents_sidebar_index = 0
-    _stats_sidebar_index = 1
+    _documents_splitter_index = 0
+    _chat_splitter_index = 1
+    _center_splitter_index = 2
+    _stats_splitter_index = 3
+    _stats_sidebar_index = 0
     icons = [
         ("settings", "actionSettings"),
         ("image", "menuArt"),
@@ -222,6 +225,7 @@ class MainWindow(
         self._post_startup_status_refresh_requested = False
         self._state_restored = None
         self._restore_sidebar_page_after_startup = None
+        self._restore_documents_panel_after_startup = False
         self._daemon_status_refresh_inflight = False
         self._runtime_preference_retry_after = {}
         self.ui = self.ui_class_()
@@ -347,11 +351,24 @@ class MainWindow(
 
     @Slot(bool)
     def on_chat_button_toggled(self, val: bool):
-        self._toggle_splitter_section(val, 0, self.ui.main_window_splitter, 50)
+        self._toggle_splitter_section(
+            val,
+            self._chat_splitter_index,
+            self.ui.main_window_splitter,
+            50,
+        )
 
     @Slot(bool)
     def on_knowledgebase_button_toggled(self, val: bool):
-        self._toggle_sidebar_page(self._documents_sidebar_index, val)
+        if val:
+            self._ensure_knowledgebase_loaded()
+        self._toggle_splitter_section(
+            val,
+            self._documents_splitter_index,
+            self.ui.main_window_splitter,
+            220,
+        )
+        self._sync_sidebar_button_states()
 
     @Slot(bool)
     def on_stats_button_toggled(self, val: bool):
@@ -360,6 +377,10 @@ class MainWindow(
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Restore deferred startup UI once the main window is visible."""
         self._ensure_canvas_loaded()
+
+        if self._restore_documents_panel_after_startup:
+            self._restore_documents_panel_after_startup = False
+            self._ensure_knowledgebase_loaded()
 
         if self._restore_sidebar_page_after_startup is not None:
             page_index = int(self._restore_sidebar_page_after_startup)
@@ -396,6 +417,8 @@ class MainWindow(
     def on_splitter_changed_sizes(self):
         if self._sidebar_is_visible():
             self._ensure_sidebar_page_loaded(self.ui.sidebar_tab.currentIndex())
+        if self._knowledgebase_panel_is_visible():
+            self._ensure_knowledgebase_loaded()
         self.set_chat_button_checked()
         self.set_knowledgebase_button_checked()
         self.set_stats_button_checked()
@@ -409,30 +432,34 @@ class MainWindow(
     def _sidebar_is_visible(self) -> bool:
         """Return True when the right sidebar splitter area is visible."""
         sizes = self.ui.main_window_splitter.sizes()
-        return len(sizes) > 2 and sizes[2] > 0
+        return len(sizes) > self._stats_splitter_index and (
+            sizes[self._stats_splitter_index] > 0
+        )
+
+    def _knowledgebase_panel_is_visible(self) -> bool:
+        """Return True when the left documents splitter area is visible."""
+        sizes = self.ui.main_window_splitter.sizes()
+        return len(sizes) > self._documents_splitter_index and (
+            sizes[self._documents_splitter_index] > 0
+        )
 
     def _saved_sidebar_tab_index(self) -> int:
         """Return the persisted sidebar page index."""
-        self.qsettings.beginGroup("window_settings")
-        index = self.qsettings.value("active_sidebar_tab_index", 0, type=int)
-        self.qsettings.endGroup()
-        return self._stats_sidebar_index if index == 1 else 0
+        return self._stats_sidebar_index
 
     def _store_active_sidebar_tab_index(self, index: int) -> None:
         """Persist the current sidebar page index."""
         self.qsettings.beginGroup("window_settings")
         self.qsettings.setValue(
             "active_sidebar_tab_index",
-            self._stats_sidebar_index if index == 1 else 0,
+            self._stats_sidebar_index,
         )
         self.qsettings.endGroup()
         self.qsettings.sync()
 
     def _ensure_sidebar_page_loaded(self, page_index: int) -> None:
         """Load sidebar content lazily for the requested page."""
-        if page_index == self._documents_sidebar_index:
-            self._ensure_knowledgebase_loaded()
-        elif page_index == self._stats_sidebar_index:
+        if page_index == self._stats_sidebar_index:
             self._ensure_stats_loaded()
 
     def _toggle_sidebar_page(self, page_index: int, visible: bool) -> None:
@@ -443,7 +470,7 @@ class MainWindow(
             if not self._sidebar_is_visible():
                 self._toggle_splitter_section(
                     True,
-                    2,
+                    self._stats_splitter_index,
                     self.ui.main_window_splitter,
                     50,
                 )
@@ -453,7 +480,7 @@ class MainWindow(
         ):
             self._toggle_splitter_section(
                 False,
-                2,
+                self._stats_splitter_index,
                 self.ui.main_window_splitter,
                 50,
             )
@@ -468,26 +495,25 @@ class MainWindow(
     def set_chat_button_checked(self):
         self.ui.chat_button.blockSignals(True)
         self.ui.chat_button.setChecked(
-            self.ui.main_window_splitter.sizes()[0] > 0
+            len(self.ui.main_window_splitter.sizes())
+            > self._chat_splitter_index
+            and self.ui.main_window_splitter.sizes()[
+                self._chat_splitter_index
+            ]
+            > 0
         )
         self.ui.chat_button.blockSignals(False)
 
     def set_knowledgebase_button_checked(self):
         self.ui.knowledgebase_button.blockSignals(True)
         self.ui.knowledgebase_button.setChecked(
-            self._sidebar_is_visible()
-            and self.ui.sidebar_tab.currentIndex()
-            == self._documents_sidebar_index
+            self._knowledgebase_panel_is_visible()
         )
         self.ui.knowledgebase_button.blockSignals(False)
     
     def set_stats_button_checked(self):
         self.ui.stats_button.blockSignals(True)
-        self.ui.stats_button.setChecked(
-            self._sidebar_is_visible()
-            and self.ui.sidebar_tab.currentIndex()
-            == self._stats_sidebar_index
-        )
+        self.ui.stats_button.setChecked(self._sidebar_is_visible())
         self.ui.stats_button.blockSignals(False)
 
     @Slot()
@@ -1068,7 +1094,7 @@ class MainWindow(
         # Configure default splitter sizes to maximize the canvas area (index 1)
         default_splitter_config = {
             "main_window_splitter": {
-                "index_to_maximize": 1,
+                "index_to_maximize": self._center_splitter_index,
                 "min_other_size": 50,
             }
         }
@@ -1081,6 +1107,9 @@ class MainWindow(
 
         if self._sidebar_is_visible():
             self._restore_sidebar_page_after_startup = sidebar_page_index
+        self._restore_documents_panel_after_startup = (
+            self._knowledgebase_panel_is_visible()
+        )
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)

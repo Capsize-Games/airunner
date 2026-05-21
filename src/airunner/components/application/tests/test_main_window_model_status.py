@@ -57,9 +57,13 @@ def _make_window_stub():
         },
         _post_startup_status_refresh_requested=False,
         _restore_sidebar_page_after_startup=None,
+        _restore_documents_panel_after_startup=False,
         _runtime_preference_retry_after={},
-        _documents_sidebar_index=0,
-        _stats_sidebar_index=1,
+        _documents_splitter_index=0,
+        _chat_splitter_index=1,
+        _center_splitter_index=2,
+        _stats_splitter_index=3,
+        _stats_sidebar_index=0,
         ui=SimpleNamespace(
             text_to_speech_button=_make_action(),
             speech_to_text_button=_make_action(),
@@ -67,9 +71,10 @@ def _make_window_stub():
                 currentIndex=Mock(return_value=0),
                 setCurrentIndex=Mock(),
             ),
-            main_window_splitter=SimpleNamespace(sizes=lambda: [0, 0, 0]),
+            main_window_splitter=SimpleNamespace(sizes=lambda: [0, 0, 0, 0]),
             knowledgebase_button=_make_action(),
             stats_button=_make_action(),
+            chat_button=_make_action(),
         ),
         application_settings=SimpleNamespace(
             llm_enabled=False,
@@ -95,6 +100,7 @@ def _make_window_stub():
         refresh_api_reference=Mock(return_value=None),
         _ensure_canvas_loaded=Mock(),
         _ensure_sidebar_page_loaded=Mock(),
+        _ensure_knowledgebase_loaded=Mock(),
         _sync_sidebar_button_states=Mock(),
         _set_action_checked_state=MainWindow._set_action_checked_state,
         _allows_loading_toggle=MainWindow._allows_loading_toggle,
@@ -110,6 +116,10 @@ def _make_window_stub():
     )
     window._normalize_direct_llm_status = lambda status: (
         MainWindow._normalize_direct_llm_status(window, status)
+    )
+    window._sidebar_is_visible = lambda: MainWindow._sidebar_is_visible(window)
+    window._knowledgebase_panel_is_visible = (
+        lambda: MainWindow._knowledgebase_panel_is_visible(window)
     )
     return window
 
@@ -316,27 +326,38 @@ def test_on_main_window_loaded_signal_refreshes_daemon_status_once():
 
 def test_on_main_window_loaded_signal_restores_saved_sidebar_page():
     window = _make_window_stub()
-    window._restore_sidebar_page_after_startup = 1
+    window._restore_sidebar_page_after_startup = 0
     window._refresh_model_status_from_daemon = Mock()
 
     MainWindow.on_main_window_loaded_signal(window)
 
-    window._ensure_sidebar_page_loaded.assert_called_once_with(1)
-    window.ui.sidebar_tab.setCurrentIndex.assert_called_once_with(1)
+    window._ensure_sidebar_page_loaded.assert_called_once_with(0)
+    window.ui.sidebar_tab.setCurrentIndex.assert_called_once_with(0)
     window._sync_sidebar_button_states.assert_called_once_with()
     assert window._restore_sidebar_page_after_startup is None
 
 
-def test_sidebar_buttons_reflect_active_sidebar_page():
+def test_on_main_window_loaded_signal_restores_documents_panel():
     window = _make_window_stub()
-    window.ui.main_window_splitter = SimpleNamespace(sizes=lambda: [50, 500, 240])
-    window._sidebar_is_visible = lambda: True
-    window.ui.sidebar_tab.currentIndex = Mock(return_value=1)
+    window._restore_documents_panel_after_startup = True
+    window._refresh_model_status_from_daemon = Mock()
+
+    MainWindow.on_main_window_loaded_signal(window)
+
+    window._ensure_knowledgebase_loaded.assert_called_once_with()
+    assert window._restore_documents_panel_after_startup is False
+
+
+def test_sidebar_buttons_reflect_splitter_panels():
+    window = _make_window_stub()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [220, 480, 800, 240]
+    )
 
     MainWindow.set_knowledgebase_button_checked(window)
     MainWindow.set_stats_button_checked(window)
 
-    window.ui.knowledgebase_button.setChecked.assert_called_once_with(False)
+    window.ui.knowledgebase_button.setChecked.assert_called_once_with(True)
     window.ui.stats_button.setChecked.assert_called_once_with(True)
 
 

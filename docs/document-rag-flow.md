@@ -19,6 +19,8 @@ For summaries, the important detail is that the model does not answer directly f
 
 For a single active document, the summary path is now designed to be broader than ordinary semantic search. Instead of relying only on the highest-similarity chunks, it can build summary evidence from the full extracted document text so the final answer covers more than just the introduction.
 
+The retrieval layer now also normalizes the local E5 embedding inputs the way the model expects: document queries are embedded with a `query:` prefix and indexed passages are embedded with a `passage:` prefix. Persisted indexes that were built before that change are upgraded lazily on the next search so older documents do not stay stuck on the pre-prefix strategy.
+
 ## Diagram
 
 ```mermaid
@@ -83,6 +85,17 @@ For summary intent, `rag_search()` now has a different quality target than ordin
 - if that broader path is unavailable, it should fall back to wider retrieval breadth instead of the narrow default.
 - the summary fallback path should request more evidence than ordinary retrieval so the synthesis step has enough coverage to work with.
 
+### 2.5 Retrieval runtime and persisted indexes
+
+These files sit under the tool layer, but they matter directly for real answer quality.
+
+- [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py): wraps the local `intfloat/e5-large` embeddings so queries use `query:` and passages use `passage:` before embedding.
+- [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py): stores embedding-strategy metadata with each persisted index and lazily re-embeds legacy indexes on the next search when the strategy changes.
+- [retriever.py](../src/airunner/components/llm/managers/agent/retriever.py): ensures loaded document indexes are refreshed to the current embedding strategy before similarity search runs.
+- [model_status_widget.py](../src/airunner/components/model_management/gui/model_status_widget.py): surfaces the embedding runtime as its own `RAG Embeddings` row with status and unload support.
+
+This means the RAG path now has a distinct embedding runtime that can be loading, loaded, or unloaded independently of the main LLM runtime.
+
 ### 3. Post-tool synthesis instructions
 
 This is the main place where the summary answer style is created.
@@ -96,6 +109,7 @@ Two extra safeguards now matter for summary turns:
 
 - the internal no-tool summary synthesis pass uses a larger generation budget than the outer RAG action so it does not inherit the concise retrieval budget and truncate mid-thought,
 - malformed prompt-tail fragments such as partial `Answer:` label text are rejected before they can override a better drafted summary recovered from thinking content.
+- if the visible synthesis output merely echoes the summary instructions themselves, that prompt-guidance text is rejected and recovery falls back to drafted content from thinking, flattening numbered reasoning summaries into plain prose when needed.
 
 ### 4. Final streaming and rendering
 
@@ -134,11 +148,12 @@ Example: "summarize the document for me"
 1. The request is classified as `summary`.
 2. The route forces `rag_search`.
 3. If one active document is available, `rag_search()` can extract the full text and build distributed summary evidence across multiple sections or regions of the document.
-4. If that path is unavailable, `rag_search()` falls back to a wider semantic retrieval pass.
-5. `_build_document_summary_prompt_results()` removes filename, path, and excerpt-label clutter from the synthesis input.
-6. `_build_search_results_prompt()` tells the model to synthesize a real summary from the evidence.
-7. If the internal synthesis pass emits a malformed tail fragment, recovery prefers the better drafted summary from thinking content instead of trusting that fragment.
-8. The streamed answer is rendered into the assistant bubble.
+4. Before searching a persisted index, the retrieval layer upgrades any legacy pre-prefix embeddings to the current E5 strategy when needed.
+5. If that broader path is unavailable, `rag_search()` falls back to a wider semantic retrieval pass.
+6. `_build_document_summary_prompt_results()` removes filename, path, and excerpt-label clutter from the synthesis input.
+7. `_build_search_results_prompt()` tells the model to synthesize a real summary from the evidence.
+8. If the internal synthesis pass emits a malformed tail fragment or simply reflects the instructions back, recovery prefers the better drafted summary from thinking content instead of trusting that visible fragment.
+9. The streamed answer is rendered into the assistant bubble.
 
 ## Why Summary Quality Lives Mostly In One File
 
@@ -160,17 +175,21 @@ After the summary-retrieval upgrade, the two most important files for summary qu
 - [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py)
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py)
 - [rag_search_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_search_mixin.py)
+- [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py)
+- [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)
 
-`rag_tools.py` determines coverage. `rag_search_mixin.py` determines whether the requested breadth is even reachable. `NodeFunctionsMixin` determines how that evidence becomes the final assistant answer.
+`rag_tools.py` determines coverage. `rag_search_mixin.py` determines whether the requested breadth is even reachable. `rag_properties_mixin.py` determines how text is embedded for retrieval. `vector_index.py` determines whether old indexes are silently upgraded to the current strategy. `NodeFunctionsMixin` determines how that evidence becomes the final assistant answer and how malformed visible output is recovered.
 
 ## Practical Debugging Order
 
 When a document answer looks wrong, check the pipeline in this order:
 
 1. Was the question routed to the right intent in [document_query_routing.py](../src/airunner/components/llm/utils/document_query_routing.py#L93)?
-2. Did the right tool run in [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py#L267)?
-3. Did the tool return good evidence in [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L417)?
-4. Did `_build_document_summary_prompt_results()` and `_build_search_results_prompt()` in [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L716) create the right synthesis input?
-5. Did the answer stream correctly through [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302) and [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087)?
+2. Is the active embedding runtime using the expected E5 prefix strategy in [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py)?
+3. Did the persisted index refresh itself if it was built before the current embedding strategy in [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)?
+4. Did the right tool run in [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py#L267)?
+5. Did the tool return good evidence in [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L417)?
+6. Did `_build_document_summary_prompt_results()` and `_build_search_results_prompt()` in [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L716) create the right synthesis input, and did recovery reject any prompt-guidance echo?
+7. Did the answer stream correctly through [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302) and [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087)?
 
 That order usually tells you whether the bug is routing, retrieval, synthesis, or rendering.
