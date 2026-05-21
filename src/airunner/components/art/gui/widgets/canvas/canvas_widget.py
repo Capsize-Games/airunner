@@ -62,8 +62,6 @@ class CanvasWidget(BaseWidget):
         ("save", "save_art_document"),
         ("link-2", "snap_to_grid_button"),
         ("move", "move_button"),
-        ("message-square", "prompt_editor_button"),
-        ("tool", "art_tools_button"),
         ("filter", "filter_button"),
         ("image-minus", "remove_background_button"),
     ]
@@ -95,19 +93,9 @@ class CanvasWidget(BaseWidget):
             SignalCode.SAVE_STATE: self.save_state,
         }
         self._initialized: bool = False
-        self._splitters = ["splitter"]
-        self._default_splitter_settings_applied = False
+        self._splitters = []
         self._centered_canvas_restore_scheduled = False
         super().__init__(*args, **kwargs)
-
-        # Configure default splitter sizes for splitter
-        # Assuming the main canvas area is the second panel (index 1)
-        default_canvas_splitter_config = {
-            "splitter": {"index_to_maximize": 1, "min_other_size": 50}
-        }
-        self.load_splitter_settings(
-            default_maximize_config=default_canvas_splitter_config
-        )
         self._configure_canvas_shortcuts()
 
         show_grid = self.grid_settings.show_grid
@@ -128,8 +116,6 @@ class CanvasWidget(BaseWidget):
         self.ui.snap_to_grid_button.setChecked(self.grid_settings.snap_to_grid)
         self.ui.grid_button.blockSignals(False)
         self.ui.snap_to_grid_button.blockSignals(False)
-
-        self.ui.splitter.splitterMoved.connect(self.on_splitter_changed_sizes)
 
         self.update_grid_info(
             {
@@ -320,44 +306,6 @@ class CanvasWidget(BaseWidget):
         settings.pivot_point_y = value.y()
         self.update_application_settings(pivot_point_x=value.x())
         self.update_application_settings(pivot_point_y=value.y())
-
-    @Slot(bool)
-    def on_prompt_editor_button_clicked(self, val: bool) -> None:
-        """Handle prompt editor button toggle.
-
-        Args:
-            val: True if button is checked, False otherwise.
-        """
-        self._toggle_splitter_section(val, 0, self.ui.splitter)
-
-    @Slot(bool)
-    def on_art_tools_button_clicked(self, val: bool) -> None:
-        """Handle art tools button toggle.
-
-        Args:
-            val: True if button is checked, False otherwise.
-        """
-        self._toggle_splitter_section(val, 2, self.ui.splitter, 300)
-
-    def on_splitter_changed_sizes(self) -> None:
-        """Handle splitter size changes by updating button states."""
-        self.set_prompt_editor_button_checked()
-        self.set_art_tools_button_checked()
-        self._schedule_centered_canvas_restore()
-
-    def set_prompt_editor_button_checked(self) -> None:
-        """Update prompt editor button checked state based on splitter size."""
-        self.ui.prompt_editor_button.blockSignals(True)
-        self.ui.prompt_editor_button.setChecked(
-            self.ui.splitter.sizes()[0] > 0
-        )
-        self.ui.prompt_editor_button.blockSignals(False)
-
-    def set_art_tools_button_checked(self) -> None:
-        """Update art tools button checked state based on splitter size."""
-        self.ui.art_tools_button.blockSignals(True)
-        self.ui.art_tools_button.setChecked(self.ui.splitter.sizes()[2] > 0)
-        self.ui.art_tools_button.blockSignals(False)
 
     @Slot()
     def on_brush_color_button_clicked(self) -> None:
@@ -583,7 +531,7 @@ class CanvasWidget(BaseWidget):
         self._update_status_labels()
 
     def save_state(self) -> None:
-        """Save the current widget state including splitter positions."""
+        """Save the current widget state."""
         self._save_splitter_state()
 
     def on_toggle_grid_signal(self, message: Dict) -> None:
@@ -648,21 +596,22 @@ class CanvasWidget(BaseWidget):
         self.ui.move_button.blockSignals(False)
 
     def showEvent(self, event: Any) -> None:
-        """Handle widget show event to initialize splitter and cursor.
+        """Handle widget show event to initialize layout and cursor.
 
         Args:
             event: The show event.
         """
         super().showEvent(event)
-        self._schedule_default_splitter_settings()
-
-        self.set_prompt_editor_button_checked()
-        self.set_art_tools_button_checked()
+        self._schedule_centered_canvas_restore()
         self._update_status_labels()
 
         if not self._initialized:
             self._initialized = True
             self._update_cursor({"apply_cursor": True})
+
+    def refresh_layout_after_host_resize(self) -> None:
+        """Recenter the canvas after the main splitter changes size."""
+        self._schedule_centered_canvas_restore()
 
     def _configure_canvas_shortcuts(self) -> None:
         """Register keyboard shortcuts that only apply inside the canvas."""
@@ -716,30 +665,6 @@ class CanvasWidget(BaseWidget):
         """
         self._update_cursor(message)
 
-    def _apply_default_splitter_settings(self):
-        """
-        Applies default splitter sizes. Called to ensure
-        widget geometry is more likely to be initialized.
-        """
-        if hasattr(self, "ui") and self.ui is not None:
-            default_canvas_splitter_config = {
-                "splitter": {
-                    "index_to_maximize": 1,
-                    "min_other_size": 50,
-                }
-            }
-            self.load_splitter_settings(
-                default_maximize_config=default_canvas_splitter_config,
-            )
-            self._schedule_centered_canvas_restore()
-        else:
-            # This case should ideally not happen if __init__ completed successfully.
-            # Consider logging if a logger is available and configured for this class.
-            self.logger.error(
-                "Error in CanvasWidget: UI not available when applying "
-                "default splitter settings."
-            )
-
     def _schedule_centered_canvas_restore(self) -> None:
         """Defer centered-canvas sync until splitter layout changes settle."""
         view = getattr(getattr(self, "ui", None), "canvas_container", None)
@@ -776,15 +701,6 @@ class CanvasWidget(BaseWidget):
         if getattr(view, "_initialized", False):
             view.on_recenter_grid_signal()
             self.update_grid_info({})
-
-    def _schedule_default_splitter_settings(self) -> None:
-        """Apply splitter settings after the show event unwinds."""
-        if self._default_splitter_settings_applied:
-            return
-        if not self.isVisible():
-            return
-        self._default_splitter_settings_applied = True
-        QTimer.singleShot(0, self._apply_default_splitter_settings)
 
     def _update_cursor(self, message: Optional[Dict] = None):
         message = message or {}

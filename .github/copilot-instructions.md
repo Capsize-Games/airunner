@@ -22,6 +22,13 @@
 - Always run automated tests to ensure that your code changes do not break existing functionality. Use the `src/airunner/bin/run_tests.py` script to run tests.
 - Avoid multiple classes in a single file - we prefer one class per file for better organization and readability. Subdirectories are a good way to group related classes together while keeping each file focused and manageable.
 
+## Generated UI Files
+
+- Never edit generated `*_ui.py` files directly.
+- Always edit the corresponding `.ui` template file instead.
+- Regenerate generated UI Python files with `src/airunner/bin/build_ui.py` after changing a `.ui` template.
+- Treat any direct `*_ui.py` edit as invalid because `src/airunner/bin/build_ui.py` will overwrite it.
+
 ## Security and Privacy Standards
 
 - Treat log hygiene as a product requirement, not a cleanup pass. Do not add logs that expose prompts, conversation bodies, transcriptions, raw tool payloads, API responses, filesystem paths, tokens, secrets, or other user content unless the user explicitly asks for that level of logging.

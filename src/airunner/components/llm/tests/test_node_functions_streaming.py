@@ -383,6 +383,35 @@ class _VerificationPromptCapturingChatModel:
         return iter(self._responses.pop(0))
 
 
+class _VerificationVerdictFallbackChatModel:
+    """Fake model whose verification pass emits only a verdict note."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [
+                _chunk(
+                    "The novel follows a haunted Hollywood studio mystery "
+                    "built around an impossible corpse and the buried past "
+                    "tied to the lot and cemetery next door."
+                )
+            ],
+            [
+                _chunk(
+                    '"Narrator remembers seeing someone twenty years ago on '
+                    'roller skates... killed in a car crash." Supported.'
+                )
+            ],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return iter(self._responses.pop(0))
+
+
 def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     """RAG synthesis prompt should prioritize document identity cues."""
     mixin = NodeFunctionsMixinDouble([])
@@ -478,7 +507,37 @@ def test_forced_response_summary_runs_verification_pass():
         mixin._chat_model.prompts[1]
     )
     assert "Evidence excerpts:" in mixin._chat_model.prompts[1]
+    assert "Do not answer with claim-by-claim verdicts" in (
+        mixin._chat_model.prompts[1]
+    )
     assert "Stored path:" not in mixin._chat_model.prompts[1]
+
+
+def test_forced_response_summary_falls_back_from_verification_verdict():
+    """Verification verdict chatter should not replace a valid summary draft."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _VerificationVerdictFallbackChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "The story unfolds around a haunted Hollywood studio and the "
+        "cemetery next door.\n\n"
+        "[Excerpt 2 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "An impossible corpse and long-buried history drive the mystery.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "The novel follows a haunted Hollywood studio mystery built "
+        "around an impossible corpse and the buried past tied to the lot "
+        "and cemetery next door."
+    )
+    assert len(mixin._chat_model.prompts) == 2
 
 
 class _SummaryBudgetCapturingChatModel:

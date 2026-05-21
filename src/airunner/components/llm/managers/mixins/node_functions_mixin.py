@@ -621,6 +621,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 )
                 if self._looks_like_instruction_reflection(visible_content):
                     visible_content = ""
+                if reject_structure_only and drafted_response and not visible_content:
+                    visible_content = drafted_response
                 if document_tool and document_intent == "identity":
                     fallback_identity = (
                         self._build_document_identity_response(
@@ -763,6 +765,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             )
             if self._looks_like_instruction_reflection(response_content):
                 response_content = ""
+            if reject_structure_only and drafted_response and not response_content:
+                response_content = drafted_response
             if document_tool and document_intent == "identity":
                 fallback_identity = self._build_document_identity_response(
                     all_tool_content
@@ -990,6 +994,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "leakage, or stray scene fragments. If the draft is weak, ignore "
             "it and answer directly from the evidence. If the evidence is "
             "incomplete, say so briefly instead of guessing.\n"
+            "Do not answer with claim-by-claim verdicts such as Supported, "
+            "Not supported, or Partially supported.\n"
             f"{verification_focus}\n"
             f"{response_style}\n"
             "Do not mention search results, verification, instructions, file "
@@ -1340,6 +1346,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 cleaned_visible
             ) and not self._looks_like_reasoning_header(
                 cleaned_visible
+                ) and not self._looks_like_verification_verdict_response(
+                    cleaned_visible
             ) and not self._looks_like_summary_prompt_echo(
                 cleaned_visible
             ) and not self._looks_like_malformed_forced_response_fragment(
@@ -1711,7 +1719,54 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             return ""
         if self._looks_like_reasoning_header(candidate):
             return ""
+        if self._looks_like_verification_verdict_response(candidate):
+            return ""
         return candidate
+
+    @staticmethod
+    def _looks_like_verification_verdict_response(text: str) -> bool:
+        """Return True when text is a verifier verdict, not a user answer."""
+        normalized = " ".join(str(text or "").split())
+        if not normalized:
+            return False
+
+        normalized_for_split = re.sub(
+            r'([.!?])["\'”)]\s+',
+            r"\1 ",
+            normalized,
+        )
+        sentences = [
+            sentence.strip(' "\'“”')
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                normalized_for_split,
+            )
+            if sentence.strip()
+        ]
+        if len(sentences) < 2:
+            return False
+
+        verdict = sentences[-1].rstrip(".!?").lower()
+        if verdict not in {
+            "supported",
+            "not supported",
+            "partially supported",
+            "unsupported",
+            "contradicted",
+            "inconclusive",
+        }:
+            return False
+
+        evidence_markers = (
+            normalized[:1] in {'"', "'", "“"}
+            or any(marker in normalized.lower() for marker in (
+                "claim:",
+                "evidence:",
+                "excerpt:",
+                "the claim",
+            ))
+        )
+        return evidence_markers or len(sentences) <= 2
 
     @staticmethod
     def _looks_like_structure_only_response(text: str) -> bool:

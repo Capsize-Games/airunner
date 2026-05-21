@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1074</width>
-    <height>760</height>
+    <height>797</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -137,7 +137,7 @@
             </property>
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
+              <normaloff>:/light/icons/lucide/light/message-square-text.svg</normaloff>:/light/icons/lucide/light/message-square-text.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -182,6 +182,88 @@
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/book.svg</normaloff>:/light/icons/feather/light/book.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="history_sidebar_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Chat history</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/history.svg</normaloff>:/light/icons/lucide/light/history.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="llm_settings_sidebar_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>LLM generator settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/settings-2.svg</normaloff>:/light/icons/lucide/light/settings-2.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -315,6 +397,88 @@
            <number>5</number>
           </property>
           <item>
+           <widget class="QPushButton" name="prompt_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Art Prompt</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/message-square-heart.svg</normaloff>:/light/icons/lucide/light/message-square-heart.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="art_tools_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Art Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/tool.svg</normaloff>:/light/icons/feather/light/tool.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="stats_button">
             <property name="minimumSize">
              <size>
@@ -332,7 +496,7 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Toggle VRAM Stats</string>
+             <string>Toggle Model Resources</string>
             </property>
             <property name="text">
              <string/>
@@ -340,6 +504,12 @@
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/activity.svg</normaloff>:/light/icons/feather/light/activity.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -408,37 +578,107 @@
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
          </property>
-           <widget class="QWidget" name="documents_sidebar" native="true">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>64</width>
-              <height>0</height>
-             </size>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_documents_sidebar">
-             <property name="leftMargin">
+         <widget class="QWidget" name="documents_sidebar" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>64</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_documents_sidebar">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QTabWidget" name="left_panel_tab">
+             <property name="currentIndex">
               <number>0</number>
              </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QWidget" name="documents_placeholder" native="true"/>
-             </item>
-            </layout>
-           </widget>
+             <widget class="QWidget" name="left_documents_page">
+              <attribute name="title">
+               <string>Documents</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_left_documents_page">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QWidget" name="left_documents_placeholder" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="left_history_page">
+              <attribute name="title">
+               <string>History</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_left_history_page">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QWidget" name="left_history_placeholder" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="left_llm_settings_page">
+              <attribute name="title">
+               <string>LLM Settings</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_left_llm_settings_page">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QWidget" name="left_llm_settings_placeholder" native="true"/>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
          <widget class="GeneratorForm" name="generator_widget" native="true">
           <property name="enabled">
            <bool>true</bool>
@@ -576,10 +816,71 @@
              <property name="currentIndex">
               <number>0</number>
              </property>
-             <widget class="QWidget" name="stats_placeholder">
+             <widget class="QWidget" name="stats_page">
               <attribute name="title">
-               <string>Page</string>
+               <string>Model Resources</string>
               </attribute>
+              <layout class="QGridLayout" name="gridLayout_stats_page">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QWidget" name="stats_placeholder" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="art_prompt_page">
+              <attribute name="title">
+               <string>Art Prompt</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_art_prompt_page">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QWidget" name="art_prompt_placeholder" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="art_tools_page">
+              <attribute name="title">
+               <string>Art Settings</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_art_tools_page">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QWidget" name="art_tools_placeholder" native="true"/>
+               </item>
+              </layout>
              </widget>
             </widget>
            </item>

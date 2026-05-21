@@ -57,6 +57,7 @@ def _make_window_stub():
         },
         _post_startup_status_refresh_requested=False,
         _restore_sidebar_page_after_startup=None,
+        _restore_left_panel_page_after_startup=None,
         _restore_documents_panel_after_startup=False,
         _runtime_preference_retry_after={},
         _documents_splitter_index=0,
@@ -64,15 +65,26 @@ def _make_window_stub():
         _center_splitter_index=2,
         _stats_splitter_index=3,
         _stats_sidebar_index=0,
+        _art_prompt_sidebar_index=1,
+        _art_tools_sidebar_index=2,
+        _left_documents_panel_index=0,
+        _left_history_panel_index=1,
+        _left_llm_settings_panel_index=2,
         ui=SimpleNamespace(
             text_to_speech_button=_make_action(),
             speech_to_text_button=_make_action(),
+            left_panel_tab=SimpleNamespace(
+                currentIndex=Mock(return_value=0),
+                setCurrentIndex=Mock(),
+            ),
             sidebar_tab=SimpleNamespace(
                 currentIndex=Mock(return_value=0),
                 setCurrentIndex=Mock(),
             ),
             main_window_splitter=SimpleNamespace(sizes=lambda: [0, 0, 0, 0]),
             knowledgebase_button=_make_action(),
+            prompt_editor_button=_make_action(),
+            art_tools_button=_make_action(),
             stats_button=_make_action(),
             chat_button=_make_action(),
         ),
@@ -99,8 +111,10 @@ def _make_window_stub():
         logger=Mock(),
         refresh_api_reference=Mock(return_value=None),
         _ensure_canvas_loaded=Mock(),
+        _ensure_left_panel_page_loaded=Mock(),
         _ensure_sidebar_page_loaded=Mock(),
         _ensure_knowledgebase_loaded=Mock(),
+        _sync_left_panel_button_states=Mock(),
         _sync_sidebar_button_states=Mock(),
         _set_action_checked_state=MainWindow._set_action_checked_state,
         _allows_loading_toggle=MainWindow._allows_loading_toggle,
@@ -117,7 +131,16 @@ def _make_window_stub():
     window._normalize_direct_llm_status = lambda status: (
         MainWindow._normalize_direct_llm_status(window, status)
     )
+    window._current_sidebar_index = lambda: MainWindow._current_sidebar_index(
+        window
+    )
     window._sidebar_is_visible = lambda: MainWindow._sidebar_is_visible(window)
+    window._current_left_panel_index = (
+        lambda: MainWindow._current_left_panel_index(window)
+    )
+    window._left_panel_is_visible = (
+        lambda: MainWindow._left_panel_is_visible(window)
+    )
     window._knowledgebase_panel_is_visible = (
         lambda: MainWindow._knowledgebase_panel_is_visible(window)
     )
@@ -339,13 +362,21 @@ def test_on_main_window_loaded_signal_restores_saved_sidebar_page():
 
 def test_on_main_window_loaded_signal_restores_documents_panel():
     window = _make_window_stub()
-    window._restore_documents_panel_after_startup = True
+    window._restore_left_panel_page_after_startup = (
+        window._left_documents_panel_index
+    )
     window._refresh_model_status_from_daemon = Mock()
 
     MainWindow.on_main_window_loaded_signal(window)
 
-    window._ensure_knowledgebase_loaded.assert_called_once_with()
-    assert window._restore_documents_panel_after_startup is False
+    window._ensure_left_panel_page_loaded.assert_called_once_with(
+        window._left_documents_panel_index
+    )
+    window.ui.left_panel_tab.setCurrentIndex.assert_called_once_with(
+        window._left_documents_panel_index
+    )
+    window._sync_left_panel_button_states.assert_called_once_with()
+    assert window._restore_left_panel_page_after_startup is None
 
 
 def test_sidebar_buttons_reflect_splitter_panels():
@@ -359,6 +390,22 @@ def test_sidebar_buttons_reflect_splitter_panels():
 
     window.ui.knowledgebase_button.setChecked.assert_called_once_with(True)
     window.ui.stats_button.setChecked.assert_called_once_with(True)
+
+
+def test_right_sidebar_buttons_follow_active_page():
+    window = _make_window_stub()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [220, 480, 800, 240]
+    )
+    window.ui.sidebar_tab.currentIndex = Mock(return_value=1)
+
+    MainWindow.set_prompt_editor_button_checked(window)
+    MainWindow.set_art_tools_button_checked(window)
+    MainWindow.set_stats_button_checked(window)
+
+    window.ui.prompt_editor_button.setChecked.assert_called_once_with(True)
+    window.ui.art_tools_button.setChecked.assert_called_once_with(False)
+    window.ui.stats_button.setChecked.assert_called_once_with(False)
 
 
 def test_daemon_status_prefers_loaded_local_llm_worker():
