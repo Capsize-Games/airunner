@@ -23,55 +23,23 @@ from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
-def _is_document_identity_query(query: str) -> bool:
-    """Return whether the query is asking to identify the document."""
-    normalized = " ".join(str(query or "").lower().split())
-    if not normalized:
-        return False
+def _coerce_active_values(values: Any) -> list[str]:
+    """Return normalized string values from one manager accessor result."""
+    if values is None:
+        return []
+    if isinstance(values, (str, os.PathLike)):
+        values = [values]
+    else:
+        try:
+            values = list(values)
+        except TypeError:
+            return []
 
-    identity_phrases = (
-        "what is this document",
-        "what document is this",
-        "tell me what this document is",
-        "what is this file",
-        "what file is this",
-        "which document is this",
-        "which file is this",
-        "identify this document",
-        "identify the document",
-        "identify this file",
-    )
-    if any(phrase in normalized for phrase in identity_phrases):
-        return True
-
-    asks_identity = any(
-        phrase in normalized
-        for phrase in ("what is this", "which is this", "identify")
-    )
-    mentions_document = "document" in normalized or "file" in normalized
-    return asks_identity and mentions_document
-
-
-def _is_document_structure_query(query: str) -> bool:
-    """Return whether the query asks for a document outline."""
-    normalized = " ".join(str(query or "").lower().split())
-    if not normalized:
-        return False
-
-    structure_phrases = (
-        "table of contents",
-        "what are the contents",
-        "list the contents",
-        "what chapters are",
-        "what are the chapters",
-        "list the chapters",
-        "chapter titles",
-        "what sections are",
-        "list the sections",
-        "section headings",
-        "document outline",
-    )
-    return any(phrase in normalized for phrase in structure_phrases)
+    return [
+        str(value).strip()
+        for value in values
+        if str(value or "").strip()
+    ]
 
 
 def _query_mentions_document_reference(query: str) -> bool:
@@ -101,15 +69,64 @@ def _get_single_active_document_path(
     if not callable(get_paths):
         return None
 
-    active_paths = [
-        str(path).strip()
-        for path in get_paths()
-        if str(path or "").strip()
-    ]
+    active_paths = _coerce_active_values(get_paths())
     active_paths = list(dict.fromkeys(active_paths))
     if len(active_paths) != 1:
         return None
     return active_paths[0]
+
+
+def _get_active_document_names(rag_manager: Any) -> list[str]:
+    """Return distinct active document names when the manager exposes them."""
+    get_names = getattr(rag_manager, "_get_active_document_names", None)
+    if not callable(get_names):
+        return []
+
+    active_names = _coerce_active_values(get_names())
+    return list(dict.fromkeys(active_names))
+
+
+def _get_active_document_entries(
+    rag_manager: Any,
+) -> list[dict[str, Any]]:
+    """Return active document metadata entries for inspection tools."""
+    entries: list[dict[str, Any]] = []
+    active_names = _get_active_document_names(rag_manager)
+
+    get_paths = getattr(rag_manager, "_get_active_document_paths", None)
+    active_paths = []
+    if callable(get_paths):
+        active_paths = _coerce_active_values(get_paths())
+        active_paths = list(dict.fromkeys(active_paths))
+
+    if active_paths:
+        for index, path in enumerate(active_paths):
+            name = (
+                active_names[index]
+                if index < len(active_names)
+                else os.path.basename(path)
+            )
+            label = str(name or "").strip() or os.path.basename(path) or path
+            entries.append(
+                {
+                    "source": path,
+                    "file_name": label,
+                    "file_type": os.path.splitext(label)[1],
+                    "file_path": path,
+                }
+            )
+        return entries
+
+    for name in active_names:
+        entries.append(
+            {
+                "source": name,
+                "file_name": name,
+                "file_type": os.path.splitext(name)[1],
+                "file_path": "",
+            }
+        )
+    return entries
 
 
 def _extract_document_structure_headings(text: str) -> list[str]:
@@ -137,32 +154,18 @@ def _format_document_structure_results(
     headings: list[str],
 ) -> str:
     """Return one structure-oriented result string for a document."""
-    metadata = {
-        "file_name": os.path.basename(file_path),
-        "file_path": file_path,
-        "file_type": os.path.splitext(file_path)[1].lower(),
-        "source": file_path,
-    }
+    del file_path
     structure = "\n".join(
         f"{index}. {heading}"
         for index, heading in enumerate(headings, 1)
     )
-    return "\n\n".join(
-        [
-            "Matched documents:\n" + _format_document_summary(1, metadata),
-            "Document structure:\n" + structure,
-        ]
-    )
+    return "Document structure:\n" + structure
 
 
 def _build_document_structure_result(
-    query: str,
     rag_manager: Any,
 ) -> str | None:
-    """Return a direct structure summary for one active document."""
-    if not _is_document_structure_query(query):
-        return None
-
+    """Return structure headings for one active document when available."""
     file_path = _get_single_active_document_path(rag_manager)
     if not file_path:
         return None
@@ -202,8 +205,6 @@ def _expand_query_with_active_document(
     rag_manager: Any,
 ) -> str:
     """Augment one pronoun query with the single active document name."""
-    if _is_document_identity_query(query):
-        return query
     if not _query_mentions_document_reference(query):
         return query
 
@@ -211,11 +212,7 @@ def _expand_query_with_active_document(
     if not callable(get_names):
         return query
 
-    active_names = [
-        str(name).strip()
-        for name in get_names()
-        if str(name or "").strip()
-    ]
+    active_names = _coerce_active_values(get_names())
     active_names = list(dict.fromkeys(active_names))
     if len(active_names) != 1:
         return query
@@ -342,6 +339,63 @@ def _format_rag_search_results(
     return "\n\n".join(sections)
 
 
+def _format_loaded_document_results(
+    entries: list[dict[str, Any]],
+) -> str:
+    """Return one inspection summary for the currently loaded documents."""
+    sections = [
+        _format_document_summary(index, metadata)
+        for index, metadata in enumerate(entries, 1)
+    ]
+    return "Loaded documents:\n" + "\n\n".join(sections)
+
+
+@tool(
+    name="inspect_loaded_documents",
+    category=ToolCategory.RAG,
+    description=(
+        "Inspect the currently loaded documents and return metadata such as "
+        "file name, inferred title, inferred author, file type, stored path, "
+        "and extracted structure headings when available. Use this for "
+        "questions about what the loaded document is or what chapters or "
+        "sections it contains."
+    ),
+    return_direct=False,
+    requires_api=True,
+    keywords=[
+        "document",
+        "chapters",
+        "sections",
+        "title",
+        "author",
+        "outline",
+        "contents",
+    ],
+    input_examples=[{}],
+)
+def inspect_loaded_documents(api: Any = None) -> str:
+    """Return metadata and structure for the currently loaded documents."""
+    rag_manager = api
+    if not rag_manager:
+        return (
+            "TOOL UNAVAILABLE: No RAG manager available. "
+            "This is an internal error."
+        )
+
+    entries = _get_active_document_entries(rag_manager)
+    if not entries:
+        return (
+            "No documents are currently loaded into memory. Load a document "
+            "before inspecting it."
+        )
+
+    sections = [_format_loaded_document_results(entries)]
+    structure_result = _build_document_structure_result(rag_manager)
+    if structure_result:
+        sections.append(structure_result)
+    return "\n\n".join(sections)
+
+
 @tool(
     name="rag_search",
     category=ToolCategory.RAG,
@@ -403,14 +457,6 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
-        structure_result = _build_document_structure_result(
-            query,
-            rag_manager,
-        )
-        if structure_result is not None:
-            logger.info("Returning extracted document structure")
-            return structure_result
-
         effective_query = _expand_query_with_active_document(
             query,
             rag_manager,
@@ -424,7 +470,10 @@ def rag_search(
                 ),
             )
 
-        results = rag_manager.search(effective_query, k=3)
+        results = rag_manager.search(
+            effective_query,
+            k=6,
+        )
         logger.info(
             f"rag_manager.search returned "
             f"{len(results) if results else 0} results"
@@ -451,7 +500,7 @@ def rag_search(
 
         result_text = _format_rag_search_results(
             results,
-            include_excerpts=not _is_document_identity_query(query),
+            include_excerpts=True,
         )
         logger.info(
             f"Returning {len(results)} document excerpts, "
@@ -978,9 +1027,20 @@ def save_to_knowledge_base(
     """
     try:
         # Create a document file
-        settings = PathSettings.objects.first()
-        base_path = os.path.expanduser(settings.base_path)
-        kb_path = os.path.join(base_path, "knowledge_base", category)
+        settings = getattr(api, "path_settings", None)
+        if settings is None:
+            settings = PathSettings.objects.first()
+        if settings is None or not getattr(settings, "base_path", None):
+            return (
+                "Error saving to knowledge base: No knowledge base path "
+                "is configured."
+            )
+
+        safe_category = "".join(
+            char for char in category if char.isalnum() or char in ("-", "_")
+        ).strip() or "general"
+        base_path = os.path.expanduser(str(settings.base_path))
+        kb_path = os.path.join(base_path, "knowledge_base", safe_category)
         os.makedirs(kb_path, exist_ok=True)
 
         # Sanitize filename
@@ -992,9 +1052,9 @@ def save_to_knowledge_base(
         file_path = os.path.join(kb_path, filename)
 
         # Write content
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(f"Title: {title}\n")
-            f.write(f"Category: {category}\n")
+            f.write(f"Category: {safe_category}\n")
             f.write("\n---\n\n")
             f.write(content)
 

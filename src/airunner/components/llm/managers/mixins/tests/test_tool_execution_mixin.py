@@ -1,6 +1,6 @@
 """Unit tests for ToolExecutionMixin tool-arg normalization."""
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -14,6 +14,25 @@ class _DummyToolExecutionMixin(ToolExecutionMixin):
         self.logger = Mock()
         self._conversation_id = None
         self._executed_tools = []
+        self._tool_choice = None
+        self._force_tool = None
+        self._tools = []
+        self._rebound = False
+
+    def _emit_starting_status(self, _tool_calls):
+        return None
+
+    def _sanitize_tool_functions(self):
+        return None
+
+    def _emit_completed_status(self, _result_state, _tool_calls):
+        return None
+
+    def _get_next_workflow_tool(self, _executed_tool):
+        return None
+
+    def _bind_tools_to_model(self):
+        self._rebound = True
 
 
 def test_normalize_rag_search_uses_latest_user_prompt_when_query_missing():
@@ -48,3 +67,44 @@ def test_normalize_rag_search_uses_latest_user_prompt_when_query_missing():
     assert updated_messages[-1].tool_calls[0]["args"] == {
         "query": "what is this document?"
     }
+
+
+def test_execute_tools_with_status_clears_stale_tool_choice():
+    """Clearing a forced tool should also clear the bound tool choice."""
+    mixin = _DummyToolExecutionMixin()
+    mixin._tools = [Mock(name="example_tool")]
+    mixin._force_tool = "example_tool"
+    mixin._tool_choice = {
+        "type": "function",
+        "function": {"name": "example_tool"},
+    }
+
+    state = {
+        "messages": [
+            HumanMessage(content="run the example tool"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "example_tool",
+                        "args": {"text": "hello"},
+                    }
+                ],
+            ),
+        ]
+    }
+
+    fake_tool_node = Mock()
+    fake_tool_node.invoke.return_value = {"messages": ["ok"]}
+
+    with patch(
+        "langgraph.prebuilt.ToolNode",
+        return_value=fake_tool_node,
+    ):
+        result = mixin._execute_tools_with_status(state)
+
+    assert result["messages"]
+    assert mixin._force_tool is None
+    assert mixin._tool_choice is None
+    assert mixin._rebound is True

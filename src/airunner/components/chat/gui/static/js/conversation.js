@@ -410,7 +410,7 @@ function createSavedStatusWidget(msg) {
     }
 
     const widget = document.createElement('div');
-    widget.className = 'unified-status-widget restored-status-widget expanded';
+    widget.className = 'unified-status-widget restored-status-widget';
     if (items.some(item => item.type === 'thinking')) {
         widget.classList.add('has-thinking');
     }
@@ -457,6 +457,10 @@ function createSavedStatusWidget(msg) {
     }
 
     widget.appendChild(header);
+    const thinkingItem = items.find((item) => item.type === 'thinking' && item.content);
+    if (thinkingItem) {
+        setThinkingPreviewLine(widget, thinkingItem.content);
+    }
     widget.appendChild(visible);
     widget.appendChild(history);
     return widget;
@@ -466,6 +470,41 @@ function createStatusItemElement(item) {
     const temp = document.createElement('div');
     temp.innerHTML = renderStatusItem(item, false);
     return temp.firstElementChild;
+}
+
+function getThinkingPreviewText(content) {
+    const lines = String(content || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    if (!lines.length) {
+        return '';
+    }
+    return lines[lines.length - 1].substring(0, 150);
+}
+
+function setThinkingPreviewLine(widget, content) {
+    if (!widget) return;
+
+    const previewText = getThinkingPreviewText(content);
+    let previewLine = widget.querySelector('.thinking-preview-line');
+
+    if (!previewText) {
+        if (previewLine) {
+            previewLine.style.display = 'none';
+        }
+        return;
+    }
+
+    if (!previewLine) {
+        previewLine = document.createElement('div');
+        previewLine.className = 'thinking-preview-line';
+        const header = widget.querySelector('.unified-status-header');
+        if (header) header.after(previewLine);
+    }
+
+    previewLine.textContent = previewText;
+    previewLine.style.display = 'block';
 }
 
 /**
@@ -760,33 +799,17 @@ function renderStatusWidget(requestId) {
         }
         iconSpan.classList.add('pulsing');
 
-        const thinkingItem = state.items.find((item) => (
-            item.type === 'thinking' && item.content
-        ));
-        let previewLine = widget.querySelector('.thinking-preview-line');
-        if (thinkingItem && thinkingItem.content) {
-            if (!previewLine) {
-                previewLine = document.createElement('div');
-                previewLine.className = 'thinking-preview-line';
-                const header = widget.querySelector('.unified-status-header');
-                if (header) header.after(previewLine);
-            }
-            const lines = thinkingItem.content.trim().split('\n');
-            const lastLine = lines[lines.length - 1] || '';
-            previewLine.textContent = lastLine.substring(0, 150);
-            previewLine.style.display = 'block';
-        } else if (previewLine) {
-            previewLine.style.display = 'none';
-        }
     } else {
         if (iconSpan.textContent !== '✅') iconSpan.textContent = '✅';
         if (titleSpan.textContent !== 'Completed') titleSpan.textContent = 'Completed';
         titleSpan.classList.remove('animated-dots');
         iconSpan.classList.remove('pulsing');
-
-        const previewLine = widget.querySelector('.thinking-preview-line');
-        if (previewLine) previewLine.style.display = 'none';
     }
+
+    const thinkingItem = state.items.find((item) => (
+        item.type === 'thinking' && item.content
+    ));
+    setThinkingPreviewLine(widget, thinkingItem ? thinkingItem.content : '');
 
     const newCount = state.items.length > state.maxVisible
         ? `${state.items.length} items`
@@ -1016,10 +1039,6 @@ function handleThinkingStatusUpdate(requestId, status, content) {
             status: 'active',
             content: ''
         });
-        const widget = getOrCreateStatusWidget(requestId);
-        if (widget) {
-            widget.classList.add('expanded');
-        }
         startThinkingAnimation(requestId);
         return;
     }
@@ -1119,12 +1138,10 @@ function smoothScrollToBottom() {
     const container = document.getElementById('conversation-container');
     if (container) {
         requestAnimationFrame(() => {
-            const lastMsg = container.lastElementChild;
-            if (lastMsg) {
-                lastMsg.scrollIntoView({ behavior: 'auto', block: 'end' });
-            } else {
+            container.scrollTop = container.scrollHeight;
+            requestAnimationFrame(() => {
                 container.scrollTop = container.scrollHeight;
-            }
+            });
             if (isScrolledToBottom(container)) enableAutoScroll();
             const contentHeight = container.scrollHeight;
             if (window.isChatReady && window.chatBridge && typeof window.chatBridge.update_content_height === 'function') {

@@ -633,6 +633,10 @@ mjx-container[display="true"] {
     animation: fadeSlideIn 0.2s ease;
 }
 
+.unified-status-widget.expanded .thinking-preview-line {
+    opacity: 0.9;
+}
+
 @keyframes fadeSlideIn {
     from {
         opacity: 0;

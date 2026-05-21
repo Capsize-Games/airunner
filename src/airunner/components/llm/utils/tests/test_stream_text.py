@@ -18,6 +18,11 @@ def test_combine_stream_chunks_preserves_existing_spacing():
     assert combine_stream_chunks(["Hello", " world"]) == "Hello world"
 
 
+def test_combine_stream_chunks_inserts_missing_word_boundary_space():
+    """Readable prose should recover spaces between full word chunks."""
+    assert combine_stream_chunks(["Hello", "world"]) == "Hello world"
+
+
 def test_combine_stream_chunks_keeps_code_like_boundaries_tight():
     """Code-style punctuation should not gain extra spaces."""
     assert combine_stream_chunks(["print", "(", '"hi"', ")"]) == 'print("hi")'

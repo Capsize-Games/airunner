@@ -31,6 +31,23 @@ def _reasoning_chunk(content: str, thinking: str) -> SimpleNamespace:
     )
 
 
+def _tool_call_chunk(tool_name: str) -> SimpleNamespace:
+    """Return one fake streamed chunk that carries a parsed tool call."""
+    return SimpleNamespace(
+        message=SimpleNamespace(
+            content="",
+            additional_kwargs={},
+            tool_calls=[
+                {
+                    "id": "tool-1",
+                    "name": tool_name,
+                    "args": {"query": "what is this document?"},
+                }
+            ],
+        )
+    )
+
+
 class NodeFunctionsMixinDouble(NodeFunctionsMixin):
     """Small test double for NodeFunctionsMixin streaming helpers."""
 
@@ -93,6 +110,65 @@ def test_headless_reasoning_deltas_still_persist_thinking_content():
     assert message.content == "Hello!"
     assert message.additional_kwargs["thinking_content"] == thinking
     mixin._token_callback.assert_called_once_with("Hello!")
+
+
+def test_force_tool_turn_suppresses_visible_planning_text():
+    """Forced tool turns should not stream planning prose into chat."""
+    mixin = NodeFunctionsMixinDouble(
+        [
+            _chunk(
+                "I'd be happy to help identify the document. "
+                "Let me search first."
+            ),
+            _tool_call_chunk("rag_search"),
+        ]
+    )
+    mixin._force_tool = "rag_search"
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.content == ""
+    assert len(message.tool_calls) == 1
+    assert message.tool_calls[0]["id"] == "tool-1"
+    assert message.tool_calls[0]["name"] == "rag_search"
+    assert message.tool_calls[0]["args"] == {
+        "query": "what is this document?"
+    }
+    mixin._token_callback.assert_not_called()
+
+
+def test_forced_tool_choice_turn_suppresses_visible_planning_text():
+    """Forced tool-choice turns should also hide planning prose."""
+    mixin = NodeFunctionsMixinDouble(
+        [
+            _chunk(
+                "I'll search through your uploaded documents to help identify "
+                "what document you're referring to."
+            ),
+            _tool_call_chunk("rag_search"),
+        ]
+    )
+    mixin._tool_choice = {
+        "type": "function",
+        "function": {"name": "rag_search"},
+    }
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.content == ""
+    assert len(message.tool_calls) == 1
+    assert message.tool_calls[0]["name"] == "rag_search"
+    mixin._token_callback.assert_not_called()
+
+
+def test_tool_call_json_detection_handles_flat_tool_query_shape():
+    """Legacy flat tool JSON should still be recognized as a tool call."""
+    mixin = NodeFunctionsMixinDouble([])
+
+    assert NodeFunctionsMixin._is_tool_call_json(
+        mixin,
+        '{"tool": "rag_search", "query": "document file type title author"}',
+    ) is True
 
 
 class _ThinkingSensitiveChatModel:
@@ -254,6 +330,39 @@ def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     assert "Do not mention search results or instructions" in prompt
     assert "author" in prompt
     assert "labels like Draft:, Answer:, or Response:" in prompt
+
+
+def test_forced_response_prompt_avoids_metadata_repetition_for_structure():
+    """Structure prompts should not force repeated document identity."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _PromptCapturingChatModel()
+
+    mixin._generate_response_message_from_results(
+        "Document structure:\n1. INTRODUCTION\n2. PROLOGUE",
+        "rag_search",
+        "what chapters are in it?",
+    )
+
+    prompt = mixin._chat_model.prompts[0]
+    assert "answer with the section names only" in prompt
+    assert "Do not restate the document title" in prompt
+
+
+def test_forced_response_prompt_requests_thorough_summary():
+    """Summary prompts should ask for a fuller synthesis."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _PromptCapturingChatModel()
+
+    mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    prompt = mixin._chat_model.prompts[0]
+    assert "fuller multi-sentence summary" in prompt
+    assert "Do not repeat the document title, author, or structure" in prompt
+    assert "Avoid repetition and be thorough." in prompt
 
 
 class _InternalSynthesisReasoningChatModel:

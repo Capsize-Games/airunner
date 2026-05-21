@@ -739,3 +739,208 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
         "Hello",
         " world",
     ]
+
+
+def _daemon_bridge_service(emitted_responses, emitted_signals=None):
+    """Return a daemon-bridge test double with bound helper methods."""
+    emitted_signals = emitted_signals if emitted_signals is not None else []
+    service = SimpleNamespace()
+    service.send_llm_text_streamed_signal = (
+        lambda response: emitted_responses.append(response)
+    )
+    service.send_llm_thinking_signal = (
+        lambda status, content, request_id=None: emitted_signals.append(
+            (request_id, status, content)
+        )
+    )
+    service._forward_daemon_chunk = lambda chunk, **kwargs: (
+        LLMAPIService._forward_daemon_chunk(service, chunk, **kwargs)
+    )
+    service._extract_visible_daemon_text = (
+        lambda message, state, request_id: (
+            LLMAPIService._extract_visible_daemon_text(
+                service,
+                message,
+                state,
+                request_id=request_id,
+            )
+        )
+    )
+    service._finish_daemon_thinking = lambda state, request_id: (
+        LLMAPIService._finish_daemon_thinking(
+            service,
+            state,
+            request_id=request_id,
+        )
+    )
+    service._finish_pending_daemon_visible_output = (
+        lambda chunk, **kwargs: (
+            LLMAPIService._finish_pending_daemon_visible_output(
+                service,
+                chunk,
+                **kwargs,
+            )
+        )
+    )
+    service._emit_visible_daemon_parts = lambda visible_parts, **kwargs: (
+        LLMAPIService._emit_visible_daemon_parts(
+            service,
+            visible_parts,
+            **kwargs,
+        )
+    )
+    service._build_visible_daemon_response = lambda chunk, **kwargs: (
+        LLMAPIService._build_visible_daemon_response(
+            service,
+            chunk,
+            **kwargs,
+        )
+    )
+    service._response_from_daemon_chunk = lambda chunk, **kwargs: (
+        LLMAPIService._response_from_daemon_chunk(chunk, **kwargs)
+    )
+    service._start_daemon_thinking = lambda state, tag_format, request_id: (
+        LLMAPIService._start_daemon_thinking(
+            service,
+            state,
+            tag_format,
+            request_id=request_id,
+        )
+    )
+    service._append_daemon_thinking = lambda state, content, request_id: (
+        LLMAPIService._append_daemon_thinking(
+            service,
+            state,
+            content,
+            request_id=request_id,
+        )
+    )
+    service._daemon_output_looks_like_tool_turn = lambda text, chunk: (
+        LLMAPIService._daemon_output_looks_like_tool_turn(
+            service,
+            text,
+            chunk,
+        )
+    )
+    service._daemon_text_looks_like_tool_call_json = lambda text: (
+        LLMAPIService._daemon_text_looks_like_tool_call_json(text)
+    )
+    return service
+
+
+def test_stream_daemon_request_hides_force_tool_preamble_stream():
+    chunks = [
+        {
+            "message": (
+                "<think>Let me call the rag_search tool to search for "
+                "information about documents.</think>"
+                "I'm calling the search tool to find information about the "
+                "document you're referring to."
+            ),
+            "is_first_message": True,
+            "is_end_of_message": False,
+            "sequence_number": 1,
+        },
+        {
+            "message": (
+                '{\n  "tool": "rag_search",\n'
+                '  "query": "document information title author"\n}'
+            ),
+            "is_first_message": False,
+            "is_end_of_message": True,
+            "sequence_number": 2,
+        },
+        {
+            "message": "This document is a PDF titled Sample",
+            "is_first_message": True,
+            "is_end_of_message": False,
+            "sequence_number": 3,
+        },
+        {
+            "message": " by Jane Doe.",
+            "is_first_message": False,
+            "is_end_of_message": True,
+            "sequence_number": 4,
+        },
+    ]
+    emitted_responses = []
+    emitted_signals = []
+    service = _daemon_bridge_service(emitted_responses, emitted_signals)
+    client = SimpleNamespace(
+        stream_llm_request=lambda *args, **kwargs: iter(chunks)
+    )
+    llm_request = LLMRequest()
+    llm_request.force_tool = "rag_search"
+
+    LLMAPIService._stream_daemon_request(
+        service,
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        7,
+        None,
+        None,
+    )
+
+    assert emitted_signals == [
+        ("req-123", "started", ""),
+        (
+            "req-123",
+            "streaming",
+            "Let me call the rag_search tool to search for "
+            "information about documents.",
+        ),
+        (
+            "req-123",
+            "completed",
+            "Let me call the rag_search tool to search for "
+            "information about documents.",
+        ),
+    ]
+    assert [response.message for response in emitted_responses] == [
+        "This document is a PDF titled Sample",
+        " by Jane Doe.",
+    ]
+    assert emitted_responses[0].is_first_message is True
+    assert emitted_responses[0].sequence_number == 1
+    assert emitted_responses[-1].is_end_of_message is True
+
+
+def test_stream_daemon_request_flushes_force_tool_answer_without_tool_preamble():
+    chunks = [
+        {
+            "message": "This document is a PDF titled Sample.",
+            "is_first_message": True,
+            "is_end_of_message": True,
+            "sequence_number": 1,
+        }
+    ]
+    emitted_responses = []
+    service = _daemon_bridge_service(emitted_responses)
+    client = SimpleNamespace(
+        stream_llm_request=lambda *args, **kwargs: iter(chunks)
+    )
+    llm_request = LLMRequest()
+    llm_request.force_tool = "rag_search"
+
+    LLMAPIService._stream_daemon_request(
+        service,
+        client,
+        "hello",
+        llm_request,
+        LLMActionType.CHAT,
+        "req-123",
+        None,
+        7,
+        None,
+        None,
+    )
+
+    assert [response.message for response in emitted_responses] == [
+        "This document is a PDF titled Sample.",
+    ]
+    assert emitted_responses[0].is_first_message is True
+    assert emitted_responses[0].is_end_of_message is True

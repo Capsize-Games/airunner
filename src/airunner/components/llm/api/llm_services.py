@@ -30,6 +30,8 @@ class _DaemonStreamState:
     thinking_content: list[str] = field(default_factory=list)
     visible_sequence_number: int = 0
     visible_text: str = ""
+    hold_visible_output: bool = False
+    pending_visible_parts: list[str] = field(default_factory=list)
 
 
 class LLMAPIService(APIServiceBase):
@@ -469,7 +471,11 @@ class LLMAPIService(APIServiceBase):
         enable_consciousness: Optional[bool],
     ) -> None:
         """Emit streamed LLM responses received from the daemon client."""
-        state = _DaemonStreamState()
+        state = _DaemonStreamState(
+            hold_visible_output=bool(
+                getattr(llm_request, "force_tool", None)
+            )
+        )
         try:
             for chunk in client.stream_llm_request(
                 prompt,
@@ -529,6 +535,19 @@ class LLMAPIService(APIServiceBase):
             )
             return
 
+        if (
+            state.hold_visible_output
+            and bool(chunk.get("is_first_message", False))
+            and state.pending_visible_parts
+        ):
+            self._finish_pending_daemon_visible_output(
+                chunk,
+                state=state,
+                request_id=request_id,
+                action=action,
+                node_id=node_id,
+            )
+
         visible_parts = self._extract_visible_daemon_text(
             chunk.get("message", "") or "",
             state,
@@ -538,9 +557,32 @@ class LLMAPIService(APIServiceBase):
             self._finish_daemon_thinking(state, request_id=request_id)
 
         if visible_parts:
-            self._emit_visible_daemon_parts(
-                visible_parts,
-                chunk=chunk,
+            if state.hold_visible_output:
+                state.pending_visible_parts.extend(visible_parts)
+                if bool(chunk.get("is_end_of_message", False)):
+                    self._finish_pending_daemon_visible_output(
+                        chunk,
+                        state=state,
+                        request_id=request_id,
+                        action=action,
+                        node_id=node_id,
+                    )
+            else:
+                self._emit_visible_daemon_parts(
+                    visible_parts,
+                    chunk=chunk,
+                    state=state,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
+            return
+
+        if state.hold_visible_output and bool(
+            chunk.get("is_end_of_message", False)
+        ):
+            self._finish_pending_daemon_visible_output(
+                chunk,
                 state=state,
                 request_id=request_id,
                 action=action,
@@ -563,6 +605,86 @@ class LLMAPIService(APIServiceBase):
                 )
             )
 
+    def _finish_pending_daemon_visible_output(
+        self,
+        chunk: dict,
+        *,
+        state: _DaemonStreamState,
+        request_id: str,
+        action: LLMActionType,
+        node_id: Optional[str],
+    ) -> None:
+        """Release or discard one buffered daemon substream."""
+        pending_parts = list(state.pending_visible_parts)
+        state.pending_visible_parts = []
+        state.hold_visible_output = False
+        if not pending_parts:
+            return
+
+        pending_text = "".join(pending_parts)
+        if self._daemon_output_looks_like_tool_turn(pending_text, chunk):
+            return
+
+        self._emit_visible_daemon_parts(
+            pending_parts,
+            chunk=chunk,
+            state=state,
+            request_id=request_id,
+            action=action,
+            node_id=node_id,
+        )
+
+    def _daemon_output_looks_like_tool_turn(
+        self,
+        text: str,
+        chunk: dict,
+    ) -> bool:
+        """Return whether buffered daemon text looks like tool planning."""
+        if bool(chunk.get("tools") or chunk.get("tool_calls")):
+            return True
+
+        stripped = str(text or "").strip()
+        if not stripped:
+            return False
+        if self._daemon_text_looks_like_tool_call_json(stripped):
+            return True
+
+        normalized = " ".join(stripped.lower().split())
+        markers = (
+            "let me call the",
+            "i'll call the",
+            "i will call the",
+            "i'm calling the",
+            "i am calling the",
+            "calling the search tool",
+            "rag_search tool",
+        )
+        return any(marker in normalized for marker in markers)
+
+    @staticmethod
+    def _daemon_text_looks_like_tool_call_json(text: str) -> bool:
+        """Return whether daemon-visible text matches tool-call JSON."""
+        stripped = str(text or "").strip()
+        if not stripped.startswith("{"):
+            return False
+        if ('"name"' in stripped or '"tool"' in stripped) and (
+            '"arguments"' in stripped or '"args"' in stripped
+        ):
+            return True
+        if '"tool"' in stripped and any(
+            key in stripped
+            for key in (
+                '"query"',
+                '"prompt"',
+                '"url"',
+                '"path"',
+                '"text"',
+                '"content"',
+            )
+        ):
+            return True
+        return False
+
     def _emit_visible_daemon_parts(
         self,
         visible_parts: List[str],
@@ -577,7 +699,10 @@ class LLMAPIService(APIServiceBase):
         last_index = len(visible_parts) - 1
         chunk_done = bool(chunk.get("is_end_of_message", False))
         for index, part in enumerate(visible_parts):
-            cleaned_part = strip_thinking_tags(part)
+            # visible_parts already come from _extract_visible_daemon_text(),
+            # so trimming here would incorrectly drop leading spaces between
+            # streamed word chunks.
+            cleaned_part = part
             if not cleaned_part:
                 continue
             normalized_part = prepare_stream_chunk(

@@ -387,45 +387,42 @@ class ToolManager(
             return common_tools + additional_tools
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
-            # RAG mode: prefer any ToolRegistry tools that look like a search tool.
+            # Document mode should expose document inspection and retrieval
+            # tools, not just literal search-named tools.
             additional_tools = []
+            seen_names: set[str] = set()
             try:
                 from airunner.components.llm.core.tool_registry import (
                     ToolRegistry,
+                    ToolCategory,
                 )
 
-                for tool_info in ToolRegistry.all().values():
-                    name_lower = (tool_info.name or "").lower()
-                    category_lower = str(
-                        getattr(tool_info, "category", "")
-                    ).lower()
-
-                    # Heuristic: search / rag / knowledge keywords indicate a true search tool
-                    if (
-                        "search" in name_lower
-                        or "rag" in name_lower
-                        or "knowledge" in name_lower
-                        or "search" in category_lower
-                    ):
+                for category in (ToolCategory.RAG, ToolCategory.SEARCH):
+                    for tool_info in ToolRegistry.get_by_category(category):
                         wrapped = self._wrap_tool_with_dependencies(tool_info)
                         wrapped.name = tool_info.name
                         wrapped.description = tool_info.description
                         wrapped.return_direct = tool_info.return_direct
                         wrapped.category = getattr(tool_info, "category", None)
                         additional_tools.append(wrapped)
+                        seen_names.add(tool_info.name)
             except Exception:
-                # fall back to explicit names if registry not available
+                # Fall back to explicit names if registry lookup is unavailable.
                 self.logger.debug(
-                    "ToolRegistry unavailable while filtering search tools; falling back to hardcoded names"
+                    "ToolRegistry unavailable while filtering document tools; "
+                    "falling back to hardcoded names"
                 )
 
             # Fallback named tools in case registry doesn't cover them. This
             # captures older mixin tools and name variants.
             for tool_name in [
+                "inspect_loaded_documents",
                 "rag_search",
                 "search_web",
                 "search_knowledge_base_documents",
             ]:
+                if tool_name in seen_names:
+                    continue
                 tool = self._get_tool_by_name(tool_name)
                 if tool:
                     additional_tools.append(tool)

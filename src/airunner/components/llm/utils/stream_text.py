@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Iterable
+import os
+import re
 import unicodedata
 
 
@@ -13,6 +16,8 @@ _OPENING_CHARS = frozenset("([{</\\")
 _WORD_CONTINUATION = frozenset("_")
 _WORD_ENDERS = frozenset(")]}\"'")
 _SENTENCE_ENDERS = frozenset(".!?;:")
+_WORD_PATTERN = re.compile(r"[A-Za-z]+")
+_WORDLIST_PATHS = ("/usr/share/dict/words",)
 
 
 def _is_space_separated_symbol(char: str) -> bool:
@@ -22,6 +27,56 @@ def _is_space_separated_symbol(char: str) -> bool:
     if char in _NO_SPACE_BEFORE or char in _OPENING_CHARS:
         return False
     return unicodedata.category(char) == "So"
+
+
+@lru_cache(maxsize=1)
+def _load_known_words() -> frozenset[str]:
+    """Load one optional system word list for chunk-boundary heuristics."""
+    for path in _WORDLIST_PATHS:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as handle:
+                return frozenset(
+                    line.strip().lower()
+                    for line in handle
+                    if line.strip()
+                )
+        except OSError:
+            continue
+    return frozenset()
+
+
+def _leading_word(chunk: str) -> str:
+    """Return the alphabetic word fragment at one chunk start."""
+    match = _WORD_PATTERN.match(chunk)
+    return match.group(0) if match else ""
+
+
+def _trailing_word(existing: str) -> str:
+    """Return the alphabetic word fragment at one chunk end."""
+    matches = list(_WORD_PATTERN.finditer(existing))
+    return matches[-1].group(0) if matches else ""
+
+
+def _is_known_word(word: str) -> bool:
+    """Return whether one alphabetic token looks like a full word."""
+    return word.isalpha() and word.lower() in _load_known_words()
+
+
+def _needs_plain_word_boundary(existing: str, chunk: str) -> bool:
+    """Return whether adjacent alphabetic chunks need a spacer."""
+    left = _trailing_word(existing)
+    right = _leading_word(chunk)
+    if not left or not right:
+        return False
+    if len(left) == 1 or len(right) == 1:
+        return False
+    if _is_known_word(left + right):
+        return False
+    if _is_known_word(left) and _is_known_word(right):
+        return True
+    return len(left) >= 5 and len(right) >= 4
 
 
 def needs_stream_space(existing: str, chunk: str) -> bool:
@@ -39,6 +94,9 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
     next_is_word = next_char.isalnum() or next_char in _WORD_CONTINUATION
     prev_is_symbol = _is_space_separated_symbol(prev)
     next_is_symbol = _is_space_separated_symbol(next_char)
+
+    if prev_is_word and next_is_word:
+        return _needs_plain_word_boundary(existing, chunk)
 
     if prev in _SENTENCE_ENDERS and (next_is_word or next_is_symbol):
         return True

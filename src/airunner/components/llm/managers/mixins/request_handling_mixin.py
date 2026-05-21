@@ -7,7 +7,10 @@ from typing import Any, Dict, List, Optional
 
 from airunner.components.data.session_manager import session_scope
 from airunner.components.documents.data.models.document import Document
-from airunner.enums import SignalCode
+from airunner.components.llm.utils.document_query_routing import (
+    route_document_query,
+)
+from airunner.enums import LLMActionType, SignalCode
 
 
 class RequestHandlingMixin:
@@ -34,6 +37,7 @@ class RequestHandlingMixin:
             )
 
         self._interrupted = False
+        self._current_document_query_route = None
         if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
             self._chat_model.set_interrupted(False)
         if self._workflow_manager and hasattr(
@@ -222,6 +226,7 @@ class RequestHandlingMixin:
 
         prompt = data["request_data"]["prompt"]
         action = data["request_data"].get("action")
+        self._apply_document_query_route(llm_request, prompt, action)
 
         if llm_request and llm_request.tool_categories is None:
             selected_categories = self._auto_select_tool_categories(
@@ -258,6 +263,26 @@ class RequestHandlingMixin:
             self.logger.info("No tool filtering - using all tools")
 
         return tools_filtered, selected_categories, system_prompt
+
+    def _apply_document_query_route(
+        self,
+        llm_request: Any,
+        prompt: str,
+        action: Any,
+    ) -> None:
+        """Cache one request-scoped document route and force its tool."""
+        assume_document_mode = action == LLMActionType.PERFORM_RAG_SEARCH
+        route = route_document_query(
+            prompt,
+            assume_document_mode=assume_document_mode,
+        )
+        self._current_document_query_route = route
+        if not llm_request or not route:
+            return
+        if getattr(llm_request, "force_tool", None) is None:
+            llm_request.force_tool = route.force_tool
+        if getattr(llm_request, "tool_categories", None) is None:
+            llm_request.tool_categories = ["rag", "search"]
 
     def _auto_select_tool_categories(
         self,

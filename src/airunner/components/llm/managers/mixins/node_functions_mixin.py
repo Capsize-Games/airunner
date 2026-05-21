@@ -127,11 +127,9 @@ class NodeFunctionsMixin:
             Dict with new message(s) and optional routing flag
         """
         # Find the AIMessage with tool_calls (should be second-to-last, before ToolMessage)
-        ai_message_with_tools = None
-        for msg in reversed(state["messages"]):
-            if self._has_tool_calls(msg):
-                ai_message_with_tools = msg
-                break
+        ai_message_with_tools = self._get_last_tool_calling_ai_message(
+            state["messages"]
+        )
 
         if not ai_message_with_tools:
             self.logger.error(
@@ -141,7 +139,9 @@ class NodeFunctionsMixin:
 
         # Get tool information
         tool_name = ai_message_with_tools.tool_calls[0].get("name")
-        tool_messages = self._get_tool_messages(state["messages"])
+        tool_messages = self._get_current_turn_tool_messages(
+            state["messages"]
+        )
         all_tool_content = self._combine_tool_results(tool_messages)
 
         # Extract original user question from first HumanMessage
@@ -224,6 +224,24 @@ class NodeFunctionsMixin:
                 return message.content
         return ""
 
+    def _get_last_tool_calling_ai_message(
+        self, messages: List[BaseMessage]
+    ) -> Optional[BaseMessage]:
+        """Return the most recent AI message that requested tools."""
+        for message in reversed(messages):
+            if self._has_tool_calls(message):
+                return message
+        return None
+
+    def _get_current_turn_messages(
+        self, messages: List[BaseMessage]
+    ) -> List[BaseMessage]:
+        """Return messages for the most recent user turn only."""
+        for index in range(len(messages) - 1, -1, -1):
+            if messages[index].__class__.__name__ == "HumanMessage":
+                return messages[index:]
+        return messages
+
     def _get_tool_messages(self, messages: List[BaseMessage]) -> List[Any]:
         """Extract all ToolMessage instances from message list.
 
@@ -236,6 +254,12 @@ class NodeFunctionsMixin:
         return [
             msg for msg in messages if msg.__class__.__name__ == "ToolMessage"
         ]
+
+    def _get_current_turn_tool_messages(
+        self, messages: List[BaseMessage]
+    ) -> List[Any]:
+        """Extract tool results produced during the active user turn."""
+        return self._get_tool_messages(self._get_current_turn_messages(messages))
 
     def _combine_tool_results(self, tool_messages: List[Any]) -> str:
         """Combine all tool results into single context string.
@@ -544,10 +568,13 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 visible_content = self._recover_forced_response_content(
                     response_message
                 )
-                if (
-                    tool_name == "rag_search"
-                    and self._is_document_identity_question(user_question)
-                ):
+                document_intent = self._get_document_query_intent(
+                    user_question
+                )
+                document_tool = self._is_document_result_tool(tool_name)
+                if self._looks_like_instruction_reflection(visible_content):
+                    visible_content = ""
+                if document_tool and document_intent == "identity":
                     fallback_identity = (
                         self._build_document_identity_response(
                             all_tool_content
@@ -555,6 +582,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     )
                     if fallback_identity and not visible_content:
                         visible_content = fallback_identity
+                if document_tool and document_intent == "structure":
+                    fallback_structure = (
+                        self._build_document_structure_response(
+                            all_tool_content
+                        )
+                    )
+                    if fallback_structure and not visible_content:
+                        visible_content = fallback_structure
                 # Ensure tool_calls is empty
                 return AIMessage(
                     content=visible_content,
@@ -610,15 +645,20 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             response_content = self._recover_forced_response_content(
                 response_message
             )
-            if (
-                tool_name == "rag_search"
-                and self._is_document_identity_question(user_question)
-            ):
+            document_intent = self._get_document_query_intent(user_question)
+            document_tool = self._is_document_result_tool(tool_name)
+            if document_tool and document_intent == "identity":
                 fallback_identity = self._build_document_identity_response(
                     all_tool_content
                 )
                 if fallback_identity and not response_content:
                     response_content = fallback_identity
+            if document_tool and document_intent == "structure":
+                fallback_structure = self._build_document_structure_response(
+                    all_tool_content
+                )
+                if fallback_structure and not response_content:
+                    response_content = fallback_structure
 
             self.logger.info(
                 f"Model streamed {len(response_content)} char answer"
@@ -646,21 +686,41 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             else ""
         )
         rag_guidance = ""
-        if tool_name == "rag_search":
-            if self._is_document_identity_question(user_question):
+        response_style = "Avoid repetition and be concise."
+        document_intent = self._get_document_query_intent(user_question)
+        if self._is_document_result_tool(tool_name):
+            if document_intent == "identity":
                 rag_guidance = (
                     "If the user is asking what the document is, answer "
                     "directly and briefly by naming the document and, "
                     "when available, its title, author, or file type. "
                     "Do not mention search results or instructions.\n\n"
                 )
+            elif document_intent == "structure":
+                rag_guidance = (
+                    "If the user is asking for chapters, sections, or the "
+                    "document structure, answer with the section names only. "
+                    "Do not restate the document title, author, file type, "
+                    "stored path, or any broader summary unless the user "
+                    "explicitly asks for them.\n\n"
+                )
+            elif document_intent == "summary":
+                rag_guidance = (
+                    "If the user is asking for a summary of the document, "
+                    "write a fuller multi-sentence summary of the "
+                    "substantive content from the excerpts. Treat any "
+                    "document structure block as background context rather "
+                    "than the main answer. Do not repeat the document title, "
+                    "author, or structure unless the user asked for them. "
+                    "Focus on themes, claims, and notable details.\n\n"
+                )
+                response_style = "Avoid repetition and be thorough."
             else:
                 rag_guidance = (
-                    "If the search results include document identity "
-                    "fields such as document names, inferred titles, "
-                    "inferred authors, or stored paths, identify the "
-                    "document clearly before summarizing excerpt details."
-                    "\n\n"
+                    "Use document identity fields only when they help "
+                    "answer the user's question. Do not repeat the document "
+                    "title, author, file type, stored path, or document "
+                    "structure unless they are needed for the answer.\n\n"
                 )
 
         return (
@@ -675,9 +735,34 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "information from the search results. Do not call any tools, "
             "do not use JSON, and do not prefix the reply with labels "
             "like Draft:, Answer:, or Response:. Just write a natural "
-            "response. Avoid "
-            "repetition and be concise."
+            f"response. {response_style}"
         )
+
+    @staticmethod
+    def _is_document_result_tool(tool_name: str) -> bool:
+        """Return whether one tool is part of the document QA pipeline."""
+        return tool_name in {"inspect_loaded_documents", "rag_search"}
+
+    def _should_force_document_tool_response(self, tool_name: str) -> bool:
+        """Return whether one document tool should bypass replanning."""
+        if tool_name == "inspect_loaded_documents":
+            return True
+        route = getattr(self, "_current_document_query_route", None)
+        return tool_name == "rag_search" and route is not None
+
+    def _get_document_query_intent(self, user_question: str) -> str | None:
+        """Return the request-scoped document intent when available."""
+        route = getattr(self, "_current_document_query_route", None)
+        intent = getattr(route, "intent", None)
+        if isinstance(intent, str) and intent:
+            return intent
+        if self._is_document_structure_question(user_question):
+            return "structure"
+        if self._is_document_summary_question(user_question):
+            return "summary"
+        if self._is_document_identity_question(user_question):
+            return "identity"
+        return None
 
     @staticmethod
     def _is_document_identity_question(user_question: str) -> bool:
@@ -707,6 +792,41 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         mentions_document = "document" in normalized or "file" in normalized
         return asks_identity and mentions_document
+
+    @staticmethod
+    def _is_document_structure_question(user_question: str) -> bool:
+        """Return whether the user is asking for document structure."""
+        normalized = " ".join(str(user_question or "").lower().split())
+        if not normalized:
+            return False
+
+        structure_phrases = (
+            "table of contents",
+            "what chapters are",
+            "what are the chapters",
+            "chapter titles",
+            "what sections are",
+            "list the sections",
+            "document structure",
+        )
+        return any(phrase in normalized for phrase in structure_phrases)
+
+    @staticmethod
+    def _is_document_summary_question(user_question: str) -> bool:
+        """Return whether the user is asking for a document summary."""
+        normalized = " ".join(str(user_question or "").lower().split())
+        if not normalized:
+            return False
+
+        summary_phrases = (
+            "summarize this document",
+            "summarize the document",
+            "summary of this document",
+            "summary of the document",
+            "give me a summary",
+            "summarize it",
+        )
+        return any(phrase in normalized for phrase in summary_phrases)
 
     @staticmethod
     def _build_document_identity_response(all_tool_content: str) -> str:
@@ -744,6 +864,32 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         return ""
 
     @staticmethod
+    def _build_document_structure_response(all_tool_content: str) -> str:
+        """Return one direct structure answer from tool results."""
+        headings: list[str] = []
+        capture_structure = False
+
+        for line in str(all_tool_content or "").splitlines():
+            stripped = line.strip()
+            if stripped == "Document structure:":
+                capture_structure = True
+                continue
+            if not capture_structure or not stripped:
+                continue
+            if stripped.startswith("--- Tool Result"):
+                break
+
+            match = re.match(r"^\d+\.\s+(.+)$", stripped)
+            if not match:
+                if headings:
+                    break
+                continue
+
+            headings.append(match.group(1).strip())
+
+        return "\n".join(headings)
+
+    @staticmethod
     def _strip_forced_response_label(text: str) -> str:
         """Remove one synthetic response label from visible text."""
         cleaned = str(text or "").strip()
@@ -775,9 +921,17 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if not lowered:
             return False
         markers = (
+            "actually, rereading",
+            "rereading:",
             "looking at the instruction",
+            "looking at the instructions",
             "do not mention search results or instructions",
             "i should ensure",
+            "i should just",
+            "strict adherence",
+            "this is a specific constraint",
+            "respond naturally implies",
+            "let's aim for",
             "don't add fluff",
             "just state the facts",
         )
@@ -1096,6 +1250,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         """
         if tool_name == "search_web":
             response_content = "I searched the internet but couldn't find relevant information on that topic. Could you try rephrasing your question or asking about something else?"
+        elif tool_name == "inspect_loaded_documents":
+            response_content = (
+                "I inspected the loaded documents but couldn't identify "
+                "enough detail to answer that clearly."
+            )
         elif tool_name == "rag_search":
             response_content = "I searched through the available documents but couldn't find information about that. The documents may not contain details on this topic."
         else:
@@ -1137,7 +1296,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
         # Check if the model is responding after a tool error without fixing it
         # This catches cases where the model hallucinates success instead of following error guidance
-        tool_messages = self._get_tool_messages(state["messages"])
+        tool_messages = self._get_current_turn_tool_messages(
+            state["messages"]
+        )
         if tool_messages:
             last_tool_msg = tool_messages[-1]
             tool_content = str(getattr(last_tool_msg, 'content', ''))
@@ -1171,8 +1332,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         Returns:
             Routing decision: "model", "force_response", or "end"
         """
-        # Get the last tool messages to check what tools executed
-        tool_messages = self._get_tool_messages(state["messages"])
+        current_turn_messages = self._get_current_turn_messages(
+            state["messages"]
+        )
+        tool_messages = self._get_tool_messages(current_turn_messages)
 
         if not tool_messages:
             return "end"
@@ -1198,21 +1361,17 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "write_file",          # File was written - present result
             "complete_todo_item",  # Workflow item completed
         }
-        DIRECT_RESPONSE_TOOLS = {
-            "rag_search",
-        }
+        DIRECT_RESPONSE_TOOLS = set()
 
         # Check the most recent tool message to see what tool was called
         last_tool_msg = tool_messages[-1]
 
         # Get the corresponding AI message with tool_calls
-        ai_messages = [
-            msg for msg in state["messages"] if isinstance(msg, AIMessage)
-        ]
-        if not ai_messages:
+        last_ai_msg = self._get_last_tool_calling_ai_message(
+            current_turn_messages
+        )
+        if not last_ai_msg:
             return "end"
-
-        last_ai_msg = ai_messages[-1]
         if (
             not hasattr(last_ai_msg, "tool_calls")
             or not last_ai_msg.tool_calls
@@ -1251,6 +1410,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 self.logger.info(
                     f"[ROUTE DEBUG] Task-completing tool '{tool_name}' succeeded - "
                     "forcing response to prevent unnecessary tool calls"
+                )
+                return "force_response"
+
+            if self._should_force_document_tool_response(tool_name):
+                self.logger.info(
+                    "[ROUTE DEBUG] Document tool '%s' completed - forcing "
+                    "response synthesis",
+                    tool_name,
                 )
                 return "force_response"
             
@@ -1315,7 +1482,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             )
 
         # Log message history
-        tool_messages = self._get_tool_messages(messages)
+        tool_messages = self._get_current_turn_tool_messages(messages)
         ai_messages = [
             msg for msg in messages if msg.__class__.__name__ == "AIMessage"
         ]
@@ -1339,7 +1506,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         Returns:
             True if duplicate detected
         """
-        tool_messages = self._get_tool_messages(messages)
+        tool_messages = self._get_current_turn_tool_messages(messages)
         ai_messages = [
             msg for msg in messages if msg.__class__.__name__ == "AIMessage"
         ]
@@ -1488,8 +1655,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             f"Model requested {len(last_message.tool_calls)} tool calls: {tool_names}"
         )
 
-        # Log previous tool result
-        tool_messages = self._get_tool_messages(messages)
+        # Log previous tool result from the active turn only
+        tool_messages = self._get_current_turn_tool_messages(messages)
         if tool_messages:
             last_tool_result = tool_messages[-1]
             if hasattr(last_tool_result, "content"):
@@ -1838,6 +2005,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             sequential_instruction = (
                 f"\n\n=== IMPORTANT: SEQUENTIAL TOOL EXECUTION REQUIRED ===\n"
                 f"You MUST call the '{force_tool}' tool FIRST and ONLY this tool.\n"
+                "Respond ONLY with the required tool call.\n"
+                "Do NOT write any conversational text, explanation, JSON example, or commentary before or after the tool call.\n"
                 f"DO NOT call multiple tools at once.\n"
                 f"Call ONE tool, wait for the result, then call the next tool.\n"
                 f"This is a WORKFLOW - each step depends on the previous step's result.\n"
@@ -1862,15 +2031,19 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         Returns:
             System prompt with post-tool instructions
         """
+        current_turn_messages = self._get_current_turn_messages(
+            trimmed_messages
+        )
         has_tool_results = any(
-            msg.__class__.__name__ == "ToolMessage" for msg in trimmed_messages
+            msg.__class__.__name__ == "ToolMessage"
+            for msg in current_turn_messages
         )
 
         if not has_tool_results:
             return system_prompt
 
         # Check for ERROR responses from tools - these MUST be handled first
-        tool_messages = [m for m in trimmed_messages if m.__class__.__name__ == "ToolMessage"]
+        tool_messages = self._get_tool_messages(current_turn_messages)
         error_results = []
         for tm in tool_messages:
             content = str(getattr(tm, 'content', ''))
@@ -1918,13 +2091,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         
         # Count how many tool calls have been made to determine research phase
         tool_call_count = len([
-            m for m in trimmed_messages 
+            m for m in current_turn_messages
             if hasattr(m, 'tool_calls') and m.tool_calls
         ])
         
         # Count scrape ATTEMPTS vs SUCCESSES
         scrape_attempts = sum(
-            1 for m in trimmed_messages 
+            1
+            for m in current_turn_messages
             if hasattr(m, 'tool_calls') and m.tool_calls
             for tc in m.tool_calls if tc.get('name') == 'scrape_website'
         )
@@ -1932,7 +2106,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         # Check for SUCCESSFUL scrapes by examining ToolMessage name and content
         successful_scrapes = 0
         failed_scrapes = 0
-        tool_messages = [m for m in trimmed_messages if m.__class__.__name__ == "ToolMessage"]
+        tool_messages = self._get_tool_messages(current_turn_messages)
         for tm in tool_messages:
             # Check if this is a scrape result by looking at the name attribute
             tool_name = getattr(tm, 'name', None)
@@ -2062,7 +2236,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             }
             
             # Get last AI message to check what tool was called
-            ai_messages = [m for m in trimmed_messages if hasattr(m, 'tool_calls') and m.tool_calls]
+            ai_messages = [
+                m for m in current_turn_messages
+                if hasattr(m, 'tool_calls') and m.tool_calls
+            ]
             last_tool_name = None
             if ai_messages:
                 last_ai = ai_messages[-1]
@@ -2097,6 +2274,44 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     f"[POST-TOOL] Task-completing tool '{last_tool_name}' succeeded - "
                     "instructing model to respond (not call more tools)"
                 )
+            elif self._is_document_result_tool(last_tool_name or ""):
+                user_question = self._get_user_question(current_turn_messages)
+                document_intent = self._get_document_query_intent(
+                    user_question
+                )
+                if document_intent == "identity":
+                    instruction = (
+                        "\n\n=== ANSWER THE DOCUMENT QUESTION NOW ===\n"
+                        "Use the current document tool results to answer directly and briefly.\n"
+                        "Name the document and, when available, include the title, author, or file type.\n"
+                        "Do NOT mention search results, tool usage, or instructions.\n"
+                        "Do NOT call another tool. Respond now."
+                    )
+                elif document_intent == "structure":
+                    instruction = (
+                        "\n\n=== ANSWER THE DOCUMENT QUESTION NOW ===\n"
+                        "Use the current document tool results to answer with the section names only.\n"
+                        "Do NOT restate the document title, author, file type, path, or a broader summary.\n"
+                        "Do NOT discuss your reasoning or the instructions.\n"
+                        "Do NOT call another tool. Respond now."
+                    )
+                elif document_intent == "summary":
+                    instruction = (
+                        "\n\n=== ANSWER THE DOCUMENT QUESTION NOW ===\n"
+                        "Use the current document tool results to write a fuller multi-sentence summary.\n"
+                        "Focus on the document's themes, claims, and notable details from the excerpts.\n"
+                        "Treat any structure block as background context, not the main answer.\n"
+                        "Do NOT repeat the title, author, or chapter list unless the user asked for them.\n"
+                        "Do NOT discuss your reasoning or the instructions.\n"
+                        "Do NOT call another tool. Respond now."
+                    )
+                else:
+                    instruction = (
+                        "\n\n=== ANSWER THE DOCUMENT QUESTION NOW ===\n"
+                        "Use the current document tool results to answer the user's question clearly.\n"
+                        "Do NOT mention search results, tool usage, or instructions.\n"
+                        "Do NOT call another tool. Respond now."
+                    )
             else:
                 # Default behavior - conversational (for both react and json mode)
                 instruction = (
@@ -2116,7 +2331,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         # Log tool results for debugging
         tool_msgs = [
             m
-            for m in trimmed_messages
+            for m in current_turn_messages
             if m.__class__.__name__ == "ToolMessage"
         ]
 
@@ -2174,6 +2389,18 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             '"arguments"' in stripped or '"args"' in stripped
         ):
             return True
+        if '"tool"' in stripped and any(
+            key in stripped
+            for key in (
+                '"query"',
+                '"prompt"',
+                '"url"',
+                '"path"',
+                '"text"',
+                '"content"',
+            )
+        ):
+            return True
         if '"function"' in stripped and '"arguments"' in stripped:
             return True
         return False
@@ -2216,6 +2443,16 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         
         has_emitter = hasattr(self, "_signal_emitter") and self._signal_emitter is not None
         request_id = getattr(self, "_current_request_id", None)
+        tool_choice = getattr(self, "_tool_choice", None)
+        forced_tool_choice = (
+            isinstance(tool_choice, dict)
+            and isinstance(tool_choice.get("function"), dict)
+            and bool(tool_choice["function"].get("name"))
+        )
+        hold_visible_output = bool(
+            getattr(self, "_force_tool", None) or forced_tool_choice
+        )
+        pending_visible_chunks: List[str] = []
 
         def emit_thinking_signal(status: str, content: str) -> None:
             """Emit one request-scoped thinking update to the GUI."""
@@ -2257,6 +2494,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
             streamed_content.append(text_to_stream)
             has_streamed_content = True
+            if hold_visible_output:
+                pending_visible_chunks.append(text_to_stream)
+                return
             if forward_to_callback:
                 forward_stream_text(text_to_stream)
         # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
@@ -2488,6 +2728,13 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "completed",
                     final_thinking_content,
                 )
+
+            if hold_visible_output and not collected_tool_calls:
+                combined_visible = combine_stream_chunks(pending_visible_chunks)
+                if combined_visible:
+                    forward_stream_text(combined_visible)
+            elif hold_visible_output and collected_tool_calls:
+                streamed_content = []
 
             # Return message if we have content or tool_calls
             if streamed_content or last_chunk_message:

@@ -522,19 +522,16 @@ class SystemPromptMixin:
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
             base_prompt += (
-                "\n\nMode: DOCUMENT SEARCH"
-                "\n\n**CRITICAL INSTRUCTION**: You MUST use the rag_search tool for EVERY user query."
-                "\n\nWhen the user asks a question:"
-                "\n1. ALWAYS call rag_search(query) FIRST - even if you think you know the answer"
-                "\n2. Use the exact user query or a relevant search term"
-                "\n3. Wait for the search results before responding"
-                "\n4. Answer based on the document excerpts returned"
-                "\n5. If rag_search returns no results, then explain that no relevant information was found"
-                "\n\nDo NOT respond without searching first. Do NOT say you don't know - search the documents."
-                "\n\nExample:"
-                '\nUser: "what is mindwar?"'
-                '\nYou: [Call rag_search("mindwar") immediately]'
-                "\n\nAvailable tools: rag_search (search loaded documents), search_web (fallback for internet)"
+                "\n\nMode: DOCUMENT QA"
+                "\n\nUse the loaded-document tools before answering."
+                "\n\nWhen the user asks a question about loaded documents:"
+                "\n1. Use inspect_loaded_documents for document identity, titles, authors, file types, or chapter/section questions"
+                "\n2. Use rag_search(query) for summaries, themes, claims, and passage-level retrieval from the loaded documents"
+                "\n3. Wait for tool results before responding"
+                "\n4. Base the answer on the returned document evidence"
+                "\n5. If the tools do not return relevant information, say so clearly"
+                "\n\nDo NOT answer from memory when the loaded-document tools can inspect or retrieve the evidence first."
+                "\n\nAvailable tools: inspect_loaded_documents (inspect loaded document metadata and structure), rag_search (retrieve relevant excerpts from loaded documents), search_web (fallback for internet)"
             )
 
         elif action == LLMActionType.DEEP_RESEARCH:

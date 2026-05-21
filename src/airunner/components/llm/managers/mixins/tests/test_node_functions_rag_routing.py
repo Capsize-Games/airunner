@@ -1,8 +1,9 @@
 """Unit tests for NodeFunctionsMixin RAG/search routing."""
 
+from types import SimpleNamespace
 from unittest.mock import Mock
 
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from airunner.components.llm.managers.mixins.node_functions_mixin import (
     NodeFunctionsMixin,
@@ -17,8 +18,25 @@ class _DummyNodeFunctions(NodeFunctionsMixin):
         return False
 
 
-def test_route_after_tools_forces_response_for_rag_search():
-    """RAG search results should synthesize a final answer directly."""
+class _CapturingNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self.captured = None
+
+    def _generate_forced_response_message(
+        self,
+        tool_content,
+        tool_name,
+        user_question,
+        generation_kwargs=None,
+    ):
+        self.captured = (tool_content, tool_name, user_question)
+        return AIMessage(content="forced response", tool_calls=[])
+
+
+def test_route_after_tools_returns_model_for_rag_search():
+    """RAG search results should return to the model for a streamed answer."""
     mixin = _DummyNodeFunctions()
     state = {
         "messages": [
@@ -36,6 +54,62 @@ def test_route_after_tools_forces_response_for_rag_search():
                 content="Found 1 relevant chunk.",
                 tool_call_id="tool-1",
                 name="rag_search",
+            ),
+        ]
+    }
+
+    assert mixin._route_after_tools(state) == "model"
+
+
+def test_route_after_tools_forces_response_for_document_rag_route():
+    """Document-mode RAG should synthesize directly after retrieval."""
+    mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="summary",
+        force_tool="rag_search",
+    )
+    state = {
+        "messages": [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "rag_search",
+                        "args": {"query": "summarize this document"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Found 1 relevant chunk.",
+                tool_call_id="tool-1",
+                name="rag_search",
+            ),
+        ]
+    }
+
+    assert mixin._route_after_tools(state) == "force_response"
+
+
+def test_route_after_tools_forces_response_for_inspection_tool():
+    """Inspection results should bypass another model planning turn."""
+    mixin = _DummyNodeFunctions()
+    state = {
+        "messages": [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "inspect_loaded_documents",
+                        "args": {},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Loaded documents:\nDocument 1: Example.pdf",
+                tool_call_id="tool-1",
+                name="inspect_loaded_documents",
             ),
         ]
     }
@@ -67,3 +141,183 @@ def test_route_after_tools_keeps_search_web_in_model_loop():
     }
 
     assert mixin._route_after_tools(state) == "model"
+
+
+def test_force_response_node_uses_only_current_turn_tool_results():
+    """Force synthesis should ignore older tool messages from prior turns."""
+    mixin = _CapturingNodeFunctions()
+    state = {
+        "messages": [
+            HumanMessage(content="what document is this?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "rag_search",
+                        "args": {"query": "what document is this?"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Matched documents:\nDocument 1: Old.pdf",
+                tool_call_id="tool-1",
+                name="rag_search",
+            ),
+            AIMessage(content="Old answer", tool_calls=[]),
+            HumanMessage(content="what chapters are in it?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-2",
+                        "name": "rag_search",
+                        "args": {"query": "what chapters are in it?"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Document structure:\n1. INTRODUCTION",
+                tool_call_id="tool-2",
+                name="rag_search",
+            ),
+        ],
+        "generation_kwargs": {},
+    }
+
+    result = mixin._force_response_node(state)
+
+    assert result["messages"][0].content == "forced response"
+    tool_content, tool_name, user_question = mixin.captured
+    assert "Old.pdf" not in tool_content
+    assert "Document structure:" in tool_content
+    assert tool_name == "rag_search"
+    assert user_question == "what chapters are in it?"
+
+
+def test_post_tool_instructions_ignore_previous_turn_tool_results():
+    """Fresh user turns should not inherit stale tool-result guidance."""
+    mixin = _DummyNodeFunctions()
+    mixin._chat_model = SimpleNamespace(tool_calling_mode="json")
+
+    prompt = mixin._add_post_tool_instructions(
+        "Base prompt",
+        [
+            HumanMessage(content="what document is this?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "rag_search",
+                        "args": {"query": "what document is this?"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Matched documents:\nDocument 1: Old.pdf",
+                tool_call_id="tool-1",
+                name="rag_search",
+            ),
+            AIMessage(content="Old answer", tool_calls=[]),
+            HumanMessage(content="what chapters are in it?"),
+        ],
+    )
+
+    assert prompt == "Base prompt"
+
+
+def test_post_tool_instructions_keep_current_turn_research_state():
+    """Research-mode post-tool instructions should still inspect current turn data."""
+    mixin = _DummyNodeFunctions()
+    mixin._chat_model = SimpleNamespace(tool_calling_mode="react")
+    mixin._force_tool = "search_web"
+
+    prompt = mixin._add_post_tool_instructions(
+        "Base prompt",
+        [
+            HumanMessage(content="research the latest updates"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "search_web",
+                        "args": {"query": "latest updates"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Search results:\nhttps://example.com/article",
+                tool_call_id="tool-1",
+                name="search_web",
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-2",
+                        "name": "scrape_website",
+                        "args": {"url": "https://example.com/article"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="A" * 250,
+                tool_call_id="tool-2",
+                name="scrape_website",
+            ),
+        ],
+    )
+
+    assert "EXPAND SOURCE COVERAGE" in prompt
+
+
+def test_post_tool_instructions_specialize_rag_structure_answers():
+    """RAG structure answers should avoid another tool pass and metadata chatter."""
+    mixin = _DummyNodeFunctions()
+    mixin._chat_model = SimpleNamespace(tool_calling_mode="json")
+
+    prompt = mixin._add_post_tool_instructions(
+        "Base prompt",
+        [
+            HumanMessage(content="what chapters are in it?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "rag_search",
+                        "args": {"query": "what chapters are in it?"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Document structure:\n1. INTRODUCTION",
+                tool_call_id="tool-1",
+                name="rag_search",
+            ),
+        ],
+    )
+
+    assert "section names only" in prompt
+    assert "Do NOT call another tool" in prompt
+    assert "Do NOT discuss your reasoning" in prompt
+
+
+def test_build_search_results_prompt_uses_document_route_for_inspection():
+    """Forced synthesis should honor the request-scoped inspection intent."""
+    mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="identity",
+        force_tool="inspect_loaded_documents",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Loaded documents:\nDocument 1: Example.pdf",
+        "inspect_loaded_documents",
+        "what is this document?",
+    )
+
+    assert "answer directly and briefly" in prompt
+    assert "Do not mention search results or instructions" in prompt

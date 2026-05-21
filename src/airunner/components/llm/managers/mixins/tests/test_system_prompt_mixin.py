@@ -173,19 +173,19 @@ class TestGetSystemPromptForAction:
     def test_rag_search_action_adds_search_instructions(
         self, mock_datetime, mixin
     ):
-        """Should add document search instructions for PERFORM_RAG_SEARCH action."""
+        """Should add document-tool instructions for PERFORM_RAG_SEARCH."""
         mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0)
 
         prompt = mixin.get_system_prompt_for_action(
             LLMActionType.PERFORM_RAG_SEARCH
         )
 
-        assert "Mode: DOCUMENT SEARCH" in prompt
+        assert "Mode: DOCUMENT QA" in prompt
+        assert "inspect_loaded_documents" in prompt
         assert "rag_search" in prompt
         assert "search_web" in prompt
-        # Verify critical instruction is present
-        assert "CRITICAL INSTRUCTION" in prompt
-        assert "MUST use the rag_search tool" in prompt
+        assert "identity" in prompt
+        assert "chapter/section questions" in prompt
 
     @patch(
         "airunner.components.llm.managers.mixins.system_prompt_mixin.datetime"
