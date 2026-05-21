@@ -1,4 +1,6 @@
 #include <cstdlib>
+#include <cerrno>
+#include <csignal>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -22,6 +24,67 @@
 namespace fs = std::filesystem;
 
 namespace {
+
+#ifndef _WIN32
+volatile sig_atomic_t g_child_process_group = 0;
+
+extern "C" void forward_signal_to_child_process_group(int signal_number)
+{
+    const int saved_errno = errno;
+    const pid_t child_process_group =
+        static_cast<pid_t>(g_child_process_group);
+    if (child_process_group > 0) {
+        kill(child_process_group, signal_number);
+        kill(-child_process_group, signal_number);
+    }
+    errno = saved_errno;
+}
+
+struct SignalForwardingGuard {
+    struct sigaction previous_sigint {};
+    struct sigaction previous_sigterm {};
+    bool sigint_installed = false;
+    bool sigterm_installed = false;
+
+    SignalForwardingGuard()
+    {
+        install(SIGINT, previous_sigint, sigint_installed);
+        install(SIGTERM, previous_sigterm, sigterm_installed);
+    }
+
+    ~SignalForwardingGuard()
+    {
+        restore(SIGINT, previous_sigint, sigint_installed);
+        restore(SIGTERM, previous_sigterm, sigterm_installed);
+        g_child_process_group = 0;
+    }
+
+    void install(
+        int signal_number,
+        struct sigaction &previous_action,
+        bool &installed)
+    {
+        struct sigaction action {};
+        action.sa_handler = forward_signal_to_child_process_group;
+        sigemptyset(&action.sa_mask);
+        action.sa_flags = 0;
+        if (sigaction(signal_number, &action, &previous_action) == 0) {
+            installed = true;
+        }
+    }
+
+    void restore(
+        int signal_number,
+        const struct sigaction &previous_action,
+        bool installed)
+    {
+        if (!installed) {
+            return;
+        }
+        sigaction(signal_number, &previous_action, nullptr);
+    }
+};
+#endif
 
 struct CliOptions {
     std::string mode = "auto";
@@ -608,12 +671,15 @@ int run_process(
     const std::vector<std::string> &app_args,
     const std::map<std::string, std::string> &environment)
 {
+    SignalForwardingGuard signal_forwarding_guard;
     const pid_t pid = fork();
     if (pid < 0) {
         throw std::runtime_error("fork() failed");
     }
 
     if (pid == 0) {
+        setpgid(0, 0);
+
         for (const auto &[key, value] : environment) {
             setenv(key.c_str(), value.c_str(), 1);
         }
@@ -635,10 +701,26 @@ int run_process(
         _exit(127);
     }
 
-    int status = 0;
-    if (waitpid(pid, &status, 0) < 0) {
-        throw std::runtime_error("waitpid() failed");
+    g_child_process_group = static_cast<sig_atomic_t>(pid);
+    if (setpgid(pid, pid) < 0 && errno != EACCES && errno != ESRCH) {
+        throw std::runtime_error("setpgid() failed");
     }
+
+    int status = 0;
+    while (true) {
+        const pid_t waited_pid = waitpid(pid, &status, 0);
+        if (waited_pid == pid) {
+            break;
+        }
+        if (waited_pid < 0 && errno == EINTR) {
+            continue;
+        }
+        if (waited_pid < 0) {
+            throw std::runtime_error("waitpid() failed");
+        }
+    }
+
+    g_child_process_group = 0;
 
     if (WIFEXITED(status)) {
         return WEXITSTATUS(status);

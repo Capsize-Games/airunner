@@ -252,3 +252,58 @@ def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     assert "identify the document first" in prompt
     assert "inferred titles" in prompt
     assert "stored paths" in prompt
+
+
+class _ModernRagReasoningOnlyChatModel:
+    """Fake model that mirrors the current numbered RAG reasoning format."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    "",
+                    "Thinking Process:\n\n"
+                    "1.  **Analyze the Request:**\n"
+                    "    *   Task: Answer the user's question (\"what is this document?\") based on search results.\n"
+                    "    *   Constraint 1: Respond naturally and conversationally.\n"
+                    "    *   Constraint 2: If search results include document identity fields (name, author, path, etc.), identify the document first before describing excerpt details.\n"
+                    "    *   Input: Search results showing a PDF file named \"The Satanic Bible - Anton LaVey.pdf\" with excerpts from it.\n\n"
+                    "2.  **Analyze the Search Results:**\n"
+                    "    *   Document 1: The Satanic Bible - Anton LaVey.pdf\n\n"
+                    "3.  **Draft the Response:**\n"
+                    "    *   *Identify the document first:* This is a PDF file titled \"The Satanic Bible\" by Anton LaVey.\n"
+                    "    *   *Describe excerpt details:* The excerpts show content related to \"The Ninth Enochian Key.\"\n\n"
+                    "4.  **Refine the Response:**\n"
+                    "    *   \"Based on the file information, this document is a PDF titled 'The Satanic Bible' by Anton LaVey.\"\n"
+                    "    *   *Combine for flow:* \"This document is a PDF file titled 'The Satanic Bible' by Anton LaVey. The excerpts indicate it contains sections like 'The Ninth Enochian Key.'\"\n\n"
+                    "5.  **Final Polish:** Ensure it sounds conversational.\n\n"
+                    "    *   \"This document is a PDF file titled 'The Satanic Bible' by Anton LaVey. The excerpts indicate it contains sections like 'The Ninth Enochian Key,' which warns against substances or devices that might lead to delusion or enslavement.\"\n\n"
+                    "    *Self-Correction on \"Identify first\":*\n"
+                    "    *Draft:* This document is a PDF file titled \"The Satanic Bible\" by Anton LaVey.\n"
+                )
+            ]
+        )
+
+
+def test_forced_response_recovers_modern_rag_reasoning_answer():
+    """Modern numbered RAG reasoning should recover the drafted answer."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _ModernRagReasoningOnlyChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Tool result content",
+        "rag_search",
+        "What is this document?",
+    )
+
+    assert message.content == (
+        "This document is a PDF file titled 'The Satanic Bible' by Anton "
+        "LaVey. The excerpts indicate it contains sections like 'The Ninth "
+        "Enochian Key,' which warns against substances or devices that might "
+        "lead to delusion or enslavement."
+    )

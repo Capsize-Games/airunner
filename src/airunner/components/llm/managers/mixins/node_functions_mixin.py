@@ -700,29 +700,92 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         cleaned_thinking: str,
     ) -> str:
         """Extract quoted draft sentences from structured reasoning output."""
-        section = self._extract_reasoning_section(
-            cleaned_thinking,
+        section_headings = [
+            "Final Polish",
+            "Refine the Response",
             "Refining for Conciseness and Flow",
-        )
-        if not section:
+            "Draft the Response",
+            "Drafting the Response",
+        ]
+        for heading in section_headings:
             section = self._extract_reasoning_section(
                 cleaned_thinking,
-                "Drafting the Response",
+                heading,
             )
-        if not section:
+            if not section:
+                continue
+
+            preferred_quote = self._extract_preferred_quote_from_section(
+                section
+            )
+            if preferred_quote:
+                return preferred_quote
+
+            quotes = self._extract_quoted_response_lines(section)
+            if quotes:
+                return " ".join(quotes)
+
+            draft_line = self._extract_labelled_draft_line(section)
+            if draft_line:
+                return draft_line
+
+        return ""
+
+    def _extract_preferred_quote_from_section(self, section: str) -> str:
+        """Return one preferred quoted answer from a reasoning section."""
+        labelled_quotes: list[tuple[str, str]] = []
+        pattern = re.compile(
+            r'^\s*\*\s+(?:\*([^*]+):\*\s*)?"(.+?)"\s*$',
+            flags=re.MULTILINE,
+        )
+        for match in pattern.finditer(section):
+            label = (match.group(1) or "").strip().lower()
+            quote = match.group(2).strip()
+            if quote:
+                labelled_quotes.append((label, quote))
+
+        if not labelled_quotes:
             return ""
 
-        quotes = [
-            match.strip()
-            for match in re.findall(
-                r'^\s*\*\s+"(.+?)"\s*$',
+        preferred_labels = {
+            "combine for flow",
+            "final answer",
+            "final polish",
+            "draft",
+        }
+        for label, quote in reversed(labelled_quotes):
+            if label in preferred_labels:
+                return quote
+
+        if len(labelled_quotes) == 1:
+            return labelled_quotes[0][1]
+        return ""
+
+    def _extract_quoted_response_lines(self, section: str) -> list[str]:
+        """Return quoted response lines from one reasoning section."""
+        return [
+            match.group(1).strip()
+            for match in re.finditer(
+                r'^\s*\*\s+(?:\*[^*]+:\*\s*)?"(.+?)"\s*$',
                 section,
                 flags=re.MULTILINE,
             )
-            if match.strip()
+            if match.group(1).strip()
         ]
-        if quotes:
-            return " ".join(quotes)
+
+    def _extract_labelled_draft_line(self, section: str) -> str:
+        """Return one unquoted draft line from a reasoning section."""
+        patterns = [
+            r'^\s*\*Draft:\*\s*(.+)$',
+            r'^\s*Draft:\s*(.+)$',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, section, flags=re.MULTILINE)
+            if not match:
+                continue
+            candidate = self._clean_reasoning_candidate(match.group(1))
+            if candidate:
+                return candidate
         return ""
 
     def _extract_reasoning_section(
@@ -732,7 +795,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
     ) -> str:
         """Return one numbered reasoning section by heading label."""
         pattern = re.compile(
-            rf"\d+\.\s+\*\*{re.escape(heading)}:\*\*\n(.*?)(?=\n\d+\.\s+\*\*|\Z)",
+            rf"\d+\.\s+\*\*{re.escape(heading)}:\*\*(?:[^\n]*)\n(.*?)(?=\n\d+\.\s+\*\*|\Z)",
             flags=re.DOTALL,
         )
         match = pattern.search(cleaned_thinking)
@@ -765,7 +828,29 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "synthesize the answer:",
         }:
             return True
+        reasoning_markers = (
+            "task:",
+            "constraint 1:",
+            "constraint 2:",
+            "constraint 3:",
+            "constraint 4:",
+            "constraint 5:",
+            "constraint 6:",
+            "input:",
+            "constraints check:",
+            "natural/conversational?",
+            "identify document first?",
+            "only search result info?",
+            "no tools/json?",
+            "concise?",
+            "self-correction",
+            "wait, one more check:",
+        )
+        if any(marker in lowered for marker in reasoning_markers):
+            return True
         if re.match(r"^\d+\.\s+\*\*.*\*\*$", candidate):
+            return True
+        if re.match(r"^\d+\.\s+\*\*.*?:\*\*", candidate):
             return True
         return False
 
