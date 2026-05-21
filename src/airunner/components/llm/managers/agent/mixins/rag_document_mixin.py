@@ -101,6 +101,19 @@ class RAGDocumentMixin:
             self.logger.error(f"Error getting active document names: {e}")
             return []
 
+    def _get_active_document_paths(self) -> List[str]:
+        """Get list of file paths for active indexed documents."""
+        try:
+            active_docs = DBDocument.objects.filter(
+                DBDocument.active == True, DBDocument.indexed == True
+            )
+            return [
+                doc.path for doc in active_docs if os.path.exists(doc.path)
+            ]
+        except Exception as e:
+            self.logger.error(f"Error getting active document paths: {e}")
+            return []
+
     def _mark_document_indexed(self, file_path: str):
         """Mark a document as indexed in the database with current hash.
 

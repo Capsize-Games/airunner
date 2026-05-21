@@ -12,11 +12,13 @@ from typing import Annotated, Any
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.documents.data.models.document import Document
 from airunner.components.data.session_manager import session_scope
+from airunner.components.llm.utils.document_extraction import extract_text
 from airunner.components.settings.data.path_settings import PathSettings
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
+from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -50,6 +52,28 @@ def _is_document_identity_query(query: str) -> bool:
     return asks_identity and mentions_document
 
 
+def _is_document_structure_query(query: str) -> bool:
+    """Return whether the query asks for a document outline."""
+    normalized = " ".join(str(query or "").lower().split())
+    if not normalized:
+        return False
+
+    structure_phrases = (
+        "table of contents",
+        "what are the contents",
+        "list the contents",
+        "what chapters are",
+        "what are the chapters",
+        "list the chapters",
+        "chapter titles",
+        "what sections are",
+        "list the sections",
+        "section headings",
+        "document outline",
+    )
+    return any(phrase in normalized for phrase in structure_phrases)
+
+
 def _query_mentions_document_reference(query: str) -> bool:
     """Return whether one query refers to one implied document."""
     normalized = " ".join(str(query or "").lower().split())
@@ -67,6 +91,94 @@ def _query_mentions_document_reference(query: str) -> bool:
         r"\bthe file\b",
     )
     return any(re.search(pattern, normalized) for pattern in patterns)
+
+
+def _get_single_active_document_path(
+    rag_manager: Any,
+) -> str | None:
+    """Return the one active document path when exactly one is loaded."""
+    get_paths = getattr(rag_manager, "_get_active_document_paths", None)
+    if not callable(get_paths):
+        return None
+
+    active_paths = [
+        str(path).strip()
+        for path in get_paths()
+        if str(path or "").strip()
+    ]
+    active_paths = list(dict.fromkeys(active_paths))
+    if len(active_paths) != 1:
+        return None
+    return active_paths[0]
+
+
+def _extract_document_structure_headings(text: str) -> list[str]:
+    """Extract major structure headings from one source document."""
+    pattern = re.compile(
+        r"^(INTRODUCTION|PROLOGUE|THE BOOK OF [A-Z][A-Z' -]+|"
+        r"BOOK OF [A-Z][A-Z' -]+|PART [A-Z0-9IVXLC]+(?:[: .-].*)?|"
+        r"CHAPTER [A-Z0-9IVXLC]+(?:[: .-].*)?)$"
+    )
+    headings: list[str] = []
+    seen: set[str] = set()
+    for raw_line in str(text or "").splitlines():
+        line = " ".join(raw_line.strip().split())
+        if not line or len(line) > 120 or not pattern.fullmatch(line):
+            continue
+        if line in seen:
+            continue
+        seen.add(line)
+        headings.append(line)
+    return headings
+
+
+def _format_document_structure_results(
+    file_path: str,
+    headings: list[str],
+) -> str:
+    """Return one structure-oriented result string for a document."""
+    metadata = {
+        "file_name": os.path.basename(file_path),
+        "file_path": file_path,
+        "file_type": os.path.splitext(file_path)[1].lower(),
+        "source": file_path,
+    }
+    structure = "\n".join(
+        f"{index}. {heading}"
+        for index, heading in enumerate(headings, 1)
+    )
+    return "\n\n".join(
+        [
+            "Matched documents:\n" + _format_document_summary(1, metadata),
+            "Document structure:\n" + structure,
+        ]
+    )
+
+
+def _build_document_structure_result(
+    query: str,
+    rag_manager: Any,
+) -> str | None:
+    """Return a direct structure summary for one active document."""
+    if not _is_document_structure_query(query):
+        return None
+
+    file_path = _get_single_active_document_path(rag_manager)
+    if not file_path:
+        return None
+
+    try:
+        resolved_path = resolve_existing_file(file_path, label="Document path")
+    except PathPolicyError as error:
+        logger.warning("Skipping structure extraction: %s", error)
+        return None
+
+    headings = _extract_document_structure_headings(
+        extract_text(resolved_path) or ""
+    )
+    if not headings:
+        return None
+    return _format_document_structure_results(resolved_path, headings)
 
 
 def _document_query_context(document_name: str) -> str:
@@ -291,6 +403,14 @@ def rag_search(
 
     # Check if documents are loaded by calling the RAG manager's search method
     try:
+        structure_result = _build_document_structure_result(
+            query,
+            rag_manager,
+        )
+        if structure_result is not None:
+            logger.info("Returning extracted document structure")
+            return structure_result
+
         effective_query = _expand_query_with_active_document(
             query,
             rag_manager,
