@@ -491,6 +491,141 @@ def test_submit_generation_request_keeps_document_attachments_visible():
     assert widget._attached_documents == ["/tmp/notes.md"]
 
 
+def test_submit_generation_request_uses_action_presets_when_override_disabled():
+    """Unchecked manual overrides should keep the action preset profile."""
+    sent_requests = []
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[],
+        llm_generator_settings=SimpleNamespace(
+            override_parameters=False,
+            enable_thinking=False,
+            temperature=100,
+            top_p=100,
+            max_new_tokens=42,
+            top_k=99,
+            repetition_penalty=500,
+            ngram_size=7,
+            min_length=3,
+            num_beams=4,
+            sequences=2,
+            do_sample=False,
+            early_stopping=False,
+            eta_cutoff=7,
+            length_penalty=2000,
+            use_cache=False,
+        ),
+        logger=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Hello",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-override-off",
+        slash_command=None,
+    )
+
+    llm_request = sent_requests[0]["llm_request"]
+    assert llm_request.temperature == 0.7
+    assert llm_request.top_p == 0.8
+    assert llm_request.max_new_tokens == 8192
+    assert llm_request.tool_categories is None
+
+
+def test_submit_generation_request_applies_manual_overrides_when_enabled():
+    """Checked manual overrides should replace visible generation params."""
+    sent_requests = []
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[],
+        llm_generator_settings=SimpleNamespace(
+            override_parameters=True,
+            enable_thinking=False,
+            temperature=100,
+            top_p=100,
+            max_new_tokens=42,
+            top_k=99,
+            repetition_penalty=250,
+            ngram_size=7,
+            min_length=3,
+            num_beams=4,
+            sequences=2,
+            do_sample=False,
+            early_stopping=False,
+            eta_cutoff=7,
+            length_penalty=2000,
+            use_cache=False,
+        ),
+        logger=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Search the document",
+        action=LLMActionType.PERFORM_RAG_SEARCH,
+        conversation_id=1,
+        request_id="req-override-on",
+        slash_command=None,
+    )
+
+    llm_request = sent_requests[0]["llm_request"]
+    assert llm_request.do_sample is False
+    assert llm_request.temperature == 0.1
+    assert llm_request.top_p == 0.1
+    assert llm_request.max_new_tokens == 42
+    assert llm_request.num_beams == 4
+    assert llm_request.num_return_sequences == 2
+    assert llm_request.tool_categories == ["RAG", "SEARCH"]
+
+
 def test_attach_knowledge_base_document_marks_document_active(
     monkeypatch,
 ):

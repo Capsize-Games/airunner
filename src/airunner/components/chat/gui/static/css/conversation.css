@@ -478,11 +478,16 @@ mjx-container[display="true"] {
 
 /* Individual status item */
 .status-item {
+    display: block;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.status-item-main {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    width: 100%;
 }
 
 .status-item.new-item {
@@ -522,6 +527,10 @@ mjx-container[display="true"] {
     display: block;
 }
 
+.status-item.thinking-item .status-item-main {
+    align-items: flex-start;
+}
+
 .status-item.thinking-item .status-item-text {
     display: block;
     white-space: normal;
@@ -543,6 +552,56 @@ mjx-container[display="true"] {
 
 .status-item.completed .status-item-icon {
     animation: none;
+}
+
+.status-item-metadata-toggle {
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--dim-color);
+    cursor: pointer;
+    font-size: 0.85em;
+    line-height: 1;
+}
+
+.status-item-metadata-toggle:hover {
+    color: var(--light-color);
+}
+
+.status-item-metadata-panel {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid rgba(147, 51, 234, 0.18);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.status-item-metadata-title {
+    margin-bottom: 6px;
+    color: var(--dim-color);
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.status-item-metadata-row {
+    display: grid;
+    grid-template-columns: minmax(96px, auto) 1fr;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.status-item-metadata-key {
+    color: var(--dim-color);
+    font-size: 0.8em;
+}
+
+.status-item-metadata-value {
+    color: var(--light-color);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
+    font-size: 0.82em;
+    word-break: break-word;
 }
 
 /* Slide animations */

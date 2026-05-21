@@ -575,8 +575,12 @@ class ChatPromptWidget(BaseWidget):
         self._current_response_tokens = 0
         self._update_token_tracking_labels()
         
-        # Create LLMRequest optimized for the action type
-        llm_request = LLMRequest.for_action(action)
+        # Create the top-level visible-response request, using manual
+        # overrides only when the user explicitly enabled them.
+        llm_request = LLMRequest.for_visible_action(
+            action,
+            getattr(self, "llm_generator_settings", None),
+        )
         llm_request.enable_thinking = self._is_thinking_enabled_for_request()
         llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
         

@@ -5,6 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
+from airunner.components.llm.config.document_tasks import (
+    DEFAULT_DOCUMENT_TASK,
+    DOCUMENT_SURFACE_PATTERNS,
+    DOCUMENT_TASK_CONFIGS,
+    DocumentTaskConfig,
+)
+
 
 @dataclass(frozen=True)
 class DocumentQueryRoute:
@@ -12,46 +19,7 @@ class DocumentQueryRoute:
 
     intent: str
     force_tool: str
-
-
-_DOCUMENT_SURFACE_PATTERNS = (
-    r"\bdocument\b",
-    r"\bfile\b",
-    r"\bbook\b",
-    r"\bpdf\b",
-    r"\buploaded\b",
-    r"\bloaded\b",
-)
-_IDENTITY_PATTERNS = (
-    r"\bwhat(?:'s| is)\s+(?:this|the)\s+(?:document|file|book)\b",
-    r"\bwhat\s+(?:document|file|book)\s+is\s+this\b",
-    r"\bwhich\s+(?:document|file|book)\s+is\s+this\b",
-    r"\bidentify\s+(?:this|the)\s+(?:document|file|book)\b",
-    r"\bwhat\s+documents?\s+(?:are\s+)?(?:loaded|uploaded|available)\b",
-)
-_IDENTITY_HINT_PATTERNS = (
-    r"\btitle\b",
-    r"\bauthor\b",
-    r"\bwho\s+wrote\b",
-    r"\bfile\s+type\b",
-    r"\bformat\b",
-    r"\bextension\b",
-)
-_STRUCTURE_PATTERNS = (
-    r"\btable\s+of\s+contents\b",
-    r"\bchapters?\b",
-    r"\bsections?\b",
-    r"\boutline\b",
-    r"\bdocument\s+structure\b",
-)
-_SUMMARY_PATTERNS = (
-    r"\bsummar(?:ize|y)\b",
-    r"\boverview\b",
-    r"\bmain\s+(?:idea|topic|theme)\b",
-    r"\bwhat\s+is\s+(?:this|the)\s+(?:document|book)\s+about\b",
-    r"\btell\s+me\s+more\s+about\s+(?:this|the)\s+(?:document|book|file)\b",
-    r"\bmore\s+about\s+(?:this|the)\s+(?:document|book|file)\b",
-)
+    answer_mode: str
 
 
 def _normalize_prompt(prompt: str) -> str:
@@ -66,28 +34,20 @@ def _matches_any(prompt: str, patterns: tuple[str, ...]) -> bool:
 
 def _mentions_document_surface(prompt: str) -> bool:
     """Return whether the prompt clearly refers to one document surface."""
-    return _matches_any(prompt, _DOCUMENT_SURFACE_PATTERNS)
+    return _matches_any(prompt, DOCUMENT_SURFACE_PATTERNS)
 
 
-def _is_structure_prompt(prompt: str, assume_document_mode: bool) -> bool:
-    """Return whether the question is asking for document structure."""
-    if not _matches_any(prompt, _STRUCTURE_PATTERNS):
-        return False
-    return assume_document_mode or _mentions_document_surface(prompt)
-
-
-def _is_summary_prompt(prompt: str, assume_document_mode: bool) -> bool:
-    """Return whether the question is asking for a document summary."""
-    if not _matches_any(prompt, _SUMMARY_PATTERNS):
-        return False
-    return assume_document_mode or _mentions_document_surface(prompt)
-
-
-def _is_identity_prompt(prompt: str, assume_document_mode: bool) -> bool:
-    """Return whether the question is asking for document identity."""
-    if _matches_any(prompt, _IDENTITY_PATTERNS):
+def _matches_document_task(
+    prompt: str,
+    config: DocumentTaskConfig,
+    assume_document_mode: bool,
+) -> bool:
+    """Return whether the prompt matches one configured document task."""
+    if config.direct_patterns and _matches_any(prompt, config.direct_patterns):
         return True
-    if not _matches_any(prompt, _IDENTITY_HINT_PATTERNS):
+    if not config.contextual_patterns:
+        return False
+    if not _matches_any(prompt, config.contextual_patterns):
         return False
     return assume_document_mode or _mentions_document_surface(prompt)
 
@@ -101,12 +61,17 @@ def route_document_query(
     normalized = _normalize_prompt(prompt)
     if not normalized:
         return None
-    if _is_structure_prompt(normalized, assume_document_mode):
-        return DocumentQueryRoute("structure", "inspect_loaded_documents")
-    if _is_summary_prompt(normalized, assume_document_mode):
-        return DocumentQueryRoute("summary", "rag_search")
-    if _is_identity_prompt(normalized, assume_document_mode):
-        return DocumentQueryRoute("identity", "inspect_loaded_documents")
+    for config in DOCUMENT_TASK_CONFIGS:
+        if _matches_document_task(normalized, config, assume_document_mode):
+            return DocumentQueryRoute(
+                intent=config.intent,
+                force_tool=config.force_tool,
+                answer_mode=config.answer_mode,
+            )
     if assume_document_mode:
-        return DocumentQueryRoute("retrieval", "rag_search")
+        return DocumentQueryRoute(
+            intent=DEFAULT_DOCUMENT_TASK.intent,
+            force_tool=DEFAULT_DOCUMENT_TASK.force_tool,
+            answer_mode=DEFAULT_DOCUMENT_TASK.answer_mode,
+        )
     return None

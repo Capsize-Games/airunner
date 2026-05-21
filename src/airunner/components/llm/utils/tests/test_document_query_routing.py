@@ -15,6 +15,7 @@ def test_route_document_query_routes_identity_to_inspection():
     assert route is not None
     assert route.intent == "identity"
     assert route.force_tool == "inspect_loaded_documents"
+    assert route.answer_mode == "deterministic"
 
 
 def test_route_document_query_routes_inverted_identity_phrase():
@@ -27,6 +28,7 @@ def test_route_document_query_routes_inverted_identity_phrase():
     assert route is not None
     assert route.intent == "identity"
     assert route.force_tool == "inspect_loaded_documents"
+    assert route.answer_mode == "deterministic"
 
 
 def test_route_document_query_routes_structure_to_inspection():
@@ -39,6 +41,7 @@ def test_route_document_query_routes_structure_to_inspection():
     assert route is not None
     assert route.intent == "structure"
     assert route.force_tool == "inspect_loaded_documents"
+    assert route.answer_mode == "deterministic"
 
 
 def test_route_document_query_routes_summary_to_retrieval():
@@ -51,6 +54,7 @@ def test_route_document_query_routes_summary_to_retrieval():
     assert route is not None
     assert route.intent == "summary"
     assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
 
 
 def test_route_document_query_defaults_to_retrieval_in_document_mode():
@@ -63,6 +67,7 @@ def test_route_document_query_defaults_to_retrieval_in_document_mode():
     assert route is not None
     assert route.intent == "retrieval"
     assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
 
 
 def test_route_document_query_treats_tell_me_more_as_summary():
@@ -75,3 +80,56 @@ def test_route_document_query_treats_tell_me_more_as_summary():
     assert route is not None
     assert route.intent == "summary"
     assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
+
+
+def test_route_document_query_routes_compare_task_to_retrieval():
+    """Explicit comparison requests should use the synthesized document path."""
+    route = route_document_query(
+        "compare the lab results in this document",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "compare"
+    assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
+
+
+def test_route_document_query_routes_extract_task_to_retrieval():
+    """Extraction requests should use the synthesized document path."""
+    route = route_document_query(
+        "extract the key values from this pdf",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "extract"
+    assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
+
+
+def test_route_document_query_routes_list_task_to_retrieval():
+    """Enumeration requests should use the synthesized document path."""
+    route = route_document_query(
+        "list the medications in this document",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "list"
+    assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
+
+
+def test_route_document_query_routes_transform_task_to_retrieval():
+    """Formatting requests should use the synthesized document path."""
+    route = route_document_query(
+        "summarize the results in a table from this document",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "transform"
+    assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"

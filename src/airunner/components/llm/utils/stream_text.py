@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Iterable
-import os
 import re
 import unicodedata
 
@@ -17,8 +16,126 @@ _MARKDOWN_DELIMITERS = frozenset("*_`")
 _WORD_CONTINUATION = frozenset("_")
 _WORD_ENDERS = frozenset(")]}\"'")
 _SENTENCE_ENDERS = frozenset(".!?;:")
+_SINGLE_LETTER_WORDS = frozenset({"a", "i"})
+_COMMON_WORDS = frozenset(
+    {
+        "a",
+        "about",
+        "after",
+        "again",
+        "according",
+        "all",
+        "an",
+        "and",
+        "any",
+        "appears",
+        "are",
+        "as",
+        "at",
+        "based",
+        "be",
+        "been",
+        "between",
+        "bible",
+        "book",
+        "but",
+        "by",
+        "can",
+        "city",
+        "dead",
+        "death",
+        "document",
+        "distinct",
+        "divided",
+        "for",
+        "front",
+        "from",
+        "graveyard",
+        "green",
+        "had",
+        "haunted",
+        "has",
+        "have",
+        "he",
+        "help",
+        "her",
+        "here",
+        "him",
+        "his",
+        "how",
+        "i",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "know",
+        "la",
+        "let",
+        "living",
+        "lunatics",
+        "maximus",
+        "me",
+        "memory",
+        "more",
+        "narrator",
+        "night",
+        "no",
+        "not",
+        "of",
+        "on",
+        "one",
+        "or",
+        "our",
+        "out",
+        "photograph",
+        "realms",
+        "results",
+        "sat",
+        "search",
+        "set",
+        "she",
+        "someone",
+        "story",
+        "summary",
+        "supernatural",
+        "satanic",
+        "tale",
+        "that",
+        "the",
+        "their",
+        "them",
+        "themes",
+        "there",
+        "they",
+        "this",
+        "to",
+        "too",
+        "two",
+        "up",
+        "was",
+        "warm",
+        "we",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "will",
+        "with",
+        "world",
+        "worlds",
+        "wonder",
+        "would",
+        "you",
+        "your",
+        "years",
+        "anton",
+    }
+)
 _WORD_PATTERN = re.compile(r"[A-Za-z]+")
-_WORDLIST_PATHS = ("/usr/share/dict/words",)
 
 
 def _is_space_separated_symbol(char: str) -> bool:
@@ -32,20 +149,8 @@ def _is_space_separated_symbol(char: str) -> bool:
 
 @lru_cache(maxsize=1)
 def _load_known_words() -> frozenset[str]:
-    """Load one optional system word list for chunk-boundary heuristics."""
-    for path in _WORDLIST_PATHS:
-        if not os.path.exists(path):
-            continue
-        try:
-            with open(path, encoding="utf-8", errors="ignore") as handle:
-                return frozenset(
-                    line.strip().lower()
-                    for line in handle
-                    if line.strip()
-                )
-        except OSError:
-            continue
-    return frozenset()
+    """Return built-in words for chunk-boundary heuristics."""
+    return _COMMON_WORDS
 
 
 def _leading_word(chunk: str) -> str:
@@ -65,6 +170,19 @@ def _is_known_word(word: str) -> bool:
     return word.isalpha() and word.lower() in _load_known_words()
 
 
+def _should_strip_leading_space(existing: str, stripped: str) -> bool:
+    """Return whether one leading space looks like a split-word artifact."""
+    left = _trailing_word(existing)
+    right = _leading_word(stripped)
+    if not left or not right:
+        return False
+    if _is_known_word(left + right):
+        return True
+    if _is_known_word(left) or _is_known_word(right):
+        return False
+    return len(left) <= 3 and len(right) >= 4
+
+
 def _needs_plain_word_boundary(existing: str, chunk: str) -> bool:
     """Return whether adjacent alphabetic chunks need a spacer."""
     left = _trailing_word(existing)
@@ -72,10 +190,26 @@ def _needs_plain_word_boundary(existing: str, chunk: str) -> bool:
     if not left or not right:
         return False
     if len(left) == 1 or len(right) == 1:
-        return False
+        if _is_known_word(left + right):
+            return False
+        left_is_single_word = (
+            left.lower() in _SINGLE_LETTER_WORDS
+            and _is_known_word(right)
+            and (left.islower() or left == "I")
+        )
+        right_is_single_word = (
+            right.lower() in _SINGLE_LETTER_WORDS
+            and _is_known_word(left)
+            and right.islower()
+        )
+        return left_is_single_word or right_is_single_word
     if _is_known_word(left + right):
         return False
     if _is_known_word(left) and _is_known_word(right):
+        return True
+    if _is_known_word(right) and len(left) >= 4:
+        return True
+    if _is_known_word(left) and len(right) >= 4:
         return True
     return len(left) >= 5 and len(right) >= 4
 
@@ -104,6 +238,8 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
     if prev_is_word and next_is_word:
         return _needs_plain_word_boundary(existing, chunk)
 
+    if prev == ',' and (next_char.isalpha() or next_is_symbol):
+        return True
     if prev in _SENTENCE_ENDERS and (next_is_word or next_is_symbol):
         return True
     if prev in _WORD_ENDERS and (next_is_word or next_is_symbol):
@@ -126,7 +262,7 @@ def prepare_stream_chunk(existing: str, chunk: str) -> str:
             and existing
             and existing[-1].isalpha()
             and stripped[0].islower()
-            and not _needs_plain_word_boundary(existing, stripped)
+            and _should_strip_leading_space(existing, stripped)
         ):
             chunk = stripped
     if needs_stream_space(existing, chunk):

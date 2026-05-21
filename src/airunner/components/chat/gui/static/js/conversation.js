@@ -415,6 +415,7 @@ function createSavedStatusWidget(msg) {
                 type: 'tool',
                 text: `${displayName}${queryPreview ? ` for "${queryPreview}"` : ''}${details}`,
                 status: 'completed',
+                metadata: tool.metadata || null,
             });
         }
     }
@@ -426,6 +427,7 @@ function createSavedStatusWidget(msg) {
             text: 'Completed',
             status: 'completed',
             content: msg.thinking_content,
+            metadata: msg.thinking_metadata || null,
         });
     }
 
@@ -560,9 +562,9 @@ function syncThinkingContent(requestId) {
         : thinkingItemId.replace(/"/g, '\\"');
     const element = widget.querySelector(`.status-item[data-id="${selectorId}"]`);
     if (element) {
-        updateStatusElement(element, thinkingItem);
+        const updatedElement = updateStatusElement(element, thinkingItem);
         if (state.expanded) {
-            scrollThinkingContentToBottom(element);
+            scrollThinkingContentToBottom(updatedElement);
         }
     }
 }
@@ -794,6 +796,19 @@ function getOrCreateStatusWidget(requestId) {
                 );
             });
         }
+        widget.addEventListener('click', (event) => {
+            const toggle = event.target.closest(
+                '.status-item-metadata-toggle'
+            );
+            if (!toggle) {
+                return;
+            }
+            event.stopPropagation();
+            toggleStatusItemMetadata(
+                widget.dataset.requestId || 'legacy',
+                toggle.dataset.itemId || '',
+            );
+        });
     }
 
     const anchor = findStatusWidgetAnchor(container, requestId);
@@ -967,8 +982,7 @@ function updateStatusContainer(container, items) {
         let element = container.querySelector(`.status-item[data-id="${item.id}"]`);
 
         if (element) {
-            // Update existing element in place
-            updateStatusElement(element, item);
+            element = updateStatusElement(element, item);
         } else {
             // Create new element
             const html = renderStatusItem(item, true); // true = new item
@@ -1007,48 +1021,98 @@ function scrollThinkingContentToBottom(element) {
 }
 
 /**
- * Update an existing status element in place without recreating it
+ * Re-render one status item and replace its DOM node in place.
  */
 function updateStatusElement(element, item) {
-    const isActive = item.status === 'active';
-    const icon = item.type === 'thinking'
-        ? (isActive ? '🧠' : '💭')
-        : (item.type === 'model_loading'
-            ? (isActive ? '⏳' : '✅')
-            : (isActive ? '⏳' : '✅'));
+    const temp = document.createElement('div');
+    temp.innerHTML = renderStatusItem(item);
+    const nextElement = temp.firstElementChild;
+    if (!nextElement) {
+        return element;
+    }
+    element.replaceWith(nextElement);
+    return nextElement;
+}
 
-    // Update classes
-    element.classList.toggle('active', isActive);
-    element.classList.toggle('completed', !isActive);
-    element.classList.remove('new-item'); // Remove animation class after first render
+function parseStatusMetadata(metadataJson) {
+    if (!metadataJson) {
+        return null;
+    }
+    try {
+        return JSON.parse(metadataJson);
+    } catch (error) {
+        console.warn(
+            '[conversation.js] Failed to parse thinking metadata:',
+            error,
+        );
+        return null;
+    }
+}
 
-    // Update icon
-    const iconEl = element.querySelector('.status-item-icon');
-    if (iconEl) {
-        if (iconEl.textContent !== icon) iconEl.textContent = icon;
-        iconEl.classList.toggle('spinning', isActive);
+function formatStatusMetadataLabel(label) {
+    return String(label)
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatStatusMetadataValue(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    if (typeof value === 'object') {
+        return JSON.stringify(value);
+    }
+    return String(value);
+}
+
+function renderStatusMetadataPanel(item) {
+    if (!item.metadata || !item.metadataExpanded) {
+        return '';
     }
 
-    // Update text
-    const textEl = element.querySelector('.status-item-text');
-    if (textEl && textEl.textContent !== item.text) {
-        textEl.textContent = item.text;
-    }
+    let rows = '';
+    [['stage', 'Stage'], ['intent', 'Intent'], ['preset_id', 'Preset']]
+        .forEach(([fieldName, label]) => {
+            const value = item.metadata[fieldName];
+            if (!value) {
+                return;
+            }
+            rows += `
+                <div class="status-item-metadata-row">
+                    <span class="status-item-metadata-key">${escapeHtml(label)}</span>
+                    <span class="status-item-metadata-value">${escapeHtml(String(value))}</span>
+                </div>
+            `;
+        });
 
-    // Update thinking content if present
-    if (item.type === 'thinking' && item.content) {
-        let wrapper = element.querySelector('.thinking-content-wrapper');
-        if (!wrapper) {
-            wrapper = document.createElement('div');
-            wrapper.className = 'thinking-content-wrapper';
-            wrapper.innerHTML = '<div class="thinking-content-inner"></div>';
-            element.appendChild(wrapper);
-        }
-        const inner = wrapper.querySelector('.thinking-content-inner');
-        if (inner) {
-            inner.innerHTML = escapeHtml(item.content);
-        }
+    Object.entries(item.metadata.settings || {}).forEach(([key, value]) => {
+        rows += `
+            <div class="status-item-metadata-row">
+                <span class="status-item-metadata-key">${escapeHtml(formatStatusMetadataLabel(key))}</span>
+                <span class="status-item-metadata-value">${escapeHtml(formatStatusMetadataValue(value))}</span>
+            </div>
+        `;
+    });
+
+    return `
+        <div class="status-item-metadata-panel">
+            <div class="status-item-metadata-title">${escapeHtml(item.metadata.title || 'Generation Settings')}</div>
+            ${rows}
+        </div>
+    `;
+}
+
+function toggleStatusItemMetadata(requestId, itemId) {
+    if (!itemId) {
+        return;
     }
+    const state = getStatusState(requestId);
+    const item = state.items.find((existingItem) => existingItem.id === itemId);
+    if (!item || !item.metadata) {
+        return;
+    }
+    item.metadataExpanded = !item.metadataExpanded;
+    renderStatusWidget(requestId);
 }
 
 function renderStatusItem(item, isNew = false) {
@@ -1064,13 +1128,35 @@ function renderStatusItem(item, isNew = false) {
         `${item.type}-item`,
         isActive ? 'active' : 'completed',
         isNew ? 'new-item' : '',
-        item.expanded ? 'expanded' : ''
+        item.expanded ? 'expanded' : '',
+        item.metadataExpanded ? 'metadata-expanded' : ''
     ].filter(Boolean).join(' ');
+
+    const metadataToggle = item.metadata
+        ? `
+            <button
+                class="status-item-metadata-toggle"
+                type="button"
+                data-item-id="${escapeAttr(item.id)}"
+                aria-expanded="${item.metadataExpanded ? 'true' : 'false'}"
+                title="${escapeAttr(
+                    item.metadataExpanded
+                        ? 'Hide generation settings'
+                        : 'Show generation settings'
+                )}"
+            >
+                ⚙
+            </button>
+        `
+        : '';
 
     let html = `
         <div class="${classes}" data-id="${escapeAttr(item.id)}">
-            <span class="status-item-icon ${isActive ? 'spinning' : ''}">${icon}</span>
-            <span class="status-item-text">${escapeHtml(item.text)}</span>
+            <div class="status-item-main">
+                <span class="status-item-icon ${isActive ? 'spinning' : ''}">${icon}</span>
+                <span class="status-item-text">${escapeHtml(item.text)}</span>
+                ${metadataToggle}
+            </div>
     `;
 
     // Add expandable thinking content
@@ -1081,6 +1167,8 @@ function renderStatusItem(item, isNew = false) {
             </div>
         `;
     }
+
+    html += renderStatusMetadataPanel(item);
 
     html += '</div>';
     return html;
@@ -1156,9 +1244,10 @@ function scheduleThinkingRender(requestId) {
     }, 75);
 }
 
-function handleThinkingStatusUpdate(requestId, status, content) {
+function handleThinkingStatusUpdate(requestId, status, content, metadataJson) {
     const state = getStatusState(requestId);
     const thinkingItemId = getThinkingItemId(requestId);
+    const metadata = parseStatusMetadata(metadataJson);
 
     if (status === 'started') {
         flushThinkingRender(requestId);
@@ -1168,7 +1257,8 @@ function handleThinkingStatusUpdate(requestId, status, content) {
             type: 'thinking',
             text: 'Thinking',
             status: 'active',
-            content: ''
+            content: '',
+            metadata,
         });
         startThinkingAnimation(requestId);
         return;
@@ -1176,6 +1266,9 @@ function handleThinkingStatusUpdate(requestId, status, content) {
 
     if (status === 'streaming') {
         state.currentThinkingContent += content;
+        if (metadata) {
+            updateStatusItem(requestId, thinkingItemId, { metadata });
+        }
         scheduleThinkingRender(requestId);
         return;
     }
@@ -1186,11 +1279,15 @@ function handleThinkingStatusUpdate(requestId, status, content) {
             state.currentThinkingContent = content;
         }
         flushThinkingRender(requestId);
-        updateStatusItem(requestId, thinkingItemId, {
+        const updates = {
             text: 'Completed',
             status: 'completed',
-            content: state.currentThinkingContent
-        });
+            content: state.currentThinkingContent,
+        };
+        if (metadata) {
+            updates.metadata = metadata;
+        }
+        updateStatusItem(requestId, thinkingItemId, updates);
     }
 }
 
@@ -1219,24 +1316,30 @@ function toggleThinkingBlock() {
     }
 }
 
-function handleToolStatusUpdate(requestId, toolId, toolName, query, status, details) {
+function handleToolStatusUpdate(requestId, toolId, toolName, query, status, details, metadataJson) {
     const displayName = getToolDisplayName(toolName);
     const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
     const text = `${displayName} for "${queryPreview}"`;
     const itemId = `tool-${getStatusRequestId(requestId)}-${toolId}`;
+    const metadata = parseStatusMetadata(metadataJson);
 
     if (status === 'starting') {
         addStatusItem(requestId, {
             id: itemId,
             type: 'tool',
             text: text,
-            status: 'active'
+            status: 'active',
+            metadata,
         });
     } else if (status === 'completed') {
-        updateStatusItem(requestId, itemId, {
+        const updates = {
             text: text + (details ? ` - ${details}` : ''),
-            status: 'completed'
-        });
+            status: 'completed',
+        };
+        if (metadata) {
+            updates.metadata = metadata;
+        }
+        updateStatusItem(requestId, itemId, updates);
     }
 }
 

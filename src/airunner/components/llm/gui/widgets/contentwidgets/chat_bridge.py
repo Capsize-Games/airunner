@@ -15,14 +15,14 @@ class ChatBridge(QObject):
     copyMessageRequested = Signal(object)
     newChatRequested = Signal()
     toolStatusUpdate = Signal(
-        str, str, str, str, str, str
-    )  # request_id, tool_id, tool_name, query, status, details
+        str, str, str, str, str, str, str
+    )  # request_id, tool_id, tool_name, query, status, details, metadata_json
     modelLoadStatusUpdate = Signal(
         str, str, str
     )  # request_id, status, message
     thinkingStatusUpdate = Signal(
-        str, str, str
-    )  # request_id, status, content - for Qwen3 <think> blocks
+        str, str, str, str
+    )  # request_id, status, content, metadata_json
 
     @Slot(list)
     def set_messages(self, messages):
@@ -68,7 +68,7 @@ class ChatBridge(QObject):
     def newChat(self):
         self.newChatRequested.emit()
 
-    @Slot(str, str, str, str, str, str)
+    @Slot(str, str, str, str, str, str, str)
     def updateToolStatus(
         self,
         request_id,
@@ -77,6 +77,7 @@ class ChatBridge(QObject):
         query,
         status,
         details,
+        metadata_json,
     ):
         """Emit tool status update to JavaScript.
 
@@ -87,6 +88,7 @@ class ChatBridge(QObject):
             query: The query/prompt sent to the tool
             status: "starting" or "completed"
             details: Optional details (e.g., URLs)
+            metadata_json: JSON-encoded read-only debug metadata
         """
         self.toolStatusUpdate.emit(
             request_id,
@@ -95,6 +97,7 @@ class ChatBridge(QObject):
             query,
             status,
             details,
+            metadata_json,
         )
 
     @Slot(str, str, str)
@@ -102,13 +105,25 @@ class ChatBridge(QObject):
         """Emit one request-scoped model loading update to JavaScript."""
         self.modelLoadStatusUpdate.emit(request_id, status, message)
 
-    @Slot(str, str, str)
-    def updateThinkingStatus(self, request_id, status, content):
+    @Slot(str, str, str, str)
+    def updateThinkingStatus(
+        self,
+        request_id,
+        status,
+        content,
+        metadata_json,
+    ):
         """Emit thinking status update to JavaScript.
 
         Args:
             request_id: Request identifier for one assistant response
             status: "started", "streaming", or "completed"
             content: The thinking text content
+            metadata_json: JSON-encoded read-only debug metadata
         """
-        self.thinkingStatusUpdate.emit(request_id, status, content)
+        self.thinkingStatusUpdate.emit(
+            request_id,
+            status,
+            content,
+            metadata_json,
+        )

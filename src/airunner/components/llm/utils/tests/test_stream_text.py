@@ -68,3 +68,50 @@ def test_combine_stream_chunks_handles_markdown_title_boundaries():
 def test_combine_stream_chunks_removes_spurious_subword_leading_space():
     """Subword continuations should drop bogus leading spaces."""
     assert combine_stream_chunks(["Sat", " anic"]) == "Satanic"
+
+
+def test_combine_stream_chunks_preserves_short_common_word_boundaries():
+    """Short standalone words should not collapse into their neighbors."""
+    assert (
+        combine_stream_chunks(
+            [
+                "Based",
+                "on",
+                "the",
+                "document,",
+                "it",
+                "appears",
+                "to",
+                "be",
+                "a",
+                "story",
+                "set",
+                "in",
+                "two",
+                "worlds.",
+            ]
+        )
+        == "Based on the document, it appears to be a story set in two worlds."
+    )
+
+
+def test_combine_stream_chunks_preserves_model_emitted_spaces():
+    """Model-emitted leading spaces should survive normal prose updates."""
+    assert (
+        combine_stream_chunks(
+            [
+                "Based",
+                " on",
+                " the",
+                " document",
+                ",",
+                " it",
+                " appears",
+                " to",
+                " be",
+                " a",
+                " story",
+            ]
+        )
+        == "Based on the document, it appears to be a story"
+    )

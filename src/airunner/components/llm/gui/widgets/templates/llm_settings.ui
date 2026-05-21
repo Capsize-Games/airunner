@@ -123,7 +123,7 @@
           <bool>true</bool>
          </property>
          <property name="checked">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_12">
           <property name="leftMargin">

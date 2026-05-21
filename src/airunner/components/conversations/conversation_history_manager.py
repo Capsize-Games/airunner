@@ -168,12 +168,18 @@ class ConversationHistoryManager:
                 # Collect tool call metadata to attach to next assistant message
                 if msg_obj.get("metadata_type") == "tool_calls":
                     tool_calls = msg_obj.get("tool_calls", [])
+                    tool_status_metadata = msg_obj.get("tool_status_metadata")
                     for tc in tool_calls:
                         pending_tool_usage.append({
                             "tool_id": tc.get("id", ""),
                             "tool_name": tc.get("name", "unknown"),
                             "query": self._extract_query_from_tool_call(tc),
                             "details": None,  # Will be filled from tool_result
+                            "metadata": (
+                                tool_status_metadata
+                                if isinstance(tool_status_metadata, dict)
+                                else None
+                            ),
                         })
                     # Also capture pre-tool thinking content
                     pending_pre_tool_thinking = normalize_thinking_content(
@@ -307,6 +313,10 @@ class ConversationHistoryManager:
                     if post_tool_thinking:
                         # Post-tool thinking goes in thinking_content field
                         formatted_msg["thinking_content"] = post_tool_thinking
+                    if isinstance(msg_obj.get("thinking_metadata"), dict):
+                        formatted_msg["thinking_metadata"] = msg_obj.get(
+                            "thinking_metadata"
+                        )
                 
                 # Include tool usage for assistant messages if we have pending tool calls
                 if is_bot and pending_tool_usage:

@@ -100,6 +100,39 @@ def test_messages_property_normalizes_gpt_oss_channel_content(monkeypatch):
     )
 
 
+def test_messages_property_preserves_thinking_metadata(monkeypatch):
+    """Stored assistant rows should reload with thinking metadata intact."""
+    metadata = {
+        "stage": "document_verification",
+        "settings": {"max_new_tokens": 1024},
+    }
+    conversation = SimpleNamespace(
+        value=[
+            {
+                "role": "assistant",
+                "content": "Hello!",
+                "thinking_content": "Plan first.",
+                "thinking_metadata": metadata,
+            }
+        ]
+    )
+    history = DatabaseChatMessageHistory.__new__(DatabaseChatMessageHistory)
+    history.ephemeral = False
+    history._conversation = conversation
+    history.conversation_id = 45
+    history.logger = Mock()
+
+    monkeypatch.setattr(
+        Conversation.objects,
+        "get",
+        lambda _conversation_id: conversation,
+    )
+
+    messages = history.messages
+
+    assert messages[0].additional_kwargs["thinking_metadata"] == metadata
+
+
 def test_load_conversation_history_strips_legacy_thinking_prefix():
     """Restarted conversation rendering should keep thinking separate."""
     conversation = SimpleNamespace(
@@ -183,3 +216,80 @@ def test_load_conversation_history_normalizes_gpt_oss_channel_content():
         messages[0]["thinking_content"]
         == 'Okay, the user said "Hello". I need to respond.'
     )
+
+
+def test_load_conversation_history_preserves_thinking_metadata():
+    """Restarted conversation rendering should keep thinking metadata."""
+    metadata = {
+        "stage": "document_verification",
+        "settings": {"max_new_tokens": 1024},
+    }
+    conversation = SimpleNamespace(
+        id=45,
+        chatbot_name="Computer",
+        user_name="User",
+        value=[
+            {
+                "role": "assistant",
+                "content": "Hello!",
+                "thinking_content": "Plan first.",
+                "thinking_metadata": metadata,
+                "timestamp": "2026-04-30T14:00:00+00:00",
+                "blocks": [
+                    {
+                        "block_type": "text",
+                        "text": "Hello!",
+                    }
+                ],
+            }
+        ],
+    )
+
+    messages = ConversationHistoryManager().load_conversation_history(
+        conversation=conversation,
+    )
+
+    assert messages[0]["thinking_metadata"] == metadata
+
+
+def test_load_conversation_history_preserves_tool_usage_metadata():
+    """Restarted tool rows should keep their request settings metadata."""
+    metadata = {
+        "title": "Request Settings",
+        "settings": {"max_new_tokens": 500},
+    }
+    conversation = SimpleNamespace(
+        id=45,
+        chatbot_name="Computer",
+        user_name="User",
+        value=[
+            {
+                "metadata_type": "tool_calls",
+                "tool_calls": [
+                    {
+                        "id": "call-1",
+                        "name": "rag_search",
+                        "args": {"query": "what is this about"},
+                    }
+                ],
+                "tool_status_metadata": metadata,
+            },
+            {
+                "role": "assistant",
+                "content": "Hello!",
+                "timestamp": "2026-04-30T14:00:00+00:00",
+                "blocks": [
+                    {
+                        "block_type": "text",
+                        "text": "Hello!",
+                    }
+                ],
+            },
+        ],
+    )
+
+    messages = ConversationHistoryManager().load_conversation_history(
+        conversation=conversation,
+    )
+
+    assert messages[0]["tool_usage"][0]["metadata"] == metadata

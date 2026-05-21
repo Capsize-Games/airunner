@@ -19,6 +19,16 @@ from langchain_core.messages import (
 )
 
 from langchain_core.messages import SystemMessage
+from airunner.components.llm.config.generation_presets import (
+    WorkflowGenerationStage,
+    get_workflow_generation_preset,
+)
+from airunner.components.llm.config.document_tasks import (
+    get_document_task_config,
+)
+from airunner.components.llm.utils.document_query_routing import (
+    route_document_query,
+)
 from airunner.components.llm.utils.thinking_parser import (
     strip_thinking_tags,
     detect_thinking_open_tag,
@@ -228,10 +238,10 @@ class NodeFunctionsMixin:
 
     def _get_last_tool_calling_ai_message(
         self, messages: List[BaseMessage]
-    ) -> Optional[BaseMessage]:
+    ) -> Optional[AIMessage]:
         """Return the most recent AI message that requested tools."""
         for message in reversed(messages):
-            if self._has_tool_calls(message):
+            if isinstance(message, AIMessage) and self._has_tool_calls(message):
                 return message
         return None
 
@@ -580,7 +590,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     generation_kwargs,
                     tool_name=tool_name,
                     user_question=user_question,
+                    stage=WorkflowGenerationStage.DOCUMENT_SYNTHESIS,
                 )
+            )
+            thinking_metadata = self._build_internal_stage_debug_metadata(
+                internal_generation_kwargs,
+                tool_name=tool_name,
+                user_question=user_question,
+                stage=WorkflowGenerationStage.DOCUMENT_SYNTHESIS,
             )
 
             # Force the synthesis pass to return visible text instead of
@@ -588,6 +605,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             response_message = self._stream_internal_response(
                 simple_prompt,
                 internal_generation_kwargs,
+                thinking_metadata=thinking_metadata,
                 buffer_visible_output=True,
             )
 
@@ -609,7 +627,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                         tool_name,
                         user_question,
                         drafted_response,
-                        internal_generation_kwargs,
+                        generation_kwargs,
                     )
                     if verified_message is not None:
                         response_message = verified_message
@@ -658,6 +676,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         *,
         tool_name: str,
         user_question: str,
+        stage: WorkflowGenerationStage = (
+            WorkflowGenerationStage.DOCUMENT_SYNTHESIS
+        ),
     ) -> Dict:
         """Return generation kwargs tuned for one internal synthesis pass."""
         prepared = dict(generation_kwargs or {})
@@ -666,18 +687,57 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if self._get_document_query_intent(user_question) != "summary":
             return prepared
 
-        for key in ("max_new_tokens", "max_tokens"):
-            value = prepared.get(key)
-            if isinstance(value, int):
-                prepared[key] = max(value, 1024)
+        return get_workflow_generation_preset(stage).apply_to_generation_kwargs(
+            prepared
+        )
 
-        if "max_new_tokens" not in prepared and "max_tokens" not in prepared:
-            prepared["max_new_tokens"] = 1024
+    @staticmethod
+    def _collect_generation_debug_settings(
+        generation_kwargs: Dict,
+    ) -> Dict[str, Any]:
+        """Return one compact debug view of resolved generation settings."""
+        settings = {}
+        for key in (
+            "max_new_tokens",
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "top_k",
+            "num_beams",
+            "repetition_penalty",
+            "no_repeat_ngram_size",
+            "reasoning_effort",
+        ):
+            value = generation_kwargs.get(key)
+            if value is not None:
+                settings[key] = value
+        return settings
 
-        if "reasoning_effort" in prepared:
-            prepared["reasoning_effort"] = "low"
-
-        return prepared
+    def _build_internal_stage_debug_metadata(
+        self,
+        generation_kwargs: Dict,
+        *,
+        tool_name: str,
+        user_question: str,
+        stage: WorkflowGenerationStage,
+    ) -> Optional[Dict[str, Any]]:
+        """Return one read-only metadata payload for internal LLM stages."""
+        if not self._is_document_result_tool(tool_name):
+            return None
+        intent = self._get_document_query_intent(user_question)
+        metadata = {
+            "kind": "llm_stage_settings",
+            "title": stage.value.replace("_", " ").title(),
+            "stage": stage.value,
+            "intent": intent,
+            "preset_applied": intent == "summary",
+            "settings": self._collect_generation_debug_settings(
+                generation_kwargs
+            ),
+        }
+        if metadata["preset_applied"]:
+            metadata["preset_id"] = stage.value
+        return metadata
 
     def _generate_response_from_results(
         self,
@@ -727,13 +787,21 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     generation_kwargs,
                     tool_name=tool_name,
                     user_question=user_question,
+                    stage=WorkflowGenerationStage.DOCUMENT_SYNTHESIS,
                 )
+            )
+            thinking_metadata = self._build_internal_stage_debug_metadata(
+                internal_generation_kwargs,
+                tool_name=tool_name,
+                user_question=user_question,
+                stage=WorkflowGenerationStage.DOCUMENT_SYNTHESIS,
             )
 
             # Stream a plain answer without tool bindings or hidden thinking.
             response_message = self._stream_internal_response(
                 simple_prompt,
                 internal_generation_kwargs,
+                thinking_metadata=thinking_metadata,
                 buffer_visible_output=True,
             )
 
@@ -753,7 +821,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     tool_name,
                     user_question,
                     drafted_response,
-                    internal_generation_kwargs,
+                    generation_kwargs,
                 )
                 if verified_message is not None:
                     response_message = verified_message
@@ -826,9 +894,24 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         self.logger.info(
             "Running verification pass for synthesized document response"
         )
+        verification_generation_kwargs = (
+            self._prepare_internal_response_generation_kwargs(
+                generation_kwargs,
+                tool_name=tool_name,
+                user_question=user_question,
+                stage=WorkflowGenerationStage.DOCUMENT_VERIFICATION,
+            )
+        )
+        thinking_metadata = self._build_internal_stage_debug_metadata(
+            verification_generation_kwargs,
+            tool_name=tool_name,
+            user_question=user_question,
+            stage=WorkflowGenerationStage.DOCUMENT_VERIFICATION,
+        )
         return self._stream_internal_response(
             [HumanMessage(content=verification_prompt_text)],
-            generation_kwargs,
+            verification_generation_kwargs,
+            thinking_metadata=thinking_metadata,
             buffer_visible_output=True,
         )
 
@@ -887,7 +970,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "beliefs unless the evidence states them directly. "
                     "Write 7 to 10 sentences in 2 to 4 short paragraphs. Do "
                     "not repeat the document title, author, or structure "
-                    "unless the user asked for them. Do not mention file "
+                    "unless the user asked for them. Do not answer with "
+                    "bare category labels such as 'Setting, Premise, "
+                    "Conflict, Characters.' Write full sentences only. Do "
+                    "not mention file "
                     "names, stored paths, excerpt numbers, search results, "
                     "or internal instructions. Do not use bullet points, "
                     "numbered lists, or excerpt inventories.\n\n"
@@ -913,6 +999,58 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                         "Start with the central themes, not opening trivia. "
                         "Synthesize across excerpts and avoid repetition."
                     )
+            elif document_intent == "compare":
+                rag_guidance = (
+                    "If the user is asking for a comparison, compare only "
+                    "the people, sections, claims, or results that the "
+                    "document evidence actually supports. Separate the most "
+                    "important similarities from the most important "
+                    "differences when helpful. If the evidence only covers "
+                    "one side of the requested comparison, say so briefly "
+                    "instead of filling gaps.\n\n"
+                )
+                response_style = (
+                    "Keep the comparison structured, direct, and grounded in "
+                    "the excerpts."
+                )
+            elif document_intent == "extract":
+                rag_guidance = (
+                    "If the user is asking you to extract or pull out "
+                    "specific information, return only the supported names, "
+                    "dates, values, measurements, labels, or facts that the "
+                    "document states. Preserve exact wording for concrete "
+                    "values when possible. If a requested field is missing, "
+                    "say it is not stated instead of guessing.\n\n"
+                )
+                response_style = (
+                    "Use labeled lines or a short list when that makes the "
+                    "extracted information easier to read."
+                )
+            elif document_intent == "list":
+                rag_guidance = (
+                    "If the user is asking for a list or enumeration, "
+                    "extract only the items the document supports. "
+                    "Deduplicate overlapping items, keep them concise, and "
+                    "preserve exact wording for names, dates, headings, or "
+                    "values when useful.\n\n"
+                )
+                response_style = (
+                    "Prefer a compact, readable list if that best matches the "
+                    "user's request."
+                )
+            elif document_intent == "transform":
+                rag_guidance = (
+                    "If the user is asking you to organize or reformat "
+                    "document information, follow the requested structure as "
+                    "closely as the evidence allows. Keep the answer factual, "
+                    "clear, and readable. If the requested layout is more "
+                    "specific than the evidence supports, provide the closest "
+                    "clear structure without inventing missing data.\n\n"
+                )
+                response_style = (
+                    "Follow the requested structure while keeping every field "
+                    "grounded in the excerpts."
+                )
             else:
                 rag_guidance = (
                     "Use document identity fields only when they help "
@@ -973,6 +1111,12 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         response_style = (
             "Write 7 to 10 sentences in 2 to 4 short paragraphs."
             if document_intent == "summary"
+            else "Return the extracted information in a clear structure."
+            if document_intent == "extract"
+            else "Return a clear, readable list when the user asked for one."
+            if document_intent == "list"
+            else "Return the requested structure as clearly as the evidence allows."
+            if document_intent == "transform"
             else "Answer directly in one or two concise paragraphs."
         )
         verification_focus = (
@@ -980,6 +1124,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "relationships that the excerpts support. Prefer recurring core "
             "details over isolated late-scene events."
             if document_intent == "summary"
+            else "Keep exact supported values and remove guessed or merged fields."
+            if document_intent == "extract"
+            else "Keep only supported items, remove duplicates, and do not pad the list with inferences."
+            if document_intent == "list"
+            else "Compare only supported similarities and differences, and remove unsupported contrasts."
+            if document_intent == "compare"
+            else "Follow the requested structure, but drop fields the evidence does not support."
+            if document_intent == "transform"
             else "Prefer the clearest directly supported claims and remove "
             "anything the evidence does not clearly support."
         )
@@ -996,6 +1148,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "incomplete, say so briefly instead of guessing.\n"
             "Do not answer with claim-by-claim verdicts such as Supported, "
             "Not supported, or Partially supported.\n"
+            "Do not answer with bare category labels such as 'Setting, "
+            "Premise, Conflict, Characters.' Write complete sentences only.\n"
             f"{verification_focus}\n"
             f"{response_style}\n"
             "Do not mention search results, verification, instructions, file "
@@ -1057,12 +1211,34 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         """Return whether one document tool should bypass replanning."""
         if tool_name == "inspect_loaded_documents":
             return True
+        if self._get_document_answer_mode() == "synthesized":
+            return False
         llm_request = getattr(self, "llm_request", None)
         primary_tool = getattr(llm_request, "document_primary_tool", None)
         if isinstance(primary_tool, str) and primary_tool:
             return tool_name == primary_tool
         route = getattr(self, "_current_document_query_route", None)
         return tool_name == "rag_search" and route is not None
+
+    def _should_disable_tools_for_followup(
+        self,
+        messages: List[BaseMessage],
+    ) -> bool:
+        """Return whether the next model turn should answer without tools."""
+        if self._get_document_answer_mode() != "synthesized":
+            return False
+        current_turn_messages = self._get_current_turn_messages(messages)
+        last_ai_msg = self._get_last_tool_calling_ai_message(
+            current_turn_messages
+        )
+        if not last_ai_msg or not getattr(last_ai_msg, "tool_calls", None):
+            return False
+        return any(
+            self._is_document_result_tool(
+                str(tool_call.get("name") or "")
+            )
+            for tool_call in last_ai_msg.tool_calls
+        )
 
     def _get_document_query_intent(self, user_question: str) -> str | None:
         """Return the request-scoped document intent when available."""
@@ -1074,6 +1250,12 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         intent = getattr(route, "intent", None)
         if isinstance(intent, str) and intent:
             return intent
+        routed = route_document_query(
+            user_question,
+            assume_document_mode=True,
+        )
+        if routed is not None:
+            return routed.intent
         if self._is_document_about_question(user_question):
             return "summary"
         if self._is_document_structure_question(user_question):
@@ -1088,6 +1270,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         """Return the request-scoped document answer mode when available."""
         llm_request = getattr(self, "llm_request", None)
         mode = getattr(llm_request, "document_answer_mode", None)
+        if isinstance(mode, str) and mode:
+            return mode
+        route = getattr(self, "_current_document_query_route", None)
+        mode = getattr(route, "answer_mode", None)
         if isinstance(mode, str) and mode:
             return mode
         return None
@@ -1317,12 +1503,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             or additional_kwargs.get("reasoning_content")
             or ""
         )
+        thinking_metadata = additional_kwargs.get("thinking_metadata")
         emitter.emit_signal(
             SignalCode.LLM_THINKING_SIGNAL,
             {
                 "status": "completed",
                 "content": str(thinking_content),
                 "request_id": request_id,
+                "metadata": thinking_metadata,
             },
         )
 
@@ -1803,10 +1991,43 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         return uppercase_ratio >= 0.6 and not has_sentence_punctuation
 
+    @staticmethod
+    def _looks_like_summary_label_inventory_response(text: str) -> bool:
+        """Return True for bare summary category labels without prose."""
+        normalized = " ".join(str(text or "").split())
+        if not normalized:
+            return False
+
+        label_markers = {
+            "premise",
+            "setting",
+            "conflict",
+            "central conflict",
+            "characters",
+            "character relationships",
+            "relationships",
+            "themes",
+            "plot",
+            "subject",
+            "argument",
+            "context",
+        }
+        parts = [
+            part.strip(" .:;!?-\t").lower()
+            for part in re.split(r"[,;/]", normalized)
+            if part.strip(" .:;!?-\t")
+        ]
+        if len(parts) < 2 or len(parts) > 6:
+            return False
+
+        return all(part in label_markers for part in parts)
+
     @classmethod
     def _looks_like_summary_scaffolding_response(cls, text: str) -> bool:
         """Return True for summary candidates that are structure or inventory."""
         if cls._looks_like_structure_only_response(text):
+            return True
+        if cls._looks_like_summary_label_inventory_response(text):
             return True
 
         lines = [
@@ -1997,6 +2218,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         self,
         prompt: List[BaseMessage],
         generation_kwargs: Optional[Dict] = None,
+        thinking_metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Stream model response and accumulate content.
 
@@ -2035,7 +2257,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
             # Use the standard streaming response method which properly handles generation_kwargs
             response_message = self._generate_streaming_response(
-                prompt, generation_kwargs
+                prompt,
+                generation_kwargs,
+                thinking_metadata=thinking_metadata,
             )
 
             # Return the full AIMessage to preserve additional_kwargs including thinking_content
@@ -2526,11 +2750,51 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         else:
             trimmed_messages = self._trim_messages(state["messages"])
 
-        # Build prompt with tool instructions
-        prompt = self._build_prompt(trimmed_messages)
+        disable_tools_for_followup = self._should_disable_tools_for_followup(
+            trimmed_messages
+        )
+        chat_model_overrides = {}
+        tools_backup = getattr(self, "_tools", None)
 
-        # Generate response
-        response_message = self._generate_response(prompt, generation_kwargs)
+        try:
+            if disable_tools_for_followup:
+                self.logger.info(
+                    "[CALL MODEL DEBUG] Disabling tools for synthesized "
+                    "document follow-up response"
+                )
+                if hasattr(self, "_tools"):
+                    self._tools = []
+                for attr_name, override in (
+                    ("tools", None),
+                    ("tool_choice", None),
+                ):
+                    if chat_model is None or not hasattr(chat_model, attr_name):
+                        continue
+                    chat_model_overrides[attr_name] = getattr(
+                        chat_model,
+                        attr_name,
+                    )
+                    setattr(chat_model, attr_name, override)
+
+            # Build prompt with tool instructions
+            prompt = self._build_prompt(trimmed_messages)
+
+            # Generate response
+            response_message = self._generate_response(
+                prompt,
+                generation_kwargs,
+            )
+        finally:
+            if disable_tools_for_followup and hasattr(self, "_tools"):
+                self._tools = tools_backup
+            for attr_name, original_value in chat_model_overrides.items():
+                try:
+                    setattr(chat_model, attr_name, original_value)
+                except Exception:
+                    self.logger.debug(
+                        "Failed to restore chat model attribute %s",
+                        attr_name,
+                    )
 
         # Guard against models returning None so LangGraph doesn't try to merge
         # a None entry into the message list (which raises during add_messages).
@@ -3219,7 +3483,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         return False
 
     def _generate_streaming_response(
-        self, formatted_prompt, generation_kwargs: Dict
+        self,
+        formatted_prompt,
+        generation_kwargs: Dict,
+        thinking_metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[AIMessage]:
         """Generate response using streaming.
 
@@ -3352,6 +3619,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "status": status,
                     "content": content,
                     "request_id": request_id,
+                    "metadata": thinking_metadata,
                 },
             )
 
@@ -3642,7 +3910,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 # Otherwise fall back to current thinking_content list (for incomplete thinking)
                 thinking_to_save = final_thinking_content or ("".join(thinking_content) if thinking_content else None)
                 return self._create_streamed_message(
-                    streamed_content, last_chunk_message, collected_tool_calls, thinking_to_save
+                    streamed_content,
+                    last_chunk_message,
+                    collected_tool_calls,
+                    thinking_to_save,
+                    thinking_metadata,
                 )
 
             # No chunks were produced (likely interrupted before first token)
@@ -3674,6 +3946,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         formatted_prompt,
         generation_kwargs: Optional[Dict] = None,
         *,
+        thinking_metadata: Optional[Dict[str, Any]] = None,
         buffer_visible_output: bool = False,
     ) -> Optional[AIMessage]:
         """Stream one internal model pass with tools and thinking disabled."""
@@ -3683,6 +3956,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             return self._stream_model_response(
                 formatted_prompt,
                 generation_kwargs or {},
+                thinking_metadata=thinking_metadata,
             )
 
         original_values = {}
@@ -3701,6 +3975,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             return self._stream_model_response(
                 formatted_prompt,
                 generation_kwargs or {},
+                thinking_metadata=thinking_metadata,
             )
         finally:
             self._token_callback = token_callback_backup
@@ -3713,12 +3988,23 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                         attr_name,
                     )
 
+    def _build_request_tool_debug_metadata(self) -> Optional[Dict[str, Any]]:
+        """Return one read-only request settings snapshot for tool rows."""
+        llm_request = getattr(self, "llm_request", None)
+        if llm_request is None:
+            return None
+        build_metadata = getattr(llm_request, "to_debug_metadata", None)
+        if not callable(build_metadata):
+            return None
+        return build_metadata(title="Request Settings")
+
     def _create_streamed_message(
         self,
         streamed_content: List[str],
         last_chunk_message: Optional[BaseMessage],
         collected_tool_calls: Optional[List] = None,
         thinking_content: Optional[str] = None,
+        thinking_metadata: Optional[Dict[str, Any]] = None,
     ) -> AIMessage:
         """Create AIMessage from streamed content.
 
@@ -3727,6 +4013,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             last_chunk_message: Last chunk message
             collected_tool_calls: Tool calls collected from all chunks
             thinking_content: Thinking content from <think> blocks (optional)
+            thinking_metadata: Read-only debug metadata for the thinking block
 
         Returns:
             Complete AIMessage
@@ -3756,6 +4043,17 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if thinking_content:
             additional_kwargs = dict(additional_kwargs)  # Make a copy to avoid mutating
             additional_kwargs["thinking_content"] = thinking_content
+        if thinking_metadata:
+            additional_kwargs = dict(additional_kwargs)
+            additional_kwargs["thinking_metadata"] = thinking_metadata
+
+        if tool_calls and "tool_status_metadata" not in additional_kwargs:
+            tool_status_metadata = self._build_request_tool_debug_metadata()
+            if tool_status_metadata:
+                additional_kwargs = dict(additional_kwargs)
+                additional_kwargs["tool_status_metadata"] = (
+                    tool_status_metadata
+                )
 
         response_message = AIMessage(
             content=complete_content,
@@ -3784,6 +4082,23 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     content=cleaned_content,
                     additional_kwargs=getattr(response_message, "additional_kwargs", {}),
                     tool_calls=getattr(response_message, "tool_calls", []) or [],
+                )
+
+        tool_calls = getattr(response_message, "tool_calls", []) or []
+        additional_kwargs = (
+            getattr(response_message, "additional_kwargs", {}) or {}
+        )
+        if tool_calls and "tool_status_metadata" not in additional_kwargs:
+            tool_status_metadata = self._build_request_tool_debug_metadata()
+            if tool_status_metadata:
+                additional_kwargs = dict(additional_kwargs)
+                additional_kwargs["tool_status_metadata"] = (
+                    tool_status_metadata
+                )
+                response_message = AIMessage(
+                    content=getattr(response_message, "content", "") or "",
+                    additional_kwargs=additional_kwargs,
+                    tool_calls=tool_calls,
                 )
 
         if (

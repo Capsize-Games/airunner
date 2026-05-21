@@ -7,8 +7,28 @@ from airunner.components.llm.data.chatbot import Chatbot
 from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
+from airunner.components.llm.config.generation_presets import (
+    get_action_generation_preset,
+)
 from airunner.components.llm.utils import get_chatbot
 from airunner.enums import LLMActionType
+
+
+DEBUG_SETTING_FIELDS = (
+    "max_new_tokens",
+    "temperature",
+    "top_p",
+    "top_k",
+    "num_beams",
+    "repetition_penalty",
+    "no_repeat_ngram_size",
+    "reasoning_effort",
+    "enable_thinking",
+    "force_tool",
+    "tool_categories",
+    "document_query_intent",
+    "document_answer_mode",
+)
 
 
 @dataclass
@@ -156,6 +176,26 @@ class LLMRequest:
         data.pop("images", None)
 
         return data
+
+    def to_debug_metadata(
+        self,
+        *,
+        title: str = "Request Settings",
+    ) -> Dict[str, Any]:
+        """Return one compact, read-only debug snapshot for the request."""
+        settings: Dict[str, Any] = {}
+        for field_name in DEBUG_SETTING_FIELDS:
+            value = getattr(self, field_name, None)
+            if value is None:
+                continue
+            if isinstance(value, list) and not value:
+                continue
+            settings[field_name] = value
+        return {
+            "kind": "llm_request_settings",
+            "title": title,
+            "settings": settings,
+        }
 
     @classmethod
     def from_values(
@@ -309,6 +349,93 @@ class LLMRequest:
         """
         return cls.from_llm_settings()
 
+    @staticmethod
+    def _copy_generation_fields(
+        target: "LLMRequest",
+        source: "LLMRequest",
+    ) -> None:
+        """Copy generation-only fields without changing routing behavior."""
+        fields = (
+            "do_sample",
+            "early_stopping",
+            "eta_cutoff",
+            "length_penalty",
+            "max_new_tokens",
+            "min_length",
+            "no_repeat_ngram_size",
+            "num_beams",
+            "num_return_sequences",
+            "repetition_penalty",
+            "temperature",
+            "top_k",
+            "top_p",
+            "use_cache",
+        )
+        for field_name in fields:
+            setattr(target, field_name, getattr(source, field_name))
+
+    @classmethod
+    def for_visible_action(
+        cls,
+        action: "LLMActionType",  # type: ignore
+        llm_settings: Optional[Any] = None,
+    ) -> "LLMRequest":
+        """Create one top-level request using presets or manual overrides."""
+        request = cls.for_action(action)
+        if not getattr(llm_settings, "override_parameters", False):
+            return request
+
+        overrides = cls.from_values(
+            do_sample=getattr(llm_settings, "do_sample", request.do_sample),
+            early_stopping=getattr(
+                llm_settings,
+                "early_stopping",
+                request.early_stopping,
+            ),
+            eta_cutoff=getattr(llm_settings, "eta_cutoff", request.eta_cutoff),
+            length_penalty=getattr(
+                llm_settings,
+                "length_penalty",
+                int(request.length_penalty * 1000),
+            ),
+            max_new_tokens=getattr(
+                llm_settings,
+                "max_new_tokens",
+                request.max_new_tokens,
+            ),
+            min_length=getattr(llm_settings, "min_length", request.min_length),
+            no_repeat_ngram_size=getattr(
+                llm_settings,
+                "ngram_size",
+                request.no_repeat_ngram_size,
+            ),
+            num_beams=getattr(llm_settings, "num_beams", request.num_beams),
+            num_return_sequences=getattr(
+                llm_settings,
+                "sequences",
+                request.num_return_sequences,
+            ),
+            repetition_penalty=getattr(
+                llm_settings,
+                "repetition_penalty",
+                int(request.repetition_penalty * 100),
+            ),
+            temperature=getattr(
+                llm_settings,
+                "temperature",
+                int(request.temperature * 1000),
+            ),
+            top_k=getattr(llm_settings, "top_k", request.top_k),
+            top_p=getattr(
+                llm_settings,
+                "top_p",
+                int(request.top_p * 1000),
+            ),
+            use_cache=getattr(llm_settings, "use_cache", request.use_cache),
+        )
+        cls._copy_generation_fields(request, overrides)
+        return request
+
     @classmethod
     def for_action(cls, action: "LLMActionType") -> "LLMRequest":  # type: ignore
         """
@@ -327,125 +454,8 @@ class LLMRequest:
         Returns:
             LLMRequest: A new instance with parameters optimized for the action
         """
-        # Action-specific parameters
-        if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
-            # Chat: Conversational, coherent, natural
-            # Qwen3 non-thinking mode: temp=0.7, top_p=0.8, top_k=20
-            return cls(
-                do_sample=True,
-                temperature=0.7,  # Qwen3 non-thinking mode recommended
-                repetition_penalty=1.15,  # Moderate anti-repetition
-                no_repeat_ngram_size=3,  # Block phrase repetition
-                max_new_tokens=8192,  # Qwen2.5 generation limit
-                top_k=20,  # Qwen3 recommended
-                top_p=0.8,  # Qwen3 non-thinking mode recommended
-                tool_categories=None,  # Allow auto tool routing for chat when needed
-            )
-
-        elif action == LLMActionType.CODE:
-            # Compatibility fallback: dedicated code mode was removed.
-            # Keep a deterministic chat profile without code-only tools.
-            return cls(
-                do_sample=True,
-                temperature=0.6,
-                repetition_penalty=1.1,
-                no_repeat_ngram_size=2,
-                max_new_tokens=8192,
-                top_k=20,
-                top_p=0.8,
-                tool_categories=None,
-            )
-
-        elif action == LLMActionType.PERFORM_RAG_SEARCH:
-            # RAG Search: Enable RAG and search tools for document retrieval
-            return cls(
-                do_sample=True,
-                temperature=0.3,  # Mostly consistent
-                repetition_penalty=1.1,  # Moderate anti-repetition
-                no_repeat_ngram_size=2,  # Some phrase blocking
-                max_new_tokens=300,  # Concise responses
-                top_k=30,
-                top_p=0.9,
-                tool_categories=[
-                    "RAG",
-                    "SEARCH",
-                ],  # Enable RAG and search tools
-            )
-
-        elif action in (
-            LLMActionType.SUMMARIZE,
-            LLMActionType.SEARCH,
-        ):
-            # Summarize/Search: Concise, factual, consistent
-            return cls(
-                do_sample=True,
-                temperature=0.3,  # Mostly consistent
-                repetition_penalty=1.1,  # Moderate anti-repetition
-                no_repeat_ngram_size=2,  # Some phrase blocking
-                max_new_tokens=300,  # Concise responses
-                top_k=30,
-                top_p=0.9,
-                tool_categories=["SEARCH"],  # Enable search tools
-            )
-
-        elif action == LLMActionType.GENERATE_IMAGE:
-            # Image prompts: Descriptive, creative, detailed
-            return cls(
-                do_sample=True,
-                temperature=0.9,  # More creative
-                repetition_penalty=1.15,
-                no_repeat_ngram_size=3,
-                max_new_tokens=200,  # Focused descriptions
-                top_k=50,
-                top_p=0.9,
-            )
-
-        elif action in (
-            LLMActionType.DECISION,
-            LLMActionType.APPLICATION_COMMAND,
-            LLMActionType.FILE_INTERACTION,
-            LLMActionType.WORKFLOW,
-            LLMActionType.WORKFLOW_INTERACTION,
-        ):
-            # Commands/Decisions: Precise with thinking for complex reasoning
-            # Use Qwen3 thinking mode for multi-step tool chains
-            return cls(
-                do_sample=True,  # Required for Qwen3 thinking mode
-                temperature=0.6,  # Qwen3 thinking mode
-                repetition_penalty=1.0,  # No penalty needed
-                no_repeat_ngram_size=0,  # Allow any patterns
-                max_new_tokens=32768,  # Full thinking + tool call budget
-                top_k=20,  # Qwen3 recommended
-                top_p=0.95,  # Qwen3 thinking mode
-                tool_categories=None,  # Enable all tools for commands/decisions
-            )
-
-        elif action == LLMActionType.DEEP_RESEARCH:
-            # Deep Research: Comprehensive, creative, high token budget
-            # Needs to generate long-form structured content with extensive tool use
-            # Use Qwen3 thinking mode for complex research tasks
-            return cls(
-                do_sample=True,  # Required for Qwen3 thinking mode
-                temperature=0.6,  # Qwen3 thinking mode
-                repetition_penalty=1.15,  # Avoid redundant phrasing
-                no_repeat_ngram_size=3,  # Some phrase blocking
-                max_new_tokens=32768,  # Qwen3 recommended for complex reasoning
-                top_k=20,  # Qwen3 recommended
-                top_p=0.95,  # Qwen3 thinking mode
-                tool_categories=["RESEARCH", "SEARCH"],  # Research tools only
-            )
-
-        else:
-            # Default: Balanced settings
-            return cls(
-                do_sample=True,
-                temperature=0.8,
-                repetition_penalty=1.15,
-                no_repeat_ngram_size=3,
-                max_new_tokens=500,
-                top_k=50,
-                top_p=0.9,
-            )
+        preset = get_action_generation_preset(action)
+        return cls(**preset.to_request_kwargs())
 
 
 @dataclass

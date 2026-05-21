@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -524,6 +525,10 @@ class ConversationWidget(BaseWidget):
             # Preserve thinking and tool usage fields for assistant messages
             if msg.get("thinking_content"):
                 simplified_msg["thinking_content"] = msg["thinking_content"]
+            if msg.get("thinking_metadata"):
+                simplified_msg["thinking_metadata"] = msg[
+                    "thinking_metadata"
+                ]
             if msg.get("pre_tool_thinking"):
                 simplified_msg["pre_tool_thinking"] = msg["pre_tool_thinking"]
             if msg.get("tool_usage"):
@@ -535,6 +540,7 @@ class ConversationWidget(BaseWidget):
                 f"is_bot={simplified_msg['is_bot']}, "
                 f"has_pre_tool_thinking={bool(simplified_msg.get('pre_tool_thinking'))}, "
                 f"has_thinking_content={bool(simplified_msg.get('thinking_content'))}, "
+                f"has_thinking_metadata={bool(simplified_msg.get('thinking_metadata'))}, "
                 f"has_tool_usage={bool(simplified_msg.get('tool_usage'))}"
             )
             
@@ -577,6 +583,9 @@ class ConversationWidget(BaseWidget):
                     tool_status.get("query", ""),
                     status,
                     tool_status.get("details", "") or "",
+                    json.dumps(tool_status.get("metadata"))
+                    if tool_status.get("metadata")
+                    else "",
                 )
 
     def _handle_scroll_request(self) -> None:
@@ -915,6 +924,7 @@ class ConversationWidget(BaseWidget):
         details = data.get("details", "")
         conversation_id = data.get("conversation_id")
         request_id = data.get("request_id", "")
+        metadata = data.get("metadata")
         timestamp = data.get("timestamp")
 
         if not all([tool_id, tool_name, query, status]):
@@ -957,6 +967,7 @@ class ConversationWidget(BaseWidget):
                 "status": status,
                 "details": details,
                 "request_id": request_id,
+                "metadata": metadata,
                 "timestamp": timestamp,
             }
 
@@ -991,6 +1002,7 @@ class ConversationWidget(BaseWidget):
             query,
             status,
             details or "",  # Ensure empty string instead of None
+            json.dumps(metadata) if metadata else "",
         )
 
     def on_thinking_update(self, data: Dict[str, Any]):
@@ -1004,6 +1016,8 @@ class ConversationWidget(BaseWidget):
         request_id = data.get("request_id", "")
         status = data.get("status", "")
         content = data.get("content", "")
+        metadata = data.get("metadata")
+        metadata_json = json.dumps(metadata) if metadata else ""
 
         # Send to JavaScript for rendering
         self._dispatch_chat_bridge_call(
@@ -1011,6 +1025,7 @@ class ConversationWidget(BaseWidget):
             request_id,
             status,
             content,
+            metadata_json,
         )
 
     def show_model_loading_status(

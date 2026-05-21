@@ -67,7 +67,7 @@ class Ui_llm_settings_widget(object):
         font.setBold(True)
         self.override_parameters.setFont(font)
         self.override_parameters.setCheckable(True)
-        self.override_parameters.setChecked(True)
+        self.override_parameters.setChecked(False)
         self.gridLayout_12 = QGridLayout(self.override_parameters)
         self.gridLayout_12.setSpacing(10)
         self.gridLayout_12.setObjectName(u"gridLayout_12")

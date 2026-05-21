@@ -18,6 +18,14 @@ if TYPE_CHECKING:
 class ToolExecutionMixin:
     """Manages tool execution with status tracking and signal emission."""
 
+    def _request_debug_metadata(self) -> Optional[dict]:
+        """Return one compact request settings snapshot for tool status UI."""
+        llm_request = getattr(self, "llm_request", None)
+        build_metadata = getattr(llm_request, "to_debug_metadata", None)
+        if not callable(build_metadata):
+            return None
+        return build_metadata(title="Request Settings")
+
     def __init__(self):
         """Initialize tool execution mixin."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -315,6 +323,7 @@ class ToolExecutionMixin:
                     "details": None,
                     "conversation_id": self._conversation_id,
                     "request_id": getattr(self, "_current_request_id", None),
+                    "metadata": self._request_debug_metadata(),
                     "timestamp": str(datetime.now()),
                 },
             )
@@ -369,6 +378,7 @@ class ToolExecutionMixin:
                                 "_current_request_id",
                                 None,
                             ),
+                            "metadata": self._request_debug_metadata(),
                             "timestamp": str(datetime.now()),
                         },
                     )

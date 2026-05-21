@@ -157,6 +157,26 @@ def test_headless_streaming_emits_structured_tool_call_chunks(monkeypatch):
     }
 
 
+def test_streamed_tool_calls_persist_request_debug_metadata():
+    """Tool-call messages should keep request settings for later UI restore."""
+    mixin = NodeFunctionsMixinDouble([_tool_call_chunk("rag_search")])
+    mixin.llm_request = SimpleNamespace(
+        to_debug_metadata=lambda title="Request Settings": {
+            "kind": "llm_request_settings",
+            "title": title,
+            "settings": {"max_new_tokens": 500},
+        }
+    )
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.additional_kwargs["tool_status_metadata"] == {
+        "kind": "llm_request_settings",
+        "title": "Request Settings",
+        "settings": {"max_new_tokens": 500},
+    }
+
+
 def test_force_tool_turn_suppresses_visible_planning_text():
     """Forced tool turns should not stream planning prose into chat."""
     mixin = NodeFunctionsMixinDouble(
@@ -412,6 +432,30 @@ class _VerificationVerdictFallbackChatModel:
         return iter(self._responses.pop(0))
 
 
+class _VerificationLabelInventoryFallbackChatModel:
+    """Fake model whose verification pass emits only category labels."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [
+                _chunk(
+                    "The novel follows a screenwriter through a haunted "
+                    "Hollywood studio mystery after an impossible corpse "
+                    "pulls old grudges and buried history back into view."
+                )
+            ],
+            [_chunk("Setting, Premise, Conflict, Characters.")],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return iter(self._responses.pop(0))
+
+
 def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     """RAG synthesis prompt should prioritize document identity cues."""
     mixin = NodeFunctionsMixinDouble([])
@@ -510,6 +554,9 @@ def test_forced_response_summary_runs_verification_pass():
     assert "Do not answer with claim-by-claim verdicts" in (
         mixin._chat_model.prompts[1]
     )
+    assert "Do not answer with bare category labels" in (
+        mixin._chat_model.prompts[1]
+    )
     assert "Stored path:" not in mixin._chat_model.prompts[1]
 
 
@@ -536,6 +583,32 @@ def test_forced_response_summary_falls_back_from_verification_verdict():
         "The novel follows a haunted Hollywood studio mystery built "
         "around an impossible corpse and the buried past tied to the lot "
         "and cemetery next door."
+    )
+    assert len(mixin._chat_model.prompts) == 2
+
+
+def test_forced_response_summary_falls_back_from_label_inventory():
+    """Verification label inventories should not replace a valid summary."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _VerificationLabelInventoryFallbackChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "A screenwriter is drawn into a haunted Hollywood studio mystery.\n\n"
+        "[Excerpt 2 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "An impossible corpse and old grudges drive the conflict.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "The novel follows a screenwriter through a haunted Hollywood "
+        "studio mystery after an impossible corpse pulls old grudges and "
+        "buried history back into view."
     )
     assert len(mixin._chat_model.prompts) == 2
 
@@ -581,8 +654,11 @@ def test_forced_response_summary_uses_larger_internal_budget():
         "The document presents a realist philosophy that rejects "
         "mystical morality."
     )
+    assert len(mixin._chat_model.observed_kwargs) == 2
     assert mixin._chat_model.observed_kwargs[0]["max_new_tokens"] == 1024
     assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "low"
+    assert mixin._chat_model.observed_kwargs[1]["max_new_tokens"] == 1024
+    assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "low"
 
 
 class _InternalSynthesisReasoningChatModel:
@@ -619,13 +695,34 @@ def test_forced_response_keeps_thinking_updates_and_completes():
     assert message.additional_kwargs["thinking_content"] == (
         "Wait, one more check:\nUse the title only."
     )
+    assert message.additional_kwargs["thinking_metadata"]["stage"] == (
+        "document_verification"
+    )
     statuses = [
         call.args[1]["status"]
         for call in mixin._signal_emitter.emit_signal.call_args_list
         if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
     ]
+    thinking_updates = [
+        call.args[1]
+        for call in mixin._signal_emitter.emit_signal.call_args_list
+        if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
+    ]
+    preset_ids = {
+        call.args[1]["metadata"].get("preset_id")
+        for call in mixin._signal_emitter.emit_signal.call_args_list
+        if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
+        and call.args[1].get("metadata")
+    }
     assert statuses[:3] == ["started", "streaming", "completed"]
     assert statuses[-1] == "completed"
+    assert preset_ids == {
+        "document_synthesis",
+        "document_verification",
+    }
+    assert thinking_updates[-1]["metadata"]["stage"] == (
+        "document_verification"
+    )
     mixin._token_callback.assert_not_called()
 
 

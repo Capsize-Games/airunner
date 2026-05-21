@@ -169,3 +169,28 @@ def test_prepare_request_tooling_overrides_stale_rag_search_force_tool():
     assert llm_request.document_primary_tool == "inspect_loaded_documents"
     assert llm_request.document_answer_mode == "deterministic"
     assert mixin._current_document_query_route.intent == "identity"
+
+
+def test_prepare_request_tooling_routes_document_transform_task():
+    """Formatting-heavy document tasks should stay on synthesized retrieval."""
+    mixin = _DummyRequestHandlingMixin()
+    llm_request = SimpleNamespace(
+        tool_categories=["rag"],
+        force_tool=None,
+        system_prompt=None,
+        rag_files=["/tmp/doc.pdf"],
+    )
+    data = {
+        "request_data": {
+            "prompt": "summarize the lab results in a table",
+            "action": LLMActionType.CHAT,
+        }
+    }
+
+    mixin._prepare_request_tooling(data, llm_request)
+
+    assert llm_request.force_tool == "rag_search"
+    assert llm_request.document_query_intent == "transform"
+    assert llm_request.document_primary_tool == "rag_search"
+    assert llm_request.document_answer_mode == "synthesized"
+    assert mixin._current_document_query_route.intent == "transform"

@@ -146,6 +146,10 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                         additional_kwargs["thinking_content"] = (
                             thinking_content
                         )
+                    if isinstance(msg.get("thinking_metadata"), dict):
+                        additional_kwargs["thinking_metadata"] = msg.get(
+                            "thinking_metadata"
+                        )
                     langchain_messages.append(
                         AIMessage(
                             content=content,
@@ -286,6 +290,19 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 if thinking_content:
                     tool_calls_dict["thinking_content"] = thinking_content
                     self.logger.debug(f"[THINKING SAVE] Saved pre-tool thinking: {len(thinking_content)} chars")
+                if (
+                    hasattr(message, "additional_kwargs")
+                    and isinstance(message.additional_kwargs, dict)
+                    and isinstance(
+                        message.additional_kwargs.get("tool_status_metadata"),
+                        dict,
+                    )
+                ):
+                    tool_calls_dict["tool_status_metadata"] = (
+                        message.additional_kwargs.get(
+                            "tool_status_metadata"
+                        )
+                    )
                 
                 if self._conversation.value is None:
                     self._conversation.value = []

@@ -47,6 +47,34 @@ class _NoModelNodeFunctions(_DummyNodeFunctions):
         raise AssertionError("model synthesis should not run")
 
 
+class _CapturingCallModelNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(
+            tool_calling_mode="json",
+            tools=["rag_search"],
+            tool_choice={"function": {"name": "rag_search"}},
+        )
+        self._tools = ["rag_search"]
+        self.captured = None
+
+    def _trim_messages(self, messages):
+        return messages
+
+    def _build_prompt(self, trimmed_messages):
+        return trimmed_messages
+
+    def _generate_response(self, prompt, generation_kwargs):
+        self.captured = {
+            "prompt": prompt,
+            "generation_kwargs": generation_kwargs,
+            "chat_model_tools": self._chat_model.tools,
+            "bound_tools": list(self._tools),
+            "tool_choice": self._chat_model.tool_choice,
+        }
+        return AIMessage(content="model response", tool_calls=[])
+
+
 def test_route_after_tools_returns_model_for_rag_search():
     """RAG search results should return to the model for a streamed answer."""
     mixin = _DummyNodeFunctions()
@@ -73,12 +101,13 @@ def test_route_after_tools_returns_model_for_rag_search():
     assert mixin._route_after_tools(state) == "model"
 
 
-def test_route_after_tools_forces_response_for_document_rag_route():
-    """Document-mode RAG should synthesize directly after retrieval."""
+def test_route_after_tools_returns_model_for_synthesized_document_rag_route():
+    """Synthesized document answers should return to the model node."""
     mixin = _DummyNodeFunctions()
     mixin._current_document_query_route = SimpleNamespace(
         intent="summary",
         force_tool="rag_search",
+        answer_mode="synthesized",
     )
     state = {
         "messages": [
@@ -100,7 +129,7 @@ def test_route_after_tools_forces_response_for_document_rag_route():
         ]
     }
 
-    assert mixin._route_after_tools(state) == "force_response"
+    assert mixin._route_after_tools(state) == "model"
 
 
 def test_route_after_tools_forces_response_for_inspection_tool():
@@ -153,6 +182,49 @@ def test_route_after_tools_keeps_search_web_in_model_loop():
     }
 
     assert mixin._route_after_tools(state) == "model"
+
+
+def test_call_model_disables_tools_for_synthesized_document_followup():
+    """Synthesized document follow-ups should answer without another tool call."""
+    mixin = _CapturingCallModelNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_answer_mode="synthesized")
+    state = {
+        "messages": [
+            HumanMessage(content="what is this book about?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "rag_search",
+                        "args": {"query": "what is this book about?"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Found 1 relevant chunk.",
+                tool_call_id="tool-1",
+                name="rag_search",
+            ),
+        ],
+        "generation_kwargs": {"temperature": 0.3},
+    }
+
+    result = mixin._call_model(state)
+
+    assert result["messages"][0].content == "model response"
+    assert mixin.captured == {
+        "prompt": state["messages"],
+        "generation_kwargs": {"temperature": 0.3},
+        "chat_model_tools": None,
+        "bound_tools": [],
+        "tool_choice": None,
+    }
+    assert mixin._chat_model.tools == ["rag_search"]
+    assert mixin._chat_model.tool_choice == {
+        "function": {"name": "rag_search"}
+    }
+    assert mixin._tools == ["rag_search"]
 
 
 def test_force_response_node_uses_only_current_turn_tool_results():
@@ -351,6 +423,52 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
 
     assert "lead with the premise, setting, central conflict" in prompt
     assert "Treat isolated later scenes" in prompt
+
+
+def test_build_search_results_prompt_specializes_compare_document_tasks():
+    """Comparison requests should receive comparison-specific guidance."""
+    mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="compare",
+        force_tool="rag_search",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Evidence excerpts:\nResult set A. Result set B.",
+        "rag_search",
+        "compare the two result sections in this document",
+    )
+
+    assert "asking for a comparison" in prompt
+    assert "similarities" in prompt
+    assert "differences" in prompt
+
+
+def test_build_search_results_prompt_specializes_transform_document_tasks():
+    """Formatting requests should receive structure-aware guidance."""
+    mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="transform",
+        force_tool="rag_search",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Evidence excerpts:\nVitals and lab values.",
+        "rag_search",
+        "summarize the results in a table",
+    )
+
+    assert "organize or reformat" in prompt
+    assert "follow the requested structure" in prompt
+
+
+def test_get_document_query_intent_detects_transform_tasks_from_text():
+    """Fallback intent routing should detect new transform-style tasks."""
+    mixin = _DummyNodeFunctions()
+
+    assert mixin._get_document_query_intent(
+        "summarize the lab results in a table"
+    ) == "transform"
 
 
 def test_generate_response_message_uses_deterministic_structure_answer():

@@ -16,6 +16,14 @@ from airunner.enums import LLMActionType, SignalCode
 class RequestHandlingMixin:
     """Coordinate request-time model, tool, and RAG preparation."""
 
+    @staticmethod
+    def _request_debug_metadata(llm_request: Any) -> Optional[Dict[str, Any]]:
+        """Return one compact request settings snapshot for status UI."""
+        build_metadata = getattr(llm_request, "to_debug_metadata", None)
+        if not callable(build_metadata):
+            return None
+        return build_metadata(title="Request Settings")
+
     def handle_request(
         self,
         data: Dict,
@@ -295,11 +303,7 @@ class RequestHandlingMixin:
             route.force_tool if route is not None else None
         )
         llm_request.document_answer_mode = (
-            "deterministic"
-            if route is not None and route.intent in {"identity", "structure"}
-            else "synthesized"
-            if route is not None
-            else None
+            route.answer_mode if route is not None else None
         )
 
         if not route:
@@ -342,6 +346,7 @@ class RequestHandlingMixin:
                 "details": "Analyzing prompt to select tools...",
                 "conversation_id": getattr(self, "_conversation_id", None),
                 "request_id": request_id,
+                "metadata": self._request_debug_metadata(llm_request),
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )
@@ -375,6 +380,7 @@ class RequestHandlingMixin:
                 "details": details,
                 "conversation_id": getattr(self, "_conversation_id", None),
                 "request_id": request_id,
+                "metadata": self._request_debug_metadata(llm_request),
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )

@@ -76,8 +76,54 @@ def test_tool_status_updates_include_request_id(monkeypatch):
         "hello",
         "completed",
         "Selected: none",
+        "",
     )
     assert conversation.user_data["tool_statuses"][0]["request_id"] == "req-1"
+
+
+def test_tool_status_updates_forward_metadata_json(monkeypatch):
+    """Tool status bridge updates should forward debug metadata to JS."""
+    update = Mock()
+    conversation = SimpleNamespace(id=7, user_data={})
+    widget = SimpleNamespace(
+        logger=Mock(),
+        conversation=conversation,
+        _chat_bridge=SimpleNamespace(updateToolStatus=update),
+    )
+
+    monkeypatch.setattr(module.Conversation.objects, "update", Mock())
+
+    ConversationWidget.on_tool_status_update(
+        widget,
+        {
+            "tool_id": "tool-2",
+            "tool_name": "rag_search",
+            "query": "what is this about",
+            "status": "completed",
+            "details": "example.com",
+            "conversation_id": 7,
+            "request_id": "req-2",
+            "metadata": {
+                "title": "Request Settings",
+                "settings": {"max_new_tokens": 500},
+            },
+            "timestamp": "2026-04-30T00:00:00",
+        },
+    )
+
+    update.assert_called_once_with(
+        "req-2",
+        "tool-2",
+        "rag_search",
+        "what is this about",
+        "completed",
+        "example.com",
+        '{"title": "Request Settings", "settings": {"max_new_tokens": 500}}',
+    )
+    assert conversation.user_data["tool_statuses"][0]["metadata"] == {
+        "title": "Request Settings",
+        "settings": {"max_new_tokens": 500},
+    }
 
 
 def test_thinking_updates_include_request_id():
@@ -98,6 +144,69 @@ def test_thinking_updates_include_request_id():
         "req-2",
         "streaming",
         "plan",
+        "",
+    )
+
+
+def test_thinking_updates_forward_metadata_json():
+    """Thinking bridge updates should forward debug metadata to JS."""
+    widget = SimpleNamespace(_dispatch_chat_bridge_call=Mock())
+
+    ConversationWidget.on_thinking_update(
+        widget,
+        {
+            "request_id": "req-3",
+            "status": "completed",
+            "content": "done",
+            "metadata": {
+                "stage": "document_synthesis",
+                "settings": {"max_new_tokens": 1024},
+            },
+        },
+    )
+
+    widget._dispatch_chat_bridge_call.assert_called_once_with(
+        "updateThinkingStatus",
+        "req-3",
+        "completed",
+        "done",
+        '{"stage": "document_synthesis", "settings": {"max_new_tokens": 1024}}',
+    )
+
+
+def test_set_conversation_preserves_thinking_metadata():
+    """Reloaded assistant messages should keep thinking metadata for JS."""
+    set_messages = Mock()
+    widget = SimpleNamespace(
+        _clear_conversation_widgets=Mock(),
+        _pending_chat_bridge_calls=[],
+        _chat_bridge=SimpleNamespace(set_messages=set_messages),
+        _conversation_id=None,
+        _conversation=None,
+        logger=Mock(),
+        wait_for_js_ready=lambda callback: callback(),
+    )
+
+    ConversationWidget.set_conversation(
+        widget,
+        [
+            {
+                "id": 5,
+                "name": "Assistant",
+                "is_bot": True,
+                "content": "Hello!",
+                "thinking_content": "Plan first.",
+                "thinking_metadata": {
+                    "stage": "document_verification",
+                    "settings": {"max_new_tokens": 1024},
+                },
+            }
+        ],
+    )
+
+    sent_messages = set_messages.call_args.args[0]
+    assert sent_messages[0]["thinking_metadata"]["stage"] == (
+        "document_verification"
     )
 
 
