@@ -578,18 +578,23 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             # Force the synthesis pass to return visible text instead of
             # reasoning/tool scaffolding.
             response_message = self._stream_internal_response(
-                simple_prompt, generation_kwargs
+                simple_prompt,
+                generation_kwargs,
+                buffer_visible_output=True,
             )
             self._emit_final_thinking_signal(response_message)
 
             if response_message:
-                visible_content = self._recover_forced_response_content(
-                    response_message
-                )
                 document_intent = self._get_document_query_intent(
                     user_question
                 )
                 document_tool = self._is_document_result_tool(tool_name)
+                visible_content = self._recover_forced_response_content(
+                    response_message,
+                    reject_structure_only=(
+                        document_tool and document_intent == "summary"
+                    ),
+                )
                 if self._looks_like_instruction_reflection(visible_content):
                     visible_content = ""
                 if document_tool and document_intent == "identity":
@@ -667,16 +672,21 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
             # Stream a plain answer without tool bindings or hidden thinking.
             response_message = self._stream_internal_response(
-                simple_prompt, generation_kwargs
+                simple_prompt,
+                generation_kwargs,
+                buffer_visible_output=True,
             )
             self._emit_final_thinking_signal(response_message)
 
             # Extract content from the response message
-            response_content = self._recover_forced_response_content(
-                response_message
-            )
             document_intent = self._get_document_query_intent(user_question)
             document_tool = self._is_document_result_tool(tool_name)
+            response_content = self._recover_forced_response_content(
+                response_message,
+                reject_structure_only=(
+                    document_tool and document_intent == "summary"
+                ),
+            )
             if document_tool and document_intent == "identity":
                 fallback_identity = self._build_document_identity_response(
                     all_tool_content
@@ -742,7 +752,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "document structure block as background context rather "
                     "than the main answer. Do not repeat the document title, "
                     "author, or structure unless the user asked for them. "
-                    "Focus on themes, claims, and notable details.\n\n"
+                    "Focus on themes, claims, and notable details. Write "
+                    "one or two short paragraphs, not bullet points, "
+                    "numbered lists, or excerpt inventories.\n\n"
                 )
                 response_style = "Avoid repetition and be thorough."
             else:
@@ -1033,11 +1045,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
     def _recover_forced_response_content(
         self,
         response_message: Optional[AIMessage],
+        *,
+        reject_structure_only: bool = False,
     ) -> str:
         """Recover a visible answer from a reasoning-only internal pass."""
         if response_message is None:
             return ""
 
+        rejected_visible = ""
         visible_content = str(getattr(response_message, "content", "") or "")
         if visible_content.strip():
             cleaned_visible = self._strip_forced_response_label(
@@ -1045,8 +1060,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             )
             if not self._looks_like_instruction_reflection(
                 cleaned_visible
+            ) and not (
+                reject_structure_only
+                and self._looks_like_summary_scaffolding_response(
+                    cleaned_visible
+                )
             ):
                 return cleaned_visible
+            rejected_visible = cleaned_visible
 
         additional_kwargs = (
             getattr(response_message, "additional_kwargs", {}) or {}
@@ -1063,7 +1084,12 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         drafted_response = self._extract_drafted_response_from_thinking(
             cleaned_thinking
         )
-        if drafted_response:
+        if drafted_response and not (
+            reject_structure_only
+            and self._looks_like_summary_scaffolding_response(
+                drafted_response
+            )
+        ):
             self.logger.info(
                 "Recovered drafted forced response from reasoning-only output"
             )
@@ -1076,11 +1102,25 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         ]
         for paragraph in paragraphs:
             candidate = self._clean_reasoning_candidate(paragraph)
+            if reject_structure_only and (
+                self._looks_like_summary_scaffolding_response(candidate)
+            ):
+                continue
             if candidate:
                 self.logger.info(
                     "Recovered visible forced response from reasoning-only output"
                 )
                 return candidate
+
+        if reject_structure_only and rejected_visible:
+            normalized_inventory = self._normalize_inventory_summary_response(
+                rejected_visible
+            )
+            if normalized_inventory:
+                self.logger.info(
+                    "Flattened list-style summary into visible prose"
+                )
+                return normalized_inventory
 
         return ""
 
@@ -1118,7 +1158,98 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             if draft_line:
                 return draft_line
 
+        labelled_response = self._extract_labelled_reasoning_response(
+            cleaned_thinking
+        )
+        if labelled_response:
+            return labelled_response
+
         return ""
+
+    def _extract_labelled_reasoning_response(
+        self,
+        cleaned_thinking: str,
+    ) -> str:
+        """Extract one substantive answer from free-form labelled reasoning."""
+        labelled_candidates: list[tuple[int, str]] = []
+
+        for raw_line in cleaned_thinking.splitlines():
+            parsed = self._parse_reasoning_labelled_line(raw_line)
+            if not parsed:
+                continue
+            label, body = parsed
+            candidate = self._clean_reasoning_candidate(body)
+            if not candidate:
+                continue
+
+            lowered_label = label.lower()
+            score = 0
+            if "final answer" in lowered_label or "final polish" in lowered_label:
+                score = 5
+            elif "substantive content" in lowered_label:
+                score = 4
+            elif "summary" in lowered_label or lowered_label == "answer":
+                score = 3
+            elif "draft" in lowered_label:
+                score = 2
+            elif "content" in lowered_label:
+                score = 1
+
+            if score:
+                labelled_candidates.append((score, candidate))
+
+        if not labelled_candidates:
+            return ""
+
+        labelled_candidates.sort(
+            key=lambda item: (item[0], len(item[1])),
+            reverse=True,
+        )
+        return labelled_candidates[0][1]
+
+    @staticmethod
+    def _parse_reasoning_labelled_line(line: str) -> tuple[str, str] | None:
+        """Return one `(label, body)` pair from a labelled reasoning line."""
+        candidate = line.strip()
+        if not candidate:
+            return None
+
+        candidate = re.sub(r"^(?:[-*+]\s+)", "", candidate).strip()
+        patterns = (
+            r'^\*\*([^*]+):\*\*\s*(.+)$',
+            r'^\*([^*]+):\*\s*(.+)$',
+            r'^\*([^*]+)\*:\s*(.+)$',
+            r'^"([^"]+):"\s*(.+)$',
+            r'^([^:]{3,80}):\s*(.+)$',
+        )
+        for pattern in patterns:
+            match = re.match(pattern, candidate)
+            if not match:
+                continue
+
+            label = match.group(1).strip()
+            body = match.group(2).strip()
+            body_text = re.sub(r"[^A-Za-z0-9]+", "", body)
+            if not body_text:
+                continue
+            lowered_label = label.lower()
+            if any(
+                marker in lowered_label
+                for marker in (
+                    "constraint",
+                    "refining",
+                    "instruction",
+                    "self-correction",
+                    "review",
+                    "check",
+                    "prompt says",
+                    "do not repeat",
+                )
+            ):
+                return None
+            return label, body
+
+        return None
 
     def _extract_preferred_quote_from_section(self, section: str) -> str:
         """Return one preferred quoted answer from a reasoning section."""
@@ -1200,11 +1331,108 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if candidate[:1] == candidate[-1:] and candidate[:1] in {'"', "'"}:
             candidate = candidate[1:-1].strip()
         candidate = self._strip_forced_response_label(candidate)
+        section_body_match = re.match(
+            r"^\d+\.\s+\*\*[^*]+:\*\*\s*(.+)$",
+            candidate,
+            flags=re.DOTALL,
+        )
+        if section_body_match:
+            candidate = section_body_match.group(1).strip()
         if self._looks_like_instruction_reflection(candidate):
             return ""
         if self._looks_like_reasoning_header(candidate):
             return ""
         return candidate
+
+    @staticmethod
+    def _looks_like_structure_only_response(text: str) -> bool:
+        """Return True for table-of-contents style answers."""
+        normalized = " ".join(str(text or "").split())
+        if not normalized:
+            return False
+
+        upper = normalized.upper()
+        marker_hits = sum(
+            1
+            for marker in (
+                "INTRODUCTION",
+                "PROLOGUE",
+                "THE BOOK OF",
+                "BOOK OF",
+                "CHAPTER ",
+                "PART ",
+            )
+            if marker in upper
+        )
+        if marker_hits < 2:
+            return False
+
+        alpha_chars = [char for char in normalized if char.isalpha()]
+        if not alpha_chars:
+            return False
+        uppercase_ratio = (
+            sum(1 for char in alpha_chars if char.isupper())
+            / len(alpha_chars)
+        )
+        has_sentence_punctuation = any(
+            mark in normalized for mark in (".", "!", "?")
+        )
+        return uppercase_ratio >= 0.6 and not has_sentence_punctuation
+
+    @classmethod
+    def _looks_like_summary_scaffolding_response(cls, text: str) -> bool:
+        """Return True for summary candidates that are structure or inventory."""
+        if cls._looks_like_structure_only_response(text):
+            return True
+
+        lines = [
+            line.strip()
+            for line in str(text or "").splitlines()
+            if line.strip()
+        ]
+        if len(lines) < 2:
+            return False
+
+        list_lines = [
+            line for line in lines if re.match(r"^(?:[-*+]\s+|\d+\.\s+)", line)
+        ]
+        if len(list_lines) < 2:
+            return False
+
+        lowered = "\n".join(lines).lower()
+        markers = (
+            "document:",
+            "excerpt ",
+            "matched documents",
+            "relevant excerpts",
+        )
+        return sum(marker in lowered for marker in markers) >= 2
+
+    @staticmethod
+    def _normalize_inventory_summary_response(text: str) -> str:
+        """Flatten one list-style excerpt inventory into short prose."""
+        fragments: list[str] = []
+        for raw_line in str(text or "").splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            line = re.sub(r"^(?:[-*+]\s+|\d+\.\s+)", "", line).strip()
+            if not line:
+                continue
+            if line.lower().startswith("document:"):
+                line = line.split(":", 1)[-1].strip()
+            elif ":" in line and line.lower().startswith("excerpt "):
+                line = line.split(":", 1)[-1].strip()
+            if not line:
+                continue
+            if line[-1] not in ".!?":
+                line = f"{line}."
+            if line not in fragments:
+                fragments.append(line)
+
+        if not fragments:
+            return ""
+        return " ".join(fragments)
 
     @staticmethod
     def _looks_like_reasoning_header(candidate: str) -> bool:
@@ -2926,9 +3154,12 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         self,
         formatted_prompt,
         generation_kwargs: Optional[Dict] = None,
+        *,
+        buffer_visible_output: bool = False,
     ) -> Optional[AIMessage]:
         """Stream one internal model pass with tools and thinking disabled."""
         chat_model = getattr(self, "_chat_model", None)
+        token_callback_backup = getattr(self, "_token_callback", None)
         if chat_model is None:
             return self._stream_model_response(
                 formatted_prompt,
@@ -2946,11 +3177,14 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 setattr(chat_model, attr_name, override)
 
         try:
+            if buffer_visible_output:
+                self._token_callback = None
             return self._stream_model_response(
                 formatted_prompt,
                 generation_kwargs or {},
             )
         finally:
+            self._token_callback = token_callback_backup
             for attr_name, original_value in original_values.items():
                 try:
                     setattr(chat_model, attr_name, original_value)

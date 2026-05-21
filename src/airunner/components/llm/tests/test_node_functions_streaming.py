@@ -401,6 +401,7 @@ def test_forced_response_prompt_requests_thorough_summary():
     prompt = mixin._chat_model.prompts[0]
     assert "fuller multi-sentence summary" in prompt
     assert "Do not repeat the document title, author, or structure" in prompt
+    assert "not bullet points, numbered lists, or excerpt inventories" in prompt
     assert "Avoid repetition and be thorough." in prompt
 
 
@@ -424,7 +425,7 @@ class _InternalSynthesisReasoningChatModel:
 
 
 def test_forced_response_keeps_thinking_updates_and_completes():
-    """Internal synthesis should stream thinking and still complete it."""
+    """Internal synthesis should stream thinking and buffer raw text."""
     mixin = NodeFunctionsMixinDouble([])
     mixin._chat_model = _InternalSynthesisReasoningChatModel()
 
@@ -445,7 +446,175 @@ def test_forced_response_keeps_thinking_updates_and_completes():
     ]
     assert statuses[:3] == ["started", "streaming", "completed"]
     assert statuses[-1] == "completed"
-    mixin._token_callback.assert_called_once_with("Visible answer")
+    mixin._token_callback.assert_not_called()
+
+
+class _SummaryStructureLeakChatModel:
+    """Fake model that leaks structure in visible text but drafts a summary."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    (
+                        "INTRODUCTION PROLOGUE THE BOOK OF SATAN "
+                        "THE BOOK OF LUCIFER THE BOOK OF BELIAL "
+                        "THE BOOK OF LEVIATHAN"
+                    ),
+                    (
+                        "5. **Final Polish:**\n"
+                        "This work positions itself as a profound explanation "
+                        "of Satanism that prioritizes the real world over the "
+                        "mystical promises found in religious texts. It frames "
+                        "ritual and symbolism as practical tools for realism, "
+                        "self-determination, and responsibility rather than "
+                        "supernatural revelation."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_ignores_structure_only_visible_text():
+    """Summary synthesis should prefer the drafted summary over TOC text."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _SummaryStructureLeakChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    assert message.content == (
+        "This work positions itself as a profound explanation of Satanism "
+        "that prioritizes the real world over the mystical promises found "
+        "in religious texts. It frames ritual and symbolism as practical "
+        "tools for realism, self-determination, and responsibility rather "
+        "than supernatural revelation."
+    )
+    mixin._token_callback.assert_not_called()
+
+
+class _SummaryInventoryLeakChatModel:
+    """Fake model that leaks a markdown inventory instead of prose."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    (
+                        "- Document: The Satanic Bible by Anton LaVey\n"
+                        "  - Excerpt 1 & 2: Discusses Satanism as a realist "
+                        "philosophy grounded in the real world.\n"
+                        "  - Excerpt 3 & 4: Says LaVey's books define the "
+                        "authentic practice.\n"
+                        "  - Excerpt 5: Mentions public visibility, church "
+                        "activity, and later editions."
+                    ),
+                    (
+                        "Final answer:\n"
+                        "The document presents Satanism as a practical, "
+                        "realist philosophy centered on self-determination "
+                        "rather than mystical promises. It emphasizes LaVey's "
+                        "own books and rituals as the authoritative expression "
+                        "of that worldview, while also pointing to its growing "
+                        "public presence and institutional visibility."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_ignores_inventory_list_visible_text():
+    """Summary synthesis should prefer prose over markdown inventories."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _SummaryInventoryLeakChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    assert message.content == (
+        "The document presents Satanism as a practical, realist philosophy "
+        "centered on self-determination rather than mystical promises. It "
+        "emphasizes LaVey's own books and rituals as the authoritative "
+        "expression of that worldview, while also pointing to its growing "
+        "public presence and institutional visibility."
+    )
+    assert "- Document:" not in message.content
+
+
+class _ConstraintHeavySummaryReasoningChatModel:
+    """Fake model that mirrors the screenshot-style summary reasoning."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    (
+                        "INTRODUCTION PROLOGUE THE BOOK OF SATAN "
+                        "THE BOOK OF LUCIFER THE BOOK OF BELIAL "
+                        "THE BOOK OF LEVIATHAN"
+                    ),
+                    (
+                        '"Let\'s focus on the substantive content:" '
+                        "The document contrasts the real world with "
+                        "Christian mysticism and presents Satanism as a "
+                        "practical philosophy for a \"church of realists.\" "
+                        "It treats ritual, authorship, and public identity as "
+                        "tools for a self-directed worldview rather than "
+                        "mystical revelation.\n\n"
+                        "*Draft 1 (Mental):* This document is about Anton "
+                        "LaVey's The Satanic Bible. It says Satanism is about "
+                        "the real world, not like the Christian Bible's "
+                        "mystical lands.\n\n"
+                        "*Refining for Constraints:* Needs to be "
+                        "conversational, 1-2 paragraphs, no title repetition.\n\n"
+                        "*Refining for \"Do not repeat the document title\":* "
+                        "I should avoid explicitly naming the book as the "
+                        "main focus."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_recovers_constraint_heavy_reasoning():
+    """Summary recovery should pull the substantive draft out of reasoning."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _ConstraintHeavySummaryReasoningChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "summarize the document for me",
+    )
+
+    assert message.content == (
+        "The document contrasts the real world with Christian mysticism "
+        "and presents Satanism as a practical philosophy for a \"church "
+        "of realists.\" It treats ritual, authorship, and public identity "
+        "as tools for a self-directed worldview rather than mystical "
+        "revelation."
+    )
 
 
 class _MetaIdentityResponseChatModel:

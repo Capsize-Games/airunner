@@ -68,6 +68,30 @@ def test_prepare_request_tooling_forces_document_inspection_tool():
     )
 
 
+def test_prepare_request_tooling_routes_inverted_identity_phrase():
+    """The common inverted identity phrase should still force inspection."""
+    mixin = _DummyRequestHandlingMixin()
+    llm_request = SimpleNamespace(
+        tool_categories=["RAG", "SEARCH"],
+        force_tool=None,
+        system_prompt=None,
+    )
+    data = {
+        "request_data": {
+            "prompt": "what document is this?",
+            "action": LLMActionType.PERFORM_RAG_SEARCH,
+        }
+    }
+
+    mixin._prepare_request_tooling(data, llm_request)
+
+    assert llm_request.force_tool == "inspect_loaded_documents"
+    assert llm_request.document_query_intent == "identity"
+    assert llm_request.document_primary_tool == "inspect_loaded_documents"
+    assert llm_request.document_answer_mode == "deterministic"
+    assert mixin._current_document_query_route.intent == "identity"
+
+
 def test_prepare_request_tooling_forces_document_retrieval_tool():
     """Document summaries should use retrieval without model tool planning."""
     mixin = _DummyRequestHandlingMixin()

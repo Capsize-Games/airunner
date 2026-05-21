@@ -17,6 +17,18 @@ def test_route_document_query_routes_identity_to_inspection():
     assert route.force_tool == "inspect_loaded_documents"
 
 
+def test_route_document_query_routes_inverted_identity_phrase():
+    """'What document is this' should still use the inspection tool."""
+    route = route_document_query(
+        "what document is this?",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "identity"
+    assert route.force_tool == "inspect_loaded_documents"
+
+
 def test_route_document_query_routes_structure_to_inspection():
     """Structure questions should use the inspection tool."""
     route = route_document_query(

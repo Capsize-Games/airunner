@@ -24,6 +24,7 @@ _DOCUMENT_SURFACE_PATTERNS = (
 )
 _IDENTITY_PATTERNS = (
     r"\bwhat(?:'s| is)\s+(?:this|the)\s+(?:document|file|book)\b",
+    r"\bwhat\s+(?:document|file|book)\s+is\s+this\b",
     r"\bwhich\s+(?:document|file|book)\s+is\s+this\b",
     r"\bidentify\s+(?:this|the)\s+(?:document|file|book)\b",
     r"\bwhat\s+documents?\s+(?:are\s+)?(?:loaded|uploaded|available)\b",
