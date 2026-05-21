@@ -8,7 +8,7 @@ In simple terms, our RAG flow does three things:
 
 1. It decides whether the user is asking about an attached document and what kind of document question it is.
 2. It retrieves the right document data.
-3. It asks the model to answer using only that retrieved data, then streams the answer into the chat UI.
+3. It drafts an answer from that retrieved data, verifies the draft against the same evidence, and only then emits the final answer into the chat UI.
 
 For document questions, AIRunner currently uses two different tool paths:
 
@@ -17,7 +17,19 @@ For document questions, AIRunner currently uses two different tool paths:
 
 For summaries, the important detail is that the model does not answer directly from the raw tool output anymore. The synthesis layer strips the raw RAG inventory down to evidence bodies and then builds a summary-specific prompt around that evidence.
 
-For a single active document, the summary path is now designed to be broader than ordinary semantic search. Instead of relying only on the highest-similarity chunks, it can build summary evidence from the full extracted document text so the final answer covers more than just the introduction.
+For a single active document, the summary path is now designed to be
+broader than ordinary semantic search. Instead of relying only on the
+highest-similarity chunks, it can build summary evidence from the full
+extracted document text so the final answer covers more than just the
+introduction.
+
+That full-text path now has two summary modes:
+
+- general summary queries still sample evidence across the document so
+    the answer can cover the whole work,
+- premise-style queries such as "what is this book about?" now prefer
+    the opening setup and the earliest premise/conflict paragraphs instead
+    of evenly sampling late-scene material from the whole narrative.
 
 The retrieval layer now also normalizes the local E5 embedding inputs the way the model expects: document queries are embedded with a `query:` prefix and indexed passages are embedded with a `passage:` prefix. Persisted indexes that were built before that change are upgraded lazily on the next search so older documents do not stay stuck on the pre-prefix strategy.
 
@@ -32,9 +44,10 @@ flowchart LR
     D -->|Summary or Retrieval| F[rag_search]
     E --> G[NodeFunctionsMixin builds final answer]
     F --> H[NodeFunctionsMixin builds synthesis prompt from excerpts]
-    H --> I[Model writes answer from retrieved evidence]
+    H --> I[Model drafts answer from retrieved evidence]
+    I --> I2[NodeFunctionsMixin verifies draft against evidence]
     G --> J[GenerationMixin streams assistant text]
-    I --> J
+    I2 --> J
     J --> K[ConversationWidget renders the assistant bubble]
 ```
 
@@ -45,17 +58,21 @@ flowchart LR
     A[User asks for a document summary] --> B[Request routed to rag_search]
     B --> C{Single active document with readable text?}
     C -->|Yes| D[Resolve file and extract full text]
-    D --> E[Detect headings or paragraph regions]
-    E --> F[Select distributed evidence across the document]
-    F --> G[Return summary evidence blocks]
+    D --> E{Premise-style about query?}
+    E -->|Yes| F[Prefer opening setup and early conflict evidence]
+    E -->|No| G[Detect headings or paragraph regions]
+    G --> H[Select distributed evidence across the document]
+    F --> I[Return summary evidence blocks]
+    H --> I
     C -->|No| H[Fallback to wider semantic retrieval]
-    H --> G
-    G --> I[NodeFunctionsMixin strips labels and builds summary prompt]
-    I --> J[Internal synthesis gets larger answer budget]
-    J --> K[Model synthesizes final summary]
-    K --> L{Visible output malformed?}
-    L -->|Yes| M[Prefer drafted summary from thinking content]
-    L -->|No| N[Use visible summary]
+    H --> I
+    I --> J[NodeFunctionsMixin strips labels and builds summary prompt]
+    J --> K[Internal draft synthesis gets larger answer budget]
+    K --> L[Model drafts summary]
+    L --> M[NodeFunctionsMixin verifies draft against evidence]
+    M --> N{Visible output malformed?}
+    N -->|Yes| O[Prefer drafted summary from thinking content]
+    N -->|No| P[Use verified summary]
 ```
 
 ## Where The Instructions Come From
@@ -82,6 +99,7 @@ These functions define the raw material that the model receives after retrieval.
 For summary intent, `rag_search()` now has a different quality target than ordinary question answering:
 
 - if there is one active readable document, it should build evidence from across that document rather than only returning the most similar intro-heavy chunks,
+- if the user is asking what a book or document is about, that single-document path should prefer opening premise and central-conflict paragraphs over later-scene snippets,
 - if that broader path is unavailable, it should fall back to wider retrieval breadth instead of the narrow default.
 - the summary fallback path should request more evidence than ordinary retrieval so the synthesis step has enough coverage to work with.
 
@@ -100,14 +118,17 @@ This means the RAG path now has a distinct embedding runtime that can be loading
 
 This is the main place where the summary answer style is created.
 
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L530): `_generate_response_message_from_results()` decides whether to answer deterministically or run a synthesis pass.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L812): `_build_document_summary_prompt_results()` strips summary prompts down to excerpt bodies so the model sees evidence instead of raw RAG inventory noise.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L716): `_build_search_results_prompt()` writes the actual no-tool prompt that tells the model how to turn retrieved content into a user-facing answer.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L2741): `_generate_streaming_response()` gathers streamed visible text, thinking content, and tool-call chunks.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L530): `_generate_response_message_from_results()` decides whether to answer deterministically or run the internal draft and verification passes.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015): `_build_document_summary_prompt_results()` strips summary prompts down to excerpt bodies so the model sees evidence instead of raw RAG inventory noise.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831): `_build_search_results_prompt()` writes the draft prompt that turns retrieved content into an answer candidate.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935): `_build_search_results_verification_prompt()` writes the follow-up verification prompt that rewrites the final answer against the same evidence.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L3164): `_generate_streaming_response()` gathers streamed visible text, thinking content, and tool-call chunks.
 
-Two extra safeguards now matter for summary turns:
+Three extra safeguards now matter for summary turns:
 
 - the internal no-tool summary synthesis pass uses a larger generation budget than the outer RAG action so it does not inherit the concise retrieval budget and truncate mid-thought,
+- for "what is this book/document about?" prompts, the synthesis guidance tells the model to lead with premise, setting, central conflict, and major relationships before isolated later scenes,
+- after that draft pass, a second internal verification pass checks the draft against the same evidence and rewrites unsupported or stray details before any final answer is emitted,
 - malformed prompt-tail fragments such as partial `Answer:` label text are rejected before they can override a better drafted summary recovered from thinking content.
 - if the visible synthesis output merely echoes the summary instructions themselves, that prompt-guidance text is rejected and recovery falls back to drafted content from thinking, flattening numbered reasoning summaries into plain prose when needed.
 
@@ -143,17 +164,24 @@ Example: "what chapters does it contain?"
 
 ### Summary question
 
-Example: "summarize the document for me"
+Example: "summarize the document for me" or "what is this book about?"
 
 1. The request is classified as `summary`.
 2. The route forces `rag_search`.
-3. If one active document is available, `rag_search()` can extract the full text and build distributed summary evidence across multiple sections or regions of the document.
+3. If one active document is available, `rag_search()` can extract the
+    full text and either build distributed summary evidence across the
+    document or, for premise-style about queries, prefer the opening
+    setup and earliest conflict paragraphs.
 4. Before searching a persisted index, the retrieval layer upgrades any legacy pre-prefix embeddings to the current E5 strategy when needed.
 5. If that broader path is unavailable, `rag_search()` falls back to a wider semantic retrieval pass.
 6. `_build_document_summary_prompt_results()` removes filename, path, and excerpt-label clutter from the synthesis input.
-7. `_build_search_results_prompt()` tells the model to synthesize a real summary from the evidence.
-8. If the internal synthesis pass emits a malformed tail fragment or simply reflects the instructions back, recovery prefers the better drafted summary from thinking content instead of trusting that visible fragment.
-9. The streamed answer is rendered into the assistant bubble.
+7. `_build_search_results_prompt()` tells the model to synthesize a
+    real summary from the evidence, and premise-style about questions are
+    steered toward setup and conflict first.
+8. The first internal pass drafts a summary from the evidence.
+9. A second internal pass verifies that draft against the same evidence and rewrites unsupported or stray claims before the answer becomes visible.
+10. If the verified pass emits a malformed tail fragment or simply reflects the instructions back, recovery prefers the better drafted summary from thinking content instead of trusting that visible fragment.
+11. The streamed answer is rendered into the assistant bubble.
 
 ## Why Summary Quality Lives Mostly In One File
 
@@ -165,10 +193,14 @@ That file controls:
 
 - whether a document result should be answered deterministically or synthesized,
 - which prompt is built for summary questions,
+- how the draft answer is verified against the same evidence before it becomes visible,
 - how raw RAG results are cleaned before synthesis,
 - how hidden thinking is recovered when the visible stream is empty or poor.
 
-`rag_tools.py` matters because it shapes the raw excerpts, but the user-facing summary instructions are mainly created inside `NodeFunctionsMixin`.
+`rag_tools.py` matters because it shapes the raw excerpts, including the
+new premise-focused evidence path for book-about questions, but the
+user-facing summary instructions are mainly created inside
+`NodeFunctionsMixin`.
 
 After the summary-retrieval upgrade, the two most important files for summary quality are:
 
@@ -189,7 +221,7 @@ When a document answer looks wrong, check the pipeline in this order:
 3. Did the persisted index refresh itself if it was built before the current embedding strategy in [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)?
 4. Did the right tool run in [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py#L267)?
 5. Did the tool return good evidence in [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L417)?
-6. Did `_build_document_summary_prompt_results()` and `_build_search_results_prompt()` in [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L716) create the right synthesis input, and did recovery reject any prompt-guidance echo?
+6. Did [_build_document_summary_prompt_results()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015), [_build_search_results_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831), and [_build_search_results_verification_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935) create the right draft and verification inputs, and did recovery reject any prompt-guidance echo?
 7. Did the answer stream correctly through [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302) and [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087)?
 
 That order usually tells you whether the bug is routing, retrieval, synthesis, or rendering.

@@ -143,6 +143,53 @@ def test_rag_search_summary_avoids_opening_front_matter_bias(
     assert "sixteen years old" not in result
 
 
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_prefers_premise_over_late_scene_noise(
+    mock_resolve,
+    mock_extract,
+):
+    """Book-about summaries should use premise hooks, not late-scene plot salad."""
+    file_path = "/library/A Graveyard for Lunatics - Ray Bradbury.mobi"
+    mock_resolve.return_value = file_path
+    paragraphs = [
+        "Maximus Films sits beside a cemetery, giving the story a haunted Hollywood setting.",
+        "The narrator introduces a world where movie illusions and death seem to share the same streets.",
+        "Halloween parties and studio politics frame the opening atmosphere.",
+    ]
+    paragraphs.extend(
+        f"Early filler paragraph {index} about studio life and strange rumors."
+        for index in range(4, 47)
+    )
+    paragraphs.append(
+        "A body appears on the cemetery wall, forcing the narrator to confront a mystery tied to the studio's past."
+    )
+    paragraphs.append(
+        "The narrator realizes James Charles Arbuthnot was supposedly killed years earlier, sharpening the central conflict."
+    )
+    paragraphs.extend(
+        f"More filler paragraph {index} about routine production work."
+        for index in range(49, 60)
+    )
+    paragraphs.append(
+        "The characters drove through Madrid, Rome, and Calcutta on studio sets before stopping at a Bronx brownstone facade."
+    )
+    mock_extract.return_value = "\n\n".join(paragraphs)
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "haunted Hollywood setting" in result
+    assert "central conflict" in result
+    assert "Madrid, Rome, and Calcutta" not in result
+
+
 def test_rag_search_expands_single_document_pronoun_queries():
     """Single-document follow-ups should include the active doc name."""
     doc = SimpleNamespace(

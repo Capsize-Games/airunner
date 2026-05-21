@@ -35,6 +35,31 @@ _FRONT_MATTER_HEADINGS = {
     "FOREWORD",
     "PREFACE",
 }
+_PREMISE_QUERY_PATTERNS = (
+    r"\bwhat(?:'s| is)\s+(?:this|the)\s+(?:book|novel|story|document|file)\s+about\b",
+    r"\bwhat\s+is\s+the\s+(?:book|novel|story|document|file)\s+about\b",
+    r"\btell\s+me\s+about\s+(?:this|the)\s+(?:book|novel|story|document|file)\b",
+)
+_PREMISE_PLOT_MARKERS = (
+    "body",
+    "corpse",
+    "detective",
+    "investigat",
+    "killed",
+    "murder",
+    "mystery",
+)
+_PREMISE_ATMOSPHERE_MARKERS = (
+    "dead",
+    "death",
+)
+_PREMISE_CONTEXT_MARKERS = (
+    "cemetery",
+    "graveyard",
+    "halloween",
+    "hollywood",
+    "studio",
+)
 
 
 def _coerce_active_values(values: Any) -> list[str]:
@@ -242,6 +267,17 @@ def _is_summary_query(query: str) -> bool:
     """Return whether the query is asking for a document summary."""
     route = route_document_query(query, assume_document_mode=True)
     return route is not None and route.intent == "summary"
+
+
+def _is_premise_summary_query(query: str) -> bool:
+    """Return whether the summary query is asking what a work is about."""
+    normalized = " ".join(str(query or "").lower().split())
+    if not normalized:
+        return False
+    return any(
+        re.search(pattern, normalized)
+        for pattern in _PREMISE_QUERY_PATTERNS
+    )
 
 
 def _document_label(metadata: dict[str, Any]) -> str:
@@ -498,11 +534,101 @@ def _build_summary_evidence_text(
     return prefix + _truncate_summary_evidence(body)
 
 
-def _build_summary_evidence_documents(
+def _premise_paragraph_score(paragraph: str) -> int:
+    """Score one paragraph for premise-level summary usefulness."""
+    lowered = str(paragraph or "").lower()
+    if not lowered:
+        return 0
+
+    plot_hits = sum(marker in lowered for marker in _PREMISE_PLOT_MARKERS)
+    if plot_hits == 0:
+        return 0
+    atmosphere_hits = sum(
+        marker in lowered for marker in _PREMISE_ATMOSPHERE_MARKERS
+    )
+    context_hits = sum(
+        marker in lowered for marker in _PREMISE_CONTEXT_MARKERS
+    )
+    word_count = len(lowered.split())
+    length_bonus = 1 if 20 <= word_count <= 140 else 0
+    return plot_hits * 5 + atmosphere_hits + context_hits + length_bonus
+
+
+def _build_premise_evidence_documents(
     metadata: dict[str, Any],
     text: str,
 ) -> list[Any]:
+    """Build premise-focused evidence for book/document about queries."""
+    paragraphs = _split_document_paragraphs(text)
+    if not paragraphs:
+        return []
+
+    premise_limit = min(_SUMMARY_EVIDENCE_LIMIT, 6)
+    selected: list[tuple[str, str]] = []
+    seen: set[str] = set()
+
+    def add(label: str, paragraph: str) -> None:
+        cleaned = str(paragraph or "").strip()
+        if not cleaned or cleaned in seen:
+            return
+        seen.add(cleaned)
+        selected.append((label, cleaned))
+
+    for paragraph in paragraphs[:3]:
+        add("Opening context", paragraph)
+
+    hook_window = paragraphs[: min(len(paragraphs), 120)]
+    scored_hooks = [
+        (_premise_paragraph_score(paragraph), index, paragraph)
+        for index, paragraph in enumerate(hook_window)
+        if _premise_paragraph_score(paragraph) > 0
+    ]
+    scored_hooks.sort(key=lambda item: (-item[0], item[1]))
+    for _score, _index, paragraph in scored_hooks:
+        add("Premise detail", paragraph)
+        if len(selected) >= premise_limit:
+            break
+
+    if len(selected) < 4:
+        opening_window_size = min(
+            len(paragraphs),
+            max(3, min(12, len(paragraphs) // 3)),
+        )
+        early_window = paragraphs[:opening_window_size]
+        for paragraph in _select_evenly_spaced_items(
+            early_window,
+            min(len(early_window), premise_limit),
+        ):
+            add("Opening context", paragraph)
+            if len(selected) >= premise_limit:
+                break
+
+    return [
+        SimpleNamespace(
+            metadata=dict(metadata),
+            page_content=(
+                f"{label}. {_truncate_summary_evidence(paragraph)}"
+            ),
+        )
+        for label, paragraph in selected[:premise_limit]
+    ]
+
+
+def _build_summary_evidence_documents(
+    metadata: dict[str, Any],
+    text: str,
+    *,
+    query: str = "",
+) -> list[Any]:
     """Build distributed summary evidence from one document text."""
+    if _is_premise_summary_query(query):
+        premise_documents = _build_premise_evidence_documents(
+            metadata,
+            text,
+        )
+        if premise_documents:
+            return premise_documents
+
     sections = _split_document_sections(text)
     if sections:
         selected_sections = _select_evenly_spaced_items(
@@ -541,7 +667,11 @@ def _build_summary_evidence_documents(
     ]
 
 
-def _build_single_document_summary_results(rag_manager: Any) -> list[Any]:
+def _build_single_document_summary_results(
+    rag_manager: Any,
+    *,
+    query: str = "",
+) -> list[Any]:
     """Return document-wide summary evidence for one active document."""
     file_path = _get_single_active_document_path(rag_manager)
     if not file_path:
@@ -560,7 +690,11 @@ def _build_single_document_summary_results(rag_manager: Any) -> list[Any]:
     entries = _get_active_document_entries(rag_manager)
     if not entries:
         return []
-    return _build_summary_evidence_documents(entries[0], text)
+    return _build_summary_evidence_documents(
+        entries[0],
+        text,
+        query=query,
+    )
 
 
 def _format_loaded_document_results(
@@ -684,6 +818,7 @@ def rag_search(
         if _is_summary_query(query):
             summary_results = _build_single_document_summary_results(
                 rag_manager,
+                query=query,
             )
             if summary_results:
                 result_text = _format_rag_search_results(

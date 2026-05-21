@@ -590,15 +590,34 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 internal_generation_kwargs,
                 buffer_visible_output=True,
             )
-            self._emit_final_thinking_signal(response_message)
 
             if response_message:
                 document_tool = self._is_document_result_tool(tool_name)
+                reject_structure_only = (
+                    document_tool and document_intent == "summary"
+                )
+                drafted_response = self._recover_forced_response_content(
+                    response_message,
+                    reject_structure_only=reject_structure_only,
+                )
+                if self._should_verify_document_response(
+                    tool_name,
+                    user_question,
+                ):
+                    verified_message = self._run_document_verification_pass(
+                        all_tool_content,
+                        tool_name,
+                        user_question,
+                        drafted_response,
+                        internal_generation_kwargs,
+                    )
+                    if verified_message is not None:
+                        response_message = verified_message
+
+                self._emit_final_thinking_signal(response_message)
                 visible_content = self._recover_forced_response_content(
                     response_message,
-                    reject_structure_only=(
-                        document_tool and document_intent == "summary"
-                    ),
+                    reject_structure_only=reject_structure_only,
                 )
                 if self._looks_like_instruction_reflection(visible_content):
                     visible_content = ""
@@ -701,24 +720,49 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
             # Convert to message format
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
+            internal_generation_kwargs = (
+                self._prepare_internal_response_generation_kwargs(
+                    generation_kwargs,
+                    tool_name=tool_name,
+                    user_question=user_question,
+                )
+            )
 
             # Stream a plain answer without tool bindings or hidden thinking.
             response_message = self._stream_internal_response(
                 simple_prompt,
-                generation_kwargs,
+                internal_generation_kwargs,
                 buffer_visible_output=True,
             )
-            self._emit_final_thinking_signal(response_message)
 
             # Extract content from the response message
             document_intent = self._get_document_query_intent(user_question)
             document_tool = self._is_document_result_tool(tool_name)
+            reject_structure_only = (
+                document_tool and document_intent == "summary"
+            )
+            drafted_response = self._recover_forced_response_content(
+                response_message,
+                reject_structure_only=reject_structure_only,
+            )
+            if self._should_verify_document_response(tool_name, user_question):
+                verified_message = self._run_document_verification_pass(
+                    all_tool_content,
+                    tool_name,
+                    user_question,
+                    drafted_response,
+                    internal_generation_kwargs,
+                )
+                if verified_message is not None:
+                    response_message = verified_message
+
+            self._emit_final_thinking_signal(response_message)
             response_content = self._recover_forced_response_content(
                 response_message,
-                reject_structure_only=(
-                    document_tool and document_intent == "summary"
-                ),
+                reject_structure_only=reject_structure_only,
             )
+            if self._looks_like_instruction_reflection(response_content):
+                response_content = ""
             if document_tool and document_intent == "identity":
                 fallback_identity = self._build_document_identity_response(
                     all_tool_content
@@ -744,6 +788,45 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             if self._token_callback:
                 self._token_callback(fallback)
             return fallback
+
+    def _should_verify_document_response(
+        self,
+        tool_name: str,
+        user_question: str,
+    ) -> bool:
+        """Return whether a synthesized document answer needs verification."""
+        if not self._is_document_result_tool(tool_name):
+            return False
+        return self._get_document_query_intent(user_question) not in {
+            "identity",
+            "structure",
+        }
+
+    def _run_document_verification_pass(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str,
+        drafted_response: str,
+        generation_kwargs: Optional[Dict],
+    ) -> Optional[AIMessage]:
+        """Run one bounded verification pass for a document answer."""
+        verification_prompt_text = (
+            self._build_search_results_verification_prompt(
+                all_tool_content,
+                tool_name,
+                user_question,
+                drafted_response,
+            )
+        )
+        self.logger.info(
+            "Running verification pass for synthesized document response"
+        )
+        return self._stream_internal_response(
+            [HumanMessage(content=verification_prompt_text)],
+            generation_kwargs,
+            buffer_visible_output=True,
+        )
 
     def _build_search_results_prompt(
         self,
@@ -784,7 +867,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 )
                 if prompt_results != all_tool_content:
                     prompt_results_label = "Evidence excerpts"
-                rag_guidance = (
+                summary_guidance = (
                     "If the user is asking for a summary of the document, "
                     "synthesize the evidence below into a substantive "
                     "overview. Explain the central worldview, argument, or "
@@ -805,10 +888,27 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "or internal instructions. Do not use bullet points, "
                     "numbered lists, or excerpt inventories.\n\n"
                 )
-                response_style = (
-                    "Start with the central themes, not opening trivia. "
-                    "Synthesize across excerpts and avoid repetition."
-                )
+                if self._is_document_about_question(user_question):
+                    rag_guidance = (
+                        "If the user is asking what the book, story, or "
+                        "document is about, lead with the premise, setting, "
+                        "central conflict, and the most important character "
+                        "relationships first. Treat isolated later scenes, "
+                        "one-off travel stops, and stray dialogue fragments "
+                        "as secondary unless the evidence clearly shows they "
+                        "define the work as a whole.\n\n"
+                        + summary_guidance
+                    )
+                    response_style = (
+                        "Lead with premise, setting, and central conflict. "
+                        "Keep stray scene details secondary."
+                    )
+                else:
+                    rag_guidance = summary_guidance
+                    response_style = (
+                        "Start with the central themes, not opening trivia. "
+                        "Synthesize across excerpts and avoid repetition."
+                    )
             else:
                 rag_guidance = (
                     "Use document identity fields only when they help "
@@ -830,6 +930,72 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "do not use JSON, and do not prefix the reply with labels "
             "like Draft:, Answer:, or Response:. Just write a natural "
             f"response. {response_style}"
+        )
+
+    def _build_search_results_verification_prompt(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str,
+        drafted_response: str,
+    ) -> str:
+        """Build a verification prompt for the final document answer."""
+        prompt_results = all_tool_content
+        prompt_results_label = "Search results"
+        document_intent = self._get_document_query_intent(user_question)
+        if (
+            self._is_document_result_tool(tool_name)
+            and document_intent == "summary"
+        ):
+            prompt_results = self._build_document_summary_prompt_results(
+                all_tool_content
+            )
+            if prompt_results != all_tool_content:
+                prompt_results_label = "Evidence excerpts"
+
+        draft_block = drafted_response.strip()
+        if draft_block:
+            draft_instruction = (
+                "Draft answer to verify:\n"
+                f"{draft_block}\n\n"
+            )
+        else:
+            draft_instruction = (
+                "Draft answer to verify:\n"
+                "The initial draft was empty or unusable. Rebuild the final "
+                "answer directly from the evidence below.\n\n"
+            )
+
+        response_style = (
+            "Write 7 to 10 sentences in 2 to 4 short paragraphs."
+            if document_intent == "summary"
+            else "Answer directly in one or two concise paragraphs."
+        )
+        verification_focus = (
+            "Lead with the premise, setting, central conflict, and major "
+            "relationships that the excerpts support. Prefer recurring core "
+            "details over isolated late-scene events."
+            if document_intent == "summary"
+            else "Prefer the clearest directly supported claims and remove "
+            "anything the evidence does not clearly support."
+        )
+
+        return (
+            "You are verifying and finalizing a document-grounded answer.\n\n"
+            f"User question: {user_question}\n\n"
+            f"{draft_instruction}"
+            f"{prompt_results_label}:\n{prompt_results}\n\n"
+            "Check the draft against the evidence and keep only supported "
+            "claims. Rewrite or remove unsupported details, instruction "
+            "leakage, or stray scene fragments. If the draft is weak, ignore "
+            "it and answer directly from the evidence. If the evidence is "
+            "incomplete, say so briefly instead of guessing.\n"
+            f"{verification_focus}\n"
+            f"{response_style}\n"
+            "Do not mention search results, verification, instructions, file "
+            "names, stored paths, excerpt numbers, labels like Draft:, "
+            "Verified:, Answer:, or Response:, or any internal reasoning "
+            "steps. Return only the final user-facing answer."
         )
 
     @staticmethod
@@ -902,6 +1068,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         intent = getattr(route, "intent", None)
         if isinstance(intent, str) and intent:
             return intent
+        if self._is_document_about_question(user_question):
+            return "summary"
         if self._is_document_structure_question(user_question):
             return "structure"
         if self._is_document_summary_question(user_question):
@@ -981,6 +1149,20 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "summarize it",
         )
         return any(phrase in normalized for phrase in summary_phrases)
+
+    @staticmethod
+    def _is_document_about_question(user_question: str) -> bool:
+        """Return whether the user is asking what a document/book is about."""
+        normalized = " ".join(str(user_question or "").lower().split())
+        if not normalized:
+            return False
+
+        patterns = (
+            r"\bwhat(?:'s| is)\s+(?:this|the)\s+(?:book|novel|story|document|file)\s+about\b",
+            r"\bwhat\s+is\s+the\s+(?:book|novel|story|document|file)\s+about\b",
+            r"\btell\s+me\s+about\s+(?:this|the)\s+(?:book|novel|story|document|file)\b",
+        )
+        return any(re.search(pattern, normalized) for pattern in patterns)
 
     @staticmethod
     def _build_document_identity_response(all_tool_content: str) -> str:
@@ -1155,6 +1337,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 visible_content
             )
             if not self._looks_like_instruction_reflection(
+                cleaned_visible
+            ) and not self._looks_like_reasoning_header(
                 cleaned_visible
             ) and not self._looks_like_summary_prompt_echo(
                 cleaned_visible
@@ -1665,7 +1849,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
     def _looks_like_reasoning_header(candidate: str) -> bool:
         """Return True when text is a planning header, not a user answer."""
         lowered = candidate.strip().lower()
-        if lowered in {
+        normalized = re.sub(r"[*_`]+", "", lowered)
+        normalized = " ".join(normalized.split())
+        if normalized in {
             "thinking process:",
             "drafting the response:",
             "refining for conciseness and flow:",
@@ -1675,6 +1861,51 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "synthesize the answer:",
         }:
             return True
+        scaffolding_labels = (
+            "thinking process",
+            "analyze the request",
+            "analyze the evidence",
+            "analyze the search results",
+            "draft the response",
+            "drafting the response",
+            "drafting - step 1",
+            "drafting - step 2",
+            "mental outline",
+            "writing & counting",
+            "refine the response",
+            "refining for conciseness and flow",
+            "final review against constraints",
+            "final polish",
+            "synthesize the answer",
+        )
+        if normalized.endswith(":"):
+            residual = normalized
+            for label in scaffolding_labels:
+                residual = residual.replace(label, " ")
+            residual = re.sub(r"[\d\W_]+", " ", residual)
+            residual_words = [
+                word
+                for word in residual.split()
+                if word not in {"and", "the", "step"}
+            ]
+            if any(label in normalized for label in scaffolding_labels):
+                if len(residual_words) <= 3:
+                    return True
+        marker_hits = sum(
+            label in normalized for label in scaffolding_labels
+        )
+        if marker_hits >= 2:
+            residual = normalized
+            for label in scaffolding_labels:
+                residual = residual.replace(label, " ")
+            residual = re.sub(r"[\d\W_]+", " ", residual)
+            residual_words = [
+                word
+                for word in residual.split()
+                if word not in {"and", "the", "step"}
+            ]
+            if len(residual_words) <= 3:
+                return True
         reasoning_markers = (
             "task:",
             "constraint 1:",

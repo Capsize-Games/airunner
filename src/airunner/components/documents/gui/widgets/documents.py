@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QTableWidgetItem,
+    QWidget,
 )
 
 from airunner.enums import SignalCode
@@ -76,6 +77,7 @@ class DocumentsWidget(BaseWidget):
             SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
         }
         super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
         self._document_fs_watcher = QFileSystemWatcher(self)
         self._document_fs_watcher.directoryChanged.connect(
             self._on_document_library_changed
@@ -85,6 +87,7 @@ class DocumentsWidget(BaseWidget):
         self.kiwix_widget = KiwixWidget()
         self.setup_kiwix_widget()
         self.setup_knowledge_folder()
+        self._install_drop_target_filters()
 
     def setup_knowledge_folder(self):
         """Setup the knowledge folder file explorer in the Knowledge tab."""
@@ -110,7 +113,6 @@ class DocumentsWidget(BaseWidget):
     def setup_file_explorer(self):
         """Configure the table-only document management surface."""
         self._configure_documents_table()
-        self.ui.documentsTableWidget.viewport().installEventFilter(self)
 
         # Load document state into the table.
         self.refresh_active_documents_list()
@@ -270,15 +272,39 @@ class DocumentsWidget(BaseWidget):
         self.refresh_documents_list()
 
     def eventFilter(self, obj, event):
-        """Handle drag-and-drop events for the document status table."""
-        if obj == self.ui.documentsTableWidget.viewport():
-            if event.type() == QEvent.Type.DragEnter:
-                event.acceptProposedAction()
-                return True
-            elif event.type() == QEvent.Type.Drop:
-                self.handle_drop_on_documents_table(event)
+        """Handle drag-and-drop events across the full documents widget."""
+        if isinstance(obj, QWidget) and event.type() in {
+            QEvent.Type.DragEnter,
+            QEvent.Type.DragMove,
+            QEvent.Type.Drop,
+        }:
+            if event.type() in {
+                QEvent.Type.DragEnter,
+                QEvent.Type.DragMove,
+            }:
+                if self._accept_document_drop(event):
+                    return True
+            elif self._handle_document_drop_event(event):
                 return True
         return super().eventFilter(obj, event)
+
+    def dragEnterEvent(self, event):
+        """Accept supported document drops anywhere on the widget."""
+        if self._accept_document_drop(event):
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        """Keep the full widget active as a drop target during drag move."""
+        if self._accept_document_drop(event):
+            return
+        super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        """Handle supported document drops anywhere on the widget."""
+        if self._handle_document_drop_event(event):
+            return
+        super().dropEvent(event)
 
     def on_available_doc_clicked(self, index):
         """Handle double-click on available documents to add to active list."""
@@ -286,24 +312,120 @@ class DocumentsWidget(BaseWidget):
 
     def handle_drop_on_documents_table(self, event):
         """Handle files dropped onto the document status table."""
-        mime_data = event.mimeData()
+        self._handle_document_drop_event(event)
 
-        # Handle file paths from file system view
+    def _install_drop_target_filters(self) -> None:
+        """Install drop filters across the full documents widget tree."""
+        widgets = [self, *self.findChildren(QWidget)]
+        seen: set[int] = set()
+        for widget in widgets:
+            widget_id = id(widget)
+            if widget_id in seen:
+                continue
+            seen.add(widget_id)
+            widget.setAcceptDrops(True)
+            widget.installEventFilter(self)
+
+    def _accept_document_drop(self, event) -> bool:
+        """Accept a drag enter or move when supported paths are present."""
+        if not self._extract_dropped_paths(event.mimeData()):
+            return False
+        event.acceptProposedAction()
+        return True
+
+    def _handle_document_drop_event(self, event) -> bool:
+        """Handle one drop event across the documents widget."""
+        if not self._handle_dropped_paths(
+            self._extract_dropped_paths(event.mimeData())
+        ):
+            return False
+        event.acceptProposedAction()
+        return True
+
+    def _extract_dropped_paths(self, mime_data) -> list[str]:
+        """Return supported file or directory paths from one drop payload."""
+        if not mime_data.hasUrls():
+            return []
+
+        dropped_paths: list[str] = []
+        for url in mime_data.urls():
+            path = url.toLocalFile()
+            if not path or not os.path.exists(path):
+                continue
+            if os.path.isdir(path):
+                dropped_paths.append(path)
+                continue
+            ext = os.path.splitext(path)[1][1:].lower()
+            if ext in self.file_extensions:
+                dropped_paths.append(path)
+        return list(dict.fromkeys(dropped_paths))
+
+    def _handle_dropped_paths(self, dropped_paths: list[str]) -> bool:
+        """Route dropped paths to import or activation behavior."""
+        if not dropped_paths:
+            return False
+
+        managed_files: list[str] = []
+        managed_dirs: list[str] = []
+        external_files: list[str] = []
+
+        for path in dropped_paths:
+            if os.path.isdir(path):
+                if self._is_managed_document_path(path):
+                    managed_dirs.append(path)
+                else:
+                    external_files.extend(
+                        self._collect_importable_paths_from_directory(path)
+                    )
+                continue
+
+            if self._is_managed_document_path(path):
+                managed_files.append(path)
+            else:
+                external_files.append(path)
+
         handled = False
+        if external_files:
+            imported = self.knowledgeBasePanelWidget._import_documents(
+                list(dict.fromkeys(external_files))
+            )
+            handled = bool(imported) or handled
 
-        # Standard file-system drags (URLs)
-        if mime_data.hasUrls():
-            for url in mime_data.urls():
-                file_path = url.toLocalFile()
-                if os.path.isfile(file_path):
-                    self.add_document_to_active(file_path)
-                elif os.path.isdir(file_path):
-                    # Handle dropped folder - add all documents within it
-                    self.add_folder_documents_to_active(file_path)
+        for folder_path in managed_dirs:
+            self.add_folder_documents_to_active(folder_path)
             handled = True
 
-        if handled:
-            event.acceptProposedAction()
+        for file_path in managed_files:
+            self.add_document_to_active(file_path)
+            handled = True
+
+        return handled
+
+    def _collect_importable_paths_from_directory(
+        self,
+        folder_path: str,
+    ) -> list[str]:
+        """Collect supported document files recursively from one folder."""
+        importable_paths: list[str] = []
+        for root, _dirs, files in os.walk(folder_path):
+            for fname in files:
+                ext = os.path.splitext(fname)[1][1:].lower()
+                if ext not in self.file_extensions:
+                    continue
+                importable_paths.append(os.path.join(root, fname))
+        return importable_paths
+
+    def _is_managed_document_path(self, path: str) -> bool:
+        """Return whether one path already lives inside AIRunner roots."""
+        candidate = os.path.realpath(path)
+        for root in self._allowed_document_roots():
+            try:
+                root_path = os.path.realpath(root)
+                if os.path.commonpath([candidate, root_path]) == root_path:
+                    return True
+            except ValueError:
+                continue
+        return False
 
     def add_folder_documents_to_active(self, folder_path: str):
         """Add all documents from a folder to the active RAG collection."""

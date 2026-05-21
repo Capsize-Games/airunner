@@ -51,6 +51,9 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QMenu,
+    QPushButton,
+    QTabWidget,
+    QWidget,
 )
 from PySide6.QtGui import QIcon
 
@@ -182,6 +185,9 @@ class MainWindow(
     _center_splitter_index = 2
     _stats_splitter_index = 3
     _stats_sidebar_index = 0
+    _left_documents_panel_index = 0
+    _left_history_panel_index = 1
+    _left_llm_settings_panel_index = 2
     icons = [
         ("settings", "actionSettings"),
         ("image", "menuArt"),
@@ -214,6 +220,8 @@ class MainWindow(
         ("mic", "speech_to_text_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
+        ("clock", "history_sidebar_button"),
+        ("settings", "llm_settings_sidebar_button"),
         ("activity", "stats_button"),
     ]
     _last_reload_time = 0
@@ -225,7 +233,7 @@ class MainWindow(
         self._post_startup_status_refresh_requested = False
         self._state_restored = None
         self._restore_sidebar_page_after_startup = None
-        self._restore_documents_panel_after_startup = False
+        self._restore_left_panel_page_after_startup = None
         self._daemon_status_refresh_inflight = False
         self._runtime_preference_retry_after = {}
         self.ui = self.ui_class_()
@@ -360,15 +368,18 @@ class MainWindow(
 
     @Slot(bool)
     def on_knowledgebase_button_toggled(self, val: bool):
-        if val:
-            self._ensure_knowledgebase_loaded()
-        self._toggle_splitter_section(
+        self._toggle_left_panel_page(self._left_documents_panel_index, val)
+
+    @Slot(bool)
+    def on_history_sidebar_button_toggled(self, val: bool):
+        self._toggle_left_panel_page(self._left_history_panel_index, val)
+
+    @Slot(bool)
+    def on_llm_settings_sidebar_button_toggled(self, val: bool):
+        self._toggle_left_panel_page(
+            self._left_llm_settings_panel_index,
             val,
-            self._documents_splitter_index,
-            self.ui.main_window_splitter,
-            220,
         )
-        self._sync_sidebar_button_states()
 
     @Slot(bool)
     def on_stats_button_toggled(self, val: bool):
@@ -378,9 +389,12 @@ class MainWindow(
         """Restore deferred startup UI once the main window is visible."""
         self._ensure_canvas_loaded()
 
-        if self._restore_documents_panel_after_startup:
-            self._restore_documents_panel_after_startup = False
-            self._ensure_knowledgebase_loaded()
+        if self._restore_left_panel_page_after_startup is not None:
+            page_index = int(self._restore_left_panel_page_after_startup)
+            self._restore_left_panel_page_after_startup = None
+            self._ensure_left_panel_page_loaded(page_index)
+            self.ui.left_panel_tab.setCurrentIndex(page_index)
+            self._sync_left_panel_button_states()
 
         if self._restore_sidebar_page_after_startup is not None:
             page_index = int(self._restore_sidebar_page_after_startup)
@@ -417,16 +431,24 @@ class MainWindow(
     def on_splitter_changed_sizes(self):
         if self._sidebar_is_visible():
             self._ensure_sidebar_page_loaded(self.ui.sidebar_tab.currentIndex())
-        if self._knowledgebase_panel_is_visible():
-            self._ensure_knowledgebase_loaded()
+        if self._left_panel_is_visible():
+            self._ensure_left_panel_page_loaded(
+                self.ui.left_panel_tab.currentIndex()
+            )
         self.set_chat_button_checked()
-        self.set_knowledgebase_button_checked()
+        self._sync_left_panel_button_states()
         self.set_stats_button_checked()
+
+    def on_left_panel_tab_current_changed(self, index: int) -> None:
+        """Persist the active left panel page and refresh toggle state."""
+        self._ensure_left_panel_page_loaded(index)
+        self._store_active_left_panel_tab_index(index)
+        self._sync_left_panel_button_states()
 
     def on_sidebar_tab_current_changed(self, index: int) -> None:
         """Persist the active sidebar page and refresh toggle state."""
         self._store_active_sidebar_tab_index(index)
-        self.set_knowledgebase_button_checked()
+        self._sync_left_panel_button_states()
         self.set_stats_button_checked()
 
     def _sidebar_is_visible(self) -> bool:
@@ -438,24 +460,72 @@ class MainWindow(
 
     def _knowledgebase_panel_is_visible(self) -> bool:
         """Return True when the left documents splitter area is visible."""
+        return self._left_panel_is_visible()
+
+    def _left_panel_is_visible(self) -> bool:
+        """Return True when the shared left splitter area is visible."""
         sizes = self.ui.main_window_splitter.sizes()
         return len(sizes) > self._documents_splitter_index and (
             sizes[self._documents_splitter_index] > 0
         )
 
+    def _current_left_panel_index(self) -> int:
+        """Return the active left panel page index."""
+        tab_widget = getattr(self.ui, "left_panel_tab", None)
+        if tab_widget is None:
+            return self._left_documents_panel_index
+        return tab_widget.currentIndex()
+
+    def _saved_left_panel_tab_index(self) -> int:
+        """Return the persisted left panel page index."""
+        self.qsettings.beginGroup("window_settings")
+        index = self.qsettings.value(
+            "active_left_panel_tab_index",
+            self._left_documents_panel_index,
+            type=int,
+        )
+        self.qsettings.endGroup()
+        return int(index)
+
     def _saved_sidebar_tab_index(self) -> int:
         """Return the persisted sidebar page index."""
-        return self._stats_sidebar_index
+        self.qsettings.beginGroup("window_settings")
+        index = self.qsettings.value(
+            "active_sidebar_tab_index",
+            self._stats_sidebar_index,
+            type=int,
+        )
+        self.qsettings.endGroup()
+        return int(index)
+
+    def _store_active_left_panel_tab_index(self, index: int) -> None:
+        """Persist the current left panel page index."""
+        self.qsettings.beginGroup("window_settings")
+        self.qsettings.setValue(
+            "active_left_panel_tab_index",
+            int(index),
+        )
+        self.qsettings.endGroup()
+        self.qsettings.sync()
 
     def _store_active_sidebar_tab_index(self, index: int) -> None:
         """Persist the current sidebar page index."""
         self.qsettings.beginGroup("window_settings")
         self.qsettings.setValue(
             "active_sidebar_tab_index",
-            self._stats_sidebar_index,
+            int(index),
         )
         self.qsettings.endGroup()
         self.qsettings.sync()
+
+    def _ensure_left_panel_page_loaded(self, page_index: int) -> None:
+        """Load left-panel content lazily for the requested page."""
+        if page_index == self._left_documents_panel_index:
+            self._ensure_knowledgebase_loaded()
+        elif page_index == self._left_history_panel_index:
+            self._ensure_left_history_loaded()
+        elif page_index == self._left_llm_settings_panel_index:
+            self._ensure_left_llm_settings_loaded()
 
     def _ensure_sidebar_page_loaded(self, page_index: int) -> None:
         """Load sidebar content lazily for the requested page."""
@@ -487,9 +557,40 @@ class MainWindow(
 
         self._sync_sidebar_button_states()
 
+    def _toggle_left_panel_page(self, page_index: int, visible: bool) -> None:
+        """Switch or hide the shared left splitter panel page."""
+        if visible:
+            self._ensure_left_panel_page_loaded(page_index)
+            self.ui.left_panel_tab.setCurrentIndex(page_index)
+            if not self._left_panel_is_visible():
+                self._toggle_splitter_section(
+                    True,
+                    self._documents_splitter_index,
+                    self.ui.main_window_splitter,
+                    220,
+                )
+        elif (
+            self._left_panel_is_visible()
+            and self._current_left_panel_index() == page_index
+        ):
+            self._toggle_splitter_section(
+                False,
+                self._documents_splitter_index,
+                self.ui.main_window_splitter,
+                220,
+            )
+
+        self._sync_left_panel_button_states()
+
+    def _sync_left_panel_button_states(self) -> None:
+        """Update left-panel toggle buttons from current panel state."""
+        self.set_knowledgebase_button_checked()
+        self.set_history_sidebar_button_checked()
+        self.set_llm_settings_sidebar_button_checked()
+
     def _sync_sidebar_button_states(self) -> None:
         """Update the right-sidebar toggle buttons from current sidebar state."""
-        self.set_knowledgebase_button_checked()
+        self._sync_left_panel_button_states()
         self.set_stats_button_checked()
 
     def set_chat_button_checked(self):
@@ -507,9 +608,35 @@ class MainWindow(
     def set_knowledgebase_button_checked(self):
         self.ui.knowledgebase_button.blockSignals(True)
         self.ui.knowledgebase_button.setChecked(
-            self._knowledgebase_panel_is_visible()
+            self._left_panel_is_visible()
+            and self._current_left_panel_index()
+            == self._left_documents_panel_index
         )
         self.ui.knowledgebase_button.blockSignals(False)
+
+    def set_history_sidebar_button_checked(self):
+        button = getattr(self.ui, "history_sidebar_button", None)
+        if button is None:
+            return
+        button.blockSignals(True)
+        button.setChecked(
+            self._left_panel_is_visible()
+            and self._current_left_panel_index()
+            == self._left_history_panel_index
+        )
+        button.blockSignals(False)
+
+    def set_llm_settings_sidebar_button_checked(self):
+        button = getattr(self.ui, "llm_settings_sidebar_button", None)
+        if button is None:
+            return
+        button.blockSignals(True)
+        button.setChecked(
+            self._left_panel_is_visible()
+            and self._current_left_panel_index()
+            == self._left_llm_settings_panel_index
+        )
+        button.blockSignals(False)
     
     def set_stats_button_checked(self):
         self.ui.stats_button.blockSignals(True)
@@ -900,11 +1027,127 @@ class MainWindow(
             DocumentsWidget,
         )
 
+        self._ensure_left_panel_host()
         self._attach_lazy_widget(
-            "documents_placeholder",
+            "left_documents_page",
             "documents",
             "documents",
             DocumentsWidget,
+            placeholder_attr="left_documents_placeholder",
+        )
+
+    def _ensure_left_history_loaded(self) -> None:
+        """Create the history left-panel page only when it is shown."""
+        from airunner.components.llm.gui.widgets.llm_history_widget import (
+            LLMHistoryWidget,
+        )
+
+        self._ensure_left_panel_host()
+        self._attach_lazy_widget(
+            "left_history_page",
+            "left_history_widget",
+            "left_history_widget",
+            LLMHistoryWidget,
+            placeholder_attr="left_history_placeholder",
+        )
+
+    def _ensure_left_llm_settings_loaded(self) -> None:
+        """Create the LLM settings left-panel page only when it is shown."""
+        from airunner.components.llm.gui.widgets.llm_settings_widget import (
+            LLMSettingsWidget,
+        )
+
+        self._ensure_left_panel_host()
+        widget = self._attach_lazy_widget(
+            "left_llm_settings_page",
+            "left_llm_settings_widget",
+            "left_llm_settings_widget",
+            LLMSettingsWidget,
+            placeholder_attr="left_llm_settings_placeholder",
+        )
+        handle_loaded = getattr(widget, "handle_main_window_loaded", None)
+        if callable(handle_loaded):
+            handle_loaded()
+
+    def _create_left_sidebar_buttons(self) -> None:
+        """Add history and LLM settings toggles to the left action rail."""
+        if getattr(self.ui, "history_sidebar_button", None) is not None:
+            return
+
+        history_button = QPushButton(self.ui.actionsidebar)
+        history_button.setObjectName("history_sidebar_button")
+        history_button.setMinimumSize(35, 35)
+        history_button.setMaximumSize(35, 35)
+        history_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        history_button.setCheckable(True)
+        history_button.setFlat(True)
+        history_button.setToolTip("Chat history")
+        self.ui.action_sidebar.insertWidget(2, history_button)
+        history_button.toggled.connect(
+            self.on_history_sidebar_button_toggled
+        )
+        self.ui.history_sidebar_button = history_button
+
+        llm_settings_button = QPushButton(self.ui.actionsidebar)
+        llm_settings_button.setObjectName("llm_settings_sidebar_button")
+        llm_settings_button.setMinimumSize(35, 35)
+        llm_settings_button.setMaximumSize(35, 35)
+        llm_settings_button.setCursor(
+            QCursor(Qt.CursorShape.PointingHandCursor)
+        )
+        llm_settings_button.setCheckable(True)
+        llm_settings_button.setFlat(True)
+        llm_settings_button.setToolTip("LLM generator settings")
+        self.ui.action_sidebar.insertWidget(3, llm_settings_button)
+        llm_settings_button.toggled.connect(
+            self.on_llm_settings_sidebar_button_toggled
+        )
+        self.ui.llm_settings_sidebar_button = llm_settings_button
+
+    def _ensure_left_panel_host(self) -> None:
+        """Replace the single documents placeholder with a hidden tab host."""
+        if getattr(self.ui, "left_panel_tab", None) is not None:
+            return
+
+        container = self.ui.documents_sidebar
+        layout = container.layout()
+        if layout is None:
+            layout = QGridLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+
+        tab_widget = QTabWidget(container)
+        tab_widget.setObjectName("left_panel_tab")
+        tab_widget.tabBar().hide()
+
+        def add_page(page_name: str, placeholder_name: str) -> None:
+            page = QWidget(tab_widget)
+            page.setObjectName(page_name)
+            page_layout = QGridLayout(page)
+            page_layout.setContentsMargins(0, 0, 0, 0)
+            placeholder = QWidget(page)
+            placeholder.setObjectName(placeholder_name)
+            page_layout.addWidget(placeholder, 0, 0, 1, 1)
+            tab_widget.addTab(page, "")
+            setattr(self.ui, page_name, page)
+            setattr(self.ui, placeholder_name, placeholder)
+
+        add_page("left_documents_page", "left_documents_placeholder")
+        add_page("left_history_page", "left_history_placeholder")
+        add_page(
+            "left_llm_settings_page",
+            "left_llm_settings_placeholder",
+        )
+
+        placeholder = getattr(self.ui, "documents_placeholder", None)
+        if placeholder is not None:
+            layout.removeWidget(placeholder)
+            placeholder.deleteLater()
+            self.ui.documents_placeholder = None
+
+        layout.addWidget(tab_widget, 0, 0, 1, 1)
+        self.ui.left_panel_tab = tab_widget
+        self.ui.left_panel_tab.currentChanged.connect(
+            self.on_left_panel_tab_current_changed
         )
     
     def _ensure_stats_loaded(self) -> None:
@@ -1048,6 +1291,8 @@ class MainWindow(
 
         phase_started_at = time.perf_counter()
         self.ui.setupUi(self)
+        self._create_left_sidebar_buttons()
+        self._ensure_left_panel_host()
         self.logger.info(
             "MainWindow startup phase setup_ui completed in %.2fs",
             time.perf_counter() - phase_started_at,
@@ -1065,6 +1310,10 @@ class MainWindow(
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
 
+        left_panel_page_index = self._saved_left_panel_tab_index()
+        self.ui.left_panel_tab.blockSignals(True)
+        self.ui.left_panel_tab.setCurrentIndex(left_panel_page_index)
+        self.ui.left_panel_tab.blockSignals(False)
         sidebar_page_index = self._saved_sidebar_tab_index()
         self.ui.sidebar_tab.setCurrentIndex(sidebar_page_index)
         self.ui.sidebar_tab.currentChanged.connect(
@@ -1107,9 +1356,10 @@ class MainWindow(
 
         if self._sidebar_is_visible():
             self._restore_sidebar_page_after_startup = sidebar_page_index
-        self._restore_documents_panel_after_startup = (
-            self._knowledgebase_panel_is_visible()
-        )
+        if self._left_panel_is_visible():
+            self._restore_left_panel_page_after_startup = (
+                left_panel_page_index
+            )
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -1138,7 +1388,7 @@ class MainWindow(
             self.on_splitter_changed_sizes
         )
         self.set_chat_button_checked()
-        self.set_knowledgebase_button_checked()
+        self._sync_left_panel_button_states()
         self.set_stats_button_checked()
 
         # Keyboard shortcut: Ctrl+N -> placeholder handler using QAction
@@ -1464,6 +1714,10 @@ class MainWindow(
         self.qsettings.setValue(
             "active_main_tab_index",
             0,
+        )
+        self.qsettings.setValue(
+            "active_left_panel_tab_index",
+            self.ui.left_panel_tab.currentIndex(),
         )
         self.qsettings.setValue(
             "active_sidebar_tab_index",

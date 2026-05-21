@@ -359,6 +359,30 @@ class _PromptCapturingChatModel:
         return iter([_chunk("Visible answer")])
 
 
+class _VerificationPromptCapturingChatModel:
+    """Fake model that records draft and verification prompts."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [_chunk("Draft answer with a stray travel-stop detail.")],
+            [
+                _chunk(
+                    "The novel centers on an impossible corpse at a "
+                    "Hollywood studio beside a cemetery, and the mystery "
+                    "pulls the living back into the studio's haunted past."
+                )
+            ],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return iter(self._responses.pop(0))
+
+
 def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     """RAG synthesis prompt should prioritize document identity cues."""
     mixin = NodeFunctionsMixinDouble([])
@@ -416,6 +440,45 @@ def test_forced_response_prompt_requests_thorough_summary():
     assert "Stored path:" not in prompt
     assert "[Excerpt 1 from" not in prompt
     assert "Start with the central themes, not opening trivia." in prompt
+
+
+def test_forced_response_summary_runs_verification_pass():
+    """Summary answers should be finalized through a verification pass."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _VerificationPromptCapturingChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: A Graveyard for Lunatics - Ray Bradbury.mobi\n"
+        "Stored path: /sensitive/path/A Graveyard for Lunatics.mobi\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "The story opens at a haunted Hollywood studio beside a cemetery.\n\n"
+        "[Excerpt 2 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "An impossible corpse drives the central mystery through the lot.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "The novel centers on an impossible corpse at a Hollywood studio "
+        "beside a cemetery, and the mystery pulls the living back into "
+        "the studio's haunted past."
+    )
+    assert len(mixin._chat_model.prompts) == 2
+    assert "synthesize the evidence below into a substantive overview" in (
+        mixin._chat_model.prompts[0]
+    )
+    assert "You are verifying and finalizing a document-grounded answer." in (
+        mixin._chat_model.prompts[1]
+    )
+    assert "Draft answer to verify:" in mixin._chat_model.prompts[1]
+    assert "Draft answer with a stray travel-stop detail." in (
+        mixin._chat_model.prompts[1]
+    )
+    assert "Evidence excerpts:" in mixin._chat_model.prompts[1]
+    assert "Stored path:" not in mixin._chat_model.prompts[1]
 
 
 class _SummaryBudgetCapturingChatModel:
@@ -717,6 +780,67 @@ def test_forced_response_summary_ignores_malformed_visible_fragment():
         "self-determination instead of Christian humility and universal "
         "love. It presents LaVeyan Satanism as a deliberate inversion of "
         "conventional religious morality."
+    )
+
+
+class _ReasoningHeaderVisibleSummaryChatModel:
+    """Fake model that leaks only reasoning-stage headers as visible text."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    (
+                        "Analyze the Request: Analyze the Evidence: "
+                        "Drafting - Step 1 (Mental Outline): Drafting - "
+                        "Step 2 (Writing & Counting)::"
+                    ),
+                    (
+                        "Final answer: The novel is set around a haunted "
+                        "Hollywood studio bordered by a cemetery, and it "
+                        "centers on an impossible corpse and the mystery "
+                        "that ties the dead man back to the studio's past."
+                    ),
+                )
+            ]
+        )
+
+
+def test_forced_response_summary_ignores_reasoning_header_only_visible_text():
+    """Summary recovery should reject visible scaffolding headers."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _ReasoningHeaderVisibleSummaryChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Relevant excerpts:\nA substantive passage.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "The novel is set around a haunted Hollywood studio bordered by a "
+        "cemetery, and it centers on an impossible corpse and the mystery "
+        "that ties the dead man back to the studio's past."
+    )
+
+
+def test_numbered_summary_normalization_ignores_bold_reasoning_headers():
+    """Numbered reasoning recovery should skip bold planning headers."""
+    normalized = NodeFunctionsMixin._normalize_numbered_summary_response(
+        "1. **Analyze the Request:**\n"
+        "2. **Analyze the Evidence:**\n"
+        "3. The novel centers on an impossible corpse at a Hollywood studio.\n"
+        "4. The setting blends studio life with the cemetery next door."
+    )
+
+    assert normalized == (
+        "The novel centers on an impossible corpse at a Hollywood studio. "
+        "The setting blends studio life with the cemetery next door."
     )
 
 

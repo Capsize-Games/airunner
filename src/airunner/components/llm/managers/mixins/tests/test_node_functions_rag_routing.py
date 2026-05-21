@@ -335,6 +335,24 @@ def test_build_search_results_prompt_uses_document_route_for_inspection():
     assert "Do not mention search results or instructions" in prompt
 
 
+def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
+    """Book-about questions should emphasize premise over stray scenes."""
+    mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="summary",
+        force_tool="rag_search",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Evidence excerpts:\nOpening context. Haunted Hollywood studio.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert "lead with the premise, setting, central conflict" in prompt
+    assert "Treat isolated later scenes" in prompt
+
+
 def test_generate_response_message_uses_deterministic_structure_answer():
     """Structure answers should not invoke model synthesis."""
     mixin = _NoModelNodeFunctions()
@@ -389,6 +407,15 @@ def test_get_document_query_intent_prefers_request_metadata():
 
     assert mixin._get_document_query_intent("what is this document?") == (
         "structure"
+    )
+
+
+def test_get_document_query_intent_treats_book_about_as_summary():
+    """Book-about fallback heuristics should map to summary intent."""
+    mixin = _DummyNodeFunctions()
+
+    assert mixin._get_document_query_intent("what is this book about?") == (
+        "summary"
     )
 
 

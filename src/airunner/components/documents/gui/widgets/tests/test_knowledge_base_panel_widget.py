@@ -287,6 +287,60 @@ def test_add_document_to_active_emits_collection_changed(monkeypatch):
     )
 
 
+def test_documents_widget_drop_imports_external_files(tmp_path):
+    """External drops on the documents widget should import into the KB."""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from airunner.components.documents.gui.widgets.documents import (
+        DocumentsWidget,
+    )
+
+    app = QApplication.instance() or QApplication([])
+    widget = DocumentsWidget()
+    widget.path_settings.base_path = str(tmp_path / "airunner")
+    widget.add_document_to_active = Mock()
+    widget.knowledgeBasePanelWidget._import_documents = Mock(
+        return_value=[
+            str(tmp_path / "airunner/text/other/documents/book.pdf")
+        ]
+    )
+
+    external_file = tmp_path / "outside-book.pdf"
+    external_file.write_text("content", encoding="utf-8")
+
+    handled = widget._handle_dropped_paths([str(external_file)])
+
+    assert handled is True
+    widget.knowledgeBasePanelWidget._import_documents.assert_called_once_with(
+        [str(external_file)]
+    )
+    widget.add_document_to_active.assert_not_called()
+
+
+def test_documents_widget_drop_activates_managed_files(tmp_path):
+    """Managed-library drops should keep the activation behavior."""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from airunner.components.documents.gui.widgets.documents import (
+        DocumentsWidget,
+    )
+
+    app = QApplication.instance() or QApplication([])
+    widget = DocumentsWidget()
+    widget.path_settings.base_path = str(tmp_path / "airunner")
+    os.makedirs(widget.documents_path, exist_ok=True)
+    widget.add_document_to_active = Mock()
+    widget.knowledgeBasePanelWidget._import_documents = Mock()
+
+    managed_file = os.path.join(widget.documents_path, "managed-book.pdf")
+    with open(managed_file, "w", encoding="utf-8") as handle:
+        handle.write("content")
+
+    handled = widget._handle_dropped_paths([managed_file])
+
+    assert handled is True
+    widget.add_document_to_active.assert_called_once_with(managed_file)
+    widget.knowledgeBasePanelWidget._import_documents.assert_not_called()
+
+
 def test_remove_document_from_active_emits_collection_changed(monkeypatch):
     """Active-document removals should notify the chat prompt to detach."""
     from airunner.components.documents.gui.widgets import documents as module

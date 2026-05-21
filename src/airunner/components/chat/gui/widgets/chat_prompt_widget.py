@@ -756,6 +756,7 @@ class ChatPromptWidget(BaseWidget):
         if self._startup_controls_loaded:
             return
         self._startup_controls_loaded = True
+        self._hide_action_bar_controls_moved_to_sidebar()
         self._hide_footer_controls_moved_to_settings()
         self._populate_model_dropdown()
         self._populate_reasoning_effort_dropdown()
@@ -818,6 +819,13 @@ class ChatPromptWidget(BaseWidget):
             self.ui.provider_dropdown.setVisible(False)
         if hasattr(self.ui, "precision_dropdown"):
             self.ui.precision_dropdown.setVisible(False)
+
+    def _hide_action_bar_controls_moved_to_sidebar(self) -> None:
+        """Hide action-bar controls that now live in the main left rail."""
+        if hasattr(self.ui, "history_button"):
+            self.ui.history_button.setVisible(False)
+        if hasattr(self.ui, "settings_button"):
+            self.ui.settings_button.setVisible(False)
 
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Finish non-critical startup work after the main window loads."""
