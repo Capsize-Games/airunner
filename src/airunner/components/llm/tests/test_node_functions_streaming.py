@@ -6,6 +6,7 @@ from unittest.mock import Mock
 from airunner.components.llm.managers.mixins.node_functions_mixin import (
     NodeFunctionsMixin,
 )
+from airunner.enums import SignalCode
 
 
 def _chunk(content: str) -> SimpleNamespace:
@@ -249,9 +250,93 @@ def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     )
 
     prompt = mixin._chat_model.prompts[0]
-    assert "identify the document first" in prompt
-    assert "inferred titles" in prompt
-    assert "stored paths" in prompt
+    assert "answer directly and briefly by naming the document" in prompt
+    assert "Do not mention search results or instructions" in prompt
+    assert "author" in prompt
+
+
+class _InternalSynthesisReasoningChatModel:
+    """Fake model that still emits reasoning during internal synthesis."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _reasoning_chunk(
+                    "Visible answer",
+                    "Wait, one more check:\nUse the title only.",
+                )
+            ]
+        )
+
+
+def test_forced_response_keeps_thinking_updates_and_completes():
+    """Internal synthesis should stream thinking and still complete it."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _InternalSynthesisReasoningChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\nDocument 1: Example.pdf",
+        "rag_search",
+        "What is this document?",
+    )
+
+    assert message.content == "Visible answer"
+    assert message.additional_kwargs["thinking_content"] == (
+        "Wait, one more check:\nUse the title only."
+    )
+    statuses = [
+        call.args[1]["status"]
+        for call in mixin._signal_emitter.emit_signal.call_args_list
+        if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
+    ]
+    assert statuses[:3] == ["started", "streaming", "completed"]
+    assert statuses[-1] == "completed"
+    mixin._token_callback.assert_called_once_with("Visible answer")
+
+
+class _MetaIdentityResponseChatModel:
+    """Fake model that emits meta instruction chatter as visible text."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+
+    def stream(self, *_args, **_kwargs):
+        return iter(
+            [
+                _chunk(
+                    "Actually, looking at the instruction, I should just "
+                    "state the facts naturally."
+                )
+            ]
+        )
+
+
+def test_forced_response_identity_falls_back_from_meta_visible_text():
+    """Identity answers should not surface meta instruction chatter."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _MetaIdentityResponseChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: The Satanic Bible - Anton LaVey.pdf\n"
+        "Inferred title from filename: The Satanic Bible\n"
+        "Inferred author from filename: Anton LaVey\n"
+        "File type: .pdf",
+        "rag_search",
+        "What is this document?",
+    )
+
+    assert message.content == (
+        "This document is a PDF document titled 'The Satanic Bible' "
+        "by Anton LaVey."
+    )
 
 
 class _ModernRagReasoningOnlyChatModel:

@@ -538,11 +538,23 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             response_message = self._stream_internal_response(
                 simple_prompt, generation_kwargs
             )
+            self._emit_final_thinking_signal(response_message)
 
             if response_message:
                 visible_content = self._recover_forced_response_content(
                     response_message
                 )
+                if (
+                    tool_name == "rag_search"
+                    and self._is_document_identity_question(user_question)
+                ):
+                    fallback_identity = (
+                        self._build_document_identity_response(
+                            all_tool_content
+                        )
+                    )
+                    if fallback_identity and not visible_content:
+                        visible_content = fallback_identity
                 # Ensure tool_calls is empty
                 return AIMessage(
                     content=visible_content,
@@ -592,11 +604,21 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             response_message = self._stream_internal_response(
                 simple_prompt, generation_kwargs
             )
+            self._emit_final_thinking_signal(response_message)
 
             # Extract content from the response message
             response_content = self._recover_forced_response_content(
                 response_message
             )
+            if (
+                tool_name == "rag_search"
+                and self._is_document_identity_question(user_question)
+            ):
+                fallback_identity = self._build_document_identity_response(
+                    all_tool_content
+                )
+                if fallback_identity and not response_content:
+                    response_content = fallback_identity
 
             self.logger.info(
                 f"Model streamed {len(response_content)} char answer"
@@ -625,13 +647,21 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         rag_guidance = ""
         if tool_name == "rag_search":
-            rag_guidance = (
-                "If the search results include document identity fields "
-                "such as document names, inferred titles, inferred "
-                "authors, or stored paths, and the user is asking what "
-                "the document is, identify the document first before "
-                "describing excerpt details.\n\n"
-            )
+            if self._is_document_identity_question(user_question):
+                rag_guidance = (
+                    "If the user is asking what the document is, answer "
+                    "directly and briefly by naming the document and, "
+                    "when available, its title, author, or file type. "
+                    "Do not mention search results or instructions.\n\n"
+                )
+            else:
+                rag_guidance = (
+                    "If the search results include document identity "
+                    "fields such as document names, inferred titles, "
+                    "inferred authors, or stored paths, identify the "
+                    "document clearly before summarizing excerpt details."
+                    "\n\n"
+                )
 
         return (
             "You are answering a question based on search results. "
@@ -647,6 +677,112 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "repetition and be concise."
         )
 
+    @staticmethod
+    def _is_document_identity_question(user_question: str) -> bool:
+        """Return whether the user is asking to identify a document."""
+        normalized = " ".join(str(user_question or "").lower().split())
+        if not normalized:
+            return False
+
+        identity_phrases = (
+            "what is this document",
+            "what document is this",
+            "tell me what this document is",
+            "what is this file",
+            "what file is this",
+            "which document is this",
+            "which file is this",
+            "identify this document",
+            "identify the document",
+            "identify this file",
+        )
+        if any(phrase in normalized for phrase in identity_phrases):
+            return True
+
+        asks_identity = any(
+            phrase in normalized
+            for phrase in ("what is this", "which is this", "identify")
+        )
+        mentions_document = "document" in normalized or "file" in normalized
+        return asks_identity and mentions_document
+
+    @staticmethod
+    def _build_document_identity_response(all_tool_content: str) -> str:
+        """Return one direct document identity answer from tool results."""
+        label = title = author = file_type = stored_path = ""
+        for line in all_tool_content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("Document 1: ") and not label:
+                label = stripped.removeprefix("Document 1: ").strip()
+            elif stripped.startswith("Inferred title from filename: "):
+                title = stripped.removeprefix(
+                    "Inferred title from filename: "
+                ).strip()
+            elif stripped.startswith("Inferred author from filename: "):
+                author = stripped.removeprefix(
+                    "Inferred author from filename: "
+                ).strip()
+            elif stripped.startswith("File type: "):
+                file_type = stripped.removeprefix("File type: ").strip()
+            elif stripped.startswith("Stored path: "):
+                stored_path = stripped.removeprefix("Stored path: ").strip()
+
+        type_label = file_type.lstrip(".").upper()
+        if title and author:
+            descriptor = f"a {type_label} document" if type_label else "a document"
+            return f"This document is {descriptor} titled '{title}' by {author}."
+        if title:
+            descriptor = f"a {type_label} document" if type_label else "a document"
+            return f"This document is {descriptor} titled '{title}'."
+        if label:
+            descriptor = f"the {type_label} file" if type_label else "the file"
+            return f"This document is {descriptor} '{label}'."
+        if stored_path:
+            return f"This document is stored at '{stored_path}'."
+        return ""
+
+    @staticmethod
+    def _looks_like_instruction_reflection(text: str) -> bool:
+        """Return True for meta self-corrections, not user-facing answers."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+        markers = (
+            "looking at the instruction",
+            "do not mention search results or instructions",
+            "i should ensure",
+            "don't add fluff",
+            "just state the facts",
+        )
+        return any(marker in lowered for marker in markers)
+
+    def _emit_final_thinking_signal(
+        self,
+        response_message: Optional[AIMessage],
+    ) -> None:
+        """Ensure the live thinking widget receives one final completion."""
+        emitter = getattr(self, "_signal_emitter", None)
+        request_id = getattr(self, "_current_request_id", None)
+        if emitter is None or not request_id or response_message is None:
+            return
+
+        additional_kwargs = (
+            getattr(response_message, "additional_kwargs", {}) or {}
+        )
+        thinking_content = (
+            additional_kwargs.get("thinking_content")
+            or additional_kwargs.get("reasoning_content")
+            or ""
+        )
+        emitter.emit_signal(
+            SignalCode.LLM_THINKING_SIGNAL,
+            {
+                "status": "completed",
+                "content": str(thinking_content),
+                "request_id": request_id,
+            },
+        )
+
     def _recover_forced_response_content(
         self,
         response_message: Optional[AIMessage],
@@ -657,7 +793,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
         visible_content = str(getattr(response_message, "content", "") or "")
         if visible_content.strip():
-            return visible_content
+            cleaned_visible = visible_content.strip()
+            if not self._looks_like_instruction_reflection(
+                cleaned_visible
+            ):
+                return cleaned_visible
 
         additional_kwargs = (
             getattr(response_message, "additional_kwargs", {}) or {}
@@ -810,6 +950,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             return ""
         if candidate[:1] == candidate[-1:] and candidate[:1] in {'"', "'"}:
             candidate = candidate[1:-1].strip()
+        if self._looks_like_instruction_reflection(candidate):
+            return ""
         if self._looks_like_reasoning_header(candidate):
             return ""
         return candidate

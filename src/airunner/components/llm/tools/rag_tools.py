@@ -20,6 +20,35 @@ from airunner.utils.application.log_hygiene import summarize_text
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
+def _is_document_identity_query(query: str) -> bool:
+    """Return whether the query is asking to identify the document."""
+    normalized = " ".join(str(query or "").lower().split())
+    if not normalized:
+        return False
+
+    identity_phrases = (
+        "what is this document",
+        "what document is this",
+        "tell me what this document is",
+        "what is this file",
+        "what file is this",
+        "which document is this",
+        "which file is this",
+        "identify this document",
+        "identify the document",
+        "identify this file",
+    )
+    if any(phrase in normalized for phrase in identity_phrases):
+        return True
+
+    asks_identity = any(
+        phrase in normalized
+        for phrase in ("what is this", "which is this", "identify")
+    )
+    mentions_document = "document" in normalized or "file" in normalized
+    return asks_identity and mentions_document
+
+
 def _document_label(metadata: dict[str, Any]) -> str:
     """Return one human-readable label for a retrieved document."""
     for key in ("file_name", "source", "file_path"):
@@ -89,7 +118,11 @@ def _format_excerpt(
     return f"[Excerpt {position} from {label}]\n{excerpt}"
 
 
-def _format_rag_search_results(results: list[Any]) -> str:
+def _format_rag_search_results(
+    results: list[Any],
+    *,
+    include_excerpts: bool = True,
+) -> str:
     """Return one user-facing RAG search result string."""
     document_summaries: list[str] = []
     excerpt_sections: list[str] = []
@@ -110,13 +143,14 @@ def _format_rag_search_results(results: list[Any]) -> str:
                 _format_document_summary(len(document_summaries) + 1, metadata)
             )
 
-        excerpt_sections.append(
-            _format_excerpt(
-                index,
-                metadata,
-                str(getattr(doc, "page_content", "") or ""),
+        if include_excerpts:
+            excerpt_sections.append(
+                _format_excerpt(
+                    index,
+                    metadata,
+                    str(getattr(doc, "page_content", "") or ""),
+                )
             )
-        )
 
     sections = []
     if document_summaries:
@@ -216,7 +250,10 @@ def rag_search(
                 f"length: {len(getattr(doc, 'page_content', '') or '')}"
             )
 
-        result_text = _format_rag_search_results(results)
+        result_text = _format_rag_search_results(
+            results,
+            include_excerpts=not _is_document_identity_query(query),
+        )
         logger.info(
             f"Returning {len(results)} document excerpts, "
             f"total length: {len(result_text)}"
