@@ -7,6 +7,28 @@ window.chatReady = new Promise((resolve) => {
 });
 window.autoScrollEnabled = true;
 
+function getStreamTargetMessage(container, requestId) {
+    if (!container) return null;
+
+    if (requestId) {
+        const escapedRequestId =
+            typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+                ? CSS.escape(requestId)
+                : requestId.replace(/"/g, '\\"');
+        const requestMessage = container.querySelector(
+            `.message.assistant[data-request-id="${escapedRequestId}"]`
+        );
+        if (requestMessage) {
+            return requestMessage;
+        }
+    }
+
+    const messages = container.querySelectorAll(
+        '.message.assistant:not(.tool-status):not(.thinking-block)'
+    );
+    return messages.length ? messages[messages.length - 1] : null;
+}
+
 function enableAutoScroll() { window.autoScrollEnabled = true; }
 function disableAutoScroll() { window.autoScrollEnabled = false; }
 function isScrolledToBottom(container, tolerance = 8) {
@@ -51,17 +73,18 @@ function initializeChatView() {
                 }
             });
         });
-        chatBridge.updateLastMessageContent.connect(function (content) {
-            // Update only the last message's content during streaming
+        chatBridge.updateLastMessageContent.connect(function (
+            requestId,
+            content,
+        ) {
+            // Update the message for the active request during streaming.
             const container = document.getElementById('conversation-container');
             if (!container) return;
 
-            // Find all message divs (exclude tool status)
-            const messages = container.querySelectorAll('.message:not(.tool-status):not(.thinking-block)');
-            if (messages.length === 0) return;
+            const targetMessage = getStreamTargetMessage(container, requestId);
+            if (!targetMessage) return;
 
-            const lastMessage = messages[messages.length - 1];
-            const contentDiv = lastMessage.querySelector('.content');
+            const contentDiv = targetMessage.querySelector('.content');
             if (!contentDiv) return;
 
             // Update content with sanitized HTML

@@ -7,6 +7,7 @@ from airunner.components.chat.gui.widgets import conversation_widget as module
 from airunner.components.chat.gui.widgets.conversation_widget import (
     ConversationWidget,
 )
+from airunner.components.llm.managers.llm_response import LLMResponse
 
 
 def test_append_user_message_for_request_uses_incremental_bridge_update():
@@ -98,6 +99,52 @@ def test_thinking_updates_include_request_id():
         "streaming",
         "plan",
     )
+
+
+def test_process_sequential_tokens_updates_message_with_request_id(
+    monkeypatch,
+):
+    """Incremental assistant updates should target the active request."""
+    dispatch = Mock()
+    monkeypatch.setattr(
+        module.FormatterExtended,
+        "format_content",
+        Mock(return_value={"content": "Hello world"}),
+    )
+    widget = SimpleNamespace(
+        _expected_sequence=1,
+        _sequence_buffer={
+            1: LLMResponse(
+                message=" world",
+                sequence_number=1,
+                request_id="req-3",
+            )
+        },
+        _current_stream_tokens=["Hello"],
+        _streamed_messages=[
+            {
+                "id": 0,
+                "name": "Assistant",
+                "content": "Hello",
+                "role": "assistant",
+                "is_bot": True,
+                "request_id": "req-3",
+            }
+        ],
+        _active_stream_message_index=0,
+        _conversation=None,
+        _assign_message_ids=lambda messages: messages,
+        _dispatch_chat_bridge_call=dispatch,
+    )
+
+    ConversationWidget._process_sequential_tokens(widget)
+
+    dispatch.assert_called_once_with(
+        "update_last_message_content",
+        "req-3",
+        "Hello world",
+    )
+    assert widget._streamed_messages[0]["content"] == "Hello world"
 
 
 def test_dispatch_chat_bridge_call_flushes_when_js_is_ready():
