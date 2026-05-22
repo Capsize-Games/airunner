@@ -1593,6 +1593,46 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         return any(marker in lowered for marker in directive_markers)
 
+    @staticmethod
+    def _looks_like_summary_format_description_response(text: str) -> bool:
+        """Return True for meta descriptions of a summary format."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+
+        if not lowered.startswith((
+            "a bulleted list of ",
+            "a bullet list of ",
+            "a brief bulleted list of ",
+            "a concise bulleted list of ",
+            "a list of ",
+        )):
+            return False
+
+        excerpt_markers = (
+            "snippet",
+            "excerpt",
+            "text",
+            "document",
+            "key elements",
+            "key details",
+        )
+        label_markers = (
+            "setting",
+            "topic",
+            "characters",
+            "action",
+            "context",
+            "tone",
+            "premise",
+            "conflict",
+            "themes",
+        )
+        return (
+            any(marker in lowered for marker in excerpt_markers)
+            and sum(marker in lowered for marker in label_markers) >= 3
+        )
+
     def _emit_final_thinking_signal(
         self,
         response_message: Optional[AIMessage],
@@ -1649,6 +1689,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             ) and not self._looks_like_search_result_preface_response(
                 cleaned_visible
             ) and not self._looks_like_summary_direction_response(
+                cleaned_visible
+            ) and not self._looks_like_summary_format_description_response(
                 cleaned_visible
             ) and not self._looks_like_malformed_forced_response_fragment(
                 cleaned_visible
@@ -2020,6 +2062,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if self._looks_like_search_result_preface_response(candidate):
             return ""
         if self._looks_like_summary_direction_response(candidate):
+            return ""
+        if self._looks_like_summary_format_description_response(candidate):
             return ""
         if self._looks_like_reasoning_header(candidate):
             return ""

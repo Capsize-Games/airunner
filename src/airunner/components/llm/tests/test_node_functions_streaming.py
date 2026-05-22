@@ -517,6 +517,36 @@ class _VerificationDirectiveFallbackChatModel:
         return iter(self._responses.pop(0))
 
 
+class _VerificationFormatDescriptionFallbackChatModel:
+    """Fake model whose verification pass describes a format, not a summary."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [
+                _chunk(
+                    "Miss Marple becomes involved in a Caribbean resort "
+                    "murder after Major Palgrave tries to show her a "
+                    "snapshot that identifies a killer."
+                )
+            ],
+            [
+                _chunk(
+                    "A bulleted list of key elements extracted from a "
+                    "snippet (Setting, Topic, Characters, Action, "
+                    "Context, Tone)."
+                )
+            ],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return iter(self._responses.pop(0))
+
+
 def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     """RAG synthesis prompt should prioritize document identity cues."""
     mixin = NodeFunctionsMixinDouble([])
@@ -706,6 +736,33 @@ def test_forced_response_summary_falls_back_from_direction_text():
     mixin = NodeFunctionsMixinDouble([])
     mixin.llm_request = SimpleNamespace(document_query_intent="summary")
     mixin._chat_model = _VerificationDirectiveFallbackChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: A Caribbean Mystery - Agatha Christie.epub\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from A Caribbean Mystery - Agatha Christie.epub]\n"
+        "Miss Marple is staying at a Caribbean resort when Major "
+        "Palgrave tries to show her a snapshot of a murderer.\n\n"
+        "[Excerpt 2 from A Caribbean Mystery - Agatha Christie.epub]\n"
+        "Palgrave is killed before he can explain what he has seen.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "Miss Marple becomes involved in a Caribbean resort murder after "
+        "Major Palgrave tries to show her a snapshot that identifies a "
+        "killer."
+    )
+    assert len(mixin._chat_model.prompts) == 2
+
+
+def test_forced_response_summary_falls_back_from_format_description():
+    """Format-description verification output should not replace a draft."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _VerificationFormatDescriptionFallbackChatModel()
 
     message = mixin._generate_response_message_from_results(
         "Matched documents:\n"
