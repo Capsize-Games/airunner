@@ -161,3 +161,68 @@ def test_combine_stream_chunks_preserves_space_after_split_possessive():
 def test_combine_stream_chunks_removes_split_pective_space():
     """Split words ending in -pective should stay contiguous."""
     assert combine_stream_chunks(["intros", " pective"]) == "introspective"
+
+
+def test_combine_stream_chunks_preserves_spaces_in_named_entities():
+    """Title-and-name boundaries should stay readable in prose."""
+    assert combine_stream_chunks(["Miss", "Marple"]) == "Miss Marple"
+
+
+def test_combine_stream_chunks_preserves_spaces_between_common_words():
+    """Plain prose chunks should not collapse into one token."""
+    assert combine_stream_chunks(["some", "details"]) == "some details"
+
+
+def test_combine_stream_chunks_preserves_single_letter_word_boundaries():
+    """Single-letter words should remain separate from neighbors."""
+    assert combine_stream_chunks(["involves", "a"]) == "involves a"
+    assert combine_stream_chunks(["a", "specific"]) == "a specific"
+
+
+def test_combine_stream_chunks_preserves_spaces_before_titles():
+    """Honorifics should keep their word boundary."""
+    assert combine_stream_chunks(["is", "Mr."]) == "is Mr."
+
+
+def test_combine_stream_chunks_preserves_spaces_in_place_names():
+    """Multi-word place names should not collapse during streaming."""
+    assert combine_stream_chunks(["West", "Indies"]) == "West Indies"
+
+
+def test_combine_stream_chunks_repairs_whodunit_split_boundary():
+    """Whodunit should keep the outer space but drop the inner split."""
+    assert (
+        combine_stream_chunks(["classic", "whod", " unit"])
+        == "classic whodunit"
+    )
+
+
+def test_combine_stream_chunks_preserves_space_for_a_caribbean_title():
+    """Single-letter titles should still keep their word boundary."""
+    assert combine_stream_chunks(["A", "Caribbean"]) == "A Caribbean"
+
+
+def test_combine_stream_chunks_preserves_space_in_agatha_christie_name():
+    """Proper names split across chunks should remain readable."""
+    assert (
+        combine_stream_chunks(["Ag", " atha", "Christie"])
+        == "Agatha Christie"
+    )
+
+
+def test_combine_stream_chunks_preserves_space_before_doctor_title():
+    """Common honorifics should keep a boundary in prose."""
+    assert combine_stream_chunks(["like", "Dr."]) == "like Dr."
+
+
+def test_combine_stream_chunks_preserves_common_prose_boundaries():
+    """Readable prose should keep simple verb and noun boundaries."""
+    assert combine_stream_chunks(["to", "see"]) == "to see"
+    assert combine_stream_chunks(["keen", "observations"]) == (
+        "keen observations"
+    )
+
+
+def test_combine_stream_chunks_merges_red_herrings_suffix_split():
+    """Red-herring style suffix splits should collapse back into one word."""
+    assert combine_stream_chunks(["redherr", " ings"]) == "redherrings"

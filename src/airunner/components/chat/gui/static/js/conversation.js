@@ -77,6 +77,7 @@ function initializeChatView() {
         chatBridge.updateLastMessageContent.connect(function (
             requestId,
             content,
+            contentType,
         ) {
             // Update the message for the active request during streaming.
             const container = document.getElementById('conversation-container');
@@ -88,12 +89,14 @@ function initializeChatView() {
             const contentDiv = targetMessage.querySelector('.content');
             if (!contentDiv) return;
 
-            const contentType = targetMessage.getAttribute(
+            const previousContentType = targetMessage.getAttribute(
                 'data-content-type'
             ) || '';
+            const nextContentType = contentType || previousContentType;
+            targetMessage.setAttribute('data-content-type', nextContentType);
 
             // Update content with sanitized HTML
-            contentDiv.innerHTML = sanitizeContent(content, contentType);
+            contentDiv.innerHTML = sanitizeContent(content, nextContentType);
 
             // Trigger MathJax typesetting if needed
             if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {

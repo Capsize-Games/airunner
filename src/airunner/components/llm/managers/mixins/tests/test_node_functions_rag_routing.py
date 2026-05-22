@@ -456,6 +456,7 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
 
     assert "lead with the premise, setting, central conflict" in prompt
     assert "Treat isolated later scenes" in prompt
+    assert "Prefer the inciting incident, victim, investigator, and case setup" in prompt
     assert "Do not infer genre, series, trilogy, collection" in prompt
     assert "prefer a grounded mystery or noir framing" in prompt
     assert "Do not describe literal resurrection" in prompt

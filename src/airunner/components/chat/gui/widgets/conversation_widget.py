@@ -1198,6 +1198,7 @@ class ConversationWidget(BaseWidget):
                         self._active_stream_message_index
                     ].get("request_id", ""),
                     fmt["content"],
+                    fmt["type"],
                 )
 
         if last_token_was_end:

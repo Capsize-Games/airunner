@@ -245,7 +245,7 @@ def test_process_sequential_tokens_updates_message_with_request_id(
     monkeypatch.setattr(
         module.FormatterExtended,
         "format_content",
-        Mock(return_value={"content": "Hello world"}),
+        Mock(return_value={"content": "Hello world", "type": "plaintext"}),
     )
     widget = SimpleNamespace(
         _expected_sequence=1,
@@ -279,6 +279,7 @@ def test_process_sequential_tokens_updates_message_with_request_id(
         "update_last_message_content",
         "req-3",
         "Hello world",
+        "plaintext",
     )
     assert widget._streamed_messages[0]["content"] == "Hello world"
 
@@ -291,7 +292,7 @@ def test_process_sequential_tokens_combines_markdown_boundaries(
     monkeypatch.setattr(
         module.FormatterExtended,
         "format_content",
-        Mock(side_effect=lambda content: {"content": content}),
+        Mock(side_effect=lambda content: {"content": content, "type": "markdown"}),
     )
     widget = SimpleNamespace(
         _expected_sequence=1,
@@ -341,6 +342,7 @@ def test_process_sequential_tokens_combines_markdown_boundaries(
         "update_last_message_content",
         "req-4",
         "According to *The Satanic Bible*",
+        "markdown",
     )
     assert widget._streamed_messages[0]["content"] == (
         "According to *The Satanic Bible*"

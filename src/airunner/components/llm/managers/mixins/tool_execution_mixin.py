@@ -18,6 +18,20 @@ if TYPE_CHECKING:
 class ToolExecutionMixin:
     """Manages tool execution with status tracking and signal emission."""
 
+    _LOW_INFORMATION_DOCUMENT_FOLLOWUPS = frozenset(
+        {
+            "yes",
+            "yeah",
+            "yep",
+            "sure",
+            "ok",
+            "okay",
+            "please",
+            "more",
+            "go on",
+        }
+    )
+
     def _request_debug_metadata(self) -> Optional[dict]:
         """Return one compact request settings snapshot for tool status UI."""
         llm_request = getattr(self, "llm_request", None)
@@ -183,6 +197,7 @@ class ToolExecutionMixin:
                 normalized_call = self._normalize_rag_search_tool_call(
                     tool_call,
                     user_query,
+                    messages,
                 )
                 changed = changed or normalized_call is not tool_call
             normalized_calls.append(normalized_call)
@@ -216,21 +231,63 @@ class ToolExecutionMixin:
         self,
         tool_call: dict,
         user_query: str,
+        messages: list,
     ) -> dict:
         """Ensure forced RAG searches always use a real query string."""
         args = tool_call.get("args") or {}
         query = args.get("query") if isinstance(args, dict) else None
-        if isinstance(query, str) and query.strip():
-            return tool_call
-        if not user_query:
+        resolved_query = self._resolve_document_followup_rag_query(
+            messages,
+            query if isinstance(query, str) else None,
+            user_query,
+        )
+        if resolved_query is None:
+            if isinstance(query, str) and query.strip():
+                return tool_call
+            if not user_query:
+                return tool_call
+            resolved_query = user_query
+
+        if isinstance(query, str) and query.strip() == resolved_query:
             return tool_call
 
         self.logger.info(
-            "Repairing rag_search args with latest user prompt"
+            "Repairing rag_search args with normalized document query"
         )
         normalized = dict(tool_call)
-        normalized["args"] = {"query": user_query}
+        normalized["args"] = {"query": resolved_query}
         return normalized
+
+    def _resolve_document_followup_rag_query(
+        self,
+        messages: list,
+        tool_query: str | None,
+        user_query: str,
+    ) -> str | None:
+        """Rewrite low-information document follow-ups into real RAG queries."""
+        llm_request = getattr(self, "llm_request", None)
+        if getattr(llm_request, "document_answer_mode", None) != "synthesized":
+            return None
+
+        candidate = str(tool_query or user_query or "").strip()
+        if not candidate:
+            return None
+        normalized = " ".join(candidate.lower().split())
+        if normalized not in self._LOW_INFORMATION_DOCUMENT_FOLLOWUPS:
+            return None
+
+        prior_assistant = self._get_latest_assistant_response(messages)
+        if prior_assistant and re.search(
+            r"plot|character|theme",
+            prior_assistant,
+            re.IGNORECASE,
+        ):
+            return "specific plot details, character information, and themes from this book"
+
+        prior_user_query = self._get_previous_substantive_user_query(messages)
+        if prior_user_query:
+            return prior_user_query
+        return None
 
     def _get_latest_user_query(self, messages: list) -> str:
         """Return the most recent user message content."""
@@ -239,6 +296,39 @@ class ToolExecutionMixin:
                 content = getattr(message, "content", "") or ""
                 if isinstance(content, str):
                     return content.strip()
+                return str(content).strip()
+        return ""
+
+    def _get_previous_substantive_user_query(self, messages: list) -> str:
+        """Return the prior non-trivial user question for one follow-up turn."""
+        seen_latest = False
+        for message in reversed(messages):
+            if message.__class__.__name__ != "HumanMessage":
+                continue
+            content = getattr(message, "content", "") or ""
+            text = content.strip() if isinstance(content, str) else str(content).strip()
+            if not text:
+                continue
+            normalized = " ".join(text.lower().split())
+            if not seen_latest:
+                seen_latest = True
+                continue
+            if normalized not in self._LOW_INFORMATION_DOCUMENT_FOLLOWUPS:
+                return text
+        return ""
+
+    def _get_latest_assistant_response(self, messages: list) -> str:
+        """Return the latest assistant response text before one tool turn."""
+        for message in reversed(messages):
+            if message.__class__.__name__ != "AIMessage":
+                continue
+            tool_calls = getattr(message, "tool_calls", None) or []
+            if tool_calls:
+                continue
+            content = getattr(message, "content", "") or ""
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+            if content:
                 return str(content).strip()
         return ""
 

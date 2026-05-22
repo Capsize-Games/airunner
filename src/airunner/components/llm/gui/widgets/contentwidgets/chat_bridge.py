@@ -8,7 +8,8 @@ class ChatBridge(QObject):
     updateLastMessageContent = Signal(
         str,
         str,
-    )  # Update last message content during streaming
+        str,
+    )  # request_id, content, content_type
     scrollRequested = Signal()
     contentHeightChanged = Signal(int)
     deleteMessageRequested = Signal(object)  # Accepts int or str
@@ -32,15 +33,20 @@ class ChatBridge(QObject):
     def append_message(self, msg):
         self.appendMessage.emit(msg)
 
-    @Slot(str, str)
-    def update_last_message_content(self, request_id, content):
+    @Slot(str, str, str)
+    def update_last_message_content(self, request_id, content, content_type):
         """Update the content of the last message (for streaming).
 
         Args:
             request_id: Request identifier for the active streamed response
             content: New content for the last message
+            content_type: Render type for the current content payload
         """
-        self.updateLastMessageContent.emit(request_id, content)
+        self.updateLastMessageContent.emit(
+            request_id,
+            content,
+            content_type,
+        )
 
     @Slot()
     def clear_messages(self):

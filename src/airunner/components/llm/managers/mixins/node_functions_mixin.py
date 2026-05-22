@@ -991,7 +991,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                         "relationships first. Treat isolated later scenes, "
                         "one-off travel stops, and stray dialogue fragments "
                         "as secondary unless the evidence clearly shows they "
-                        "define the work as a whole. If the excerpts describe "
+                        "define the work as a whole. Prefer the inciting "
+                        "incident, victim, investigator, and case setup over "
+                        "static character descriptions or travel anecdotes. If the excerpts describe "
                         "a corpse, a supposedly dead figure, studio illusions, "
                         "or eerie atmosphere, prefer a grounded mystery or noir "
                         "framing unless the evidence explicitly confirms literal "
@@ -1008,7 +1010,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     response_style = (
                         "Lead with premise, setting, and central conflict. "
                         "Keep stray scene details secondary and favor a "
-                        "grounded mystery framing unless the excerpts say otherwise."
+                        "grounded mystery framing unless the excerpts say otherwise. "
+                        "Prioritize the case setup over static character profiles."
                     )
                 else:
                     rag_guidance = summary_guidance

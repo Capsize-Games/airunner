@@ -263,6 +263,78 @@ def test_rag_search_book_about_query_deprioritizes_stray_dialogue(
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")
 @patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_skips_quote_only_opening_fallback(
+    mock_resolve,
+    mock_extract,
+):
+    """Quote-heavy openings should not displace the actual inciting case."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            '"Take all this business about Kenya," said Major Palgrave. "Lots of chaps gabbing away who know nothing about the place!"',
+            "Mr. Jason Rafiel is a wealthy, semi-paralysed man who visits the West Indies every year.",
+            "Miss Marple realizes that Major Palgrave has shown her a photograph of a murderer just before he is killed at the resort.",
+            "Rafiel later becomes Miss Marple's wealthy ally, giving her room to investigate the crimes on the island.",
+        ]
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "photograph of a murderer" in result
+    assert "wealthy ally" in result
+    assert '"Take all this business about Kenya' not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_ignores_substring_marker_false_positives(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise markers should not fire inside unrelated words."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    paragraphs = [
+        "But the pattern was essentially the same. An elderly man who needed a listener so that he could relive happier days.",
+        "Nobody had ever known why. Her eyes strayed to Mr. Rafter's table, where he looked like a wrinkled old bird of prey.",
+    ]
+    paragraphs.extend(
+        f"Bridge paragraph {index} about resort life and ordinary conversation."
+        for index in range(3, 132)
+    )
+    paragraphs.extend(
+        [
+            "Major Palgrave offers Miss Marple a photograph of a murderer at the resort just before he is killed.",
+            "Miss Marple investigates the killing while Jason Rafiel becomes a wealthy ally on the island.",
+        ]
+    )
+    mock_extract.return_value = "\n\n".join(paragraphs)
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "photograph of a murderer" in result
+    assert "wealthy ally" in result
+    assert "needed a listener" not in result
+    assert "wrinkled old bird of prey" not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
 def test_rag_search_summary_omits_filename_inference_metadata(
     mock_resolve,
     mock_extract,

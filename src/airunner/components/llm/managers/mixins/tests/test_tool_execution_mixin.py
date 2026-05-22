@@ -1,5 +1,6 @@
 """Unit tests for ToolExecutionMixin tool-arg normalization."""
 
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -108,3 +109,42 @@ def test_execute_tools_with_status_clears_stale_tool_choice():
     assert mixin._force_tool is None
     assert mixin._tool_choice is None
     assert mixin._rebound is True
+
+
+def test_normalize_rag_search_rewrites_low_info_document_followup():
+    """A bare affirmative should not become a literal document search query."""
+    mixin = _DummyToolExecutionMixin()
+    mixin.llm_request = SimpleNamespace(document_answer_mode="synthesized")
+    messages = [
+        HumanMessage(content="what is this book about?"),
+        AIMessage(
+            content=(
+                "Would you like me to search for more specific details "
+                "about the plot or characters?"
+            )
+        ),
+        HumanMessage(content="yes"),
+        AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "tool-2",
+                    "name": "rag_search",
+                    "args": {"query": "yes"},
+                }
+            ],
+        ),
+    ]
+
+    updated_messages, tool_calls = mixin._normalize_tool_calls_for_execution(
+        messages,
+        messages[-1].tool_calls,
+    )
+
+    assert tool_calls[0]["args"] == {
+        "query": (
+            "specific plot details, character information, and themes "
+            "from this book"
+        )
+    }
+    assert updated_messages[-1].tool_calls[0]["args"] == tool_calls[0]["args"]

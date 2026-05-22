@@ -47,6 +47,7 @@ _PREMISE_PLOT_MARKERS = (
     "investigat",
     "killed",
     "murder",
+    "murderer",
     "mystery",
 )
 _PREMISE_ATMOSPHERE_MARKERS = (
@@ -63,19 +64,30 @@ _PREMISE_CONTEXT_MARKERS = (
 _PREMISE_GROUNDED_MYSTERY_MARKERS = (
     "accident",
     "apparently",
+    "ally",
     "corruption",
     "disguise",
     "effects",
     "fake",
+    "guest",
     "hoax",
+    "hotel",
     "illusion",
     "illusions",
+    "investigation",
     "investigat",
+    "island",
+    "killer",
     "makeup",
     "murder",
+    "murderer",
     "mystery",
     "noir",
+    "photograph",
+    "photo",
+    "snapshot",
     "return",
+    "resort",
     "roller skates",
     "remember",
     "scheme",
@@ -101,6 +113,7 @@ _PREMISE_DIALOGUE_SCENE_MARKERS = (
     "drunk",
     "lifestyle",
 )
+_PREMISE_PREFIX_MARKERS = frozenset({"investigat"})
 
 
 def _coerce_active_values(values: Any) -> list[str]:
@@ -586,6 +599,29 @@ def _build_summary_evidence_text(
     return prefix + _truncate_summary_evidence(body)
 
 
+def _premise_has_marker(text: str, marker: str) -> bool:
+    """Return whether one premise marker appears as an actual cue."""
+    normalized_text = str(text or "").lower()
+    normalized_marker = str(marker or "").lower().strip()
+    if not normalized_text or not normalized_marker:
+        return False
+    if normalized_marker in _PREMISE_PREFIX_MARKERS:
+        return bool(
+            re.search(
+                rf"\b{re.escape(normalized_marker)}[a-z]*\b",
+                normalized_text,
+            )
+        )
+    if " " in normalized_marker:
+        return normalized_marker in normalized_text
+    return bool(
+        re.search(
+            rf"\b{re.escape(normalized_marker)}\b",
+            normalized_text,
+        )
+    )
+
+
 def _premise_paragraph_score(paragraph: str) -> int:
     """Score one paragraph for premise-level summary usefulness."""
     source = str(paragraph or "")
@@ -593,17 +629,22 @@ def _premise_paragraph_score(paragraph: str) -> int:
     if not lowered:
         return 0
 
-    plot_hits = sum(marker in lowered for marker in _PREMISE_PLOT_MARKERS)
+    plot_hits = sum(
+        _premise_has_marker(lowered, marker)
+        for marker in _PREMISE_PLOT_MARKERS
+    )
     if plot_hits == 0:
         return 0
     atmosphere_hits = sum(
-        marker in lowered for marker in _PREMISE_ATMOSPHERE_MARKERS
+        _premise_has_marker(lowered, marker)
+        for marker in _PREMISE_ATMOSPHERE_MARKERS
     )
     context_hits = sum(
-        marker in lowered for marker in _PREMISE_CONTEXT_MARKERS
+        _premise_has_marker(lowered, marker)
+        for marker in _PREMISE_CONTEXT_MARKERS
     )
     grounded_hits = sum(
-        marker in lowered
+        _premise_has_marker(lowered, marker)
         for marker in _PREMISE_GROUNDED_MYSTERY_MARKERS
     )
     dialogue_penalty = _premise_dialogue_penalty(source)
@@ -644,14 +685,16 @@ def _premise_opening_score(paragraph: str) -> int:
     if not lowered:
         return 0
     context_hits = sum(
-        marker in lowered for marker in _PREMISE_CONTEXT_MARKERS
+        _premise_has_marker(lowered, marker)
+        for marker in _PREMISE_CONTEXT_MARKERS
     )
     grounded_hits = sum(
-        marker in lowered
+        _premise_has_marker(lowered, marker)
         for marker in _PREMISE_GROUNDED_MYSTERY_MARKERS
     )
     atmosphere_hits = sum(
-        marker in lowered for marker in _PREMISE_ATMOSPHERE_MARKERS
+        _premise_has_marker(lowered, marker)
+        for marker in _PREMISE_ATMOSPHERE_MARKERS
     )
     return context_hits * 3 + grounded_hits * 2 + atmosphere_hits
 
@@ -700,10 +743,8 @@ def _build_premise_evidence_documents(
         added_openings += 1
         if added_openings >= opening_limit:
             break
-    if not selected and opening_window:
-        add("Opening context", opening_window[0])
 
-    hook_window = paragraphs[: min(len(paragraphs), 120)]
+    hook_window = paragraphs[: min(len(paragraphs), 160)]
     scored_hooks = [
         (_premise_paragraph_score(paragraph), index, paragraph)
         for index, paragraph in enumerate(hook_window)
