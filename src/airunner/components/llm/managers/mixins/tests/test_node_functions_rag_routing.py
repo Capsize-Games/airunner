@@ -75,6 +75,36 @@ class _CapturingCallModelNodeFunctions(_DummyNodeFunctions):
         return AIMessage(content="model response", tool_calls=[])
 
 
+class _VerificationFallbackNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._streamed_messages = [
+            AIMessage(
+                content=(
+                    "Miss Marple looks into a resort murder after a doctor "
+                    "realizes he once recognized a killer from a snapshot."
+                ),
+                tool_calls=[],
+            ),
+            AIMessage(
+                content=(
+                    '"Focus on the murder mystery, the telling of the '
+                    "story, the setting (clubs), and the specific detail "
+                    'about the snapshot." '
+                    "(This looks like an instruction "
+                    "or a note rather than a full answer, but I need to "
+                    "treat it as the starting point to be verified against "
+                    "search results)."
+                ),
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        return self._streamed_messages.pop(0)
+
+
 def test_route_after_tools_returns_model_for_rag_search():
     """RAG search results should return to the model for a streamed answer."""
     mixin = _DummyNodeFunctions()
@@ -607,4 +637,44 @@ def test_recover_forced_response_content_rejects_summary_prompt_echo():
         "eccentric characters as they investigate crypts, danger, memory, "
         "and grief in a setting where the past keeps intruding on the "
         "present."
+    )
+
+
+def test_recover_forced_response_content_rejects_verification_meta_text():
+    """Verifier meta-review text should not surface as the visible answer."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            '"Focus on the murder mystery, the telling of the story, the '
+            'setting (clubs), and the specific detail about the snapshot." '
+            "(This looks like an instruction or a note rather than a full "
+            "answer, but I need to treat it as the starting point to be "
+            "verified against search results)."
+        ),
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text():
+    """Bad verifier meta output should not replace a usable drafted answer."""
+    mixin = _VerificationFallbackNodeFunctions()
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA doctor recalls recognizing a murderer from a "
+        "snapshot at a Caribbean resort.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple looks into a resort murder after a doctor realizes he "
+        "once recognized a killer from a snapshot."
     )

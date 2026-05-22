@@ -629,7 +629,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                         drafted_response,
                         generation_kwargs,
                     )
-                    if verified_message is not None:
+                    if self._should_accept_verified_document_response(
+                        verified_message,
+                        reject_structure_only=reject_structure_only,
+                    ):
                         response_message = verified_message
 
                 self._emit_final_thinking_signal(response_message)
@@ -823,7 +826,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     drafted_response,
                     generation_kwargs,
                 )
-                if verified_message is not None:
+                if self._should_accept_verified_document_response(
+                    verified_message,
+                    reject_structure_only=reject_structure_only,
+                ):
                     response_message = verified_message
 
             self._emit_final_thinking_signal(response_message)
@@ -914,6 +920,21 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             thinking_metadata=thinking_metadata,
             buffer_visible_output=True,
         )
+
+    def _should_accept_verified_document_response(
+        self,
+        verified_message: Optional[AIMessage],
+        *,
+        reject_structure_only: bool,
+    ) -> bool:
+        """Return whether the verifier produced one user-facing answer."""
+        if verified_message is None:
+            return False
+        verified_content = self._recover_forced_response_content(
+            verified_message,
+            reject_structure_only=reject_structure_only,
+        )
+        return bool(verified_content.strip())
 
     def _build_search_results_prompt(
         self,
@@ -1482,8 +1503,19 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             "let's aim for",
             "don't add fluff",
             "just state the facts",
+            "this looks like an instruction or a note rather than a full answer",
+            "treat it as the starting point",
+            "to be verified against search results",
         )
-        return any(marker in lowered for marker in markers)
+        if any(marker in lowered for marker in markers):
+            return True
+        return (
+            "search results" in lowered
+            and any(
+                marker in lowered
+                for marker in ("verify", "verified", "instruction")
+            )
+        )
 
     @staticmethod
     def _looks_like_summary_prompt_echo(text: str) -> bool:
