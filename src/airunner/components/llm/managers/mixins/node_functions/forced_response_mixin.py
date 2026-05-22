@@ -389,6 +389,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 internal_generation_kwargs,
                 thinking_metadata=thinking_metadata,
                 buffer_visible_output=True,
+                disable_thinking=document_tool,
             )
             if response_message is None:
                 return None
@@ -631,4 +632,5 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             verification_generation_kwargs,
             thinking_metadata=thinking_metadata,
             buffer_visible_output=True,
+            disable_thinking=self._is_document_result_tool(tool_name),
         )

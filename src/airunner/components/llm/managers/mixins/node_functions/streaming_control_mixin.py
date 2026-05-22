@@ -91,6 +91,7 @@ class StreamingControlMixin:
         *,
         thinking_metadata: Optional[Dict[str, Any]] = None,
         buffer_visible_output: bool = False,
+        disable_thinking: bool = False,
     ) -> Optional[AIMessage]:
         """Stream one internal model pass with tools disabled."""
         chat_model = getattr(self, "_chat_model", None)
@@ -110,15 +111,33 @@ class StreamingControlMixin:
             if hasattr(chat_model, attr_name):
                 original_values[attr_name] = getattr(chat_model, attr_name)
                 setattr(chat_model, attr_name, override)
+        if disable_thinking and hasattr(chat_model, "enable_thinking"):
+            original_values["enable_thinking"] = getattr(
+                chat_model,
+                "enable_thinking",
+            )
+            setattr(chat_model, "enable_thinking", False)
 
         try:
             if buffer_visible_output:
                 self._token_callback = None
-            return self._stream_model_response(
+            response_message = self._stream_model_response(
                 formatted_prompt,
                 generation_kwargs or {},
                 thinking_metadata=thinking_metadata,
             )
+            if disable_thinking and response_message is not None:
+                additional_kwargs = dict(
+                    getattr(response_message, "additional_kwargs", {}) or {}
+                )
+                additional_kwargs.pop("thinking_content", None)
+                additional_kwargs.pop("reasoning_content", None)
+                response_message = AIMessage(
+                    content=getattr(response_message, "content", "") or "",
+                    additional_kwargs=additional_kwargs,
+                    tool_calls=getattr(response_message, "tool_calls", []) or [],
+                )
+            return response_message
         finally:
             self._token_callback = token_callback_backup
             for attr_name, original_value in original_values.items():

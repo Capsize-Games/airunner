@@ -1190,9 +1190,20 @@ class _SummaryBudgetCapturingChatModel:
         self.tools = None
         self.tool_choice = None
         self.observed_kwargs = []
+        self.observed_enable_thinking = []
 
     def stream(self, *_args, **kwargs):
         self.observed_kwargs.append(dict(kwargs))
+        self.observed_enable_thinking.append(self.enable_thinking)
+        if not self.enable_thinking:
+            return iter(
+                [
+                    _chunk(
+                        "<answer_text>The document presents a realist "
+                        "philosophy that rejects mystical morality.</answer_text>"
+                    )
+                ]
+            )
         return iter(
             [
                 _reasoning_chunk(
@@ -1211,6 +1222,7 @@ def test_forced_response_summary_uses_larger_internal_budget():
     """Summary synthesis should not inherit the tiny outer RAG budget."""
     mixin = NodeFunctionsMixinDouble([])
     mixin._chat_model = _SummaryBudgetCapturingChatModel()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
 
     message = mixin._generate_response_message_from_results(
         "Relevant excerpts:\nA substantive passage.",
@@ -1227,9 +1239,12 @@ def test_forced_response_summary_uses_larger_internal_budget():
     assert mixin._chat_model.observed_kwargs[0]["max_new_tokens"] == 1024
     assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "low"
     assert mixin._chat_model.observed_kwargs[0]["temperature"] == 0.1
+    assert mixin._chat_model.observed_enable_thinking[0] is False
     assert mixin._chat_model.observed_kwargs[1]["max_new_tokens"] == 1024
     assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "low"
     assert mixin._chat_model.observed_kwargs[1]["temperature"] == 0.1
+    assert mixin._chat_model.observed_enable_thinking[1] is False
+    assert mixin._chat_model.enable_thinking is True
 
 
 class _InternalSynthesisReasoningChatModel:
@@ -1241,6 +1256,10 @@ class _InternalSynthesisReasoningChatModel:
         self.tool_choice = None
 
     def stream(self, *_args, **_kwargs):
+        if not self.enable_thinking:
+            return iter([
+                _chunk("<answer_text>Visible answer</answer_text>")
+            ])
         return iter(
             [
                 _reasoning_chunk(
@@ -1251,10 +1270,11 @@ class _InternalSynthesisReasoningChatModel:
         )
 
 
-def test_forced_response_keeps_thinking_updates_and_completes():
-    """Internal synthesis should stream thinking and buffer raw text."""
+def test_forced_response_disables_hidden_stage_thinking_and_completes():
+    """Hidden document stages should not spend output budget on thinking."""
     mixin = NodeFunctionsMixinDouble([])
     mixin._chat_model = _InternalSynthesisReasoningChatModel()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
 
     message = mixin._generate_response_message_from_results(
         "Relevant excerpts:\nA substantive passage.",
@@ -1263,13 +1283,7 @@ def test_forced_response_keeps_thinking_updates_and_completes():
     )
 
     assert message.content == "Visible answer"
-    thinking_content = message.additional_kwargs["thinking_content"]
-    assert "document_synthesis" in thinking_content
-    assert "document_verification" in thinking_content
-    assert "Final Conversational Reply" in thinking_content
-    assert thinking_content.count(
-        "Wait, one more check:\nUse the title only."
-    ) == 3
+    assert message.additional_kwargs.get("thinking_content", "") == ""
     assert message.additional_kwargs["thinking_metadata"]["stage"] == (
         "document_verification"
     )
@@ -1283,8 +1297,8 @@ def test_forced_response_keeps_thinking_updates_and_completes():
         for call in mixin._signal_emitter.emit_signal.call_args_list
         if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
     ]
-    assert statuses[:3] == ["started", "streaming", "completed"]
-    assert statuses[-1] == "completed"
+    assert statuses == ["completed"]
+    assert all(update["content"] == "" for update in thinking_updates)
     assert thinking_updates[-1]["metadata"]["stage"] == (
         "document_verification"
     )

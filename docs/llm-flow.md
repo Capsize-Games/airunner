@@ -171,7 +171,10 @@ flowchart LR
   duplicate-call recovery, and task-completing tool replies.
 - Document-specific grounded replies can swap to a saved final chat
   prompt before the visible answer is generated. Those internal passes
-  can unbind tools, but they now keep thinking enabled.
+  can unbind tools. Request-level thinking still stays on, but hidden
+  document synthesis and verification now run with model thinking
+  disabled so they spend their budget on the committed answer rather
+  than on internal reasoning prose.
 - For large attached documents, `analyze_loaded_document` now carries a
   reduced whole-document bundle with coverage, a deterministic refined
   synthesis, chunk summaries, and supporting evidence so hidden
@@ -189,12 +192,11 @@ flowchart LR
   checkpointed tool state for document requests before it falls back to
   the generic empty-result messages such as the read-only or
   non-mutating tool notices.
-- In the current document-summary path, the remaining hard failure mode
-  is that hidden synthesis or verification can consume its internal
-  generation budget without ever emitting a committed `answer_text`
-  block. When that happens, the pipeline now fails closed instead of
-  leaking reasoning, but the request can still collapse into the empty-
-  result fallback path.
+- The remaining hard failure mode in this path is no longer leaked
+  reasoning; it is a stage returning no committed `answer_text` block
+  even after the hidden no-think pass. When that happens, the pipeline
+  fails closed and can still collapse into the empty-result fallback
+  path.
 
 ### 8. Streaming And Rendering
 

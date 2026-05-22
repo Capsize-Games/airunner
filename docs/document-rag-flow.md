@@ -109,6 +109,11 @@ flowchart LR
    or replace the draft only through a valid `answer_text` block; meta
    fragments, verifier commentary, and other reasoning text no longer
    count as successful document finalization.
+- Those hidden synthesis and verification passes now run with model
+   thinking disabled even though request-level thinking remains enabled.
+   That keeps the internal stage budget focused on emitting the
+   committed `answer_text` block instead of spending the turn on hidden
+   reasoning prose.
 - Direct document actions such as `PERFORM_RAG_SEARCH` can still use
   explicit forced tool routing.
 
@@ -157,8 +162,9 @@ Current roles:
 - `inspect_loaded_documents()` returns metadata and extracted
   structure headings.
 - `analyze_loaded_document()` returns either full-document text for
-   small documents or a chunked evidence bundle with document coverage
-   and supporting excerpts for larger documents.
+   small documents or a chunked evidence bundle with document coverage,
+   deterministic refined synthesis, chunk summaries, and supporting
+   excerpts for larger documents.
 - `rag_search()` performs excerpt retrieval and wider fallback search.
 - Summary evidence and chunk frontloading now use request metadata,
   especially `document_summary_focus`, instead of reparsing the prompt.
