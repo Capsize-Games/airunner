@@ -170,6 +170,8 @@ class CanvasAPIService(APIServiceBase):
         )
 
     def create_image_request(self, **kwargs) -> ImageRequest:
+        include_image_data = kwargs.get("include_image_data", True)
+
         # Check if we have an inpaint model selected, prioritize that
         section = kwargs.get("section", None)
 
@@ -193,19 +195,25 @@ class CanvasAPIService(APIServiceBase):
         generator_settings = self.generator_settings
 
         controlnet_image = None
+        has_controlnet_source = False
         if self.controlnet_settings.enabled:
             controlnet_binary_image = self.controlnet_settings.image
-            if controlnet_binary_image is not None:
-                controlnet_image = convert_binary_to_image(
-                    controlnet_binary_image
-                )
-                controlnet_image = controlnet_image.convert("RGB")
-            else:
-                controlnet_image = self.controlnet_image
+            has_controlnet_source = controlnet_binary_image is not None
+            if include_image_data:
+                if controlnet_binary_image is not None:
+                    controlnet_image = convert_binary_to_image(
+                        controlnet_binary_image
+                    )
+                    controlnet_image = controlnet_image.convert("RGB")
+                else:
+                    controlnet_image = self.controlnet_image
+                has_controlnet_source = controlnet_image is not None
+            elif self.drawing_pad_settings.image is not None:
+                has_controlnet_source = True
 
         controlnet_enabled = (
             self.controlnet_settings.enabled
-            and controlnet_image is not None
+            and has_controlnet_source
         )
 
         # Determine strength based on whether we are doing img2img or txt2img
@@ -260,10 +268,10 @@ class CanvasAPIService(APIServiceBase):
         # Get image from ImageToImageSettings if img2img
         if is_img2img:
             binary_image = self.image_to_image_settings.image
-            if binary_image is None:
+            if include_image_data and binary_image is None:
                 image = self.img2img_image
 
-        if binary_image is not None:
+        if include_image_data and binary_image is not None:
             image = convert_binary_to_image(binary_image)
             image = image.convert("RGB")
 
@@ -317,13 +325,16 @@ class CanvasAPIService(APIServiceBase):
         return image_request
 
     def input_image_changed(self, section: str, setting: str, value: Any):
+        include_image_data = setting != "enabled"
         self.emit_signal(
             SignalCode.INPUT_IMAGE_SETTINGS_CHANGED,
             {
                 "section": section,
                 "setting": setting,
                 "value": value,
-                "image_request": self.create_image_request(),
+                "image_request": self.create_image_request(
+                    include_image_data=include_image_data,
+                ),
             },
         )
 

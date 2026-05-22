@@ -59,21 +59,6 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
-        self.tab_2 = QWidget()
-        self.tab_2.setObjectName(u"tab_2")
-        self.gridLayout_5 = QGridLayout(self.tab_2)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.layer_tab_splitter = QSplitter(self.tab_2)
-        self.layer_tab_splitter.setObjectName(u"layer_tab_splitter")
-        self.layer_tab_splitter.setOrientation(Qt.Orientation.Vertical)
-        self.canvas_layer_container = CanvasLayerContainerWidget(self.layer_tab_splitter)
-        self.canvas_layer_container.setObjectName(u"canvas_layer_container")
-        self.layer_tab_splitter.addWidget(self.canvas_layer_container)
-
-        self.gridLayout_5.addWidget(self.layer_tab_splitter, 0, 0, 1, 1)
-
-        self.tool_tab_widget_container.addTab(self.tab_2, "")
         self.tab_6 = QWidget()
         self.tab_6.setObjectName(u"tab_6")
         self.gridLayout_7 = QGridLayout(self.tab_6)
@@ -100,6 +85,21 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_8.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_7, "")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName(u"tab_2")
+        self.gridLayout_5 = QGridLayout(self.tab_2)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.layer_tab_splitter = QSplitter(self.tab_2)
+        self.layer_tab_splitter.setObjectName(u"layer_tab_splitter")
+        self.layer_tab_splitter.setOrientation(Qt.Orientation.Vertical)
+        self.canvas_layer_container = CanvasLayerContainerWidget(self.layer_tab_splitter)
+        self.canvas_layer_container.setObjectName(u"canvas_layer_container")
+        self.layer_tab_splitter.addWidget(self.canvas_layer_container)
+
+        self.gridLayout_5.addWidget(self.layer_tab_splitter, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_2, "")
         self.tab_4 = QWidget()
         self.tab_4.setObjectName(u"tab_4")
         self.gridLayout_2 = QGridLayout(self.tab_4)
@@ -111,7 +111,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 98, 28))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 648, 754))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -163,9 +163,9 @@ class Ui_stablediffusion_tool_tab_widget(object):
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Model", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Layers", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Embeddings", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Layers", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_4), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Grid", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Images", None))
     # retranslateUi

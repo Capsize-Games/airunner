@@ -85,8 +85,6 @@ class ChatPromptWidget(BaseWidget):
     icons = [
         ("chevron-up", "send_button"),
         ("plus", "clear_conversation_button"),
-        ("clock", "history_button"),
-        ("settings", "settings_button"),
         ("stop-circle", "stop_button"),
         ("paperclip", "attach_button"),
     ]
@@ -286,24 +284,6 @@ class ChatPromptWidget(BaseWidget):
             self.logger.error("Failed to create new conversation")
             # Fallback to old behavior
             self.api.llm.clear_history()
-
-    @Slot(bool)
-    def on_history_button_toggled(self, checked: bool):
-        self.ui.settings_button.blockSignals(True)
-        self.ui.settings_button.setChecked(False)
-        self.ui.settings_button.blockSignals(False)
-        if checked:
-            self._ensure_history_view_loaded()
-        self.ui.tabWidget.setCurrentIndex(2 if checked else 0)
-
-    @Slot(bool)
-    def on_settings_button_toggled(self, checked: bool):
-        self.ui.history_button.blockSignals(True)
-        self.ui.history_button.setChecked(False)
-        self.ui.history_button.blockSignals(False)
-        if checked:
-            self._ensure_settings_view_loaded()
-        self.ui.tabWidget.setCurrentIndex(1 if checked else 0)
 
     def _ensure_settings_view_loaded(self):
         """Create the settings page only when the user opens it."""
@@ -595,19 +575,6 @@ class ChatPromptWidget(BaseWidget):
                 len(rag_files),
             )
         
-        # Add attached images (manual + auto canvas) if any
-        images_for_request = self._collect_images_for_llm()
-        if images_for_request:
-            if self._is_model_vision_capable():
-                llm_request.images = images_for_request
-                self.logger.info(
-                    f"Added {len(images_for_request)} images to llm_request"
-                )
-            else:
-                self.logger.warning(
-                    "Images attached but model does not support vision - ignoring"
-                )
-        
         self.logger.info(f"Sending request - action={action}, force_tool={llm_request.force_tool}, tool_categories={llm_request.tool_categories}")
         
         self.api.llm.send_request(
@@ -736,8 +703,6 @@ class ChatPromptWidget(BaseWidget):
         if self._startup_controls_loaded:
             return
         self._startup_controls_loaded = True
-        self._hide_action_bar_controls_moved_to_sidebar()
-        self._hide_footer_controls_moved_to_settings()
         self._populate_model_dropdown()
         self._populate_reasoning_effort_dropdown()
         self._update_thinking_checkbox_visibility()
@@ -786,25 +751,9 @@ class ChatPromptWidget(BaseWidget):
         )
         dropdown.setToolTip("GPT-OSS reasoning effort")
 
-        spacer_index = self.ui.horizontalLayout_2.indexOf(self.ui.footer_spacer)
-        self.ui.horizontalLayout_2.insertWidget(spacer_index, dropdown)
         dropdown.currentIndexChanged.connect(self.on_reasoning_effort_changed)
         dropdown.hide()
         self.ui.reasoning_effort_dropdown = dropdown
-
-    def _hide_footer_controls_moved_to_settings(self) -> None:
-        """Hide footer controls that now live in the settings panel."""
-        if hasattr(self.ui, "provider_dropdown"):
-            self.ui.provider_dropdown.setVisible(False)
-        if hasattr(self.ui, "precision_dropdown"):
-            self.ui.precision_dropdown.setVisible(False)
-
-    def _hide_action_bar_controls_moved_to_sidebar(self) -> None:
-        """Hide action-bar controls that now live in the main left rail."""
-        if hasattr(self.ui, "history_button"):
-            self.ui.history_button.setVisible(False)
-        if hasattr(self.ui, "settings_button"):
-            self.ui.settings_button.setVisible(False)
 
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Finish non-critical startup work after the main window loads."""
@@ -2097,52 +2046,6 @@ class ChatPromptWidget(BaseWidget):
             repo_id=repo_id,
         )
 
-    def _populate_provider_dropdown(self) -> None:
-        """Populate the provider dropdown with available providers."""
-        if not hasattr(self.ui, "provider_dropdown"):
-            return
-        
-        self.ui.provider_dropdown.blockSignals(True)
-        self.ui.provider_dropdown.clear()
-        
-        # Provider options with display name -> ModelService value mapping
-        providers = [
-            ("HuggingFace", ModelService.LOCAL.value),
-            ("Ollama", ModelService.OLLAMA.value),
-            ("OpenRouter", ModelService.OPENROUTER.value),
-        ]
-        
-        for display_name, service_value in providers:
-            self.ui.provider_dropdown.addItem(display_name, service_value)
-        
-        # Set current selection based on saved settings
-        current_service = getattr(self.llm_generator_settings, "model_service", ModelService.LOCAL.value)
-        for i in range(self.ui.provider_dropdown.count()):
-            if self.ui.provider_dropdown.itemData(i) == current_service:
-                self.ui.provider_dropdown.setCurrentIndex(i)
-                break
-        
-        self.ui.provider_dropdown.blockSignals(False)
-
-    @Slot(int)
-    def on_provider_changed(self, index: int) -> None:
-        """Handle provider selection change from dropdown."""
-        if index < 0:
-            return
-        
-        provider = self.ui.provider_dropdown.itemData(index)
-        if not provider:
-            return
-        
-        # Update settings with new provider
-        self.update_llm_generator_settings(model_service=provider)
-        
-        # Repopulate model dropdown for new provider
-        self._populate_model_dropdown()
-        
-        # Update precision dropdown for new provider
-        self._populate_precision_dropdown()
-
     def _emit_llm_model_changed_signal(
         self,
         model_path: str,
@@ -2216,103 +2119,6 @@ class ChatPromptWidget(BaseWidget):
         # Update context tokens
         self._refresh_model_context_tokens()
         
-    @Slot(int)
-    def on_precision_changed(self, index: int) -> None:
-        """Handle precision selection change from dropdown.
-        
-        Updates the LLM generator settings with the selected dtype/precision.
-        This affects how the model is loaded (quantization level).
-        """
-        if index < 0:
-            return
-        
-        if not hasattr(self.ui, "precision_dropdown"):
-            return
-        
-        precision = self.ui.precision_dropdown.itemData(index)
-        if not precision:
-            return
-        
-        self.logger.info(f"Precision changed to: {precision}")
-        self.update_llm_generator_settings(dtype=precision)
-
-        self._emit_llm_model_changed_signal(
-            getattr(self.llm_generator_settings, "model_path", ""),
-            getattr(self.llm_generator_settings, "model_version", ""),
-        )
-
-    def _populate_precision_dropdown(self) -> None:
-        """Populate the precision dropdown with available options.
-        
-        Options are filtered based on the model's native precision.
-        Lower precision options (more quantization) are always available,
-        while higher precision options are limited by the model's native precision.
-        
-        Precision hierarchy (from highest to lowest):
-        - bf16 (bfloat16) - 16-bit brain float
-        - fp16 (float16) - 16-bit float
-        - 8bit - 8-bit quantization
-        - 4bit - 4-bit quantization (default)
-        """
-        if not hasattr(self.ui, "precision_dropdown"):
-            return
-        
-        self.ui.precision_dropdown.blockSignals(True)
-        self.ui.precision_dropdown.clear()
-        
-        # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
-        
-        # Remote providers don't support precision selection
-        if provider != ModelService.LOCAL.value:
-            self.ui.precision_dropdown.addItem("Auto", "auto")
-            self.ui.precision_dropdown.setEnabled(False)
-            self.ui.precision_dropdown.setToolTip("Precision selection not available for remote providers")
-            self.ui.precision_dropdown.blockSignals(False)
-            return
-        
-        self.ui.precision_dropdown.setEnabled(True)
-        self.ui.precision_dropdown.setToolTip(
-            "Model precision/quantization. Lower precision uses less memory but may reduce quality."
-        )
-        
-        # Define precision options with display names and values
-        # These are ordered from lowest precision (most memory efficient) to highest
-        precision_options = [
-            ("4-bit", "4bit"),
-            ("8-bit", "8bit"),
-            ("FP16", "float16"),
-            ("BF16", "bfloat16"),
-        ]
-        
-        # Get model's native precision from config if available
-        native_precision = self._get_model_native_precision()
-        
-        # Build list of available options based on native precision
-        precision_hierarchy = ["4bit", "8bit", "float16", "bfloat16"]
-        native_index = precision_hierarchy.index(native_precision) if native_precision in precision_hierarchy else len(precision_hierarchy) - 1
-        
-        for display_name, value in precision_options:
-            option_index = precision_hierarchy.index(value) if value in precision_hierarchy else 0
-            if option_index <= native_index:
-                self.ui.precision_dropdown.addItem(display_name, value)
-        
-        # Restore current selection from settings
-        current_dtype = getattr(self.llm_generator_settings, "dtype", "4bit") or "4bit"
-        
-        # Find and select the saved dtype
-        for i in range(self.ui.precision_dropdown.count()):
-            if self.ui.precision_dropdown.itemData(i) == current_dtype:
-                self.ui.precision_dropdown.setCurrentIndex(i)
-                break
-        else:
-            # If saved dtype is not available (e.g., model changed), default to 4bit
-            self.ui.precision_dropdown.setCurrentIndex(0)
-        
-        self.ui.precision_dropdown.blockSignals(False)
-
     def _get_model_native_precision(self) -> str:
         """Determine the native precision of the currently selected model.
         
@@ -2532,15 +2338,8 @@ class ChatPromptWidget(BaseWidget):
         """Update attach button state and tooltip for available file types."""
         if not hasattr(self.ui, "attach_button"):
             return
-
-        is_vision_capable = self._is_model_vision_capable()
+        
         self.ui.attach_button.setEnabled(True)
-
-        if is_vision_capable:
-            self.ui.attach_button.setToolTip(
-                "Attach documents for RAG or images for vision analysis"
-            )
-            return
 
         self.ui.attach_button.setToolTip("Attach documents for RAG")
 
@@ -2662,9 +2461,6 @@ class ChatPromptWidget(BaseWidget):
         document_patterns = " ".join(
             f"*{suffix}" for suffix in rag_document_suffixes()
         )
-        if not self._is_model_vision_capable():
-            return f"Documents ({document_patterns});;All Files (*)"
-
         image_patterns = " ".join(
             f"*{suffix}" for suffix in chat_image_suffixes()
         )
@@ -2675,47 +2471,6 @@ class ChatPromptWidget(BaseWidget):
             f"Images ({image_patterns});;"
             "All Files (*)"
         )
-
-    def _is_model_vision_capable(self) -> bool:
-        """Check if the currently selected model supports vision/images.
-        
-        Returns:
-            True if the model can process images, False otherwise.
-        """
-        # Get current provider
-        provider = ModelService.LOCAL.value
-        if hasattr(self.ui, "provider_dropdown") and self.ui.provider_dropdown.count() > 0:
-            provider = self.ui.provider_dropdown.currentData() or ModelService.LOCAL.value
-        
-        # Get current model
-        model_id = None
-        if hasattr(self.ui, "model_dropdown") and self.ui.model_dropdown.count() > 0:
-            model_id = self.ui.model_dropdown.currentData()
-        
-        if not model_id:
-            return False
-        
-        # Check provider config for vision capability
-        if provider == ModelService.LOCAL.value:
-            model_config = LLMProviderConfig.LOCAL_MODELS.get(model_id, {})
-            return model_config.get("vision_capable", False)
-        elif provider == ModelService.OPENROUTER.value:
-            # OpenRouter models with known vision capability
-            # (simplified check - real implementation would query API)
-            vision_models = [
-                "anthropic/claude-3.5-sonnet",
-                "anthropic/claude-3-opus",
-                "openai/gpt-4-turbo",
-                "openai/gpt-4o",
-                "google/gemini-pro-1.5",
-            ]
-            return model_id in vision_models
-        elif provider == ModelService.OLLAMA.value:
-            # Ollama vision-capable models (llava, bakllava, moondream)
-            vision_models = ["llava", "bakllava", "moondream"]
-            return any(vm in model_id.lower() for vm in vision_models)
-        
-        return False
 
     @Slot()
     def _on_attach_button_clicked(self) -> None:
@@ -2737,12 +2492,6 @@ class ChatPromptWidget(BaseWidget):
         for file_path in file_paths:
             if is_rag_document_path(file_path):
                 self._add_document_attachment_from_path(file_path)
-                continue
-
-            if self._is_model_vision_capable() and is_chat_image_path(
-                file_path
-            ):
-                self._add_image_attachment_from_path(file_path)
                 continue
 
             self.logger.warning(
@@ -2836,59 +2585,6 @@ class ChatPromptWidget(BaseWidget):
         self._document_attachment_widgets.clear()
         self._attached_documents.clear()
         self._update_attachments_visibility()
-
-    def _add_image_attachment_from_path(self, file_path: str) -> None:
-        """Add an image attachment from a file path.
-        
-        Args:
-            file_path: Path to the image file.
-        """
-        try:
-            image = Image.open(file_path)
-            # Convert to RGB if needed (e.g., for RGBA or P mode images)
-            if image.mode not in ("RGB", "RGBA"):
-                image = image.convert("RGB")
-            self._add_image_attachment(image, file_path)
-        except Exception as e:
-            self.logger.error(f"Failed to load image from {file_path}: {e}")
-
-    def _add_image_attachment(
-        self,
-        image: Image.Image,
-        image_path: Optional[str] = None,
-    ) -> None:
-        """Add an image to the attachments list.
-        
-        Args:
-            image: PIL Image to attach.
-            image_path: Optional path to the source file.
-        """
-        if not self._is_model_vision_capable():
-            self.logger.warning("Cannot attach images: model does not support vision")
-            return
-        
-        # Store the image
-        self._attached_images.append((image, image_path))
-
-        label = os.path.basename(image_path) if image_path else "Pasted image"
-        if image_path:
-            tooltip = f"{image_path}\n{image.width}x{image.height}"
-        else:
-            tooltip = f"Image: {image.width}x{image.height}"
-
-        widget = ChatAttachmentPillWidget(
-            label,
-            tooltip=tooltip,
-            parent=self,
-        )
-        widget.removed.connect(lambda: self._remove_image_attachment(widget))
-        self._image_attachment_widgets.append(widget)
-        self._add_attachment_widget(widget)
-        
-        self.logger.debug(
-            f"Added image attachment: {image_path or 'in-memory'} "
-            f"({image.width}x{image.height})"
-        )
 
     def _add_attachment_widget(
         self,
@@ -3037,13 +2733,7 @@ class ChatPromptWidget(BaseWidget):
         Returns:
             True if the drag was accepted, False otherwise.
         """
-        vision_capable = self._is_model_vision_capable()
         mime = event.mimeData()
-
-        # Accept internal image panel drags
-        if vision_capable and mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
-            event.acceptProposedAction()
-            return True
 
         if self._extract_dragged_knowledge_base_paths(event):
             event.acceptProposedAction()
@@ -3058,42 +2748,12 @@ class ChatPromptWidget(BaseWidget):
                 if is_rag_document_path(path):
                     event.acceptProposedAction()
                     return True
-                if vision_capable and is_chat_image_path(path):
-                    event.acceptProposedAction()
-                    return True
-
-        # Accept raw image data
-        if vision_capable:
-            for fmt in mime.formats():
-                if fmt.startswith("image/"):
-                    event.acceptProposedAction()
-                    return True
 
         return False
 
     def _handle_drop(self, event: QDropEvent) -> bool:
         """Handle dropped documents and images for the current chat."""
-        vision_capable = self._is_model_vision_capable()
         mime = event.mimeData()
-
-        # Try internal image panel drag first
-        if vision_capable and mime.hasFormat(IMAGE_METADATA_MIME_TYPE):
-            try:
-                import json
-
-                data = mime.data(IMAGE_METADATA_MIME_TYPE)
-                metadata_str = bytes(data.data()).decode("utf-8")
-                metadata = json.loads(metadata_str)
-                image_path = metadata.get("path")
-
-                if image_path and os.path.exists(image_path):
-                    self._add_image_attachment_from_path(image_path)
-                    event.acceptProposedAction()
-                    return True
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to handle image metadata drop: {e}"
-                )
 
         internal_paths = self._extract_dragged_knowledge_base_paths(event)
         if internal_paths:
@@ -3112,33 +2772,9 @@ class ChatPromptWidget(BaseWidget):
                     self._add_document_attachment_from_path(path)
                     handled = True
                     continue
-                if vision_capable and is_chat_image_path(path):
-                    self._add_image_attachment_from_path(path)
-                    handled = True
             if handled:
                 event.acceptProposedAction()
                 return True
-
-        # Try raw image data
-        if vision_capable:
-            import io
-
-            for fmt in mime.formats():
-                if not fmt.startswith("image/"):
-                    continue
-                data = mime.data(fmt)
-                if data.size() < 10:
-                    continue
-                try:
-                    data_bytes = data.data()
-                    img = Image.open(io.BytesIO(data_bytes))
-                    self._add_image_attachment(img)
-                    event.acceptProposedAction()
-                    return True
-                except Exception as e:
-                    self.logger.debug(
-                        f"Failed to load image from {fmt}: {e}"
-                    )
 
         return False
 

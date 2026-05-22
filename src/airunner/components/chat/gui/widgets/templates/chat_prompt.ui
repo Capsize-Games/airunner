@@ -109,76 +109,12 @@
           </property>
          </spacer>
         </item>
-        <item>
-         <widget class="QPushButton" name="history_button">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>30</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>30</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>Chat history</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset resource="../../../../../gui/resources/feather.qrc">
-            <normaloff>:/light/icons/feather/light/clock.svg</normaloff>:/light/icons/feather/light/clock.svg</iconset>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="settings_button">
-          <property name="minimumSize">
-           <size>
-            <width>30</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>30</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>Settings</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset resource="../../../../../gui/resources/feather.qrc">
-            <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
        </layout>
       </item>
      </layout>
     </widget>
    </item>
-  <item row="1" column="0">
+   <item row="1" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -189,7 +125,7 @@
         <x>0</x>
         <y>0</y>
         <width>595</width>
-        <height>561</height>
+        <height>579</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_4">
@@ -528,7 +464,7 @@
      </widget>
     </widget>
    </item>
-  <item row="2" column="0">
+   <item row="2" column="0">
     <widget class="QWidget" name="chat_prompt_footer" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="leftMargin">
@@ -547,7 +483,7 @@
        <widget class="QWidget" name="footer_container" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <property name="spacing">
-          <number>5</number>
+          <number>0</number>
          </property>
          <property name="leftMargin">
           <number>10</number>
@@ -561,28 +497,6 @@
          <property name="bottomMargin">
           <number>10</number>
          </property>
-         <item>
-          <widget class="QComboBox" name="provider_dropdown">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>110</width>
-             <height>30</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Select LLM provider</string>
-           </property>
-           <property name="sizeAdjustPolicy">
-            <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-           </property>
-          </widget>
-         </item>
          <item>
           <widget class="QComboBox" name="model_dropdown">
            <property name="sizePolicy">
@@ -606,39 +520,32 @@
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="precision_dropdown">
+          <widget class="QProgressBar" name="progressBar">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="minimumSize">
             <size>
-             <width>80</width>
-             <height>30</height>
+             <width>0</width>
+             <height>0</height>
             </size>
            </property>
-           <property name="toolTip">
-            <string>Model precision/quantization. Lower precision uses less memory but may reduce quality.</string>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
            </property>
-           <property name="sizeAdjustPolicy">
-            <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+           <property name="value">
+            <number>0</number>
+           </property>
+           <property name="textVisible">
+            <bool>false</bool>
            </property>
           </widget>
-         </item>
-         <item>
-          <spacer name="footer_spacer">
-           <property name="orientation">
-            <enum>Qt::Orientation::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
          <item>
           <widget class="QPushButton" name="send_button">
@@ -710,7 +617,7 @@
      </layout>
     </widget>
    </item>
-  <item row="3" column="0">
+   <item row="3" column="0">
     <widget class="QWidget" name="progress_container" native="true">
      <layout class="QHBoxLayout" name="progress_layout">
       <property name="spacing">
@@ -728,34 +635,6 @@
       <property name="bottomMargin">
        <number>10</number>
       </property>
-      <item>
-       <widget class="QProgressBar" name="progressBar">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>8</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>8</height>
-         </size>
-        </property>
-        <property name="value">
-         <number>0</number>
-        </property>
-        <property name="textVisible">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -786,22 +665,6 @@
  </resources>
  <connections>
   <connection>
-   <sender>provider_dropdown</sender>
-   <signal>currentIndexChanged(int)</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>on_provider_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>29</x>
-     <y>689</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>47</x>
-     <y>2</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>model_dropdown</sender>
    <signal>currentIndexChanged(int)</signal>
    <receiver>chat_prompt</receiver>
@@ -830,38 +693,6 @@
     <hint type="destinationlabel">
      <x>161</x>
      <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>thinking_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>thinking_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>200</x>
-     <y>689</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>200</x>
-     <y>2</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>precision_dropdown</sender>
-   <signal>currentIndexChanged(int)</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>on_precision_changed(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>300</x>
-     <y>689</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>300</x>
-     <y>2</y>
     </hint>
    </hints>
   </connection>

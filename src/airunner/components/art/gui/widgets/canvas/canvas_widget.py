@@ -310,12 +310,173 @@ class CanvasWidget(BaseWidget):
         """
         Align the images on the canvas to the horizontal center.
         """
+        self._align_selected_layer_to_document("horizontal")
 
     @Slot()
     def on_align_center_vertical_clicked(self) -> None:
         """
         Align the images on the canvas to the vertical center.
         """
+        self._align_selected_layer_to_document("vertical")
+
+    def _align_selected_layer_to_document(self, axis: str) -> None:
+        """Center the selected layer on one document axis."""
+        target = self._selected_layer_alignment(axis)
+        if target is None:
+            return
+
+        layer_id, item, x_pos, y_pos = target
+        scene = self._selected_layer_scene()
+        self._begin_layer_alignment_history(scene, layer_id)
+        try:
+            self.update_drawing_pad_settings(
+                layer_id=layer_id,
+                x_pos=x_pos,
+                y_pos=y_pos,
+            )
+            self._store_layer_alignment_position(
+                scene,
+                item,
+                x_pos,
+                y_pos,
+            )
+            self.api.art.canvas.update_image_positions()
+            self.api.art.canvas.update_grid_info({})
+            self._update_status_labels()
+            self._commit_layer_alignment_history(scene, layer_id)
+        except Exception as exc:
+            self._cancel_layer_alignment_history(scene, layer_id)
+            self.logger.exception(exc)
+
+    def _selected_layer_alignment(
+        self,
+        axis: str,
+    ) -> Optional[tuple[int, Any, int, int]]:
+        """Return one centered absolute position for the selected layer."""
+        layer_id = self._get_current_selected_layer_id()
+        if layer_id is None:
+            return None
+
+        settings = self._get_layer_specific_settings(
+            DrawingPadSettings,
+            layer_id=layer_id,
+        )
+        if settings is None:
+            return None
+
+        item = self._selected_layer_item(layer_id)
+        item_width, item_height = self._selected_layer_size(settings, item)
+        x_pos = int(getattr(settings, "x_pos", 0) or 0)
+        y_pos = int(getattr(settings, "y_pos", 0) or 0)
+        origin_x, origin_y = self._document_origin()
+
+        if axis == "horizontal":
+            x_pos = int(
+                round(
+                    origin_x
+                    + (self._document_width() - item_width) / 2.0
+                )
+            )
+        else:
+            y_pos = int(
+                round(
+                    origin_y
+                    + (self._document_height() - item_height) / 2.0
+                )
+            )
+
+        current_x = int(getattr(settings, "x_pos", 0) or 0)
+        current_y = int(getattr(settings, "y_pos", 0) or 0)
+        if current_x == x_pos and current_y == y_pos:
+            return None
+
+        return layer_id, item, x_pos, y_pos
+
+    def _selected_layer_item(self, layer_id: int) -> Optional[Any]:
+        """Return the graphics item for the selected layer, if present."""
+        scene = self._selected_layer_scene()
+        layer_items = getattr(scene, "_layer_items", None)
+        if layer_items is None:
+            return None
+        return layer_items.get(layer_id)
+
+    def _selected_layer_scene(self) -> Optional[Any]:
+        """Return the active canvas scene, if one is available."""
+        view = getattr(getattr(self, "ui", None), "canvas_container", None)
+        if view is None:
+            return None
+        return getattr(view, "scene", None)
+
+    def _selected_layer_size(
+        self,
+        settings: DrawingPadSettings,
+        item: Optional[Any],
+    ) -> tuple[float, float]:
+        """Return the selected layer size for alignment math."""
+        if item is not None:
+            try:
+                rect = item.boundingRect()
+                if rect.width() > 0 and rect.height() > 0:
+                    return rect.width(), rect.height()
+            except Exception:
+                pass
+
+        image_binary = getattr(settings, "image", None)
+        if image_binary:
+            size = self._decode_binary_image_size(image_binary)
+            if size is not None:
+                width, height = size
+                return float(width), float(height)
+
+        return float(self._document_width()), float(self._document_height())
+
+    @staticmethod
+    def _begin_layer_alignment_history(
+        scene: Optional[Any],
+        layer_id: int,
+    ) -> None:
+        """Start one position-history transaction when supported."""
+        callback = getattr(scene, "_begin_layer_history_transaction", None)
+        if callback is not None:
+            callback(layer_id, "position")
+
+    @staticmethod
+    def _commit_layer_alignment_history(
+        scene: Optional[Any],
+        layer_id: int,
+    ) -> None:
+        """Commit one position-history transaction when supported."""
+        callback = getattr(scene, "_commit_layer_history_transaction", None)
+        if callback is not None:
+            callback(layer_id, "position")
+
+    @staticmethod
+    def _cancel_layer_alignment_history(
+        scene: Optional[Any],
+        layer_id: int,
+    ) -> None:
+        """Cancel one position-history transaction when supported."""
+        callback = getattr(scene, "_cancel_layer_history_transaction", None)
+        if callback is not None:
+            callback(layer_id)
+
+    @staticmethod
+    def _store_layer_alignment_position(
+        scene: Optional[Any],
+        item: Optional[Any],
+        x_pos: int,
+        y_pos: int,
+    ) -> None:
+        """Keep the in-memory absolute-position cache in sync."""
+        if scene is None or item is None:
+            return
+
+        positions = getattr(scene, "original_item_positions", None)
+        if positions is None:
+            positions = {}
+            scene.original_item_positions = positions
+
+        positions[item] = QPointF(float(x_pos), float(y_pos))
 
     @Slot()
     def on_undo_button_clicked(self) -> None:

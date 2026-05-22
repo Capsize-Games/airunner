@@ -77,7 +77,6 @@ from airunner.enums import (
     GeneratorSection,
     ModelType,
     ModelStatus,
-    TemplateName,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.get_version import get_version
@@ -190,6 +189,12 @@ class MainWindow(
     _chat_panel_target_width = 250
     _stats_sidebar_index = 0
     _art_tools_sidebar_index = 1
+    _art_tools_model_tab_index = 0
+    _art_tools_lora_tab_index = 1
+    _art_tools_embeddings_tab_index = 2
+    _art_tools_layers_tab_index = 3
+    _art_tools_grid_tab_index = 4
+    _art_tools_image_browser_tab_index = 5
     _left_documents_panel_index = 0
     _left_history_panel_index = 1
     _left_llm_settings_panel_index = 2
@@ -228,9 +233,14 @@ class MainWindow(
         ("history", "history_sidebar_button"),
         ("settings-2", "llm_settings_sidebar_button"),
         ("message-square-heart", "prompt_editor_button"),
-        ("tool", "art_tools_button"),
+        ("sparkles", "art_model_button"),
         ("activity", "stats_button"),
         ("image", "canvas_button"),
+        ("puzzle", "lora_button"),
+        ("scan-text", "embeddings_button"),
+        ("layers", "layers_button"),
+        ("grid-2x2-check", "grid_button"),
+        ("images", "image_browser_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -398,8 +408,34 @@ class MainWindow(
         self._toggle_prompt_panel(val)
 
     @Slot(bool)
-    def on_art_tools_button_toggled(self, val: bool):
-        self._toggle_sidebar_page(self._art_tools_sidebar_index, val)
+    def on_art_model_button_toggled(self, val: bool):
+        self._toggle_art_tools_tab(self._art_tools_model_tab_index, val)
+
+    @Slot(bool)
+    def on_lora_button_toggled(self, val: bool):
+        self._toggle_art_tools_tab(self._art_tools_lora_tab_index, val)
+
+    @Slot(bool)
+    def on_embeddings_button_toggled(self, val: bool):
+        self._toggle_art_tools_tab(
+            self._art_tools_embeddings_tab_index,
+            val,
+        )
+
+    @Slot(bool)
+    def on_layers_button_toggled(self, val: bool):
+        self._toggle_art_tools_tab(self._art_tools_layers_tab_index, val)
+
+    @Slot(bool)
+    def on_grid_button_toggled(self, val: bool):
+        self._toggle_art_tools_tab(self._art_tools_grid_tab_index, val)
+
+    @Slot(bool)
+    def on_image_browser_button_toggled(self, val: bool):
+        self._toggle_art_tools_tab(
+            self._art_tools_image_browser_tab_index,
+            val,
+        )
 
     @Slot(bool)
     def on_stats_button_toggled(self, val: bool):
@@ -574,6 +610,46 @@ class MainWindow(
             min(index, self._art_tools_sidebar_index),
         )
 
+    def _clamp_art_tools_tab_index(self, index: int) -> int:
+        """Clamp the nested art-tools tab index to the supported range."""
+        return max(
+            self._art_tools_model_tab_index,
+            min(index, self._art_tools_image_browser_tab_index),
+        )
+
+    def _saved_art_tools_tab_index(self) -> int:
+        """Return the persisted nested art-tools tab index."""
+        index = self.qsettings.value(
+            "tabs/stablediffusion_tool_tab/active_index",
+            self._art_tools_model_tab_index,
+            type=int,
+        )
+        if not isinstance(index, int):
+            return self._art_tools_model_tab_index
+        return self._clamp_art_tools_tab_index(index)
+
+    def _current_art_tools_tab_index(self) -> int:
+        """Return the active nested tab inside the art tools sidebar."""
+        widget = getattr(self.ui, "art_tools_widget", None)
+        if widget is None:
+            return self._saved_art_tools_tab_index()
+
+        current_index = getattr(widget, "current_tool_page_index", None)
+        if callable(current_index):
+            value = current_index()
+            if isinstance(value, int):
+                return self._clamp_art_tools_tab_index(value)
+            return self._saved_art_tools_tab_index()
+
+        tab_widget = getattr(
+            getattr(widget, "ui", None),
+            "tool_tab_widget_container",
+            None,
+        )
+        if tab_widget is None:
+            return self._saved_art_tools_tab_index()
+        return self._clamp_art_tools_tab_index(tab_widget.currentIndex())
+
     def _store_active_left_panel_tab_index(self, index: int) -> None:
         """Persist the current left panel page index."""
         self.qsettings.beginGroup("window_settings")
@@ -631,6 +707,27 @@ class MainWindow(
                 self.ui.main_window_splitter,
                 self._sidebar_page_min_size(page_index),
             )
+
+        self._sync_sidebar_button_states()
+
+    def _toggle_art_tools_tab(self, tab_index: int, visible: bool) -> None:
+        """Show or hide one nested art-tools tab from the right sidebar."""
+        tab_index = self._clamp_art_tools_tab_index(tab_index)
+        if visible:
+            widget = self._ensure_art_tools_loaded()
+            show_tool_page = getattr(widget, "show_tool_page", None)
+            if callable(show_tool_page):
+                show_tool_page(tab_index)
+            self._toggle_sidebar_page(self._art_tools_sidebar_index, True)
+            return
+
+        if (
+            self._sidebar_is_visible()
+            and self._current_sidebar_index() == self._art_tools_sidebar_index
+            and self._current_art_tools_tab_index() == tab_index
+        ):
+            self._toggle_sidebar_page(self._art_tools_sidebar_index, False)
+            return
 
         self._sync_sidebar_button_states()
 
@@ -793,7 +890,12 @@ class MainWindow(
         """Update the canvas and sidebar toggle buttons from panel state."""
         self.set_canvas_button_checked()
         self.set_prompt_editor_button_checked()
-        self.set_art_tools_button_checked()
+        self.set_art_model_button_checked()
+        self.set_lora_button_checked()
+        self.set_embeddings_button_checked()
+        self.set_layers_button_checked()
+        self.set_grid_button_checked()
+        self.set_image_browser_button_checked()
         self.set_stats_button_checked()
 
     def set_chat_button_checked(self):
@@ -857,8 +959,49 @@ class MainWindow(
         button.setChecked(self._prompt_panel_is_visible())
         button.blockSignals(False)
 
-    def set_art_tools_button_checked(self):
-        button = getattr(self.ui, "art_tools_button", None)
+    def set_art_model_button_checked(self):
+        self._set_art_tools_button_checked(
+            "art_model_button",
+            self._art_tools_model_tab_index,
+        )
+
+    def set_lora_button_checked(self):
+        self._set_art_tools_button_checked(
+            "lora_button",
+            self._art_tools_lora_tab_index,
+        )
+
+    def set_embeddings_button_checked(self):
+        self._set_art_tools_button_checked(
+            "embeddings_button",
+            self._art_tools_embeddings_tab_index,
+        )
+
+    def set_layers_button_checked(self):
+        self._set_art_tools_button_checked(
+            "layers_button",
+            self._art_tools_layers_tab_index,
+        )
+
+    def set_grid_button_checked(self):
+        self._set_art_tools_button_checked(
+            "grid_button",
+            self._art_tools_grid_tab_index,
+        )
+
+    def set_image_browser_button_checked(self):
+        self._set_art_tools_button_checked(
+            "image_browser_button",
+            self._art_tools_image_browser_tab_index,
+        )
+
+    def _set_art_tools_button_checked(
+        self,
+        button_name: str,
+        tab_index: int,
+    ) -> None:
+        """Sync one right-rail art-tools button with sidebar state."""
+        button = getattr(self.ui, button_name, None)
         if button is None:
             return
         button.blockSignals(True)
@@ -866,6 +1009,7 @@ class MainWindow(
             self._sidebar_is_visible()
             and self._current_sidebar_index()
             == self._art_tools_sidebar_index
+            and self._current_art_tools_tab_index() == tab_index
         )
         button.blockSignals(False)
     
@@ -1436,13 +1580,17 @@ class MainWindow(
             StablediffusionToolTabWidget,
         )
 
-        self._attach_lazy_widget(
+        widget = self._attach_lazy_widget(
             "art_tools_page",
             "art_tools_widget",
             "art_tools_widget",
             StablediffusionToolTabWidget,
             placeholder_attr="art_tools_placeholder",
         )
+        show_tool_page = getattr(widget, "show_tool_page", None)
+        if callable(show_tool_page):
+            show_tool_page(self._saved_art_tools_tab_index())
+        return widget
 
     @property
     def buttons(self) -> Dict:

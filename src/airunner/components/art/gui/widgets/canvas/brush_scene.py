@@ -53,6 +53,9 @@ class BrushScene(CustomScene):
         self._stroke_base_image: Optional[QImage] = None
         self._stroke_buffer_image: Optional[QImage] = None
         self._stroke_buffer_erasing = False
+        self._stroke_item: Optional[QGraphicsPixmapItem] = None
+        self._stroke_target_item = None
+        self._stroke_target_layer_id: Optional[int] = None
 
     @property
     def active_image(self):
@@ -137,6 +140,8 @@ class BrushScene(CustomScene):
 
     def on_layer_selection_changed(self, data):
         """Handle layer selection changes to update painter target."""
+        if self.draw_button_down and self._stroke_target_item is not None:
+            return
         self._clear_stroke_buffer()
         self.stop_painter()
         self._rebind_active_painter()
@@ -221,9 +226,145 @@ class BrushScene(CustomScene):
         )
 
     def _clear_stroke_buffer(self) -> None:
+        self._remove_stroke_item()
+        self._stroke_target_item = None
+        self._stroke_target_layer_id = None
         self._stroke_base_image = None
         self._stroke_buffer_image = None
         self._stroke_buffer_erasing = False
+
+    def _remove_stroke_item(self) -> None:
+        if self._stroke_item is None:
+            return
+        try:
+            if self._stroke_item.scene() is self:
+                self.removeItem(self._stroke_item)
+        except (AttributeError, RuntimeError):
+            pass
+        self._stroke_item = None
+
+    def _document_size(self) -> Optional[tuple[int, int]]:
+        if not self.views():
+            return None
+        view = self.views()[0]
+        if not hasattr(view, "document_size"):
+            return None
+        width, height = view.document_size()
+        return max(1, int(round(width))), max(1, int(round(height)))
+
+    def _document_absolute_origin(self) -> QPointF:
+        if not self.views():
+            return QPointF(0.0, 0.0)
+        view = self.views()[0]
+        if not hasattr(view, "document_origin"):
+            return QPointF(0.0, 0.0)
+        return QPointF(view.document_origin())
+
+    def _document_display_origin(self) -> QPointF:
+        rect = BrushScene._document_rect(self)
+        if rect is not None:
+            return QPointF(rect.topLeft())
+        return self._document_absolute_origin()
+
+    def _scene_point_to_document_local(
+        self,
+        scene_point: Optional[QPointF],
+    ) -> Optional[QPointF]:
+        bounded_point = self._clamp_scene_point_to_document(scene_point)
+        if bounded_point is None:
+            return None
+        origin = self._document_display_origin()
+        return QPointF(
+            bounded_point.x() - origin.x(),
+            bounded_point.y() - origin.y(),
+        )
+
+    def _layer_absolute_origin(self, item) -> QPointF:
+        positions = getattr(self, "original_item_positions", None)
+        if isinstance(positions, dict):
+            try:
+                if item in positions:
+                    return QPointF(positions[item])
+            except TypeError:
+                pass
+
+        settings = getattr(item, "drawing_pad_settings", None)
+        if settings is not None:
+            return QPointF(
+                float(getattr(settings, "x_pos", 0) or 0),
+                float(getattr(settings, "y_pos", 0) or 0),
+            )
+
+        if not hasattr(item, "pos") or not self.views():
+            return QPointF(0.0, 0.0)
+
+        view = self.views()[0]
+        canvas_offset = getattr(view, "canvas_offset", QPointF(0.0, 0.0))
+        grid_compensation = getattr(
+            view,
+            "grid_compensation_offset",
+            getattr(view, "_grid_compensation_offset", QPointF(0.0, 0.0)),
+        )
+        view_state = ViewState(
+            canvas_offset=QPointF(canvas_offset),
+            grid_compensation=QPointF(grid_compensation),
+        )
+        return CanvasPositionManager.display_to_absolute(
+            item.pos(),
+            view_state,
+        )
+
+    def _build_document_stroke_base(self, item) -> Optional[QImage]:
+        qimage = getattr(item, "qimage", None)
+        if qimage is None:
+            return None
+
+        document_size = self._document_size()
+        if document_size is None:
+            return qimage.copy()
+
+        document_width, document_height = document_size
+        base_image = QImage(
+            document_width,
+            document_height,
+            QImage.Format.Format_ARGB32,
+        )
+        base_image.fill(Qt.GlobalColor.transparent)
+
+        item_origin = self._layer_absolute_origin(item)
+        document_origin = self._document_absolute_origin()
+        target_x = int(round(item_origin.x() - document_origin.x()))
+        target_y = int(round(item_origin.y() - document_origin.y()))
+
+        painter = QPainter(base_image)
+        painter.drawImage(target_x, target_y, qimage)
+        painter.end()
+        return base_image
+
+    def _stroke_item_z_value(self) -> float:
+        active_item = self._stroke_target_item or self.active_item
+        if active_item is not None and hasattr(active_item, "zValue"):
+            try:
+                return float(active_item.zValue()) + 1.0
+            except (TypeError, ValueError):
+                pass
+        return 3.0
+
+    def _sync_stroke_item(self) -> None:
+        if self._stroke_buffer_image is None:
+            self._remove_stroke_item()
+            return
+        if self._stroke_item is None:
+            self._stroke_item = QGraphicsPixmapItem()
+            self._stroke_item.setAcceptedMouseButtons(
+                Qt.MouseButton.NoButton
+            )
+            self.addItem(self._stroke_item)
+        self._stroke_item.setPixmap(
+            QPixmap.fromImage(self._stroke_buffer_image)
+        )
+        self._stroke_item.setPos(self._document_display_origin())
+        self._stroke_item.setZValue(self._stroke_item_z_value())
 
     def _current_paint_target(self):
         if self.drawing_pad_settings.mask_layer_enabled:
@@ -263,15 +404,89 @@ class BrushScene(CustomScene):
             self._clear_stroke_buffer()
             return
         self._stroke_base_image = base_image
+        self._stroke_target_item = None
+        self._stroke_target_layer_id = None
+        if not self.drawing_pad_settings.mask_layer_enabled:
+            self._stroke_target_item = BrushScene._resolve_layer_canvas_item(
+                self
+            )
+            self._stroke_target_layer_id = getattr(
+                self._stroke_target_item,
+                "layer_id",
+                None,
+            )
+            if self._stroke_target_layer_id is None:
+                get_layer_id = getattr(
+                    self,
+                    "_get_current_selected_layer_id",
+                    None,
+                )
+                if callable(get_layer_id):
+                    try:
+                        self._stroke_target_layer_id = get_layer_id()
+                    except Exception:
+                        self._stroke_target_layer_id = None
+            if self._stroke_target_item is not None:
+                document_base = self._build_document_stroke_base(
+                    self._stroke_target_item
+                )
+                if document_base is not None:
+                    self._stroke_base_image = document_base
         self._stroke_buffer_erasing = (
             not self.drawing_pad_settings.mask_layer_enabled
             and self.current_tool is CanvasToolName.ERASER
         )
+        if self.drawing_pad_settings.mask_layer_enabled:
+            width = base_image.width()
+            height = base_image.height()
+        else:
+            document_size = self._document_size()
+            if document_size is None:
+                width = base_image.width()
+                height = base_image.height()
+            else:
+                width, height = document_size
         self._stroke_buffer_image = QImage(
-            base_image.size(),
+            width,
+            height,
             QImage.Format.Format_ARGB32,
         )
         self._stroke_buffer_image.fill(Qt.GlobalColor.transparent)
+        if (
+            not self.drawing_pad_settings.mask_layer_enabled
+            and not self._stroke_buffer_erasing
+        ):
+            self._sync_stroke_item()
+
+    def _preview_document_stroke(self) -> bool:
+        if (
+            self.drawing_pad_settings.mask_layer_enabled
+            or self._stroke_buffer_image is None
+        ):
+            return False
+
+        if self._stroke_buffer_erasing:
+            preview_item = self._stroke_target_item or self.active_item
+            preview_image = self._compose_stroke_image(
+                self._stroke_base_image,
+                self._stroke_buffer_image,
+                True,
+            )
+            self._update_item_image(
+                preview_item,
+                preview_image,
+                invalidate_scene=False,
+            )
+            if preview_item is not None and hasattr(preview_item, "setPos"):
+                preview_item.setPos(self._document_display_origin())
+            return True
+
+        self._sync_stroke_item()
+        if self._stroke_item is not None and self._stroke_item.scene():
+            self._stroke_item.scene().update(
+                self._stroke_item.sceneBoundingRect()
+            )
+        return True
 
     def _update_active_item_image(
         self,
@@ -279,20 +494,32 @@ class BrushScene(CustomScene):
         *,
         invalidate_scene: bool = True,
     ) -> None:
-        if image is None or self.active_item is None:
+        BrushScene._update_item_image(
+            self,
+            self.active_item,
+            image,
+            invalidate_scene=invalidate_scene,
+        )
+
+    def _update_item_image(
+        self,
+        item,
+        image: Optional[QImage],
+        *,
+        invalidate_scene: bool = True,
+    ) -> None:
+        if image is None or item is None:
             return
-        if hasattr(self.active_item, "updateImage"):
-            self.active_item.updateImage(
+        if hasattr(item, "updateImage"):
+            item.updateImage(
                 image,
                 invalidate_scene=invalidate_scene,
             )
-            if invalidate_scene and self.active_item.scene():
-                self.active_item.scene().update(
-                    self.active_item.sceneBoundingRect()
-                )
+            if invalidate_scene and item.scene():
+                item.scene().update(item.sceneBoundingRect())
             return
-        if hasattr(self.active_item, "setPixmap"):
-            self.active_item.setPixmap(QPixmap.fromImage(image))
+        if hasattr(item, "setPixmap"):
+            item.setPixmap(QPixmap.fromImage(image))
 
     def _rebind_active_painter(self):
         if self._stroke_buffer_image is not None:
@@ -392,12 +619,27 @@ class BrushScene(CustomScene):
         if abs(viewport_delta.x()) < 0.01 and abs(viewport_delta.y()) < 0.01:
             return
 
-        # Use scene coordinates minus image item position for image coordinates
-        item_pos = (
-            self.active_item.pos() if self.active_item else QPointF(0, 0)
-        )
-        image_start_pos = previous_pos - item_pos
-        image_last_pos = current_pos - item_pos
+        if (
+            not self.drawing_pad_settings.mask_layer_enabled
+            and self._stroke_buffer_image is not None
+        ):
+            image_start_pos = self._scene_point_to_document_local(
+                previous_pos
+            )
+            image_last_pos = self._scene_point_to_document_local(current_pos)
+        else:
+            item_pos = (
+                self.active_item.pos()
+                if self.active_item
+                else QPointF(0, 0)
+            )
+            image_start_pos = previous_pos - item_pos
+            image_last_pos = current_pos - item_pos
+
+        if image_start_pos is None or image_last_pos is None:
+            self._last_draw_scene_pos = current_pos
+            self.start_pos = current_pos
+            return
 
         control_point = QPointF(
             (image_start_pos.x() + image_last_pos.x()) * 0.5,
@@ -411,6 +653,9 @@ class BrushScene(CustomScene):
 
         self._last_draw_scene_pos = current_pos
         self.start_pos = current_pos
+
+        if self._preview_document_stroke():
+            return
 
         active_image = self.active_image
         if self._stroke_base_image is not None:
@@ -451,6 +696,11 @@ class BrushScene(CustomScene):
             CanvasToolName.BRUSH,
             CanvasToolName.ERASER,
         ]:
+            return False
+        if BrushScene._scene_uses_layer_canvas(self):
+            # Layer-backed canvases use fixed layer surfaces while brushing.
+            # Auto-growing smaller layers during a stroke shifts their stored
+            # origin and makes partial-size images jump when drawing left/top.
             return False
         if self._active_item_uses_document_surface(item):
             return False
@@ -604,9 +854,9 @@ class BrushScene(CustomScene):
             )
 
         self.stop_painter()
-        self._update_active_item_image(merged_image)
 
         if self.drawing_pad_settings.mask_layer_enabled:
+            self._update_active_item_image(merged_image)
             if merged_image is not None:
                 self.mask_image = merged_image
             mask_source = merged_image if merged_image is not None else self.mask_image
@@ -621,9 +871,28 @@ class BrushScene(CustomScene):
             self.update_drawing_pad_settings(mask=base_64_image)
         else:
             if merged_image is not None:
-                pil_image = ImageQt.fromqimage(merged_image).copy()
-                self.current_active_image = pil_image
+                target_item = self._stroke_target_item
+                target_layer_id = self._stroke_target_layer_id
+                document_display_origin = self._document_display_origin()
+                document_absolute_origin = self._document_absolute_origin()
 
+                if target_item is not None:
+                    self._update_item_image(target_item, merged_image)
+                    if hasattr(target_item, "setPos"):
+                        target_item.setPos(document_display_origin)
+                    if hasattr(self, "original_item_positions"):
+                        self.original_item_positions[target_item] = QPointF(
+                            document_absolute_origin
+                        )
+                    if hasattr(target_item, "layer_image_data"):
+                        target_item.layer_image_data["pos_x"] = int(
+                            round(document_absolute_origin.x())
+                        )
+                        target_item.layer_image_data["pos_y"] = int(
+                            round(document_absolute_origin.y())
+                        )
+
+                pil_image = ImageQt.fromqimage(merged_image).copy()
                 rgba_image = (
                     pil_image
                     if pil_image.mode == "RGBA"
@@ -637,15 +906,32 @@ class BrushScene(CustomScene):
                     + rgba_image.tobytes()
                 )
 
-                # Store in-memory for undo/redo and cache
-                self._pending_image_binary = raw_binary
-                self._current_active_image_binary = raw_binary
+                current_layer_id = None
+                get_layer_id = getattr(
+                    self,
+                    "_get_current_selected_layer_id",
+                    None,
+                )
+                if callable(get_layer_id):
+                    try:
+                        current_layer_id = get_layer_id()
+                    except Exception:
+                        current_layer_id = None
 
-                # Persist to database to ensure undo captures it
+                if current_layer_id == target_layer_id:
+                    self.current_active_image = pil_image
+                    self._pending_image_binary = raw_binary
+                    self._current_active_image_binary = raw_binary
+                else:
+                    self._pending_image_binary = None
+                    self._current_active_image_binary = None
+
                 try:
-                    layer_id = self._get_current_selected_layer_id()
                     self.update_drawing_pad_settings(
-                        layer_id=layer_id, image=raw_binary
+                        layer_id=target_layer_id,
+                        image=raw_binary,
+                        x_pos=int(round(document_absolute_origin.x())),
+                        y_pos=int(round(document_absolute_origin.y())),
                     )
                 except Exception:
                     self.drawing_pad_settings.image = raw_binary

@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1074</width>
-    <height>845</height>
+    <height>1045</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -420,6 +420,9 @@
               <height>35</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>Toggle Canvas</string>
+            </property>
             <property name="text">
              <string/>
             </property>
@@ -493,7 +496,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="art_tools_button">
+           <widget class="Line" name="line_4">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="art_model_button">
             <property name="minimumSize">
              <size>
               <width>35</width>
@@ -510,14 +520,219 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Toggle Art Settings</string>
+             <string>Toggle Art Model Settings</string>
             </property>
             <property name="text">
              <string/>
             </property>
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/tool.svg</normaloff>:/light/icons/feather/light/tool.svg</iconset>
+              <normaloff>:/light/icons/lucide/light/sparkles.svg</normaloff>:/light/icons/lucide/light/sparkles.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="lora_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle LoRA Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/puzzle.svg</normaloff>:/light/icons/lucide/light/puzzle.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="embeddings_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Embedding Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/scan-text.svg</normaloff>:/light/icons/lucide/light/scan-text.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="layers_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Layer Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/layers.svg</normaloff>:/light/icons/lucide/light/layers.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="grid_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Grid Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/grid-2x2-check.svg</normaloff>:/light/icons/lucide/light/grid-2x2-check.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="image_browser_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Image Browser</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/images.svg</normaloff>:/light/icons/lucide/light/images.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -642,7 +857,7 @@
           </property>
           <property name="minimumSize">
            <size>
-              <width>360</width>
+            <width>360</width>
             <height>0</height>
            </size>
           </property>
@@ -905,7 +1120,7 @@
            <item row="0" column="0">
             <widget class="QTabWidget" name="sidebar_tab">
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="stats_page">
               <attribute name="title">
