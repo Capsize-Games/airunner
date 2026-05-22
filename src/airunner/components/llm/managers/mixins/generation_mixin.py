@@ -67,6 +67,151 @@ MUTATING_TASK_TOOLS = {
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
 
+    def _get_checkpoint_messages(self) -> List[Any]:
+        """Return checkpointed workflow messages for the active thread."""
+        workflow_manager = getattr(self, "_workflow_manager", None)
+        if not workflow_manager:
+            return []
+
+        memory = getattr(workflow_manager, "_memory", None)
+        get_tuple = getattr(memory, "get_tuple", None)
+        if not callable(get_tuple):
+            return []
+
+        try:
+            history = get_tuple(
+                {
+                    "configurable": {
+                        "thread_id": getattr(
+                            workflow_manager,
+                            "_thread_id",
+                            "default",
+                        )
+                    }
+                }
+            )
+        except Exception:
+            self.logger.exception(
+                "Failed to inspect checkpoint state for empty-response recovery"
+            )
+            return []
+
+        if not history or len(history) < 2:
+            return []
+
+        checkpoint_state = history[1]
+        if not isinstance(checkpoint_state, dict):
+            return []
+
+        channel_values = checkpoint_state.get("channel_values", {})
+        if not isinstance(channel_values, dict):
+            return []
+
+        messages = channel_values.get("messages", [])
+        return messages if isinstance(messages, list) else []
+
+    def _recover_document_response_from_tool_state(
+        self,
+        prompt: str,
+        llm_request: Optional[Any],
+        executed_tools: List[str],
+    ) -> str:
+        """Return a synthesized document answer when the final reply is empty."""
+        workflow_manager = getattr(self, "_workflow_manager", None)
+        if not workflow_manager or not prompt:
+            return ""
+
+        document_intent = getattr(llm_request, "document_query_intent", None)
+        document_primary_tool = getattr(
+            llm_request,
+            "document_primary_tool",
+            None,
+        )
+        is_document_request = bool(document_intent or document_primary_tool)
+        document_tools = {"inspect_loaded_documents", "rag_search"}
+        if not is_document_request and not any(
+            tool in document_tools for tool in executed_tools
+        ):
+            return ""
+
+        get_turn_tool_messages = getattr(
+            workflow_manager,
+            "_get_current_turn_tool_messages",
+            None,
+        )
+        combine_tool_results = getattr(
+            workflow_manager,
+            "_combine_tool_results",
+            None,
+        )
+        generate_from_results = getattr(
+            workflow_manager,
+            "_generate_response_from_results",
+            None,
+        )
+        is_document_result_tool = getattr(
+            workflow_manager,
+            "_is_document_result_tool",
+            None,
+        )
+        if not all(
+            callable(method)
+            for method in (
+                get_turn_tool_messages,
+                combine_tool_results,
+                generate_from_results,
+                is_document_result_tool,
+            )
+        ):
+            return ""
+
+        messages = self._get_checkpoint_messages()
+        if not messages:
+            return ""
+
+        tool_messages = get_turn_tool_messages(messages)
+        if not tool_messages:
+            return ""
+
+        tool_name = document_primary_tool
+        if not tool_name:
+            for candidate in reversed(executed_tools):
+                if is_document_result_tool(candidate):
+                    tool_name = candidate
+                    break
+
+        if not tool_name:
+            for message in reversed(tool_messages):
+                candidate = getattr(message, "name", None)
+                if isinstance(candidate, str) and is_document_result_tool(
+                    candidate
+                ):
+                    tool_name = candidate
+                    break
+
+        if not tool_name or not is_document_result_tool(tool_name):
+            return ""
+
+        all_tool_content = str(combine_tool_results(tool_messages) or "")
+        if not all_tool_content.strip():
+            return ""
+
+        generation_kwargs = None
+        if llm_request is not None:
+            to_dict = getattr(llm_request, "to_dict", None)
+            if callable(to_dict):
+                generation_kwargs = to_dict()
+
+        response = generate_from_results(
+            all_tool_content,
+            tool_name,
+            prompt,
+            generation_kwargs,
+        )
+        if not isinstance(response, str):
+            return ""
+        return response.strip()
+
     def _emit_visible_response(
         self,
         llm_request: Optional[Any],
@@ -823,6 +968,22 @@ class GenerationMixin:
                 sequence_counter,
             )
             complete_response[0] = final_response
+
+        if not complete_response[0]:
+            document_recovery = (
+                self._recover_document_response_from_tool_state(
+                    prompt,
+                    llm_request,
+                    executed_tools,
+                )
+            )
+            if document_recovery:
+                self._emit_visible_response(
+                    llm_request,
+                    document_recovery,
+                    complete_response,
+                    sequence_counter,
+                )
 
         if not complete_response[0]:
             fallback_response = self._fallback_response_for_empty_result(

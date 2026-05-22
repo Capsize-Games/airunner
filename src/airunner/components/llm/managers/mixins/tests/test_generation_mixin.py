@@ -751,6 +751,62 @@ class TestDoGenerate:
         assert "did not make any changes" in result["response"]
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_recovers_document_answer_when_rag_final_reply_is_empty(
+        self,
+        mock_torch,
+        mixin,
+        llm_request,
+    ):
+        """Document requests should synthesize from tool results before generic fallback."""
+        mock_torch.cuda.is_available.return_value = False
+        llm_request.document_query_intent = "summary"
+        llm_request.document_primary_tool = "rag_search"
+        mixin._workflow_manager.stream.return_value = [
+            AIMessage(
+                content=(
+                    "<|channel|>analysis<|message|>Need to answer from rag."
+                    "<|return|>"
+                ),
+                additional_kwargs={
+                    "executed_tools": ["rag_search"]
+                },
+            )
+        ]
+        mixin._workflow_manager.get_executed_tools.return_value = []
+        mixin._workflow_manager._thread_id = "thread-1"
+        mixin._workflow_manager._memory = Mock()
+        mixin._workflow_manager._memory.get_tuple.return_value = (
+            None,
+            {"channel_values": {"messages": ["state-message"]}},
+        )
+        mixin._workflow_manager._get_current_turn_tool_messages.return_value = [
+            Mock(name="tool-message")
+        ]
+        mixin._workflow_manager._combine_tool_results.return_value = (
+            "Relevant excerpts:\nHollywood mystery evidence"
+        )
+        mixin._workflow_manager._is_document_result_tool.side_effect = (
+            lambda tool_name: tool_name == "rag_search"
+        )
+        mixin._workflow_manager._generate_response_from_results.return_value = (
+            "Recovered document answer."
+        )
+
+        result = mixin._do_generate(
+            "what is this book about?",
+            LLMActionType.PERFORM_RAG_SEARCH,
+            llm_request=llm_request,
+        )
+
+        assert result["response"] == "Recovered document answer."
+        mixin._workflow_manager._generate_response_from_results.assert_called_once_with(
+            "Relevant excerpts:\nHollywood mystery evidence",
+            "rag_search",
+            "what is this book about?",
+            llm_request.to_dict(),
+        )
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_returns_error_when_no_workflow_manager(self, mock_torch, mixin):
         """Should return error when workflow manager missing."""
         mixin._workflow_manager = None
