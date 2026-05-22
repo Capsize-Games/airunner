@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>1074</width>
-    <height>797</height>
+    <height>845</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -157,6 +157,13 @@
            </widget>
           </item>
           <item>
+           <widget class="Line" name="line_3">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="knowledgebase_button">
             <property name="minimumSize">
              <size>
@@ -191,6 +198,9 @@
             </property>
             <property name="checkable">
              <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
             </property>
             <property name="flat">
              <bool>true</bool>
@@ -396,6 +406,48 @@
           <property name="bottomMargin">
            <number>5</number>
           </property>
+          <item>
+           <widget class="QPushButton" name="canvas_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/lucide/light/image.svg</normaloff>:/light/icons/lucide/light/image.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line_2">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="QPushButton" name="prompt_editor_button">
             <property name="minimumSize">

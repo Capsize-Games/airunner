@@ -88,8 +88,12 @@ function initializeChatView() {
             const contentDiv = targetMessage.querySelector('.content');
             if (!contentDiv) return;
 
+            const contentType = targetMessage.getAttribute(
+                'data-content-type'
+            ) || '';
+
             // Update content with sanitized HTML
-            contentDiv.innerHTML = sanitizeContent(content);
+            contentDiv.innerHTML = sanitizeContent(content, contentType);
 
             // Trigger MathJax typesetting if needed
             if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
@@ -137,8 +141,40 @@ function initializeChatView() {
     observer.observe(container, { childList: true, subtree: true, characterData: true });
 }
 
-function sanitizeContent(html) {
-    // Content may include HTML from the backend; treat it as untrusted and sanitize.
+function escapeHtml(text) {
+    if (typeof text !== 'string') return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function looksLikeHtmlContent(content) {
+    if (typeof content !== 'string') return false;
+    return /<\/?[a-z][\w:-]*(?:\s[^<>]*)?>/i.test(content);
+}
+
+function formatPlainTextParagraphs(content) {
+    if (typeof content !== 'string' || !content) return '';
+
+    const paragraphs = content
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean);
+
+    if (!paragraphs.length) {
+        return '';
+    }
+
+    return paragraphs
+        .map((paragraph) => {
+            const escaped = escapeHtml(paragraph).replace(/\n/g, '<br>');
+            return `<p>${escaped}</p>`;
+        })
+        .join('');
+}
+
+function normalizeContentForRender(html, contentType = '') {
     let content = html;
 
     if (typeof content !== 'string') return '';
@@ -166,6 +202,21 @@ function sanitizeContent(html) {
         .replace(/^\s+/, '')
         .replace(/\s+$/, '');
 
+    const normalizedType = String(contentType || '').toLowerCase();
+    if (!content) {
+        return '';
+    }
+
+    if (normalizedType === 'plaintext' || !looksLikeHtmlContent(content)) {
+        return formatPlainTextParagraphs(content);
+    }
+
+    return content;
+}
+
+function sanitizeContent(html, contentType = '') {
+    // Content may include HTML from the backend; treat it as untrusted and sanitize.
+    const content = normalizeContentForRender(html, contentType);
     return sanitizeHtmlAllowlist(content);
 }
 
@@ -272,13 +323,14 @@ function createMessageElement(msg) {
     if (msg.request_id) {
         messageDiv.setAttribute('data-request-id', msg.request_id);
     }
+    messageDiv.setAttribute('data-content-type', msg.content_type || '');
     const senderDiv = document.createElement('div');
     senderDiv.className = 'sender';
     senderDiv.textContent = msg.name || msg.sender || (msg.is_bot ? 'Assistant' : 'User');
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'content';
-    contentDiv.innerHTML = sanitizeContent(msg.content);
+    contentDiv.innerHTML = sanitizeContent(msg.content, msg.content_type);
 
     // Header always present so we can attach action buttons for all messages
     let headerDiv = document.createElement('div');

@@ -227,6 +227,7 @@ class MainWindow(
         ("message-square-heart", "prompt_editor_button"),
         ("tool", "art_tools_button"),
         ("activity", "stats_button"),
+        ("image", "canvas_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0

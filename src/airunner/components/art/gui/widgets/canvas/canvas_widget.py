@@ -49,8 +49,8 @@ class CanvasWidget(BaseWidget):
     widget_class_ = Ui_canvas
     icons = [
         ("file-plus", "new_button"),
-        ("arrow-down", "import_button"),
-        ("arrow-up", "export_button"),
+        ("image-down", "import_button"),
+        ("image-up", "export_button"),
         ("target", "recenter_button"),
         ("object-selected-icon", "active_grid_area_button"),
         ("pencil", "brush_button"),
