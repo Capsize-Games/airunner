@@ -114,6 +114,10 @@ flowchart LR
    That keeps the internal stage budget focused on emitting the
    committed `answer_text` block instead of spending the turn on hidden
    reasoning prose.
+- For local GGUF execution, `ChatGGUF` now enforces those hidden-stage
+   presets at the adapter boundary, so per-pass `max_new_tokens`,
+   `temperature`, `reasoning_effort`, and `enable_thinking` overrides
+   actually reach `llama.cpp`.
 - Direct document actions such as `PERFORM_RAG_SEARCH` can still use
   explicit forced tool routing.
 

@@ -331,6 +331,71 @@ class TestChatGGUFNativeTools:
             "content"
         ].lower()
 
+    def test_generate_respects_per_call_qwen_overrides(self):
+        fake_llama = FakeLlama(
+            response={
+                "choices": [{"message": {"content": "Hello"}}]
+            }
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/Qwen3-8B-Q4_K_M.gguf",
+        )
+        chat_model.max_tokens = 8192
+        chat_model.temperature = 0.6
+        chat_model.enable_thinking = True
+
+        chat_model._generate(
+            [HumanMessage(content="hello")],
+            max_new_tokens=256,
+            temperature=0.1,
+            enable_thinking=False,
+        )
+
+        call_kwargs = fake_llama.calls[0]
+        assert call_kwargs["max_tokens"] == 256
+        assert call_kwargs["temperature"] == 0.1
+        assert call_kwargs["messages"][-1]["content"] == "/no_think\nhello"
+        assert chat_model.max_tokens == 8192
+        assert chat_model.temperature == 0.6
+        assert chat_model.enable_thinking is True
+
+    def test_stream_respects_per_call_gpt_oss_overrides(self):
+        fake_llama = FakeLlama(
+            stream_chunks=[
+                {"choices": [{"delta": {"content": "Hello"}}]}
+            ]
+        )
+        chat_model = _build_chat_gguf(
+            fake_llama,
+            model_path="/tmp/gpt-oss-20b-F16.gguf",
+        )
+        chat_model.max_tokens = 4096
+        chat_model.temperature = 0.6
+        chat_model.reasoning_effort = "high"
+
+        list(
+            chat_model._stream(
+                [
+                    SystemMessage(content="You are a helpful assistant."),
+                    HumanMessage(content="hello"),
+                ],
+                max_new_tokens=384,
+                temperature=0.1,
+                reasoning_effort="low",
+            )
+        )
+
+        call_kwargs = fake_llama.calls[0]
+        assert call_kwargs["max_tokens"] == 384
+        assert call_kwargs["temperature"] == 0.1
+        assert "reasoning effort low" in call_kwargs["messages"][0][
+            "content"
+        ].lower()
+        assert chat_model.max_tokens == 4096
+        assert chat_model.temperature == 0.6
+        assert chat_model.reasoning_effort == "high"
+
     def test_generate_passes_native_tools_and_tool_choice(self):
         fake_llama = FakeLlama(
             response={

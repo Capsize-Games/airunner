@@ -175,6 +175,10 @@ flowchart LR
   document synthesis and verification now run with model thinking
   disabled so they spend their budget on the committed answer rather
   than on internal reasoning prose.
+- In `ChatGGUF`, those hidden-stage generation presets are now applied
+  as per-call adapter overrides, so stage-specific `max_new_tokens`,
+  `temperature`, `reasoning_effort`, and `enable_thinking` settings
+  reach `llama.cpp` instead of remaining manager-side metadata only.
 - For large attached documents, `analyze_loaded_document` now carries a
   reduced whole-document bundle with coverage, a deterministic refined
   synthesis, chunk summaries, and supporting evidence so hidden

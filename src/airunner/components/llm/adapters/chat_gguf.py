@@ -19,6 +19,7 @@ import os
 import re
 import time
 import uuid
+from contextlib import contextmanager
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -455,6 +456,59 @@ class ChatGGUF(BaseChatModel):
             return effort
         return "medium"
 
+    @staticmethod
+    def _is_numeric_override(value: Any) -> bool:
+        """Return whether one runtime override is numeric, not boolean."""
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+    @contextmanager
+    def _temporary_runtime_overrides(
+        self,
+        kwargs: Optional[Dict[str, Any]],
+    ) -> Iterator[None]:
+        """Apply one-shot generation overrides for this model call."""
+        runtime_kwargs = dict(kwargs or {})
+        original_values: Dict[str, Any] = {}
+        overrides: Dict[str, Any] = {}
+
+        max_tokens = runtime_kwargs.get("max_new_tokens")
+        if not isinstance(max_tokens, int):
+            max_tokens = runtime_kwargs.get("max_tokens")
+        if isinstance(max_tokens, int):
+            overrides["max_tokens"] = max_tokens
+
+        for attr_name in ("temperature", "top_p", "min_p"):
+            value = runtime_kwargs.get(attr_name)
+            if self._is_numeric_override(value):
+                overrides[attr_name] = value
+
+        top_k = runtime_kwargs.get("top_k")
+        if isinstance(top_k, int):
+            overrides["top_k"] = top_k
+
+        repeat_penalty = runtime_kwargs.get("repetition_penalty")
+        if repeat_penalty is None:
+            repeat_penalty = runtime_kwargs.get("repeat_penalty")
+        if self._is_numeric_override(repeat_penalty):
+            overrides["repeat_penalty"] = repeat_penalty
+
+        reasoning_effort = runtime_kwargs.get("reasoning_effort")
+        if isinstance(reasoning_effort, str) and reasoning_effort.strip():
+            overrides["reasoning_effort"] = reasoning_effort.strip()
+
+        enable_thinking = runtime_kwargs.get("enable_thinking")
+        if isinstance(enable_thinking, bool):
+            overrides["enable_thinking"] = enable_thinking
+
+        try:
+            for attr_name, value in overrides.items():
+                original_values[attr_name] = getattr(self, attr_name)
+                setattr(self, attr_name, value)
+            yield
+        finally:
+            for attr_name, value in original_values.items():
+                setattr(self, attr_name, value)
+
     def _resolve_llama_tuning(self) -> Dict[str, Any]:
         """Resolve optional llama.cpp tuning overrides from the environment."""
         tuning: Dict[str, Any] = {
@@ -588,9 +642,10 @@ class ChatGGUF(BaseChatModel):
         self.logger.info(
             f"  llama.cpp tuning: {self._format_llama_tuning(llama_tuning)}"
         )
-        
+
         # Add YaRN parameters for extended context (131K)
-        # YaRN (Yet another RoPE extensioN) allows extending context beyond native limit
+        # YaRN (Yet another RoPE extensioN) allows extending context
+        # beyond native limit
         if self.use_yarn and self.n_ctx > self.yarn_orig_ctx:
             self.logger.info(
                 f"Enabling YaRN for extended context: {self.yarn_orig_ctx} -> {self.n_ctx}"
@@ -604,7 +659,7 @@ class ChatGGUF(BaseChatModel):
             llama_kwargs["yarn_attn_factor"] = 1.0
             llama_kwargs["yarn_beta_fast"] = 32.0
             llama_kwargs["yarn_beta_slow"] = 1.0
-        
+
         try:
             self._llama = Llama(**llama_kwargs)
         except Exception as e:
@@ -614,11 +669,21 @@ class ChatGGUF(BaseChatModel):
                 # Extract architecture name from error message if possible
                 # Error format: "unknown model architecture: 'mistral3'"
                 import re
-                arch_match = re.search(r"unknown model architecture[:\s]*['\"]?(\w+)['\"]?", error_msg)
-                architecture = arch_match.group(1) if arch_match else "unknown"
-                raise UnsupportedGGUFArchitectureError(architecture, self.model_path)
+
+                arch_match = re.search(
+                    r"unknown model architecture[:\s]*['\"]?(\w+)['\"]?",
+                    error_msg,
+                )
+                architecture = (
+                    arch_match.group(1) if arch_match else "unknown"
+                )
+                raise UnsupportedGGUFArchitectureError(
+                    architecture,
+                    self.model_path,
+                )
             elif "failed to load model" in error_msg:
-                # Generic llama.cpp load failure - could also be architecture issue
+                # Generic llama.cpp load failure - could also be
+                # architecture issue
                 raise RuntimeError(
                     f"Failed to load GGUF model from {self.model_path}: {e}. "
                     "This may be due to an unsupported model architecture or corrupted file."
@@ -659,7 +724,9 @@ class ChatGGUF(BaseChatModel):
             and self.tool_calling_mode == "native"
         )
 
-    def _native_tool_choice(self) -> Optional[Union[str, Dict[str, Any]]]:
+    def _native_tool_choice(
+        self,
+    ) -> Optional[Union[str, Dict[str, Any]]]:
         """Normalize internal tool-choice values for llama.cpp."""
         if self.tool_choice == "any" and self._use_native_tool_calling():
             return "required"
@@ -1837,121 +1904,125 @@ For each function call, return a json object with function name and arguments wi
         Returns:
             ChatResult with generated response
         """
-        if self._use_raw_gpt_oss_completion():
-            completion_kwargs = self._build_gpt_oss_completion_kwargs(
-                messages,
-                stop,
-                stream=False,
-            )
+        with self._temporary_runtime_overrides(kwargs):
+            if self._use_raw_gpt_oss_completion():
+                completion_kwargs = self._build_gpt_oss_completion_kwargs(
+                    messages,
+                    stop,
+                    stream=False,
+                )
+                call_started = time.perf_counter()
+                response = self._llama.create_completion(**completion_kwargs)
+                self.logger.info(
+                    "[ChatGGUF._generate] create_completion returned in %.3fs",
+                    time.perf_counter() - call_started,
+                )
+                choice = response["choices"][0]
+                raw_text = choice.get("text", "") or ""
+                raw_text = self._continue_prefilled_gpt_oss_tool_call(
+                    completion_kwargs,
+                    raw_text,
+                )
+                message = self._build_gpt_oss_message_from_raw(raw_text)
+                return ChatResult(
+                    generations=[ChatGeneration(message=message)]
+                )
+
+            converted_messages = self._convert_messages(messages)
+
+            chat_kwargs = {
+                "messages": converted_messages,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "top_k": self.top_k,
+                "min_p": self.min_p,
+                "repeat_penalty": self.repeat_penalty,
+                "stream": False,
+            }
+
+            if stop:
+                chat_kwargs["stop"] = stop
+
+            native_tool_choice = self._native_tool_choice()
+
+            if self._use_native_tool_calling():
+                chat_kwargs["tools"] = self.tools
+                if native_tool_choice is not None:
+                    chat_kwargs["tool_choice"] = native_tool_choice
+
+            if self._use_native_tool_calling():
+                self.logger.debug(
+                    f"[TOOL CALL] Passing {len(self.tools or [])} native tools to llama.cpp"
+                )
+            elif self.tools:
+                self.logger.debug(
+                    f"[TOOL CALL] {len(self.tools)} tools injected in system prompt"
+                )
+            else:
+                self.logger.debug("[TOOL CALL] No tools bound")
+
             call_started = time.perf_counter()
-            response = self._llama.create_completion(**completion_kwargs)
+            self.logger.debug(
+                "[TOOL CALL] Calling create_chat_completion with "
+                f"chat_format={self._detected_format}"
+            )
+            response = self._llama.create_chat_completion(**chat_kwargs)
             self.logger.info(
-                "[ChatGGUF._generate] create_completion returned in %.3fs",
-                time.perf_counter() - call_started,
+                "[ChatGGUF._generate] create_chat_completion returned in "
+                f"{time.perf_counter() - call_started:.3f}s"
             )
+            self.logger.debug(
+                "[TOOL CALL] Response received (%s)",
+                summarize_mapping_keys(response, label="response"),
+            )
+
             choice = response["choices"][0]
-            raw_text = choice.get("text", "") or ""
-            raw_text = self._continue_prefilled_gpt_oss_tool_call(
-                completion_kwargs,
-                raw_text,
+            message_data = choice.get("message", {})
+            content = message_data.get("content", "") or ""
+
+            thinking_content = None
+            if self.enable_thinking and hasattr(message_data, "get"):
+                thinking_content = message_data.get("reasoning_content")
+
+            gpt_oss_tool_calls: List[Dict[str, Any]] = []
+            if self._uses_gpt_oss_parser() or has_gpt_oss_markup(content):
+                gpt_oss_tool_calls = (
+                    self._parse_gpt_oss_commentary_tool_calls(content)
+                )
+                parsed = parse_gpt_oss_response(content)
+                content = parsed.content
+                if not thinking_content:
+                    thinking_content = parsed.thinking_content
+
+            raw_native_tool_calls = (
+                message_data.get("tool_calls")
+                if hasattr(message_data, "get")
+                else None
             )
-            message = self._build_gpt_oss_message_from_raw(raw_text)
+            tool_calls = self._parse_native_tool_calls(raw_native_tool_calls)
+            if not tool_calls:
+                tool_calls, content = self._extract_tool_calls(content)
+            if not tool_calls and gpt_oss_tool_calls:
+                tool_calls = gpt_oss_tool_calls
+
+            if tool_calls:
+                self.logger.debug(
+                    "[TOOL CALL] Parsed %s tool calls from response",
+                    len(tool_calls),
+                )
+
+            additional_kwargs = {}
+            if thinking_content:
+                additional_kwargs["thinking_content"] = thinking_content
+
+            message = AIMessage(
+                content=content,
+                tool_calls=tool_calls,
+                additional_kwargs=additional_kwargs,
+            )
+
             return ChatResult(generations=[ChatGeneration(message=message)])
-
-        converted_messages = self._convert_messages(messages)
-        
-        # Build kwargs for create_chat_completion
-        chat_kwargs = {
-            "messages": converted_messages,
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "top_k": self.top_k,
-            "min_p": self.min_p,
-            "repeat_penalty": self.repeat_penalty,
-            "stream": False,
-        }
-        
-        if stop:
-            chat_kwargs["stop"] = stop
-
-        native_tool_choice = self._native_tool_choice()
-
-        if self._use_native_tool_calling():
-            chat_kwargs["tools"] = self.tools
-            if native_tool_choice is not None:
-                chat_kwargs["tool_choice"] = native_tool_choice
-
-        if self._use_native_tool_calling():
-            self.logger.debug(
-                f"[TOOL CALL] Passing {len(self.tools or [])} native tools to llama.cpp"
-            )
-        elif self.tools:
-            self.logger.debug(f"[TOOL CALL] {len(self.tools)} tools injected in system prompt")
-        else:
-            self.logger.debug("[TOOL CALL] No tools bound")
-
-        # Call native chat completion
-        call_started = time.perf_counter()
-        self.logger.debug(f"[TOOL CALL] Calling create_chat_completion with chat_format={self._detected_format}")
-        response = self._llama.create_chat_completion(**chat_kwargs)
-        self.logger.info(
-            f"[ChatGGUF._generate] create_chat_completion returned in {time.perf_counter() - call_started:.3f}s"
-        )
-        self.logger.debug(
-            "[TOOL CALL] Response received (%s)",
-            summarize_mapping_keys(response, label="response"),
-        )
-        
-        # Extract response
-        choice = response["choices"][0]
-        message_data = choice.get("message", {})
-        content = message_data.get("content", "") or ""
-        
-        # Handle thinking content (Qwen3)
-        thinking_content = None
-        if self.enable_thinking and hasattr(message_data, "get"):
-            thinking_content = message_data.get("reasoning_content")
-
-        gpt_oss_tool_calls: List[Dict[str, Any]] = []
-        if self._uses_gpt_oss_parser() or has_gpt_oss_markup(content):
-            gpt_oss_tool_calls = self._parse_gpt_oss_commentary_tool_calls(
-                content
-            )
-            parsed = parse_gpt_oss_response(content)
-            content = parsed.content
-            if not thinking_content:
-                thinking_content = parsed.thinking_content
-        
-        raw_native_tool_calls = (
-            message_data.get("tool_calls")
-            if hasattr(message_data, "get")
-            else None
-        )
-        tool_calls = self._parse_native_tool_calls(raw_native_tool_calls)
-        if not tool_calls:
-            tool_calls, content = self._extract_tool_calls(content)
-        if not tool_calls and gpt_oss_tool_calls:
-            tool_calls = gpt_oss_tool_calls
-        
-        if tool_calls:
-            self.logger.debug(
-                "[TOOL CALL] Parsed %s tool calls from response",
-                len(tool_calls),
-            )
-
-        # Build AIMessage
-        additional_kwargs = {}
-        if thinking_content:
-            additional_kwargs["thinking_content"] = thinking_content
-            
-        message = AIMessage(
-            content=content,
-            tool_calls=tool_calls,
-            additional_kwargs=additional_kwargs,
-        )
-
-        return ChatResult(generations=[ChatGeneration(message=message)])
 
     def _stream(
         self,
@@ -1974,227 +2045,262 @@ For each function call, return a json object with function name and arguments wi
         Yields:
             ChatGenerationChunk objects with streamed content
         """
-        if self._use_raw_gpt_oss_completion():
-            completion_kwargs = self._build_gpt_oss_completion_kwargs(
-                messages,
-                stop,
-                stream=True,
-            )
-            full_content: List[str] = []
-            parser = GPTOSSStreamParser()
-            for chunk in self._llama.create_completion(**completion_kwargs):
-                if self._interrupted:
-                    break
+        with self._temporary_runtime_overrides(kwargs):
+            if self._use_raw_gpt_oss_completion():
+                completion_kwargs = self._build_gpt_oss_completion_kwargs(
+                    messages,
+                    stop,
+                    stream=True,
+                )
+                full_content: List[str] = []
+                parser = GPTOSSStreamParser()
+                for chunk in self._llama.create_completion(**completion_kwargs):
+                    if self._interrupted:
+                        break
 
-                raw_text = chunk.get("choices", [{}])[0].get("text", "")
-                if not raw_text:
-                    continue
+                    raw_text = chunk.get("choices", [{}])[0].get(
+                        "text",
+                        "",
+                    )
+                    if not raw_text:
+                        continue
 
-                full_content.append(raw_text)
-                parsed_delta = parser.feed(raw_text)
-                if parsed_delta.analysis_text:
+                    full_content.append(raw_text)
+                    parsed_delta = parser.feed(raw_text)
+                    if parsed_delta.analysis_text:
+                        yield ChatGenerationChunk(
+                            message=AIMessageChunk(
+                                content="",
+                                additional_kwargs={
+                                    "reasoning_content": (
+                                        parsed_delta.analysis_text
+                                    ),
+                                },
+                            )
+                        )
+
+                    if parsed_delta.final_text:
+                        chunk_msg = ChatGenerationChunk(
+                            message=AIMessageChunk(
+                                content=parsed_delta.final_text
+                            )
+                        )
+                        if run_manager:
+                            run_manager.on_llm_new_token(
+                                parsed_delta.final_text,
+                                chunk=chunk_msg,
+                            )
+                        yield chunk_msg
+
+                parsed_tail = parser.finish()
+                if parsed_tail.analysis_text:
                     yield ChatGenerationChunk(
                         message=AIMessageChunk(
                             content="",
                             additional_kwargs={
                                 "reasoning_content": (
-                                    parsed_delta.analysis_text
+                                    parsed_tail.analysis_text
                                 ),
                             },
                         )
                     )
-
-                if parsed_delta.final_text:
-                    chunk_msg = ChatGenerationChunk(
-                        message=AIMessageChunk(content=parsed_delta.final_text)
+                if parsed_tail.final_text:
+                    tail_chunk = ChatGenerationChunk(
+                        message=AIMessageChunk(
+                            content=parsed_tail.final_text
+                        )
                     )
                     if run_manager:
                         run_manager.on_llm_new_token(
-                            parsed_delta.final_text,
-                            chunk=chunk_msg,
+                            parsed_tail.final_text,
+                            chunk=tail_chunk,
                         )
-                    yield chunk_msg
+                    yield tail_chunk
 
-            parsed_tail = parser.finish()
-            if parsed_tail.analysis_text:
-                yield ChatGenerationChunk(
-                    message=AIMessageChunk(
-                        content="",
-                        additional_kwargs={
-                            "reasoning_content": parsed_tail.analysis_text,
-                        },
-                    )
+                raw_text = "".join(full_content)
+                tool_calls = self._parse_gpt_oss_commentary_tool_calls(
+                    raw_text
                 )
-            if parsed_tail.final_text:
-                tail_chunk = ChatGenerationChunk(
-                    message=AIMessageChunk(content=parsed_tail.final_text)
-                )
-                if run_manager:
-                    run_manager.on_llm_new_token(
-                        parsed_tail.final_text,
-                        chunk=tail_chunk,
-                    )
-                yield tail_chunk
-
-            raw_text = "".join(full_content)
-            tool_calls = self._parse_gpt_oss_commentary_tool_calls(raw_text)
-            if not tool_calls:
-                tool_calls, _ = self._extract_tool_calls(raw_text)
-            if tool_calls:
-                yield ChatGenerationChunk(
-                    message=AIMessageChunk(content="", tool_calls=tool_calls)
-                )
-            return
-
-        self.logger.info("[ChatGGUF._stream] Starting stream generation")
-        converted_messages = self._convert_messages(messages)
-        self.logger.info(f"[ChatGGUF._stream] Converted {len(converted_messages)} messages")
-        
-        chat_kwargs = {
-            "messages": converted_messages,
-            "max_tokens": self.max_tokens,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "top_k": self.top_k,
-            "min_p": self.min_p,
-            "repeat_penalty": self.repeat_penalty,
-            "stream": True,
-        }
-        
-        if stop:
-            chat_kwargs["stop"] = stop
-
-        native_tool_choice = self._native_tool_choice()
-
-        if self._use_native_tool_calling():
-            chat_kwargs["tools"] = self.tools
-            if native_tool_choice is not None:
-                chat_kwargs["tool_choice"] = native_tool_choice
-
-        self._interrupted = False
-        full_content = []
-        native_tool_call_buffers: Dict[int, Dict[str, Any]] = {}
-        
-        call_started = time.perf_counter()
-        self.logger.info(f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}")
-        self.logger.info(f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}")
-        self.logger.info(
-            f"[ChatGGUF._stream] tool_choice: {native_tool_choice}"
-        )
-        
-        chunk_count = 0
-        gpt_oss_parser = (
-            GPTOSSStreamParser() if self._uses_gpt_oss_parser() else None
-        )
-        for chunk in self._llama.create_chat_completion(**chat_kwargs):
-            chunk_count += 1
-            if chunk_count == 1:
-                self.logger.info(
-                    f"[ChatGGUF._stream] First chunk received after {time.perf_counter() - call_started:.3f}s"
-                )
-            if self._interrupted:
-                break
-
-            delta = chunk.get("choices", [{}])[0].get("delta", {})
-
-            if "tool_calls" in delta and delta["tool_calls"]:
-                self._merge_native_tool_call_deltas(
-                    native_tool_call_buffers,
-                    delta["tool_calls"],
-                )
-
-            reasoning_text = delta.get("reasoning_content")
-            
-            # Handle content
-            if "content" in delta and delta["content"]:
-                raw_text = delta["content"]
-                full_content.append(raw_text)
-                text = raw_text
-
-                if gpt_oss_parser is not None or has_gpt_oss_markup(raw_text):
-                    if gpt_oss_parser is None:
-                        gpt_oss_parser = GPTOSSStreamParser()
-                    parsed_delta = gpt_oss_parser.feed(raw_text)
-                    if parsed_delta.analysis_text:
-                        reasoning_text = (
-                            f"{reasoning_text}{parsed_delta.analysis_text}"
-                            if reasoning_text
-                            else parsed_delta.analysis_text
+                if not tool_calls:
+                    tool_calls, _ = self._extract_tool_calls(raw_text)
+                if tool_calls:
+                    yield ChatGenerationChunk(
+                        message=AIMessageChunk(
+                            content="",
+                            tool_calls=tool_calls,
                         )
-                    text = parsed_delta.final_text
+                    )
+                return
 
-                additional_kwargs: Dict[str, Any] = {}
-                if reasoning_text:
-                    additional_kwargs["reasoning_content"] = reasoning_text
-                
-                chunk_msg = ChatGenerationChunk(
-                    message=AIMessageChunk(
-                        content=text,
-                        additional_kwargs=additional_kwargs,
-                    )
-                )
-                
-                if run_manager:
-                    run_manager.on_llm_new_token(text, chunk=chunk_msg)
-                    
-                yield chunk_msg
-            else:
-                additional_kwargs = {}
-                if reasoning_text:
-                    additional_kwargs["reasoning_content"] = reasoning_text
-            if not ("content" in delta and delta["content"]) and additional_kwargs:
-                yield ChatGenerationChunk(
-                    message=AIMessageChunk(
-                        content="",
-                        additional_kwargs=additional_kwargs,
-                    )
-                )
-
-        if gpt_oss_parser is not None:
-            parsed_tail = gpt_oss_parser.finish()
-            if parsed_tail.analysis_text:
-                yield ChatGenerationChunk(
-                    message=AIMessageChunk(
-                        content="",
-                        additional_kwargs={
-                            "reasoning_content": parsed_tail.analysis_text,
-                        },
-                    )
-                )
-            if parsed_tail.final_text:
-                tail_chunk = ChatGenerationChunk(
-                    message=AIMessageChunk(content=parsed_tail.final_text)
-                )
-                if run_manager:
-                    run_manager.on_llm_new_token(
-                        parsed_tail.final_text,
-                        chunk=tail_chunk,
-                    )
-                yield tail_chunk
-
-        # After streaming completes, parse <tool_call> tags from full content
-        self.logger.info(
-            f"[ChatGGUF._stream] Stream loop finished in {time.perf_counter() - call_started:.3f}s. "
-            f"Total chunks: {chunk_count}, content length: {len(''.join(full_content))}"
-        )
-        full_text = "".join(full_content)
-        gpt_oss_tool_calls = self._parse_gpt_oss_commentary_tool_calls(
-            full_text
-        )
-        tool_calls = self._finalize_native_tool_call_deltas(native_tool_call_buffers)
-        if not tool_calls:
-            tool_calls, _ = self._extract_tool_calls(full_text)
-        if not tool_calls and gpt_oss_tool_calls:
-            tool_calls = gpt_oss_tool_calls
-        
-        if tool_calls:
-            self.logger.debug(f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from streamed response")
-            yield ChatGenerationChunk(
-                message=AIMessageChunk(
-                    content="",
-                    tool_calls=tool_calls,
-                )
+            self.logger.info("[ChatGGUF._stream] Starting stream generation")
+            converted_messages = self._convert_messages(messages)
+            self.logger.info(
+                f"[ChatGGUF._stream] Converted {len(converted_messages)} messages"
             )
+
+            chat_kwargs = {
+                "messages": converted_messages,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "top_k": self.top_k,
+                "min_p": self.min_p,
+                "repeat_penalty": self.repeat_penalty,
+                "stream": True,
+            }
+
+            if stop:
+                chat_kwargs["stop"] = stop
+
+            native_tool_choice = self._native_tool_choice()
+
+            if self._use_native_tool_calling():
+                chat_kwargs["tools"] = self.tools
+                if native_tool_choice is not None:
+                    chat_kwargs["tool_choice"] = native_tool_choice
+
+            self._interrupted = False
+            full_content = []
+            native_tool_call_buffers: Dict[int, Dict[str, Any]] = {}
+
+            call_started = time.perf_counter()
+            self.logger.info(
+                f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}"
+            )
+            self.logger.info(
+                f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}"
+            )
+            self.logger.info(
+                f"[ChatGGUF._stream] tool_choice: {native_tool_choice}"
+            )
+
+            chunk_count = 0
+            gpt_oss_parser = (
+                GPTOSSStreamParser() if self._uses_gpt_oss_parser() else None
+            )
+            for chunk in self._llama.create_chat_completion(**chat_kwargs):
+                chunk_count += 1
+                if chunk_count == 1:
+                    self.logger.info(
+                        f"[ChatGGUF._stream] First chunk received after {time.perf_counter() - call_started:.3f}s"
+                    )
+                if self._interrupted:
+                    break
+
+                delta = chunk.get("choices", [{}])[0].get("delta", {})
+
+                if "tool_calls" in delta and delta["tool_calls"]:
+                    self._merge_native_tool_call_deltas(
+                        native_tool_call_buffers,
+                        delta["tool_calls"],
+                    )
+
+                reasoning_text = delta.get("reasoning_content")
+
+                if "content" in delta and delta["content"]:
+                    raw_text = delta["content"]
+                    full_content.append(raw_text)
+                    text = raw_text
+
+                    if gpt_oss_parser is not None or has_gpt_oss_markup(
+                        raw_text
+                    ):
+                        if gpt_oss_parser is None:
+                            gpt_oss_parser = GPTOSSStreamParser()
+                        parsed_delta = gpt_oss_parser.feed(raw_text)
+                        if parsed_delta.analysis_text:
+                            reasoning_text = (
+                                f"{reasoning_text}{parsed_delta.analysis_text}"
+                                if reasoning_text
+                                else parsed_delta.analysis_text
+                            )
+                        text = parsed_delta.final_text
+
+                    additional_kwargs: Dict[str, Any] = {}
+                    if reasoning_text:
+                        additional_kwargs["reasoning_content"] = (
+                            reasoning_text
+                        )
+
+                    chunk_msg = ChatGenerationChunk(
+                        message=AIMessageChunk(
+                            content=text,
+                            additional_kwargs=additional_kwargs,
+                        )
+                    )
+
+                    if run_manager:
+                        run_manager.on_llm_new_token(text, chunk=chunk_msg)
+
+                    yield chunk_msg
+                else:
+                    additional_kwargs = {}
+                    if reasoning_text:
+                        additional_kwargs["reasoning_content"] = (
+                            reasoning_text
+                        )
+                if not (
+                    "content" in delta and delta["content"]
+                ) and additional_kwargs:
+                    yield ChatGenerationChunk(
+                        message=AIMessageChunk(
+                            content="",
+                            additional_kwargs=additional_kwargs,
+                        )
+                    )
+
+            if gpt_oss_parser is not None:
+                parsed_tail = gpt_oss_parser.finish()
+                if parsed_tail.analysis_text:
+                    yield ChatGenerationChunk(
+                        message=AIMessageChunk(
+                            content="",
+                            additional_kwargs={
+                                "reasoning_content": (
+                                    parsed_tail.analysis_text
+                                ),
+                            },
+                        )
+                    )
+                if parsed_tail.final_text:
+                    tail_chunk = ChatGenerationChunk(
+                        message=AIMessageChunk(
+                            content=parsed_tail.final_text
+                        )
+                    )
+                    if run_manager:
+                        run_manager.on_llm_new_token(
+                            parsed_tail.final_text,
+                            chunk=tail_chunk,
+                        )
+                    yield tail_chunk
+
+            self.logger.info(
+                f"[ChatGGUF._stream] Stream loop finished in {time.perf_counter() - call_started:.3f}s. "
+                f"Total chunks: {chunk_count}, content length: {len(''.join(full_content))}"
+            )
+            full_text = "".join(full_content)
+            gpt_oss_tool_calls = self._parse_gpt_oss_commentary_tool_calls(
+                full_text
+            )
+            tool_calls = self._finalize_native_tool_call_deltas(
+                native_tool_call_buffers
+            )
+            if not tool_calls:
+                tool_calls, _ = self._extract_tool_calls(full_text)
+            if not tool_calls and gpt_oss_tool_calls:
+                tool_calls = gpt_oss_tool_calls
+
+            if tool_calls:
+                self.logger.debug(
+                    f"[TOOL CALL] Parsed {len(tool_calls)} tool calls from streamed response"
+                )
+                yield ChatGenerationChunk(
+                    message=AIMessageChunk(
+                        content="",
+                        tool_calls=tool_calls,
+                    )
+                )
 
     def bind_tools(
         self,
