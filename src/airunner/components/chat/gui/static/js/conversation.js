@@ -876,6 +876,17 @@ function getOrCreateStatusWidget(requestId) {
             });
         }
         widget.addEventListener('click', (event) => {
+            const copyButton = event.target.closest(
+                '.status-item-copy-toggle'
+            );
+            if (copyButton) {
+                event.stopPropagation();
+                copyStatusItemText(
+                    widget.dataset.requestId || 'legacy',
+                    copyButton.dataset.itemId || '',
+                );
+                return;
+            }
             const toggle = event.target.closest(
                 '.status-item-metadata-toggle'
             );
@@ -1394,17 +1405,6 @@ function clearStatusWidgets() {
         }
     });
     statusWidgets.clear();
-            const copyButton = event.target.closest(
-                '.status-item-copy-toggle'
-            );
-            if (copyButton) {
-                event.stopPropagation();
-                copyStatusItemText(
-                    widget.dataset.requestId || 'legacy',
-                    copyButton.dataset.itemId || '',
-                );
-                return;
-            }
     document.querySelectorAll('.unified-status-widget').forEach((widget) => {
         widget.remove();
     });
