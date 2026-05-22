@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from PySide6.QtCore import QPointF
 from PySide6.QtGui import QImage
 
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
@@ -28,7 +29,7 @@ class CanvasItemManagementMixin:
         if self.item.scene() is None:
             self.addItem(self.item)
             self.item.setPos(x, y)
-            self.original_item_positions[self.item] = self.item.pos()
+            self.original_item_positions[self.item] = QPointF(x, y)
 
     def _update_existing_item(self, image: QImage, x: int, y: int) -> None:
         """Update an existing item with new image and position.
@@ -39,7 +40,7 @@ class CanvasItemManagementMixin:
             y: Y position for the item.
         """
         self.item.setPos(x, y)
-        self.original_item_positions[self.item] = self.item.pos()
+        self.original_item_positions[self.item] = QPointF(x, y)
         if image is not None and not image.isNull():
             try:
                 self.item.updateImage(image)

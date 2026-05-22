@@ -184,9 +184,12 @@ class MainWindow(
     _chat_splitter_index = 1
     _center_splitter_index = 2
     _stats_splitter_index = 3
+    _canvas_panel_index = 0
+    _prompt_panel_index = 1
+    _left_panel_target_width = 360
+    _chat_panel_target_width = 250
     _stats_sidebar_index = 0
-    _art_prompt_sidebar_index = 1
-    _art_tools_sidebar_index = 2
+    _art_tools_sidebar_index = 1
     _left_documents_panel_index = 0
     _left_history_panel_index = 1
     _left_llm_settings_panel_index = 2
@@ -387,8 +390,12 @@ class MainWindow(
         )
 
     @Slot(bool)
+    def on_canvas_button_toggled(self, val: bool):
+        self._toggle_canvas_panel(val)
+
+    @Slot(bool)
     def on_prompt_editor_button_toggled(self, val: bool):
-        self._toggle_sidebar_page(self._art_prompt_sidebar_index, val)
+        self._toggle_prompt_panel(val)
 
     @Slot(bool)
     def on_art_tools_button_toggled(self, val: bool):
@@ -401,6 +408,8 @@ class MainWindow(
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Restore deferred startup UI once the main window is visible."""
         self._ensure_canvas_loaded()
+        if self._prompt_panel_is_visible():
+            self._ensure_art_prompt_loaded()
 
         if self._restore_left_panel_page_after_startup is not None:
             page_index = int(self._restore_left_panel_page_after_startup)
@@ -446,6 +455,8 @@ class MainWindow(
             self._ensure_sidebar_page_loaded(
                 self._current_sidebar_index()
             )
+        if self._prompt_panel_is_visible():
+            self._ensure_art_prompt_loaded()
         if self._left_panel_is_visible():
             self._ensure_left_panel_page_loaded(
                 self.ui.left_panel_tab.currentIndex()
@@ -482,6 +493,33 @@ class MainWindow(
             sizes[self._stats_splitter_index] > 0
         )
 
+    def _center_section_is_visible(self) -> bool:
+        """Return True when the shared center splitter area is visible."""
+        sizes = self.ui.main_window_splitter.sizes()
+        return len(sizes) > self._center_splitter_index and (
+            sizes[self._center_splitter_index] > 0
+        )
+
+    def _canvas_panel_is_visible(self) -> bool:
+        """Return True when the canvas panel is visible."""
+        splitter = getattr(self.ui, "center_splitter", None)
+        if splitter is None or not self._center_section_is_visible():
+            return False
+        sizes = splitter.sizes()
+        return len(sizes) > self._canvas_panel_index and (
+            sizes[self._canvas_panel_index] > 0
+        )
+
+    def _prompt_panel_is_visible(self) -> bool:
+        """Return True when the prompt panel is visible."""
+        splitter = getattr(self.ui, "center_splitter", None)
+        if splitter is None or not self._center_section_is_visible():
+            return False
+        sizes = splitter.sizes()
+        return len(sizes) > self._prompt_panel_index and (
+            sizes[self._prompt_panel_index] > 0
+        )
+
     def _knowledgebase_panel_is_visible(self) -> bool:
         """Return True when the left documents splitter area is visible."""
         return self._left_panel_is_visible()
@@ -516,7 +554,9 @@ class MainWindow(
             type=int,
         )
         self.qsettings.endGroup()
-        return int(index)
+        if isinstance(index, int):
+            return index
+        return self._left_documents_panel_index
 
     def _saved_sidebar_tab_index(self) -> int:
         """Return the persisted sidebar page index."""
@@ -527,7 +567,12 @@ class MainWindow(
             type=int,
         )
         self.qsettings.endGroup()
-        return int(index)
+        if not isinstance(index, int):
+            return self._stats_sidebar_index
+        return max(
+            self._stats_sidebar_index,
+            min(index, self._art_tools_sidebar_index),
+        )
 
     def _store_active_left_panel_tab_index(self, index: int) -> None:
         """Persist the current left panel page index."""
@@ -562,8 +607,6 @@ class MainWindow(
         """Load sidebar content lazily for the requested page."""
         if page_index == self._stats_sidebar_index:
             self._ensure_stats_loaded()
-        elif page_index == self._art_prompt_sidebar_index:
-            self._ensure_art_prompt_loaded()
         elif page_index == self._art_tools_sidebar_index:
             self._ensure_art_tools_loaded()
 
@@ -593,11 +636,127 @@ class MainWindow(
 
     def _sidebar_page_min_size(self, page_index: int) -> int:
         """Return a sensible opening width for one right-panel page."""
-        if page_index == self._art_prompt_sidebar_index:
-            return 350
         if page_index == self._art_tools_sidebar_index:
             return 320
         return 280
+
+    def _toggle_canvas_panel(self, visible: bool) -> None:
+        """Show or hide the canvas panel within the center splitter."""
+        min_size = 320
+        if visible:
+            if not self._center_section_is_visible():
+                self._toggle_splitter_section(
+                    True,
+                    self._center_splitter_index,
+                    self.ui.main_window_splitter,
+                    min_size,
+                )
+            self._maximize_canvas_workspace()
+            self._maximize_canvas_panel()
+        elif self._canvas_panel_is_visible():
+            self._toggle_splitter_section(
+                False,
+                self._canvas_panel_index,
+                self.ui.center_splitter,
+                min_size,
+            )
+            if not self._prompt_panel_is_visible():
+                self._toggle_splitter_section(
+                    False,
+                    self._center_splitter_index,
+                    self.ui.main_window_splitter,
+                    min_size,
+                )
+        self._sync_sidebar_button_states()
+
+    def _maximize_canvas_workspace(self) -> None:
+        """Shrink visible left panels so the center workspace can expand."""
+        splitter = getattr(self.ui, "main_window_splitter", None)
+        if splitter is None:
+            return
+
+        sizes = splitter.sizes()
+        if len(sizes) <= self._center_splitter_index:
+            return
+
+        total_width = sum(max(size, 0) for size in sizes)
+        if total_width <= 0:
+            return
+
+        target_sizes = list(sizes)
+        fixed_width = 0
+
+        if self._left_panel_is_visible():
+            target_sizes[self._documents_splitter_index] = (
+                self._left_panel_target_width
+            )
+        else:
+            target_sizes[self._documents_splitter_index] = 0
+        fixed_width += target_sizes[self._documents_splitter_index]
+
+        if len(sizes) > self._chat_splitter_index and (
+            sizes[self._chat_splitter_index] > 0
+        ):
+            target_sizes[self._chat_splitter_index] = (
+                self._chat_panel_target_width
+            )
+        else:
+            target_sizes[self._chat_splitter_index] = 0
+        fixed_width += target_sizes[self._chat_splitter_index]
+
+        if len(sizes) > self._stats_splitter_index and (
+            sizes[self._stats_splitter_index] <= 0
+        ):
+            target_sizes[self._stats_splitter_index] = 0
+        fixed_width += target_sizes[self._stats_splitter_index]
+
+        target_sizes[self._center_splitter_index] = max(
+            1,
+            total_width - fixed_width,
+        )
+        splitter.setSizes(target_sizes)
+
+    def _maximize_canvas_panel(self) -> None:
+        """Let the canvas take the remaining width in the center splitter."""
+        splitter = getattr(self.ui, "center_splitter", None)
+        if splitter is None:
+            return
+        prompt_size = 1 if self._prompt_panel_is_visible() else 0
+        splitter.setSizes([10000, prompt_size])
+
+    def _toggle_prompt_panel(self, visible: bool) -> None:
+        """Show or hide the dedicated prompt panel."""
+        min_size = 350
+        if visible:
+            self._ensure_art_prompt_loaded()
+            if not self._center_section_is_visible():
+                self._toggle_splitter_section(
+                    True,
+                    self._center_splitter_index,
+                    self.ui.main_window_splitter,
+                    min_size,
+                )
+            self._toggle_splitter_section(
+                True,
+                self._prompt_panel_index,
+                self.ui.center_splitter,
+                min_size,
+            )
+        elif self._prompt_panel_is_visible():
+            self._toggle_splitter_section(
+                False,
+                self._prompt_panel_index,
+                self.ui.center_splitter,
+                min_size,
+            )
+            if not self._canvas_panel_is_visible():
+                self._toggle_splitter_section(
+                    False,
+                    self._center_splitter_index,
+                    self.ui.main_window_splitter,
+                    min_size,
+                )
+        self._sync_sidebar_button_states()
 
     def _toggle_left_panel_page(self, page_index: int, visible: bool) -> None:
         """Switch or hide the shared left splitter panel page."""
@@ -609,7 +768,7 @@ class MainWindow(
                     True,
                     self._documents_splitter_index,
                     self.ui.main_window_splitter,
-                    220,
+                    self._left_panel_target_width,
                 )
         elif (
             self._left_panel_is_visible()
@@ -619,7 +778,7 @@ class MainWindow(
                 False,
                 self._documents_splitter_index,
                 self.ui.main_window_splitter,
-                220,
+                self._left_panel_target_width,
             )
 
         self._sync_left_panel_button_states()
@@ -631,7 +790,8 @@ class MainWindow(
         self.set_llm_settings_sidebar_button_checked()
 
     def _sync_sidebar_button_states(self) -> None:
-        """Update the right-sidebar toggle buttons from current sidebar state."""
+        """Update the canvas and sidebar toggle buttons from panel state."""
+        self.set_canvas_button_checked()
         self.set_prompt_editor_button_checked()
         self.set_art_tools_button_checked()
         self.set_stats_button_checked()
@@ -656,6 +816,14 @@ class MainWindow(
             == self._left_documents_panel_index
         )
         self.ui.knowledgebase_button.blockSignals(False)
+
+    def set_canvas_button_checked(self):
+        button = getattr(self.ui, "canvas_button", None)
+        if button is None:
+            return
+        button.blockSignals(True)
+        button.setChecked(self._canvas_panel_is_visible())
+        button.blockSignals(False)
 
     def set_history_sidebar_button_checked(self):
         button = getattr(self.ui, "history_sidebar_button", None)
@@ -686,11 +854,7 @@ class MainWindow(
         if button is None:
             return
         button.blockSignals(True)
-        button.setChecked(
-            self._sidebar_is_visible()
-            and self._current_sidebar_index()
-            == self._art_prompt_sidebar_index
-        )
+        button.setChecked(self._prompt_panel_is_visible())
         button.blockSignals(False)
 
     def set_art_tools_button_checked(self):
@@ -749,16 +913,15 @@ class MainWindow(
 
     @Slot()
     def on_artActionNew_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
+        self._ensure_canvas_loaded()
+        canvas = getattr(self, "canvas", None)
+        if canvas is None or not hasattr(canvas, "start_new_document_flow"):
             self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot clear canvas."
+                "MainWindow: canvas widget is missing. Cannot create "
+                "a new document."
             )
             return
-        self.api.art.canvas.clear()
+        canvas.start_new_document_flow()
 
     @Slot()
     def on_actionCopy_triggered(self):
@@ -1231,9 +1394,12 @@ class MainWindow(
         if placeholder is not None:
             layout.removeWidget(placeholder)
             placeholder.deleteLater()
-            self.ui.documents_placeholder = None
+            setattr(self.ui, "documents_placeholder", None)
 
-        layout.addWidget(tab_widget, 0, 0, 1, 1)
+        if isinstance(layout, QGridLayout):
+            layout.addWidget(tab_widget, 0, 0, 1, 1)
+        else:
+            layout.addWidget(tab_widget)
         self.ui.left_panel_tab = tab_widget
         self.ui.left_panel_tab.currentChanged.connect(
             self.on_left_panel_tab_current_changed
@@ -1257,7 +1423,7 @@ class MainWindow(
         )
 
         self._attach_lazy_widget(
-            "art_prompt_page",
+            "prompt_sidebar",
             "art_prompt_widget",
             "art_prompt_widget",
             StableDiffusionGeneratorForm,
@@ -1467,17 +1633,23 @@ class MainWindow(
             "main_window_splitter": {
                 "index_to_maximize": self._center_splitter_index,
                 "min_other_size": 50,
+            },
+            "center_splitter": {
+                "index_to_maximize": self._canvas_panel_index,
+                "min_other_size": 0,
             }
         }
         load_splitter_settings(
             self.ui,
-            ["main_window_splitter"],
+            ["main_window_splitter", "center_splitter"],
             default_maximize_config=default_splitter_config,
             namespace="MainWindow",
         )
 
         if self._sidebar_is_visible():
             self._restore_sidebar_page_after_startup = sidebar_page_index
+        if self._prompt_panel_is_visible():
+            self._ensure_art_prompt_loaded()
         if self._left_panel_is_visible():
             self._restore_left_panel_page_after_startup = (
                 left_panel_page_index
@@ -1509,9 +1681,12 @@ class MainWindow(
         self.ui.main_window_splitter.splitterMoved.connect(
             self.on_splitter_changed_sizes
         )
+        self.ui.center_splitter.splitterMoved.connect(
+            self.on_splitter_changed_sizes
+        )
         self.set_chat_button_checked()
         self._sync_left_panel_button_states()
-        self.set_stats_button_checked()
+        self._sync_sidebar_button_states()
 
         # Keyboard shortcut: Ctrl+N -> placeholder handler using QAction
         try:
@@ -1850,7 +2025,11 @@ class MainWindow(
         # Ensure settings are written to disk before exit
         self.qsettings.sync()
         
-        save_splitter_settings(self.ui, ["main_window_splitter"], "MainWindow")
+        save_splitter_settings(
+            self.ui,
+            ["main_window_splitter", "center_splitter"],
+            "MainWindow",
+        )
 
         # Save canvas offset for all canvas views
         try:

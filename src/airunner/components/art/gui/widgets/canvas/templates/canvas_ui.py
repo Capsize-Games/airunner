@@ -27,13 +27,13 @@ class Ui_canvas(object):
     def setupUi(self, canvas):
         if not canvas.objectName():
             canvas.setObjectName(u"canvas")
-        canvas.resize(1027, 531)
+        canvas.resize(760, 531)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(canvas.sizePolicy().hasHeightForWidth())
         canvas.setSizePolicy(sizePolicy)
-        canvas.setMinimumSize(QSize(0, 0))
+        canvas.setMinimumSize(QSize(760, 0))
         canvas.setStyleSheet(u"b")
         self.gridLayout = QGridLayout(canvas)
         self.gridLayout.setSpacing(0)

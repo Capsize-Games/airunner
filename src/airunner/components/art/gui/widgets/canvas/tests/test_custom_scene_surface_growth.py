@@ -4,6 +4,7 @@ These tests focus on the dynamic canvas expansion and measurement calculations
 that are fragile and prone to bugs.
 """
 
+from types import SimpleNamespace
 from unittest.mock import Mock
 from PySide6.QtCore import QPointF
 from PySide6.QtGui import QImage
@@ -167,6 +168,83 @@ class TestCreateBlankSurface:
 
 class TestExpandItemSurface:
     """Test expand_item_surface - critical for drawing beyond bounds."""
+
+    def test_expand_item_surface_preserves_display_position_with_compensation(
+        self, qapp
+    ):
+        """Right-edge growth should not shift the displayed image position."""
+        scene = CustomScene(canvas_type="image")
+        scene.get_canvas_offset = Mock(return_value=QPointF(100, 200))
+        scene.views = Mock(
+            return_value=[
+                SimpleNamespace(
+                    grid_compensation_offset=QPointF(25, 40)
+                )
+            ]
+        )
+
+        original = QImage(100, 100, QImage.Format.Format_ARGB32)
+        item = DraggablePixmap(qimage=original)
+        original_pos = QPointF(500, 600)
+        display_pos = QPointF(425, 440)
+        item.setPos(display_pos)
+        scene.original_item_positions[item] = QPointF(original_pos)
+
+        result = scene._expand_item_surface(item, 0, 0, 64, 0)
+
+        assert result is True
+        assert item.pos() == display_pos
+        assert scene.original_item_positions[item] == original_pos
+
+    def test_expand_item_surface_without_cached_origin_uses_view_state(
+        self, qapp
+    ):
+        """Fallback origin reconstruction should honor grid compensation."""
+        scene = CustomScene(canvas_type="image")
+        scene.get_canvas_offset = Mock(return_value=QPointF(100, 200))
+        scene.views = Mock(
+            return_value=[
+                SimpleNamespace(
+                    grid_compensation_offset=QPointF(25, 40)
+                )
+            ]
+        )
+
+        original = QImage(100, 100, QImage.Format.Format_ARGB32)
+        item = DraggablePixmap(qimage=original)
+        display_pos = QPointF(425, 440)
+        item.setPos(display_pos)
+
+        result = scene._expand_item_surface(item, 0, 0, 64, 0)
+
+        assert result is True
+        assert scene.original_item_positions[item] == QPointF(500, 600)
+        assert item.pos() == display_pos
+
+    def test_expand_item_surface_ignores_stale_cached_origin(
+        self, qapp
+    ):
+        """Left growth should derive origin from live item position."""
+        scene = CustomScene(canvas_type="image")
+        scene.get_canvas_offset = Mock(return_value=QPointF(100, 200))
+        scene.views = Mock(
+            return_value=[
+                SimpleNamespace(
+                    grid_compensation_offset=QPointF(25, 40)
+                )
+            ]
+        )
+
+        original = QImage(100, 100, QImage.Format.Format_ARGB32)
+        item = DraggablePixmap(qimage=original)
+        item.setPos(QPointF(425, 440))
+        scene.original_item_positions[item] = QPointF(400, 600)
+
+        result = scene._expand_item_surface(item, 64, 0, 0, 0)
+
+        assert result is True
+        assert scene.original_item_positions[item] == QPointF(436, 600)
+        assert item.pos() == QPointF(361, 440)
 
     def test_expand_item_surface_no_growth(self, qapp):
         """Expand with all zeros should skip expansion."""

@@ -18,8 +18,6 @@ from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.model_management import (
     ModelResourceManager,
 )
@@ -615,12 +613,6 @@ class CanvasLayerMixin:
             snapshot["outpaint"] = self._serialize_record(
                 OutpaintSettings.objects.filter_by_first(layer_id=layer_id)
             )
-            snapshot["brush"] = self._serialize_record(
-                BrushSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["metadata"] = self._serialize_record(
-                MetadataSettings.objects.filter_by_first(layer_id=layer_id)
-            )
             snapshots.append(snapshot)
         return snapshots
 
@@ -647,12 +639,6 @@ class CanvasLayerMixin:
             )
             self._merge_model_from_dict(
                 OutpaintSettings, snapshot.get("outpaint") or {}
-            )
-            self._merge_model_from_dict(
-                BrushSettings, snapshot.get("brush") or {}
-            )
-            self._merge_model_from_dict(
-                MetadataSettings, snapshot.get("metadata") or {}
             )
 
     def _merge_model_from_dict(self, model_cls, data: Dict[str, Any]) -> None:
@@ -700,8 +686,6 @@ class CanvasLayerMixin:
                 ControlnetSettings,
                 ImageToImageSettings,
                 OutpaintSettings,
-                BrushSettings,
-                MetadataSettings,
             ]:
                 cache_key = f"{model_class.__name__}_layer_{layer_id}"
                 cache_by_key.pop(cache_key, None)

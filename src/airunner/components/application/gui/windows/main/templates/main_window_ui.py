@@ -28,7 +28,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1074, 837)
+        MainWindow.resize(1074, 845)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -231,6 +231,7 @@ class Ui_MainWindow(object):
         self.knowledgebase_button.setIcon(icon25)
         self.knowledgebase_button.setIconSize(QSize(20, 20))
         self.knowledgebase_button.setCheckable(True)
+        self.knowledgebase_button.setChecked(False)
         self.knowledgebase_button.setFlat(True)
 
         self.action_sidebar.addWidget(self.knowledgebase_button)
@@ -314,6 +315,7 @@ class Ui_MainWindow(object):
         self.canvas_button.setIcon(icon28)
         self.canvas_button.setIconSize(QSize(20, 20))
         self.canvas_button.setCheckable(True)
+        self.canvas_button.setChecked(True)
         self.canvas_button.setFlat(True)
 
         self.verticalLayout.addWidget(self.canvas_button)
@@ -392,7 +394,7 @@ class Ui_MainWindow(object):
         self.documents_sidebar.setObjectName(u"documents_sidebar")
         sizePolicy1.setHeightForWidth(self.documents_sidebar.sizePolicy().hasHeightForWidth())
         self.documents_sidebar.setSizePolicy(sizePolicy1)
-        self.documents_sidebar.setMinimumSize(QSize(64, 0))
+        self.documents_sidebar.setMinimumSize(QSize(360, 0))
         self.gridLayout_documents_sidebar = QGridLayout(self.documents_sidebar)
         self.gridLayout_documents_sidebar.setObjectName(u"gridLayout_documents_sidebar")
         self.gridLayout_documents_sidebar.setContentsMargins(0, 0, 0, 0)
@@ -452,7 +454,10 @@ class Ui_MainWindow(object):
         self.gridLayout_4 = QGridLayout(self.center_widget)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.center_tab_container = QWidget(self.center_widget)
+        self.center_splitter = QSplitter(self.center_widget)
+        self.center_splitter.setObjectName(u"center_splitter")
+        self.center_splitter.setOrientation(Qt.Orientation.Horizontal)
+        self.center_tab_container = QWidget(self.center_splitter)
         self.center_tab_container.setObjectName(u"center_tab_container")
         sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy2.setHorizontalStretch(0)
@@ -475,8 +480,23 @@ class Ui_MainWindow(object):
 
         self.gridLayout_2.addWidget(self.canvas_placeholder, 0, 0, 1, 1)
 
+        self.center_splitter.addWidget(self.center_tab_container)
+        self.prompt_sidebar = QWidget(self.center_splitter)
+        self.prompt_sidebar.setObjectName(u"prompt_sidebar")
+        sizePolicy1.setHeightForWidth(self.prompt_sidebar.sizePolicy().hasHeightForWidth())
+        self.prompt_sidebar.setSizePolicy(sizePolicy1)
+        self.prompt_sidebar.setMinimumSize(QSize(0, 0))
+        self.gridLayout_prompt_sidebar = QGridLayout(self.prompt_sidebar)
+        self.gridLayout_prompt_sidebar.setObjectName(u"gridLayout_prompt_sidebar")
+        self.gridLayout_prompt_sidebar.setContentsMargins(0, 0, 0, 0)
+        self.art_prompt_placeholder = QWidget(self.prompt_sidebar)
+        self.art_prompt_placeholder.setObjectName(u"art_prompt_placeholder")
 
-        self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
+        self.gridLayout_prompt_sidebar.addWidget(self.art_prompt_placeholder, 0, 0, 1, 1)
+
+        self.center_splitter.addWidget(self.prompt_sidebar)
+
+        self.gridLayout_4.addWidget(self.center_splitter, 0, 0, 1, 1)
 
         self.main_window_splitter.addWidget(self.center_widget)
         self.rightsidebar = QWidget(self.main_window_splitter)
@@ -497,17 +517,6 @@ class Ui_MainWindow(object):
         self.gridLayout_stats_page.addWidget(self.stats_placeholder, 0, 0, 1, 1)
 
         self.sidebar_tab.addTab(self.stats_page, "")
-        self.art_prompt_page = QWidget()
-        self.art_prompt_page.setObjectName(u"art_prompt_page")
-        self.gridLayout_art_prompt_page = QGridLayout(self.art_prompt_page)
-        self.gridLayout_art_prompt_page.setObjectName(u"gridLayout_art_prompt_page")
-        self.gridLayout_art_prompt_page.setContentsMargins(0, 0, 0, 0)
-        self.art_prompt_placeholder = QWidget(self.art_prompt_page)
-        self.art_prompt_placeholder.setObjectName(u"art_prompt_placeholder")
-
-        self.gridLayout_art_prompt_page.addWidget(self.art_prompt_placeholder, 0, 0, 1, 1)
-
-        self.sidebar_tab.addTab(self.art_prompt_page, "")
         self.art_tools_page = QWidget()
         self.art_tools_page.setObjectName(u"art_tools_page")
         self.gridLayout_art_tools_page = QGridLayout(self.art_tools_page)
@@ -715,7 +724,6 @@ class Ui_MainWindow(object):
         self.left_panel_tab.setTabText(self.left_panel_tab.indexOf(self.left_history_page), QCoreApplication.translate("MainWindow", u"History", None))
         self.left_panel_tab.setTabText(self.left_panel_tab.indexOf(self.left_llm_settings_page), QCoreApplication.translate("MainWindow", u"LLM Settings", None))
         self.sidebar_tab.setTabText(self.sidebar_tab.indexOf(self.stats_page), QCoreApplication.translate("MainWindow", u"Model Resources", None))
-        self.sidebar_tab.setTabText(self.sidebar_tab.indexOf(self.art_prompt_page), QCoreApplication.translate("MainWindow", u"Art Prompt", None))
         self.sidebar_tab.setTabText(self.sidebar_tab.indexOf(self.art_tools_page), QCoreApplication.translate("MainWindow", u"Art Settings", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))

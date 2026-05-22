@@ -476,7 +476,8 @@ class TestEventHandlerMixin:
         # New center: (500, 350), old center: (400, 300)
         # Shift: (100, 50)
         mixin._apply_viewport_compensation.assert_called_once_with(100.0, 50.0)
-        mixin.draw_grid.assert_called_once()
+        mixin.do_draw.assert_called_once_with(force_draw=True)
+        mixin.draw_grid.assert_not_called()
         assert mixin._last_viewport_size == QSize(1000, 700)
 
     def test_finish_state_restoration(self, qapp):
@@ -524,7 +525,8 @@ class TestEventHandlerMixin:
         # New center: (500, 350), old center: (400, 300)
         # Shift: (100, 50)
         mixin._apply_viewport_compensation.assert_called_once_with(100.0, 50.0)
-        mixin.draw_grid.assert_called_once()
+        mixin.do_draw.assert_called_once_with(force_draw=True)
+        mixin.draw_grid.assert_not_called()
         assert mixin._last_viewport_size == QSize(1000, 700)
 
     def test_resizeEvent_no_size_change(self, qapp):

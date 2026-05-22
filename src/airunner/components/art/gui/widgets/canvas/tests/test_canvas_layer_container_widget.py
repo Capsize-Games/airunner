@@ -10,6 +10,7 @@ from airunner.components.art.gui.widgets.canvas.canvas_layer_container_widget im
     CanvasLayerContainerWidget,
 )
 from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 
 
 class TestCanvasLayerContainerWidget:
@@ -112,3 +113,29 @@ class TestCanvasLayerContainerWidget:
         # Verify layer was added correctly
         assert layers == [mock_layer]
         assert layer_id == 1
+
+    def test_ensure_drawing_pad_defaults_updates_empty_settings(self):
+        """Existing blank layer rows should be promoted to document size."""
+        widget = MagicMock(spec=CanvasLayerContainerWidget)
+        widget._document_origin.return_value = (32, 48)
+        widget._create_blank_document_binary.return_value = b"blank-image"
+        widget.update_drawing_pad_settings = MagicMock()
+
+        settings = MagicMock(id=5, image=None)
+
+        with patch.object(
+            DrawingPadSettings.objects,
+            "filter_by_first",
+            return_value=settings,
+        ):
+            CanvasLayerContainerWidget._ensure_drawing_pad_defaults(
+                widget,
+                3,
+            )
+
+        widget.update_drawing_pad_settings.assert_called_once_with(
+            layer_id=3,
+            image=b"blank-image",
+            x_pos=32,
+            y_pos=48,
+        )

@@ -3,6 +3,7 @@ from typing import Optional, Dict, Tuple
 from PySide6.QtCore import (
     QPointF,
     QEvent,
+    QRectF,
     QSize,
 )
 from PySide6.QtGui import QColor, QBrush, QFont
@@ -401,9 +402,13 @@ class CustomGraphicsView(
         if not self.scene:
             return
         canvas_container_size = self.viewport().size()
-        self.scene.setSceneRect(
-            0, 0, canvas_container_size.width(), canvas_container_size.height()
+        viewport_rect = QRectF(
+            0,
+            0,
+            canvas_container_size.width(),
+            canvas_container_size.height(),
         )
+        self.scene.setSceneRect(viewport_rect.united(self.document_rect()))
 
     def update_scene(self):
         if not self.scene:
@@ -484,6 +489,76 @@ class CustomGraphicsView(
         from PySide6.QtCore import QTimer
 
         QTimer.singleShot(0, lambda: self.do_draw(force_draw=True))
+
+    def document_origin(self) -> QPointF:
+        """Return the fixed top-left origin for the current document."""
+        anchor = self._get_existing_grid_anchor()
+        if anchor is not None:
+            return QPointF(anchor)
+
+        pos_x = float(getattr(self.active_grid_settings, "pos_x", 0) or 0)
+        pos_y = float(getattr(self.active_grid_settings, "pos_y", 0) or 0)
+        return QPointF(pos_x, pos_y)
+
+    def document_size(self) -> tuple[float, float]:
+        """Return the persisted fixed document size with legacy fallback."""
+        width = getattr(self.application_settings, "document_width", None)
+        height = getattr(self.application_settings, "document_height", None)
+        if not isinstance(width, (int, float)) or width <= 0:
+            width = self.application_settings.working_width
+        if not isinstance(height, (int, float)) or height <= 0:
+            height = self.application_settings.working_height
+        return max(1.0, float(width)), max(1.0, float(height))
+
+    def clamp_active_grid_absolute_position(
+        self,
+        position: QPointF,
+    ) -> QPointF:
+        """Clamp the active grid origin so it stays within the document."""
+        document_origin = self.document_origin()
+        document_width, document_height = self.document_size()
+        grid_width = min(
+            document_width,
+            float(self.application_settings.working_width),
+        )
+        grid_height = min(
+            document_height,
+            float(self.application_settings.working_height),
+        )
+
+        max_x = document_origin.x() + max(0.0, document_width - grid_width)
+        max_y = document_origin.y() + max(0.0, document_height - grid_height)
+        clamped_x = min(max(position.x(), document_origin.x()), max_x)
+        clamped_y = min(max(position.y(), document_origin.y()), max_y)
+        return QPointF(clamped_x, clamped_y)
+
+    def document_rect(self) -> QRectF:
+        """Return the current document rectangle in scene coordinates."""
+        origin = self.document_origin()
+        width, height = self.document_size()
+        return QRectF(origin.x(), origin.y(), width, height)
+
+    def fit_document_in_view(self) -> None:
+        """Zoom out when needed so the full document fits the viewport."""
+        rect = self.document_rect()
+        viewport_size = self.viewport().size()
+        if rect.isEmpty() or viewport_size.isEmpty():
+            return
+
+        fit_scale = min(
+            1.0,
+            viewport_size.width() / rect.width(),
+            viewport_size.height() / rect.height(),
+        )
+        self.zoom_handler.zoom_level = fit_scale
+        self.setTransform(self.zoom_handler.on_zoom_level_changed())
+
+        if self.scene is not None:
+            scene_rect = self.scene.sceneRect().united(rect)
+            self.scene.setSceneRect(scene_rect)
+
+        self.centerOn(rect.center())
+        self._update_zoom_grid_info()
 
     def _get_default_text_font(self):
         font = QFont()

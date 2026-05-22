@@ -7,6 +7,15 @@ from PIL import Image
 
 from airunner.components.art.api import canvas_services as module
 from airunner.components.art.api.canvas_services import CanvasAPIService
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.enums import GeneratorSection, SignalCode
 
 
@@ -213,3 +222,47 @@ def test_remove_background_emits_signal():
     service.emit_signal.assert_called_once_with(
         SignalCode.REMOVE_BACKGROUND
     )
+
+
+def test_create_new_layer_only_creates_layer_scoped_settings():
+    """Global brush/metadata settings should not be created per layer."""
+    service = CanvasAPIService.__new__(CanvasAPIService)
+    service.begin_layer_operation = Mock()
+    service.cancel_layer_operation = Mock()
+    service.commit_layer_operation = Mock()
+
+    layer = SimpleNamespace(id=1)
+
+    with patch.object(CanvasLayer.objects, "create", return_value=layer):
+        with patch.object(DrawingPadSettings.objects, "create") as drawing:
+            with patch.object(ControlnetSettings.objects, "create") as controlnet:
+                with patch.object(
+                    ImageToImageSettings.objects,
+                    "create",
+                ) as image_to_image:
+                    with patch.object(
+                        OutpaintSettings.objects,
+                        "create",
+                    ) as outpaint:
+                        with patch.object(
+                            BrushSettings.objects,
+                            "create",
+                        ) as brush_create:
+                            with patch.object(
+                                MetadataSettings.objects,
+                                "create",
+                            ) as metadata_create:
+                                result = CanvasAPIService.create_new_layer(
+                                    service,
+                                    order=0,
+                                    name="Layer 1",
+                                )
+
+    assert result is layer
+    drawing.assert_called_once_with(layer_id=1)
+    controlnet.assert_called_once_with(layer_id=1)
+    image_to_image.assert_called_once_with(layer_id=1)
+    outpaint.assert_called_once_with(layer_id=1)
+    brush_create.assert_not_called()
+    metadata_create.assert_not_called()
+    service.commit_layer_operation.assert_called_once_with("create", [1])

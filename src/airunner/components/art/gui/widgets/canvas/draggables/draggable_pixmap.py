@@ -1,9 +1,9 @@
 from typing import Optional
-from PySide6.QtCore import QPoint, QPointF, QRectF
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QPainter, QImage
 from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
-from airunner.enums import CanvasToolName
+from airunner.enums import CanvasToolName, SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
@@ -27,6 +27,11 @@ class DraggablePixmap(
         layer_id: Optional[int] = None,
         use_layer_context: bool = True,
     ):
+        self.signal_handlers = {
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: (
+                self.on_tool_changed_signal
+            ),
+        }
         self._layer_id_override: Optional[int] = layer_id
         self._use_layer_context = use_layer_context
         super().__init__()
@@ -43,6 +48,7 @@ class DraggablePixmap(
         # Threshold for snapping (percentage of cell size)
         self.snap_threshold = 0.5
         self.setPos(QPoint(pos[0], pos[1]))
+        self._update_mouse_interaction()
 
     @property
     def canvas_offset_x(self) -> float:
@@ -100,35 +106,39 @@ class DraggablePixmap(
             return QRectF(self._qimage.rect())
         return QRectF()
 
-    def updateImage(self, qimage: QImage):
-        """Update the image data directly without conversion to pixmap"""
+    def updateImage(
+        self,
+        qimage: QImage,
+        immediate: bool = False,
+        invalidate_scene: bool = True,
+    ):
+        """Update the image data directly without conversion to pixmap."""
         if qimage is None:
             return
-        # Defer geometry change and image update to avoid blocking
-        # This allows the function to return immediately
-        from PySide6.QtCore import QTimer
-
-        def deferred_image_update():
-            if not self.scene():  # Item was removed
-                return
-            self.prepareGeometryChange()
+        try:
+            previous_image = self._qimage
+            geometry_changed = (
+                previous_image is None
+                or previous_image.size() != qimage.size()
+            )
+            if geometry_changed:
+                self.prepareGeometryChange()
             self._qimage = qimage
-            self.update()  # Schedule a repaint of this item
-
-            # Also defer viewport updates
+            self.update()
+            if not invalidate_scene:
+                return
+            scene = self.scene()
+            if scene is None:
+                return
             rect = self.sceneBoundingRect()
-
-            def deferred_viewport_update():
-                if self.scene():  # Check scene still exists
-                    self.scene().update(rect)
-                    # Notify all views to update their viewport
-                    for view in self.scene().views():
-                        if view.viewport():
-                            view.viewport().update()
-
-            QTimer.singleShot(0, deferred_viewport_update)
-
-        QTimer.singleShot(0, deferred_image_update)
+            scene.update(rect)
+            for view in scene.views():
+                if view.viewport():
+                    view.viewport().update()
+        except RuntimeError:
+            # The underlying Qt item or scene was deleted between calls.
+            # Ignore the stale update rather than queueing work against it.
+            return
 
     @property
     def qimage(self) -> Optional[QImage]:
@@ -140,22 +150,47 @@ class DraggablePixmap(
         self._qimage = qimage
         self.update()
 
+    def on_tool_changed_signal(self, _data=None) -> None:
+        """Update item interaction when the active tool changes."""
+        self._update_mouse_interaction()
+
+    def _update_mouse_interaction(self) -> None:
+        """Allow item-level interaction only while moving items."""
+        is_move_tool = self.current_tool == CanvasToolName.MOVE
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, is_move_tool)
+        accepted = (
+            Qt.MouseButton.LeftButton
+            if is_move_tool
+            else Qt.MouseButton.NoButton
+        )
+        self.setAcceptedMouseButtons(accepted)
+
+    def _ignore_mouse_event_when_not_moving(self, event) -> bool:
+        """Ignore item-level mouse handling outside the move tool."""
+        if self.current_tool == CanvasToolName.MOVE:
+            return False
+        if hasattr(event, "ignore"):
+            event.ignore()
+        return True
+
+    def mousePressEvent(self, event):
+        if self._ignore_mouse_event_when_not_moving(event):
+            return
+        super().mousePressEvent(event)
+
     def mouseMoveEvent(self, event):
-        if self.current_tool not in [
-            CanvasToolName.MOVE,
-        ]:
+        if self._ignore_mouse_event_when_not_moving(event):
             return
         super().mouseMoveEvent(event)
         self.snap_to_grid_when_close()
 
     def mouseReleaseEvent(self, event):
-        if self.current_tool in [
-            CanvasToolName.MOVE,
-        ]:
-            # Pass the current position for saving instead of None values
-            current_x = int(self.x())
-            current_y = int(self.y())
-            self.update_position(x=current_x, y=current_y, save=True)
+        if self._ignore_mouse_event_when_not_moving(event):
+            return
+        # Pass the current position for saving instead of None values
+        current_x = int(self.x())
+        current_y = int(self.y())
+        self.update_position(x=current_x, y=current_y, save=True)
         super().mouseReleaseEvent(event)
 
     def snap_to_grid_when_close(self, x=None, y=None):

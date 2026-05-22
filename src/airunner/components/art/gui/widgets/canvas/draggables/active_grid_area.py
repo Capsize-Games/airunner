@@ -70,11 +70,23 @@ class ActiveGridArea(DraggablePixmap):
     @property
     def rect(self):
         pos = self.active_grid_settings.pos
+        width = getattr(self.application_settings, "working_width", None)
+        if not width:
+            width = getattr(self.application_settings, "document_width", 0)
+
+        height = getattr(self.application_settings, "working_height", None)
+        if not height:
+            height = getattr(
+                self.application_settings,
+                "document_height",
+                0,
+            )
+
         return QRect(
             pos[0],
             pos[1],
-            self.application_settings.working_width,
-            self.application_settings.working_height,
+            int(width or 0),
+            int(height or 0),
         )
 
     def render_fill(self):
@@ -216,7 +228,7 @@ class ActiveGridArea(DraggablePixmap):
         cell_size = self.grid_settings.cell_size if snap_enabled else 0
         center_pos = getattr(view, "center_pos", QPointF(0, 0))
 
-        _, new_display_pos = manager.calculate_drag_position(
+        new_abs_pos, _ = manager.calculate_drag_position(
             self.drag_start_abs_pos,
             mouse_delta,
             view_state,
@@ -224,6 +236,9 @@ class ActiveGridArea(DraggablePixmap):
             cell_size=cell_size,
             grid_origin=center_pos,
         )
+
+        new_abs_pos = view.clamp_active_grid_absolute_position(new_abs_pos)
+        new_display_pos = manager.absolute_to_display(new_abs_pos, view_state)
 
         self.setPos(new_display_pos)
         self.drag_final_display_pos = new_display_pos
@@ -255,12 +270,15 @@ class ActiveGridArea(DraggablePixmap):
         # Convert current display position to absolute position
         abs_pos = manager.display_to_absolute(current_display_pos, view_state)
 
+        abs_pos = view.clamp_active_grid_absolute_position(abs_pos)
+
         # Snap to grid in absolute space if enabled
         if self.grid_settings.snap_to_grid:
             center_pos = getattr(view, "center_pos", QPointF(0, 0))
             abs_pos = manager.snap_to_grid(
                 abs_pos, self.grid_settings.cell_size, grid_origin=center_pos
             )
+            abs_pos = view.clamp_active_grid_absolute_position(abs_pos)
 
             # Update display position to snapped absolute position
             display_pos = manager.absolute_to_display(abs_pos, view_state)

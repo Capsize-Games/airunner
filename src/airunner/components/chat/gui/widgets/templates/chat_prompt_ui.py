@@ -15,12 +15,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QPlainTextEdit,
-    QProgressBar, QPushButton, QScrollArea, QSizePolicy,
-    QSpacerItem, QSplitter, QTabWidget, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
+    QHBoxLayout, QLabel, QPlainTextEdit, QProgressBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QSplitter, QTabWidget, QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
+from airunner.components.llm.gui.widgets.llm_history_widget import LLMHistoryWidget
+from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):
@@ -90,11 +92,6 @@ class Ui_chat_prompt(object):
 
 
         self.gridLayout_2.addWidget(self.chat_prompt_action_bar, 0, 0, 1, 1)
-
-        self.chat_history_placeholder = QWidget(chat_prompt)
-        self.chat_history_placeholder.setObjectName(u"chat_history_placeholder")
-
-        self.gridLayout_2.addWidget(self.chat_history_placeholder, 1, 0, 1, 1)
 
         self.scrollArea = QScrollArea(chat_prompt)
         self.scrollArea.setObjectName(u"scrollArea")
@@ -240,10 +237,10 @@ class Ui_chat_prompt(object):
         self.gridLayout_3 = QGridLayout(self.tab_2)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.llm_settings_placeholder = QWidget(self.tab_2)
-        self.llm_settings_placeholder.setObjectName(u"llm_settings_placeholder")
+        self.llm_settings = LLMSettingsWidget(self.tab_2)
+        self.llm_settings.setObjectName(u"llm_settings")
 
-        self.gridLayout_3.addWidget(self.llm_settings_placeholder, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.llm_settings, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_2, "")
         self.tab_3 = QWidget()
@@ -251,10 +248,10 @@ class Ui_chat_prompt(object):
         self.gridLayout_5 = QGridLayout(self.tab_3)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.history_placeholder = QWidget(self.tab_3)
-        self.history_placeholder.setObjectName(u"history_placeholder")
+        self.widget = LLMHistoryWidget(self.tab_3)
+        self.widget.setObjectName(u"widget")
 
-        self.gridLayout_5.addWidget(self.history_placeholder, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_3, "")
 
@@ -262,7 +259,7 @@ class Ui_chat_prompt(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
-        self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.scrollArea, 1, 0, 1, 1)
 
         self.chat_prompt_footer = QWidget(chat_prompt)
         self.chat_prompt_footer.setObjectName(u"chat_prompt_footer")
@@ -298,15 +295,6 @@ class Ui_chat_prompt(object):
         self.model_dropdown.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
 
         self.horizontalLayout_2.addWidget(self.model_dropdown)
-
-        self.thinking_checkbox = QCheckBox(self.footer_container)
-        self.thinking_checkbox.setObjectName(u"thinking_checkbox")
-        sizePolicy4.setHeightForWidth(self.thinking_checkbox.sizePolicy().hasHeightForWidth())
-        self.thinking_checkbox.setSizePolicy(sizePolicy4)
-        self.thinking_checkbox.setMinimumSize(QSize(0, 30))
-        self.thinking_checkbox.setChecked(True)
-
-        self.horizontalLayout_2.addWidget(self.thinking_checkbox)
 
         self.precision_dropdown = QComboBox(self.footer_container)
         self.precision_dropdown.setObjectName(u"precision_dropdown")
@@ -349,7 +337,7 @@ class Ui_chat_prompt(object):
         self.horizontalLayout.addWidget(self.footer_container)
 
 
-        self.gridLayout_2.addWidget(self.chat_prompt_footer, 3, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.chat_prompt_footer, 2, 0, 1, 1)
 
         self.progress_container = QWidget(chat_prompt)
         self.progress_container.setObjectName(u"progress_container")
@@ -369,14 +357,13 @@ class Ui_chat_prompt(object):
         self.progress_layout.addWidget(self.progressBar)
 
 
-        self.gridLayout_2.addWidget(self.progress_container, 4, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.progress_container, 3, 0, 1, 1)
 
 
         self.retranslateUi(chat_prompt)
         self.provider_dropdown.currentIndexChanged.connect(chat_prompt.on_provider_changed)
         self.model_dropdown.currentIndexChanged.connect(chat_prompt.on_model_changed)
         self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
-        self.thinking_checkbox.toggled.connect(chat_prompt.thinking_toggled)
         self.precision_dropdown.currentIndexChanged.connect(chat_prompt.on_precision_changed)
 
         self.tabWidget.setCurrentIndex(0)
@@ -415,10 +402,6 @@ class Ui_chat_prompt(object):
 #if QT_CONFIG(tooltip)
         self.model_dropdown.setToolTip(QCoreApplication.translate("chat_prompt", u"Select LLM model", None))
 #endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(tooltip)
-        self.thinking_checkbox.setToolTip(QCoreApplication.translate("chat_prompt", u"Enable thinking mode (Qwen3). When enabled, the model will reason step-by-step before responding. Slower but more thoughtful responses.", None))
-#endif // QT_CONFIG(tooltip)
-        self.thinking_checkbox.setText(QCoreApplication.translate("chat_prompt", u"Thinking", None))
 #if QT_CONFIG(tooltip)
         self.precision_dropdown.setToolTip(QCoreApplication.translate("chat_prompt", u"Model precision/quantization. Lower precision uses less memory but may reduce quality.", None))
 #endif // QT_CONFIG(tooltip)

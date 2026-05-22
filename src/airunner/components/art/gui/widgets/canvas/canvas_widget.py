@@ -1,13 +1,14 @@
 import base64
 import json
 from pathlib import Path
+from PIL import Image
 
 from PySide6.QtWidgets import QColorDialog
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import QMessageBox
 from typing import Optional, Dict, Any, List
 
-from PySide6.QtCore import Qt, QPoint, QTimer
+from PySide6.QtCore import Qt, QPoint, QPointF, QTimer
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QKeySequence, QShortcut
 
@@ -29,10 +30,16 @@ from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.art.gui.dialogs.new_document_dialog import (
+    NewDocumentConfig,
+    NewDocumentDialog,
+)
 from airunner.components.art.gui.windows.filter_list_window.filter_list_window import (
     FilterListWindow,
+)
+from airunner.utils.image import (
+    convert_binary_to_image,
+    convert_image_to_binary,
 )
 
 
@@ -51,7 +58,6 @@ class CanvasWidget(BaseWidget):
         ("file-plus", "new_button"),
         ("image-down", "import_button"),
         ("image-up", "export_button"),
-        ("target", "recenter_button"),
         ("object-selected-icon", "active_grid_area_button"),
         ("pencil", "brush_button"),
         ("eraser", "eraser_button"),
@@ -133,7 +139,6 @@ class CanvasWidget(BaseWidget):
                 "new_button",
                 "import_button",
                 "export_button",
-                "recenter_button",
                 "active_grid_area_button",
                 "brush_button",
                 "eraser_button",
@@ -318,11 +323,6 @@ class CanvasWidget(BaseWidget):
         self.api.art.canvas.remove_background()
 
     @Slot()
-    def on_recenter_button_clicked(self) -> None:
-        """Handle recenter button click to recenter the grid."""
-        self.api.art.canvas.recenter_grid()
-
-    @Slot()
     def on_undo_button_clicked(self) -> None:
         """Handle undo button click to undo last action."""
         self.api.art.canvas.undo()
@@ -335,7 +335,25 @@ class CanvasWidget(BaseWidget):
     @Slot()
     def on_new_button_clicked(self) -> None:
         """Handle new button click to create a new canvas document."""
-        self._reset_canvas_document()
+        self.start_new_document_flow()
+
+    def start_new_document_flow(self) -> None:
+        """Open the shared new-document dialog and reset on acceptance."""
+        document_config = self._show_new_document_dialog()
+        if document_config is None:
+            return
+        self._reset_canvas_document(document_config)
+
+    def _show_new_document_dialog(self) -> Optional[NewDocumentConfig]:
+        """Return one accepted document configuration, if any."""
+        dialog = NewDocumentDialog(
+            parent=self,
+            width=self.application_settings.working_width,
+            height=self.application_settings.working_height,
+        )
+        if dialog.exec() != dialog.DialogCode.Accepted:
+            return None
+        return dialog.document_config()
 
     @Slot(bool)
     def on_grid_button_toggled(self, val: bool) -> None:
@@ -773,8 +791,22 @@ class CanvasWidget(BaseWidget):
 
     def _clear_canvas_state(self) -> None:
         """Clear the scene and reset widget-level caches."""
+        view = getattr(getattr(self, "ui", None), "canvas_container", None)
+        scene = None if view is None else getattr(view, "scene", None)
 
-        self.api.art.canvas.clear()
+        if scene is not None:
+            if hasattr(scene, "original_item_positions"):
+                scene.original_item_positions.clear()
+            if hasattr(scene, "_pending_layer_images"):
+                scene._pending_layer_images = {}
+            scene._skip_recenter_on_clear = True
+
+        try:
+            self.api.art.canvas.clear()
+        finally:
+            if scene is not None:
+                scene._skip_recenter_on_clear = False
+
         self.images.clear()
         self.current_image_index = 0
         self.draggable_pixmaps_in_scene.clear()
@@ -846,9 +878,31 @@ class CanvasWidget(BaseWidget):
             )
 
         return {
-            "version": 1,
+            "version": 2,
+            "document": self._serialize_document_settings(),
             "layers": document_layers,
         }
+
+    def _serialize_document_settings(self) -> Dict[str, int]:
+        """Serialize the fixed document dimensions for one canvas file."""
+        return {
+            "width": int(self._document_width()),
+            "height": int(self._document_height()),
+        }
+
+    def _document_width(self) -> int:
+        """Return the persisted document width with legacy fallback."""
+        width = getattr(self.application_settings, "document_width", None)
+        if width:
+            return int(width)
+        return int(self.application_settings.working_width)
+
+    def _document_height(self) -> int:
+        """Return the persisted document height with legacy fallback."""
+        height = getattr(self.application_settings, "document_height", None)
+        if height:
+            return int(height)
+        return int(self.application_settings.working_height)
 
     def _serialize_drawing_pad_settings(self, layer_id: int) -> Dict[str, Any]:
         """Serialize drawing pad settings for persistence."""
@@ -875,8 +929,13 @@ class CanvasWidget(BaseWidget):
         OutpaintSettings.objects.delete_all()
         self.api.art.canvas.clear_history()
 
-    def _reset_canvas_document(self) -> None:
+    def _reset_canvas_document(
+        self,
+        document_config: Optional[NewDocumentConfig] = None,
+    ) -> None:
         self._clear_canvas()
+        self._apply_document_size(document_config)
+        self._reset_new_document_view_anchor(document_config)
 
         # Ensure any previous scoped session state is cleared (e.g. after a
         # rolled-back transaction). This prevents "Session's transaction has
@@ -908,6 +967,57 @@ class CanvasWidget(BaseWidget):
             self.api.art.canvas.layer_selection_changed([new_layer.id])
 
         self.api.art.canvas.update_image_positions()
+        self._schedule_document_fit()
+
+    def _apply_document_size(
+        self,
+        document_config: Optional[NewDocumentConfig],
+    ) -> None:
+        """Apply one document size to the live application settings."""
+        if document_config is None:
+            return
+        self.update_application_settings(
+            document_width=document_config.width,
+        )
+        self.update_application_settings(
+            document_height=document_config.height,
+        )
+        self.update_application_settings(working_width=document_config.width)
+        self.update_application_settings(
+            working_height=document_config.height
+        )
+
+    def _reset_new_document_view_anchor(
+        self,
+        document_config: Optional[NewDocumentConfig],
+    ) -> None:
+        """Reset the view/document anchor for a fresh document."""
+        if document_config is None:
+            return
+
+        view = getattr(getattr(self, "ui", None), "canvas_container", None)
+        if view is None or not hasattr(view, "get_recentered_position"):
+            return
+
+        anchor_x, anchor_y = view.get_recentered_position(
+            document_config.width,
+            document_config.height,
+        )
+        anchor = QPointF(anchor_x, anchor_y)
+        view.center_pos = QPointF(anchor)
+        view._grid_compensation_offset = QPointF(0, 0)
+        # A fresh document should always start from the centered home anchor
+        # with no pan applied. Deriving the offset from cached working-size
+        # state can reuse the previous document dimensions during a 1024->512
+        # reset and leave layer surfaces displayed at the old center.
+        view.canvas_offset = QPointF(0, 0)
+        if hasattr(view, "save_canvas_offset"):
+            view.save_canvas_offset()
+
+        self.update_active_grid_settings(
+            pos_x=int(round(anchor.x())),
+            pos_y=int(round(anchor.y())),
+        )
 
     def _load_canvas_document(self, document: Dict[str, Any]) -> None:
         """Restore layers from a serialized document."""
@@ -916,12 +1026,14 @@ class CanvasWidget(BaseWidget):
             raise ValueError("Invalid document format.")
 
         version = document.get("version", 1)
-        if version != 1:
+        if version not in (1, 2):
             raise ValueError(f"Unsupported document version: {version}")
 
         layers_data = document.get("layers", []) or []
+        document_config = self._resolve_document_config(document, layers_data)
 
         self._clear_canvas()
+        self._apply_document_size(document_config)
 
         created_layer_ids: List[int] = []
 
@@ -976,6 +1088,74 @@ class CanvasWidget(BaseWidget):
             self.api.art.canvas.layer_selection_changed([created_layer_ids[0]])
 
         self.api.art.canvas.update_image_positions()
+        self._schedule_document_fit()
+
+    def _schedule_document_fit(self) -> None:
+        """Defer fit-to-document until the canvas view processes updates."""
+        QTimer.singleShot(0, self._fit_document_to_viewport)
+
+    def _fit_document_to_viewport(self) -> None:
+        """Redraw the canvas and fit the current document to the view."""
+        view = getattr(self.ui, "canvas_container", None)
+        if view is None:
+            return
+        view.do_draw(force_draw=True)
+        view.fit_document_in_view()
+
+    def _resolve_document_config(
+        self,
+        document: Dict[str, Any],
+        layers_data: List[Dict[str, Any]],
+    ) -> NewDocumentConfig:
+        """Return one explicit or inferred document size for loading."""
+        document_settings = document.get("document") or {}
+        width = document_settings.get("width")
+        height = document_settings.get("height")
+        if width and height:
+            return NewDocumentConfig(width=int(width), height=int(height))
+        return self._infer_legacy_document_config(layers_data)
+
+    def _infer_legacy_document_config(
+        self,
+        layers_data: List[Dict[str, Any]],
+    ) -> NewDocumentConfig:
+        """Infer document size from the first available legacy layer image."""
+        for snapshot in layers_data:
+            size = self._extract_legacy_layer_size(snapshot)
+            if size is not None:
+                return NewDocumentConfig(width=size[0], height=size[1])
+        return NewDocumentConfig(
+            width=int(self._document_width()),
+            height=int(self._document_height()),
+        )
+
+    def _extract_legacy_layer_size(
+        self,
+        snapshot: Dict[str, Any],
+    ) -> Optional[tuple[int, int]]:
+        """Return one legacy layer image size from serialized layer data."""
+        drawing_snapshot = snapshot.get("drawing_pad") or {}
+        binary = self._decode_binary(drawing_snapshot.get("image"))
+        if binary is None:
+            return None
+        return self._decode_binary_image_size(binary)
+
+    @staticmethod
+    def _decode_binary_image_size(
+        binary: bytes,
+    ) -> Optional[tuple[int, int]]:
+        """Decode image size from AIRAW1 or a general image payload."""
+        if binary.startswith(b"AIRAW1") and len(binary) >= 14:
+            width = int.from_bytes(binary[6:10], "big")
+            height = int.from_bytes(binary[10:14], "big")
+            return width, height
+        try:
+            image = convert_binary_to_image(binary)
+        except Exception:
+            return None
+        if image is None:
+            return None
+        return int(image.width), int(image.height)
 
     def _create_layer_from_snapshot(
         self, snapshot: Dict[str, Any], fallback_order: int
@@ -1086,16 +1266,45 @@ class CanvasWidget(BaseWidget):
         self._initialize_layer_defaults(layer.id)
         return layer
 
-    @staticmethod
-    def _initialize_layer_defaults(layer_id: int) -> None:
+    def _document_origin(self) -> tuple[int, int]:
+        view = getattr(self.ui, "canvas_container", None)
+        if view is not None and hasattr(view, "document_origin"):
+            origin = view.document_origin()
+            return int(round(origin.x())), int(round(origin.y()))
+        pos_x = getattr(self.active_grid_settings, "pos_x", 0) or 0
+        pos_y = getattr(self.active_grid_settings, "pos_y", 0) or 0
+        return int(pos_x), int(pos_y)
+
+    def _create_blank_document_binary(self) -> Optional[bytes]:
+        image = Image.new(
+            "RGBA",
+            (self._document_width(), self._document_height()),
+            (0, 0, 0, 0),
+        )
+        return convert_image_to_binary(image)
+
+    def _ensure_drawing_pad_defaults(self, layer_id: int) -> None:
+        settings = DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
+        x_pos, y_pos = self._document_origin()
+        image = self._create_blank_document_binary()
+        if settings is not None and settings.image:
+            return
+
+        self.update_drawing_pad_settings(
+            layer_id=layer_id,
+            image=image,
+            x_pos=x_pos,
+            y_pos=y_pos,
+        )
+
+    def _initialize_layer_defaults(self, layer_id: int) -> None:
         """Initialize default settings for a new layer.
 
         Args:
             layer_id: The ID of the layer to initialize settings for.
         """
         try:
-            if not DrawingPadSettings.objects.filter_by(layer_id=layer_id):
-                DrawingPadSettings.objects.create(layer_id=layer_id)
+            self._ensure_drawing_pad_defaults(layer_id)
 
             if not ControlnetSettings.objects.filter_by(layer_id=layer_id):
                 ControlnetSettings.objects.create(layer_id=layer_id)
@@ -1105,12 +1314,6 @@ class CanvasWidget(BaseWidget):
 
             if not OutpaintSettings.objects.filter_by(layer_id=layer_id):
                 OutpaintSettings.objects.create(layer_id=layer_id)
-
-            if not BrushSettings.objects.filter_by(layer_id=layer_id):
-                BrushSettings.objects.create(layer_id=layer_id)
-
-            if not MetadataSettings.objects.filter_by(layer_id=layer_id):
-                MetadataSettings.objects.create(layer_id=layer_id)
         except Exception:  # pragma: no cover - defensive fallback
             # Logging occurs at manager level; no additional handling required
             pass

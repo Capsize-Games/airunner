@@ -1,13 +1,11 @@
 from typing import Any, Dict, List
 from airunner.components.application.api.api_service_base import APIServiceBase
-from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
@@ -340,8 +338,6 @@ class CanvasAPIService(APIServiceBase):
         ControlnetSettings.objects.create(**data)
         ImageToImageSettings.objects.create(**data)
         OutpaintSettings.objects.create(**data)
-        BrushSettings.objects.create(**data)
-        MetadataSettings.objects.create(**data)
         if not layer:
             self.cancel_layer_operation("create")
             return

@@ -13,9 +13,16 @@ from airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin import
     CanvasLayerMixin,
 )
 from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.drawingpad_settings import (
     DrawingPadSettings,
 )
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.metadata_settings import MetadataSettings
 
 
 class TestCanvasLayerMixin:
@@ -269,6 +276,52 @@ class TestCanvasLayerMixin:
                         # Verify - no item should be created
                         layer_mixin.addItem.assert_not_called()
                         assert layer_id not in layer_mixin._layer_items
+
+        def test_capture_layers_state_skips_global_settings_models(
+            self, layer_mixin
+        ):
+            """Layer snapshots should not query global brush/metadata tables."""
+            layer_record = MagicMock(id=1)
+            serialized = {"id": 1}
+            layer_mixin._serialize_record = MagicMock(return_value=serialized)
+
+            with patch.object(CanvasLayer.objects, "get", return_value=layer_record):
+                with patch.object(
+                    DrawingPadSettings.objects,
+                    "filter_by_first",
+                    return_value=MagicMock(),
+                ), patch.object(
+                    ControlnetSettings.objects,
+                    "filter_by_first",
+                    return_value=MagicMock(),
+                ), patch.object(
+                    ImageToImageSettings.objects,
+                    "filter_by_first",
+                    return_value=MagicMock(),
+                ), patch.object(
+                    OutpaintSettings.objects,
+                    "filter_by_first",
+                    return_value=MagicMock(),
+                ), patch.object(
+                    BrushSettings.objects,
+                    "filter_by_first",
+                ) as brush_filter, patch.object(
+                    MetadataSettings.objects,
+                    "filter_by_first",
+                ) as metadata_filter:
+                    snapshots = layer_mixin._capture_layers_state([1])
+
+            assert snapshots == [
+                {
+                    "layer": serialized,
+                    "drawing_pad": serialized,
+                    "controlnet": serialized,
+                    "image_to_image": serialized,
+                    "outpaint": serialized,
+                }
+            ]
+            brush_filter.assert_not_called()
+            metadata_filter.assert_not_called()
 
     def test_layer_item_is_layer_image_item_not_qgraphicspixmapitem(
         self, layer_mixin, sample_layer_data, sample_image

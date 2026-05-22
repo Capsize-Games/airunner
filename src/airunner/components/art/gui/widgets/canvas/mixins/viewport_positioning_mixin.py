@@ -140,10 +140,14 @@ class ViewportPositioningMixin:
                 f"[ALIGN] Using loaded center pos: x={pos_x}, y={pos_y}"
             )
 
-        self.update_active_grid_settings(
-            pos_x=pos_x,
-            pos_y=pos_y,
-        )
+        if (
+            getattr(self.active_grid_settings, "pos_x", None) is None
+            or getattr(self.active_grid_settings, "pos_y", None) is None
+        ):
+            self.update_active_grid_settings(
+                pos_x=pos_x,
+                pos_y=pos_y,
+            )
         # Update display positions
         self.update_active_grid_area_position()
 
@@ -180,6 +184,17 @@ class ViewportPositioningMixin:
 
             # Convert absolute position to display position
             abs_pos = QPointF(*self.active_grid_settings.pos)
+            abs_pos = self.clamp_active_grid_absolute_position(abs_pos)
+            clamped_x = int(round(abs_pos.x()))
+            clamped_y = int(round(abs_pos.y()))
+            if (
+                clamped_x != self.active_grid_settings.pos_x
+                or clamped_y != self.active_grid_settings.pos_y
+            ):
+                self.update_active_grid_settings(
+                    pos_x=clamped_x,
+                    pos_y=clamped_y,
+                )
             display_pos = manager.absolute_to_display(abs_pos, view_state)
 
             self.logger.debug(

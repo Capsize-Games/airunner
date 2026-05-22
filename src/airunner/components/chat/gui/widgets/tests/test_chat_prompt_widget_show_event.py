@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from PySide6.QtCore import QEvent, Qt
+from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.chat.gui.widgets import chat_prompt_widget as module
 from airunner.components.chat.gui.widgets.chat_prompt_widget import (
@@ -32,6 +33,35 @@ def test_chat_prompt_splitter_restore_is_deferred(monkeypatch):
 
     assert widget._default_splitter_settings_applied is True
     assert scheduled == [(0, widget._apply_default_splitter_settings)]
+
+
+def test_generated_chat_prompt_ui_keeps_history_out_of_root_layout():
+    """The main chat area should not permanently mount the history widget."""
+    app = QApplication.instance() or QApplication([])
+
+    class _StubChatPrompt(QWidget):
+        def on_provider_changed(self, *_args):
+            return None
+
+        def on_model_changed(self, *_args):
+            return None
+
+        def prompt_text_changed(self):
+            return None
+
+        def on_precision_changed(self, *_args):
+            return None
+
+    host = _StubChatPrompt()
+    ui = module.Ui_chat_prompt()
+
+    ui.setupUi(host)
+
+    assert ui.gridLayout_2.itemAtPosition(1, 0).widget() is ui.scrollArea
+    assert ui.gridLayout_2.itemAtPosition(2, 0).widget() is ui.chat_prompt_footer
+    assert ui.gridLayout_2.itemAtPosition(3, 0).widget() is ui.progress_container
+    assert not hasattr(ui, "chat_history_widget")
+    assert app is not None
 
 
 def test_chat_prompt_splitter_restore_does_not_process_events(monkeypatch):
@@ -442,7 +472,7 @@ def test_submit_generation_request_attaches_rag_documents():
     llm_request = sent_requests[0]["llm_request"]
     assert llm_request.rag_files == ["/tmp/notes.md"]
     assert llm_request.force_tool is None
-    assert llm_request.tool_categories == ["rag"]
+    assert llm_request.tool_categories is None
     assert llm_request.attached_document_capabilities == []
     assert llm_request.attached_document_total_tokens == 0
     assert llm_request.attached_document_total_characters == 0
@@ -512,6 +542,82 @@ def test_submit_generation_request_includes_document_capabilities(
             "file_size": document_path.stat().st_size,
             "estimated_tokens": 3,
             "estimated_characters": 16,
+            "text_available": True,
+            "fits_current_context": True,
+        }
+    ]
+
+
+def test_submit_generation_request_includes_epub_capabilities_from_ebook_root(
+    monkeypatch,
+    tmp_path,
+):
+    """Planner metadata should include ebooks stored in the KB ebook root."""
+    sent_requests = []
+    ebook_dir = tmp_path / "text" / "other" / "ebooks"
+    ebook_dir.mkdir(parents=True)
+    document_path = ebook_dir / "caribbean-mystery.epub"
+    document_path.write_bytes(b"epub")
+
+    monkeypatch.setattr(
+        module,
+        "extract_text_from_file",
+        lambda _path: "Miss Marple visits the Caribbean.",
+    )
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[str(document_path)],
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        _estimate_token_count=lambda prompt: 5 if prompt else 0,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+        _model_context_tokens=32,
+        documents_path=str(tmp_path / "text" / "other" / "documents"),
+        ebook_path=str(ebook_dir),
+        webpages_path=str(tmp_path / "text" / "other" / "webpages"),
+        zim_path=str(tmp_path / "zim"),
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="what is this book about?",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-epub-capabilities",
+        slash_command=None,
+    )
+
+    llm_request = sent_requests[0]["llm_request"]
+    assert llm_request.attached_document_total_tokens == 5
+    assert llm_request.attached_document_total_characters == 33
+    assert llm_request.attached_document_capabilities == [
+        {
+            "path": str(document_path),
+            "file_name": "caribbean-mystery.epub",
+            "file_size": document_path.stat().st_size,
+            "estimated_tokens": 5,
+            "estimated_characters": 33,
             "text_available": True,
             "fits_current_context": True,
         }

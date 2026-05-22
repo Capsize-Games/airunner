@@ -408,6 +408,99 @@ def test_viewport_resize_applies_compensation_without_changing_offset():
     )
 
 
+def test_active_grid_drag_clamps_to_document_bounds():
+    """Dragging should not move the active grid outside the fixed document."""
+    view = CustomGraphicsView()
+    active, grid, app_settings = make_settings(
+        pos_x=144,
+        pos_y=44,
+        working_width=512,
+        working_height=512,
+    )
+    app_settings.document_width = 1024
+    app_settings.document_height = 1024
+
+    def fake_get_or_cache_settings(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    view._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings, view
+    )
+    view.setProperty("canvas_type", "image")
+    _ = view.scene
+    view.center_pos = QPointF(144, 44)
+    view.show_active_grid_area()
+    aga: ActiveGridArea = view.active_grid_area
+    assert aga is not None
+
+    def fake_get_or_cache_settings_local(self, cls, eager_load=None):
+        name = getattr(cls, "__name__", str(cls))
+        if name == "ActiveGridSettings":
+            return active
+        if name == "GridSettings":
+            return grid
+        if name == "ApplicationSettings":
+            return app_settings
+        return cls()
+
+    aga._get_or_cache_settings = types.MethodType(
+        fake_get_or_cache_settings_local, aga
+    )
+
+    def apply_active_grid_update(**kwargs):
+        if "pos_x" in kwargs:
+            active.pos_x = kwargs["pos_x"]
+        if "pos_y" in kwargs:
+            active.pos_y = kwargs["pos_y"]
+        active.pos = (active.pos_x, active.pos_y)
+
+    aga.update_active_grid_settings = apply_active_grid_update
+    aga.api = SimpleNamespace(
+        art=SimpleNamespace(
+            canvas=SimpleNamespace(generate_mask=lambda: None),
+            active_grid_area_updated=lambda: None,
+        )
+    )
+
+    app_settings.current_tool = CanvasToolName.ACTIVE_GRID_AREA.value
+
+    class Evt:
+        def __init__(self, button, scene_pos, pos):
+            self._button = button
+            self._scene_pos = scene_pos
+            self._pos = pos
+
+        def button(self):
+            return self._button
+
+        def scenePos(self):
+            return self._scene_pos
+
+        def pos(self):
+            return self._pos
+
+        def accept(self):
+            pass
+
+    press = Evt(None, QPointF(0, 0), QPointF(0, 0))
+    aga.mousePressEvent(press)
+    move = Evt(None, QPointF(3000, 3000), QPointF(0, 0))
+    aga.mouseMoveEvent(move)
+    release = Evt(None, QPointF(3000, 3000), QPointF(0, 0))
+    aga.mouseReleaseEvent(release)
+
+    assert int(round(aga.scenePos().x())) == 654
+    assert int(round(aga.scenePos().y())) == 554
+    assert active.pos == (654, 554)
+
+
 def test_resize_during_restoration_skips_compensation():
     """Test that resize events during initial load don't apply compensation."""
     view = CustomGraphicsView()

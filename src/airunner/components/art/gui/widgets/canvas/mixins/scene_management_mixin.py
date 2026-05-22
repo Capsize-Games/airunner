@@ -64,16 +64,20 @@ class SceneManagementMixin:
         self._scene = value
 
     def set_scene_rect(self) -> None:
-        """Update the scene rect to match current viewport size.
-
-        Sets scene rect to (0, 0, width, height) based on viewport dimensions.
-        """
+        """Update the scene rect to include both viewport and document."""
         if not self.scene:
             return
         canvas_container_size = self.viewport().size()
-        self.scene.setSceneRect(
-            0, 0, canvas_container_size.width(), canvas_container_size.height()
+        viewport_rect = self.scene.sceneRect()
+        viewport_rect.setRect(
+            0,
+            0,
+            canvas_container_size.width(),
+            canvas_container_size.height(),
         )
+
+        document_rect = self.document_rect()
+        self.scene.setSceneRect(viewport_rect.united(document_rect))
 
     def update_scene(self) -> None:
         """Trigger a scene update to refresh the display.

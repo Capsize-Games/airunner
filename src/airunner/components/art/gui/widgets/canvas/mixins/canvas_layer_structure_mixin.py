@@ -11,8 +11,6 @@ from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
@@ -61,12 +59,6 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
             snapshot["outpaint"] = self._serialize_record(
                 OutpaintSettings.objects.filter_by_first(layer_id=layer_id)
             )
-            snapshot["brush"] = self._serialize_record(
-                BrushSettings.objects.filter_by_first(layer_id=layer_id)
-            )
-            snapshot["metadata"] = self._serialize_record(
-                MetadataSettings.objects.filter_by_first(layer_id=layer_id)
-            )
             snapshots.append(snapshot)
         return snapshots
 
@@ -113,12 +105,6 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
             self._merge_model_from_dict(
                 OutpaintSettings, snapshot.get("outpaint") or {}
             )
-            self._merge_model_from_dict(
-                BrushSettings, snapshot.get("brush") or {}
-            )
-            self._merge_model_from_dict(
-                MetadataSettings, snapshot.get("metadata") or {}
-            )
 
     def _remove_layers(self, layer_ids: Iterable[int]) -> None:
         """Remove layers and their associated data.
@@ -146,8 +132,6 @@ class CanvasLayerStructureMixin(MediatorMixin, SettingsMixin):
                 ControlnetSettings,
                 ImageToImageSettings,
                 OutpaintSettings,
-                BrushSettings,
-                MetadataSettings,
             ]:
                 cache_key = f"{model_class.__name__}_layer_{layer_id}"
                 cache_by_key.pop(cache_key, None)

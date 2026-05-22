@@ -1,7 +1,7 @@
 """Tests for main-window model status synchronization."""
 
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 from PySide6.QtWidgets import QApplication
@@ -64,9 +64,12 @@ def _make_window_stub():
         _chat_splitter_index=1,
         _center_splitter_index=2,
         _stats_splitter_index=3,
+        _canvas_panel_index=0,
+        _prompt_panel_index=1,
+        _left_panel_target_width=360,
+        _chat_panel_target_width=250,
         _stats_sidebar_index=0,
-        _art_prompt_sidebar_index=1,
-        _art_tools_sidebar_index=2,
+        _art_tools_sidebar_index=1,
         _left_documents_panel_index=0,
         _left_history_panel_index=1,
         _left_llm_settings_panel_index=2,
@@ -81,7 +84,9 @@ def _make_window_stub():
                 currentIndex=Mock(return_value=0),
                 setCurrentIndex=Mock(),
             ),
+            center_splitter=SimpleNamespace(sizes=lambda: [800, 0]),
             main_window_splitter=SimpleNamespace(sizes=lambda: [0, 0, 0, 0]),
+            canvas_button=_make_action(),
             knowledgebase_button=_make_action(),
             prompt_editor_button=_make_action(),
             art_tools_button=_make_action(),
@@ -114,6 +119,8 @@ def _make_window_stub():
         _ensure_left_panel_page_loaded=Mock(),
         _ensure_sidebar_page_loaded=Mock(),
         _ensure_knowledgebase_loaded=Mock(),
+        _ensure_art_prompt_loaded=Mock(),
+        _maximize_canvas_workspace=Mock(),
         _sync_left_panel_button_states=Mock(),
         _sync_sidebar_button_states=Mock(),
         _set_action_checked_state=MainWindow._set_action_checked_state,
@@ -135,6 +142,15 @@ def _make_window_stub():
         window
     )
     window._sidebar_is_visible = lambda: MainWindow._sidebar_is_visible(window)
+    window._center_section_is_visible = (
+        lambda: MainWindow._center_section_is_visible(window)
+    )
+    window._canvas_panel_is_visible = (
+        lambda: MainWindow._canvas_panel_is_visible(window)
+    )
+    window._prompt_panel_is_visible = (
+        lambda: MainWindow._prompt_panel_is_visible(window)
+    )
     window._current_left_panel_index = (
         lambda: MainWindow._current_left_panel_index(window)
     )
@@ -397,15 +413,115 @@ def test_right_sidebar_buttons_follow_active_page():
     window.ui.main_window_splitter = SimpleNamespace(
         sizes=lambda: [220, 480, 800, 240]
     )
+    window.ui.center_splitter = SimpleNamespace(sizes=lambda: [500, 0])
     window.ui.sidebar_tab.currentIndex = Mock(return_value=1)
 
     MainWindow.set_prompt_editor_button_checked(window)
     MainWindow.set_art_tools_button_checked(window)
     MainWindow.set_stats_button_checked(window)
 
-    window.ui.prompt_editor_button.setChecked.assert_called_once_with(True)
-    window.ui.art_tools_button.setChecked.assert_called_once_with(False)
+    window.ui.prompt_editor_button.setChecked.assert_called_once_with(False)
+    window.ui.art_tools_button.setChecked.assert_called_once_with(True)
     window.ui.stats_button.setChecked.assert_called_once_with(False)
+
+
+def test_center_panel_buttons_follow_center_splitter_panels():
+    window = _make_window_stub()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [220, 480, 800, 240]
+    )
+    window.ui.center_splitter = SimpleNamespace(sizes=lambda: [500, 350])
+
+    MainWindow.set_canvas_button_checked(window)
+    MainWindow.set_prompt_editor_button_checked(window)
+
+    window.ui.canvas_button.setChecked.assert_called_once_with(True)
+    window.ui.prompt_editor_button.setChecked.assert_called_once_with(True)
+
+
+def test_toggle_canvas_panel_opens_center_splitter():
+    window = _make_window_stub()
+    window._toggle_splitter_section = Mock()
+    window._maximize_canvas_workspace = Mock()
+    window._maximize_canvas_panel = Mock()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [220, 480, 0, 240]
+    )
+    window.ui.center_splitter = SimpleNamespace(
+        sizes=lambda: [0, 0],
+        setSizes=Mock(),
+    )
+
+    MainWindow._toggle_canvas_panel(window, True)
+
+    assert window._toggle_splitter_section.call_args_list == [
+        call(
+            True,
+            window._center_splitter_index,
+            window.ui.main_window_splitter,
+            320,
+        )
+    ]
+    window._maximize_canvas_workspace.assert_called_once_with()
+    window._maximize_canvas_panel.assert_called_once_with()
+    window._sync_sidebar_button_states.assert_called_once_with()
+
+
+def test_maximize_canvas_workspace_shrinks_left_panels():
+    window = _make_window_stub()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [540, 480, 320, 240],
+        setSizes=Mock(),
+    )
+
+    MainWindow._maximize_canvas_workspace(window)
+
+    window.ui.main_window_splitter.setSizes.assert_called_once_with(
+        [360, 250, 730, 240]
+    )
+
+
+def test_maximize_canvas_panel_shrinks_prompt_panel_to_minimum():
+    window = _make_window_stub()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [220, 480, 800, 240]
+    )
+    window.ui.center_splitter = SimpleNamespace(
+        sizes=lambda: [0, 500],
+        setSizes=Mock(),
+    )
+
+    MainWindow._maximize_canvas_panel(window)
+
+    window.ui.center_splitter.setSizes.assert_called_once_with([10000, 1])
+
+
+def test_toggle_prompt_panel_opens_center_splitter():
+    window = _make_window_stub()
+    window._toggle_splitter_section = Mock()
+    window.ui.main_window_splitter = SimpleNamespace(
+        sizes=lambda: [220, 480, 0, 240]
+    )
+    window.ui.center_splitter = SimpleNamespace(sizes=lambda: [0, 0])
+
+    MainWindow._toggle_prompt_panel(window, True)
+
+    window._ensure_art_prompt_loaded.assert_called_once_with()
+    assert window._toggle_splitter_section.call_args_list == [
+        call(
+            True,
+            window._center_splitter_index,
+            window.ui.main_window_splitter,
+            350,
+        ),
+        call(
+            True,
+            window._prompt_panel_index,
+            window.ui.center_splitter,
+            350,
+        ),
+    ]
+    window._sync_sidebar_button_states.assert_called_once_with()
 
 
 def test_daemon_status_prefers_loaded_local_llm_worker():

@@ -39,6 +39,8 @@ class ApplicationSettings(BaseModel):
     image_export_type = Column(String, default="png")
     auto_export_images = Column(Boolean, default=True)
     show_active_image_area = Column(Boolean, default=True)
+    document_width = Column(Integer, default=1024)
+    document_height = Column(Integer, default=1024)
     working_width = Column(Integer, default=1024)
     working_height = Column(Integer, default=1024)
     current_llm_generator = Column(String, default="causallm")

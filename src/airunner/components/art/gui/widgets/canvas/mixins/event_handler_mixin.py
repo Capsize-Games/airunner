@@ -319,8 +319,10 @@ class EventHandlerMixin:
                 # Update tracked size
                 self._last_viewport_size = current_viewport_size
 
-                # Redraw grid
-                self.draw_grid()
+                # Rebuild the grid item against the new viewport basis so
+                # splitter-driven host resizes keep the grid aligned with the
+                # compensated canvas content.
+                self.do_draw(force_draw=True)
 
     @staticmethod
     def _to_bool(value) -> bool:
@@ -441,8 +443,9 @@ class EventHandlerMixin:
         # Update the tracked viewport size for next resize
         self._last_viewport_size = new_size
 
-        # Redraw the grid with new viewport size
-        self.draw_grid()
+        # Rebuild the grid item with the updated viewport size so grid lines
+        # follow the same compensated shift as the canvas content.
+        self.do_draw(force_draw=True)
 
     def enterEvent(self, event: QEvent) -> None:
         """Handle event when mouse enters the widget.

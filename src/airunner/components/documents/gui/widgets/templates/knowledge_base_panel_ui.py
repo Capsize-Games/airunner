@@ -18,6 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout,
     QLabel, QProgressBar, QPushButton, QSizePolicy,
     QVBoxLayout, QWidget)
+import airunner.feather_rc
 
 class Ui_knowledge_base_panel(object):
     def setupUi(self, knowledge_base_panel):
@@ -96,15 +97,31 @@ class Ui_knowledge_base_panel(object):
 
         self.controlsLayout.addWidget(self.progress_bar)
 
+        self.import_button = QPushButton(knowledge_base_panel)
+        self.import_button.setObjectName(u"import_button")
+        self.import_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/lucide/light/import.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.import_button.setIcon(icon)
+
+        self.controlsLayout.addWidget(self.import_button)
+
         self.index_button = QPushButton(knowledge_base_panel)
         self.index_button.setObjectName(u"index_button")
         self.index_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/lucide/light/database.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.index_button.setIcon(icon1)
 
         self.controlsLayout.addWidget(self.index_button)
 
         self.cancel_button = QPushButton(knowledge_base_panel)
         self.cancel_button.setObjectName(u"cancel_button")
         self.cancel_button.setEnabled(False)
+        self.cancel_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/lucide/light/circle-x.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.cancel_button.setIcon(icon2)
 
         self.controlsLayout.addWidget(self.cancel_button)
 
@@ -127,7 +144,17 @@ class Ui_knowledge_base_panel(object):
         self.unindexed_label.setText(QCoreApplication.translate("knowledge_base_panel", u"Unindexed:", None))
         self.unindexed_docs_value.setText(QCoreApplication.translate("knowledge_base_panel", u"0", None))
         self.progress_bar.setFormat(QCoreApplication.translate("knowledge_base_panel", u"%p%", None))
-        self.index_button.setText(QCoreApplication.translate("knowledge_base_panel", u"Index All", None))
-        self.cancel_button.setText(QCoreApplication.translate("knowledge_base_panel", u"Cancel", None))
+#if QT_CONFIG(tooltip)
+        self.import_button.setToolTip(QCoreApplication.translate("knowledge_base_panel", u"Import document", None))
+#endif // QT_CONFIG(tooltip)
+        self.import_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.index_button.setToolTip(QCoreApplication.translate("knowledge_base_panel", u"Index all documents", None))
+#endif // QT_CONFIG(tooltip)
+        self.index_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.cancel_button.setToolTip(QCoreApplication.translate("knowledge_base_panel", u"Cancel operation", None))
+#endif // QT_CONFIG(tooltip)
+        self.cancel_button.setText("")
     # retranslateUi
 

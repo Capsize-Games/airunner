@@ -12,6 +12,10 @@ from airunner.components.art.gui.widgets.canvas.draggables.draggable_pixmap impo
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
     LayerImageItem,
 )
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 
 
 class CanvasSurfaceManagementMixin:
@@ -160,7 +164,7 @@ class CanvasSurfaceManagementMixin:
         """Apply expanded image to item."""
         if hasattr(item, "updateImage"):
             try:
-                item.updateImage(new_image)
+                item.updateImage(new_image, immediate=True)
             except Exception as e:
                 self.logger.warning(f"Failed to update item image: {e}")
                 return False
@@ -181,10 +185,12 @@ class CanvasSurfaceManagementMixin:
         grow_bottom: int,
     ) -> None:
         """Update item position and origin after expansion."""
-        original_pos = self.original_item_positions.get(item)
-        if original_pos is None:
-            canvas_offset = self.get_canvas_offset()
-            original_pos = item.pos() + canvas_offset
+        manager = CanvasPositionManager()
+        view_state = self._surface_view_state()
+        original_pos = manager.display_to_absolute(
+            item.pos(),
+            view_state,
+        )
 
         new_origin = QPointF(
             original_pos.x() - grow_left, original_pos.y() - grow_top
@@ -196,12 +202,32 @@ class CanvasSurfaceManagementMixin:
         )
         self._persist_item_origin(item, new_origin)
 
-        canvas_offset = self.get_canvas_offset()
-        display_pos = QPointF(
-            new_origin.x() - canvas_offset.x(),
-            new_origin.y() - canvas_offset.y(),
+        display_pos = manager.absolute_to_display(
+            new_origin,
+            view_state,
         )
         item.setPos(display_pos)
+
+    def _surface_view_state(self) -> ViewState:
+        """Return the current view state for surface growth updates."""
+        view = self.views()[0] if self.views() else None
+        grid_compensation = QPointF(0, 0)
+        if view is not None:
+            grid_compensation = QPointF(
+                getattr(
+                    view,
+                    "grid_compensation_offset",
+                    getattr(
+                        view,
+                        "_grid_compensation_offset",
+                        QPointF(0, 0),
+                    ),
+                )
+            )
+        return ViewState(
+            canvas_offset=self.get_canvas_offset(),
+            grid_compensation=grid_compensation,
+        )
 
     def _log_expansion(
         self,

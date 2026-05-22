@@ -15,4 +15,4 @@ def pil_to_qimage(pil_image):
         pil_image.size[1],
         QImage.Format.Format_RGBA8888,
     )
-    return qimage
+    return qimage.copy()

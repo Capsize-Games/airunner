@@ -9,6 +9,13 @@ Following red/green/refactor TDD methodology.
 """
 
 from PIL import Image
+from types import SimpleNamespace
+from unittest.mock import Mock
+from PySide6.QtGui import QImage
+
+from airunner.components.art.gui.widgets.canvas.mixins.canvas_image_initialization_mixin import (
+    CanvasImageInitializationMixin,
+)
 
 
 
@@ -239,6 +246,94 @@ class TestDeleteImage:
 
         # Item should be cleared
         assert scene.item is None
+
+
+def test_on_canvas_clear_signal_skips_recenter_when_suppressed(
+    mock_scene_with_settings,
+):
+    """Reset-driven clears should not run a stale recenter pass."""
+    scene = mock_scene_with_settings
+    scene.delete_image = Mock()
+    scene._clear_history = Mock()
+    scene.api = SimpleNamespace(
+        art=SimpleNamespace(canvas=SimpleNamespace(recenter_grid=Mock()))
+    )
+    scene._skip_recenter_on_clear = True
+    scene.current_active_image = object()
+
+    scene.on_canvas_clear_signal()
+
+    scene.delete_image.assert_called_once_with()
+    scene._clear_history.assert_called_once_with()
+    scene.api.art.canvas.recenter_grid.assert_not_called()
+
+
+def test_initialize_image_updates_layer_canvas_without_legacy_item():
+    """Layer canvases should update the selected layer, not self.item."""
+    layer_item = SimpleNamespace(
+        qimage=QImage(8, 8, QImage.Format.Format_ARGB32),
+        updateImage=Mock(),
+    )
+    viewport = SimpleNamespace(update=Mock())
+    view = SimpleNamespace(viewport=lambda: viewport, update=Mock())
+    qimage = QImage(8, 8, QImage.Format.Format_ARGB32)
+    qimage.fill(0)
+    scene = SimpleNamespace(
+        canvas_type="brush",
+        stop_painter=Mock(),
+        set_image=Mock(),
+        image=qimage,
+        current_active_image=None,
+        _layers_initialized=True,
+        _layer_items={1: layer_item},
+        _get_active_layer_item=Mock(return_value=layer_item),
+        _refresh_layer_display=Mock(),
+        item=SimpleNamespace(),
+        original_item_positions={},
+        set_painter=Mock(),
+        update=Mock(),
+        views=lambda: [view],
+        update_drawing_pad_settings=Mock(
+            side_effect=AssertionError("legacy position update used")
+        ),
+        set_item=Mock(side_effect=AssertionError("legacy item used")),
+    )
+    scene._uses_layer_canvas = (
+        CanvasImageInitializationMixin._uses_layer_canvas.__get__(
+            scene,
+            CanvasImageInitializationMixin,
+        )
+    )
+    scene._get_layer_canvas_item = (
+        CanvasImageInitializationMixin._get_layer_canvas_item.__get__(
+            scene,
+            CanvasImageInitializationMixin,
+        )
+    )
+    scene._remove_legacy_item_if_present = (
+        CanvasImageInitializationMixin._remove_legacy_item_if_present.__get__(
+            scene,
+            CanvasImageInitializationMixin,
+        )
+    )
+    scene._initialize_layer_canvas_image = (
+        CanvasImageInitializationMixin._initialize_layer_canvas_image.__get__(
+            scene,
+            CanvasImageInitializationMixin,
+        )
+    )
+
+    pil_image = Image.new("RGBA", (8, 8), (0, 0, 255, 255))
+    scene.set_image.side_effect = lambda _image: setattr(scene, "image", qimage)
+
+    CanvasImageInitializationMixin.initialize_image(scene, pil_image)
+
+    layer_item.updateImage.assert_called_once_with(qimage)
+    scene.set_painter.assert_called_once_with(layer_item.qimage)
+    assert scene.item is None
+    scene._refresh_layer_display.assert_not_called()
+    view.update.assert_called_once_with()
+    viewport.update.assert_called_once_with()
 
 
 class TestImageInitializationEdgeCases:

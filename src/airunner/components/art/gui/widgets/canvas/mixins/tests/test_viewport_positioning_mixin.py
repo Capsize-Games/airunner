@@ -257,6 +257,23 @@ class TestAlignCanvasItemsToViewport:
         assert int(mixin.center_pos.x()) == int(original_center.x())
         assert int(mixin.center_pos.y()) == int(original_center.y())
 
+    def test_align_preserves_existing_active_grid_position(
+        self, mixin, mock_scene
+    ):
+        """Stored active-grid positions should survive restore alignment."""
+        mixin._scene = mock_scene
+        mixin.center_pos = QPointF(150, 250)
+        mixin.active_grid_settings.pos_x = 320
+        mixin.active_grid_settings.pos_y = 220
+        mixin.update_active_grid_area_position = MagicMock()
+        mixin.updateImagePositions = MagicMock()
+        mixin.original_item_positions = MagicMock(return_value={})
+        mixin.update_active_grid_settings = MagicMock()
+
+        mixin.align_canvas_items_to_viewport()
+
+        mixin.update_active_grid_settings.assert_not_called()
+
 
 class TestUpdateActiveGridAreaPosition:
     """Test update_active_grid_area_position method."""

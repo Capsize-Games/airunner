@@ -12,8 +12,9 @@ Tests focus on:
 """
 
 import types
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
-from PySide6.QtCore import QPointF, QSize
+from PySide6.QtCore import QPointF, QRectF, QSize
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QGraphicsView
 import pytest
@@ -234,6 +235,22 @@ class TestSceneManagement:
             assert scene_rect.width() == 800
             assert scene_rect.height() == 600
 
+    def test_set_scene_rect_includes_large_document(self, custom_view):
+        """Fixed documents should remain inside the scene after redraw."""
+        _ = custom_view.scene
+        custom_view.application_settings.document_width = 1920
+        custom_view.application_settings.document_height = 1080
+        custom_view.application_settings.working_width = 512
+        custom_view.application_settings.working_height = 512
+        custom_view.center_pos = QPointF(144, 44)
+
+        with patch.object(custom_view, "viewport") as mock_viewport:
+            mock_viewport.return_value.size.return_value = QSize(800, 600)
+            custom_view.set_scene_rect()
+
+        scene_rect = custom_view.scene.sceneRect()
+        assert scene_rect == QRectF(0, 0, 2064, 1124)
+
     def test_update_scene(self, custom_view):
         """Test update_scene calls scene.update()."""
         _ = custom_view.scene
@@ -255,6 +272,81 @@ class TestSceneManagement:
         with patch.object(custom_view.scene, "removeItem") as mock_remove:
             custom_view.remove_scene_item(mock_item)
             mock_remove.assert_called_once_with(mock_item)
+
+    def test_document_rect_uses_fixed_document_size(self, custom_view):
+        """Document rect should stay anchored even if grid size changes."""
+        custom_view.application_settings.document_width = 1920
+        custom_view.application_settings.document_height = 1080
+        custom_view.application_settings.working_width = 512
+        custom_view.application_settings.working_height = 512
+        custom_view.center_pos = QPointF(144, 44)
+        custom_view.active_grid_settings.pos_x = 320
+        custom_view.active_grid_settings.pos_y = 220
+
+        assert custom_view.document_rect() == QRectF(144, 44, 1920, 1080)
+
+    def test_clamp_active_grid_absolute_position_keeps_grid_in_document(
+        self, custom_view
+    ):
+        """Active grid origin should remain inside the fixed document."""
+        custom_view.application_settings.document_width = 1920
+        custom_view.application_settings.document_height = 1080
+        custom_view.application_settings.working_width = 512
+        custom_view.application_settings.working_height = 512
+        custom_view.center_pos = QPointF(144, 44)
+
+        clamped = custom_view.clamp_active_grid_absolute_position(
+            QPointF(2000, 900)
+        )
+
+        assert clamped == QPointF(1552, 612)
+
+    def test_fit_document_in_view_zooms_out_only(self, custom_view):
+        """Large documents should fit without zooming past 100 percent."""
+        custom_view.zoom_handler = SimpleNamespace(
+            zoom_level=0.0,
+            on_zoom_level_changed=Mock(return_value=Mock()),
+        )
+        custom_view.centerOn = Mock()
+        custom_view.setTransform = Mock()
+        custom_view._update_zoom_grid_info = Mock()
+        _ = custom_view.scene
+
+        with patch.object(custom_view, "viewport") as mock_viewport:
+            mock_viewport.return_value.size.return_value = QSize(800, 600)
+            custom_view.application_settings.document_width = 1600
+            custom_view.application_settings.document_height = 1200
+            custom_view.application_settings.working_width = 1600
+            custom_view.application_settings.working_height = 1200
+            custom_view.center_pos = QPointF(144, 44)
+
+            custom_view.fit_document_in_view()
+
+        assert custom_view.zoom_handler.zoom_level == 0.5
+        custom_view.setTransform.assert_called_once_with(
+            custom_view.zoom_handler.on_zoom_level_changed.return_value
+        )
+        custom_view.centerOn.assert_called_once_with(QPointF(944, 644))
+
+    def test_align_canvas_items_preserves_existing_active_grid_position(
+        self, custom_view
+    ):
+        """Restore alignment should not recenter a moved active grid."""
+        custom_view.application_settings.document_width = 1920
+        custom_view.application_settings.document_height = 1080
+        custom_view.active_grid_settings.pos_x = 320
+        custom_view.active_grid_settings.pos_y = 220
+        custom_view.center_pos = QPointF(144, 44)
+        custom_view.update_active_grid_settings = Mock()
+        custom_view.update_active_grid_area_position = Mock()
+        custom_view.updateImagePositions = Mock()
+        custom_view.original_item_positions = Mock(return_value={})
+
+        custom_view.align_canvas_items_to_viewport()
+
+        custom_view.update_active_grid_settings.assert_not_called()
+        custom_view.update_active_grid_area_position.assert_called_once_with()
+        custom_view.updateImagePositions.assert_called_once_with({})
 
 
 class TestGridDrawing:
@@ -356,7 +448,9 @@ class TestViewportEvents:
         custom_view._last_viewport_size = size
 
         event = QResizeEvent(size, size)
-        custom_view.resizeEvent(event)
+        with patch.object(custom_view, "viewport") as mock_viewport:
+            mock_viewport.return_value.size.return_value = size
+            custom_view.resizeEvent(event)
 
         # Should return early without changes
 

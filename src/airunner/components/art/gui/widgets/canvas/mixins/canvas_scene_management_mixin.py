@@ -9,6 +9,10 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 from airunner.components.art.managers.stablediffusion.rect import Rect
 import time
 
@@ -135,13 +139,69 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         Priority: active layer item > self.item > fallback to setting property.
         """
         # Try layer system first (new approach)
-        active_layer_item = self._get_active_layer_item()
+        resolve_layer_item = getattr(
+            type(self),
+            "_get_layer_canvas_item",
+            None,
+        )
+        if resolve_layer_item is not None:
+            active_layer_item = resolve_layer_item(self)
+        else:
+            resolve_layer_item = getattr(
+                getattr(self, "__dict__", {}),
+                "get",
+                lambda *_args, **_kwargs: None,
+            )("_get_layer_canvas_item")
+            if callable(resolve_layer_item):
+                active_layer_item = resolve_layer_item()
+            else:
+                active_layer_item = self._get_active_layer_item()
+
+        uses_layer_canvas = getattr(
+            type(self),
+            "_uses_layer_canvas",
+            None,
+        )
+        if uses_layer_canvas is not None:
+            layer_canvas = uses_layer_canvas(self)
+        else:
+            uses_layer_canvas = getattr(
+                getattr(self, "__dict__", {}),
+                "get",
+                lambda *_args, **_kwargs: None,
+            )("_uses_layer_canvas")
+            if callable(uses_layer_canvas):
+                layer_canvas = uses_layer_canvas()
+            else:
+                layer_canvas = False
+
+        if (
+            active_layer_item is None
+            and layer_canvas
+            and hasattr(self, "_refresh_layer_display")
+        ):
+            self._refresh_layer_display()
+            if getattr(type(self), "_get_layer_canvas_item", None) is not None:
+                active_layer_item = type(self)._get_layer_canvas_item(self)
+            elif callable(resolve_layer_item):
+                active_layer_item = resolve_layer_item()
+            else:
+                active_layer_item = self._get_active_layer_item()
+
         self.logger.debug(
             "[ITEM DEBUG] active_layer_item=%s self.item=%s",
             active_layer_item,
             getattr(self, "item", "NO ATTR"),
         )
         if active_layer_item is not None:
+            remove_legacy_item = getattr(
+                self,
+                "_remove_legacy_item_if_present",
+                None,
+            )
+            if callable(remove_legacy_item):
+                remove_legacy_item()
+
             q_image = self._convert_and_cache_qimage(image)
             self.logger.debug(
                 "[ITEM DEBUG] Using active layer item, q_image_valid=%s",
@@ -169,6 +229,10 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
                 self.logger.warning(
                     "Skipped layer updateImage due to null QImage"
                 )
+            return
+
+        if layer_canvas:
+            self.current_active_image = image
             return
 
         # Fall back to legacy single-item system
@@ -268,16 +332,31 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         if image.mode == "RGBA":
             w, h = image.size
             img_data = image.tobytes("raw", "RGBA")
-            result = QImage(img_data, w, h, QImage.Format.Format_RGBA8888)
+            result = QImage(
+                img_data,
+                w,
+                h,
+                QImage.Format.Format_RGBA8888,
+            ).copy()
         elif image.mode == "RGB":
             w, h = image.size
             img_data = image.tobytes("raw", "RGB")
-            result = QImage(img_data, w, h, QImage.Format.Format_RGB888)
+            result = QImage(
+                img_data,
+                w,
+                h,
+                QImage.Format.Format_RGB888,
+            ).copy()
         else:
             rgba_image = image.convert("RGBA")
             w, h = rgba_image.size
             img_data = rgba_image.tobytes("raw", "RGBA")
-            result = QImage(img_data, w, h, QImage.Format.Format_RGBA8888)
+            result = QImage(
+                img_data,
+                w,
+                h,
+                QImage.Format.Format_RGBA8888,
+            ).copy()
 
         elapsed = (time.time() - start) * 1000
         if elapsed > 10:
@@ -345,14 +424,36 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             absolute_pos = QPointF(root_point.x(), root_point.y())
             self.original_item_positions[self.item] = absolute_pos
 
-            visible_pos_x = absolute_pos.x() - canvas_offset.x()
-            visible_pos_y = absolute_pos.y() - canvas_offset.y()
+            grid_compensation = QPointF(0, 0)
+            if hasattr(self, "views"):
+                views = self.views()
+                if views:
+                    view = views[0]
+                    grid_compensation = QPointF(
+                        getattr(
+                            view,
+                            "grid_compensation_offset",
+                            getattr(
+                                view,
+                                "_grid_compensation_offset",
+                                QPointF(0, 0),
+                            ),
+                        )
+                    )
+
+            display_pos = CanvasPositionManager.absolute_to_display(
+                absolute_pos,
+                ViewState(
+                    canvas_offset=QPointF(canvas_offset),
+                    grid_compensation=grid_compensation,
+                ),
+            )
             current_pos = self.item.pos()
             if (
-                abs(current_pos.x() - visible_pos_x) > 0.5
-                or abs(current_pos.y() - visible_pos_y) > 0.5
+                abs(current_pos.x() - display_pos.x()) > 0.5
+                or abs(current_pos.y() - display_pos.y()) > 0.5
             ):
-                self.item.setPos(visible_pos_x, visible_pos_y)
+                self.item.setPos(display_pos)
         except (RuntimeError, AttributeError):
             # Item was deleted or is no longer valid
             pass

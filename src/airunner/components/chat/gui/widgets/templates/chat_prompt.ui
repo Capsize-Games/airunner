@@ -178,10 +178,7 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="LLMHistoryWidget" name="chat_history_widget" native="true"/>
-   </item>
-   <item row="2" column="0">
+  <item row="1" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -531,7 +528,7 @@
      </widget>
     </widget>
    </item>
-   <item row="3" column="0">
+  <item row="2" column="0">
     <widget class="QWidget" name="chat_prompt_footer" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <property name="leftMargin">
@@ -605,31 +602,6 @@
            </property>
            <property name="sizeAdjustPolicy">
             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="thinking_checkbox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>30</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Enable thinking mode (Qwen3). When enabled, the model will reason step-by-step before responding. Slower but more thoughtful responses.</string>
-           </property>
-           <property name="text">
-            <string>Thinking</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -738,7 +710,7 @@
      </layout>
     </widget>
    </item>
-   <item row="4" column="0">
+  <item row="3" column="0">
     <widget class="QWidget" name="progress_container" native="true">
      <layout class="QHBoxLayout" name="progress_layout">
       <property name="spacing">

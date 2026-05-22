@@ -2,7 +2,9 @@
 
 import pytest
 from unittest.mock import MagicMock
+from types import SimpleNamespace
 
+from PySide6.QtCore import QPointF
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 
 
@@ -213,6 +215,35 @@ class TestHistoryEntryApplication:
         history_scene._apply_layer_structure.assert_called_once_with(
             entry, "after"
         )
+
+
+def test_apply_layer_state_uses_document_sized_blank_surface():
+    """Blank history restores should keep the fixed document dimensions."""
+    layer_item = MagicMock()
+    scene = SimpleNamespace(
+        update_drawing_pad_settings=MagicMock(),
+        _get_current_selected_layer_id=MagicMock(return_value=1),
+        _pending_image_binary=None,
+        _current_active_image_binary=None,
+        _layer_items={1: layer_item},
+        _history_blank_surface=MagicMock(return_value="blank-surface"),
+        application_settings=SimpleNamespace(
+            document_width=640,
+            document_height=480,
+        ),
+        get_canvas_offset=MagicMock(return_value=QPointF(0.0, 0.0)),
+        parent=SimpleNamespace(
+            views=lambda: [
+                SimpleNamespace(grid_compensation_offset=QPointF(0.0, 0.0))
+            ]
+        ),
+        original_item_positions={},
+    )
+
+    CustomScene._apply_layer_state(scene, 1, {"image": None})
+
+    scene._history_blank_surface.assert_called_once_with()
+    layer_item.updateImage.assert_called_once_with("blank-surface")
 
     def test_apply_layer_reorder_entry(self, history_scene):
         """Test layer reorder uses structure handler."""

@@ -95,6 +95,24 @@ class TestUpdateExistingItem:
         mock_item.updateImage.assert_called_once_with(mock_qimage)
         assert mock_item in scene.original_item_positions
 
+    def test_update_existing_item_caches_provided_absolute_position(
+        self, mock_scene_with_settings, mock_qimage
+    ):
+        """Cache should use the provided absolute position, not item.pos()."""
+        scene = mock_scene_with_settings
+
+        mock_item = Mock()
+        mock_item.setPos = Mock()
+        mock_item.pos.return_value = QPointF(-40, -25)
+        mock_item.updateImage = Mock()
+        scene.item = mock_item
+        scene.original_item_positions = {}
+
+        x, y = 100, 150
+        scene._update_existing_item(mock_qimage, x, y)
+
+        assert scene.original_item_positions[mock_item] == QPointF(x, y)
+
     def test_update_existing_item_with_none_image(
         self, mock_scene_with_settings
     ):

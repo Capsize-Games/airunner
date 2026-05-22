@@ -1,18 +1,17 @@
 from typing import Optional
 from PySide6.QtCore import Slot, Qt, QTimer
-from PySide6.QtWidgets import QSpacerItem, QSizePolicy
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
+from PIL import Image
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
 from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.widgets.canvas.layer_item_widget import (
     LayerItemWidget,
@@ -21,6 +20,7 @@ from airunner.components.art.gui.widgets.canvas.templates.canvas_layer_container
     Ui_canvas_layer_container,
 )
 from airunner.enums import SignalCode
+from airunner.utils.image import convert_image_to_binary
 
 
 class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
@@ -695,9 +695,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             layer_id: The ID of the layer to initialize settings for.
         """
         try:
-            # Create default DrawingPadSettings
-            if not DrawingPadSettings.objects.filter_by(layer_id=layer_id):
-                DrawingPadSettings.objects.create(layer_id=layer_id)
+            self._ensure_drawing_pad_defaults(layer_id)
 
             # Create default ControlnetSettings
             if not ControlnetSettings.objects.filter_by(layer_id=layer_id):
@@ -711,15 +709,44 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             if not OutpaintSettings.objects.filter_by(layer_id=layer_id):
                 OutpaintSettings.objects.create(layer_id=layer_id)
 
-            # Create default BrushSettings
-            if not BrushSettings.objects.filter_by(layer_id=layer_id):
-                BrushSettings.objects.create(layer_id=layer_id)
-
-            # Create default MetadataSettings
-            if not MetadataSettings.objects.filter_by(layer_id=layer_id):
-                MetadataSettings.objects.create(layer_id=layer_id)
-
         except Exception as e:
             print(
                 f"Error initializing default settings for layer {layer_id}: {e}"
             )
+
+    def _document_origin(self) -> tuple[int, int]:
+        window = self.window()
+        view = None if window is None else window.findChild(
+            QWidget, "canvas_container"
+        )
+        if view is not None and hasattr(view, "document_origin"):
+            origin = view.document_origin()
+            return int(round(origin.x())), int(round(origin.y()))
+        pos_x = getattr(self.active_grid_settings, "pos_x", 0) or 0
+        pos_y = getattr(self.active_grid_settings, "pos_y", 0) or 0
+        return int(pos_x), int(pos_y)
+
+    def _create_blank_document_binary(self) -> Optional[bytes]:
+        image = Image.new(
+            "RGBA",
+            (
+                self.application_settings.document_width,
+                self.application_settings.document_height,
+            ),
+            (0, 0, 0, 0),
+        )
+        return convert_image_to_binary(image)
+
+    def _ensure_drawing_pad_defaults(self, layer_id: int) -> None:
+        settings = DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
+        x_pos, y_pos = self._document_origin()
+        image = self._create_blank_document_binary()
+        if settings is not None and settings.image:
+            return
+
+        self.update_drawing_pad_settings(
+            layer_id=layer_id,
+            image=image,
+            x_pos=x_pos,
+            y_pos=y_pos,
+        )

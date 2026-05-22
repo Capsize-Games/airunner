@@ -317,6 +317,36 @@ class TestBinaryToPilFast:
 class TestImageConversionEdgeCases:
     """Test edge cases and integration scenarios."""
 
+    def test_direct_qimage_conversion_detaches_source_buffer(
+        self, mock_scene_with_settings
+    ):
+        """REGRESSION: Direct conversion must not alias temporary bytes."""
+        scene = mock_scene_with_settings
+
+        class BufferBackedImage:
+            mode = "RGBA"
+            size = (1, 1)
+
+            def __init__(self):
+                self.buffer = bytearray([255, 0, 0, 255])
+
+            def tobytes(self, *_args):
+                return self.buffer
+
+        source = BufferBackedImage()
+
+        qimage = scene._convert_pil_to_qimage_direct(source)
+
+        source.buffer[:] = bytearray([0, 255, 0, 255])
+
+        pixel = qimage.pixelColor(0, 0)
+        assert (pixel.red(), pixel.green(), pixel.blue(), pixel.alpha()) == (
+            255,
+            0,
+            0,
+            255,
+        )
+
     def test_round_trip_conversion(self, mock_scene_with_settings):
         """INTEGRATION: PIL -> QImage conversion preserves data."""
         scene = mock_scene_with_settings

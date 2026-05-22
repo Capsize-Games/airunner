@@ -813,7 +813,7 @@ class ConversationWidget(BaseWidget):
         user_mood: str = None,
     ):
         message = strip_names_from_message(
-            message.lstrip() if first_message else message,
+            message,
             self.user.username,
             self.chatbot.botname,
         )

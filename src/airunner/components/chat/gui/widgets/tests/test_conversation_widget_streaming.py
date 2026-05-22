@@ -43,6 +43,38 @@ def test_append_user_message_for_request_uses_incremental_bridge_update():
     )
 
 
+def test_add_message_to_conversation_preserves_leading_space(monkeypatch):
+    """Visible chat rendering should not trim the message body."""
+    captured = {}
+
+    def capture_strip_names(message, *_args):
+        captured["message"] = message
+        return message
+
+    monkeypatch.setattr(module, "strip_names_from_message", capture_strip_names)
+
+    widget = SimpleNamespace(
+        user=SimpleNamespace(username="User"),
+        chatbot=SimpleNamespace(botname="Assistant"),
+        conversation=None,
+        conversation_id=1,
+        _streamed_messages=[],
+        logger=Mock(),
+        _dispatch_chat_bridge_call=Mock(),
+        _format_message_for_webview=lambda **kwargs: kwargs,
+    )
+
+    ConversationWidget.add_message_to_conversation(
+        widget,
+        name="Assistant",
+        message=" Hello",
+        is_bot=True,
+        first_message=True,
+    )
+
+    assert captured["message"] == " Hello"
+
+
 def test_tool_status_updates_include_request_id(monkeypatch):
     """Tool status bridge updates stay scoped to the active request."""
     update = Mock()

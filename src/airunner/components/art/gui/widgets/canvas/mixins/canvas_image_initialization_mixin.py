@@ -32,6 +32,80 @@ class CanvasImageInitializationMixin:
             self._current_active_image_ref = None
             self._current_active_image_binary = None
 
+    def _uses_layer_canvas(self) -> bool:
+        """Return whether this scene should render through layer items."""
+        return getattr(self, "canvas_type", None) in (
+            "drawing_pad",
+            "brush",
+        )
+
+    def _get_layer_canvas_item(self):
+        """Return the selected or fallback layer item for layer canvases."""
+        if not self._uses_layer_canvas():
+            return None
+
+        get_active_item = getattr(self, "_get_active_layer_item", None)
+        if callable(get_active_item):
+            layer_item = get_active_item()
+            if layer_item is not None:
+                return layer_item
+
+        layer_items = getattr(self, "_layer_items", None)
+        if not isinstance(layer_items, dict):
+            return None
+
+        for layer_id in sorted(layer_items):
+            layer_item = layer_items.get(layer_id)
+            if layer_item is not None:
+                return layer_item
+        return None
+
+    def _remove_legacy_item_if_present(self) -> None:
+        """Remove the old single-surface item when layers are active."""
+        legacy_item = getattr(self, "item", None)
+        if legacy_item is None:
+            return
+
+        legacy_scene = None
+        try:
+            legacy_scene = legacy_item.scene()
+        except (AttributeError, RuntimeError):
+            legacy_scene = None
+
+        if legacy_scene is not None:
+            try:
+                legacy_scene.removeItem(legacy_item)
+            except (AttributeError, RuntimeError):
+                pass
+
+        if hasattr(self, "original_item_positions"):
+            self.original_item_positions.pop(legacy_item, None)
+
+        self.item = None
+
+    def _initialize_layer_canvas_image(self) -> bool:
+        """Update the selected layer item instead of the legacy item."""
+        if not self._uses_layer_canvas():
+            return False
+
+        layer_item = self._get_layer_canvas_item()
+        if layer_item is None and hasattr(self, "_refresh_layer_display"):
+            if hasattr(self, "_layers_initialized"):
+                self._layers_initialized = True
+            self._refresh_layer_display()
+            layer_item = self._get_layer_canvas_item()
+
+        self._remove_legacy_item_if_present()
+
+        if layer_item is None:
+            return True
+
+        if self.image is not None and not self.image.isNull():
+            layer_item.updateImage(self.image)
+
+        self.set_painter(getattr(layer_item, "qimage", self.image))
+        return True
+
     def initialize_image(
         self, image: Optional[Image.Image] = None, generated: bool = False
     ) -> None:
@@ -44,6 +118,14 @@ class CanvasImageInitializationMixin:
         self.stop_painter()
         self.current_active_image = image
         self.set_image(image)
+
+        if self._initialize_layer_canvas_image():
+            self.update()
+
+            for view in self.views():
+                view.viewport().update()
+                view.update()
+            return
 
         x = self.active_grid_settings.pos_x
         y = self.active_grid_settings.pos_y

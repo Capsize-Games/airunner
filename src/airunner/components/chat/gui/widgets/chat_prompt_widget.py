@@ -172,16 +172,6 @@ class ChatPromptWidget(BaseWidget):
         # Default plain chat input to CHAT mode. Tool routing still happens
         # per-request via auto selection when the prompt needs it.
         self.update_llm_generator_settings(action=LLMActionType.CHAT.name)
-        
-        # Initialize thinking checkbox from settings
-        if hasattr(self.ui, "thinking_checkbox"):
-            self.ui.thinking_checkbox.blockSignals(True)
-            enable_thinking = getattr(self.llm_generator_settings, "enable_thinking", True)
-            # Handle None value from database (default to True)
-            if enable_thinking is None:
-                enable_thinking = True
-            self.ui.thinking_checkbox.setChecked(enable_thinking)
-            self.ui.thinking_checkbox.blockSignals(False)
 
         self._create_reasoning_effort_dropdown()
         
@@ -584,7 +574,7 @@ class ChatPromptWidget(BaseWidget):
             action,
             getattr(self, "llm_generator_settings", None),
         )
-        llm_request.enable_thinking = self._is_thinking_enabled_for_request()
+        llm_request.enable_thinking = True
         llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
         
         # Set force_tool if slash command specifies one
@@ -595,14 +585,6 @@ class ChatPromptWidget(BaseWidget):
         rag_files = list(getattr(self, "_attached_documents", []))
         if rag_files:
             llm_request.rag_files = rag_files
-            existing_categories = list(
-                getattr(llm_request, "tool_categories", []) or []
-            )
-            if "rag" not in {
-                str(category).lower() for category in existing_categories
-            }:
-                existing_categories.append("rag")
-            llm_request.tool_categories = existing_categories
             ChatPromptWidget._populate_request_document_capabilities(
                 self,
                 llm_request,
@@ -638,22 +620,8 @@ class ChatPromptWidget(BaseWidget):
         )
 
     def _is_thinking_enabled_for_request(self) -> bool:
-        """Return the user-selected thinking preference for this request."""
-        if self._model_supports_reasoning_effort():
-            return False
-
-        if hasattr(self.ui, "thinking_checkbox"):
-            try:
-                return bool(self.ui.thinking_checkbox.isChecked())
-            except Exception:
-                pass
-
-        enable_thinking = getattr(
-            self.llm_generator_settings,
-            "enable_thinking",
-            True,
-        )
-        return True if enable_thinking is None else bool(enable_thinking)
+        """Return the effective request thinking preference."""
+        return True
 
     def _get_reasoning_effort_for_request(self) -> Optional[str]:
         """Return the request-scoped GPT-OSS reasoning effort."""
@@ -772,8 +740,7 @@ class ChatPromptWidget(BaseWidget):
         self._hide_footer_controls_moved_to_settings()
         self._populate_model_dropdown()
         self._populate_reasoning_effort_dropdown()
-        if hasattr(self.ui, "thinking_checkbox"):
-            self._update_thinking_checkbox_visibility()
+        self._update_thinking_checkbox_visibility()
 
     def _apply_prompt_prefix(self, prompt: str, prefix: str) -> str:
         """Return the request prompt with one optional hidden prefix."""
@@ -860,13 +827,8 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def thinking_toggled(self, checked: bool) -> None:
-        """Handle thinking checkbox toggle.
-        
-        When enabled, Qwen3 models will use <think>...</think> reasoning
-        before responding. This produces more thoughtful responses but
-        takes longer to generate.
-        """
-        self.update_llm_generator_settings(enable_thinking=checked)
+        """Retained for compatibility after removing the thinking toggle."""
+        _ = checked
 
     def prompt_text_changed(self) -> None:
         """Handle changes to the prompt text and highlight slash commands if present."""
@@ -1203,6 +1165,8 @@ class ChatPromptWidget(BaseWidget):
             root
             for root in (
                 getattr(self, "documents_path", None),
+                getattr(self, "ebook_path", None),
+                getattr(self, "webpages_path", None),
                 getattr(self, "zim_path", None),
             )
             if root
@@ -1594,15 +1558,10 @@ class ChatPromptWidget(BaseWidget):
 
     def _update_thinking_checkbox_visibility(self) -> None:
         """Update footer reasoning controls for the current model."""
-        if not hasattr(self.ui, "thinking_checkbox"):
-            return
-
-        supports_thinking = self._model_supports_thinking()
         supports_reasoning_effort = self._model_supports_reasoning_effort()
 
-        self.ui.thinking_checkbox.setVisible(
-            supports_thinking and not supports_reasoning_effort
-        )
+        if hasattr(self.ui, "thinking_checkbox"):
+            self.ui.thinking_checkbox.setVisible(False)
 
         if hasattr(self.ui, "reasoning_effort_dropdown"):
             if supports_reasoning_effort:
@@ -1651,20 +1610,6 @@ class ChatPromptWidget(BaseWidget):
         if column == "reasoning_effort":
             self._populate_reasoning_effort_dropdown()
             return
-
-        if column == "enable_thinking" and hasattr(
-            self.ui, "thinking_checkbox"
-        ):
-            enable_thinking = getattr(
-                self.llm_generator_settings,
-                "enable_thinking",
-                True,
-            )
-            self.ui.thinking_checkbox.blockSignals(True)
-            self.ui.thinking_checkbox.setChecked(
-                True if enable_thinking is None else bool(enable_thinking)
-            )
-            self.ui.thinking_checkbox.blockSignals(False)
 
     def clear_prompt(self):
         self.prompt = ""
@@ -2602,6 +2547,9 @@ class ChatPromptWidget(BaseWidget):
     @property
     def documents_path(self) -> str:
         """Return the local document library used by the knowledge base."""
+        configured = getattr(self.path_settings, "documents_path", None)
+        if configured:
+            return os.path.expanduser(configured)
         return os.path.join(
             os.path.expanduser(self.path_settings.base_path),
             "text/other/documents",
@@ -2613,6 +2561,28 @@ class ChatPromptWidget(BaseWidget):
         return os.path.join(
             os.path.expanduser(self.path_settings.base_path),
             "zim",
+        )
+
+    @property
+    def ebook_path(self) -> str:
+        """Return the local ebook library used by the knowledge base."""
+        configured = getattr(self.path_settings, "ebook_path", None)
+        if configured:
+            return os.path.expanduser(configured)
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "text/other/ebooks",
+        )
+
+    @property
+    def webpages_path(self) -> str:
+        """Return the local webpage library used by the knowledge base."""
+        configured = getattr(self.path_settings, "webpages_path", None)
+        if configured:
+            return os.path.expanduser(configured)
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "text/other/webpages",
         )
 
     def _validate_knowledge_base_document_path(
@@ -2627,7 +2597,12 @@ class ChatPromptWidget(BaseWidget):
                 file_path,
                 label="Attached document path",
                 allowed_suffixes=KNOWLEDGE_BASE_DOCUMENT_SUFFIXES,
-                allowed_roots=(self.documents_path, self.zim_path),
+                allowed_roots=(
+                    self.documents_path,
+                    self.ebook_path,
+                    self.webpages_path,
+                    self.zim_path,
+                ),
             )
         except PathPolicyError as exc:
             if log_rejection:

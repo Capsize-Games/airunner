@@ -24,7 +24,7 @@ class LayerImageItem(DraggablePixmap):
         self.layer_image_data = layer_image_data or {}
         super().__init__(qimage, layer_id=layer_id, use_layer_context=use_layer_context)
         self.set_layer_context(layer_id)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self._update_mouse_interaction()
 
         # Add tracking variables for dragging, just like ActiveGridArea
         self.initial_mouse_scene_pos = None

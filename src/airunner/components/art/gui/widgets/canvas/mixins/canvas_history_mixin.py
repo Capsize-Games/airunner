@@ -176,7 +176,7 @@ class CanvasHistoryMixin:
                     qimage = ImageQt.ImageQt(pil_image)
                     layer_item.updateImage(qimage)
             else:
-                blank_qimage = self._create_blank_surface()
+                blank_qimage = self._history_blank_surface()
                 layer_item.updateImage(blank_qimage)
             x_pos = state.get("x_pos")
             y_pos = state.get("y_pos")
@@ -208,6 +208,16 @@ class CanvasHistoryMixin:
                 self.original_item_positions[layer_item] = QPointF(
                     x_pos, y_pos
                 )
+
+    def _history_blank_surface(self):
+        """Create a blank image using the fixed document size."""
+        width = getattr(self.application_settings, "document_width", None)
+        height = getattr(self.application_settings, "document_height", None)
+        if not isinstance(width, (int, float)) or width <= 0:
+            width = getattr(self.application_settings, "working_width", 1)
+        if not isinstance(height, (int, float)) or height <= 0:
+            height = getattr(self.application_settings, "working_height", 1)
+        return self._create_blank_surface(int(width), int(height))
 
     def _begin_layer_history_transaction(
         self, layer_id: Optional[int], change_type: str

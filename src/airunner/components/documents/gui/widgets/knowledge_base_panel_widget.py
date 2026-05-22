@@ -28,6 +28,11 @@ class KnowledgeBasePanelWidget(BaseWidget):
     """
 
     widget_class_ = Ui_knowledge_base_panel
+    icons = [
+        ("database", "index_button"),
+        ("circle-x", "cancel_button"),
+        ("import", "import_button"),
+    ]
 
     def __init__(self, *args, **kwargs):
         # Track indexing progress locally
@@ -41,41 +46,18 @@ class KnowledgeBasePanelWidget(BaseWidget):
         }
         super().__init__(*args, **kwargs)
         self.setAcceptDrops(True)
-        self._add_import_button()
         self._refresh_statistics()
-
-        # Wire up buttons
-        try:
-            self.ui.index_button.clicked.connect(self._on_index_button_clicked)
-        except Exception:
-            pass
-        try:
-            self.ui.cancel_button.clicked.connect(
-                self._on_cancel_button_clicked
-            )
-        except Exception:
-            pass
 
     @property
     def documents_path(self) -> str:
         """Return the local AIRunner document library path."""
+        configured = getattr(self.path_settings, "documents_path", None)
+        if configured:
+            return os.path.expanduser(configured)
         return os.path.join(
             os.path.expanduser(self.path_settings.base_path),
             "text/other/documents",
         )
-
-    def _add_import_button(self) -> None:
-        """Insert the knowledge-base import button into the existing panel."""
-        button = QPushButton("Import document(s)", self)
-        button.setObjectName("import_button")
-        button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.clicked.connect(self._on_import_button_clicked)
-        controls_layout = getattr(self.ui, "controlsLayout", None)
-        if controls_layout is not None:
-            controls_layout.insertWidget(1, button)
-        else:
-            self.ui.verticalLayout.insertWidget(2, button)
-        self.ui.import_button = button
 
     def _document_dialog_filter(self) -> str:
         """Return the file dialog filter for supported RAG documents."""
@@ -85,7 +67,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         return f"Documents ({document_patterns});;All Files (*)"
 
     @Slot()
-    def _on_import_button_clicked(self) -> None:
+    def on_import_button_clicked(self) -> None:
         """Import supported documents into the local AIRunner library."""
         file_paths, _ = QFileDialog.getOpenFileNames(
             self,
@@ -137,7 +119,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self.ui.unindexed_docs_value.setText(str(max(total - indexed, 0)))
 
     @Slot()
-    def _on_index_button_clicked(self):
+    def on_index_button_clicked(self):
         """Emit a RAG index-all signal.
 
         The existing worker/agent mixins expect SignalCode.RAG_INDEX_ALL_DOCUMENTS
@@ -153,7 +135,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self.emit_signal(SignalCode.RAG_INDEX_ALL_DOCUMENTS, {})
 
     @Slot()
-    def _on_cancel_button_clicked(self):
+    def on_cancel_button_clicked(self):
         """Emit a cancel signal for in-progress indexing flows."""
         self.logger.info(
             "KnowledgeBasePanel::Cancel clicked - emitting RAG_INDEX_CANCEL"

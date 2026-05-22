@@ -160,10 +160,14 @@ class PanOffsetMixin:
                 f"[ALIGN] Using loaded center pos: x={pos_x}, y={pos_y}"
             )
 
-        self.update_active_grid_settings(
-            pos_x=pos_x,
-            pos_y=pos_y,
-        )
+        if (
+            getattr(self.active_grid_settings, "pos_x", None) is None
+            or getattr(self.active_grid_settings, "pos_y", None) is None
+        ):
+            self.update_active_grid_settings(
+                pos_x=pos_x,
+                pos_y=pos_y,
+            )
         # Update display positions
         self.update_active_grid_area_position()
 
