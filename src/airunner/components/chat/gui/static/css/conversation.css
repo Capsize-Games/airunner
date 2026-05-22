@@ -554,8 +554,16 @@ mjx-container[display="true"] {
     animation: none;
 }
 
-.status-item-metadata-toggle {
+.status-item-actions {
     margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.status-item-copy-toggle,
+.status-item-metadata-toggle {
     padding: 0;
     border: none;
     background: transparent;
@@ -565,6 +573,25 @@ mjx-container[display="true"] {
     line-height: 1;
 }
 
+.status-item-copy-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-item-copy-toggle svg {
+    width: 13px;
+    height: 13px;
+    display: block;
+    pointer-events: none;
+}
+
+.status-item-copy-toggle:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.status-item-copy-toggle:hover:not(:disabled),
 .status-item-metadata-toggle:hover {
     color: var(--light-color);
 }

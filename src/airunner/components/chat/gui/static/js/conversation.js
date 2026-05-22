@@ -43,6 +43,39 @@ function attachScrollListener(container) {
     }
 }
 
+function fallbackCopyText(text) {
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function copyTextToClipboard(text) {
+    const normalized = String(text || '');
+    if (!normalized.trim()) {
+        return Promise.resolve(false);
+    }
+
+    if (
+        typeof navigator !== 'undefined'
+        && navigator.clipboard
+        && typeof navigator.clipboard.writeText === 'function'
+    ) {
+        return navigator.clipboard.writeText(normalized)
+            .then(() => true)
+            .catch(() => fallbackCopyText(normalized));
+    }
+
+    return Promise.resolve(fallbackCopyText(normalized));
+}
+
 function initializeChatView() {
     const container = document.getElementById('conversation-container');
     if (!container) return;
@@ -358,16 +391,7 @@ function createMessageElement(msg) {
                 // fallback to in-page copy if bridge not available
                 try {
                     const text = (contentDiv && (contentDiv.innerText || contentDiv.textContent)) || (msg.content || '');
-                    if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-                        navigator.clipboard.writeText(text).catch(() => { });
-                    } else {
-                        const ta = document.createElement('textarea');
-                        ta.value = text;
-                        document.body.appendChild(ta);
-                        ta.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(ta);
-                    }
+                    copyTextToClipboard(text).catch(() => { });
                 } catch (err) {
                     if (console && console.warn) console.warn('[conversation.js] fallback copy failed', err);
                 }
@@ -1170,6 +1194,67 @@ function toggleStatusItemMetadata(requestId, itemId) {
     renderStatusWidget(requestId);
 }
 
+function buildStatusItemCopyText(item) {
+    if (!item) {
+        return '';
+    }
+
+    const sections = [];
+    const statusText = String(item.text || '').trim();
+    if (statusText) {
+        sections.push(statusText);
+    }
+
+    const contentText = String(item.content || '').trim();
+    if (contentText) {
+        sections.push(contentText);
+    }
+
+    if (item.metadata) {
+        const metadataLines = [];
+        [['stage', 'Stage'], ['intent', 'Intent'], ['preset_id', 'Preset']]
+            .forEach(([fieldName, label]) => {
+                const value = item.metadata[fieldName];
+                if (!value) {
+                    return;
+                }
+                metadataLines.push(
+                    `${label}: ${formatStatusMetadataValue(value)}`,
+                );
+            });
+
+        Object.entries(item.metadata.settings || {}).forEach(([key, value]) => {
+            metadataLines.push(
+                `${formatStatusMetadataLabel(key)}: ${formatStatusMetadataValue(value)}`,
+            );
+        });
+
+        if (metadataLines.length) {
+            const title = String(
+                item.metadata.title || 'Generation Settings',
+            ).trim();
+            sections.push(`${title}\n${metadataLines.join('\n')}`);
+        }
+    }
+
+    return sections.join('\n\n').trim();
+}
+
+function copyStatusItemText(requestId, itemId) {
+    if (!itemId) {
+        return;
+    }
+    const state = getStatusState(requestId);
+    const item = state.items.find((existingItem) => existingItem.id === itemId);
+    const text = buildStatusItemCopyText(item);
+    if (!text) {
+        return;
+    }
+    copyTextToClipboard(text).catch((error) => {
+        console.warn('[conversation.js] failed to copy thinking text:', error);
+    });
+}
+
 function renderStatusItem(item, isNew = false) {
     const isActive = item.status === 'active';
     const icon = item.type === 'thinking'
@@ -1205,12 +1290,50 @@ function renderStatusItem(item, isNew = false) {
         `
         : '';
 
+    const copyText = item.type === 'thinking'
+        ? buildStatusItemCopyText(item)
+        : '';
+    const copyToggle = item.type === 'thinking'
+        ? `
+            <button
+                class="status-item-copy-toggle"
+                type="button"
+                data-item-id="${escapeAttr(item.id)}"
+                title="${escapeAttr(
+                    copyText
+                        ? 'Copy thinking text'
+                        : 'No thinking text to copy yet'
+                )}"
+                aria-label="${escapeAttr(
+                    copyText
+                        ? 'Copy thinking text'
+                        : 'No thinking text to copy yet'
+                )}"
+                ${copyText ? '' : 'disabled'}
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+            </button>
+        `
+        : '';
+
+    const actionButtons = (copyToggle || metadataToggle)
+        ? `
+            <span class="status-item-actions">
+                ${copyToggle}
+                ${metadataToggle}
+            </span>
+        `
+        : '';
+
     let html = `
         <div class="${classes}" data-id="${escapeAttr(item.id)}">
             <div class="status-item-main">
                 <span class="status-item-icon ${isActive ? 'spinning' : ''}">${icon}</span>
                 <span class="status-item-text">${escapeHtml(item.text)}</span>
-                ${metadataToggle}
+                ${actionButtons}
             </div>
     `;
 
@@ -1257,6 +1380,17 @@ function clearStatusWidgets() {
         }
     });
     statusWidgets.clear();
+            const copyButton = event.target.closest(
+                '.status-item-copy-toggle'
+            );
+            if (copyButton) {
+                event.stopPropagation();
+                copyStatusItemText(
+                    widget.dataset.requestId || 'legacy',
+                    copyButton.dataset.itemId || '',
+                );
+                return;
+            }
     document.querySelectorAll('.unified-status-widget').forEach((widget) => {
         widget.remove();
     });
