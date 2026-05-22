@@ -1,13 +1,23 @@
 """Unit tests for RAG tool result formatting."""
 
+import os
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from airunner.components.llm.tools.rag_tools import (
     inspect_loaded_documents,
     rag_search,
+    search_knowledge_base_documents,
     save_to_knowledge_base,
 )
+
+
+def _build_session_with_active_docs(*doc_batches: list[object]) -> MagicMock:
+    """Return a mocked session that yields active-doc batches."""
+    session = MagicMock()
+    query = session.query.return_value
+    query.filter_by.return_value.all.side_effect = list(doc_batches)
+    return session
 
 
 def test_rag_search_returns_metadata_and_excerpts_for_document_queries():
@@ -565,3 +575,147 @@ def test_save_to_knowledge_base_errors_without_path_settings(mock_first):
     )
 
     assert "No knowledge base path is configured" in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.Document")
+@patch("airunner.components.llm.tools.rag_tools.os.walk")
+@patch("airunner.components.llm.tools.rag_tools.os.path.exists")
+@patch("airunner.components.llm.tools.rag_tools.session_scope")
+def test_search_knowledge_base_documents_discovers_files_from_settings(
+    mock_session_scope,
+    mock_exists,
+    mock_walk,
+    mock_document,
+):
+    """KB search should discover supported files from configured paths."""
+    discovered_path = "/library/documents/python_notes.txt"
+    doc = SimpleNamespace(path=discovered_path, indexed=False)
+    session = _build_session_with_active_docs([], [doc])
+    mock_session_scope.return_value.__enter__.return_value = session
+    mock_exists.side_effect = (
+        lambda path: path == "/library/documents"
+    )
+    mock_walk.return_value = [
+        ("/library/documents", [], ["python_notes.txt", "ignore.bin"])
+    ]
+    mock_document.objects.filter_by.return_value = []
+
+    api = SimpleNamespace(
+        path_settings=SimpleNamespace(
+            documents_path="/library/documents",
+            ebook_path="/library/ebooks",
+            webpages_path="/library/webpages",
+            base_path="/library",
+        ),
+        emit_signal=Mock(),
+    )
+
+    result = search_knowledge_base_documents("python", api=api)
+
+    mock_document.objects.create.assert_called_once_with(
+        path=discovered_path,
+        active=True,
+        indexed=False,
+    )
+    api.emit_signal.assert_called_once()
+    assert "Found 1 relevant document(s) for 'python'" in result
+    assert "python_notes.txt (not indexed)" in result
+    assert discovered_path in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.PathSettings.objects.first")
+@patch("airunner.components.llm.tools.rag_tools.Document")
+@patch("airunner.components.llm.tools.rag_tools.os.walk")
+@patch("airunner.components.llm.tools.rag_tools.os.path.exists")
+@patch("airunner.components.llm.tools.rag_tools.session_scope")
+def test_search_knowledge_base_documents_uses_repo_fallback_discovery(
+    mock_session_scope,
+    mock_exists,
+    mock_walk,
+    mock_document,
+    mock_first,
+):
+    """KB search should fall back to bundled repo sample documents."""
+    from airunner.components.llm.tools import rag_tools as rag_tools_module
+
+    repo_root = os.path.abspath(
+        os.path.join(
+            os.path.dirname(rag_tools_module.__file__),
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+        )
+    )
+    fallback_dir = os.path.join(
+        repo_root,
+        "booksite",
+        "text",
+        "other",
+        "documents",
+    )
+    discovered_path = os.path.join(fallback_dir, "mystery.epub")
+    doc = SimpleNamespace(path=discovered_path, indexed=False)
+    session = _build_session_with_active_docs([], [], [doc])
+    mock_session_scope.return_value.__enter__.return_value = session
+    mock_first.return_value = None
+
+    def exists_side_effect(path: str) -> bool:
+        return path in {
+            os.path.join(repo_root, "booksite"),
+            fallback_dir,
+        }
+
+    mock_exists.side_effect = exists_side_effect
+    mock_walk.return_value = [(fallback_dir, [], ["mystery.epub"])]
+    mock_document.objects.filter_by.return_value = []
+
+    api = SimpleNamespace(emit_signal=Mock())
+
+    result = search_knowledge_base_documents("mystery", api=api)
+
+    mock_document.objects.create.assert_called_once_with(
+        path=discovered_path,
+        active=True,
+        indexed=False,
+    )
+    api.emit_signal.assert_called_once()
+    assert "mystery.epub (not indexed)" in result
+    assert discovered_path in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.session_scope")
+def test_search_knowledge_base_documents_indexes_matched_results(
+    mock_session_scope,
+):
+    """KB search should index matched files before formatting output."""
+    doc = SimpleNamespace(path="/library/python-guide.pdf", indexed=False)
+    session = _build_session_with_active_docs([doc])
+    mock_session_scope.return_value.__enter__.return_value = session
+    rag_manager = SimpleNamespace(ensure_indexed_files=Mock(return_value=True))
+    api = SimpleNamespace(rag_manager=rag_manager)
+
+    result = search_knowledge_base_documents("python", api=api)
+
+    rag_manager.ensure_indexed_files.assert_called_once_with(
+        ["/library/python-guide.pdf"]
+    )
+    assert "Automatically indexed 1 document(s)" in result
+    assert "python-guide.pdf (indexed)" in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.os.path.exists")
+@patch("airunner.components.llm.tools.rag_tools.session_scope")
+def test_search_knowledge_base_documents_handles_empty_knowledge_base(
+    mock_session_scope,
+    mock_exists,
+):
+    """KB search should return a clear message when no docs exist."""
+    session = _build_session_with_active_docs([])
+    mock_session_scope.return_value.__enter__.return_value = session
+    mock_exists.return_value = False
+
+    result = search_knowledge_base_documents("python")
+
+    assert "No documents found in knowledge base" in result
