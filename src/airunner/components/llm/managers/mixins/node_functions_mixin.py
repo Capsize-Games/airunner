@@ -1556,6 +1556,43 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             )
         )
 
+    @staticmethod
+    def _looks_like_summary_direction_response(text: str) -> bool:
+        """Return True for imperative summary directions, not answers."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+
+        directive_prefixes = (
+            "focus on ",
+            "focus the summary on ",
+            "emphasize ",
+            "highlight ",
+            "prioritize ",
+            "stick to ",
+            "lead with ",
+        )
+        if not lowered.startswith(directive_prefixes):
+            return False
+
+        directive_markers = (
+            "aspect",
+            "aspects",
+            "character",
+            "characters",
+            "clue",
+            "clues",
+            "conversation",
+            "detail",
+            "details",
+            "murder mystery",
+            "premise",
+            "setting",
+            "snapshot",
+            "theme",
+        )
+        return any(marker in lowered for marker in directive_markers)
+
     def _emit_final_thinking_signal(
         self,
         response_message: Optional[AIMessage],
@@ -1610,6 +1647,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             ) and not self._looks_like_summary_prompt_echo(
                 cleaned_visible
             ) and not self._looks_like_search_result_preface_response(
+                cleaned_visible
+            ) and not self._looks_like_summary_direction_response(
                 cleaned_visible
             ) and not self._looks_like_malformed_forced_response_fragment(
                 cleaned_visible
@@ -1979,6 +2018,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if self._looks_like_summary_prompt_echo(candidate):
             return ""
         if self._looks_like_search_result_preface_response(candidate):
+            return ""
+        if self._looks_like_summary_direction_response(candidate):
             return ""
         if self._looks_like_reasoning_header(candidate):
             return ""

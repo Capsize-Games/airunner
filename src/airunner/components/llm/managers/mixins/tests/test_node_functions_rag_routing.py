@@ -682,6 +682,25 @@ def test_recover_forced_response_content_rejects_search_results_preface():
     assert recovered == ""
 
 
+def test_recover_forced_response_content_rejects_summary_direction_text():
+    """Imperative summary directions should not surface as the answer."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            "Focus on the murder mystery aspect, the conversation between "
+            "the two characters, and the specific clue (the snapshot)."
+        ),
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
 def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text():
     """Bad verifier meta output should not replace a usable drafted answer."""
     mixin = _VerificationFallbackNodeFunctions()
