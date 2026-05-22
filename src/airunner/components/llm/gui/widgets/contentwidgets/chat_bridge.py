@@ -14,6 +14,7 @@ class ChatBridge(QObject):
     contentHeightChanged = Signal(int)
     deleteMessageRequested = Signal(object)  # Accepts int or str
     copyMessageRequested = Signal(object)
+    copyTextRequested = Signal(str)
     newChatRequested = Signal()
     toolStatusUpdate = Signal(
         str, str, str, str, str, str, str
@@ -69,6 +70,10 @@ class ChatBridge(QObject):
     @Slot(str)
     def copyMessage(self, message_id):
         self.copyMessageRequested.emit(message_id)
+
+    @Slot(str)
+    def copyText(self, text):
+        self.copyTextRequested.emit(str(text or ""))
 
     @Slot()
     def newChat(self):

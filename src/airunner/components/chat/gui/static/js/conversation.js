@@ -1240,14 +1240,28 @@ function buildStatusItemCopyText(item) {
     return sections.join('\n\n').trim();
 }
 
+function buildStatusWidgetCopyText(requestId) {
+    const state = getStatusState(requestId);
+    return state.items
+        .map((item) => buildStatusItemCopyText(item))
+        .filter((text) => !!text)
+        .join('\n\n');
+}
+
 function copyStatusItemText(requestId, itemId) {
     if (!itemId) {
         return;
     }
     const state = getStatusState(requestId);
     const item = state.items.find((existingItem) => existingItem.id === itemId);
-    const text = buildStatusItemCopyText(item);
+    const text = item && item.type === 'thinking'
+        ? buildStatusWidgetCopyText(requestId)
+        : buildStatusItemCopyText(item);
     if (!text) {
+        return;
+    }
+    if (window.chatBridge && typeof window.chatBridge.copyText === 'function') {
+        window.chatBridge.copyText(text);
         return;
     }
     copyTextToClipboard(text).catch((error) => {
@@ -1291,7 +1305,7 @@ function renderStatusItem(item, isNew = false) {
         : '';
 
     const copyText = item.type === 'thinking'
-        ? buildStatusItemCopyText(item)
+        ? 'widget'
         : '';
     const copyToggle = item.type === 'thinking'
         ? `
@@ -1301,12 +1315,12 @@ function renderStatusItem(item, isNew = false) {
                 data-item-id="${escapeAttr(item.id)}"
                 title="${escapeAttr(
                     copyText
-                        ? 'Copy thinking text'
+                        ? 'Copy thinking widget text'
                         : 'No thinking text to copy yet'
                 )}"
                 aria-label="${escapeAttr(
                     copyText
-                        ? 'Copy thinking text'
+                        ? 'Copy thinking widget text'
                         : 'No thinking text to copy yet'
                 )}"
                 ${copyText ? '' : 'disabled'}

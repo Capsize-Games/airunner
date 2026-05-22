@@ -952,8 +952,9 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         response_style = "Avoid repetition and be concise."
         prompt_results = all_tool_content
         prompt_results_label = "Search results"
+        document_tool = self._is_document_result_tool(tool_name)
         document_intent = self._get_document_query_intent(user_question)
-        if self._is_document_result_tool(tool_name):
+        if document_tool:
             if document_intent == "identity":
                 rag_guidance = (
                     "If the user is asking what the document is, answer "
@@ -994,6 +995,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "confirm literal supernatural events. Do "
                     "not infer divine, supernatural, or hidden-authority "
                     "beliefs unless the evidence states them directly. "
+                    "The evidence below already comes from the currently "
+                    "loaded document the user is asking about. Do not ask "
+                    "the user to identify which book, story, document, "
+                    "title, or author they mean when that evidence is "
+                    "already present. "
                     "Write 7 to 10 sentences in 2 to 4 short paragraphs. Do "
                     "not repeat the document title, author, or structure "
                     "unless the user asked for them. Do not answer with "
@@ -1100,19 +1106,40 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     "structure unless they are needed for the answer.\n\n"
                 )
 
-        return (
-            "You are answering a question based on search results. "
+        prompt_intro = (
+            "You are answering a question about a currently loaded "
+            "document using document evidence. Respond naturally and "
+            "conversationally.\n\n"
+            if document_tool
+            else "You are answering a question based on search results. "
             "Respond naturally and conversationally.\n\n"
-            f"{question_context}"
-            f"{rag_guidance}"
-            f"{prompt_results_label}:\n"
-            f"{prompt_results}\n\n"
-            "Based on the search results above, provide a clear, "
+        )
+        response_instruction = (
+            "Based on the document evidence above, provide a clear, "
+            "conversational answer to the user's question about that "
+            "document. Use ONLY the information from the document "
+            "evidence. The excerpts already belong to the loaded document "
+            "the user is asking about, so do not ask which book, story, "
+            "or document they mean unless no document evidence is "
+            "present. Do not call any tools, do not use JSON, and do not "
+            "prefix the reply with labels like Draft:, Answer:, or "
+            "Response:. Just write a natural response."
+            if document_tool
+            else "Based on the search results above, provide a clear, "
             "conversational answer to the user's question. Use ONLY the "
             "information from the search results. Do not call any tools, "
             "do not use JSON, and do not prefix the reply with labels "
             "like Draft:, Answer:, or Response:. Just write a natural "
-            f"response. {response_style}"
+            "response."
+        )
+
+        return (
+            f"{prompt_intro}"
+            f"{question_context}"
+            f"{rag_guidance}"
+            f"{prompt_results_label}:\n"
+            f"{prompt_results}\n\n"
+            f"{response_instruction} {response_style}"
         )
 
     def _build_search_results_verification_prompt(
@@ -1176,12 +1203,22 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             else "Prefer the clearest directly supported claims and remove "
             "anything the evidence does not clearly support."
         )
+        clarification_guidance = (
+            "The evidence below already belongs to the currently loaded "
+            "document the user is asking about. Do not respond with a "
+            "clarification request about which book, story, or document "
+            "they mean, and do not ask for the title or author, when that "
+            "document evidence is already present.\n"
+            if self._is_document_result_tool(tool_name)
+            else ""
+        )
 
         return (
             "You are verifying and finalizing a document-grounded answer.\n\n"
             f"User question: {user_question}\n\n"
             f"{draft_instruction}"
             f"{prompt_results_label}:\n{prompt_results}\n\n"
+            f"{clarification_guidance}"
             "Check the draft against the evidence and keep only supported "
             "claims. Rewrite or remove unsupported details, instruction "
             "leakage, or stray scene fragments. If the draft is weak, ignore "
@@ -1213,15 +1250,32 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 excerpts.append(excerpt)
         return excerpts
 
+    @staticmethod
+    def _extract_primary_document_label(all_tool_content: str) -> str:
+        """Return the first matched-document label when available."""
+        for line in str(all_tool_content or "").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("Document 1: "):
+                return stripped.removeprefix("Document 1: ").strip()
+        return ""
+
     def _build_document_summary_prompt_results(
         self,
         all_tool_content: str,
     ) -> str:
         """Return excerpt-focused synthesis input for document summaries."""
         excerpts = self._extract_rag_excerpt_bodies(all_tool_content)
+        document_label = self._extract_primary_document_label(all_tool_content)
+        sections: list[str] = []
+        if document_label:
+            sections.append(f"Current document: {document_label}")
         if not excerpts:
+            if sections:
+                sections.append(all_tool_content)
+                return "\n\n".join(sections)
             return all_tool_content
-        return "\n\n".join(excerpts)
+        sections.extend(excerpts)
+        return "\n\n".join(sections)
 
     def _build_deterministic_document_response(
         self,
@@ -1594,6 +1648,33 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         return any(marker in lowered for marker in directive_markers)
 
     @staticmethod
+    def _looks_like_document_summary_clarification_response(text: str) -> bool:
+        """Return True for clarification requests replacing a summary."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+
+        markers = (
+            "which specific book you're referring to",
+            "which specific book you are referring to",
+            "could you clarify the title or author",
+            "which book you're asking about",
+            "which book you are asking about",
+            "search results only provide a short excerpt",
+            "give you a more accurate and detailed summary",
+        )
+        if any(marker in lowered for marker in markers):
+            return True
+
+        return (
+            "clarify" in lowered
+            and any(
+                marker in lowered
+                for marker in ("book", "document", "title", "author")
+            )
+        )
+
+    @staticmethod
     def _looks_like_summary_format_description_response(text: str) -> bool:
         """Return True for meta descriptions of a summary format."""
         lowered = " ".join(str(text or "").lower().split())
@@ -1689,6 +1770,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             ) and not self._looks_like_search_result_preface_response(
                 cleaned_visible
             ) and not self._looks_like_summary_direction_response(
+                cleaned_visible
+            ) and not self._looks_like_document_summary_clarification_response(
                 cleaned_visible
             ) and not self._looks_like_summary_format_description_response(
                 cleaned_visible
@@ -2062,6 +2145,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if self._looks_like_search_result_preface_response(candidate):
             return ""
         if self._looks_like_summary_direction_response(candidate):
+            return ""
+        if self._looks_like_document_summary_clarification_response(candidate):
             return ""
         if self._looks_like_summary_format_description_response(candidate):
             return ""

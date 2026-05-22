@@ -142,6 +142,7 @@ class ConversationWidget(BaseWidget):
         self._chat_bridge.copyMessageRequested.connect(
             self._handle_copy_message
         )
+        self._chat_bridge.copyTextRequested.connect(self._handle_copy_text)
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
 
@@ -654,20 +655,34 @@ class ConversationWidget(BaseWidget):
                 )
                 return
 
-            # use QApplication clipboard
-            try:
-                clipboard = QApplication.clipboard()
-                clipboard.setText(str(text))
-                self.logger.info(
-                    f"_handle_copy_message: copied message id {message_id} to clipboard ({len(text)} chars)"
-                )
-            except Exception as e:
-                self.logger.warning(
-                    f"_handle_copy_message: failed to set clipboard: {e}",
-                    exc_info=True,
-                )
+            self._copy_text_to_clipboard(
+                str(text),
+                source=f"message id {message_id}",
+            )
         except Exception as e:
             self.logger.warning(f"_handle_copy_message failed: {e}", exc_info=True)
+
+    def _handle_copy_text(self, text: str) -> None:
+        """Handle raw text copy requests from the webview."""
+        normalized = str(text or "")
+        if not normalized:
+            self.logger.info("_handle_copy_text: ignoring empty copy request")
+            return
+        self._copy_text_to_clipboard(normalized, source="status widget")
+
+    def _copy_text_to_clipboard(self, text: str, *, source: str) -> None:
+        """Copy one text payload to the system clipboard."""
+        try:
+            clipboard = QApplication.clipboard()
+            clipboard.setText(str(text))
+            self.logger.info(
+                f"_copy_text_to_clipboard: copied {len(text)} chars from {source}"
+            )
+        except Exception as e:
+            self.logger.warning(
+                f"_copy_text_to_clipboard: failed for {source}: {e}",
+                exc_info=True,
+            )
 
     def scroll_to_bottom(self) -> None:
         """Scroll the conversation to the bottom by triggering the parent QScrollArea."""

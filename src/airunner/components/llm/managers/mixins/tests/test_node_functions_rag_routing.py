@@ -491,6 +491,8 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
     assert "prefer a grounded mystery or noir framing" in prompt
     assert "Do not describe literal resurrection" in prompt
     assert "Do not attribute criticism, accusations, or quoted dialogue" in prompt
+    assert "currently loaded document" in prompt
+    assert "do not ask which book, story, or document they mean" in prompt.lower()
 
 
 def test_build_search_results_prompt_specializes_compare_document_tasks():
@@ -708,6 +710,27 @@ def test_recover_forced_response_content_rejects_summary_format_description():
         content=(
             "A bulleted list of key elements extracted from a snippet "
             "(Setting, Topic, Characters, Action, Context, Tone)."
+        ),
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_recover_forced_response_content_rejects_summary_clarification():
+    """Clarification requests should not replace a document summary."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            "I'm a bit confused about which specific book you're referring "
+            "to, as the search results only provide a short excerpt. Could "
+            "you clarify the title or author of the book you're asking "
+            "about?"
         ),
         tool_calls=[],
     )

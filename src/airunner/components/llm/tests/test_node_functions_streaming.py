@@ -547,6 +547,38 @@ class _VerificationFormatDescriptionFallbackChatModel:
         return iter(self._responses.pop(0))
 
 
+class _VerificationClarificationFallbackChatModel:
+    """Fake model whose verification pass asks for document clarification."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [
+                _chunk(
+                    "Miss Marple becomes involved in a Caribbean resort "
+                    "murder after Major Palgrave tries to show her a "
+                    "snapshot that identifies a killer."
+                )
+            ],
+            [
+                _chunk(
+                    "I'm a bit confused about which specific book you're "
+                    "referring to, as the search results only provide a "
+                    "short excerpt mentioning a conversation about Kenya, "
+                    "India, and a snapshot of a murderer. Could you clarify "
+                    "the title or author of the book you're asking about?"
+                )
+            ],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return iter(self._responses.pop(0))
+
+
 def test_forced_response_prompt_prioritizes_document_identity_for_rag():
     """RAG synthesis prompt should prioritize document identity cues."""
     mixin = NodeFunctionsMixinDouble([])
@@ -601,8 +633,12 @@ def test_forced_response_prompt_requests_thorough_summary():
     assert "front-matter anecdotes or biographical trivia secondary" in prompt
     assert "Do not infer divine, supernatural, or hidden-authority beliefs" in prompt
     assert "Evidence excerpts:" in prompt
+    assert "Current document: The Satanic Bible - Anton LaVey.pdf" in prompt
     assert "Stored path:" not in prompt
     assert "[Excerpt 1 from" not in prompt
+    assert "currently loaded document the user is asking about" in prompt
+    assert "do not ask the user to identify which book" in prompt.lower()
+    assert "Based on the document evidence above" in prompt
     assert "Start with the central themes, not opening trivia." in prompt
 
 
@@ -646,6 +682,9 @@ def test_forced_response_summary_runs_verification_pass():
         mixin._chat_model.prompts[1]
     )
     assert "Do not answer with bare category labels" in (
+        mixin._chat_model.prompts[1]
+    )
+    assert "Do not respond with a clarification request" in (
         mixin._chat_model.prompts[1]
     )
     assert "Stored path:" not in mixin._chat_model.prompts[1]
@@ -773,6 +812,34 @@ def test_forced_response_summary_falls_back_from_format_description():
         "Palgrave tries to show her a snapshot of a murderer.\n\n"
         "[Excerpt 2 from A Caribbean Mystery - Agatha Christie.epub]\n"
         "Palgrave is killed before he can explain what he has seen.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "Miss Marple becomes involved in a Caribbean resort murder after "
+        "Major Palgrave tries to show her a snapshot that identifies a "
+        "killer."
+    )
+    assert len(mixin._chat_model.prompts) == 2
+
+
+def test_forced_response_summary_falls_back_from_clarification_request():
+    """Clarification requests should not replace a valid summary draft."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _VerificationClarificationFallbackChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: A Caribbean Mystery - Agatha Christie.epub\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from A Caribbean Mystery - Agatha Christie.epub]\n"
+        "Current setting. Miss Marple is staying at a Caribbean resort "
+        "when Major Palgrave tries to show her a snapshot of a murderer.\n\n"
+        "[Excerpt 2 from A Caribbean Mystery - Agatha Christie.epub]\n"
+        "Premise detail. Palgrave is killed before he can explain what he "
+        "has seen.",
         "rag_search",
         "what is this book about?",
     )
