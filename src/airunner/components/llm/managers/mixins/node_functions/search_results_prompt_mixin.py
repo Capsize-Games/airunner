@@ -22,11 +22,14 @@ class SearchResultsPromptMixin:
     def _build_answer_text_contract() -> str:
         """Return the structured answer-text contract for internal stages."""
         return (
-            "Return ONLY one answer_text block in this exact format:\n"
+            "Return ONLY one answer_text block. Use this exact structure:\n"
             "<answer_text>\n"
-            "final user-facing answer\n"
+            "completed reply goes here\n"
             "</answer_text>\n"
-            "Do not include any text before or after the answer_text block."
+            "Replace the example body with the actual completed reply. Do "
+            "not copy placeholder text, tag names, ellipses, or "
+            "instructions inside the tags. Do not include any text before "
+            "or after the answer_text block."
         )
 
     @staticmethod
@@ -597,7 +600,11 @@ class SearchResultsPromptMixin:
             coverage_outline = self._extract_document_analysis_section(
                 all_tool_content,
                 "Document coverage",
-                ("Supporting evidence",),
+                (
+                    "Refined whole-document synthesis",
+                    "Chunk summaries",
+                    "Supporting evidence",
+                ),
             )
             supporting_evidence = self._extract_document_supporting_evidence(
                 all_tool_content,
@@ -618,6 +625,7 @@ class SearchResultsPromptMixin:
                 sections.append(
                     f"Document coverage:\n{coverage_outline}"
                 )
+            evidence_excerpts: list[str] = []
             if supporting_evidence:
                 evidence_results = self._replace_current_document_label(
                     supporting_evidence,
@@ -630,14 +638,17 @@ class SearchResultsPromptMixin:
                     evidence_excerpts = self._select_premise_summary_excerpts(
                         evidence_excerpts
                     )
-                if evidence_excerpts:
-                    sections.extend(evidence_excerpts)
-                    return "\n\n".join(sections)
             if refined_synthesis:
                 sections.append(
                     "Refined whole-document synthesis:\n"
                     f"{refined_synthesis}"
                 )
+                if summary_focus == "premise" and evidence_excerpts:
+                    sections.extend(evidence_excerpts[:2])
+                return "\n\n".join(sections)
+            if evidence_excerpts:
+                sections.extend(evidence_excerpts)
+                return "\n\n".join(sections)
             if chunk_summaries:
                 sections.append(f"Chunk summaries:\n{chunk_summaries}")
             if len(sections) > 1:

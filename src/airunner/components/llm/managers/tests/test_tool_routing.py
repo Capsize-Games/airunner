@@ -172,6 +172,56 @@ class TestToolRouting:
         assert result["document_summary_focus"] == "premise"
         assert result["request_plan"].document_answer_mode == "synthesized"
 
+    def test_preprocess_prompt_includes_primary_tool_and_attached_doc_rules(
+        self,
+    ):
+        manager = MockToolClassifier()
+
+        prompt_text = manager._build_request_preprocess_prompt(
+            "explain this book to me",
+            action=LLMActionType.CHAT,
+            llm_request=SimpleNamespace(rag_files=["/tmp/book.epub"]),
+            conversation=None,
+        )
+
+        assert '"primary_tool": "analyze_loaded_document"' in prompt_text
+        assert "treat that as referring to the" in prompt_text
+        assert "prefer analyze_loaded_document as the first tool" in (
+            prompt_text
+        )
+
+    def test_preprocess_request_derives_document_tool_when_missing(self):
+        manager = MockToolClassifier()
+        manager._workflow_manager._original_chat_model.invoke.return_value = (
+            SimpleNamespace(
+                content=(
+                    '{"rewrite_needed": true, '
+                    '"rewritten_query": "Provide a summary of the '
+                    'currently loaded document.", '
+                    '"tool_required": false, '
+                    '"tool_categories": [], '
+                    '"planner_mode": "none", '
+                    '"planner_tool_hints": [], '
+                    '"document_query_intent": "summary", '
+                    '"document_summary_focus": "premise", '
+                    '"document_answer_mode": "none"}'
+                )
+            )
+        )
+
+        result = manager._preprocess_request(
+            "explain this book to me",
+            action=LLMActionType.CHAT,
+            llm_request=SimpleNamespace(rag_files=["/tmp/book.epub"]),
+            conversation=None,
+        )
+
+        assert result["tool_required"] is True
+        assert result["primary_tool"] == "analyze_loaded_document"
+        assert result["allowed_tool_names"] == ["analyze_loaded_document"]
+        assert "rag" in result["tool_categories"]
+        assert result["request_plan"].document_answer_mode == "synthesized"
+
     def test_empty_categories_disable_all_tools_for_simple_no_tool_prompt(
         self,
     ):

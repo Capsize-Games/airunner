@@ -46,6 +46,12 @@ READ_ONLY_TASK_TOOLS = {
     "execute_python",
 }
 
+DOCUMENT_TASK_TOOLS = {
+    "inspect_loaded_documents",
+    "rag_search",
+    "analyze_loaded_document",
+}
+
 MUTATING_TASK_TOOLS = {
     "create_code_file",
     "edit_code_file",
@@ -270,6 +276,11 @@ class GenerationMixin:
         if effective_executed_tools:
             tool_summary = ", ".join(dict.fromkeys(effective_executed_tools))
             normalized_tools = set(effective_executed_tools)
+            if normalized_tools & DOCUMENT_TASK_TOOLS:
+                return (
+                    "The document analysis completed, but the internal "
+                    "summary stages did not produce a final reply."
+                )
             if (
                 not normalized_tools & MUTATING_TASK_TOOLS
                 and normalized_tools <= READ_ONLY_TASK_TOOLS

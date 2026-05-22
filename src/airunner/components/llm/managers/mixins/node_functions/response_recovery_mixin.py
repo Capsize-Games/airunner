@@ -12,6 +12,86 @@ class ResponseRecoveryMixin:
     """Recover user-facing text from reasoning-heavy internal responses."""
 
     @staticmethod
+    def _extract_committed_answer_text_field(text: str) -> str:
+        """Extract one line-bounded answer_text block from stage output."""
+        content = str(text or "")
+        if not content.strip():
+            return ""
+
+        block_pattern = re.compile(
+            r"(?:^|\n)\s*<answer_text>\s*(.*?)\s*</answer_text>\s*(?=\n|$)",
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        match = block_pattern.search(content)
+        if match:
+            return match.group(1).strip()
+
+        labelled_match = re.search(
+            r"^answer_text\s*:\s*(.+)\Z",
+            str(text or "").strip(),
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if labelled_match:
+            return labelled_match.group(1).strip()
+
+        return ""
+
+    @staticmethod
+    def _looks_like_answer_text_placeholder(text: str) -> bool:
+        """Return True when answer_text content is still a schema placeholder."""
+        normalized = " ".join(str(text or "").strip().lower().split())
+        if not normalized:
+            return False
+
+        normalized = normalized.strip("[](){}<>'\"` ")
+        return normalized in {
+            "final user-facing answer",
+            "write the completed final answer here",
+            "your completed final answer here",
+            "completed final answer here",
+            "actual final answer here",
+            "insert final answer here",
+            "replace with the completed final answer",
+            "...",
+        }
+
+    def _extract_committed_response_content(
+        self,
+        response_message: Optional[AIMessage],
+        *,
+        reject_structure_only: bool = False,
+    ) -> str:
+        """Return one exact committed answer_text field from stage output."""
+        if response_message is None:
+            return ""
+
+        visible_content = str(getattr(response_message, "content", "") or "")
+        if visible_content.strip():
+            structured_visible = self._sanitize_recovered_response_candidate(
+                self._extract_committed_answer_text_field(visible_content),
+                reject_structure_only=reject_structure_only,
+            )
+            if structured_visible:
+                return structured_visible
+
+        additional_kwargs = (
+            getattr(response_message, "additional_kwargs", {}) or {}
+        )
+        thinking_content = (
+            additional_kwargs.get("thinking_content")
+            or additional_kwargs.get("reasoning_content")
+            or ""
+        )
+        cleaned_thinking = strip_thinking_tags(str(thinking_content)).strip()
+        if not cleaned_thinking:
+            return ""
+
+        return self._sanitize_recovered_response_candidate(
+            self._extract_committed_answer_text_field(cleaned_thinking),
+            reject_structure_only=reject_structure_only,
+        )
+
+    @staticmethod
     def _extract_answer_text_field(text: str) -> str:
         """Extract one structured answer-text field when present."""
         content = str(text or "").strip()
@@ -45,6 +125,8 @@ class ResponseRecoveryMixin:
         """Return one user-facing candidate or an empty string."""
         candidate = self._clean_reasoning_candidate(text)
         if not candidate:
+            return ""
+        if self._looks_like_answer_text_placeholder(candidate):
             return ""
         if self._looks_like_malformed_forced_response_fragment(candidate):
             return ""
@@ -251,17 +333,21 @@ class ResponseRecoveryMixin:
             ):
                 continue
 
-            lowered_label = label.lower()
+            lowered_label = " ".join(label.lower().split())
             score = 0
-            if "final answer" in lowered_label or "final polish" in lowered_label:
+            if lowered_label in {
+                "final answer",
+                "final polish",
+                "final response",
+            }:
                 score = 5
-            elif "substantive content" in lowered_label:
+            elif lowered_label == "substantive content":
                 score = 4
-            elif "summary" in lowered_label or lowered_label == "answer":
+            elif lowered_label in {"summary", "answer", "response"}:
                 score = 3
-            elif "draft" in lowered_label:
+            elif lowered_label in {"draft", "draft answer", "draft response"}:
                 score = 2
-            elif "content" in lowered_label:
+            elif lowered_label == "content":
                 score = 1
 
             if score:

@@ -751,6 +751,37 @@ class TestDoGenerate:
         assert "did not make any changes" in result["response"]
 
     @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
+    def test_reports_document_finalization_failure_without_change_message(
+        self,
+        mock_torch,
+        mixin,
+        llm_request,
+    ):
+        """Document empty-result fallbacks should not claim edit semantics."""
+        mock_torch.cuda.is_available.return_value = False
+        mixin._workflow_manager.stream.return_value = [
+            AIMessage(
+                content=(
+                    "<|channel|>analysis<|message|>Need to answer from "
+                    "document evidence.<|return|>"
+                ),
+                additional_kwargs={
+                    "executed_tools": ["analyze_loaded_document"]
+                },
+            )
+        ]
+        mixin._workflow_manager.get_executed_tools.return_value = []
+
+        result = mixin._do_generate(
+            "explain this book to me",
+            LLMActionType.PERFORM_RAG_SEARCH,
+            llm_request=llm_request,
+        )
+
+        assert "document analysis completed" in result["response"].lower()
+        assert "did not make any changes" not in result["response"]
+
+    @patch("airunner.components.llm.managers.mixins.generation_mixin.torch")
     def test_recovers_document_answer_when_rag_final_reply_is_empty(
         self,
         mock_torch,

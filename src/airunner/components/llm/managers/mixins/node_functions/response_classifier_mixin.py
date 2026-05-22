@@ -233,11 +233,28 @@ class ResponseClassifierMixin:
         )
 
     @staticmethod
+    def _looks_like_draft_claim_analysis_response(text: str) -> bool:
+        """Return True for verifier draft-claim/evidence analysis blocks."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+
+        if "evaluate the draft vs. evidence" in lowered:
+            return True
+
+        has_draft_claim = "draft claim" in lowered or "draft answer" in lowered
+        has_evidence = "evidence:" in lowered or "**evidence:**" in lowered
+        return has_draft_claim and has_evidence
+
+    @staticmethod
     def _looks_like_malformed_forced_response_fragment(text: str) -> bool:
         """Return True for tiny prompt-tail fragments, not user answers."""
         normalized = " ".join(str(text or "").split())
         if not normalized:
             return False
+
+        if not any(char.isalnum() for char in normalized):
+            return True
 
         lowered = normalized.lower()
         if any(

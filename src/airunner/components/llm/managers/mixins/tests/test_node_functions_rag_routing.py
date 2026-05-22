@@ -83,8 +83,9 @@ class _VerificationFallbackNodeFunctions(_DummyNodeFunctions):
         self._streamed_messages = [
             AIMessage(
                 content=(
-                    "Miss Marple looks into a resort murder after a doctor "
-                    "realizes he once recognized a killer from a snapshot."
+                    "<answer_text>Miss Marple looks into a resort murder "
+                    "after a doctor realizes he once recognized a killer "
+                    "from a snapshot.</answer_text>"
                 ),
                 tool_calls=[],
             ),
@@ -148,6 +149,38 @@ class _ReasoningOnlyVerificationFallbackNodeFunctions(_DummyNodeFunctions):
         return self._streamed_messages.pop(0)
 
 
+class _DraftClaimVerificationFallbackNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._streamed_messages = [
+            AIMessage(
+                content=(
+                    "Miss Marple looks into a resort murder after a retired "
+                    "officer's snapshot story turns into a real threat "
+                    "among the hotel guests."
+                ),
+                tool_calls=[],
+            ),
+            AIMessage(
+                content="",
+                additional_kwargs={
+                    "thinking_content": (
+                        "1. **Evaluate the Draft vs. Evidence:**\n"
+                        "* **Draft Claim:** Characters (Miss Marple, Major "
+                        "Palgrave). *Evidence:* \"she hadn't really been "
+                        "listening\", \"he picked up her ball of wool\", "
+                        "and the chapter coverage mentions both names."
+                    )
+                },
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        return self._streamed_messages.pop(0)
+
+
 class _StructuredAnswerNodeFunctions(_DummyNodeFunctions):
     def __init__(self):
         super().__init__()
@@ -172,8 +205,149 @@ class _StructuredAnswerNodeFunctions(_DummyNodeFunctions):
         ]
 
     def _stream_internal_response(self, prompt, *_args, **_kwargs):
-        self.prompts.append(prompt[0].content)
+        self.prompts.append(prompt[-1].content)
         return self._streamed_messages.pop(0)
+
+
+class _EllipsisStructuredAnswerNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self.prompts = []
+        answer = (
+            "Miss Marple arrives at a Caribbean resort where a chatty "
+            "retired officer hints that he once recognized a murderer from "
+            "a snapshot. When he dies soon afterward, she realizes the story "
+            "was not idle gossip and starts piecing together the danger "
+            "hiding among the other guests."
+        )
+        self._streamed_messages = [
+            AIMessage(
+                content="...",
+                additional_kwargs={
+                    "thinking_content": (
+                        f"<answer_text>{answer}</answer_text>"
+                    )
+                },
+                tool_calls=[],
+            ),
+            AIMessage(
+                content="...",
+                additional_kwargs={
+                    "thinking_content": (
+                        f"<answer_text>{answer}</answer_text>"
+                    )
+                },
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[-1].content)
+        return self._streamed_messages.pop(0)
+
+
+class _MetaFragmentVerificationFallbackNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._streamed_messages = [
+            AIMessage(
+                content=(
+                    "<answer_text>Miss Marple arrives at a Caribbean "
+                    "resort where a retired officer's old snapshot story "
+                    "turns into a murder investigation.</answer_text>"
+                ),
+                tool_calls=[],
+            ),
+            AIMessage(
+                content=(
+                    "Contains Premise, Setting, Conflict, Characters "
+                    "(Miss Marple, Major Palgrave)."
+                ),
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        return self._streamed_messages.pop(0)
+
+
+class _MetaFragmentSynthesisStructuredVerificationNodeFunctions(
+    _DummyNodeFunctions
+):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._streamed_messages = [
+            AIMessage(
+                content=(
+                    "Contains Premise, Setting, Conflict, Characters "
+                    "(Miss Marple, Major Palgrave)."
+                ),
+                tool_calls=[],
+            ),
+            AIMessage(
+                content="",
+                additional_kwargs={
+                    "thinking_content": (
+                        "<answer_text>Miss Marple arrives at a Caribbean "
+                        "resort where a retired officer's old snapshot "
+                        "story turns into a murder investigation.</answer_text>"
+                    )
+                },
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        return self._streamed_messages.pop(0)
+
+
+class _PlaceholderSynthesisStructuredVerificationNodeFunctions(
+    _DummyNodeFunctions
+):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._streamed_messages = [
+            AIMessage(
+                content="<answer_text>final user-facing answer</answer_text>",
+                tool_calls=[],
+            ),
+            AIMessage(
+                content=(
+                    "<answer_text>Miss Marple arrives at a Caribbean "
+                    "resort where a retired officer's old snapshot story "
+                    "turns into a murder investigation.</answer_text>"
+                ),
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        return self._streamed_messages.pop(0)
+
+
+class _StageThinkingOnlyFinalizedResponseNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self.llm_request = SimpleNamespace(
+            document_query_intent="summary",
+            document_answer_mode="synthesized",
+        )
+
+    def _generate_response_message_from_results(self, *_args, **_kwargs):
+        return AIMessage(
+            content="",
+            additional_kwargs={
+                "thinking_content": (
+                    "1. **Analyze the Document Evidence:**\n"
+                    "2. **Drafting the Content:**"
+                )
+            },
+            tool_calls=[],
+        )
 
 
 class _DocumentFollowupPromptNodeFunctions(_DummyNodeFunctions):
@@ -1054,6 +1228,9 @@ def test_build_search_results_prompt_structured_answer_mode_uses_answer_text_con
     )
 
     assert "<answer_text>" in prompt
+    assert "final user-facing answer" not in prompt
+    assert "completed reply goes here" in prompt
+    assert "Do not copy placeholder text" in prompt
     assert "Do not include any text before or after the answer_text block" in prompt
 
 
@@ -1073,6 +1250,9 @@ def test_build_search_results_verification_prompt_structured_answer_mode_uses_an
     )
 
     assert "<answer_text>" in prompt
+    assert "final user-facing answer" not in prompt
+    assert "completed reply goes here" in prompt
+    assert "Do not copy placeholder text" in prompt
     assert "Do not include any text before or after the answer_text block" in prompt
 
 
@@ -1357,6 +1537,31 @@ def test_recover_forced_response_content_rejects_reasoning_only_meta_quote():
     assert recovered == ""
 
 
+def test_recover_forced_response_content_rejects_draft_claim_evidence_block():
+    """Verifier draft-claim analysis should not surface as the answer."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content="",
+        additional_kwargs={
+            "thinking_content": (
+                "1. **Evaluate the Draft vs. Evidence:**\n"
+                "* **Draft Claim:** Characters (Miss Marple, Major "
+                "Palgrave). *Evidence:* \"she hadn't really been "
+                "listening\", \"he picked up her ball of wool\", and "
+                "the chapter coverage mentions both names."
+            )
+        },
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
 def test_recover_forced_response_content_extracts_answer_text_block():
     """Structured answer blocks should be preferred over free-form recovery."""
     mixin = _DummyNodeFunctions()
@@ -1375,6 +1580,80 @@ def test_recover_forced_response_content_extracts_answer_text_block():
         "Miss Marple investigates a resort murder after a doctor connects "
         "an old snapshot to a killer."
     )
+
+
+def test_recover_forced_response_content_ignores_ellipsis_placeholder():
+    """Bare ellipsis content should not outrank structured reasoning text."""
+    mixin = _DummyNodeFunctions()
+    recovered = mixin._recover_forced_response_content(
+        AIMessage(
+            content="...",
+            additional_kwargs={
+                "thinking_content": (
+                    "<answer_text>Miss Marple investigates a murder after "
+                    "a resort guest's old snapshot points toward a killer.</answer_text>"
+                )
+            },
+            tool_calls=[],
+        ),
+        reject_structure_only=True,
+    )
+
+    assert recovered == (
+        "Miss Marple investigates a murder after a resort guest's old "
+        "snapshot points toward a killer."
+    )
+
+
+def test_extract_committed_response_content_rejects_meta_fragment():
+    """Meta fragments without answer_text should fail the strict contract."""
+    mixin = _DummyNodeFunctions()
+
+    recovered = mixin._extract_committed_response_content(
+        AIMessage(
+            content=(
+                "Contains Premise, Setting, Conflict, Characters "
+                "(Miss Marple, Major Palgrave)."
+            ),
+            tool_calls=[],
+        ),
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_extract_committed_response_content_rejects_answer_text_placeholder():
+    """Schema-echo placeholder text should not count as a committed answer."""
+    mixin = _DummyNodeFunctions()
+
+    recovered = mixin._extract_committed_response_content(
+        AIMessage(
+            content="<answer_text>final user-facing answer</answer_text>",
+            tool_calls=[],
+        ),
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_extract_committed_response_content_ignores_inline_contract_phrase():
+    """Inline contract prose should not be mistaken for a committed block."""
+    mixin = _DummyNodeFunctions()
+
+    recovered = mixin._extract_committed_response_content(
+        AIMessage(
+            content=(
+                "Use the exact tags <answer_text> and </answer_text> for the "
+                "final answer block."
+            ),
+            tool_calls=[],
+        ),
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
 
 
 def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text():
@@ -1413,6 +1692,81 @@ def test_generate_response_message_keeps_draft_when_verifier_reasoning_leaks():
     )
 
 
+def test_generate_response_message_keeps_draft_when_verifier_uses_draft_claims():
+    """Verifier claim-analysis reasoning should not replace the draft."""
+    mixin = _DraftClaimVerificationFallbackNodeFunctions()
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA retired officer hints that he recognized a "
+        "murderer from a snapshot before dying at a Caribbean resort.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple looks into a resort murder after a retired officer's "
+        "snapshot story turns into a real threat among the hotel guests."
+    )
+
+
+def test_generate_response_message_keeps_draft_when_verifier_returns_meta_fragment():
+    """Verifier meta fragments should not replace a committed draft."""
+    mixin = _MetaFragmentVerificationFallbackNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA retired officer hints that he recognized a "
+        "murderer from a snapshot before dying at a Caribbean resort.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple arrives at a Caribbean resort where a retired "
+        "officer's old snapshot story turns into a murder investigation."
+    )
+
+
+def test_generate_response_message_uses_verified_answer_text_when_synthesis_is_meta_fragment():
+    """Verification should replace an uncommitted synthesis fragment."""
+    mixin = _MetaFragmentSynthesisStructuredVerificationNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA retired officer hints that he recognized a "
+        "murderer from a snapshot before dying at a Caribbean resort.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple arrives at a Caribbean resort where a retired "
+        "officer's old snapshot story turns into a murder investigation."
+    )
+
+
+def test_generate_response_message_uses_verified_answer_text_when_synthesis_is_placeholder():
+    """Verification should replace a placeholder synthesis commit."""
+    mixin = _PlaceholderSynthesisStructuredVerificationNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA retired officer hints that he recognized a "
+        "murderer from a snapshot before dying at a Caribbean resort.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple arrives at a Caribbean resort where a retired "
+        "officer's old snapshot story turns into a murder investigation."
+    )
+
+
 def test_generate_response_message_uses_structured_answer_text_contract():
     """Structured internal answers should populate the final visible reply."""
     mixin = _StructuredAnswerNodeFunctions()
@@ -1430,8 +1784,65 @@ def test_generate_response_message_uses_structured_answer_text_contract():
         "Miss Marple investigates a resort murder after a doctor connects "
         "an old snapshot to a killer."
     )
+
+
+def test_generate_response_message_ignores_ellipsis_visible_placeholder():
+    """Ellipsis placeholders should not replace structured document answers."""
+    mixin = _EllipsisStructuredAnswerNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA retired officer hints that he recognized a "
+        "killer from an old snapshot before dying at a Caribbean resort.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple arrives at a Caribbean resort where a chatty retired "
+        "officer hints that he once recognized a murderer from a snapshot. "
+        "When he dies soon afterward, she realizes the story was not idle "
+        "gossip and starts piecing together the danger hiding among the "
+        "other guests."
+    )
     assert "<answer_text>" in mixin.prompts[0]
     assert "<answer_text>" in mixin.prompts[1]
+
+
+def test_recover_forced_response_content_rejects_document_stage_headers():
+    """Document-stage reasoning headers should not surface as a reply."""
+    mixin = _DummyNodeFunctions()
+
+    recovered = mixin._recover_forced_response_content(
+        AIMessage(
+            content="",
+            additional_kwargs={
+                "thinking_content": (
+                    "1. **Analyze the Document Evidence:**\n"
+                    "2. **Drafting the Content:**"
+                )
+            },
+            tool_calls=[],
+        ),
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_generate_response_from_results_ignores_stage_thinking_only_output():
+    """Strict synthesized replies should not recover persisted stage thinking."""
+    mixin = _StageThinkingOnlyFinalizedResponseNodeFunctions()
+
+    response = mixin._generate_response_from_results(
+        "Evidence excerpts:\nA retired officer hints that he recognized a "
+        "murderer from a snapshot before dying at a Caribbean resort.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert response == ""
 
 
 def test_generate_response_message_skips_final_chat_pass_for_synthesis():

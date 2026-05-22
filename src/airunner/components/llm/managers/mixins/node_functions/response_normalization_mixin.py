@@ -40,6 +40,8 @@ class ResponseNormalizationMixin:
             return ""
         if cls._looks_like_summary_format_description_response(candidate):
             return ""
+        if cls._looks_like_draft_claim_analysis_response(candidate):
+            return ""
         if cls._looks_like_reasoning_header(candidate):
             return ""
         if cls._looks_like_verification_verdict_response(candidate):
@@ -115,9 +117,11 @@ class ResponseNormalizationMixin:
         if normalized in {
             "thinking process:",
             "drafting the response:",
+            "drafting the content:",
             "refining for conciseness and flow:",
             "final review against constraints:",
             "analyze the request:",
+            "analyze the document evidence:",
             "analyze the search results:",
             "synthesize the answer:",
         }:
@@ -126,7 +130,10 @@ class ResponseNormalizationMixin:
             "thinking process",
             "analyze the request",
             "analyze the evidence",
+            "analyze the document evidence",
             "analyze the search results",
+            "draft the content",
+            "drafting the content",
             "draft the response",
             "drafting the response",
             "drafting - step 1",

@@ -9,6 +9,9 @@ from airunner.components.llm.tools.rag_tools_helpers._document_access import (
     get_single_active_document_path,
 )
 from airunner.components.llm.tools.rag_tools_helpers._document_analysis_pipeline import (
+    build_chunk_analyses,
+    build_refined_document_synthesis,
+    format_chunk_analyses,
     select_document_analysis_chunks,
 )
 from airunner.components.llm.tools.rag_tools_helpers._result_formatting import (
@@ -94,6 +97,11 @@ def build_chunked_document_analysis(
     summary_focus: str | None = None,
 ) -> str:
     """Return one chunked whole-document analysis context string."""
+    analyses = build_chunk_analyses(
+        query,
+        text,
+        summary_focus=summary_focus,
+    )
     evidence = build_summary_evidence_documents(
         metadata,
         text,
@@ -121,6 +129,22 @@ def build_chunked_document_analysis(
             [
                 "Document coverage:",
                 coverage_outline,
+            ]
+        )
+    refined_synthesis = build_refined_document_synthesis(analyses)
+    if refined_synthesis:
+        sections.extend(
+            [
+                "Refined whole-document synthesis:",
+                refined_synthesis,
+            ]
+        )
+    chunk_summaries = format_chunk_analyses(analyses)
+    if chunk_summaries:
+        sections.extend(
+            [
+                "Chunk summaries:",
+                chunk_summaries,
             ]
         )
     if evidence:

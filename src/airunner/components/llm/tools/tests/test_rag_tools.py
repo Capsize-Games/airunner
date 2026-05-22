@@ -755,9 +755,10 @@ def test_analyze_loaded_document_returns_chunked_context_for_large_docs(
     assert "Analysis mode: chunked_document" in result
     assert "Analysis pipeline: distributed_evidence_bundle" in result
     assert "Document coverage:" in result
+    assert "Refined whole-document synthesis:" in result
+    assert "Overview:" in result
+    assert "Chunk summaries:" in result
     assert "Supporting evidence:" in result
-    assert "Refined whole-document synthesis:" not in result
-    assert "Chunk summaries:" not in result
     assert "[Excerpt 1]" in result
     assert "1. INTRODUCTION" in result
     assert "2. THE BOOK OF SATAN" in result

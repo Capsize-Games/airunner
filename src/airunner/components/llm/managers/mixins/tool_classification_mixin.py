@@ -40,6 +40,40 @@ class ToolClassificationMixin:
     }
 
     @staticmethod
+    def _derive_document_answer_mode(
+        document_intent: Optional[str],
+    ) -> Optional[str]:
+        """Return one document answer mode derived from intent."""
+        if document_intent in {"identity", "structure"}:
+            return "deterministic"
+        if document_intent:
+            return "synthesized"
+        return None
+
+    @staticmethod
+    def _derive_document_primary_tool(
+        document_intent: Optional[str],
+        *,
+        rag_file_count: int,
+    ) -> Optional[str]:
+        """Return one first tool inferred from request-scoped intent."""
+        if document_intent in {"identity", "structure"}:
+            return "inspect_loaded_documents"
+        if document_intent == "summary":
+            if rag_file_count == 1:
+                return "analyze_loaded_document"
+            return "rag_search"
+        if document_intent in {
+            "compare",
+            "extract",
+            "list",
+            "transform",
+            "retrieval",
+        }:
+            return "rag_search"
+        return None
+
+    @staticmethod
     def _derive_answer_strategy(
         *,
         tool_required: bool,
@@ -292,29 +326,30 @@ class ToolClassificationMixin:
             "",
             "Required JSON schema:",
             "{",
-            '  "allowed_tool_names": ["search_web"],',
+            '  "allowed_tool_names": ["analyze_loaded_document"],',
             '  "rewrite_needed": true,',
-            '  "planner_mode": "none",',
-            '  "rewritten_query": "standalone clarified request",',
+            '  "rewritten_query": "Provide a summary of the currently '
+            'loaded document.",',
             '  "tool_required": true,',
-            '  "tool_categories": ["search"],',
+            '  "tool_categories": ["rag"],',
+            '  "primary_tool": "analyze_loaded_document",',
+            '  "planner_mode": "none",',
+            '  "planner_tool_hints": ["analyze_loaded_document"],',
+            '  "document_query_intent": "summary",',
+            '  "document_summary_focus": "premise",',
             '  "document_answer_mode": "synthesized",',
             '  "answer_strategy": "compose",',
             '  "finalization_mode": "compose_and_verify"',
-            '  "planner_tool_hints": ["search_web"],',
-            '  "document_query_intent": "summary",',
-            '  "document_summary_focus": "premise",',
-            '  "document_answer_mode": "synthesized"',
-            "- Use [] for allowed_tool_names when no tool is needed.",
             "}",
-            "  document_summary_focus, document_answer_mode, planner_mode,",
-            "  answer_strategy, and finalization_mode when they",
             "Rules:",
+            "- Use [] for allowed_tool_names when no tool is needed.",
             "- Use [] for tool_categories when no tool is needed.",
             "- Use \"none\" for primary_tool, document_query_intent,",
             "  document_summary_focus, and document_answer_mode when they",
-            "- allowed_tool_names must contain only listed tool names.",
             "  do not apply.",
+            "- Use \"none\" for planner_mode, answer_strategy, and",
+            "  finalization_mode when they do not apply.",
+            "- allowed_tool_names must contain only listed tool names.",
             "- planner_tool_hints must be [] when no tool is needed.",
             "- Categories must come from: " + ", ".join(categories),
             "- primary_tool must be one of the listed tool names or \"none\".",
@@ -324,6 +359,17 @@ class ToolClassificationMixin:
             "  on prior turns.",
             "- Keep rewritten_query concise and standalone.",
             "- Do not add explanations outside the JSON object.",
+            "- If attached documents are present and the user refers to",
+            "  \"this book\", \"this document\", \"this file\", or a",
+            "  similar deictic reference, treat that as referring to the",
+            "  attached document context instead of asking which document",
+            "  they mean.",
+            "- When exactly one document is attached and the user asks for",
+            "  a broad explanation, summary, premise, or what the book is",
+            "  about, prefer analyze_loaded_document as the first tool.",
+            "- Use planner_mode \"select_tools\" only when more than one",
+            "  document tool is genuinely needed or you cannot name a",
+            "  single best first tool.",
             "",
             "Document tool guidance:",
             "- inspect_loaded_documents: document identity, title/author,",
@@ -444,6 +490,7 @@ class ToolClassificationMixin:
         payload: Dict[str, Any],
         *,
         prompt: str,
+        llm_request: Any,
     ) -> Dict[str, Any]:
         """Normalize one raw LLM preprocess payload."""
         rewritten_query = str(payload.get("rewritten_query", "") or "").strip()
@@ -469,6 +516,42 @@ class ToolClassificationMixin:
             payload.get("planner_tool_hints")
         )
 
+        document_intent = self._normalize_optional_token(
+            payload.get("document_query_intent")
+        )
+        if document_intent not in self.VALID_DOCUMENT_INTENTS:
+            document_intent = None
+
+        document_summary_focus = self._normalize_optional_token(
+            payload.get("document_summary_focus")
+        )
+        if document_summary_focus not in self.VALID_DOCUMENT_SUMMARY_FOCI:
+            document_summary_focus = None
+
+        document_answer_mode = self._normalize_optional_token(
+            payload.get("document_answer_mode")
+        )
+        if document_answer_mode not in self.VALID_DOCUMENT_ANSWER_MODES:
+            document_answer_mode = None
+
+        rag_file_count = len(getattr(llm_request, "rag_files", []) or [])
+        derived_primary_tool = self._derive_document_primary_tool(
+            document_intent,
+            rag_file_count=rag_file_count,
+        )
+        derived_answer_mode = self._derive_document_answer_mode(
+            document_intent,
+        )
+
+        if document_intent and document_answer_mode is None:
+            document_answer_mode = derived_answer_mode
+
+        if document_intent and derived_primary_tool and primary_tool is None:
+            primary_tool = derived_primary_tool
+
+        if document_intent and primary_tool:
+            tool_required = True
+
         if not tool_required:
             primary_tool = None
             tool_categories = []
@@ -490,24 +573,6 @@ class ToolClassificationMixin:
                 allowed_tool_names = list(planner_tool_hints)
             if planner_mode is None and len(allowed_tool_names) > 1:
                 planner_mode = "select_tools"
-
-        document_intent = self._normalize_optional_token(
-            payload.get("document_query_intent")
-        )
-        if document_intent not in self.VALID_DOCUMENT_INTENTS:
-            document_intent = None
-
-        document_summary_focus = self._normalize_optional_token(
-            payload.get("document_summary_focus")
-        )
-        if document_summary_focus not in self.VALID_DOCUMENT_SUMMARY_FOCI:
-            document_summary_focus = None
-
-        document_answer_mode = self._normalize_optional_token(
-            payload.get("document_answer_mode")
-        )
-        if document_answer_mode not in self.VALID_DOCUMENT_ANSWER_MODES:
-            document_answer_mode = None
 
         answer_strategy = self._normalize_optional_token(
             payload.get("answer_strategy")
@@ -602,7 +667,11 @@ class ToolClassificationMixin:
                 self._strip_reasoning_markup(response_text)[:300],
             )
             return None
-        return self._normalize_preprocess_payload(payload, prompt=prompt)
+        return self._normalize_preprocess_payload(
+            payload,
+            prompt=prompt,
+            llm_request=llm_request,
+        )
 
     def _classify_prompt_for_tools(self, prompt: str) -> list:
         """Return tool categories from the request preprocessor."""

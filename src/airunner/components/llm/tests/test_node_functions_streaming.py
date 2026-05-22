@@ -890,6 +890,17 @@ def test_forced_response_prompt_uses_chunked_document_analysis_context():
         "Document coverage:\n\n"
         "1. MAJOR PALGRAVE TELLS A STORY\n"
         "2. A DEATH IN THE HOTEL\n\n"
+        "Refined whole-document synthesis:\n\n"
+        "Overview: Miss Marple is drawn into a Caribbean murder after "
+        "Major Palgrave hints that a snapshot identifies a killer.\n"
+        "Covered sections: MAJOR PALGRAVE TELLS A STORY, A DEATH IN THE HOTEL\n"
+        "Key developments:\n"
+        "1. Palgrave dies before he can explain the snapshot.\n\n"
+        "Chunk summaries:\n\n"
+        "[Chunk 1 - MAJOR PALGRAVE TELLS A STORY]\n"
+        "Miss Marple is staying at a Caribbean resort.\n\n"
+        "[Chunk 2 - A DEATH IN THE HOTEL]\n"
+        "Palgrave dies before he can explain the snapshot.\n\n"
         "Supporting evidence:\n\n"
         "Current document: loaded document\n\n"
         "Relevant excerpts:\n"
@@ -905,6 +916,8 @@ def test_forced_response_prompt_uses_chunked_document_analysis_context():
     assert "Document analysis context:" in prompt
     assert "Document coverage:" in prompt
     assert "A DEATH IN THE HOTEL" in prompt
+    assert "Refined whole-document synthesis:" in prompt
+    assert "Overview: Miss Marple is drawn into a Caribbean murder" in prompt
     assert "Supporting evidence:" not in prompt
     assert "[Excerpt 1]" not in prompt
     assert "Evidence excerpts:" not in prompt

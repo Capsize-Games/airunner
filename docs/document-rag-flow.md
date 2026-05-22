@@ -104,8 +104,11 @@ flowchart LR
   use the saved final chat prompt with tools unbound before the visible
   answer is generated.
 - Internal document synthesis and verification now return one explicit
-   `answer_text` block, and forced-response recovery prefers that field
-   instead of free-form meta text.
+   `answer_text` block, and synthesized document answers now succeed
+   only when a stage returns that committed field. Verification may keep
+   or replace the draft only through a valid `answer_text` block; meta
+   fragments, verifier commentary, and other reasoning text no longer
+   count as successful document finalization.
 - Direct document actions such as `PERFORM_RAG_SEARCH` can still use
   explicit forced tool routing.
 
@@ -211,10 +214,10 @@ This layer controls:
 - how summary prompts are cleaned down to grounded evidence,
 - how summary drafts are verified against that evidence,
 - when the final normal chat prompt is restored,
-- how document replies are recovered from tool state if the visible
-   final text is weak or empty,
-- and how internal document synthesis is constrained to one explicit
-   `answer_text` field.
+- how committed `answer_text` fields are accepted or rejected across
+   synthesis and verification stages,
+- and how non-committed reasoning text is kept out of the visible reply
+   path for synthesized document answers.
 
 ### 5. Final Streaming And Rendering
 

@@ -31,6 +31,15 @@ class DocumentResponsePolicyMixin:
         """Return whether the verifier produced one user-facing answer."""
         if verified_message is None:
             return False
+        if (
+            reject_structure_only
+            or self._get_document_answer_mode() == "synthesized"
+        ):
+            verified_content = self._extract_committed_response_content(
+                verified_message,
+                reject_structure_only=reject_structure_only,
+            )
+            return bool(verified_content.strip())
         verified_content = self._recover_forced_response_content(
             verified_message,
             reject_structure_only=reject_structure_only,

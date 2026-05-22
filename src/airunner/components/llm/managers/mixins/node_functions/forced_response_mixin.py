@@ -2,7 +2,12 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 
 from airunner.components.llm.config.generation_presets import (
     WorkflowGenerationStage,
@@ -11,6 +16,40 @@ from airunner.components.llm.config.generation_presets import (
 
 class ForcedResponseMixin:
     """Handle forced responses generated from tool results."""
+
+    def _build_document_stage_messages(
+        self,
+        prompt_text: str,
+        *,
+        tool_name: str,
+        stage: WorkflowGenerationStage,
+    ) -> List[BaseMessage]:
+        """Return stage-owned prompt messages for document finalization."""
+        if not self._is_document_result_tool(tool_name):
+            return [HumanMessage(content=prompt_text)]
+
+        if stage == WorkflowGenerationStage.DOCUMENT_VERIFICATION:
+            stage_role = (
+                "Verify the grounded draft and return exactly one final "
+                "answer_text block."
+            )
+        else:
+            stage_role = (
+                "Compose exactly one grounded final answer_text block from "
+                "the document evidence."
+            )
+
+        system_prompt = (
+            "You are AIRunner's internal document answer finalizer. "
+            "This is a private grounded stage. "
+            f"{stage_role} "
+            "Do not output reasoning, critiques, verdicts, labels, or any "
+            "text outside the required answer_text block."
+        )
+        return [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt_text),
+        ]
 
     def _force_response_node(self, state: Any) -> Dict[str, Any]:
         """Generate a forced response when duplicate tool routing occurs."""
@@ -326,7 +365,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 user_question,
                 structured_answer=document_tool,
             )
-            simple_prompt = [HumanMessage(content=simple_prompt_text)]
+            simple_prompt = self._build_document_stage_messages(
+                simple_prompt_text,
+                tool_name=tool_name,
+                stage=WorkflowGenerationStage.DOCUMENT_SYNTHESIS,
+            )
             internal_generation_kwargs = (
                 self._prepare_internal_response_generation_kwargs(
                     generation_kwargs,
@@ -353,9 +396,20 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             reject_structure_only = (
                 document_tool and document_intent == "summary"
             )
-            drafted_response = self._recover_forced_response_content(
-                response_message,
-                reject_structure_only=reject_structure_only,
+            strict_document_answer = document_tool and (
+                reject_structure_only
+                or self._get_document_answer_mode() == "synthesized"
+            )
+            drafted_response = (
+                self._extract_committed_response_content(
+                    response_message,
+                    reject_structure_only=reject_structure_only,
+                )
+                if strict_document_answer
+                else self._recover_forced_response_content(
+                    response_message,
+                    reject_structure_only=reject_structure_only,
+                )
             )
             stage_messages: List[Tuple[str, Optional[AIMessage]]] = [
                 ("document_synthesis", response_message),
@@ -379,9 +433,16 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     response_message = verified_message
 
             self._emit_final_thinking_signal(response_message)
-            visible_content = self._recover_forced_response_content(
-                response_message,
-                reject_structure_only=reject_structure_only,
+            visible_content = (
+                self._extract_committed_response_content(
+                    response_message,
+                    reject_structure_only=reject_structure_only,
+                )
+                if strict_document_answer
+                else self._recover_forced_response_content(
+                    response_message,
+                    reject_structure_only=reject_structure_only,
+                )
             )
             if self._looks_like_instruction_reflection(visible_content):
                 visible_content = ""
@@ -464,10 +525,34 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             reject_structure_only = (
                 document_tool and document_intent == "summary"
             )
-            response_content = self._recover_forced_response_content(
-                response_message,
-                reject_structure_only=reject_structure_only,
+            strict_document_answer = document_tool and (
+                reject_structure_only
+                or self._get_document_answer_mode() == "synthesized"
             )
+            if strict_document_answer:
+                visible_content = str(
+                    getattr(response_message, "content", "") or ""
+                )
+                response_content = (
+                    self._sanitize_recovered_response_candidate(
+                        self._extract_answer_text_field(visible_content),
+                        reject_structure_only=reject_structure_only,
+                    )
+                )
+                if not response_content:
+                    response_content = (
+                        self._sanitize_recovered_response_candidate(
+                            self._strip_forced_response_label(
+                                visible_content
+                            ),
+                            reject_structure_only=reject_structure_only,
+                        )
+                    )
+            else:
+                response_content = self._recover_forced_response_content(
+                    response_message,
+                    reject_structure_only=reject_structure_only,
+                )
             if self._looks_like_instruction_reflection(response_content):
                 response_content = ""
             if document_tool and document_intent == "identity":
@@ -538,7 +623,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             stage=WorkflowGenerationStage.DOCUMENT_VERIFICATION,
         )
         return self._stream_internal_response(
-            [HumanMessage(content=verification_prompt_text)],
+            self._build_document_stage_messages(
+                verification_prompt_text,
+                tool_name=tool_name,
+                stage=WorkflowGenerationStage.DOCUMENT_VERIFICATION,
+            ),
             verification_generation_kwargs,
             thinking_metadata=thinking_metadata,
             buffer_visible_output=True,
