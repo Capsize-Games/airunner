@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
 from airunner.components.llm.tools.rag_tools import (
+    analyze_loaded_document,
     inspect_loaded_documents,
     rag_search,
     search_knowledge_base_documents,
@@ -503,6 +504,87 @@ def test_rag_search_expands_single_document_pronoun_queries():
     assert "what are the chapters in it?" in effective_query
     assert "The Satanic Bible" in effective_query
     assert "Anton LaVey" in effective_query
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_returns_full_text_for_small_docs(
+    mock_resolve,
+    mock_extract,
+):
+    """Small attached documents should use full-document analysis mode."""
+    file_path = "/library/Short Notes.md"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "Short full document text."
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            attached_document_total_tokens=12,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": True,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: ["Short Notes.md"],
+    )
+
+    result = analyze_loaded_document("summarize this document", api=api)
+
+    assert "Analysis mode: full_document" in result
+    assert "Requested analysis: summarize this document" in result
+    assert "Full document text:" in result
+    assert "Short full document text." in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_returns_chunked_context_for_large_docs(
+    mock_resolve,
+    mock_extract,
+):
+    """Large attached documents should use chunked analysis mode."""
+    file_path = "/library/The Satanic Bible - Anton LaVey.pdf"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "INTRODUCTION\n\n"
+        "The introduction frames Satanism as a realism-first philosophy.\n\n"
+        "THE BOOK OF SATAN\n\n"
+        "This section rejects Christian mysticism and centers the real world.\n\n"
+        "THE BOOK OF LUCIFER\n\n"
+        "This section presents key arguments and practical philosophy.\n\n"
+        "THE BOOK OF BELIAL\n\n"
+        "This section focuses on ritual as applied practice.\n\n"
+        "THE BOOK OF LEVIATHAN\n\n"
+        "This section contains later material and ceremonial text."
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "The Satanic Bible - Anton LaVey.pdf"
+        ],
+    )
+
+    result = analyze_loaded_document("summarize this document", api=api)
+
+    assert "Analysis mode: chunked_document" in result
+    assert "Analysis pipeline: deterministic_map_reduce" in result
+    assert "Refined whole-document synthesis:" in result
+    assert "Chunk summaries:" in result
+    assert "Supporting evidence:" in result
+    assert "[Excerpt 1]" in result
+    assert "[Chunk 2 - THE BOOK OF SATAN]" in result
+    assert "Section: THE BOOK OF SATAN." in result
 
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")

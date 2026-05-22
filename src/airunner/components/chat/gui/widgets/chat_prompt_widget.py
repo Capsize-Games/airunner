@@ -39,6 +39,9 @@ from airunner.components.documents.document_import import (
     rag_document_suffixes,
 )
 from airunner.components.llm.data.conversation import Conversation
+from airunner.components.llm.managers.agent.document_loader import (
+    extract_text_from_file,
+)
 from airunner.enums import (
     SignalCode,
     LLMActionType,
@@ -600,6 +603,11 @@ class ChatPromptWidget(BaseWidget):
             }:
                 existing_categories.append("rag")
             llm_request.tool_categories = existing_categories
+            ChatPromptWidget._populate_request_document_capabilities(
+                self,
+                llm_request,
+                rag_files,
+            )
             self.logger.info(
                 "Added %s document(s) to llm_request for document routing",
                 len(rag_files),
@@ -1169,6 +1177,156 @@ class ChatPromptWidget(BaseWidget):
         except Exception as exc:  # pragma: no cover - defensive fallback
             self.logger.debug("Token estimation failed: %s", exc)
             return (len(prompt) + 3) // 4
+
+    @staticmethod
+    def _safe_attachment_file_size(file_path: str) -> int:
+        """Return one best-effort file size for attachment metadata."""
+        try:
+            return os.path.getsize(file_path)
+        except OSError:
+            return 0
+
+    @staticmethod
+    def _capability_total(
+        capabilities: List[Dict[str, object]],
+        key: str,
+    ) -> int:
+        """Return one integer total across attachment capabilities."""
+        total = 0
+        for capability in capabilities:
+            total += int(capability.get(key, 0) or 0)
+        return total
+
+    def _document_attachment_roots(self) -> Optional[Tuple[str, ...]]:
+        """Return approved roots for attachment capability scans."""
+        roots = [
+            root
+            for root in (
+                getattr(self, "documents_path", None),
+                getattr(self, "zim_path", None),
+            )
+            if root
+        ]
+        return tuple(roots) or None
+
+    def _resolve_document_attachment_capability_path(
+        self,
+        file_path: str,
+    ) -> Optional[str]:
+        """Return one validated attachment path for capability scans."""
+        try:
+            return resolve_existing_file(
+                file_path,
+                label="Attached document path",
+                allowed_suffixes=KNOWLEDGE_BASE_DOCUMENT_SUFFIXES,
+                allowed_roots=ChatPromptWidget._document_attachment_roots(
+                    self
+                ),
+            )
+        except PathPolicyError as exc:
+            self.logger.debug(
+                "Skipped attachment capability scan for %s: %s",
+                file_path,
+                exc,
+            )
+            return None
+
+    def _extract_document_attachment_text(self, file_path: str) -> str:
+        """Return extracted text for one attached document, if available."""
+        try:
+            return extract_text_from_file(file_path) or ""
+        except Exception as exc:
+            self.logger.debug(
+                "Attachment capability scan failed for %s: %s",
+                file_path,
+                exc,
+            )
+            return ""
+
+    def _document_attachment_capability_payload(
+        self,
+        file_path: str,
+        text: str,
+    ) -> Dict[str, object]:
+        """Build one planner capability payload for an attached file."""
+        tokens = self._estimate_token_count(text)
+        characters = len(text)
+        context_limit = getattr(self, "_model_context_tokens", None) or 0
+        return {
+            "path": file_path,
+            "file_name": os.path.basename(file_path),
+            "file_size": ChatPromptWidget._safe_attachment_file_size(
+                file_path
+            ),
+            "estimated_tokens": tokens,
+            "estimated_characters": characters,
+            "text_available": bool(text),
+            "fits_current_context": bool(
+                context_limit and tokens <= context_limit
+            ),
+        }
+
+    def _build_document_attachment_capability(
+        self,
+        file_path: str,
+    ) -> Optional[Dict[str, object]]:
+        """Build planner metadata for one attached document."""
+        resolved = (
+            ChatPromptWidget._resolve_document_attachment_capability_path(
+                self,
+                file_path,
+            )
+        )
+        if not resolved:
+            return None
+        text = ChatPromptWidget._extract_document_attachment_text(
+            self,
+            resolved,
+        )
+        return ChatPromptWidget._document_attachment_capability_payload(
+            self,
+            resolved,
+            text,
+        )
+
+    def _build_document_attachment_capabilities(
+        self,
+        file_paths: List[str],
+    ) -> List[Dict[str, object]]:
+        """Build planner metadata for the current attached documents."""
+        capabilities: List[Dict[str, object]] = []
+        for file_path in file_paths:
+            capability = ChatPromptWidget._build_document_attachment_capability(
+                self,
+                file_path,
+            )
+            if capability is not None:
+                capabilities.append(capability)
+        return capabilities
+
+    def _populate_request_document_capabilities(
+        self,
+        llm_request: LLMRequest,
+        file_paths: List[str],
+    ) -> None:
+        """Attach planner-facing document capability metadata to a request."""
+        capabilities = ChatPromptWidget._build_document_attachment_capabilities(
+            self,
+            file_paths,
+        )
+        llm_request.attached_document_capabilities = capabilities
+        llm_request.attached_document_total_tokens = (
+            ChatPromptWidget._capability_total(
+                capabilities,
+                "estimated_tokens",
+            )
+        )
+        llm_request.attached_document_total_characters = (
+            ChatPromptWidget._capability_total(
+                capabilities,
+                "estimated_characters",
+            )
+        )
 
     def _set_token_count_label(
         self, token_count: int, context_limit: Optional[int]

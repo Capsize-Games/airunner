@@ -1,5 +1,8 @@
 """Private helper exports for the RAG tool facade."""
 
+from airunner.components.llm.tools.rag_tools_helpers._document_analysis import (
+    analyze_loaded_document_impl,
+)
 from airunner.components.llm.tools.rag_tools_helpers._document_access import (
     build_document_structure_result,
     expand_query_with_active_document,
@@ -27,6 +30,7 @@ from airunner.components.llm.tools.rag_tools_helpers._summary_evidence import (
 __all__ = [
     "STANDARD_RETRIEVAL_K",
     "SUMMARY_RETRIEVAL_K",
+    "analyze_loaded_document_impl",
     "build_document_structure_result",
     "build_single_document_summary_results",
     "expand_query_with_active_document",

@@ -13,6 +13,7 @@ from airunner.components.llm.core.tool_registry import ToolCategory, tool
 from airunner.components.llm.tools.rag_tools_helpers import (
     STANDARD_RETRIEVAL_K,
     SUMMARY_RETRIEVAL_K,
+    analyze_loaded_document_impl,
     build_document_structure_result,
     build_single_document_summary_results,
     expand_query_with_active_document,
@@ -117,6 +118,52 @@ def inspect_loaded_documents(api: Any = None) -> str:
     if structure_result:
         sections.append(structure_result)
     return "\n\n".join(sections)
+
+
+@tool(
+    name="analyze_loaded_document",
+    category=ToolCategory.RAG,
+    description=(
+        "Prepare whole-document analysis context for the currently loaded "
+        "document. Use this for summaries, premise/theme questions, and "
+        "broad document transformations when you need more than local "
+        "retrieval. This tool chooses either full-document or chunked "
+        "context based on the request's document budget."
+    ),
+    return_direct=False,
+    requires_api=True,
+    keywords=[
+        "document",
+        "summary",
+        "analyze",
+        "whole document",
+        "theme",
+        "premise",
+    ],
+    input_examples=[{"query": "What is this book about?"}],
+)
+def analyze_loaded_document(
+    query: Annotated[
+        str,
+        "Whole-document analysis request for the loaded document",
+    ],
+    api: Any = None,
+) -> str:
+    """Return whole-document analysis context for one loaded document."""
+    if not api:
+        return (
+            "TOOL UNAVAILABLE: No RAG manager available. "
+            "This is an internal error."
+        )
+
+    return analyze_loaded_document_impl(
+        api,
+        query=query,
+        extract_text=extract_text,
+        resolve_existing_file=resolve_existing_file,
+        path_policy_error=PathPolicyError,
+        logger=logger,
+    )
 
 
 @tool(

@@ -128,7 +128,11 @@ class GenerationMixin:
             None,
         )
         is_document_request = bool(document_intent or document_primary_tool)
-        document_tools = {"inspect_loaded_documents", "rag_search"}
+        document_tools = {
+            "inspect_loaded_documents",
+            "rag_search",
+            "analyze_loaded_document",
+        }
         if not is_document_request and not any(
             tool in document_tools for tool in executed_tools
         ):

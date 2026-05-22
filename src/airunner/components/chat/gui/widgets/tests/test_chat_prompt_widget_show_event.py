@@ -443,6 +443,79 @@ def test_submit_generation_request_attaches_rag_documents():
     assert llm_request.rag_files == ["/tmp/notes.md"]
     assert llm_request.force_tool is None
     assert llm_request.tool_categories == ["rag"]
+    assert llm_request.attached_document_capabilities == []
+    assert llm_request.attached_document_total_tokens == 0
+    assert llm_request.attached_document_total_characters == 0
+
+
+def test_submit_generation_request_includes_document_capabilities(
+    monkeypatch,
+    tmp_path,
+):
+    """Attached documents should include planner capability metadata."""
+    sent_requests = []
+    document_path = tmp_path / "notes.md"
+    document_path.write_text("Alpha beta gamma", encoding="utf-8")
+
+    monkeypatch.setattr(
+        module,
+        "extract_text_from_file",
+        lambda _path: "Alpha beta gamma",
+    )
+
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            model_load_balancer=SimpleNamespace(
+                get_loaded_models=lambda: [],
+                switch_to_non_art_mode=Mock(),
+            ),
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[str(document_path)],
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        _estimate_token_count=lambda prompt: 3 if prompt else 0,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+        _model_context_tokens=8,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Search these notes",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-capabilities",
+        slash_command=None,
+    )
+
+    llm_request = sent_requests[0]["llm_request"]
+    assert llm_request.attached_document_total_tokens == 3
+    assert llm_request.attached_document_total_characters == 16
+    assert llm_request.attached_document_capabilities == [
+        {
+            "path": str(document_path),
+            "file_name": "notes.md",
+            "file_size": document_path.stat().st_size,
+            "estimated_tokens": 3,
+            "estimated_characters": 16,
+            "text_available": True,
+            "fits_current_context": True,
+        }
+    ]
 
 
 def test_submit_generation_request_keeps_document_attachments_visible():

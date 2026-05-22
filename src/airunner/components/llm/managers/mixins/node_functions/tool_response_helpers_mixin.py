@@ -62,6 +62,13 @@ class ToolResponseHelpersMixin:
                 "find information about that. The documents may not contain "
                 "details on this topic."
             )
+        elif tool_name == "analyze_loaded_document":
+            response_content = (
+                "I prepared the loaded document for whole-document analysis "
+                "but still couldn't produce a grounded answer from it. The "
+                "document may not contain enough readable content for that "
+                "request."
+            )
         else:
             response_content = (
                 "I tried to find information but wasn't able to get useful "

@@ -117,6 +117,7 @@ class NodeFunctionsMixin(
         )
         chat_model_overrides = {}
         tools_backup = getattr(self, "_tools", None)
+        followup_prompt_backup = None
 
         try:
             if disable_tools_for_followup:
@@ -137,6 +138,9 @@ class NodeFunctionsMixin(
                         attr_name,
                     )
                     setattr(chat_model, attr_name, override)
+                followup_prompt_backup = (
+                    self._apply_document_followup_system_prompt()
+                )
 
             prompt = self._build_prompt(trimmed_messages)
             response_message = self._generate_response(
@@ -144,6 +148,10 @@ class NodeFunctionsMixin(
                 generation_kwargs,
             )
         finally:
+            if followup_prompt_backup is not None:
+                self._restore_document_followup_system_prompt(
+                    followup_prompt_backup
+                )
             if disable_tools_for_followup and hasattr(self, "_tools"):
                 self._tools = tools_backup
             for attr_name, original_value in chat_model_overrides.items():

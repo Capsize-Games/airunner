@@ -24,6 +24,109 @@ class RequestHandlingMixin:
             return None
         return build_metadata(title="Request Settings")
 
+    @staticmethod
+    def _planner_controls_document_tools(llm_request: Any) -> bool:
+        """Return whether planner mode should choose document tools."""
+        return getattr(llm_request, "planner_mode", None) == "select_tools"
+
+    @staticmethod
+    def _planner_tool_hints(route: Any) -> List[str]:
+        """Return planner-facing tool hints derived from the route."""
+        if route is None or not getattr(route, "force_tool", None):
+            return []
+        if (
+            getattr(route, "force_tool", None) == "rag_search"
+            and getattr(route, "answer_mode", None) == "synthesized"
+        ):
+            return ["analyze_loaded_document", "rag_search"]
+        return [route.force_tool]
+
+    @staticmethod
+    def _should_auto_activate_document_planner(
+        llm_request: Any,
+        action: Any,
+        requested_force_tool: Optional[str] = None,
+    ) -> bool:
+        """Return whether chat-with-documents should use planner mode."""
+        if not llm_request or action != LLMActionType.CHAT:
+            return False
+        if requested_force_tool:
+            return False
+        if not getattr(llm_request, "rag_files", None):
+            return False
+        if getattr(llm_request, "attached_document_capabilities", None):
+            return True
+        if getattr(llm_request, "attached_document_total_tokens", 0):
+            return True
+        return bool(
+            getattr(llm_request, "attached_document_total_characters", 0)
+        )
+
+    def _activate_request_planner_mode(
+        self,
+        llm_request: Any,
+        action: Any,
+        requested_force_tool: Optional[str] = None,
+    ) -> None:
+        """Enable planner mode and preserve the final chat prompt."""
+        if not llm_request:
+            return
+        if (
+            getattr(llm_request, "planner_mode", None) is None
+            and self._should_auto_activate_document_planner(
+                llm_request,
+                action,
+                requested_force_tool,
+            )
+        ):
+            llm_request.planner_mode = "select_tools"
+        if getattr(llm_request, "planner_mode", None) != "select_tools":
+            return
+        if getattr(llm_request, "final_system_prompt", None):
+            return
+        llm_request.final_system_prompt = self.get_system_prompt_with_context(
+            LLMActionType.CHAT,
+            None,
+            None,
+        )
+
+    def _request_planner_system_prompt(
+        self,
+        llm_request: Any,
+        action: Any,
+    ) -> Optional[str]:
+        """Return the planner-stage prompt override for the request."""
+        if not llm_request:
+            return None
+        if getattr(llm_request, "system_prompt", None):
+            return None
+        if getattr(llm_request, "planner_mode", None) != "select_tools":
+            return None
+        return self.get_tool_planner_system_prompt(
+            action,
+            tool_categories=getattr(llm_request, "tool_categories", None),
+            planner_tool_hints=getattr(
+                llm_request,
+                "planner_tool_hints",
+                None,
+            ),
+            attached_document_capabilities=getattr(
+                llm_request,
+                "attached_document_capabilities",
+                None,
+            ),
+            attached_document_total_tokens=getattr(
+                llm_request,
+                "attached_document_total_tokens",
+                0,
+            ),
+            attached_document_total_characters=getattr(
+                llm_request,
+                "attached_document_total_characters",
+                0,
+            ),
+        )
+
     def handle_request(
         self,
         data: Dict,
@@ -234,7 +337,21 @@ class RequestHandlingMixin:
 
         prompt = data["request_data"]["prompt"]
         action = data["request_data"].get("action")
+        requested_force_tool = (
+            getattr(llm_request, "force_tool", None) if llm_request else None
+        )
+        self._activate_request_planner_mode(
+            llm_request,
+            action,
+            requested_force_tool,
+        )
         self._apply_document_query_route(llm_request, prompt, action)
+        planner_system_prompt = self._request_planner_system_prompt(
+            llm_request,
+            action,
+        )
+        if planner_system_prompt is not None:
+            system_prompt = planner_system_prompt
 
         if llm_request and llm_request.tool_categories is None:
             selected_categories = self._auto_select_tool_categories(
@@ -305,14 +422,17 @@ class RequestHandlingMixin:
         llm_request.document_answer_mode = (
             route.answer_mode if route is not None else None
         )
+        llm_request.planner_tool_hints = self._planner_tool_hints(route)
 
         if not route:
+            return
+        if getattr(llm_request, "tool_categories", None) is None:
+            llm_request.tool_categories = ["rag", "search"]
+        if self._planner_controls_document_tools(llm_request):
             return
         current_force_tool = getattr(llm_request, "force_tool", None)
         if current_force_tool in (None, "rag_search"):
             llm_request.force_tool = route.force_tool
-        if getattr(llm_request, "tool_categories", None) is None:
-            llm_request.tool_categories = ["rag", "search"]
 
     def _auto_select_tool_categories(
         self,

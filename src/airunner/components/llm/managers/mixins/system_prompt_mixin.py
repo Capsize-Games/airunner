@@ -23,7 +23,7 @@ NOT included for precision actions like:
 """
 
 from datetime import datetime
-from typing import Optional, List, Set
+from typing import Any, Optional, List, Set
 
 from airunner.enums import LLMActionType
 from airunner.components.llm.core.tool_registry import ToolCategory
@@ -90,6 +90,84 @@ Focus entirely on solving the problem correctly using the available tools when n
 
 class SystemPromptMixin:
     """Mixin for LLM system prompt generation with context-aware inclusions."""
+
+    @staticmethod
+    def _format_planner_document_capability(capability: Any) -> str:
+        """Return one short planner line for an attached document."""
+        name = capability.get("file_name") or capability.get("path")
+        name = name or "document"
+        tokens = int(capability.get("estimated_tokens", 0) or 0)
+        fits = "yes" if capability.get("fits_current_context") else "no"
+        available = "yes" if capability.get("text_available") else "no"
+        return (
+            f"- {name}: about {tokens} tokens, text_available={available}, "
+            f"fits_current_context={fits}"
+        )
+
+    def _planner_document_section(
+        self,
+        capabilities: Optional[List[Any]],
+        total_tokens: int,
+    ) -> List[str]:
+        """Return planner guidance for the current attached documents."""
+        if not capabilities:
+            return []
+        lines = [
+            "",
+            "Attached documents:",
+            f"- Total attached document budget: about {total_tokens} tokens.",
+        ]
+        lines.extend(
+            self._format_planner_document_capability(capability)
+            for capability in capabilities
+        )
+        return lines
+
+    def get_tool_planner_system_prompt(
+        self,
+        action: LLMActionType,
+        *,
+        tool_categories: Optional[List] = None,
+        planner_tool_hints: Optional[List[str]] = None,
+        attached_document_capabilities: Optional[List[Any]] = None,
+        attached_document_total_tokens: int = 0,
+        attached_document_total_characters: int = 0,
+    ) -> str:
+        """Return the first-pass planner prompt for tool selection."""
+        lines = [
+            "You are AIRunner's tool planner.",
+            "This is the planning stage, not the final user-facing reply.",
+            "Decide whether tools are needed before answering.",
+            "Choose the smallest grounded tool path that can solve the",
+            "request.",
+            "Do not write the final conversational answer yet.",
+            "A separate final response pass will handle that.",
+            "",
+            "Document tool guidance:",
+            "- Use inspect_loaded_documents for identity, title, author,",
+            "  chapters, sections, and structure questions.",
+            "- Use analyze_loaded_document for whole-document summaries,",
+            "  premise/theme questions, and broad transformations when one",
+            "  document is loaded.",
+            "- Use rag_search for excerpt retrieval, factual lookup, and as",
+            "  the fallback document-content tool when localized search is",
+            "  the better fit.",
+        ]
+        lines.extend(
+            self._planner_document_section(
+                attached_document_capabilities,
+                attached_document_total_tokens,
+            )
+        )
+        if planner_tool_hints:
+            lines.extend(
+                [
+                    "",
+                    "Likely relevant tools: "
+                    + ", ".join(planner_tool_hints),
+                ]
+            )
+        return "\n".join(lines)
 
     def _get_memory_context(self, user_query: Optional[str] = None) -> str:
         """Get relevant memory context about the user from knowledge base.

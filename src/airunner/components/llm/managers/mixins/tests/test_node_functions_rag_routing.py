@@ -106,6 +106,85 @@ class _VerificationFallbackNodeFunctions(_DummyNodeFunctions):
         return self._streamed_messages.pop(0)
 
 
+class _DocumentFollowupPromptNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._system_prompt = "planner prompt"
+        self.prompt_updates = []
+        self.prompt_built_with = None
+        self.prompt_seen = None
+
+    def update_system_prompt(self, system_prompt):
+        self.prompt_updates.append(system_prompt)
+        self._system_prompt = system_prompt
+
+    def get_system_prompt_with_context(
+        self,
+        action,
+        tool_categories=None,
+        force_tool=None,
+    ):
+        assert action == LLMActionType.CHAT
+        assert tool_categories is None
+        assert force_tool is None
+        return "final conversational prompt"
+
+    def _build_prompt(self, trimmed_messages):
+        self.prompt_built_with = self._system_prompt
+        return trimmed_messages
+
+    def _stream_model_response(
+        self,
+        prompt,
+        generation_kwargs=None,
+        thinking_metadata=None,
+    ):
+        self.prompt_seen = self._system_prompt
+        return AIMessage(content="Conversational reply", tool_calls=[])
+
+    def _recover_forced_response_content(
+        self,
+        response_message,
+        reject_structure_only=False,
+    ):
+        return response_message.content
+
+    def _looks_like_instruction_reflection(self, visible_content):
+        return False
+
+
+class _CallModelDocumentFollowupNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._system_prompt = "planner prompt"
+        self.prompt_updates = []
+        self.prompt_built_with = None
+        self.prompt_seen = None
+        self._chat_model = SimpleNamespace(
+            tool_calling_mode="json",
+            tools=["analyze_loaded_document"],
+            tool_choice={
+                "function": {"name": "analyze_loaded_document"}
+            },
+        )
+        self._tools = ["analyze_loaded_document"]
+
+    def update_system_prompt(self, system_prompt):
+        self.prompt_updates.append(system_prompt)
+        self._system_prompt = system_prompt
+
+    def _trim_messages(self, messages):
+        return messages
+
+    def _build_prompt(self, trimmed_messages):
+        self.prompt_built_with = self._system_prompt
+        return trimmed_messages
+
+    def _generate_response(self, prompt, generation_kwargs):
+        self.prompt_seen = self._system_prompt
+        return AIMessage(content="Conversational reply", tool_calls=[])
+
+
 def test_route_after_tools_returns_model_for_rag_search():
     """RAG search results should return to the model for a streamed answer."""
     mixin = _DummyNodeFunctions()
@@ -156,6 +235,38 @@ def test_route_after_tools_returns_model_for_synthesized_document_rag_route():
                 content="Found 1 relevant chunk.",
                 tool_call_id="tool-1",
                 name="rag_search",
+            ),
+        ]
+    }
+
+    assert mixin._route_after_tools(state) == "model"
+
+
+def test_route_after_tools_returns_model_for_document_analysis_route():
+    """Whole-document analysis should stay in the synthesized document path."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_answer_mode="synthesized")
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="summary",
+        force_tool="rag_search",
+        answer_mode="synthesized",
+    )
+    state = {
+        "messages": [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "analyze_loaded_document",
+                        "args": {"query": "summarize this document"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Current document analysis:\n\nAnalysis mode: chunked_document",
+                tool_call_id="tool-1",
+                name="analyze_loaded_document",
             ),
         ]
     }
@@ -533,6 +644,24 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
     assert "do not ask which book, story, or document they mean" in prompt.lower()
 
 
+def test_build_search_results_prompt_treats_document_analysis_as_document_tool():
+    """Whole-document analysis should receive document-summary guidance."""
+    mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(
+        intent="summary",
+        force_tool="rag_search",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Current document analysis:\n\nAnalysis mode: full_document",
+        "analyze_loaded_document",
+        "what is this book about?",
+    )
+
+    assert "answering a question about a currently loaded document" in prompt
+    assert "lead with the premise, setting, central conflict" in prompt
+
+
 def test_build_search_results_prompt_specializes_compare_document_tasks():
     """Comparison requests should receive comparison-specific guidance."""
     mixin = _DummyNodeFunctions()
@@ -837,3 +966,80 @@ def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text()
         "Miss Marple looks into a resort murder after a doctor realizes he "
         "once recognized a killer from a snapshot."
     )
+
+
+def test_document_conversational_pass_uses_final_system_prompt_override():
+    """Final document replies should swap back to a chat-style prompt."""
+    mixin = _DocumentFollowupPromptNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        final_system_prompt="final override prompt"
+    )
+
+    response = mixin._run_document_conversational_pass(
+        "Grounded answer",
+        user_question="what is this book about?",
+        message_history=[HumanMessage(content="what is this book about?")],
+    )
+
+    assert response is not None
+    assert response.content == "Conversational reply"
+    assert mixin.prompt_built_with == "final override prompt"
+    assert mixin.prompt_seen == "final override prompt"
+    assert mixin._system_prompt == "planner prompt"
+    assert mixin.prompt_updates == [
+        "final override prompt",
+        "planner prompt",
+    ]
+
+
+def test_call_model_uses_final_prompt_for_document_analysis_followup():
+    """Planner-selected document followups should answer with chat prompt."""
+    mixin = _CallModelDocumentFollowupNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_answer_mode="synthesized",
+        final_system_prompt="final override prompt",
+    )
+    state = {
+        "messages": [
+            HumanMessage(content="what is this book about?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "analyze_loaded_document",
+                        "args": {
+                            "query": "what is this book about?",
+                        },
+                    }
+                ],
+            ),
+            ToolMessage(
+                content=(
+                    "Current document analysis:\n\n"
+                    "Analysis mode: chunked_document\n\n"
+                    "Refined whole-document synthesis:\n"
+                    "Overview: A detective investigates a murder."
+                ),
+                tool_call_id="tool-1",
+                name="analyze_loaded_document",
+            ),
+        ],
+        "generation_kwargs": {"temperature": 0.2},
+    }
+
+    result = mixin._call_model(state)
+
+    assert result["messages"][0].content == "Conversational reply"
+    assert mixin.prompt_built_with == "final override prompt"
+    assert mixin.prompt_seen == "final override prompt"
+    assert mixin._system_prompt == "planner prompt"
+    assert mixin.prompt_updates == [
+        "final override prompt",
+        "planner prompt",
+    ]
+    assert mixin._chat_model.tools == ["analyze_loaded_document"]
+    assert mixin._chat_model.tool_choice == {
+        "function": {"name": "analyze_loaded_document"}
+    }
+    assert mixin._tools == ["analyze_loaded_document"]

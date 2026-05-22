@@ -25,7 +25,11 @@ DEBUG_SETTING_FIELDS = (
     "reasoning_effort",
     "enable_thinking",
     "force_tool",
+    "planner_mode",
+    "planner_tool_hints",
     "tool_categories",
+    "attached_document_total_tokens",
+    "attached_document_total_characters",
     "document_query_intent",
     "document_answer_mode",
 )
@@ -105,6 +109,7 @@ class LLMRequest:
     # Request-level backend selection (used by headless API)
     model_service: Optional[str] = None  # local | openrouter | ollama
     api_model: Optional[str] = None  # provider model name for API backends
+    final_system_prompt: Optional[str] = None
     # Request-level quantization override for local HF models.
     # This is consumed by the model manager to set llm_generator_settings.dtype
     # before loading; it must NOT be passed through to transformers generate().
@@ -112,6 +117,13 @@ class LLMRequest:
     force_tool: Optional[str] = (
         None  # Force a specific tool to be called (from slash commands)
     )
+    planner_mode: Optional[str] = None
+    planner_tool_hints: Optional[List[str]] = field(default_factory=list)
+    attached_document_capabilities: Optional[List[Dict[str, Any]]] = field(
+        default_factory=list
+    )
+    attached_document_total_tokens: int = 0
+    attached_document_total_characters: int = 0
     document_query_intent: Optional[str] = None
     document_primary_tool: Optional[str] = None
     document_answer_mode: Optional[str] = None
@@ -161,8 +173,14 @@ class LLMRequest:
         # Request-level routing knobs are handled by the manager, not the model.
         data.pop("model_service", None)
         data.pop("api_model", None)
+        data.pop("final_system_prompt", None)
         data.pop("dtype", None)
         data.pop("reasoning_effort", None)
+        data.pop("planner_mode", None)
+        data.pop("planner_tool_hints", None)
+        data.pop("attached_document_capabilities", None)
+        data.pop("attached_document_total_tokens", None)
+        data.pop("attached_document_total_characters", None)
         data.pop("document_query_intent", None)
         data.pop("document_primary_tool", None)
         data.pop("document_answer_mode", None)

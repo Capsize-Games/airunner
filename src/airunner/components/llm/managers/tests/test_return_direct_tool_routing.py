@@ -127,15 +127,18 @@ class TestReturnDirectToolRouting:
                 "status": "started",
                 "content": "",
                 "request_id": "req-2",
+                "metadata": None,
             },
             {
                 "status": "streaming",
                 "content": "plan",
                 "request_id": "req-2",
+                "metadata": None,
             },
             {
                 "status": "completed",
                 "content": "plan",
                 "request_id": "req-2",
+                "metadata": None,
             },
         ]

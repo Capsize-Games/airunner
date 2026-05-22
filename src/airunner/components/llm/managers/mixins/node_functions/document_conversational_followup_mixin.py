@@ -4,9 +4,45 @@ from typing import Dict, List, Optional, Tuple
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from airunner.enums import LLMActionType
+
 
 class DocumentConversationalFollowupMixin:
     """Run the final conversational pass for grounded document answers."""
+
+    def _get_document_followup_system_prompt(self) -> Optional[str]:
+        """Return the system prompt for the final conversational pass."""
+        llm_request = getattr(self, "llm_request", None)
+        override = getattr(llm_request, "final_system_prompt", None)
+        if isinstance(override, str) and override.strip():
+            return override.strip()
+        builder = getattr(self, "get_system_prompt_with_context", None)
+        if not callable(builder):
+            return None
+        return builder(LLMActionType.CHAT, None, None)
+
+    def _apply_document_followup_system_prompt(self) -> Optional[str]:
+        """Swap to the final conversational prompt for follow-up generation."""
+        update_prompt = getattr(self, "update_system_prompt", None)
+        if not callable(update_prompt):
+            return None
+        original_prompt = getattr(self, "_system_prompt", None)
+        followup_prompt = self._get_document_followup_system_prompt()
+        if not followup_prompt or followup_prompt == original_prompt:
+            return None
+        update_prompt(followup_prompt)
+        return original_prompt
+
+    def _restore_document_followup_system_prompt(
+        self,
+        original_prompt: Optional[str],
+    ) -> None:
+        """Restore the workflow system prompt after follow-up generation."""
+        if not original_prompt:
+            return
+        update_prompt = getattr(self, "update_system_prompt", None)
+        if callable(update_prompt):
+            update_prompt(original_prompt)
 
     def _build_document_conversational_followup_instruction(
         self,
@@ -117,11 +153,15 @@ class DocumentConversationalFollowupMixin:
             user_question=user_question,
             grounded_answer=grounded_answer,
         )
-        prompt = self._build_prompt(followup_messages)
-        response_message = self._stream_model_response(
-            prompt,
-            generation_kwargs or {},
-        )
+        original_prompt = self._apply_document_followup_system_prompt()
+        try:
+            prompt = self._build_prompt(followup_messages)
+            response_message = self._stream_model_response(
+                prompt,
+                generation_kwargs or {},
+            )
+        finally:
+            self._restore_document_followup_system_prompt(original_prompt)
         visible_content = self._recover_forced_response_content(
             response_message,
             reject_structure_only=reject_structure_only,

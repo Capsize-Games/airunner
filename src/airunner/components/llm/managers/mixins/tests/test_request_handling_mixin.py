@@ -14,6 +14,12 @@ class _DummyRequestHandlingMixin(RequestHandlingMixin):
         self.logger = Mock()
         self.ensure_indexed_files = Mock(return_value=False)
         self._apply_tool_filter = Mock()
+        self.get_tool_planner_system_prompt = Mock(
+            return_value="planner prompt"
+        )
+        self.get_system_prompt_with_context = Mock(
+            return_value="final chat prompt"
+        )
 
 
 def test_prepare_request_rag_returns_retry_error_for_embedding_download():
@@ -194,3 +200,109 @@ def test_prepare_request_tooling_routes_document_transform_task():
     assert llm_request.document_primary_tool == "rag_search"
     assert llm_request.document_answer_mode == "synthesized"
     assert mixin._current_document_query_route.intent == "transform"
+
+
+def test_prepare_request_tooling_keeps_route_hints_in_planner_mode():
+    """Planner mode should keep document hints without forcing the tool."""
+    mixin = _DummyRequestHandlingMixin()
+    llm_request = SimpleNamespace(
+        tool_categories=["rag"],
+        force_tool=None,
+        system_prompt=None,
+        rag_files=["/tmp/doc.pdf"],
+        planner_mode="select_tools",
+    )
+    data = {
+        "request_data": {
+            "prompt": "what chapters are in it?",
+            "action": LLMActionType.CHAT,
+        }
+    }
+
+    mixin._prepare_request_tooling(data, llm_request)
+
+    assert llm_request.force_tool is None
+    assert llm_request.document_query_intent == "structure"
+    assert llm_request.document_primary_tool == "inspect_loaded_documents"
+    assert llm_request.document_answer_mode == "deterministic"
+    assert llm_request.planner_tool_hints == ["inspect_loaded_documents"]
+    assert mixin._current_document_query_route.intent == "structure"
+    mixin._apply_tool_filter.assert_called_once_with(
+        ["rag"],
+        action=LLMActionType.CHAT,
+        force_tool=None,
+    )
+
+
+def test_prepare_request_tooling_activates_planner_prompt_for_docs():
+    """Attached-doc chats should enter through the planner prompt path."""
+    mixin = _DummyRequestHandlingMixin()
+    capabilities = [
+        {
+            "file_name": "notes.md",
+            "estimated_tokens": 42,
+            "text_available": True,
+            "fits_current_context": True,
+        }
+    ]
+    llm_request = SimpleNamespace(
+        tool_categories=["rag"],
+        force_tool=None,
+        system_prompt=None,
+        rag_files=["/tmp/doc.pdf"],
+        planner_mode=None,
+        final_system_prompt=None,
+        attached_document_capabilities=capabilities,
+        attached_document_total_tokens=42,
+        attached_document_total_characters=128,
+    )
+    data = {
+        "request_data": {
+            "prompt": "what chapters are in it?",
+            "action": LLMActionType.CHAT,
+        }
+    }
+
+    result = mixin._prepare_request_tooling(data, llm_request)
+
+    assert result[2] == "planner prompt"
+    assert llm_request.planner_mode == "select_tools"
+    assert llm_request.final_system_prompt == "final chat prompt"
+    mixin.get_tool_planner_system_prompt.assert_called_once_with(
+        LLMActionType.CHAT,
+        tool_categories=["rag"],
+        planner_tool_hints=["inspect_loaded_documents"],
+        attached_document_capabilities=capabilities,
+        attached_document_total_tokens=42,
+        attached_document_total_characters=128,
+    )
+    mixin.get_system_prompt_with_context.assert_called_once_with(
+        LLMActionType.CHAT,
+        None,
+        None,
+    )
+
+
+def test_prepare_request_tooling_prefers_document_analysis_hint_in_planner():
+    """Planner hints should prefer whole-document analysis over RAG first."""
+    mixin = _DummyRequestHandlingMixin()
+    llm_request = SimpleNamespace(
+        tool_categories=["rag"],
+        force_tool=None,
+        system_prompt=None,
+        rag_files=["/tmp/doc.pdf"],
+        planner_mode="select_tools",
+    )
+    data = {
+        "request_data": {
+            "prompt": "summarize this document",
+            "action": LLMActionType.CHAT,
+        }
+    }
+
+    mixin._prepare_request_tooling(data, llm_request)
+
+    assert llm_request.planner_tool_hints == [
+        "analyze_loaded_document",
+        "rag_search",
+    ]

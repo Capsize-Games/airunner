@@ -193,8 +193,11 @@ class ToolExecutionMixin:
 
         for tool_call in tool_calls:
             normalized_call = tool_call
-            if tool_call.get("name") == "rag_search":
-                normalized_call = self._normalize_rag_search_tool_call(
+            if tool_call.get("name") in {
+                "rag_search",
+                "analyze_loaded_document",
+            }:
+                normalized_call = self._normalize_document_query_tool_call(
                     tool_call,
                     user_query,
                     messages,
@@ -227,13 +230,13 @@ class ToolExecutionMixin:
         )
         return updated_messages, normalized_calls
 
-    def _normalize_rag_search_tool_call(
+    def _normalize_document_query_tool_call(
         self,
         tool_call: dict,
         user_query: str,
         messages: list,
     ) -> dict:
-        """Ensure forced RAG searches always use a real query string."""
+        """Ensure document-query tools always use a real query string."""
         args = tool_call.get("args") or {}
         query = args.get("query") if isinstance(args, dict) else None
         resolved_query = self._resolve_document_followup_rag_query(
@@ -252,7 +255,8 @@ class ToolExecutionMixin:
             return tool_call
 
         self.logger.info(
-            "Repairing rag_search args with normalized document query"
+            "Repairing %s args with normalized document query",
+            tool_call.get("name", "document_query_tool"),
         )
         normalized = dict(tool_call)
         normalized["args"] = {"query": resolved_query}
@@ -523,6 +527,8 @@ class ToolExecutionMixin:
             return self._extract_web_search_details(result_content)
         elif tool_name == "rag_search":
             return self._extract_rag_search_details(result_content)
+        elif tool_name == "analyze_loaded_document":
+            return self._extract_document_analysis_details(result_content)
         return None
 
     def _extract_web_search_details(
@@ -556,3 +562,16 @@ class ToolExecutionMixin:
             return "no results"
         else:
             return "found results"
+
+    def _extract_document_analysis_details(
+        self,
+        result_content: str,
+    ) -> str:
+        """Extract status details from whole-document analysis results."""
+        if "Analysis mode: full_document" in result_content:
+            return "full document"
+        if "Analysis mode: chunked_document" in result_content:
+            return "chunked document"
+        if "could not" in result_content.lower():
+            return "no analysis"
+        return "prepared analysis"

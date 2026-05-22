@@ -64,7 +64,11 @@ class DocumentResponsePolicyMixin:
     @staticmethod
     def _is_document_result_tool(tool_name: str) -> bool:
         """Return whether one tool is part of the document QA pipeline."""
-        return tool_name in {"inspect_loaded_documents", "rag_search"}
+        return tool_name in {
+            "inspect_loaded_documents",
+            "rag_search",
+            "analyze_loaded_document",
+        }
 
     def _should_force_document_tool_response(self, tool_name: str) -> bool:
         """Return whether one document tool should bypass replanning."""
@@ -77,7 +81,10 @@ class DocumentResponsePolicyMixin:
         if isinstance(primary_tool, str) and primary_tool:
             return tool_name == primary_tool
         route = getattr(self, "_current_document_query_route", None)
-        return tool_name == "rag_search" and route is not None
+        return tool_name in {
+            "rag_search",
+            "analyze_loaded_document",
+        } and route is not None
 
     def _should_disable_tools_for_followup(
         self,
