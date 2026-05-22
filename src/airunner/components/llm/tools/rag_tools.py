@@ -146,6 +146,9 @@ _PREMISE_DIALOGUE_SCENE_MARKERS = (
     "drunk",
     "lifestyle",
 )
+_PREMISE_ROLE_LIMITS = {
+    "Current setting": 1,
+}
 _PREMISE_PREFIX_MARKERS = frozenset({"investigat"})
 
 
@@ -489,6 +492,21 @@ def _format_rag_search_results(
     return "\n\n".join(sections)
 
 
+def _format_summary_evidence_results(results: list[Any]) -> str:
+    """Return prompt-safe evidence for one active document summary."""
+    excerpt_sections: list[str] = []
+    for index, doc in enumerate(results, 1):
+        content = str(getattr(doc, "page_content", "") or "")
+        excerpt_sections.append(f"[Excerpt {index}]\n{content}")
+
+    sections = ["Current document: loaded document"]
+    if excerpt_sections:
+        sections.append(
+            "Relevant excerpts:\n" + "\n\n".join(excerpt_sections)
+        )
+    return "\n\n".join(sections)
+
+
 def _append_section(
     sections: list[tuple[str, str]],
     title: str,
@@ -685,10 +703,13 @@ def _premise_paragraph_score(paragraph: str) -> int:
         lowered, _PREMISE_BACKSTORY_MARKERS
     )
     dialogue_penalty = _premise_dialogue_penalty(source)
+    mixed_current_scene = bool(scene_hits and (plot_hits or grounded_hits >= 2))
     word_count = len(lowered.split())
     length_bonus = 1 if 20 <= word_count <= 140 else 0
     if backstory_hits and not scene_hits and plot_hits <= 1 and grounded_hits <= 2:
         return 0
+    if mixed_current_scene:
+        dialogue_penalty = min(dialogue_penalty, 2)
     score = (
         plot_hits * 5
         + grounded_hits * 3
@@ -700,6 +721,8 @@ def _premise_paragraph_score(paragraph: str) -> int:
     penalty = dialogue_penalty + backstory_hits * 4
     if scene_hits:
         penalty = max(0, penalty - scene_hits * 3)
+    if mixed_current_scene:
+        penalty = max(0, penalty - grounded_hits * 2)
     return max(0, score - penalty)
 
 
@@ -765,6 +788,69 @@ def _premise_neighbor_scene_score(paragraph: str) -> int:
     return max(0, score - min(_premise_dialogue_penalty(paragraph), 4))
 
 
+def _premise_current_setting_score(paragraph: str) -> int:
+    """Score one span for present-frame setting value."""
+    lowered = str(paragraph or "").lower()
+    if not lowered:
+        return 0
+    scene_hits = _premise_count_hits(lowered, _PREMISE_SCENE_MARKERS)
+    context_hits = _premise_count_hits(lowered, _PREMISE_CONTEXT_MARKERS)
+    grounded_hits = _premise_count_hits(
+        lowered, _PREMISE_GROUNDED_MYSTERY_MARKERS
+    )
+    backstory_hits = _premise_count_hits(
+        lowered, _PREMISE_BACKSTORY_MARKERS
+    )
+    if scene_hits == 0 and context_hits == 0:
+        return 0
+    score = scene_hits * 5 + context_hits * 3 + grounded_hits * 2
+    return max(0, score - backstory_hits * 4 - min(_premise_dialogue_penalty(paragraph), 4))
+
+
+def _premise_inciting_incident_score(paragraph: str) -> int:
+    """Score one span for the inciting case or catalyst."""
+    lowered = str(paragraph or "").lower()
+    if not lowered:
+        return 0
+    plot_hits = _premise_count_hits(lowered, _PREMISE_PLOT_MARKERS)
+    grounded_hits = _premise_count_hits(
+        lowered, _PREMISE_GROUNDED_MYSTERY_MARKERS
+    )
+    scene_hits = _premise_count_hits(lowered, _PREMISE_SCENE_MARKERS)
+    backstory_hits = _premise_count_hits(
+        lowered, _PREMISE_BACKSTORY_MARKERS
+    )
+    if plot_hits == 0 and grounded_hits == 0:
+        return 0
+    score = plot_hits * 5 + grounded_hits * 4 + scene_hits * 2
+    return max(0, score - backstory_hits * 3 - min(_premise_dialogue_penalty(paragraph), 4))
+
+
+def _premise_summary_label(paragraph: str) -> str:
+    """Return the clearest evidence role label for one span."""
+    current_score = _premise_current_setting_score(paragraph)
+    incident_score = _premise_inciting_incident_score(paragraph)
+    if incident_score >= current_score and incident_score >= 4:
+        return "Inciting incident"
+    if current_score >= 4:
+        return "Current setting"
+    return "Premise detail"
+
+
+def _split_premise_regions(text: str) -> list[str]:
+    """Return bounded sentence-like regions for long mixed paragraphs."""
+    regions: list[str] = []
+    seen: set[str] = set()
+    for paragraph in _split_document_paragraphs(text, min_words=1):
+        for region in re.split(r"(?<=[.;?!])\s+", paragraph):
+            cleaned = " ".join(region.split()).strip(" ;")
+            if len(cleaned.split()) < 8 or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            regions.append(cleaned)
+    return regions
+
+
 def _best_neighboring_scene_paragraph(
     paragraphs: list[str],
     center_index: int,
@@ -796,13 +882,18 @@ def _build_premise_evidence_documents(
     premise_limit = min(_SUMMARY_EVIDENCE_LIMIT, 6)
     selected: list[tuple[str, str]] = []
     seen: set[str] = set()
+    label_counts: dict[str, int] = {}
 
     def add(label: str, paragraph: str) -> None:
         cleaned = str(paragraph or "").strip()
         if not cleaned or cleaned in seen:
             return
+        label_limit = _PREMISE_ROLE_LIMITS.get(label)
+        if label_limit is not None and label_counts.get(label, 0) >= label_limit:
+            return
         seen.add(cleaned)
         selected.append((label, cleaned))
+        label_counts[label] = label_counts.get(label, 0) + 1
 
     opening_window = [
         paragraph
@@ -823,7 +914,7 @@ def _build_premise_evidence_documents(
     for score, _index, paragraph in scored_openings:
         if score < 2:
             continue
-        add("Opening context", paragraph)
+        add(_premise_summary_label(paragraph), paragraph)
         added_openings += 1
         if added_openings >= opening_limit:
             break
@@ -843,9 +934,30 @@ def _build_premise_evidence_documents(
             )
             if neighbor:
                 add("Current setting", neighbor)
-        add("Premise detail", paragraph)
+        add(_premise_summary_label(paragraph), paragraph)
         if len(selected) >= premise_limit:
             break
+
+    if len(selected) < 3:
+        regions = _split_premise_regions(text)
+        role_scorers = (
+            ("Current setting", _premise_current_setting_score),
+            ("Inciting incident", _premise_inciting_incident_score),
+        )
+        for label, scorer in role_scorers:
+            ranked_regions = sorted(
+                (
+                    (scorer(region), index, region)
+                    for index, region in enumerate(regions)
+                    if scorer(region) > 0
+                ),
+                key=lambda item: (-item[0], item[1]),
+            )
+            for _score, _index, region in ranked_regions:
+                add(label, region)
+                break
+            if len(selected) >= premise_limit:
+                break
 
     if len(selected) < 3:
         opening_window_size = min(
@@ -871,7 +983,7 @@ def _build_premise_evidence_documents(
         for score, _index, paragraph in scored_early_window:
             if score <= 0:
                 continue
-            add("Opening context", paragraph)
+            add(_premise_summary_label(paragraph), paragraph)
             if len(selected) >= premise_limit:
                 break
 
@@ -1094,11 +1206,8 @@ def rag_search(
                 query=query,
             )
             if summary_results:
-                result_text = _format_rag_search_results(
-                    summary_results,
-                    include_excerpts=True,
-                    include_document_summaries=False,
-                    include_excerpt_labels=False,
+                result_text = _format_summary_evidence_results(
+                    summary_results
                 )
                 logger.info(
                     "Returning %s summary evidence excerpts built from full document text",

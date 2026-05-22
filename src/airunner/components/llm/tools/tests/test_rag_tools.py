@@ -95,9 +95,11 @@ def test_rag_search_builds_summary_evidence_across_document(
 
     result = rag_search("summarize the document for me", api=api)
 
+    assert "Current document: loaded document" in result
     assert "Matched documents:" not in result
     assert "Inferred title from filename:" not in result
     assert "[Excerpt 1 from" not in result
+    assert "[Excerpt 1]" in result
     assert "Front matter (INTRODUCTION)." in result
     assert "Section: THE BOOK OF SATAN." in result
     assert "Section: THE BOOK OF BELIAL." in result
@@ -369,6 +371,74 @@ def test_rag_search_book_about_query_preserves_current_frame_setting(
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")
 @patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_splits_long_mixed_paragraph(
+    mock_resolve,
+    mock_extract,
+):
+    """Long mixed paragraphs should still surface separate premise roles."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "At the Golden Palm resort on St. Honore, Major Palgrave bores "
+        "Miss Marple with stories about Kenya, India, and the North West "
+        "Frontier until he suddenly tries to show her a snapshot of a "
+        "murderer; before he can explain it, he is interrupted, a ball of "
+        "wool drops, and later he is found dead, drawing Miss Marple into "
+        "an investigation among the hotel guests."
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert result.count("[Excerpt ") >= 2
+    assert "At the Golden Palm resort on St. Honore" in result
+    assert "Inciting incident." in result
+    assert "snapshot of a murderer" in result
+    assert "investigation among the hotel guests" in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_prefers_premise_coverage_over_scene_management(
+    mock_resolve,
+    mock_extract,
+):
+    """Scene-management detail should not displace premise coverage."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            "At the Golden Palm resort on St. Honore, Miss Marple sits among the hotel guests while Major Palgrave corners her with stories from his travels.",
+            "Molly rearranges table decorations, removes a knife, straightens a fork, resets a glass, and walks out to the terrace before dinner.",
+            "The subject of murder comes up and Major Palgrave produces a snapshot, asking whether anyone would guess the man in the photograph was a killer.",
+            "Major Palgrave keeps talking about Kenya, India, and the North West Frontier while Miss Marple listens politely and keeps hold of her ball of wool.",
+            "When Palgrave dies before he can explain the photograph, Miss Marple begins investigating the killing among the resort guests.",
+        ]
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "Golden Palm resort on St. Honore" in result
+    assert "snapshot" in result
+    assert "investigating the killing among the resort guests" in result
+    assert "rearranges table decorations" not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
 def test_rag_search_summary_omits_filename_inference_metadata(
     mock_resolve,
     mock_extract,
@@ -392,6 +462,7 @@ def test_rag_search_summary_omits_filename_inference_metadata(
 
     result = rag_search("what is this book about?", api=api)
 
+    assert "Current document: loaded document" in result
     assert "Inferred title from filename:" not in result
     assert "Inferred author from filename:" not in result
     assert "Another Tale of" not in result

@@ -1,4 +1,9 @@
-"""Helpers for stitching streamed text fragments."""
+"""Normalize raw streamed token fragments at the model/daemon boundary.
+
+This module is for repairing word and punctuation boundaries before chunks are
+surfaced to the rest of the app. Already-normalized GUI-visible chunks should
+be concatenated directly instead of passing through these heuristics again.
+"""
 
 from __future__ import annotations
 
@@ -61,6 +66,7 @@ _COMMON_WORDS = frozenset(
         "been",
         "between",
         "bible",
+        "bit",
         "book",
         "but",
         "by",
@@ -74,6 +80,7 @@ _COMMON_WORDS = frozenset(
         "christie",
         "cold",
         "collection",
+        "conversation",
         "dead",
         "death",
         "details",
@@ -128,6 +135,7 @@ _COMMON_WORDS = frozenset(
         "murder",
         "more",
         "mystery",
+        "name",
         "narrator",
         "night",
         "noir",
@@ -138,6 +146,7 @@ _COMMON_WORDS = frozenset(
         "of",
         "on",
         "one",
+        "once",
         "or",
         "our",
         "out",
@@ -284,6 +293,8 @@ def _needs_plain_word_boundary(existing: str, chunk: str) -> bool:
     right = _leading_word(chunk)
     if not left or not right:
         return False
+    if "'" in left and _is_known_word(right):
+        return True
     if len(left) == 1 or len(right) == 1:
         if _is_known_word(left + right):
             return False
@@ -291,11 +302,14 @@ def _needs_plain_word_boundary(existing: str, chunk: str) -> bool:
             left.lower() in _SINGLE_LETTER_WORDS
             and left.isalpha()
             and (left.islower() or left in {"I", "A"})
-            and not _looks_like_compound_suffix_fragment(right)
+            and (
+                _is_known_word(right)
+                or not _looks_like_compound_suffix_fragment(right)
+            )
         )
         right_is_single_word = (
             right.lower() in _SINGLE_LETTER_WORDS
-            and right.islower()
+            and (right.islower() or right in {"I", "A"})
             and left.isalpha()
             and not _looks_like_compound_suffix_fragment(left)
         )
@@ -333,6 +347,21 @@ def needs_stream_space(existing: str, chunk: str) -> bool:
         return existing.count(prev) % 2 == 0
     if _ends_with_opening_quote(existing):
         return False
+
+    if prev.isalpha() and next_char.isdigit():
+        return _is_known_word(_trailing_word(existing))
+    if prev.isdigit() and next_char.isalpha():
+        return _is_known_word(_leading_word(chunk))
+    if next_char == "(" and prev_is_word:
+        return _is_known_word(_trailing_word(existing))
+    if (
+        next_char in _OPENING_QUOTE_CHARS
+        and next_char != "'"
+        and len(chunk) > 1
+        and chunk[1].isalnum()
+        and prev_is_word
+    ):
+        return True
 
     if prev_is_word and next_is_word:
         return _needs_plain_word_boundary(existing, chunk)

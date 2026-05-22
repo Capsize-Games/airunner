@@ -8,14 +8,20 @@ In simple terms, our RAG flow does three things:
 
 1. It decides whether the user is asking about an attached document and what kind of document question it is.
 2. It retrieves the right document data.
-3. It drafts an answer from that retrieved data, verifies the draft against the same evidence, and only then emits the final answer into the chat UI.
+3. It builds grounded internal document artifacts from that evidence,
+   verifies them, and then runs a final normal chat reply through the
+   standard prompt/history layer before streaming the visible answer.
 
 For document questions, AIRunner currently uses two different tool paths:
 
 - `inspect_loaded_documents` for document identity and structure questions.
 - `rag_search` for summary and retrieval questions.
 
-For summaries, the important detail is that the model does not answer directly from the raw tool output anymore. The synthesis layer strips the raw RAG inventory down to evidence bodies and then builds a summary-specific prompt around that evidence.
+For summaries, the important detail is that the model does not answer
+directly from the raw tool output anymore. The synthesis layer strips
+the raw RAG inventory down to evidence bodies, builds a summary-specific
+prompt around that evidence, and then hands the grounded result to one
+final conversational pass.
 
 For a single active document, the summary path is now designed to be
 broader than ordinary semantic search. Instead of relying only on the
@@ -42,13 +48,14 @@ flowchart LR
     C --> D{Document intent}
     D -->|Identity or Structure| E[inspect_loaded_documents]
     D -->|Summary or Retrieval| F[rag_search]
-    E --> G[NodeFunctionsMixin builds final answer]
+    E --> G[NodeFunctionsMixin builds grounded document artifact]
     F --> H[NodeFunctionsMixin builds synthesis prompt from excerpts]
-    H --> I[Model drafts answer from retrieved evidence]
-    I --> I2[NodeFunctionsMixin verifies draft against evidence]
-    G --> J[GenerationMixin streams assistant text]
-    I2 --> J
-    J --> K[ConversationWidget renders the assistant bubble]
+    H --> I[Model drafts grounded answer from retrieved evidence]
+    I --> J[NodeFunctionsMixin verifies grounded answer against evidence]
+    G --> K[NodeFunctionsMixin runs final normal chat pass with standard prompt and full history]
+    J --> K
+    K --> L[GenerationMixin streams assistant text]
+    L --> M[ConversationWidget renders the assistant bubble]
 ```
 
 ## Summary-Specific Flow
@@ -62,17 +69,20 @@ flowchart LR
     E -->|Yes| F[Prefer opening setup and early conflict evidence]
     E -->|No| G[Detect headings or paragraph regions]
     G --> H[Select distributed evidence across the document]
-    F --> I[Return summary evidence blocks]
+    F --> I[Return labelled summary evidence blocks]
     H --> I
     C -->|No| H[Fallback to wider semantic retrieval]
     H --> I
     I --> J[NodeFunctionsMixin strips labels and builds summary prompt]
     J --> K[Internal draft synthesis gets larger answer budget]
-    K --> L[Model drafts summary]
-    L --> M[NodeFunctionsMixin verifies draft against evidence]
-    M --> N{Visible output malformed?}
-    N -->|Yes| O[Prefer drafted summary from thinking content]
-    N -->|No| P[Use verified summary]
+    K --> L[Model drafts grounded summary]
+    L --> M[NodeFunctionsMixin verifies grounded summary against evidence]
+    M --> N{Verification output user-facing?}
+    N -->|No| O[Prefer grounded synthesis artifact]
+    N -->|Yes| P[Use repaired grounded summary]
+    O --> Q[Run final normal chat pass with standard prompt and full history]
+    P --> Q
+    Q --> R[Stream final conversational reply to the user]
 ```
 
 ## Where The Instructions Come From
@@ -116,12 +126,14 @@ This means the RAG path now has a distinct embedding runtime that can be loading
 
 ### 3. Post-tool synthesis instructions
 
-This is the main place where the summary answer style is created.
+This is the main place where grounded document artifacts are assembled
+and then handed to the normal chat layer.
 
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L530): `_generate_response_message_from_results()` decides whether to answer deterministically or run the internal draft and verification passes.
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015): `_build_document_summary_prompt_results()` strips summary prompts down to excerpt bodies so the model sees evidence instead of raw RAG inventory noise.
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831): `_build_search_results_prompt()` writes the draft prompt that turns retrieved content into an answer candidate.
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935): `_build_search_results_verification_prompt()` writes the follow-up verification prompt that rewrites the final answer against the same evidence.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py): `_run_document_conversational_pass()` turns the grounded document artifact into the final user-facing reply through the standard prompt builder and full conversation history.
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L3164): `_generate_streaming_response()` gathers streamed visible text, thinking content, and tool-call chunks.
 
 Three extra safeguards now matter for summary turns:
@@ -129,6 +141,8 @@ Three extra safeguards now matter for summary turns:
 - the internal no-tool summary synthesis pass uses a larger generation budget than the outer RAG action so it does not inherit the concise retrieval budget and truncate mid-thought,
 - for "what is this book/document about?" prompts, the synthesis guidance tells the model to lead with premise, setting, central conflict, and major relationships before isolated later scenes,
 - after that draft pass, a second internal verification pass checks the draft against the same evidence and rewrites unsupported or stray details before any final answer is emitted,
+- verification remains an internal grounded stage; if it emits audit prose or wrapped verdict markup, fallback keeps the grounded synthesis artifact instead of surfacing the verifier text,
+- once grounded content is ready, one final no-tool conversational pass runs through the normal system prompt, persona settings, and full conversation history so the visible answer sounds like a normal chat reply,
 - malformed prompt-tail fragments such as partial `Answer:` label text are rejected before they can override a better drafted summary recovered from thinking content.
 - if the visible synthesis output merely echoes the summary instructions themselves, that prompt-guidance text is rejected and recovery falls back to drafted content from thinking, flattening numbered reasoning summaries into plain prose when needed.
 
@@ -180,8 +194,9 @@ Example: "summarize the document for me" or "what is this book about?"
     steered toward setup and conflict first.
 8. The first internal pass drafts a summary from the evidence.
 9. A second internal pass verifies that draft against the same evidence and rewrites unsupported or stray claims before the answer becomes visible.
-10. If the verified pass emits a malformed tail fragment or simply reflects the instructions back, recovery prefers the better drafted summary from thinking content instead of trusting that visible fragment.
-11. The streamed answer is rendered into the assistant bubble.
+10. If verification emits wrapped verdicts, audit prose, malformed tail fragments, or prompt echo, recovery prefers the grounded synthesis artifact instead of trusting that visible fragment.
+11. The recovered grounded content is passed through one final no-tool conversational pass that uses the normal system prompt, mood/personality settings, and full conversation history.
+12. The streamed answer is rendered into the assistant bubble.
 
 ## Why Summary Quality Lives Mostly In One File
 
@@ -192,8 +207,9 @@ If the summary is weak, the most important file is:
 That file controls:
 
 - whether a document result should be answered deterministically or synthesized,
-- which prompt is built for summary questions,
+- which grounded prompts are built for summary questions,
 - how the draft answer is verified against the same evidence before it becomes visible,
+- how the final user-facing document reply is rebuilt through the normal chat prompt/history layer,
 - how raw RAG results are cleaned before synthesis,
 - how hidden thinking is recovered when the visible stream is empty or poor.
 
@@ -221,7 +237,7 @@ When a document answer looks wrong, check the pipeline in this order:
 3. Did the persisted index refresh itself if it was built before the current embedding strategy in [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)?
 4. Did the right tool run in [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py#L267)?
 5. Did the tool return good evidence in [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L417)?
-6. Did [_build_document_summary_prompt_results()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015), [_build_search_results_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831), and [_build_search_results_verification_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935) create the right draft and verification inputs, and did recovery reject any prompt-guidance echo?
-7. Did the answer stream correctly through [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302) and [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087)?
+6. Did [_build_document_summary_prompt_results()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015), [_build_search_results_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831), and [_build_search_results_verification_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935) create the right grounded draft and verification inputs, and did recovery reject any verifier markup or prompt-guidance echo?
+7. Did the grounded artifact make it through the final normal chat pass, and did the answer stream correctly through [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302) and [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087)?
 
 That order usually tells you whether the bug is routing, retrieval, synthesis, or rendering.

@@ -5,11 +5,13 @@ Handles workflow execution via invoke and stream methods.
 
 import uuid
 from contextlib import nullcontext
-from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
 
 from langchain_core.messages import HumanMessage, AIMessage
 
+from airunner.components.llm.managers.mixins.node_functions import (
+    ConsciousnessIntegrationMixin,
+)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -17,76 +19,16 @@ from airunner.utils.application import get_logger
 DEFAULT_WORKFLOW_RECURSION_LIMIT = 20
 
 
-class StreamingMixin:
+class StreamingMixin(ConsciousnessIntegrationMixin):
     """Manages workflow execution and streaming."""
 
-    @dataclass
-    class _ConsciousnessCtx:
-        conversation_id: Optional[int]
-        thread_id: Any
-        messages: Optional[List[Any]]
-
-    def _get_consciousness_engine(self):
-        """Best-effort loader for the optional consciousness extension."""
-        try:
-            from airunner_extensions.consciousness import get_engine
-
-            return get_engine()
-        except Exception:
-            return None
-
-    @staticmethod
-    def _is_consciousness_enabled(value: Any) -> bool:
-        if value is None:
-            return True
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
-        return bool(value)
-
-    def _consciousness_enabled_for_request(self) -> bool:
-        try:
-            data = getattr(self, "data", None) or {}
-            return self._is_consciousness_enabled(data.get("enable_consciousness", None))
-        except Exception:
-            return True
-
     def _maybe_consciousness_pre_turn(self, messages: List[Any]) -> None:
-        if not self._consciousness_enabled_for_request():
-            return
-        engine = self._get_consciousness_engine()
-        if not engine:
-            return
-        try:
-            ctx = self._ConsciousnessCtx(
-                conversation_id=getattr(self, "_conversation_id", None),
-                thread_id=getattr(self, "_thread_id", "default"),
-                messages=messages,
-            )
-            engine.on_pre_turn(ctx)
-        except Exception:
-            # Never break generation.
-            return
+        """Call the pre-turn consciousness hook when enabled."""
+        self._run_consciousness_hook("on_pre_turn", messages=messages)
 
     def _maybe_consciousness_post_turn(self, messages: List[Any]) -> None:
-        if not self._consciousness_enabled_for_request():
-            return
-        engine = self._get_consciousness_engine()
-        if not engine:
-            return
-        try:
-            ctx = self._ConsciousnessCtx(
-                conversation_id=getattr(self, "_conversation_id", None),
-                thread_id=getattr(self, "_thread_id", "default"),
-                messages=messages,
-            )
-            engine.on_post_turn(ctx)
-        except Exception:
-            # Never break generation.
-            return
+        """Call the post-turn consciousness hook when enabled."""
+        self._run_consciousness_hook("on_post_turn", messages=messages)
 
     def __init__(self):
         """Initialize streaming mixin."""

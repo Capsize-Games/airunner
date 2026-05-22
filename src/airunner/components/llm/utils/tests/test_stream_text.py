@@ -223,6 +223,24 @@ def test_combine_stream_chunks_preserves_common_prose_boundaries():
     )
 
 
+def test_combine_stream_chunks_restores_recent_prose_regressions():
+    """Recent streamed prose boundaries should not collapse."""
+    assert combine_stream_chunks(["I'm", "still", "a", "bit"]) == (
+        "I'm still a bit"
+    )
+    assert combine_stream_chunks(["search results", "I"]) == (
+        "search results I"
+    )
+    assert combine_stream_chunks(["a", "mystery"]) == "a mystery"
+    assert combine_stream_chunks(["a", "conversation"]) == (
+        "a conversation"
+    )
+    assert combine_stream_chunks(["a", '"snapshot']) == 'a "snapshot'
+    assert combine_stream_chunks(["book", "2"]) == "book 2"
+    assert combine_stream_chunks(["name", "(if"]) == "name (if"
+    assert combine_stream_chunks(["Once", "I"]) == "Once I"
+
+
 def test_combine_stream_chunks_merges_red_herrings_suffix_split():
     """Red-herring style suffix splits should collapse back into one word."""
     assert combine_stream_chunks(["redherr", " ings"]) == "redherrings"

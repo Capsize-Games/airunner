@@ -46,7 +46,7 @@ DEFAULT_ACTION_PRESET = GenerationPreset(
 
 ACTION_GENERATION_PRESETS = {
     LLMActionType.CHAT: GenerationPreset(
-        temperature=0.7,
+        temperature=0.2,
         repetition_penalty=1.15,
         no_repeat_ngram_size=3,
         max_new_tokens=8192,
@@ -55,7 +55,7 @@ ACTION_GENERATION_PRESETS = {
         tool_categories=None,
     ),
     LLMActionType.UPDATE_MOOD: GenerationPreset(
-        temperature=0.7,
+        temperature=0.2,
         repetition_penalty=1.15,
         no_repeat_ngram_size=3,
         max_new_tokens=8192,
@@ -73,7 +73,7 @@ ACTION_GENERATION_PRESETS = {
         tool_categories=None,
     ),
     LLMActionType.PERFORM_RAG_SEARCH: GenerationPreset(
-        temperature=0.3,
+        temperature=0.2,
         repetition_penalty=1.1,
         no_repeat_ngram_size=2,
         max_new_tokens=300,
@@ -82,7 +82,7 @@ ACTION_GENERATION_PRESETS = {
         tool_categories=("RAG", "SEARCH"),
     ),
     LLMActionType.SUMMARIZE: GenerationPreset(
-        temperature=0.3,
+        temperature=0.2,
         repetition_penalty=1.1,
         no_repeat_ngram_size=2,
         max_new_tokens=300,
@@ -91,7 +91,7 @@ ACTION_GENERATION_PRESETS = {
         tool_categories=("SEARCH",),
     ),
     LLMActionType.SEARCH: GenerationPreset(
-        temperature=0.3,
+        temperature=0.2,
         repetition_penalty=1.1,
         no_repeat_ngram_size=2,
         max_new_tokens=300,
@@ -182,6 +182,7 @@ class WorkflowGenerationPreset:
 
     min_max_new_tokens: Optional[int] = None
     reasoning_effort: Optional[str] = None
+    temperature: Optional[float] = None
 
     def apply_to_generation_kwargs(
         self,
@@ -201,6 +202,9 @@ class WorkflowGenerationPreset:
         if self.reasoning_effort is not None:
             prepared["reasoning_effort"] = self.reasoning_effort
 
+        if self.temperature is not None:
+            prepared["temperature"] = self.temperature
+
         return prepared
 
 
@@ -211,10 +215,12 @@ WORKFLOW_GENERATION_PRESETS = {
     WorkflowGenerationStage.DOCUMENT_SYNTHESIS: WorkflowGenerationPreset(
         min_max_new_tokens=1024,
         reasoning_effort="low",
+        temperature=0.1,
     ),
     WorkflowGenerationStage.DOCUMENT_VERIFICATION: WorkflowGenerationPreset(
         min_max_new_tokens=1024,
         reasoning_effort="low",
+        temperature=0.1,
     ),
 }
 

@@ -30,6 +30,7 @@ class _CapturingNodeFunctions(_DummyNodeFunctions):
         tool_name,
         user_question,
         generation_kwargs=None,
+        message_history=None,
     ):
         self.captured = (tool_content, tool_name, user_question)
         return AIMessage(content="forced response", tool_calls=[])
@@ -212,6 +213,43 @@ def test_route_after_tools_keeps_search_web_in_model_loop():
     }
 
     assert mixin._route_after_tools(state) == "model"
+
+
+def test_route_after_model_forces_response_for_duplicate_tool_call():
+    """Duplicate tool calls in one turn should force a synthesized reply."""
+    mixin = _DummyNodeFunctions()
+    state = {
+        "messages": [
+            HumanMessage(content="search for updates"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "search_web",
+                        "args": {"query": "latest updates"},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Search results here.",
+                tool_call_id="tool-1",
+                name="search_web",
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-2",
+                        "name": "search_web",
+                        "args": {"query": "latest updates"},
+                    }
+                ],
+            ),
+        ]
+    }
+
+    assert mixin._route_after_model(state) == "force_response"
 
 
 def test_call_model_disables_tools_for_synthesized_document_followup():
@@ -672,6 +710,46 @@ def test_recover_forced_response_content_rejects_search_results_preface():
             "Based on the search results, this appears to be a mystery novel "
             "about a murder and a photograph. Would you like me to search "
             "for more specific details?"
+        ),
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_recover_forced_response_content_rejects_document_excerpt_search_offer():
+    """Document-excerpt hedging and search offers should not surface."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            "Based on the document excerpt, this appears to be a mystery "
+            "novel about a murder and a photograph. Would you like me to "
+            "search for more specific details about the plot, characters, "
+            "or themes in the document?"
+        ),
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_recover_forced_response_content_rejects_wrapped_verification_verdict():
+    """Wrapped verification verdict text should not surface as the answer."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            '"Narrator remembers seeing someone twenty years ago on roller '
+            'skates... killed in a car crash." -> Supported by evidence.'
         ),
         tool_calls=[],
     )

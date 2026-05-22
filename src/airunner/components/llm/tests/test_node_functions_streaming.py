@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
 from airunner.components.llm.managers.mixins.node_functions_mixin import (
     NodeFunctionsMixin,
 )
@@ -60,12 +62,48 @@ class NodeFunctionsMixinDouble(NodeFunctionsMixin):
         self._interrupted = False
         self._signal_emitter = SimpleNamespace(emit_signal=Mock())
         self._token_callback = Mock()
+        self._system_prompt = "You are a helpful assistant."
+        self._tools = []
         self.logger = Mock()
 
     @staticmethod
     def _is_tool_call_json(_text):
         """Return False for plain text chunks in tests."""
         return False
+
+
+class _ForceResponseHistoryMixinDouble(NodeFunctionsMixinDouble):
+    """Capture message history passed into forced document answer generation."""
+
+    def __init__(self):
+        super().__init__([])
+        self.captured_message_history = None
+
+    def _generate_response_message_from_results(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str = "",
+        generation_kwargs=None,
+        message_history=None,
+    ):
+        self.captured_message_history = message_history
+        return AIMessage(content="Final document answer", tool_calls=[])
+
+
+class _DocumentFollowupPromptMixinDouble(NodeFunctionsMixinDouble):
+    """Record the message list passed through the standard prompt builder."""
+
+    def __init__(self, chunks):
+        super().__init__(chunks)
+        self.built_prompt_messages = []
+
+    def _build_prompt(self, trimmed_messages):
+        self.built_prompt_messages.append(list(trimmed_messages))
+        return [
+            SystemMessage(content="system prompt active"),
+            *trimmed_messages,
+        ]
 
 
 def test_streaming_response_excludes_thinking_blocks_from_content():
@@ -236,6 +274,41 @@ def test_tool_call_json_detection_handles_flat_tool_query_shape():
     ) is True
 
 
+def test_force_response_node_passes_full_state_history_to_document_generation():
+    """Forced document responses should receive the full workflow history."""
+    mixin = _ForceResponseHistoryMixinDouble()
+    state_messages = [
+        HumanMessage(content="Earlier question"),
+        AIMessage(content="Earlier answer"),
+        HumanMessage(content="What is this book about?"),
+        AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "tool-1",
+                    "name": "rag_search",
+                    "args": {"query": "What is this book about?"},
+                }
+            ],
+        ),
+        ToolMessage(
+            content="Current document: loaded document\n\nRelevant excerpts:\n[Excerpt 1]\nCurrent setting. Example excerpt.",
+            tool_call_id="tool-1",
+            name="rag_search",
+        ),
+    ]
+
+    result = mixin._force_response_node(
+        {
+            "messages": state_messages,
+            "generation_kwargs": {},
+        }
+    )
+
+    assert result["messages"][0].content == "Final document answer"
+    assert mixin.captured_message_history == state_messages
+
+
 class _ThinkingSensitiveChatModel:
     """Fake model that hides the answer inside thinking unless disabled."""
 
@@ -256,6 +329,29 @@ class _ThinkingSensitiveChatModel:
         if self.enable_thinking:
             return iter([_reasoning_chunk("", "draft hidden answer")])
         return iter([_chunk("Visible answer")])
+
+
+class _DocumentConversationalPassChatModel:
+    """Fake model that records synthesis, verification, and final prompts."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [_chunk("Grounded draft answer.")],
+            [_chunk("Verified grounded answer.")],
+            [_reasoning_chunk("Conversational final answer.", "final chat thinking")],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        if hasattr(prompt, "to_messages"):
+            captured_prompt = prompt.to_messages()
+        else:
+            captured_prompt = list(prompt)
+        self.prompts.append(captured_prompt)
+        return iter(self._responses.pop(0))
 
 
 def test_forced_response_stream_disables_thinking_and_tools():
@@ -284,6 +380,42 @@ def test_forced_response_stream_disables_thinking_and_tools():
         "type": "function",
         "function": {"name": "rag_search"},
     }
+
+
+def test_forced_response_runs_final_conversational_pass_with_standard_prompt():
+    """Document replies should finish through the standard prompt builder."""
+    mixin = _DocumentFollowupPromptMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _DocumentConversationalPassChatModel()
+    message_history = [
+        HumanMessage(content="Earlier question"),
+        AIMessage(content="Earlier answer"),
+        HumanMessage(content="What is this book about?"),
+    ]
+
+    message = mixin._generate_response_message_from_results(
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. Miss Marple is staying at a Caribbean resort when Major "
+        "Palgrave tries to show her a snapshot of a murderer.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. Palgrave is killed before he can explain what he has seen.",
+        "rag_search",
+        "what is this book about?",
+        message_history=message_history,
+    )
+
+    assert message.content == "Conversational final answer."
+    assert len(mixin._chat_model.prompts) == 3
+    assert mixin._chat_model.prompts[0][0].__class__.__name__ == "HumanMessage"
+    assert mixin._chat_model.prompts[1][0].__class__.__name__ == "HumanMessage"
+    assert mixin._chat_model.prompts[2][0].__class__.__name__ == "SystemMessage"
+    assert len(mixin.built_prompt_messages) == 1
+    assert mixin.built_prompt_messages[0][0].content == "Earlier question"
+    assert mixin.built_prompt_messages[0][1].content == "Earlier answer"
+    assert mixin.built_prompt_messages[0][2].content == "What is this book about?"
+    assert "Verified grounded answer." in mixin.built_prompt_messages[0][-1].content
 
 
 class _ReasoningOnlyChatModel:
@@ -423,6 +555,36 @@ class _VerificationVerdictFallbackChatModel:
                 _chunk(
                     '"Narrator remembers seeing someone twenty years ago on '
                     'roller skates... killed in a car crash." Supported.'
+                )
+            ],
+        ]
+
+    def stream(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return iter(self._responses.pop(0))
+
+
+class _VerificationWrappedVerdictFallbackChatModel:
+    """Fake model whose verification pass emits wrapped verdict markup."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.prompts = []
+        self._responses = [
+            [
+                _chunk(
+                    "The novel follows a haunted Hollywood studio mystery "
+                    "built around an impossible corpse and the buried past "
+                    "tied to the lot and cemetery next door."
+                )
+            ],
+            [
+                _chunk(
+                    '"Narrator remembers seeing someone twenty years ago on '
+                    'roller skates... killed in a car crash." -> Supported '
+                    "by evidence."
                 )
             ],
         ]
@@ -642,6 +804,31 @@ def test_forced_response_prompt_requests_thorough_summary():
     assert "Start with the central themes, not opening trivia." in prompt
 
 
+def test_forced_response_prompt_handles_summary_evidence_shape():
+    """Actual full-text summary tool output should keep document context."""
+    mixin = NodeFunctionsMixinDouble([])
+    prompt = mixin._build_search_results_prompt(
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. Miss Marple is staying at a Caribbean resort when Major "
+        "Palgrave tries to show her a snapshot of a murderer.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. Palgrave is killed before he can explain what he has seen.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert "Evidence excerpts:" in prompt
+    assert "Current document: loaded document" in prompt
+    assert "[Excerpt 1]" not in prompt
+    assert "[Excerpt 2]" not in prompt
+    assert "Search results:\n" not in prompt
+    assert "currently loaded document the user is asking about" in prompt
+    assert "do not ask the user to identify which book" in prompt.lower()
+    assert "lead with those labeled spans first" in prompt
+
+
 def test_forced_response_summary_runs_verification_pass():
     """Summary answers should be finalized through a verification pass."""
     mixin = NodeFunctionsMixinDouble([])
@@ -695,6 +882,33 @@ def test_forced_response_summary_falls_back_from_verification_verdict():
     mixin = NodeFunctionsMixinDouble([])
     mixin.llm_request = SimpleNamespace(document_query_intent="summary")
     mixin._chat_model = _VerificationVerdictFallbackChatModel()
+
+    message = mixin._generate_response_message_from_results(
+        "Matched documents:\n"
+        "Document 1: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "The story unfolds around a haunted Hollywood studio and the "
+        "cemetery next door.\n\n"
+        "[Excerpt 2 from A Graveyard for Lunatics - Ray Bradbury.mobi]\n"
+        "An impossible corpse and long-buried history drive the mystery.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert message.content == (
+        "The novel follows a haunted Hollywood studio mystery built "
+        "around an impossible corpse and the buried past tied to the lot "
+        "and cemetery next door."
+    )
+    assert len(mixin._chat_model.prompts) == 2
+
+
+def test_forced_response_summary_falls_back_from_wrapped_verification_verdict():
+    """Wrapped verifier verdict text should not replace a valid summary draft."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    mixin._chat_model = _VerificationWrappedVerdictFallbackChatModel()
 
     message = mixin._generate_response_message_from_results(
         "Matched documents:\n"
@@ -896,8 +1110,10 @@ def test_forced_response_summary_uses_larger_internal_budget():
     assert len(mixin._chat_model.observed_kwargs) == 2
     assert mixin._chat_model.observed_kwargs[0]["max_new_tokens"] == 1024
     assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "low"
+    assert mixin._chat_model.observed_kwargs[0]["temperature"] == 0.1
     assert mixin._chat_model.observed_kwargs[1]["max_new_tokens"] == 1024
     assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "low"
+    assert mixin._chat_model.observed_kwargs[1]["temperature"] == 0.1
 
 
 class _InternalSynthesisReasoningChatModel:

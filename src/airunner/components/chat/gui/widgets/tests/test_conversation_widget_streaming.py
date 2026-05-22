@@ -284,10 +284,10 @@ def test_process_sequential_tokens_updates_message_with_request_id(
     assert widget._streamed_messages[0]["content"] == "Hello world"
 
 
-def test_process_sequential_tokens_combines_markdown_boundaries(
+def test_process_sequential_tokens_concatenates_normalized_markdown_chunks(
     monkeypatch,
 ):
-    """Streaming updates should normalize markdown title boundaries."""
+    """Streaming updates should trust upstream-normalized markdown chunks."""
     dispatch = Mock()
     monkeypatch.setattr(
         module.FormatterExtended,
@@ -297,25 +297,24 @@ def test_process_sequential_tokens_combines_markdown_boundaries(
     widget = SimpleNamespace(
         _expected_sequence=1,
         _sequence_buffer={
-            1: LLMResponse(message="to", sequence_number=1, request_id="req-4"),
+            1: LLMResponse(
+                message=" to",
+                sequence_number=1,
+                request_id="req-4",
+            ),
             2: LLMResponse(
-                message="*The",
+                message=" *The",
                 sequence_number=2,
                 request_id="req-4",
             ),
             3: LLMResponse(
-                message="Sat",
+                message=" Satanic",
                 sequence_number=3,
                 request_id="req-4",
             ),
             4: LLMResponse(
-                message=" anic",
+                message=" Bible*",
                 sequence_number=4,
-                request_id="req-4",
-            ),
-            5: LLMResponse(
-                message="Bible*",
-                sequence_number=5,
                 request_id="req-4",
             ),
         },
