@@ -561,6 +561,15 @@ function createSavedStatusWidget(msg) {
         history.appendChild(createStatusItemElement(item));
     }
 
+    widget.addEventListener('click', (event) => {
+        const copyButton = event.target.closest('.status-item-copy-toggle');
+        if (!copyButton) {
+            return;
+        }
+        event.stopPropagation();
+        copyStatusText(buildSavedStatusWidgetCopyText(items));
+    });
+
     widget.appendChild(header);
     const thinkingItem = items.find((item) => item.type === 'thinking' && item.content);
     if (thinkingItem) {
@@ -1259,6 +1268,27 @@ function buildStatusWidgetCopyText(requestId) {
         .join('\n\n');
 }
 
+function copyStatusText(text) {
+    const normalized = String(text || '');
+    if (!normalized) {
+        return;
+    }
+    if (window.chatBridge && typeof window.chatBridge.copyText === 'function') {
+        window.chatBridge.copyText(normalized);
+        return;
+    }
+    copyTextToClipboard(normalized).catch((error) => {
+        console.warn('[conversation.js] failed to copy thinking text:', error);
+    });
+}
+
+function buildSavedStatusWidgetCopyText(items) {
+    return (items || [])
+        .map((item) => buildStatusItemCopyText(item))
+        .filter((text) => !!text)
+        .join('\n\n');
+}
+
 function copyStatusItemText(requestId, itemId) {
     if (!itemId) {
         return;
@@ -1271,13 +1301,7 @@ function copyStatusItemText(requestId, itemId) {
     if (!text) {
         return;
     }
-    if (window.chatBridge && typeof window.chatBridge.copyText === 'function') {
-        window.chatBridge.copyText(text);
-        return;
-    }
-    copyTextToClipboard(text).catch((error) => {
-        console.warn('[conversation.js] failed to copy thinking text:', error);
-    });
+    copyStatusText(text);
 }
 
 function renderStatusItem(item, isNew = false) {
