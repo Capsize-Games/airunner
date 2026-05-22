@@ -92,7 +92,7 @@ class StreamingControlMixin:
         thinking_metadata: Optional[Dict[str, Any]] = None,
         buffer_visible_output: bool = False,
     ) -> Optional[AIMessage]:
-        """Stream one internal model pass with tools and thinking disabled."""
+        """Stream one internal model pass with tools disabled."""
         chat_model = getattr(self, "_chat_model", None)
         token_callback_backup = getattr(self, "_token_callback", None)
         if chat_model is None:
@@ -104,7 +104,6 @@ class StreamingControlMixin:
 
         original_values = {}
         for attr_name, override in (
-            ("enable_thinking", False),
             ("tools", None),
             ("tool_choice", None),
         ):

@@ -8,6 +8,7 @@ from airunner.enums import SignalCode
 import weakref
 import threading
 import queue
+import shiboken6
 from airunner.utils.application.get_logger import get_logger
 
 logger = get_logger(__name__)
@@ -65,6 +66,8 @@ class Signal(QObject):
         self._emitter = _SignalEmitter()
 
         # Determine if the callback is a bound method
+        self._orig_self_ref = None
+        self._is_qobject_method = False
         if inspect.ismethod(callback):
             # If the bound method's instance is a QObject, keep a QPointer to
             # the underlying C++ object so we can detect when it has been
@@ -72,25 +75,8 @@ class Signal(QObject):
             # attempted to call it). Also keep a WeakMethod to the Python
             # callable so we don't keep the instance alive.
             self._orig_func = callback.__func__
-            self._orig_self = callback.__self__
-            # If the bound instance is a QObject, connect to its destroyed
-            # signal so we can detect C++-level deletion and avoid calling
-            # into a deleted object (which may segfault).
-            try:
-                if isinstance(self._orig_self, QObject):
-                    self._dead = False
-                    try:
-                        # destroyed passes the QObject as an argument; accept it
-                        self._orig_self.destroyed.connect(
-                            lambda obj=None: setattr(self, "_dead", True)
-                        )
-                    except Exception:
-                        # If connecting fails, fall back to not having a dead flag
-                        self._dead = False
-                else:
-                    self._dead = False
-            except Exception:
-                self._dead = False
+            self._orig_self_ref = self._make_weak_ref(callback.__self__)
+            self._is_qobject_method = isinstance(callback.__self__, QObject)
 
             # WeakMethod will return None when the Python wrapper goes away
             self._callback_ref = weakref.WeakMethod(callback)
@@ -102,7 +88,6 @@ class Signal(QObject):
                 # Fallback: store strong ref if not weakrefable
                 self._callback_ref = lambda: callback
             self._orig_func = callback
-            self._orig_self = None
 
         try:
             # Try to inspect call signature; default to 1 param on failure
@@ -117,17 +102,40 @@ class Signal(QObject):
             self.param_count = 1
         self._emitter.signal.connect(self.on_signal_received)
 
+    @staticmethod
+    def _make_weak_ref(value: object):
+        try:
+            return weakref.ref(value)
+        except TypeError:
+            return lambda: value
+
+    def _bound_instance(self):
+        if self._orig_self_ref is None:
+            return None
+        try:
+            return self._orig_self_ref()
+        except Exception:
+            return None
+
+    def is_dead(self) -> bool:
+        instance = self._bound_instance()
+        if self._orig_self_ref is not None and instance is None:
+            return True
+        if self._is_qobject_method:
+            try:
+                if not shiboken6.isValid(instance):
+                    return True
+            except Exception:
+                return True
+        try:
+            return self._callback_ref() is None
+        except Exception:
+            return True
+
     @Slot(object)
     def on_signal_received(self, data: Dict):
         try:
-            # Resolve the weak reference to get the live callable
-            # If this Signal is tied to a QObject, ensure the underlying C++
-            # object is still valid before resolving the weak method. If the
-            # QPointer is null, the C++ object was deleted and calling into
-            # Python wrappers can result in a segfault.
-            # If we've been notified that the QObject has been destroyed,
-            # skip calling the callback.
-            if getattr(self, "_dead", False):
+            if self.is_dead():
                 return
             cb = None
             try:
@@ -174,7 +182,8 @@ class Signal(QObject):
         if inspect.ismethod(slot_function):
             return (
                 getattr(slot_function, "__func__", None) == self._orig_func
-                and getattr(slot_function, "__self__", None) == self._orig_self
+                and getattr(slot_function, "__self__", None)
+                == self._bound_instance()
             )
         else:
             return slot_function == self._orig_func
@@ -327,11 +336,16 @@ class SignalMediator(metaclass=SingletonMeta):
             # Delegate emission to the custom backend
             self.backend.emit_signal(code, data)
         elif code in self.signals:
+            live_signals = []
             for signal in self.signals[code]:
                 try:
+                    if signal.is_dead():
+                        continue
                     self._deliver_signal(signal, data)
+                    live_signals.append(signal)
                 except RuntimeError:
                     pass
+            self.signals[code] = live_signals
 
     @staticmethod
     def _deliver_signal(signal: Signal, data: Dict) -> None:

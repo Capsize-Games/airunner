@@ -383,7 +383,7 @@ class ChatGGUF(BaseChatModel):
     repeat_penalty: float = 1.15
     flash_attn: bool = True
     tools: Optional[List[Dict[str, Any]]] = None
-    tool_choice: Optional[str] = None  # "auto", "none", or specific tool name
+    tool_choice: Optional[Union[str, Dict[str, Any]]] = None
     tool_calling_mode: str = "native"
     enable_thinking: bool = True
     reasoning_effort: str = "medium"
@@ -656,7 +656,67 @@ class ChatGGUF(BaseChatModel):
         return (
             bool(self.tools)
             and self.tool_choice != "none"
-            and self.tool_calling_mode != "react"
+            and self.tool_calling_mode == "native"
+        )
+
+    def _native_tool_choice(self) -> Optional[Union[str, Dict[str, Any]]]:
+        """Normalize internal tool-choice values for llama.cpp."""
+        if self.tool_choice == "any" and self._use_native_tool_calling():
+            return "required"
+        return self.tool_choice
+
+    def _forced_tool_name(self) -> Optional[str]:
+        """Return one explicitly forced tool name, if present."""
+        if isinstance(self.tool_choice, str):
+            normalized = self.tool_choice.strip()
+            if normalized and normalized not in {
+                "auto",
+                "none",
+                "any",
+                "required",
+            }:
+                return normalized
+            return None
+        if not isinstance(self.tool_choice, dict):
+            return None
+        function = self.tool_choice.get("function") or {}
+        if not isinstance(function, dict):
+            return None
+        name = function.get("name")
+        return str(name).strip() or None if name else None
+
+    def _non_native_tool_choice_instruction(self) -> str:
+        """Return prompt guidance for required non-native tool turns."""
+        forced_tool = self._forced_tool_name()
+        if not forced_tool and self.tool_choice not in {"any", "required"}:
+            return ""
+
+        if self.tool_calling_mode == "react":
+            if forced_tool:
+                return (
+                    "\n\nYou MUST call the tool '"
+                    f"{forced_tool}' now. Respond ONLY with that tool call "
+                    "in the documented Action / Action Input format. Do "
+                    "NOT write conversational text before or after it."
+                )
+            return (
+                "\n\nYou MUST call at least one tool now. Respond ONLY "
+                "with tool-call output in the documented Action / Action "
+                "Input format. Do NOT write conversational text before or "
+                "after the tool call."
+            )
+
+        if forced_tool:
+            return (
+                "\n\nYou MUST call the tool '"
+                f"{forced_tool}' now. Respond ONLY with one <tool_call>"
+                "...</tool_call> block for that tool. Do NOT write "
+                "conversational text before or after it."
+            )
+        return (
+            "\n\nYou MUST call at least one tool now. Respond ONLY with "
+            "one or more <tool_call>...</tool_call> blocks. Do NOT write "
+            "conversational text before or after the tool call output."
         )
 
     def set_interrupted(self, value: bool) -> None:
@@ -794,7 +854,10 @@ class ChatGGUF(BaseChatModel):
             return self._inject_gpt_oss_tool_instructions(system_content)
 
         if self.tool_calling_mode == "react":
-            return self._inject_react_tool_instructions(system_content)
+            return (
+                self._inject_react_tool_instructions(system_content)
+                + self._non_native_tool_choice_instruction()
+            )
 
         # Build Qwen-style XML tool definitions
         tool_defs = []
@@ -819,7 +882,11 @@ For each function call, return a json object with function name and arguments wi
 {{"name": "<function-name>", "arguments": <args-json-object>}}
 </tool_call>"""
 
-        return system_content + tool_instructions
+        return (
+            system_content
+            + tool_instructions
+            + self._non_native_tool_choice_instruction()
+        )
 
     def _inject_gpt_oss_tool_instructions(self, system_content: str) -> str:
         """Inject Harmony-style tool instructions for GPT-OSS."""
@@ -1808,10 +1875,12 @@ For each function call, return a json object with function name and arguments wi
         if stop:
             chat_kwargs["stop"] = stop
 
+        native_tool_choice = self._native_tool_choice()
+
         if self._use_native_tool_calling():
             chat_kwargs["tools"] = self.tools
-            if self.tool_choice is not None:
-                chat_kwargs["tool_choice"] = self.tool_choice
+            if native_tool_choice is not None:
+                chat_kwargs["tool_choice"] = native_tool_choice
 
         if self._use_native_tool_calling():
             self.logger.debug(
@@ -1995,10 +2064,12 @@ For each function call, return a json object with function name and arguments wi
         if stop:
             chat_kwargs["stop"] = stop
 
+        native_tool_choice = self._native_tool_choice()
+
         if self._use_native_tool_calling():
             chat_kwargs["tools"] = self.tools
-            if self.tool_choice is not None:
-                chat_kwargs["tool_choice"] = self.tool_choice
+            if native_tool_choice is not None:
+                chat_kwargs["tool_choice"] = native_tool_choice
 
         self._interrupted = False
         full_content = []
@@ -2007,7 +2078,9 @@ For each function call, return a json object with function name and arguments wi
         call_started = time.perf_counter()
         self.logger.info(f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}")
         self.logger.info(f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}")
-        self.logger.info(f"[ChatGGUF._stream] tool_choice: {self.tool_choice}")
+        self.logger.info(
+            f"[ChatGGUF._stream] tool_choice: {native_tool_choice}"
+        )
         
         chunk_count = 0
         gpt_oss_parser = (
@@ -2126,14 +2199,15 @@ For each function call, return a json object with function name and arguments wi
     def bind_tools(
         self,
         tools: Sequence[Union[Dict[str, Any], type, Callable, BaseTool]],
-        tool_choice: Optional[str] = None,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> Runnable[LanguageModelInput, BaseMessage]:
         """Bind tools to this chat model.
 
         Args:
             tools: List of tools to bind (will be converted to OpenAI format)
-            tool_choice: Tool selection strategy ("auto", "none", or tool name)
+            tool_choice: Tool selection strategy. Internal callers may use
+                "any" to require some tool; llama.cpp receives "required".
             **kwargs: Additional arguments
 
         Returns:

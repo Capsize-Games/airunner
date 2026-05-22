@@ -8,6 +8,22 @@ from airunner.components.llm.tools.rag_tools_helpers._shared import (
 )
 
 
+def looks_like_generic_heading(line: str) -> bool:
+    """Return whether one line resembles a plain chapter heading."""
+    normalized = " ".join(str(line or "").split())
+    if not normalized or normalized != normalized.upper():
+        return False
+    if any(mark in normalized for mark in ('"', ",", ".", "!", "?")):
+        return False
+
+    words = normalized.split()
+    if len(words) < 2 or len(words) > 10:
+        return False
+
+    alpha_chars = [char for char in normalized if char.isalpha()]
+    return len(alpha_chars) >= 8
+
+
 def extract_document_structure_headings(text: str) -> list[str]:
     """Extract major structure headings from one source document."""
     pattern = re.compile(
@@ -19,7 +35,11 @@ def extract_document_structure_headings(text: str) -> list[str]:
     seen: set[str] = set()
     for raw_line in str(text or "").splitlines():
         line = " ".join(raw_line.strip().split())
-        if not line or len(line) > 120 or not pattern.fullmatch(line):
+        if not line or len(line) > 120:
+            continue
+        if not pattern.fullmatch(line) and not looks_like_generic_heading(
+            line
+        ):
             continue
         if line in seen:
             continue

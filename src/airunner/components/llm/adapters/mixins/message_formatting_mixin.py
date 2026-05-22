@@ -251,24 +251,7 @@ class MessageFormattingMixin:
         # Only pass enable_thinking if the model actually uses it to avoid template warnings
         model_supports_thinking = self._check_model_supports_thinking()
         if model_supports_thinking:
-            # First check if enable_thinking was set directly on the instance (for fast calls)
-            instance_thinking = getattr(self, 'enable_thinking', None)
-            if instance_thinking is not None:
-                user_wants_thinking = instance_thinking
-                self.logger.debug(f"[THINKING] enable_thinking={user_wants_thinking} (from instance attr)")
-            else:
-                # Read from database for real-time toggle support
-                from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-                db_settings = LLMGeneratorSettings.objects.first()
-                user_wants_thinking = True  # Default to enabled
-                if db_settings is not None:
-                    user_val = getattr(db_settings, "enable_thinking", None)
-                    if user_val is not None:
-                        user_wants_thinking = user_val
-                self.logger.debug(f"[THINKING] enable_thinking={user_wants_thinking} (from DB setting)")
-            
-            # Use the determined preference for thinking mode
-            template_kwargs["enable_thinking"] = user_wants_thinking
+            template_kwargs["enable_thinking"] = True
 
         # Store extracted images for vision model processing
         if extracted_images:

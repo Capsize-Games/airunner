@@ -13,6 +13,14 @@ from airunner.components.llm.tools.rag_tools import (
 )
 
 
+def _summary_request(focus: str = "overview") -> SimpleNamespace:
+    """Return request metadata for summary-style document turns."""
+    return SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus=focus,
+    )
+
+
 def _build_session_with_active_docs(*doc_batches: list[object]) -> MagicMock:
     """Return a mocked session that yields active-doc batches."""
     session = MagicMock()
@@ -50,8 +58,8 @@ def test_rag_search_returns_metadata_and_excerpts_for_document_queries():
     )
 
 
-def test_rag_search_uses_standard_retrieval_breadth():
-    """Summary fallback retrieval should request a wider result set."""
+def test_rag_search_uses_summary_retrieval_breadth_from_request_metadata():
+    """Summary breadth should come from request metadata, not query text."""
     doc = SimpleNamespace(
         metadata={
             "source": "/library/The Satanic Bible - Anton LaVey.pdf",
@@ -64,6 +72,7 @@ def test_rag_search_uses_standard_retrieval_breadth():
     search = Mock(return_value=[doc])
     api = SimpleNamespace(
         search=search,
+        llm_request=_summary_request(),
         _get_active_document_names=lambda: [
             "The Satanic Bible - Anton LaVey.pdf"
         ],
@@ -98,6 +107,7 @@ def test_rag_search_builds_summary_evidence_across_document(
     search = Mock()
     api = SimpleNamespace(
         search=search,
+        llm_request=_summary_request(),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "The Satanic Bible - Anton LaVey.pdf"
@@ -146,6 +156,7 @@ def test_rag_search_summary_avoids_opening_front_matter_bias(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request(),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "The Satanic Bible - Anton LaVey.pdf"
@@ -193,6 +204,7 @@ def test_rag_search_book_about_query_prefers_premise_over_late_scene_noise(
     mock_extract.return_value = "\n\n".join(paragraphs)
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Graveyard for Lunatics - Ray Bradbury.mobi"
@@ -229,6 +241,7 @@ def test_rag_search_book_about_query_prefers_grounded_mystery_hooks(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Graveyard for Lunatics - Ray Bradbury.mobi"
@@ -261,6 +274,7 @@ def test_rag_search_book_about_query_deprioritizes_stray_dialogue(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Graveyard for Lunatics - Ray Bradbury.mobi"
@@ -293,6 +307,7 @@ def test_rag_search_book_about_query_skips_quote_only_opening_fallback(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Caribbean Mystery - Agatha Christie.epub"
@@ -332,6 +347,7 @@ def test_rag_search_book_about_query_ignores_substring_marker_false_positives(
     mock_extract.return_value = "\n\n".join(paragraphs)
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Caribbean Mystery - Agatha Christie.epub"
@@ -367,6 +383,7 @@ def test_rag_search_book_about_query_preserves_current_frame_setting(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Caribbean Mystery - Agatha Christie.epub"
@@ -399,6 +416,7 @@ def test_rag_search_book_about_query_splits_long_mixed_paragraph(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Caribbean Mystery - Agatha Christie.epub"
@@ -434,6 +452,7 @@ def test_rag_search_book_about_query_prefers_premise_coverage_over_scene_managem
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Caribbean Mystery - Agatha Christie.epub"
@@ -446,6 +465,157 @@ def test_rag_search_book_about_query_prefers_premise_coverage_over_scene_managem
     assert "snapshot" in result
     assert "investigating the killing among the resort guests" in result
     assert "rearranges table decorations" not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_premise_theme_query_uses_premise_evidence(
+    mock_resolve,
+    mock_extract,
+):
+    """Whole-document analysis should keep premise/theme queries on the premise path."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            "At the Golden Palm resort on St. Honore, Miss Marple sits among the hotel guests while Major Palgrave corners her with stories from his travels.",
+            '"Take all this business about Kenya," said Major Palgrave. "Lots of chaps gabbing away who know nothing about the place!"',
+            "The subject of murder comes up and Major Palgrave produces a snapshot, asking whether anyone would guess the man in the photograph was a killer.",
+            "When Palgrave dies before he can explain the photograph, Miss Marple begins investigating the killing among the resort guests.",
+        ]
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = analyze_loaded_document(
+        "What is the premise and theme of this book?",
+        api=api,
+    )
+
+    assert "Analysis mode: chunked_document" in result
+    assert "Supporting evidence:" in result
+
+    supporting_evidence = result.split("Supporting evidence:\n\n", 1)[1]
+    assert "Golden Palm resort on St. Honore" in supporting_evidence
+    assert "snapshot" in supporting_evidence
+    assert "investigating the killing among the resort guests" in (
+        supporting_evidence
+    )
+    assert '"Take all this business about Kenya' not in supporting_evidence
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_explain_premise_query_uses_premise_evidence(
+    mock_resolve,
+    mock_extract,
+):
+    """Explain-premise phrasing should use the same premise evidence path."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            "At the Golden Palm resort on St. Honore, Miss Marple sits among the hotel guests while Major Palgrave corners her with stories from his travels.",
+            '"Take all this business about Kenya," said Major Palgrave. "Lots of chaps gabbing away who know nothing about the place!"',
+            "The subject of murder comes up and Major Palgrave produces a snapshot, asking whether anyone would guess the man in the photograph was a killer.",
+            "When Palgrave dies before he can explain the photograph, Miss Marple begins investigating the killing among the resort guests.",
+        ]
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = analyze_loaded_document(
+        "explain the premise of this book",
+        api=api,
+    )
+
+    supporting_evidence = result.split("Supporting evidence:\n\n", 1)[1]
+    assert "Golden Palm resort on St. Honore" in supporting_evidence
+    assert "snapshot" in supporting_evidence
+    assert "investigating the killing among the resort guests" in (
+        supporting_evidence
+    )
+    assert '"Take all this business about Kenya' not in supporting_evidence
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_premise_query_prefers_opening_setting(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise evidence should keep the opening setting over later side scenes."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            '"TAKE all this business about Kenya," said Major Palgrave. '
+            '"Lots of chaps gabbing away who know nothing about the place!"',
+            "Old Miss Marple inclined her head while Major Palgrave went on with his travel recollections.",
+            "But the pattern was essentially the same as so many elderly bores she had heard before.",
+            "It was very gay that evening at the Golden Palm Hotel, where Miss Marple sat at her little corner table and looked out into the warm West Indies night.",
+            "Kenya he had talked about Kenya and then India and then for some reason they had got on to murder, and after picking up her ball of wool he began telling her about a snapshot of a murderer.",
+            "MOLLY rearranged a few of the table decorations in the dining room, removed an extra knife, straightened a fork, reset a glass or two, and walked out on to the terrace outside.",
+            "The subject of murder having come up, he produced his snapshot and asked whether anyone would think the man in the photograph was a killer.",
+        ]
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = analyze_loaded_document(
+        "Provide a summary of 'A Caribbean Mystery' including its premise, themes, and key characters.",
+        api=api,
+    )
+
+    supporting_evidence = result.split("Supporting evidence:\n\n", 1)[1]
+    assert "Golden Palm Hotel" in supporting_evidence
+    assert "snapshot of a murderer" in supporting_evidence
+    assert "MOLLY rearranged" not in supporting_evidence
 
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")
@@ -465,6 +635,7 @@ def test_rag_search_summary_omits_filename_inference_metadata(
     )
     api = SimpleNamespace(
         search=Mock(),
+        llm_request=_summary_request("premise"),
         _get_active_document_paths=lambda: [file_path],
         _get_active_document_names=lambda: [
             "A Graveyard for Lunatics_ Another Tale of - Ray Bradbury.mobi"
@@ -479,8 +650,8 @@ def test_rag_search_summary_omits_filename_inference_metadata(
     assert "Another Tale of" not in result
 
 
-def test_rag_search_expands_single_document_pronoun_queries():
-    """Single-document follow-ups should include the active doc name."""
+def test_rag_search_uses_request_rewritten_query_when_available():
+    """Document follow-ups should use the preprocess-owned rewritten query."""
     doc = SimpleNamespace(
         metadata={
             "source": "/library/The Satanic Bible - Anton LaVey.pdf",
@@ -493,17 +664,19 @@ def test_rag_search_expands_single_document_pronoun_queries():
     search = Mock(return_value=[doc])
     api = SimpleNamespace(
         search=search,
-        _get_active_document_names=lambda: [
-            "The Satanic Bible - Anton LaVey.pdf"
-        ],
+        llm_request=SimpleNamespace(
+            rewritten_prompt=(
+                "what are the chapters in The Satanic Bible by Anton LaVey?"
+            )
+        ),
     )
 
     rag_search("what are the chapters in it?", api=api)
 
     effective_query = search.call_args.args[0]
-    assert "what are the chapters in it?" in effective_query
-    assert "The Satanic Bible" in effective_query
-    assert "Anton LaVey" in effective_query
+    assert effective_query == (
+        "what are the chapters in The Satanic Bible by Anton LaVey?"
+    )
 
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")
@@ -561,6 +734,8 @@ def test_analyze_loaded_document_returns_chunked_context_for_large_docs(
     )
     api = SimpleNamespace(
         llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
             attached_document_total_tokens=9000,
             attached_document_capabilities=[
                 {
@@ -578,13 +753,116 @@ def test_analyze_loaded_document_returns_chunked_context_for_large_docs(
     result = analyze_loaded_document("summarize this document", api=api)
 
     assert "Analysis mode: chunked_document" in result
-    assert "Analysis pipeline: deterministic_map_reduce" in result
-    assert "Refined whole-document synthesis:" in result
-    assert "Chunk summaries:" in result
+    assert "Analysis pipeline: distributed_evidence_bundle" in result
+    assert "Document coverage:" in result
     assert "Supporting evidence:" in result
+    assert "Refined whole-document synthesis:" not in result
+    assert "Chunk summaries:" not in result
     assert "[Excerpt 1]" in result
-    assert "[Chunk 2 - THE BOOK OF SATAN]" in result
+    assert "1. INTRODUCTION" in result
+    assert "2. THE BOOK OF SATAN" in result
     assert "Section: THE BOOK OF SATAN." in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_uses_generic_chapter_headings(
+    mock_resolve,
+    mock_extract,
+):
+    """Novel-style all-caps chapter headings should drive chunked analysis."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "MAJOR PALGRAVE TELLS A STORY\n\n"
+        "Miss Marple listens to Major Palgrave at a Caribbean resort while he circles toward a murder anecdote.\n\n"
+        "He produces a snapshot that may identify a killer.\n\n"
+        "A DEATH IN THE HOTEL\n\n"
+        "Palgrave dies before he can explain the photograph.\n\n"
+        "Miss Marple begins piecing together what he meant and who is at risk."
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = analyze_loaded_document("summarize this document", api=api)
+
+    assert "Analysis mode: chunked_document" in result
+    assert "Document coverage:" in result
+    assert "1. MAJOR PALGRAVE TELLS A STORY" in result
+    assert "2. A DEATH IN THE HOTEL" in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_premise_query_frontloads_early_chapters(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise summaries should keep early chapters instead of late samples."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "A Caribbean Mystery\n\n"
+        "Agatha Christie\n\n"
+        "MAJOR PALGRAVE TELLS A STORY\n\n"
+        "Miss Marple listens to Major Palgrave at a Caribbean resort while he turns toward a murder anecdote.\n\n"
+        "A DEATH IN THE HOTEL\n\n"
+        "Palgrave dies before he can explain the photograph and the mystery becomes urgent.\n\n"
+        "MISS MARPLE SEEKS MEDICAL ATTENTION\n\n"
+        "Miss Marple talks to Dr. Graham while quietly piecing together what the missing snapshot means.\n\n"
+        "MISS MARPLE MAKES A DECISION\n\n"
+        "She decides she cannot ignore the danger around the hotel guests.\n\n"
+        "IN THE SMALL HOURS\n\n"
+        "During the night she replays the clues and the people connected to Palgrave.\n\n"
+        "MORNING ON THE BEACH\n\n"
+        "Fresh conversations sharpen her view of the relationships at the resort.\n\n"
+        "A TALK WITH ESTHER WALTERS\n\n"
+        "Later witness interviews add detail about side suspicions and private tensions.\n\n"
+        "EXIT VICTORIA JOHNSON\n\n"
+        "A much later chapter shifts toward consequences after the core setup is already clear."
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = analyze_loaded_document("what is this book about?", api=api)
+
+    assert "Document coverage:" in result
+    assert "1. MAJOR PALGRAVE TELLS A STORY" in result
+    assert "2. A DEATH IN THE HOTEL" in result
+    assert "3. MISS MARPLE SEEKS MEDICAL ATTENTION" in result
+    assert "6. MORNING ON THE BEACH" in result
+    assert "A TALK WITH ESTHER WALTERS" not in result
+    assert "EXIT VICTORIA JOHNSON" not in result
 
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")

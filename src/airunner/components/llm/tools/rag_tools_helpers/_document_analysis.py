@@ -9,9 +9,7 @@ from airunner.components.llm.tools.rag_tools_helpers._document_access import (
     get_single_active_document_path,
 )
 from airunner.components.llm.tools.rag_tools_helpers._document_analysis_pipeline import (
-    build_chunk_analyses,
-    build_refined_document_synthesis,
-    format_chunk_analyses,
+    select_document_analysis_chunks,
 )
 from airunner.components.llm.tools.rag_tools_helpers._result_formatting import (
     document_label,
@@ -19,6 +17,7 @@ from airunner.components.llm.tools.rag_tools_helpers._result_formatting import (
 )
 from airunner.components.llm.tools.rag_tools_helpers._summary_evidence import (
     build_summary_evidence_documents,
+    request_document_summary_focus,
 )
 
 
@@ -92,34 +91,36 @@ def build_chunked_document_analysis(
     query: str,
     text: str,
     estimated_tokens: int,
+    summary_focus: str | None = None,
 ) -> str:
     """Return one chunked whole-document analysis context string."""
-    evidence = build_summary_evidence_documents(metadata, text, query=query)
-    chunk_analyses = build_chunk_analyses(query, text)
-    refined_synthesis = build_refined_document_synthesis(chunk_analyses)
-    if not evidence and not chunk_analyses:
+    evidence = build_summary_evidence_documents(
+        metadata,
+        text,
+        query=query,
+        summary_focus=summary_focus,
+    )
+    coverage_chunks = select_document_analysis_chunks(
+        text,
+        summary_focus=summary_focus,
+    )
+    if not evidence and not coverage_chunks:
         return ""
 
     sections = [
         "Current document analysis:",
         f"Document: {document_label(metadata)}",
         "Analysis mode: chunked_document",
-        "Analysis pipeline: deterministic_map_reduce",
+        "Analysis pipeline: distributed_evidence_bundle",
         f"Requested analysis: {query}",
         f"Estimated document tokens: {estimated_tokens}",
     ]
-    if refined_synthesis:
+    coverage_outline = format_document_coverage(coverage_chunks)
+    if coverage_outline:
         sections.extend(
             [
-                "Refined whole-document synthesis:",
-                refined_synthesis,
-            ]
-        )
-    if chunk_analyses:
-        sections.extend(
-            [
-                "Chunk summaries:",
-                format_chunk_analyses(chunk_analyses),
+                "Document coverage:",
+                coverage_outline,
             ]
         )
     if evidence:
@@ -130,6 +131,20 @@ def build_chunked_document_analysis(
             ]
         )
     return "\n\n".join(sections)
+
+
+def format_document_coverage(
+    coverage_chunks: list[tuple[str, str]],
+) -> str:
+    """Return one numbered coverage outline for large-document analysis."""
+    if not coverage_chunks:
+        return ""
+
+    lines = []
+    for index, (title, _body) in enumerate(coverage_chunks, 1):
+        cleaned_title = str(title or "").strip() or f"Document region {index}"
+        lines.append(f"{index}. {cleaned_title}")
+    return "\n".join(lines)
 
 
 def analyze_loaded_document_impl(
@@ -181,6 +196,7 @@ def analyze_loaded_document_impl(
         query=query,
         text=text,
         estimated_tokens=estimated_tokens,
+        summary_focus=request_document_summary_focus(rag_manager),
     )
     if chunked:
         return chunked

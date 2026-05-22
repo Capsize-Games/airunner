@@ -300,7 +300,12 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                     additional_kwargs={},
                     tool_calls=[],
                 )
-                if document_tool and message_history:
+                if (
+                    message_history
+                    and self._should_run_document_conversational_pass(
+                        tool_name,
+                    )
+                ):
                     final_message = self._run_document_conversational_pass(
                         deterministic_response,
                         user_question=user_question,
@@ -319,6 +324,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 all_tool_content,
                 tool_name,
                 user_question,
+                structured_answer=document_tool,
             )
             simple_prompt = [HumanMessage(content=simple_prompt_text)]
             internal_generation_kwargs = (
@@ -403,7 +409,10 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 ),
                 tool_calls=[],
             )
-            if document_tool and message_history:
+            if (
+                message_history
+                and self._should_run_document_conversational_pass(tool_name)
+            ):
                 final_message = self._run_document_conversational_pass(
                     visible_content,
                     user_question=user_question,
@@ -414,6 +423,11 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 )
                 if final_message is not None:
                     return final_message
+            if document_tool:
+                return self._merge_document_stage_thinking(
+                    grounded_message,
+                    stage_messages=stage_messages,
+                )
             return grounded_message
 
         except Exception as error:
@@ -503,6 +517,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 tool_name,
                 user_question,
                 drafted_response,
+                structured_answer=self._is_document_result_tool(tool_name),
             )
         )
         self.logger.info(

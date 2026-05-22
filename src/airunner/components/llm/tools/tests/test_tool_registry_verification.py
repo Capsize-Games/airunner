@@ -149,6 +149,22 @@ class TestToolRegistryVerification:
             "scrape_website" in tool_names
         ), "scrape_website not in SEARCH category"
 
+    def test_document_tool_boundaries_registered_correctly(self):
+        """Document tools should keep KB write separate from active-doc RAG."""
+        rag_tool = ToolRegistry.get("rag_search")
+        kb_search_tool = ToolRegistry.get(
+            "search_knowledge_base_documents"
+        )
+        kb_write_tool = ToolRegistry.get("save_to_knowledge_base")
+
+        assert rag_tool is not None
+        assert kb_search_tool is not None
+        assert kb_write_tool is not None
+        assert rag_tool.category == ToolCategory.RAG
+        assert kb_search_tool.category == ToolCategory.SEARCH
+        assert kb_write_tool.category == ToolCategory.RESEARCH
+        assert "analyze_loaded_document" in rag_tool.description
+
     def test_can_retrieve_tools_by_name(self):
         """Verify tools can be retrieved by name."""
         # Test web tools

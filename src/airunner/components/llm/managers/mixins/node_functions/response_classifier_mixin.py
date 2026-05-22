@@ -129,6 +129,22 @@ class ResponseClassifierMixin:
         if not lowered.startswith(directive_prefixes):
             return False
 
+        word_count = len(lowered.split())
+        if word_count <= 24 and (
+            lowered.count(",") >= 2
+            or any(
+                marker in lowered
+                for marker in (
+                    " and the ",
+                    " and her ",
+                    " and his ",
+                    " and their ",
+                    " and its ",
+                )
+            )
+        ):
+            return True
+
         directive_markers = (
             "aspect",
             "aspects",

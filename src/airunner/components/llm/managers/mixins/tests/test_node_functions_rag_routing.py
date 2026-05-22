@@ -106,6 +106,76 @@ class _VerificationFallbackNodeFunctions(_DummyNodeFunctions):
         return self._streamed_messages.pop(0)
 
 
+class _NoConversationalPassVerificationNodeFunctions(
+    _VerificationFallbackNodeFunctions
+):
+    def _run_document_conversational_pass(self, *_args, **_kwargs):
+        raise AssertionError(
+            "synthesized document answers should not run a final "
+            "conversational pass"
+        )
+
+
+class _ReasoningOnlyVerificationFallbackNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self._streamed_messages = [
+            AIMessage(
+                content=(
+                    "Miss Marple looks into a resort murder after a doctor "
+                    "realizes he once recognized a killer from a snapshot."
+                ),
+                tool_calls=[],
+            ),
+            AIMessage(
+                content="",
+                additional_kwargs={
+                    "thinking_content": (
+                        "1. **Final Polish:**\n"
+                        "* *Final Answer:* \"Focus on Miss Marple at the "
+                        "Golden Palm Hotel, the death, the investigation, "
+                        "and her determination.\"\n"
+                        "* *Critique:* \"This is very brief and looks like "
+                        "an outline rather than an explanation.\""
+                    )
+                },
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, *_args, **_kwargs):
+        return self._streamed_messages.pop(0)
+
+
+class _StructuredAnswerNodeFunctions(_DummyNodeFunctions):
+    def __init__(self):
+        super().__init__()
+        self._chat_model = SimpleNamespace(tool_calling_mode="json")
+        self.prompts = []
+        self._streamed_messages = [
+            AIMessage(
+                content=(
+                    "<answer_text>Miss Marple looks into a resort murder "
+                    "after a doctor realizes he once recognized a killer "
+                    "from a snapshot.</answer_text>"
+                ),
+                tool_calls=[],
+            ),
+            AIMessage(
+                content=(
+                    "<answer_text>Miss Marple investigates a resort murder "
+                    "after a doctor connects an old snapshot to a killer.</answer_text>"
+                ),
+                tool_calls=[],
+            ),
+        ]
+
+    def _stream_internal_response(self, prompt, *_args, **_kwargs):
+        self.prompts.append(prompt[0].content)
+        return self._streamed_messages.pop(0)
+
+
 class _DocumentFollowupPromptNodeFunctions(_DummyNodeFunctions):
     def __init__(self):
         super().__init__()
@@ -160,6 +230,7 @@ class _CallModelDocumentFollowupNodeFunctions(_DummyNodeFunctions):
         self.prompt_updates = []
         self.prompt_built_with = None
         self.prompt_seen = None
+        self.captured = None
         self._chat_model = SimpleNamespace(
             tool_calling_mode="json",
             tools=["analyze_loaded_document"],
@@ -181,6 +252,26 @@ class _CallModelDocumentFollowupNodeFunctions(_DummyNodeFunctions):
         return trimmed_messages
 
     def _generate_response(self, prompt, generation_kwargs):
+        raise AssertionError(
+            "generic follow-up model call should not run for grounded "
+            "document synthesis"
+        )
+
+    def _generate_forced_response_message(
+        self,
+        tool_content,
+        tool_name,
+        user_question,
+        generation_kwargs=None,
+        message_history=None,
+    ):
+        self.captured = {
+            "tool_content": tool_content,
+            "tool_name": tool_name,
+            "user_question": user_question,
+            "generation_kwargs": generation_kwargs,
+            "message_history": message_history,
+        }
         self.prompt_seen = self._system_prompt
         return AIMessage(content="Conversational reply", tool_calls=[])
 
@@ -214,10 +305,12 @@ def test_route_after_tools_returns_model_for_rag_search():
 def test_route_after_tools_returns_model_for_synthesized_document_rag_route():
     """Synthesized document answers should return to the model node."""
     mixin = _DummyNodeFunctions()
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="summary",
-        force_tool="rag_search",
-        answer_mode="synthesized",
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(
+            document_query_intent="summary",
+            primary_tool="rag_search",
+            document_answer_mode="synthesized",
+        )
     )
     state = {
         "messages": [
@@ -245,11 +338,13 @@ def test_route_after_tools_returns_model_for_synthesized_document_rag_route():
 def test_route_after_tools_returns_model_for_document_analysis_route():
     """Whole-document analysis should stay in the synthesized document path."""
     mixin = _DummyNodeFunctions()
-    mixin.llm_request = SimpleNamespace(document_answer_mode="synthesized")
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="summary",
-        force_tool="rag_search",
-        answer_mode="synthesized",
+    mixin.llm_request = SimpleNamespace(
+        document_answer_mode="synthesized",
+        request_plan=SimpleNamespace(
+            document_query_intent="summary",
+            primary_tool="analyze_loaded_document",
+            document_answer_mode="synthesized",
+        ),
     )
     state = {
         "messages": [
@@ -298,6 +393,33 @@ def test_route_after_tools_forces_response_for_inspection_tool():
     }
 
     assert mixin._route_after_tools(state) == "force_response"
+
+
+def test_route_after_tools_keeps_inspection_in_loop_for_planner_mode():
+    """Planner-controlled document turns should stay in the tool loop."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(planner_mode="select_tools")
+    state = {
+        "messages": [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "inspect_loaded_documents",
+                        "args": {},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Loaded documents:\nDocument 1: Example.pdf",
+                tool_call_id="tool-1",
+                name="inspect_loaded_documents",
+            ),
+        ]
+    }
+
+    assert mixin._route_after_tools(state) == "model"
 
 
 def test_route_after_tools_keeps_search_web_in_model_loop():
@@ -540,6 +662,9 @@ def test_post_tool_instructions_specialize_rag_structure_answers():
     """RAG structure answers should avoid another tool pass and metadata chatter."""
     mixin = _DummyNodeFunctions()
     mixin._chat_model = SimpleNamespace(tool_calling_mode="json")
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(document_query_intent="structure")
+    )
 
     prompt = mixin._add_post_tool_instructions(
         "Base prompt",
@@ -568,10 +693,51 @@ def test_post_tool_instructions_specialize_rag_structure_answers():
     assert "Do NOT discuss your reasoning" in prompt
 
 
-def test_post_tool_instructions_specialize_rag_summary_answers():
-    """Summary answers should avoid genre and series hallucinations."""
+def test_post_tool_instructions_keep_document_planner_loop_open():
+    """Planner-controlled document turns should allow another tool choice."""
     mixin = _DummyNodeFunctions()
     mixin._chat_model = SimpleNamespace(tool_calling_mode="json")
+    mixin.llm_request = SimpleNamespace(planner_mode="select_tools")
+    mixin._tools = [
+        "inspect_loaded_documents",
+        "analyze_loaded_document",
+        "rag_search",
+    ]
+
+    prompt = mixin._add_post_tool_instructions(
+        "Base prompt",
+        [
+            HumanMessage(content="what is this document?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tool-1",
+                        "name": "inspect_loaded_documents",
+                        "args": {},
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="Loaded documents:\nDocument 1: Example.pdf",
+                tool_call_id="tool-1",
+                name="inspect_loaded_documents",
+            ),
+        ],
+    )
+
+    assert "DOCUMENT TOOL LOOP" in prompt
+    assert "call the next most useful document tool" in prompt
+    assert "Do NOT call another tool" not in prompt
+
+
+def test_post_tool_instructions_specialize_rag_summary_answers():
+    """Summary answers should use generic evidence-grounding guidance."""
+    mixin = _DummyNodeFunctions()
+    mixin._chat_model = SimpleNamespace(tool_calling_mode="json")
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(document_query_intent="summary")
+    )
 
     prompt = mixin._add_post_tool_instructions(
         "Base prompt",
@@ -596,17 +762,19 @@ def test_post_tool_instructions_specialize_rag_summary_answers():
     )
 
     assert "Do NOT infer a genre, series, trilogy, collection, or bibliography" in prompt
-    assert "Treat uncanny or dreamlike atmosphere as mood" in prompt
-    assert "Do NOT attribute quoted criticism, accusations, or stray dialogue" in prompt
+    assert "Keep ambiguous mood, quoted remarks, and isolated scene details secondary" in prompt
+    assert "leave it out instead of guessing" in prompt
     assert "Do NOT call another tool" in prompt
 
 
 def test_build_search_results_prompt_uses_document_route_for_inspection():
-    """Forced synthesis should honor the request-scoped inspection intent."""
+    """Forced synthesis should honor request-scoped inspection intent."""
     mixin = _DummyNodeFunctions()
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="identity",
-        force_tool="inspect_loaded_documents",
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(
+            document_query_intent="identity",
+            primary_tool="inspect_loaded_documents",
+        )
     )
 
     prompt = mixin._build_search_results_prompt(
@@ -622,9 +790,14 @@ def test_build_search_results_prompt_uses_document_route_for_inspection():
 def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
     """Book-about questions should emphasize premise over stray scenes."""
     mixin = _DummyNodeFunctions()
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="summary",
-        force_tool="rag_search",
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+        request_plan=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            primary_tool="rag_search",
+        ),
     )
 
     prompt = mixin._build_search_results_prompt(
@@ -635,11 +808,11 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
 
     assert "lead with the premise, setting, central conflict" in prompt
     assert "Treat isolated later scenes" in prompt
-    assert "Prefer the inciting incident, victim, investigator, and case setup" in prompt
+    assert "Prefer the inciting development and main causal setup" in prompt
     assert "Do not infer genre, series, trilogy, collection" in prompt
-    assert "prefer a grounded mystery or noir framing" in prompt
-    assert "Do not describe literal resurrection" in prompt
-    assert "Do not attribute criticism, accusations, or quoted dialogue" in prompt
+    assert "Treat later arguments, recollections, quoted remarks" in prompt
+    assert "Do not introduce generic dramatic padding" in prompt
+    assert "one-off wording into confirmed plot facts, motives, or beliefs" in prompt
     assert "currently loaded document" in prompt
     assert "do not ask which book, story, or document they mean" in prompt.lower()
 
@@ -647,9 +820,14 @@ def test_build_search_results_prompt_uses_premise_guidance_for_book_about():
 def test_build_search_results_prompt_treats_document_analysis_as_document_tool():
     """Whole-document analysis should receive document-summary guidance."""
     mixin = _DummyNodeFunctions()
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="summary",
-        force_tool="rag_search",
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+        request_plan=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            primary_tool="analyze_loaded_document",
+        ),
     )
 
     prompt = mixin._build_search_results_prompt(
@@ -662,12 +840,172 @@ def test_build_search_results_prompt_treats_document_analysis_as_document_tool()
     assert "lead with the premise, setting, central conflict" in prompt
 
 
+def test_build_search_results_prompt_uses_request_scoped_summary_focus():
+    """Summary prompt guidance should use request metadata, not raw phrasing."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+        request_plan=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            primary_tool="analyze_loaded_document",
+        ),
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Evidence excerpts:\nOpening context. Caribbean resort mystery.",
+        "analyze_loaded_document",
+        "describe the story for me",
+    )
+
+    assert "lead with the premise, setting, central conflict" in prompt
+
+
+def test_build_search_results_prompt_uses_request_metadata_for_vague_book_prompt():
+    """Prompt guidance should follow request metadata instead of raw text routing."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Caribbean Mystery - Agatha Christie.epub\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Requested analysis: Provide a summary of 'A Caribbean Mystery' "
+        "including its premise, themes, and key characters.\n\n"
+        "Document coverage:\n\n"
+        "1. Intro\n"
+        "2. Investigation\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. Miss Marple is staying at the Golden Palm resort on "
+        "St. Honore.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. Major Palgrave dies after hinting that he "
+        "recognized a murderer from a photograph.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert "Document analysis context:" in prompt
+    assert "lead with the premise, setting, central conflict" in prompt
+    assert "Document coverage:" in prompt
+    assert "Current setting. Miss Marple is staying" in prompt
+
+
+def test_build_search_results_verification_prompt_uses_request_metadata():
+    """Verification should use request metadata when the user prompt is vague."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_verification_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Caribbean Mystery - Agatha Christie.epub\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Requested analysis: Provide a summary of 'A Caribbean Mystery' "
+        "including its premise, themes, and key characters.\n\n"
+        "Document coverage:\n\n"
+        "1. Intro\n"
+        "2. Investigation\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. Miss Marple is staying at the Golden Palm resort on "
+        "St. Honore.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. Major Palgrave dies after hinting that he "
+        "recognized a murderer from a photograph.",
+        "analyze_loaded_document",
+        "explain this book to me",
+        "Draft answer.",
+    )
+
+    assert "Document analysis context:" in prompt
+    assert "Lead with the premise, setting, central conflict" in prompt
+    assert "Document coverage:" in prompt
+
+
+def test_build_search_results_prompt_filters_secondary_premise_labels():
+    """Premise prompts should drop low-signal secondary label excerpts."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Frame narrative. A conversation on the terrace wanders through old "
+        "crime anecdotes.\n\n"
+        "[Excerpt 2]\n"
+        "Current setting. Miss Marple is staying at the Golden Palm resort on "
+        "St. Honore.\n\n"
+        "[Excerpt 3]\n"
+        "Background detail. The other guests exchange pleasantries over "
+        "drinks.\n\n"
+        "[Excerpt 4]\n"
+        "Inciting incident. Major Palgrave dies before he can explain why the "
+        "photograph points to a murderer.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert "Current setting. Miss Marple is staying" in prompt
+    assert "Inciting incident. Major Palgrave dies" in prompt
+    assert "Frame narrative." not in prompt
+    assert "Background detail." not in prompt
+    assert "Do not introduce generic dramatic padding" in prompt
+
+
+def test_build_search_results_verification_prompt_avoids_secondary_role_names():
+    """Verification guidance should not seed low-signal role names."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_verification_prompt(
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. Miss Marple is staying at the Golden Palm resort on "
+        "St. Honore.\n\n"
+        "[Excerpt 2]\n"
+        "Frame narrative. The conversation drifts through old anecdotes.\n\n"
+        "[Excerpt 3]\n"
+        "Inciting incident. Major Palgrave dies before he can explain why the "
+        "photograph points to a murderer.",
+        "analyze_loaded_document",
+        "explain this book to me",
+        "Draft answer.",
+    )
+
+    assert "Frame narrative." not in prompt
+    assert "Nested anecdote" not in prompt
+    assert "Background detail" not in prompt
+    assert "secondary context into the background" in prompt
+
+
 def test_build_search_results_prompt_specializes_compare_document_tasks():
     """Comparison requests should receive comparison-specific guidance."""
     mixin = _DummyNodeFunctions()
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="compare",
-        force_tool="rag_search",
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(
+            document_query_intent="compare",
+            primary_tool="rag_search",
+        )
     )
 
     prompt = mixin._build_search_results_prompt(
@@ -684,9 +1022,11 @@ def test_build_search_results_prompt_specializes_compare_document_tasks():
 def test_build_search_results_prompt_specializes_transform_document_tasks():
     """Formatting requests should receive structure-aware guidance."""
     mixin = _DummyNodeFunctions()
-    mixin._current_document_query_route = SimpleNamespace(
-        intent="transform",
-        force_tool="rag_search",
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(
+            document_query_intent="transform",
+            primary_tool="rag_search",
+        )
     )
 
     prompt = mixin._build_search_results_prompt(
@@ -699,9 +1039,49 @@ def test_build_search_results_prompt_specializes_transform_document_tasks():
     assert "follow the requested structure" in prompt
 
 
-def test_get_document_query_intent_detects_transform_tasks_from_text():
-    """Fallback intent routing should detect new transform-style tasks."""
+def test_build_search_results_prompt_structured_answer_mode_uses_answer_text_contract():
+    """Structured synthesis prompts should require the answer_text block."""
     mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(document_query_intent="summary")
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Evidence excerpts:\nCurrent setting. Caribbean resort mystery.",
+        "rag_search",
+        "what is this book about?",
+        structured_answer=True,
+    )
+
+    assert "<answer_text>" in prompt
+    assert "Do not include any text before or after the answer_text block" in prompt
+
+
+def test_build_search_results_verification_prompt_structured_answer_mode_uses_answer_text_contract():
+    """Structured verification prompts should require the answer_text block."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(document_query_intent="summary")
+    )
+
+    prompt = mixin._build_search_results_verification_prompt(
+        "Evidence excerpts:\nCurrent setting. Caribbean resort mystery.",
+        "rag_search",
+        "what is this book about?",
+        "Draft answer.",
+        structured_answer=True,
+    )
+
+    assert "<answer_text>" in prompt
+    assert "Do not include any text before or after the answer_text block" in prompt
+
+
+def test_get_document_query_intent_uses_request_plan_transform_intent():
+    """Transform intent should come from request metadata, not raw text."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(document_query_intent="transform")
+    )
 
     assert mixin._get_document_query_intent(
         "summarize the lab results in a table"
@@ -754,10 +1134,12 @@ def test_generate_response_message_uses_deterministic_identity_answer():
     assert mixin.stream_internal_calls == 0
 
 
-def test_get_document_query_intent_prefers_request_metadata():
-    """Request-scoped metadata should override manager-cached document intent."""
+def test_get_document_query_intent_prefers_request_plan():
+    """Request-plan metadata should override legacy manager state."""
     mixin = _DummyNodeFunctions()
-    mixin.llm_request = SimpleNamespace(document_query_intent="structure")
+    mixin.llm_request = SimpleNamespace(
+        request_plan=SimpleNamespace(document_query_intent="structure")
+    )
     mixin._current_document_query_route = SimpleNamespace(intent="identity")
 
     assert mixin._get_document_query_intent("what is this document?") == (
@@ -765,13 +1147,12 @@ def test_get_document_query_intent_prefers_request_metadata():
     )
 
 
-def test_get_document_query_intent_treats_book_about_as_summary():
-    """Book-about fallback heuristics should map to summary intent."""
+def test_get_document_query_intent_ignores_cached_request_route_without_metadata():
+    """Legacy route cache should not control active request behavior."""
     mixin = _DummyNodeFunctions()
+    mixin._current_document_query_route = SimpleNamespace(intent="summary")
 
-    assert mixin._get_document_query_intent("what is this book about?") == (
-        "summary"
-    )
+    assert mixin._get_document_query_intent("what is this book about?") is None
 
 
 def test_recover_forced_response_content_rejects_summary_prompt_echo():
@@ -950,6 +1331,52 @@ def test_recover_forced_response_content_rejects_summary_clarification():
     assert recovered == ""
 
 
+def test_recover_forced_response_content_rejects_reasoning_only_meta_quote():
+    """Reasoning-only quoted directives should not surface as answers."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content="",
+        additional_kwargs={
+            "thinking_content": (
+                "1. **Final Polish:**\n"
+                "* *Final Answer:* \"Focus on Miss Marple at the Golden "
+                "Palm Hotel, the death, the investigation, and her "
+                "determination.\"\n"
+                "* *Critique:* \"This is very brief and looks like an "
+                "outline rather than an explanation.\""
+            )
+        },
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
+def test_recover_forced_response_content_extracts_answer_text_block():
+    """Structured answer blocks should be preferred over free-form recovery."""
+    mixin = _DummyNodeFunctions()
+    recovered = mixin._recover_forced_response_content(
+        AIMessage(
+            content=(
+                "<answer_text>Miss Marple investigates a resort murder after "
+                "a doctor connects an old snapshot to a killer.</answer_text>"
+            ),
+            tool_calls=[],
+        ),
+        reject_structure_only=True,
+    )
+
+    assert recovered == (
+        "Miss Marple investigates a resort murder after a doctor connects "
+        "an old snapshot to a killer."
+    )
+
+
 def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text():
     """Bad verifier meta output should not replace a usable drafted answer."""
     mixin = _VerificationFallbackNodeFunctions()
@@ -959,6 +1386,69 @@ def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text()
         "snapshot at a Caribbean resort.",
         "rag_search",
         "what is this book about?",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple looks into a resort murder after a doctor realizes he "
+        "once recognized a killer from a snapshot."
+    )
+
+
+def test_generate_response_message_keeps_draft_when_verifier_reasoning_leaks():
+    """Reasoning-only verifier meta output should not replace a draft."""
+    mixin = _ReasoningOnlyVerificationFallbackNodeFunctions()
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA doctor recalls recognizing a murderer from a "
+        "snapshot at a Caribbean resort.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple looks into a resort murder after a doctor realizes he "
+        "once recognized a killer from a snapshot."
+    )
+
+
+def test_generate_response_message_uses_structured_answer_text_contract():
+    """Structured internal answers should populate the final visible reply."""
+    mixin = _StructuredAnswerNodeFunctions()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA doctor recalls recognizing a murderer from a "
+        "snapshot at a Caribbean resort.",
+        "rag_search",
+        "what is this book about?",
+    )
+
+    assert response is not None
+    assert response.content == (
+        "Miss Marple investigates a resort murder after a doctor connects "
+        "an old snapshot to a killer."
+    )
+    assert "<answer_text>" in mixin.prompts[0]
+    assert "<answer_text>" in mixin.prompts[1]
+
+
+def test_generate_response_message_skips_final_chat_pass_for_synthesis():
+    """Synthesized document answers should not be rewritten a third time."""
+    mixin = _NoConversationalPassVerificationNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_answer_mode="synthesized",
+        final_system_prompt="final override prompt",
+    )
+
+    response = mixin._generate_response_message_from_results(
+        "Evidence excerpts:\nA doctor recalls recognizing a murderer from a "
+        "snapshot at a Caribbean resort.",
+        "analyze_loaded_document",
+        "what is this book about?",
+        message_history=[HumanMessage(content="what is this book about?")],
     )
 
     assert response is not None
@@ -993,7 +1483,7 @@ def test_document_conversational_pass_uses_final_system_prompt_override():
 
 
 def test_call_model_uses_final_prompt_for_document_analysis_followup():
-    """Planner-selected document followups should answer with chat prompt."""
+    """Planner-selected document followups should use grounded synthesis."""
     mixin = _CallModelDocumentFollowupNodeFunctions()
     mixin.llm_request = SimpleNamespace(
         document_answer_mode="synthesized",
@@ -1018,8 +1508,8 @@ def test_call_model_uses_final_prompt_for_document_analysis_followup():
                 content=(
                     "Current document analysis:\n\n"
                     "Analysis mode: chunked_document\n\n"
-                    "Refined whole-document synthesis:\n"
-                    "Overview: A detective investigates a murder."
+                    "Document coverage:\n"
+                    "1. Opening context"
                 ),
                 tool_call_id="tool-1",
                 name="analyze_loaded_document",
@@ -1031,13 +1521,14 @@ def test_call_model_uses_final_prompt_for_document_analysis_followup():
     result = mixin._call_model(state)
 
     assert result["messages"][0].content == "Conversational reply"
-    assert mixin.prompt_built_with == "final override prompt"
-    assert mixin.prompt_seen == "final override prompt"
+    assert mixin.prompt_built_with is None
+    assert mixin.prompt_seen == "planner prompt"
     assert mixin._system_prompt == "planner prompt"
-    assert mixin.prompt_updates == [
-        "final override prompt",
-        "planner prompt",
-    ]
+    assert mixin.prompt_updates == []
+    assert mixin.captured is not None
+    assert mixin.captured["tool_name"] == "analyze_loaded_document"
+    assert mixin.captured["user_question"] == "what is this book about?"
+    assert "Current document analysis:" in mixin.captured["tool_content"]
     assert mixin._chat_model.tools == ["analyze_loaded_document"]
     assert mixin._chat_model.tool_choice == {
         "function": {"name": "analyze_loaded_document"}

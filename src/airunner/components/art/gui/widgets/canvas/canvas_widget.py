@@ -70,6 +70,8 @@ class CanvasWidget(BaseWidget):
         ("move", "move_button"),
         ("filter", "filter_button"),
         ("image-minus", "remove_background_button"),
+        ("align-center-horizontal", "align_center_horizontal"),
+        ("align-center-vertical", "align_center_vertical"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -132,25 +134,6 @@ class CanvasWidget(BaseWidget):
         self._update_action_buttons(self.current_tool, True)
 
         self.set_button_color()
-        # Ensure toolbar buttons use pointing hand cursor where applicable
-        try:
-            for btn_name in (
-                "upscale_x4",
-                "new_button",
-                "import_button",
-                "export_button",
-                "active_grid_area_button",
-                "brush_button",
-                "eraser_button",
-                "grid_button",
-                "undo_button",
-                "redo_button",
-            ):
-                btn = getattr(self.ui, btn_name, None)
-                if btn is not None:
-                    btn.setCursor(Qt.PointingHandCursor)
-        except Exception:
-            pass
 
     _offset_x = 0
     _offset_y = 0
@@ -321,6 +304,18 @@ class CanvasWidget(BaseWidget):
     def on_remove_background_button_clicked(self) -> None:
         """Handle remove background button click."""
         self.api.art.canvas.remove_background()
+
+    @Slot()
+    def on_align_center_horizontal_clicked(self) -> None:
+        """
+        Align the images on the canvas to the horizontal center.
+        """
+
+    @Slot()
+    def on_align_center_vertical_clicked(self) -> None:
+        """
+        Align the images on the canvas to the vertical center.
+        """
 
     @Slot()
     def on_undo_button_clicked(self) -> None:

@@ -27,7 +27,6 @@ from airunner.components.llm.utils.thinking_parser import (
     strip_stored_thinking_prefix,
     strip_thinking_tags,
 )
-from airunner.components.llm.utils.stream_text import combine_stream_chunks
 from airunner.utils.text.formatter_extended import FormatterExtended
 from airunner.enums import ModelType
 
@@ -94,7 +93,7 @@ class TTSGeneratorWorker(Worker):
 
         raw_chunks = getattr(self, "_llm_raw_visible_chunks", [])
         visible_text = strip_stored_thinking_prefix(
-            combine_stream_chunks(raw_chunks),
+            "".join(chunk for chunk in raw_chunks if chunk),
             getattr(self, "_llm_thinking_content", None),
         )
         spoken_text = getattr(self, "_llm_spoken_visible_text", "")
@@ -553,7 +552,7 @@ class TTSGeneratorWorker(Worker):
             self.tokens.extend(message)
 
         # Convert the tokens to a string
-        text = combine_stream_chunks(self.tokens)
+        text = "".join(chunk for chunk in self.tokens if chunk)
 
         # Regular expression to match timestamps in the format HH:MM
         timestamp_pattern = re.compile(r"\b(\d{1,2}):(\d{2})\b")

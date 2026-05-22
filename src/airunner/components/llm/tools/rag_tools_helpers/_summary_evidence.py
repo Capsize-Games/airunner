@@ -17,12 +17,44 @@ from airunner.components.llm.tools.rag_tools_helpers._document_splitting import 
 from airunner.components.llm.tools.rag_tools_helpers._premise_scoring import (
     build_premise_evidence_documents,
 )
-from airunner.components.llm.tools.rag_tools_helpers._query_classification import (
-    is_premise_summary_query,
-)
 from airunner.components.llm.tools.rag_tools_helpers._shared import (
     SUMMARY_EVIDENCE_LIMIT,
 )
+
+
+def request_document_summary_focus(rag_manager: Any) -> str | None:
+    """Return the request-scoped document summary subtype when available."""
+    llm_request = getattr(rag_manager, "llm_request", None)
+    request_plan = getattr(llm_request, "request_plan", None)
+    focus = getattr(request_plan, "document_summary_focus", None)
+    if isinstance(focus, str) and focus.strip():
+        return focus.strip()
+    focus = getattr(llm_request, "document_summary_focus", None)
+    if isinstance(focus, str) and focus.strip():
+        return focus.strip()
+    return None
+
+
+def request_document_query_intent(rag_manager: Any) -> str | None:
+    """Return the request-scoped document intent when available."""
+    llm_request = getattr(rag_manager, "llm_request", None)
+    request_plan = getattr(llm_request, "request_plan", None)
+    intent = getattr(request_plan, "document_query_intent", None)
+    if isinstance(intent, str) and intent.strip():
+        return intent.strip()
+    intent = getattr(llm_request, "document_query_intent", None)
+    if isinstance(intent, str) and intent.strip():
+        return intent.strip()
+    return None
+
+
+def request_rewritten_query(rag_manager: Any) -> str | None:
+    """Return the request-scoped rewritten query when available."""
+    llm_request = getattr(rag_manager, "llm_request", None)
+    rewritten_query = getattr(llm_request, "rewritten_prompt", None)
+    if isinstance(rewritten_query, str) and rewritten_query.strip():
+        return rewritten_query.strip()
+    return None
 
 
 def build_summary_evidence_documents(
@@ -30,9 +62,10 @@ def build_summary_evidence_documents(
     text: str,
     *,
     query: str = "",
+    summary_focus: str | None = None,
 ) -> list[Any]:
     """Build distributed summary evidence from one document text."""
-    if is_premise_summary_query(query):
+    if summary_focus == "premise":
         premise_documents = build_premise_evidence_documents(metadata, text)
         if premise_documents:
             return premise_documents
@@ -95,10 +128,17 @@ def build_single_document_summary_results(
     if not entries:
         return []
 
-    return build_summary_evidence_documents(entries[0], text, query=query)
+    return build_summary_evidence_documents(
+        entries[0],
+        text,
+        query=query,
+        summary_focus=request_document_summary_focus(rag_manager),
+    )
 
 
 __all__ = [
     "build_single_document_summary_results",
     "build_summary_evidence_documents",
+    "request_document_query_intent",
+    "request_document_summary_focus",
 ]

@@ -52,6 +52,31 @@ Run AIRunner through the native launcher in dev mode:
 ./scripts/run_airunner_dev.sh
 ```
 
+Capture a native crash under gdb while following the launcher child process:
+
+```bash
+./scripts/run_airunner_dev.sh --gdb
+```
+
+That workflow switches the native launcher into an internal no-fork mode so
+gdb stays attached to the main AIRunner Python process instead of drifting into
+short-lived helper children. When the crash stops in gdb, run
+`airunner_dump` to write a full backtrace and local core file under
+`build/debug/core/`.
+
+Enable kernel core dumps around the same dev launch flow:
+
+```bash
+./scripts/run_airunner_dev.sh --coredump
+```
+
+If the host is using `systemd-coredump`, inspect the resulting crash with
+`coredumpctl list airunner` and `coredumpctl info airunner`.
+
+If `kernel.core_pattern` is disabled on the host, the script reports that
+immediately and points you to `--gdb`, which can still write a local core file
+without changing system-wide settings.
+
 That flow uses the repository `venv` when present and sets `PYTHONPATH` to
 `src/` so the existing Python application code runs unchanged.
 

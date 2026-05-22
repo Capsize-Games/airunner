@@ -100,7 +100,25 @@ def group_paragraph_chunks(paragraphs: list[str]) -> list[tuple[str, str]]:
     return chunks
 
 
-def select_document_analysis_chunks(text: str) -> list[tuple[str, str]]:
+def trim_opening_context_chunk(
+    chunks: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """Drop short front-matter preambles before real chapter sections."""
+    if len(chunks) < 2:
+        return chunks
+
+    title, body = chunks[0]
+    body_words = len(" ".join(str(body or "").split()).split())
+    if title == "Opening context" and body_words <= 80:
+        return chunks[1:]
+    return chunks
+
+
+def select_document_analysis_chunks(
+    text: str,
+    *,
+    summary_focus: str | None = None,
+) -> list[tuple[str, str]]:
     """Return representative chunk bodies for large-document analysis."""
     chunks = split_document_sections(text)
     if not chunks:
@@ -108,15 +126,25 @@ def select_document_analysis_chunks(text: str) -> list[tuple[str, str]]:
         if not paragraphs:
             return []
         chunks = group_paragraph_chunks(paragraphs)
+    else:
+        chunks = trim_opening_context_chunk(chunks)
+
+    if summary_focus == "premise":
+        return chunks[:ANALYSIS_CHUNK_LIMIT]
     return select_evenly_spaced_items(chunks, ANALYSIS_CHUNK_LIMIT)
 
 
-def build_chunk_analyses(query: str, text: str) -> list[dict[str, str]]:
+def build_chunk_analyses(
+    query: str,
+    text: str,
+    *,
+    summary_focus: str | None = None,
+) -> list[dict[str, str]]:
     """Build map-stage summaries for representative document chunks."""
     analyses = []
     query_terms = extract_query_terms(query)
     for index, (title, body) in enumerate(
-        select_document_analysis_chunks(text),
+        select_document_analysis_chunks(text, summary_focus=summary_focus),
         1,
     ):
         summary = summarize_chunk_body(body, query_terms)

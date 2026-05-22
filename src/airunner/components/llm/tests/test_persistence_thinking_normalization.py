@@ -14,6 +14,7 @@ from airunner.components.llm.managers.database_chat_message_history import (
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.utils.thinking_parser import (
     normalize_thinking_content,
+    strip_thinking_tags,
     strip_stored_thinking_prefix,
 )
 
@@ -29,6 +30,12 @@ def test_strip_stored_thinking_prefix_handles_compact_content():
 def test_normalize_thinking_content_ignores_blank_values():
     """Whitespace-only thinking payloads should not render widgets."""
     assert normalize_thinking_content("\n\n") is None
+
+
+def test_strip_thinking_tags_preserves_visible_chunk_spacing():
+    """Removing think tags should not trim visible chunk whitespace."""
+    assert strip_thinking_tags("<think>plan</think> Hello") == " Hello"
+    assert strip_thinking_tags(" world") == " world"
 
 
 def test_messages_property_strips_legacy_thinking_prefix(monkeypatch):

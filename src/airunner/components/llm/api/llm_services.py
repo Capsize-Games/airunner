@@ -1,14 +1,12 @@
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.components.llm.utils.gpt_oss_parser import (
+    looks_like_tool_call_payload,
+)
 from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
-    strip_thinking_tags,
-)
-from airunner.components.llm.utils.stream_text import (
-    append_stream_text,
-    prepare_stream_chunk,
 )
 from airunner.daemon_client.daemon_connection_state import (
     DaemonConnectionState,
@@ -32,6 +30,7 @@ class _DaemonStreamState:
     visible_text: str = ""
     hold_visible_output: bool = False
     pending_visible_parts: list[str] = field(default_factory=list)
+    pending_visible_has_tool_signal: bool = False
 
 
 class LLMAPIService(APIServiceBase):
@@ -566,6 +565,11 @@ class LLMAPIService(APIServiceBase):
             state,
             request_id=request_id,
         )
+        if state.hold_visible_output and self._daemon_chunk_has_tool_signal(
+            chunk,
+            visible_parts,
+        ):
+            state.pending_visible_has_tool_signal = True
         if bool(chunk.get("is_end_of_message", False)):
             self._finish_daemon_thinking(state, request_id=request_id)
 
@@ -668,6 +672,21 @@ class LLMAPIService(APIServiceBase):
         """Clear any buffered compatibility state for typed chunks."""
         state.hold_visible_output = False
         state.pending_visible_parts = []
+        state.pending_visible_has_tool_signal = False
+
+    @staticmethod
+    def _daemon_chunk_has_tool_signal(
+        chunk: dict,
+        visible_parts: List[str],
+    ) -> bool:
+        """Return whether one buffered daemon substream has explicit tool data."""
+        if bool(chunk.get("tools") or chunk.get("tool_calls")):
+            return True
+        return any(
+            looks_like_tool_call_payload(part)
+            for part in visible_parts
+            if isinstance(part, str) and part.strip()
+        )
 
     def _forward_structured_thinking_chunk(
         self,
@@ -742,11 +761,12 @@ class LLMAPIService(APIServiceBase):
         pending_parts = list(state.pending_visible_parts)
         state.pending_visible_parts = []
         state.hold_visible_output = False
+        drop_pending_parts = state.pending_visible_has_tool_signal
+        state.pending_visible_has_tool_signal = False
         if not pending_parts:
             return
 
-        pending_text = "".join(pending_parts)
-        if self._daemon_output_looks_like_tool_turn(pending_text, chunk):
+        if drop_pending_parts:
             return
 
         self._emit_visible_daemon_parts(
@@ -757,57 +777,6 @@ class LLMAPIService(APIServiceBase):
             action=action,
             node_id=node_id,
         )
-
-    def _daemon_output_looks_like_tool_turn(
-        self,
-        text: str,
-        chunk: dict,
-    ) -> bool:
-        """Return whether buffered daemon text looks like tool planning."""
-        if bool(chunk.get("tools") or chunk.get("tool_calls")):
-            return True
-
-        stripped = str(text or "").strip()
-        if not stripped:
-            return False
-        if self._daemon_text_looks_like_tool_call_json(stripped):
-            return True
-
-        normalized = " ".join(stripped.lower().split())
-        markers = (
-            "let me call the",
-            "i'll call the",
-            "i will call the",
-            "i'm calling the",
-            "i am calling the",
-            "calling the search tool",
-            "rag_search tool",
-        )
-        return any(marker in normalized for marker in markers)
-
-    @staticmethod
-    def _daemon_text_looks_like_tool_call_json(text: str) -> bool:
-        """Return whether daemon-visible text matches tool-call JSON."""
-        stripped = str(text or "").strip()
-        if not stripped.startswith("{"):
-            return False
-        if ('"name"' in stripped or '"tool"' in stripped) and (
-            '"arguments"' in stripped or '"args"' in stripped
-        ):
-            return True
-        if '"tool"' in stripped and any(
-            key in stripped
-            for key in (
-                '"query"',
-                '"prompt"',
-                '"url"',
-                '"path"',
-                '"text"',
-                '"content"',
-            )
-        ):
-            return True
-        return False
 
     def _emit_visible_daemon_parts(
         self,
@@ -829,16 +798,8 @@ class LLMAPIService(APIServiceBase):
             cleaned_part = part
             if not cleaned_part:
                 continue
-            normalized_part = prepare_stream_chunk(
-                state.visible_text,
-                cleaned_part,
-            )
-            if not normalized_part:
-                continue
-            state.visible_text = append_stream_text(
-                state.visible_text,
-                cleaned_part,
-            )
+            normalized_part = cleaned_part
+            state.visible_text += cleaned_part
             self.send_llm_text_streamed_signal(
                 self._build_visible_daemon_response(
                     chunk,

@@ -7,7 +7,9 @@ from typing import Any, Dict, List, Optional
 from langchain_core.messages import AIMessage, BaseMessage
 
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.components.llm.utils.stream_text import combine_stream_chunks
+from airunner.components.llm.utils.gpt_oss_parser import (
+    looks_like_tool_call_payload,
+)
 from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
@@ -19,30 +21,8 @@ class StreamingResponseMixin:
     """Run the raw streaming loop and buffer visible output."""
 
     def _is_tool_call_json(self, text: str) -> bool:
-        """Check whether text strongly resembles a tool-call JSON block."""
-        stripped = text.strip()
-        if not stripped.startswith("{"):
-            return False
-
-        if ('"name"' in stripped or '"tool"' in stripped) and (
-            '"arguments"' in stripped or '"args"' in stripped
-        ):
-            return True
-        if '"tool"' in stripped and any(
-            key in stripped
-            for key in (
-                '"query"',
-                '"prompt"',
-                '"url"',
-                '"path"',
-                '"text"',
-                '"content"',
-            )
-        ):
-            return True
-        if '"function"' in stripped and '"arguments"' in stripped:
-            return True
-        return False
+        """Check whether text structurally resembles a tool-call JSON block."""
+        return looks_like_tool_call_payload(text)
 
     def _generate_streaming_response(
         self,
@@ -80,8 +60,14 @@ class StreamingResponseMixin:
             and isinstance(tool_choice.get("function"), dict)
             and bool(tool_choice["function"].get("name"))
         )
+        required_tool_choice = (
+            isinstance(tool_choice, str)
+            and tool_choice in {"any", "required"}
+        )
         hold_visible_output = bool(
-            getattr(self, "_force_tool", None) or forced_tool_choice
+            getattr(self, "_force_tool", None)
+            or forced_tool_choice
+            or required_tool_choice
         )
         pending_visible_chunks: List[str] = []
         headless_thinking_open = False
@@ -196,8 +182,6 @@ class StreamingResponseMixin:
         ) -> None:
             """Persist one visible chunk and optionally forward it."""
             nonlocal has_streamed_content
-            if not has_streamed_content:
-                text_to_stream = text_to_stream.lstrip()
             if not text_to_stream:
                 return
 
@@ -443,7 +427,9 @@ class StreamingResponseMixin:
                 emit_headless_thinking_chunk("", is_end=True)
 
             if hold_visible_output and not collected_tool_calls:
-                combined_visible = combine_stream_chunks(pending_visible_chunks)
+                combined_visible = "".join(
+                    chunk for chunk in pending_visible_chunks if chunk
+                )
                 if combined_visible:
                     forward_stream_text(combined_visible)
             elif hold_visible_output and collected_tool_calls:

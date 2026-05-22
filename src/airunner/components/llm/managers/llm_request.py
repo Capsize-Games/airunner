@@ -10,6 +10,7 @@ from airunner.components.llm.data.llm_generator_settings import (
 from airunner.components.llm.config.generation_presets import (
     get_action_generation_preset,
 )
+from airunner.components.llm.managers.request_plan import RequestPlan
 from airunner.components.llm.utils import get_chatbot
 from airunner.enums import LLMActionType
 
@@ -27,10 +28,13 @@ DEBUG_SETTING_FIELDS = (
     "force_tool",
     "planner_mode",
     "planner_tool_hints",
+    "rewritten_prompt",
+    "preprocessed_primary_tool",
     "tool_categories",
     "attached_document_total_tokens",
     "attached_document_total_characters",
     "document_query_intent",
+    "document_summary_focus",
     "document_answer_mode",
 )
 
@@ -110,6 +114,8 @@ class LLMRequest:
     model_service: Optional[str] = None  # local | openrouter | ollama
     api_model: Optional[str] = None  # provider model name for API backends
     final_system_prompt: Optional[str] = None
+    rewritten_prompt: Optional[str] = None
+    preprocessed_primary_tool: Optional[str] = None
     # Request-level quantization override for local HF models.
     # This is consumed by the model manager to set llm_generator_settings.dtype
     # before loading; it must NOT be passed through to transformers generate().
@@ -125,8 +131,10 @@ class LLMRequest:
     attached_document_total_tokens: int = 0
     attached_document_total_characters: int = 0
     document_query_intent: Optional[str] = None
+    document_summary_focus: Optional[str] = None
     document_primary_tool: Optional[str] = None
     document_answer_mode: Optional[str] = None
+    request_plan: Optional[RequestPlan] = None
     images: Optional[List[Any]] = field(
         default_factory=list
     )  # List of PIL Image objects for vision-capable models
@@ -174,6 +182,8 @@ class LLMRequest:
         data.pop("model_service", None)
         data.pop("api_model", None)
         data.pop("final_system_prompt", None)
+        data.pop("rewritten_prompt", None)
+        data.pop("preprocessed_primary_tool", None)
         data.pop("dtype", None)
         data.pop("reasoning_effort", None)
         data.pop("planner_mode", None)
@@ -182,8 +192,10 @@ class LLMRequest:
         data.pop("attached_document_total_tokens", None)
         data.pop("attached_document_total_characters", None)
         data.pop("document_query_intent", None)
+        data.pop("document_summary_focus", None)
         data.pop("document_primary_tool", None)
         data.pop("document_answer_mode", None)
+        data.pop("request_plan", None)
         # Prompt augmentation toggles are consumed by workflow setup, not passed to the model
         data.pop("include_mood", None)
         data.pop("include_datetime", None)
@@ -209,6 +221,8 @@ class LLMRequest:
             if isinstance(value, list) and not value:
                 continue
             settings[field_name] = value
+        if self.request_plan is not None:
+            settings["request_plan"] = self.request_plan.to_dict()
         return {
             "kind": "llm_request_settings",
             "title": title,
@@ -345,11 +359,7 @@ class LLMRequest:
         else:
             request = cls.from_chatbot(get_chatbot().id)
 
-        request.enable_thinking = getattr(
-            llm_settings,
-            "enable_thinking",
-            True,
-        )
+        request.enable_thinking = True
         request.reasoning_effort = getattr(
             llm_settings,
             "reasoning_effort",

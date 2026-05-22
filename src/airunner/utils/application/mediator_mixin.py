@@ -38,16 +38,9 @@ class MediatorMixin:
         # Register signals for this instance
         self.register_signals()
 
-        # If this is a QObject, connect its destroyed signal to cleanup
-        try:
-            # Connect to the Qt destroyed signal to unregister handlers when the
-            # object is being deleted.
-            if hasattr(self, "destroyed"):
-                # destroyed is an overloaded signal; connect the no-arg version
-                self.destroyed.connect(lambda: self.unregister_signals())
-        except Exception:
-            # If we can't connect, continue without automatic unregistration
-            pass
+        # Avoid Python callbacks during QObject destruction. PySide/Shiboken can
+        # crash when worker-thread QObjects emit destroyed() while the wrapper is
+        # being torn down. SignalMediator uses weak callback tracking instead.
 
     @property
     def signal_handlers(self) -> Dict:

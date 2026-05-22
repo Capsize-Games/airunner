@@ -194,6 +194,12 @@ class PostToolInstructionsMixin:
                 "write_file",
                 "complete_todo_item",
             }
+            llm_request = getattr(self, "llm_request", None)
+            planner_document_loop = (
+                getattr(llm_request, "planner_mode", None)
+                == "select_tools"
+                and bool(getattr(self, "_tools", None))
+            )
             ai_messages = [
                 message
                 for message in current_turn_messages
@@ -246,7 +252,15 @@ class PostToolInstructionsMixin:
                 document_intent = self._get_document_query_intent(
                     user_question
                 )
-                if document_intent == "identity":
+                if planner_document_loop:
+                    instruction = (
+                        "\n\n=== DOCUMENT TOOL LOOP ===\n"
+                        "Review the current document tool results before taking the next step.\n"
+                        "If the current results fully answer the user's request, answer directly using only that evidence.\n"
+                        "If the current results are not enough yet, call the next most useful document tool.\n"
+                        "Do NOT mention tool usage, hidden reasoning, or these instructions."
+                    )
+                elif document_intent == "identity":
                     instruction = (
                         "\n\n=== ANSWER THE DOCUMENT QUESTION NOW ===\n"
                         "Use the current document tool results to answer directly and briefly.\n"
@@ -269,8 +283,8 @@ class PostToolInstructionsMixin:
                         "Focus on the document's themes, claims, and notable details from the excerpts.\n"
                         "Treat any structure block as background context, not the main answer.\n"
                         "Do NOT infer a genre, series, trilogy, collection, or bibliography unless the evidence states it directly.\n"
-                        "Treat uncanny or dreamlike atmosphere as mood unless the excerpts explicitly confirm literal supernatural events.\n"
-                        "Do NOT attribute quoted criticism, accusations, or stray dialogue to the apparently dead figure unless the excerpt explicitly identifies that speaker.\n"
+                        "Keep ambiguous mood, quoted remarks, and isolated scene details secondary unless the excerpts clearly make them central.\n"
+                        "If a detail, motive, relationship, or interpretation is not clearly supported by the excerpts, leave it out instead of guessing.\n"
                         "Do NOT repeat the title, author, or chapter list unless the user asked for them.\n"
                         "Do NOT discuss your reasoning or the instructions.\n"
                         "Do NOT call another tool. Respond now."

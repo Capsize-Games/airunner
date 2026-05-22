@@ -20,6 +20,53 @@ class DocumentQueryRoute:
     intent: str
     force_tool: str
     answer_mode: str
+    summary_focus: str | None = None
+
+
+_PREMISE_SUMMARY_PATTERNS = (
+    r"\bwhat(?:'s| is)\s+(?:this|the)\s+"
+    r"(?:book|novel|story|document|file)\s+about\b",
+    r"\bwhat\s+is\s+the\s+(?:book|novel|story|document|file)\s+about\b",
+    r"\btell\s+me\s+about\s+(?:this|the)\s+"
+    r"(?:book|novel|story|document|file)\b",
+    r"\bwhat\s+is\s+the\s+premise(?:\s+and\s+theme[s]?)?\s+of\s+"
+    r"(?:this|the)\s+(?:book|novel|story|document|file)\b",
+    r"\bwhat\s+are\s+the\s+premise\s+and\s+theme[s]?\s+of\s+"
+    r"(?:this|the)\s+(?:book|novel|story|document|file)\b",
+    r"\bdescribe\s+the\s+premise(?:\s+and\s+theme[s]?)?\s+of\s+"
+    r"(?:this|the)\s+(?:book|novel|story|document|file)\b",
+    r"\b(?:synopsis|plot)\s+of\s+(?:this|the)\s+"
+    r"(?:book|novel|story|document|file)\b",
+    r"\bwhat\s+happens\s+in\s+(?:this|the)\s+"
+    r"(?:book|novel|story|document|file)\b",
+)
+
+_PREMISE_SUMMARY_KEYWORDS = (
+    "premise",
+    "plot",
+    "synopsis",
+)
+
+_OVERVIEW_SUMMARY_KEYWORDS = (
+    "summary",
+    "summarize",
+    "overview",
+    "main idea",
+    "main topic",
+    "theme",
+    "themes",
+)
+
+_SUMMARY_REQUEST_VERBS = (
+    "describe",
+    "explain",
+    "give",
+    "outline",
+    "provide",
+    "tell",
+    "walk me through",
+    "what",
+)
 
 
 def _normalize_prompt(prompt: str) -> str:
@@ -35,6 +82,39 @@ def _matches_any(prompt: str, patterns: tuple[str, ...]) -> bool:
 def _mentions_document_surface(prompt: str) -> bool:
     """Return whether the prompt clearly refers to one document surface."""
     return _matches_any(prompt, DOCUMENT_SURFACE_PATTERNS)
+
+
+def infer_document_summary_focus(
+    prompt: str,
+    *,
+    assume_document_mode: bool = False,
+) -> str | None:
+    """Return one request-time summary subtype for a document prompt."""
+    normalized = _normalize_prompt(prompt)
+    if not normalized:
+        return None
+
+    in_document_mode = assume_document_mode or _mentions_document_surface(
+        normalized
+    )
+    if not in_document_mode:
+        return None
+
+    if _matches_any(normalized, _PREMISE_SUMMARY_PATTERNS):
+        return "premise"
+
+    has_summary_verb = any(
+        verb in normalized for verb in _SUMMARY_REQUEST_VERBS
+    )
+    if has_summary_verb and any(
+        keyword in normalized for keyword in _PREMISE_SUMMARY_KEYWORDS
+    ):
+        return "premise"
+
+    if any(keyword in normalized for keyword in _OVERVIEW_SUMMARY_KEYWORDS):
+        return "overview"
+
+    return None
 
 
 def _matches_document_task(
@@ -67,11 +147,33 @@ def route_document_query(
                 intent=config.intent,
                 force_tool=config.force_tool,
                 answer_mode=config.answer_mode,
+                summary_focus=(
+                    infer_document_summary_focus(
+                        normalized,
+                        assume_document_mode=assume_document_mode,
+                    )
+                    if config.intent == "summary"
+                    else None
+                ),
             )
+
+    summary_focus = infer_document_summary_focus(
+        normalized,
+        assume_document_mode=assume_document_mode,
+    )
+    if summary_focus is not None:
+        return DocumentQueryRoute(
+            intent="summary",
+            force_tool="rag_search",
+            answer_mode="synthesized",
+            summary_focus=summary_focus,
+        )
+
     if assume_document_mode:
         return DocumentQueryRoute(
             intent=DEFAULT_DOCUMENT_TASK.intent,
             force_tool=DEFAULT_DOCUMENT_TASK.force_tool,
             answer_mode=DEFAULT_DOCUMENT_TASK.answer_mode,
+            summary_focus=None,
         )
     return None

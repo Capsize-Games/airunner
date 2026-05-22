@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
-from airunner.components.llm.utils.stream_text import combine_stream_chunks
 from airunner.components.llm.utils.thinking_parser import (
     strip_thinking_tags,
 )
@@ -79,7 +78,9 @@ class ResponseGenerationMixin:
             if cleaned_chunk:
                 visible_chunks.append(cleaned_chunk)
 
-        complete_content = combine_stream_chunks(visible_chunks)
+        complete_content = "".join(
+            chunk for chunk in visible_chunks if chunk
+        )
 
         if thinking_content:
             additional_kwargs = dict(additional_kwargs)

@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
 from airunner.components.data.session_manager import session_scope
 from airunner.components.documents.data.models.document import Document
-from airunner.components.llm.utils.document_query_routing import (
-    route_document_query,
-)
+from airunner.components.llm.managers.request_plan import RequestPlan
 from airunner.enums import LLMActionType, SignalCode
 
 
 class RequestHandlingMixin:
     """Coordinate request-time model, tool, and RAG preparation."""
+
+    DOCUMENT_TOOL_NAMES = {
+        "inspect_loaded_documents",
+        "analyze_loaded_document",
+        "rag_search",
+    }
 
     @staticmethod
     def _request_debug_metadata(llm_request: Any) -> Optional[Dict[str, Any]]:
@@ -30,6 +35,16 @@ class RequestHandlingMixin:
         return getattr(llm_request, "planner_mode", None) == "select_tools"
 
     @staticmethod
+    def _coerce_request_plan(result: Any) -> Optional[RequestPlan]:
+        """Return one request plan from a preprocess result mapping."""
+        if not isinstance(result, dict):
+            return None
+        request_plan = result.get("request_plan")
+        if isinstance(request_plan, RequestPlan):
+            return request_plan
+        return RequestPlan.from_mapping(result)
+
+    @staticmethod
     def _planner_tool_hints(route: Any) -> List[str]:
         """Return planner-facing tool hints derived from the route."""
         if route is None or not getattr(route, "force_tool", None):
@@ -40,6 +55,31 @@ class RequestHandlingMixin:
         ):
             return ["analyze_loaded_document", "rag_search"]
         return [route.force_tool]
+
+    @classmethod
+    def _document_planner_allowed_tool_names(
+        cls,
+        llm_request: Any,
+    ) -> Optional[List[str]]:
+        """Return the planner-visible tool surface for attached docs."""
+        if not llm_request or not cls._planner_controls_document_tools(
+            llm_request
+        ):
+            return None
+        if not getattr(llm_request, "rag_files", None):
+            return None
+        request_plan = getattr(llm_request, "request_plan", None)
+        if request_plan is not None:
+            allowed_tool_names = list(
+                getattr(request_plan, "allowed_tool_names", []) or []
+            )
+            if allowed_tool_names:
+                return allowed_tool_names
+        return [
+            "inspect_loaded_documents",
+            "analyze_loaded_document",
+            "rag_search",
+        ]
 
     @staticmethod
     def _should_auto_activate_document_planner(
@@ -52,15 +92,34 @@ class RequestHandlingMixin:
             return False
         if requested_force_tool:
             return False
-        if not getattr(llm_request, "rag_files", None):
+        request_plan = getattr(llm_request, "request_plan", None)
+        if request_plan is None:
             return False
-        if getattr(llm_request, "attached_document_capabilities", None):
-            return True
-        if getattr(llm_request, "attached_document_total_tokens", 0):
-            return True
-        return bool(
-            getattr(llm_request, "attached_document_total_characters", 0)
-        )
+        return getattr(request_plan, "planner_mode", None) == "select_tools"
+
+    @staticmethod
+    def _apply_request_plan_tool_routing(
+        llm_request: Any,
+        *,
+        requested_force_tool: Optional[str] = None,
+    ) -> None:
+        """Apply request-plan tool ownership to the live request."""
+        if not llm_request or requested_force_tool:
+            return
+
+        request_plan = getattr(llm_request, "request_plan", None)
+        if request_plan is None:
+            return
+
+        if getattr(request_plan, "planner_mode", None) == "select_tools":
+            llm_request.force_tool = None
+            return
+
+        if (
+            getattr(request_plan, "tool_required", False)
+            and getattr(request_plan, "primary_tool", None)
+        ):
+            llm_request.force_tool = request_plan.primary_tool
 
     def _activate_request_planner_mode(
         self,
@@ -71,6 +130,13 @@ class RequestHandlingMixin:
         """Enable planner mode and preserve the final chat prompt."""
         if not llm_request:
             return
+        request_plan = getattr(llm_request, "request_plan", None)
+        if request_plan is not None:
+            llm_request.planner_mode = getattr(
+                request_plan,
+                "planner_mode",
+                None,
+            )
         if (
             getattr(llm_request, "planner_mode", None) is None
             and self._should_auto_activate_document_planner(
@@ -82,6 +148,18 @@ class RequestHandlingMixin:
             llm_request.planner_mode = "select_tools"
         if getattr(llm_request, "planner_mode", None) != "select_tools":
             return
+        if request_plan is not None:
+            if not getattr(request_plan, "planner_mode", None):
+                request_plan.planner_mode = "select_tools"
+            if (
+                len(getattr(request_plan, "allowed_tool_names", []) or []) <= 1
+                and getattr(llm_request, "rag_files", None)
+            ):
+                request_plan.allowed_tool_names = [
+                    "inspect_loaded_documents",
+                    "analyze_loaded_document",
+                    "rag_search",
+                ]
         if getattr(llm_request, "final_system_prompt", None):
             return
         llm_request.final_system_prompt = self.get_system_prompt_with_context(
@@ -126,6 +204,266 @@ class RequestHandlingMixin:
                 0,
             ),
         )
+
+    @staticmethod
+    def _build_document_request_route(llm_request: Any) -> Any:
+        """Return one request-scoped document route shim from metadata."""
+        if llm_request is None:
+            return None
+
+        request_plan = getattr(llm_request, "request_plan", None)
+        if isinstance(request_plan, RequestPlan):
+            intent = getattr(request_plan, "document_query_intent", None)
+            summary_focus = getattr(
+                request_plan,
+                "document_summary_focus",
+                None,
+            )
+            answer_mode = getattr(request_plan, "document_answer_mode", None)
+            force_tool = getattr(request_plan, "primary_tool", None)
+            if any((intent, summary_focus, answer_mode, force_tool)):
+                return SimpleNamespace(
+                    intent=intent,
+                    summary_focus=summary_focus,
+                    answer_mode=answer_mode,
+                    force_tool=force_tool,
+                )
+
+        intent = getattr(llm_request, "document_query_intent", None)
+        summary_focus = getattr(llm_request, "document_summary_focus", None)
+        answer_mode = getattr(llm_request, "document_answer_mode", None)
+        force_tool = getattr(llm_request, "document_primary_tool", None)
+        if not any((intent, summary_focus, answer_mode, force_tool)):
+            return None
+        return SimpleNamespace(
+            intent=intent,
+            summary_focus=summary_focus,
+            answer_mode=answer_mode,
+            force_tool=force_tool,
+        )
+
+    def _emit_request_preprocess_status(
+        self,
+        llm_request: Any,
+        prompt: str,
+        *,
+        status: str,
+        details: str,
+    ) -> None:
+        """Emit one status update for the request-preprocess stage."""
+        request_id = getattr(self, "_current_request_id", None)
+        tool_status_id = (
+            f"request_preprocess_{request_id}"
+            if request_id
+            else "request_preprocess"
+        )
+        self.emit_signal(
+            SignalCode.LLM_TOOL_STATUS_SIGNAL,
+            {
+                "tool_id": tool_status_id,
+                "tool_name": "request_preprocessor",
+                "query": str(prompt or "")[:100],
+                "status": status,
+                "details": details,
+                "conversation_id": getattr(self, "_conversation_id", None),
+                "request_id": request_id,
+                "metadata": self._request_debug_metadata(llm_request),
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+    def _apply_request_preprocess(
+        self,
+        llm_request: Any,
+        prompt: str,
+        action: Any,
+        conversation: Any,
+        *,
+        explicit_force_tool: Optional[str] = None,
+    ) -> None:
+        """Run the LLM request preprocessor and persist its result."""
+        if llm_request is None:
+            return
+        if explicit_force_tool:
+            llm_request.preprocessed_primary_tool = explicit_force_tool
+            llm_request.request_plan = RequestPlan(
+                rewrite_needed=False,
+                rewritten_query=str(prompt or "").strip(),
+                tool_required=True,
+                tool_categories=list(
+                    getattr(llm_request, "tool_categories", []) or []
+                ),
+                allowed_tool_names=[explicit_force_tool],
+                primary_tool=explicit_force_tool,
+                planner_tool_hints=[explicit_force_tool],
+            )
+            return
+
+        preprocess_request = getattr(self, "_preprocess_request", None)
+        if not callable(preprocess_request):
+            return
+
+        self._emit_request_preprocess_status(
+            llm_request,
+            prompt,
+            status="starting",
+            details="Analyzing conversation context and rewriting the request if needed...",
+        )
+
+        result = preprocess_request(
+            prompt,
+            action=action,
+            llm_request=llm_request,
+            conversation=conversation,
+        )
+        if result is None:
+            self._emit_request_preprocess_status(
+                llm_request,
+                prompt,
+                status="failed",
+                details="Request preprocessing was unavailable; continuing without a rewritten request.",
+            )
+            return
+
+        request_plan = self._coerce_request_plan(result)
+        llm_request.request_plan = request_plan
+
+        rewritten_prompt = ""
+        if request_plan is not None:
+            rewritten_prompt = str(
+                getattr(request_plan, "rewritten_query", "") or ""
+            ).strip()
+        if not rewritten_prompt:
+            rewritten_prompt = str(
+                result.get("rewritten_query", "") or ""
+            ).strip()
+
+        rewrite_needed = bool(result.get("rewrite_needed"))
+        if request_plan is not None:
+            rewrite_needed = bool(getattr(request_plan, "rewrite_needed", False))
+
+        if rewrite_needed and rewritten_prompt:
+            llm_request.rewritten_prompt = rewritten_prompt
+        else:
+            llm_request.rewritten_prompt = None
+
+        plan_tool_categories = list(result.get("tool_categories") or [])
+        if request_plan is not None:
+            plan_tool_categories = list(
+                getattr(request_plan, "tool_categories", []) or []
+            )
+        llm_request.tool_categories = plan_tool_categories
+
+        primary_tool = result.get("primary_tool")
+        if request_plan is not None:
+            primary_tool = getattr(request_plan, "primary_tool", None)
+        llm_request.preprocessed_primary_tool = primary_tool
+        llm_request.document_query_intent = getattr(
+            request_plan,
+            "document_query_intent",
+            result.get("document_query_intent"),
+        )
+        llm_request.document_summary_focus = getattr(
+            request_plan,
+            "document_summary_focus",
+            result.get("document_summary_focus"),
+        )
+        llm_request.document_answer_mode = getattr(
+            request_plan,
+            "document_answer_mode",
+            result.get("document_answer_mode"),
+        )
+        llm_request.planner_tool_hints = list(
+            getattr(
+                request_plan,
+                "planner_tool_hints",
+                result.get("planner_tool_hints") or [],
+            )
+            or []
+        )
+
+        if primary_tool in self.DOCUMENT_TOOL_NAMES:
+            llm_request.document_primary_tool = primary_tool
+        else:
+            llm_request.document_primary_tool = None
+
+        self._current_document_query_route = self._build_document_request_route(
+            llm_request
+        )
+
+        details_parts = []
+        if llm_request.rewritten_prompt:
+            details_parts.append(
+                f"rewritten query: {llm_request.rewritten_prompt[:80]}"
+            )
+        categories = list(llm_request.tool_categories or [])
+        details_parts.append(
+            "categories: "
+            + (
+                ", ".join(categories)
+                if categories
+                else "none"
+            )
+        )
+        if primary_tool:
+            details_parts.append(f"primary tool: {primary_tool}")
+
+        self._emit_request_preprocess_status(
+            llm_request,
+            prompt,
+            status="completed",
+            details=" | ".join(details_parts),
+        )
+
+    def _request_preprocess_system_prompt(
+        self,
+        llm_request: Any,
+        action: Any,
+        system_prompt: Optional[str],
+    ) -> Optional[str]:
+        """Append rewritten-query guidance to the active system prompt."""
+        if llm_request is None:
+            return system_prompt
+
+        rewritten_prompt = getattr(llm_request, "rewritten_prompt", None)
+        primary_tool = getattr(llm_request, "preprocessed_primary_tool", None)
+        request_plan = getattr(llm_request, "request_plan", None)
+        planner_mode = getattr(llm_request, "planner_mode", None)
+        if request_plan is not None and getattr(
+            request_plan,
+            "planner_mode",
+            None,
+        ):
+            planner_mode = request_plan.planner_mode
+        if not rewritten_prompt and (
+            not primary_tool or planner_mode == "select_tools"
+        ):
+            return system_prompt
+
+        base_prompt = system_prompt
+        if base_prompt is None:
+            base_prompt = self.get_system_prompt_with_context(
+                action,
+                None,
+                None,
+            )
+
+        additions = [
+            "",
+            "Internal request preprocess:",
+            "Use the canonical request below when choosing tools and tool arguments.",
+            "The original user message remains part of the visible conversation history.",
+        ]
+        if rewritten_prompt:
+            additions.extend(
+                [
+                    "Canonical request:",
+                    rewritten_prompt,
+                ]
+            )
+        if primary_tool and planner_mode != "select_tools":
+            additions.append(f"Most likely first tool: {primary_tool}")
+        return "\n".join([base_prompt, *additions])
 
     def handle_request(
         self,
@@ -219,7 +557,11 @@ class RequestHandlingMixin:
             )
 
         tools_filtered, selected_categories, system_prompt = (
-            self._prepare_request_tooling(data, llm_request)
+            self._prepare_request_tooling(
+                data,
+                llm_request,
+                conversation=conversation,
+            )
         )
         rag_error = self._prepare_request_rag(
             data,
@@ -318,6 +660,8 @@ class RequestHandlingMixin:
         self,
         data: Dict[str, Any],
         llm_request: Any,
+        *,
+        conversation: Any = None,
     ) -> tuple[bool, List[str], Optional[str]]:
         """Apply per-request tool filtering and system prompt overrides."""
         tools_filtered = False
@@ -340,31 +684,38 @@ class RequestHandlingMixin:
         requested_force_tool = (
             getattr(llm_request, "force_tool", None) if llm_request else None
         )
+        self._apply_request_preprocess(
+            llm_request,
+            prompt,
+            action,
+            conversation,
+            explicit_force_tool=requested_force_tool,
+        )
         self._activate_request_planner_mode(
             llm_request,
             action,
             requested_force_tool,
         )
-        self._apply_document_query_route(llm_request, prompt, action)
+        self._apply_request_plan_tool_routing(
+            llm_request,
+            requested_force_tool=requested_force_tool,
+        )
+        allowed_tool_names = self._document_planner_allowed_tool_names(
+            llm_request,
+        )
         planner_system_prompt = self._request_planner_system_prompt(
             llm_request,
             action,
         )
         if planner_system_prompt is not None:
             system_prompt = planner_system_prompt
+        system_prompt = self._request_preprocess_system_prompt(
+            llm_request,
+            action,
+            system_prompt,
+        )
 
-        if llm_request and llm_request.tool_categories is None:
-            selected_categories = self._auto_select_tool_categories(
-                llm_request,
-                prompt,
-            )
-            self._apply_tool_filter(
-                selected_categories,
-                action=action,
-                force_tool=getattr(llm_request, "force_tool", None),
-            )
-            tools_filtered = True
-        elif llm_request and llm_request.tool_categories is not None:
+        if llm_request and llm_request.tool_categories is not None:
             self.logger.info(
                 "[LLM MANAGER DEBUG] APPLYING TOOL FILTER with %s",
                 llm_request.tool_categories,
@@ -377,6 +728,7 @@ class RequestHandlingMixin:
                 llm_request.tool_categories,
                 action=action,
                 force_tool=getattr(llm_request, "force_tool", None),
+                allowed_tool_names=allowed_tool_names,
             )
             selected_categories = list(llm_request.tool_categories)
             tools_filtered = True
@@ -388,127 +740,6 @@ class RequestHandlingMixin:
             self.logger.info("No tool filtering - using all tools")
 
         return tools_filtered, selected_categories, system_prompt
-
-    def _apply_document_query_route(
-        self,
-        llm_request: Any,
-        prompt: str,
-        action: Any,
-    ) -> None:
-        """Cache one request-scoped document route and force its tool."""
-        category_names = {
-            str(category).lower()
-            for category in getattr(llm_request, "tool_categories", []) or []
-        }
-        assume_document_mode = (
-            action == LLMActionType.PERFORM_RAG_SEARCH
-            or bool(getattr(llm_request, "rag_files", None))
-            or "rag" in category_names
-        )
-        route = route_document_query(
-            prompt,
-            assume_document_mode=assume_document_mode,
-        )
-        self._current_document_query_route = route
-        if not llm_request:
-            return
-
-        llm_request.document_query_intent = (
-            route.intent if route is not None else None
-        )
-        llm_request.document_primary_tool = (
-            route.force_tool if route is not None else None
-        )
-        llm_request.document_answer_mode = (
-            route.answer_mode if route is not None else None
-        )
-        llm_request.planner_tool_hints = self._planner_tool_hints(route)
-
-        if not route:
-            return
-        if getattr(llm_request, "tool_categories", None) is None:
-            llm_request.tool_categories = ["rag", "search"]
-        if self._planner_controls_document_tools(llm_request):
-            return
-        current_force_tool = getattr(llm_request, "force_tool", None)
-        if current_force_tool in (None, "rag_search"):
-            llm_request.force_tool = route.force_tool
-
-    def _auto_select_tool_categories(
-        self,
-        llm_request: Any,
-        prompt: str,
-    ) -> List[str]:
-        """Classify tool categories and emit UI status updates."""
-        request_id = getattr(self, "_current_request_id", None)
-        tool_status_id = (
-            f"tool_classification_{request_id}"
-            if request_id
-            else "tool_classification"
-        )
-        self.logger.info(
-            "Auto mode: Analyzing prompt to select relevant tool categories"
-        )
-        force_tool = getattr(llm_request, "force_tool", None)
-        direct_categories, direct_force_tool = self._detect_simple_tool_route(
-            prompt
-        )
-        if force_tool is None and direct_force_tool:
-            force_tool = direct_force_tool
-
-        self.emit_signal(
-            SignalCode.LLM_TOOL_STATUS_SIGNAL,
-            {
-                "tool_id": tool_status_id,
-                "tool_name": "tool_analyzer",
-                "query": prompt[:100],
-                "status": "starting",
-                "details": "Analyzing prompt to select tools...",
-                "conversation_id": getattr(self, "_conversation_id", None),
-                "request_id": request_id,
-                "metadata": self._request_debug_metadata(llm_request),
-                "timestamp": datetime.utcnow().isoformat(),
-            },
-        )
-
-        if direct_categories is not None:
-            selected_categories = direct_categories
-            self.logger.info(
-                "Auto mode: matched direct system tool route %s for prompt %r",
-                force_tool,
-                prompt[:100],
-            )
-        else:
-            selected_categories = self._classify_prompt_for_tools(prompt)
-
-        llm_request.tool_categories = selected_categories
-        llm_request.force_tool = force_tool
-
-        details = (
-            "Selected: "
-            f"{', '.join(selected_categories) if selected_categories else 'none'}"
-        )
-        if force_tool:
-            details += f" | forced tool: {force_tool}"
-        self.emit_signal(
-            SignalCode.LLM_TOOL_STATUS_SIGNAL,
-            {
-                "tool_id": tool_status_id,
-                "tool_name": "tool_analyzer",
-                "query": prompt[:100],
-                "status": "completed",
-                "details": details,
-                "conversation_id": getattr(self, "_conversation_id", None),
-                "request_id": request_id,
-                "metadata": self._request_debug_metadata(llm_request),
-                "timestamp": datetime.utcnow().isoformat(),
-            },
-        )
-        self.logger.info(
-            "Auto mode selected categories: %s",
-            selected_categories,
-        )
-        return selected_categories
 
     def _prepare_request_rag(
         self,
@@ -622,11 +853,7 @@ class RequestHandlingMixin:
         llm_request: Any,
     ) -> list[tuple[Any, Any]]:
         """Patch thinking flags on active chat models for one request."""
-        thinking_override = getattr(llm_request, "enable_thinking", None)
-        thinking_patches: list[tuple[Any, Any]] = []
-        if thinking_override is None:
-            return thinking_patches
-
+        _ = llm_request
         targets = [self._chat_model]
         if self._workflow_manager:
             targets.append(
@@ -637,13 +864,10 @@ class RequestHandlingMixin:
             if target is None or not hasattr(target, "enable_thinking"):
                 continue
             try:
-                thinking_patches.append(
-                    (target, getattr(target, "enable_thinking"))
-                )
-                setattr(target, "enable_thinking", bool(thinking_override))
+                setattr(target, "enable_thinking", True)
             except Exception:
                 continue
-        return thinking_patches
+        return []
 
     def _restore_thinking_patches(
         self,

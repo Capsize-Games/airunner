@@ -1,243 +1,350 @@
 # Document RAG Flow
 
-This note explains how document question answering works in AIRunner today.
+This note explains how document question answering works in AIRunner
+today.
+
+For the general LLM stack, see [llm-flow.md](llm-flow.md).
 
 ## Simple Explanation
 
-In simple terms, our RAG flow does three things:
+In simple terms, AIRunner now has two document entry paths:
 
-1. It decides whether the user is asking about an attached document and what kind of document question it is.
-2. It retrieves the right document data.
-3. It builds grounded internal document artifacts from that evidence,
-   verifies them, and then runs a final normal chat reply through the
-   standard prompt/history layer before streaming the visible answer.
+1. Attached-document chat can run either a direct document-tool turn or
+   a planner-controlled document turn.
+2. Direct document actions can still use explicit forced tools.
 
-For document questions, AIRunner currently uses two different tool paths:
+Both paths now start with the same request preprocess step. AIRunner
+asks the LLM to read the user's query, recent conversation context, and
+the available document tool inventory, then return structured request
+metadata.
 
-- `inspect_loaded_documents` for document identity and structure questions.
-- `rag_search` for summary and retrieval questions.
+That preprocess can:
 
-For summaries, the important detail is that the model does not answer
-directly from the raw tool output anymore. The synthesis layer strips
-the raw RAG inventory down to evidence bodies, builds a summary-specific
-prompt around that evidence, and then hands the grounded result to one
-final conversational pass.
+- rewrite a vague query into a clearer internal guidance string,
+- choose document tool categories,
+- nominate a primary tool,
+- record `document_query_intent`, `document_summary_focus`, and
+  `document_answer_mode`,
+- provide planner hints for the first document turn.
 
-For a single active document, the summary path is now designed to be
-broader than ordinary semantic search. Instead of relying only on the
-highest-similarity chunks, it can build summary evidence from the full
-extracted document text so the final answer covers more than just the
-introduction.
+The three document tools still have distinct roles:
 
-That full-text path now has two summary modes:
+- `inspect_loaded_documents` returns loaded-document identity and
+  structure data.
+- `analyze_loaded_document` prepares whole-document analysis context for
+   summaries, premise/theme questions, and broad transformations.
+- `rag_search` retrieves localized excerpts and remains the fallback
+  document-content search tool.
 
-- general summary queries still sample evidence across the document so
-    the answer can cover the whole work,
-- premise-style queries such as "what is this book about?" now prefer
-    the opening setup and the earliest premise/conflict paragraphs instead
-    of evenly sampling late-scene material from the whole narrative.
+The key architectural change is this: active document routing no longer
+depends on raw prompt keyword heuristics. Downstream document policy,
+prompt building, and chunk selection now read request metadata instead.
 
-The retrieval layer now also normalizes the local E5 embedding inputs the way the model expects: document queries are embedded with a `query:` prefix and indexed passages are embedded with a `passage:` prefix. Persisted indexes that were built before that change are upgraded lazily on the next search so older documents do not stay stuck on the pre-prefix strategy.
+The retrieval layer also normalizes the local E5 embedding inputs the
+way the model expects: document queries use a `query:` prefix and
+indexed passages use a `passage:` prefix. Persisted indexes that were
+built before that change are upgraded lazily on the next search.
 
-## Diagram
+## Attached-Document Chat Flow
 
 ```mermaid
 flowchart LR
-    A[User asks about an attached document] --> B[ChatPromptWidget builds LLMRequest]
-    B --> C[RequestHandlingMixin classifies the question]
-    C --> D{Document intent}
-    D -->|Identity or Structure| E[inspect_loaded_documents]
-    D -->|Summary or Retrieval| F[rag_search]
-    E --> G[NodeFunctionsMixin builds grounded document artifact]
-    F --> H[NodeFunctionsMixin builds synthesis prompt from excerpts]
-    H --> I[Model drafts grounded answer from retrieved evidence]
-    I --> J[NodeFunctionsMixin verifies grounded answer against evidence]
-    G --> K[NodeFunctionsMixin runs final normal chat pass with standard prompt and full history]
-    J --> K
-    K --> L[GenerationMixin streams assistant text]
-    L --> M[ConversationWidget renders the assistant bubble]
+     A[User chats with attached document] --> B[ChatPromptWidget builds LLMRequest<br/>with rag_files and document metadata]
+     B --> C[RequestHandlingMixin runs LLM preprocess<br/>with prompt, conversation, and tool inventory]
+   C --> D[Store rewrite guidance,<br/>request plan, and planner hints]
+   D --> E{Request plan needs planner mode?}
+   E -->|yes| F[Activate planner_mode = select_tools<br/>and restrict tools to document surface]
+   E -->|no| G[Apply direct primary document tool]
+   F --> H[System prompt switches to tool planner prompt]
+   H --> I[Model chooses one document tool]
+   G --> J[Tool executes]
+   I --> J
+   J --> K{How should the turn continue?}
+   K -->|more evidence needed| L[Route back to model with document loop guidance]
+   L --> M{Answer now or call another tool?}
+   M -->|another tool| I
+   M -->|answer| N[GenerationMixin streams assistant text]
+   K -->|synthesized document follow-up| O[Next model turn uses saved final chat prompt<br/>with tools unbound for the visible reply]
+   O --> N
 ```
 
 ## Summary-Specific Flow
 
 ```mermaid
 flowchart LR
-    A[User asks for a document summary] --> B[Request routed to rag_search]
-    B --> C{Single active document with readable text?}
-    C -->|Yes| D[Resolve file and extract full text]
-    D --> E{Premise-style about query?}
-    E -->|Yes| F[Prefer opening setup and early conflict evidence]
-    E -->|No| G[Detect headings or paragraph regions]
-    G --> H[Select distributed evidence across the document]
-    F --> I[Return labelled summary evidence blocks]
-    H --> I
-    C -->|No| H[Fallback to wider semantic retrieval]
-    H --> I
-    I --> J[NodeFunctionsMixin strips labels and builds summary prompt]
-    J --> K[Internal draft synthesis gets larger answer budget]
-    K --> L[Model drafts grounded summary]
-    L --> M[NodeFunctionsMixin verifies grounded summary against evidence]
-    M --> N{Verification output user-facing?}
-    N -->|No| O[Prefer grounded synthesis artifact]
-    N -->|Yes| P[Use repaired grounded summary]
-    O --> Q[Run final normal chat pass with standard prompt and full history]
-    P --> Q
-    Q --> R[Stream final conversational reply to the user]
+     A[User asks for a summary or premise] --> B[LLM preprocess marks summary intent<br/>and optional summary_focus]
+     B --> C{How did the request enter?}
+   C -->|attached-document chat| D[Request plan prefers a direct tool<br/>or planner-controlled document flow]
+     C -->|direct document action| E[Request may still force one tool]
+     D --> F{Which tool path runs?}
+   F -->|analyze_loaded_document| G[Build whole-document text or chunked evidence bundle]
+     F -->|rag_search| H[Retrieve excerpts or wider fallback search]
+     E --> H
+     G --> I[Node functions read request metadata only]
+     H --> I
+     I --> J[Summary cleanup removes labels and inventory noise]
+     J --> K[Grounded synthesis and verification run as needed]
+     K --> L[Final reply uses the normal chat prompt and history layer]
+     L --> M[Stream final conversational answer]
 ```
+
+## Current Planner And Finalization Behavior
+
+- Attached-document chat in `LLMActionType.CHAT` does not activate
+   planner mode just because `rag_files` are present.
+- The request preprocess runs before planner/tool filtering unless an
+  explicit `force_tool` already determines the route.
+- The preprocess can store `rewritten_prompt` and a structured request
+   plan containing tool categories, primary tool, planner mode,
+   `document_query_intent`, `document_summary_focus`,
+   `document_answer_mode`, and planner hints.
+- After `inspect_loaded_documents`, planner mode stays in the loop so
+  the model can answer or choose another document tool.
+- After synthesized summary-style tool results, the next model turn can
+  use the saved final chat prompt with tools unbound before the visible
+  answer is generated.
+- Internal document synthesis and verification now return one explicit
+   `answer_text` block, and forced-response recovery prefers that field
+   instead of free-form meta text.
+- Direct document actions such as `PERFORM_RAG_SEARCH` can still use
+  explicit forced tool routing.
 
 ## Where The Instructions Come From
 
-If you want to know where the model is being told how to answer, check these layers in order:
+If you want to know where the model is being told how to handle
+documents, check these layers in order.
 
-### 1. Request routing
+### 1. Request Preprocess And Planner Activation
 
-This decides whether the question is identity, structure, summary, or generic retrieval.
+These files decide whether the turn is document-aware, which document
+intent it maps to, and whether planner mode is active.
 
-- [chat_prompt_widget.py](../src/airunner/components/chat/gui/widgets/chat_prompt_widget.py#L467): builds the `LLMRequest`, attaches document paths, and marks the request as RAG-capable when documents are attached.
-- [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py#L267): `_apply_document_query_route()` stores the request-scoped document intent and forced tool.
-- [document_query_routing.py](../src/airunner/components/llm/utils/document_query_routing.py#L93): `route_document_query()` is the pure routing function.
+- [chat_prompt_widget.py](../src/airunner/components/chat/gui/widgets/chat_prompt_widget.py)
+- [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py)
+- [tool_classification_mixin.py](../src/airunner/components/llm/managers/mixins/tool_classification_mixin.py)
+- [tool_filtering_mixin.py](../src/airunner/components/llm/managers/mixins/tool_filtering_mixin.py)
+- [system_prompt_mixin.py](../src/airunner/components/llm/managers/mixins/system_prompt_mixin.py)
 
-### 2. Tool output shape
+This layer now does more than just store a route:
 
-These functions define the raw material that the model receives after retrieval.
+- it asks the LLM to classify and optionally rewrite the request,
+- it can activate `planner_mode = "select_tools"` when the request plan
+   explicitly calls for tool selection,
+- it saves `final_system_prompt` for the last no-tool reply,
+- it records `document_query_intent`, `document_summary_focus`,
+  `document_primary_tool`, and `document_answer_mode`,
+- it narrows planner turns to the document tool allowlist and can mark
+  the turn as tool-required.
 
-- [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L376): `inspect_loaded_documents()` returns metadata and extracted structure headings.
-- [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L417): `rag_search()` runs retrieval over loaded documents.
-- [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L296): `_format_rag_search_results()` formats the raw retrieval result into document summaries plus excerpt blocks.
-- [rag_search_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_search_mixin.py): `search()` now honors requested retrieval breadth instead of always being effectively capped by the default retriever size.
+### 2. Tool Output Shape
 
-For summary intent, `rag_search()` now has a different quality target than ordinary question answering:
+These functions define the raw document material the model receives.
 
-- if there is one active readable document, it should build evidence from across that document rather than only returning the most similar intro-heavy chunks,
-- if the user is asking what a book or document is about, that single-document path should prefer opening premise and central-conflict paragraphs over later-scene snippets,
-- if that broader path is unavailable, it should fall back to wider retrieval breadth instead of the narrow default.
-- the summary fallback path should request more evidence than ordinary retrieval so the synthesis step has enough coverage to work with.
+- [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py)
+- [rag_search_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_search_mixin.py)
+- [
+  _document_analysis.py](../src/airunner/components/llm/tools/rag_tools_helpers/_document_analysis.py)
+- [
+  _document_analysis_pipeline.py](../src/airunner/components/llm/tools/rag_tools_helpers/_document_analysis_pipeline.py)
+- [
+  _summary_evidence.py](../src/airunner/components/llm/tools/rag_tools_helpers/_summary_evidence.py)
 
-### 2.5 Retrieval runtime and persisted indexes
+Current roles:
 
-These files sit under the tool layer, but they matter directly for real answer quality.
+- `inspect_loaded_documents()` returns metadata and extracted
+  structure headings.
+- `analyze_loaded_document()` returns either full-document text for
+   small documents or a chunked evidence bundle with document coverage
+   and supporting excerpts for larger documents.
+- `rag_search()` performs excerpt retrieval and wider fallback search.
+- Summary evidence and chunk frontloading now use request metadata,
+  especially `document_summary_focus`, instead of reparsing the prompt.
+- `rag_search()` also uses the preprocess-owned rewritten query when one
+   is available instead of pronoun-based document expansion in the tool
+   layer.
 
-- [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py): wraps the local `intfloat/e5-large` embeddings so queries use `query:` and passages use `passage:` before embedding.
-- [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py): stores embedding-strategy metadata with each persisted index and lazily re-embeds legacy indexes on the next search when the strategy changes.
-- [retriever.py](../src/airunner/components/llm/managers/agent/retriever.py): ensures loaded document indexes are refreshed to the current embedding strategy before similarity search runs.
-- [model_status_widget.py](../src/airunner/components/model_management/gui/model_status_widget.py): surfaces the embedding runtime as its own `RAG Embeddings` row with status and unload support.
+### 2.5 Retrieval Runtime And Persisted Indexes
 
-This means the RAG path now has a distinct embedding runtime that can be loading, loaded, or unloaded independently of the main LLM runtime.
+These files sit under the tool layer, but they matter directly for real
+answer quality.
 
-### 3. Post-tool synthesis instructions
+- [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py)
+- [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)
+- [retriever.py](../src/airunner/components/llm/managers/agent/retriever.py)
+- [model_status_widget.py](../src/airunner/components/model_management/gui/model_status_widget.py)
+
+This means the document path has its own embedding runtime and its own
+index-compatibility concerns, separate from the main chat runtime.
+
+### 3. Tool Loop Control And Follow-Up Behavior
+
+This layer decides whether the workflow should stay in tool mode, answer
+deterministically, or unbind tools for the final visible reply.
+
+- [routing_decision_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/routing_decision_mixin.py)
+- [document_response_policy_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/document_response_policy_mixin.py)
+- [search_results_prompt_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/search_results_prompt_mixin.py)
+- [post_tool_instructions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/post_tool_instructions_mixin.py)
+
+Current behavior to remember:
+
+- planner-controlled document turns do not force response synthesis as
+  soon as one document tool finishes,
+- planner post-tool guidance can tell the model to either answer from
+  current evidence or choose another document tool,
+- downstream document prompt and policy helpers now trust request
+  metadata instead of reclassifying the raw question text.
+
+### 4. Grounded Synthesis And Final Chat Reply
 
 This is the main place where grounded document artifacts are assembled
-and then handed to the normal chat layer.
+and turned into visible replies.
 
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L530): `_generate_response_message_from_results()` decides whether to answer deterministically or run the internal draft and verification passes.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015): `_build_document_summary_prompt_results()` strips summary prompts down to excerpt bodies so the model sees evidence instead of raw RAG inventory noise.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831): `_build_search_results_prompt()` writes the draft prompt that turns retrieved content into an answer candidate.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935): `_build_search_results_verification_prompt()` writes the follow-up verification prompt that rewrites the final answer against the same evidence.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py): `_run_document_conversational_pass()` turns the grounded document artifact into the final user-facing reply through the standard prompt builder and full conversation history.
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L3164): `_generate_streaming_response()` gathers streamed visible text, thinking content, and tool-call chunks.
+- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py)
+- [document_conversational_followup_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/document_conversational_followup_mixin.py)
+- [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py)
 
-Three extra safeguards now matter for summary turns:
+This layer controls:
 
-- the internal no-tool summary synthesis pass uses a larger generation budget than the outer RAG action so it does not inherit the concise retrieval budget and truncate mid-thought,
-- for "what is this book/document about?" prompts, the synthesis guidance tells the model to lead with premise, setting, central conflict, and major relationships before isolated later scenes,
-- after that draft pass, a second internal verification pass checks the draft against the same evidence and rewrites unsupported or stray details before any final answer is emitted,
-- verification remains an internal grounded stage; if it emits audit prose or wrapped verdict markup, fallback keeps the grounded synthesis artifact instead of surfacing the verifier text,
-- once grounded content is ready, one final no-tool conversational pass runs through the normal system prompt, persona settings, and full conversation history so the visible answer sounds like a normal chat reply,
-- malformed prompt-tail fragments such as partial `Answer:` label text are rejected before they can override a better drafted summary recovered from thinking content.
-- if the visible synthesis output merely echoes the summary instructions themselves, that prompt-guidance text is rejected and recovery falls back to drafted content from thinking, flattening numbered reasoning summaries into plain prose when needed.
+- whether a document result should be answered deterministically or
+  synthesized,
+- how summary prompts are cleaned down to grounded evidence,
+- how summary drafts are verified against that evidence,
+- when the final normal chat prompt is restored,
+- how document replies are recovered from tool state if the visible
+   final text is weak or empty,
+- and how internal document synthesis is constrained to one explicit
+   `answer_text` field.
 
-### 4. Final streaming and rendering
+### 5. Final Streaming And Rendering
 
 These functions decide how the completed assistant text reaches the UI.
 
-- [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302): `_create_streaming_callback()` emits assistant stream chunks.
-- [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L70): `_emit_visible_response()` emits a fallback visible answer if the workflow completed without streamed assistant text.
-- [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087): `_process_sequential_tokens()` assembles streamed tokens into the active assistant bubble.
-- [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L427): `_format_message_for_webview()` formats message payloads for the web view.
-- [formatter_extended.py](../src/airunner/utils/text/formatter_extended.py#L179): `format_content()` converts markdown-looking assistant text into rendered HTML.
+- [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py)
+- [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py)
+- [formatter_extended.py](../src/airunner/utils/text/formatter_extended.py)
 
 ## What Happens For Each Kind Of Document Question
 
-### Identity question
+### Identity Question
 
 Example: "what is this document?"
 
-1. The request is classified as `identity`.
-2. The route forces `inspect_loaded_documents`.
-3. The response is usually deterministic.
-4. The final answer is built from metadata like title, author, and file type.
+1. The preprocess classifies the request as `identity`.
+2. Attached-document chat usually enters planner mode and hints
+   `inspect_loaded_documents` first.
+3. Direct document actions can still force
+   `inspect_loaded_documents` immediately.
+4. The answer is usually deterministic and built from metadata such as
+   title, author, and file type.
 
-### Structure question
+### Structure Question
 
 Example: "what chapters does it contain?"
 
-1. The request is classified as `structure`.
-2. The route forces `inspect_loaded_documents`.
-3. The response is usually deterministic.
-4. The final answer is built from extracted headings.
+1. The preprocess classifies the request as `structure`.
+2. Attached-document chat usually hints
+   `inspect_loaded_documents` first.
+3. Planner mode can stay in the loop after inspection if another
+   document step is still needed.
+4. The final answer is usually built from extracted headings.
 
-### Summary question
+### Summary Or Premise Question
 
-Example: "summarize the document for me" or "what is this book about?"
+Example: "summarize the document for me" or
+"what is this book about?"
 
-1. The request is classified as `summary`.
-2. The route forces `rag_search`.
-3. If one active document is available, `rag_search()` can extract the
-    full text and either build distributed summary evidence across the
-    document or, for premise-style about queries, prefer the opening
-    setup and earliest conflict paragraphs.
-4. Before searching a persisted index, the retrieval layer upgrades any legacy pre-prefix embeddings to the current E5 strategy when needed.
-5. If that broader path is unavailable, `rag_search()` falls back to a wider semantic retrieval pass.
-6. `_build_document_summary_prompt_results()` removes filename, path, and excerpt-label clutter from the synthesis input.
-7. `_build_search_results_prompt()` tells the model to synthesize a
-    real summary from the evidence, and premise-style about questions are
-    steered toward setup and conflict first.
-8. The first internal pass drafts a summary from the evidence.
-9. A second internal pass verifies that draft against the same evidence and rewrites unsupported or stray claims before the answer becomes visible.
-10. If verification emits wrapped verdicts, audit prose, malformed tail fragments, or prompt echo, recovery prefers the grounded synthesis artifact instead of trusting that visible fragment.
-11. The recovered grounded content is passed through one final no-tool conversational pass that uses the normal system prompt, mood/personality settings, and full conversation history.
-12. The streamed answer is rendered into the assistant bubble.
+1. The preprocess classifies the request as `summary` and can mark a
+   `document_summary_focus` such as `premise`.
+2. Attached-document chat can prefer `analyze_loaded_document` before
+   `rag_search` when a broader single-document view is needed.
+3. `analyze_loaded_document()` can return whole-document or chunked
+   context, while `rag_search()` remains the excerpt and fallback search
+   path.
+4. Large-document `analyze_loaded_document()` turns now expose document
+   coverage plus supporting evidence instead of deterministic map/reduce
+   chunk summaries.
+5. Summary evidence selection and chunk frontloading now follow request
+   metadata instead of query-text heuristics.
+6. Before search runs, legacy pre-prefix embeddings are upgraded to the
+   current E5 strategy when needed.
+7. Summary cleanup removes filename, path, and label clutter from the
+   synthesis input.
+8. Grounded synthesis and verification rewrite unsupported or stray
+   details before the answer becomes visible.
+9. The final visible answer uses the normal chat prompt and history
+   layer rather than raw tool output.
 
-## Why Summary Quality Lives Mostly In One File
+### Broad Transformation Question
 
-If the summary is weak, the most important file is:
+Example: "summarize the lab results in a table"
 
+1. The preprocess classifies the request as a synthesized document
+   task.
+2. Planner hints can prefer `analyze_loaded_document` and then
+   `rag_search`.
+3. Whole-document context is preferred when the task needs more than a
+   local excerpt window.
+4. The visible answer is still expected to be grounded in document
+   evidence, not improvised from the request alone.
+
+## Why Document Quality Now Lives Across Multiple Layers
+
+If the document answer is weak, the most important files are no longer
+just in one place.
+
+- [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py)
+  and
+  [tool_classification_mixin.py](../src/airunner/components/llm/managers/mixins/tool_classification_mixin.py)
+  control preprocess routing, intent metadata, planner hints, and the
+  saved final prompt.
+- [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py),
+  [
+  _document_analysis.py](../src/airunner/components/llm/tools/rag_tools_helpers/_document_analysis.py),
+  and
+  [
+  _summary_evidence.py](../src/airunner/components/llm/tools/rag_tools_helpers/_summary_evidence.py)
+  control evidence coverage.
+- [document_response_policy_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/document_response_policy_mixin.py)
+  and
+  [search_results_prompt_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/search_results_prompt_mixin.py)
+  control how request metadata becomes grounded answer prompts.
 - [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py)
-
-That file controls:
-
-- whether a document result should be answered deterministically or synthesized,
-- which grounded prompts are built for summary questions,
-- how the draft answer is verified against the same evidence before it becomes visible,
-- how the final user-facing document reply is rebuilt through the normal chat prompt/history layer,
-- how raw RAG results are cleaned before synthesis,
-- how hidden thinking is recovered when the visible stream is empty or poor.
-
-`rag_tools.py` matters because it shapes the raw excerpts, including the
-new premise-focused evidence path for book-about questions, but the
-user-facing summary instructions are mainly created inside
-`NodeFunctionsMixin`.
-
-After the summary-retrieval upgrade, the two most important files for summary quality are:
-
-- [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py)
-- [node_functions_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py)
-- [rag_search_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_search_mixin.py)
-- [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py)
-- [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)
-
-`rag_tools.py` determines coverage. `rag_search_mixin.py` determines whether the requested breadth is even reachable. `rag_properties_mixin.py` determines how text is embedded for retrieval. `vector_index.py` determines whether old indexes are silently upgraded to the current strategy. `NodeFunctionsMixin` determines how that evidence becomes the final assistant answer and how malformed visible output is recovered.
+  and
+  [document_conversational_followup_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/document_conversational_followup_mixin.py)
+  turn grounded evidence into the final assistant reply.
 
 ## Practical Debugging Order
 
 When a document answer looks wrong, check the pipeline in this order:
 
-1. Was the question routed to the right intent in [document_query_routing.py](../src/airunner/components/llm/utils/document_query_routing.py#L93)?
-2. Is the active embedding runtime using the expected E5 prefix strategy in [rag_properties_mixin.py](../src/airunner/components/llm/managers/agent/mixins/rag_properties_mixin.py)?
-3. Did the persisted index refresh itself if it was built before the current embedding strategy in [vector_index.py](../src/airunner/components/llm/managers/agent/vector_index.py)?
-4. Did the right tool run in [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py#L267)?
-5. Did the tool return good evidence in [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py#L417)?
-6. Did [_build_document_summary_prompt_results()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L1015), [_build_search_results_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L831), and [_build_search_results_verification_prompt()](../src/airunner/components/llm/managers/mixins/node_functions_mixin.py#L935) create the right grounded draft and verification inputs, and did recovery reject any verifier markup or prompt-guidance echo?
-7. Did the grounded artifact make it through the final normal chat pass, and did the answer stream correctly through [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py#L302) and [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py#L1087)?
+1. Did
+   [chat_prompt_widget.py](../src/airunner/components/chat/gui/widgets/chat_prompt_widget.py)
+   attach the right documents and metadata?
+2. Did the preprocess step in
+   [tool_classification_mixin.py](../src/airunner/components/llm/managers/mixins/tool_classification_mixin.py)
+   return the expected document intent, summary focus, and tool hints?
+3. Did
+   [request_handling_mixin.py](../src/airunner/components/llm/managers/mixins/request_handling_mixin.py)
+   activate planner mode or explicit forced tooling the way you
+   expected?
+4. Did
+   [tool_filtering_mixin.py](../src/airunner/components/llm/managers/mixins/tool_filtering_mixin.py)
+   expose the right document tool allowlist and tool-choice behavior?
+5. Did the adapter honor the expected tool mode in
+   [chat_gguf.py](../src/airunner/components/llm/adapters/chat_gguf.py)
+   or the active remote adapter?
+6. Which document tool actually ran, and what evidence or analysis
+   context did it return in
+   [rag_tools.py](../src/airunner/components/llm/tools/rag_tools.py)?
+7. Did the metadata-driven prompt/policy layer keep the right intent,
+   answer mode, and summary focus all the way through synthesis?
+8. Did grounded synthesis or fallback recovery produce the final answer
+   you expected?
+9. Did the reply stream and render correctly through
+   [generation_mixin.py](../src/airunner/components/llm/managers/mixins/generation_mixin.py)
+   and
+   [conversation_widget.py](../src/airunner/components/chat/gui/widgets/conversation_widget.py)?
 
-That order usually tells you whether the bug is routing, retrieval, synthesis, or rendering.
+That order usually tells you whether the bug is request assembly,
+preprocess routing, retrieval, loop control, synthesis, or rendering.

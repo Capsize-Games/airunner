@@ -1,16 +1,132 @@
 """Search-result and document prompt builders for node functions."""
 
 import re
+from typing import Any
 
 
 class SearchResultsPromptMixin:
     """Build synthesis and verification prompts for tool results."""
 
+    _PREMISE_PRIMARY_EXCERPT_PREFIXES = (
+        "Current setting.",
+        "Inciting incident.",
+    )
+
+    _PREMISE_SECONDARY_EXCERPT_PREFIXES = (
+        "Nested anecdote.",
+        "Frame narrative.",
+        "Background detail.",
+    )
+
+    @staticmethod
+    def _build_answer_text_contract() -> str:
+        """Return the structured answer-text contract for internal stages."""
+        return (
+            "Return ONLY one answer_text block in this exact format:\n"
+            "<answer_text>\n"
+            "final user-facing answer\n"
+            "</answer_text>\n"
+            "Do not include any text before or after the answer_text block."
+        )
+
+    @staticmethod
+    def _extract_document_requested_analysis(all_tool_content: str) -> str:
+        """Return the requested analysis recorded by document tools."""
+        match = re.search(
+            r"^Requested analysis:\s*(.+)$",
+            str(all_tool_content or ""),
+            flags=re.MULTILINE,
+        )
+        if match is None:
+            return ""
+        return match.group(1).strip()
+
+    @staticmethod
+    def _extract_document_supporting_evidence(
+        all_tool_content: str,
+    ) -> str:
+        """Return the supporting-evidence section from document analysis."""
+        content = str(all_tool_content or "")
+        marker = "Supporting evidence:\n\n"
+        if marker in content:
+            return content.split(marker, 1)[1].strip()
+        match = re.search(
+            r"Supporting evidence:\s*(.*)\Z",
+            content,
+            flags=re.DOTALL,
+        )
+        if match is None:
+            return ""
+        return match.group(1).strip()
+
+    @staticmethod
+    def _extract_document_analysis_mode(all_tool_content: str) -> str:
+        """Return the analysis mode recorded by document-analysis tools."""
+        match = re.search(
+            r"^Analysis mode:\s*(.+)$",
+            str(all_tool_content or ""),
+            flags=re.MULTILINE,
+        )
+        if match is None:
+            return ""
+        return match.group(1).strip()
+
+    @staticmethod
+    def _extract_document_analysis_section(
+        all_tool_content: str,
+        heading: str,
+        stop_headings: tuple[str, ...],
+    ) -> str:
+        """Return one named analyze_loaded_document section."""
+        content = str(all_tool_content or "")
+        marker = f"{heading}:\n\n"
+        if marker not in content:
+            return ""
+
+        tail = content.split(marker, 1)[1]
+        end = len(tail)
+        for stop_heading in stop_headings:
+            stop_marker = f"\n\n{stop_heading}:\n\n"
+            index = tail.find(stop_marker)
+            if index != -1:
+                end = min(end, index)
+        return tail[:end].strip()
+
+    @staticmethod
+    def _replace_current_document_label(
+        prompt_results: str,
+        document_label: str,
+    ) -> str:
+        """Return summary evidence with one normalized document label."""
+        if not prompt_results or not document_label:
+            return prompt_results
+        return re.sub(
+            r"^Current document:\s*loaded document$",
+            f"Current document: {document_label}",
+            prompt_results,
+            count=1,
+            flags=re.MULTILINE,
+        )
+
+    def _resolve_document_prompt_context(
+        self: Any,
+        tool_name: str,
+        all_tool_content: str,
+        user_question: str,
+    ) -> tuple[str | None, str | None]:
+        """Return intent and summary focus for one document answer prompt."""
+        return (
+            self._get_document_query_intent(user_question),
+            self._get_document_summary_focus(user_question),
+        )
+
     def _build_search_results_prompt(
-        self,
+        self: Any,
         all_tool_content: str,
         tool_name: str,
         user_question: str = "",
+        *,
+        structured_answer: bool = False,
     ) -> str:
         """Build one no-tool synthesis prompt for search results."""
         question_context = (
@@ -23,7 +139,13 @@ class SearchResultsPromptMixin:
         prompt_results = all_tool_content
         prompt_results_label = "Search results"
         document_tool = self._is_document_result_tool(tool_name)
-        document_intent = self._get_document_query_intent(user_question)
+        document_intent, document_summary_focus = (
+            self._resolve_document_prompt_context(
+                tool_name,
+                all_tool_content,
+                user_question,
+            )
+        )
         if document_tool:
             if document_intent == "identity":
                 rag_guidance = (
@@ -42,18 +164,20 @@ class SearchResultsPromptMixin:
                 )
             elif document_intent == "summary":
                 prompt_results = self._build_document_summary_prompt_results(
-                    all_tool_content
+                    all_tool_content,
+                    summary_focus=document_summary_focus,
                 )
                 if prompt_results != all_tool_content:
-                    prompt_results_label = "Evidence excerpts"
+                    prompt_results_label = (
+                        "Document analysis context"
+                        if "Analysis mode:" in all_tool_content
+                        else "Evidence excerpts"
+                    )
                 has_evidence_role_labels = any(
                     label in prompt_results
                     for label in (
                         "Current setting.",
                         "Inciting incident.",
-                        "Nested anecdote.",
-                        "Frame narrative.",
-                        "Background detail.",
                     )
                 )
                 summary_guidance = (
@@ -70,11 +194,9 @@ class SearchResultsPromptMixin:
                     "Stay anchored to what the excerpts explicitly say. Do "
                     "not infer genre, series, trilogy, collection, or "
                     "bibliographic relationships unless the evidence states "
-                    "them directly. Treat uncanny, dreamlike, or eerie "
-                    "atmosphere as mood unless the excerpts explicitly "
-                    "confirm literal supernatural events. Do not infer "
-                    "divine, supernatural, or hidden-authority beliefs "
-                    "unless the evidence states them directly. The evidence "
+                    "them directly. Do not turn ambiguous mood, imagery, or "
+                    "one-off wording into confirmed plot facts, motives, or "
+                    "beliefs unless the excerpts state that directly. The evidence "
                     "below already comes from the currently loaded document "
                     "the user is asking about. Do not ask the user to "
                     "identify which book, story, document, title, or author "
@@ -88,14 +210,12 @@ class SearchResultsPromptMixin:
                     "results, or internal instructions. Do not use bullet "
                     "points, numbered lists, or excerpt inventories.\n\n"
                 )
-                if self._is_document_about_question(user_question):
+                if document_summary_focus == "premise":
                     role_guidance = (
-                        "If the evidence includes labels such as Current "
-                        "setting or Inciting incident, lead with those "
-                        "labeled spans first. Treat Nested anecdote, Frame "
-                        "narrative, or Background detail as supporting "
-                        "context unless the same idea is reinforced "
-                        "elsewhere.\n\n"
+                        "If the evidence includes explicit setup or "
+                        "catalyst spans, lead with those first and keep "
+                        "secondary context subordinate unless it is "
+                        "reinforced by more than one excerpt.\n\n"
                         if has_evidence_role_labels
                         else ""
                     )
@@ -107,27 +227,22 @@ class SearchResultsPromptMixin:
                         "one-off travel stops, and stray dialogue fragments "
                         "as secondary unless the evidence clearly shows they "
                         "define the work as a whole. Prefer the inciting "
-                        "incident, victim, investigator, and case setup over "
-                        "static character descriptions or travel anecdotes. "
-                        "If the excerpts describe a corpse, a supposedly dead "
-                        "figure, studio illusions, or eerie atmosphere, "
-                        "prefer a grounded mystery or noir framing unless the "
-                        "evidence explicitly confirms literal supernatural "
-                        "events. Do not describe literal resurrection, a "
-                        "supernatural world, or magical cities unless the "
-                        "evidence states that directly. Do not attribute "
-                        "criticism, accusations, or quoted dialogue to the "
-                        "apparently dead figure unless the excerpt explicitly "
-                        "identifies that speaker. Treat later arguments and "
-                        "recollections as secondary to the inciting mystery.\n\n"
+                        "development and main causal setup over static "
+                        "character descriptions or travel anecdotes. "
+                        "Treat later arguments, recollections, quoted "
+                        "remarks, and atmospheric fragments as secondary to "
+                        "the inciting mystery unless multiple excerpts make "
+                        "them central. Do not introduce generic dramatic "
+                        "padding, extra motives, or relationship dynamics "
+                        "unless the excerpts explicitly support them.\n\n"
                         + role_guidance
                         + summary_guidance
                     )
                     response_style = (
                         "Lead with premise, setting, and central conflict. "
-                        "Keep stray scene details secondary and favor a "
-                        "grounded mystery framing unless the excerpts say "
-                        "otherwise. Prioritize the case setup over static "
+                        "Keep stray scene details secondary and favor the "
+                        "clearest grounded reading supported by the "
+                        "excerpts. Prioritize the main setup over static "
                         "character profiles."
                     )
                 else:
@@ -203,23 +318,35 @@ class SearchResultsPromptMixin:
             else "You are answering a question based on search results. "
             "Respond naturally and conversationally.\n\n"
         )
-        response_instruction = (
-            "Based on the document evidence above, provide a clear, "
-            "conversational answer to the user's question about that "
-            "document. Use ONLY the information from the document evidence. "
-            "The excerpts already belong to the loaded document the user is "
-            "asking about, so do not ask which book, story, or document they "
-            "mean unless no document evidence is present. Do not call any "
-            "tools, do not use JSON, and do not prefix the reply with labels "
-            "like Draft:, Answer:, or Response:. Just write a natural "
-            "response."
-            if document_tool
-            else "Based on the search results above, provide a clear, "
-            "conversational answer to the user's question. Use ONLY the "
-            "information from the search results. Do not call any tools, do "
-            "not use JSON, and do not prefix the reply with labels like "
-            "Draft:, Answer:, or Response:. Just write a natural response."
-        )
+        if document_tool and structured_answer:
+            response_instruction = (
+                "Based on the document evidence above, provide a clear, "
+                "conversational answer to the user's question about that "
+                "document. Use ONLY the information from the document evidence. "
+                "The excerpts already belong to the loaded document the user is "
+                "asking about, so do not ask which book, story, or document they "
+                "mean unless no document evidence is present. Do not call any "
+                "tools and do not use JSON. "
+                f"{self._build_answer_text_contract()}"
+            )
+        else:
+            response_instruction = (
+                "Based on the document evidence above, provide a clear, "
+                "conversational answer to the user's question about that "
+                "document. Use ONLY the information from the document evidence. "
+                "The excerpts already belong to the loaded document the user is "
+                "asking about, so do not ask which book, story, or document they "
+                "mean unless no document evidence is present. Do not call any "
+                "tools, do not use JSON, and do not prefix the reply with labels "
+                "like Draft:, Answer:, or Response:. Just write a natural "
+                "response."
+                if document_tool
+                else "Based on the search results above, provide a clear, "
+                "conversational answer to the user's question. Use ONLY the "
+                "information from the search results. Do not call any tools, do "
+                "not use JSON, and do not prefix the reply with labels like "
+                "Draft:, Answer:, or Response:. Just write a natural response."
+            )
 
         return (
             f"{prompt_intro}"
@@ -231,16 +358,24 @@ class SearchResultsPromptMixin:
         )
 
     def _build_search_results_verification_prompt(
-        self,
+        self: Any,
         all_tool_content: str,
         tool_name: str,
         user_question: str,
         drafted_response: str,
+        *,
+        structured_answer: bool = False,
     ) -> str:
         """Build a verification prompt for the final document answer."""
         prompt_results = all_tool_content
         prompt_results_label = "Search results"
-        document_intent = self._get_document_query_intent(user_question)
+        document_intent, document_summary_focus = (
+            self._resolve_document_prompt_context(
+                tool_name,
+                all_tool_content,
+                user_question,
+            )
+        )
         has_evidence_role_labels = any(
             label in prompt_results
             for label in (
@@ -256,10 +391,15 @@ class SearchResultsPromptMixin:
             and document_intent == "summary"
         ):
             prompt_results = self._build_document_summary_prompt_results(
-                all_tool_content
+                all_tool_content,
+                summary_focus=document_summary_focus,
             )
             if prompt_results != all_tool_content:
-                prompt_results_label = "Evidence excerpts"
+                prompt_results_label = (
+                    "Document analysis context"
+                    if "Analysis mode:" in all_tool_content
+                    else "Evidence excerpts"
+                )
 
         draft_block = drafted_response.strip()
         if draft_block:
@@ -286,17 +426,25 @@ class SearchResultsPromptMixin:
             else "Answer directly in one or two concise paragraphs."
         )
         if document_intent == "summary":
-            verification_focus = (
-                "Lead with the premise, setting, central conflict, and major "
-                "relationships that the excerpts support. Prefer recurring "
-                "core details over isolated late-scene events."
-            )
-            if has_evidence_role_labels:
-                verification_focus += (
-                    " If the evidence includes labels such as Current "
-                    "setting or Inciting incident, keep those in the lead "
-                    "and treat Nested anecdote, Frame narrative, or "
-                    "Background detail as supporting context."
+            if document_summary_focus == "premise":
+                verification_focus = (
+                    "Lead with the premise, setting, central conflict, and "
+                    "major relationships that the excerpts support. Prefer "
+                    "recurring core details over isolated late-scene "
+                    "events. Remove generic dramatic padding unless the "
+                    "excerpts explicitly support it."
+                )
+                if has_evidence_role_labels:
+                    verification_focus += (
+                        " If the evidence includes explicit setup or "
+                        "catalyst spans, keep those in the lead and push "
+                        "secondary context into the background."
+                    )
+            else:
+                verification_focus = (
+                    "Lead with the document's central subject, major themes, "
+                    "or recurring claims that the excerpts support. Prefer "
+                    "the strongest repeated evidence over isolated details."
                 )
         elif document_intent == "extract":
             verification_focus = (
@@ -333,6 +481,12 @@ class SearchResultsPromptMixin:
             else ""
         )
 
+        answer_contract = (
+            self._build_answer_text_contract()
+            if structured_answer
+            else "Return only the final user-facing answer."
+        )
+
         return (
             "You are verifying and finalizing a document-grounded answer.\n\n"
             f"User question: {user_question}\n\n"
@@ -341,7 +495,7 @@ class SearchResultsPromptMixin:
             f"{clarification_guidance}"
             "Check the draft against the evidence and keep only supported "
             "claims. Rewrite or remove unsupported details, instruction "
-            "leakage, or stray scene fragments. If the draft is weak, ignore "
+            "leakage, or unsupported scene details. If the draft is weak, ignore "
             "it and answer directly from the evidence. If the evidence is "
             "incomplete, say so briefly instead of guessing.\n"
             "Do not answer with claim-by-claim verdicts such as Supported, "
@@ -353,7 +507,7 @@ class SearchResultsPromptMixin:
             "Do not mention search results, verification, instructions, file "
             "names, stored paths, excerpt numbers, labels like Draft:, "
             "Verified:, Answer:, or Response:, or any internal reasoning "
-            "steps. Return only the final user-facing answer."
+            f"steps. {answer_contract}"
         )
 
     @staticmethod
@@ -371,6 +525,36 @@ class SearchResultsPromptMixin:
                 excerpts.append(excerpt)
         return excerpts
 
+    def _select_premise_summary_excerpts(
+        self,
+        excerpts: list[str],
+    ) -> list[str]:
+        """Return the highest-signal excerpt subset for premise summaries."""
+        if not excerpts:
+            return []
+
+        primary_excerpts = [
+            excerpt
+            for excerpt in excerpts
+            if excerpt.startswith(self._PREMISE_PRIMARY_EXCERPT_PREFIXES)
+        ]
+        supporting_excerpts = [
+            excerpt
+            for excerpt in excerpts
+            if not excerpt.startswith(self._PREMISE_SECONDARY_EXCERPT_PREFIXES)
+            and excerpt not in primary_excerpts
+        ]
+
+        selected = primary_excerpts[:3]
+        for excerpt in supporting_excerpts:
+            if excerpt in selected:
+                continue
+            selected.append(excerpt)
+            if len(selected) >= 3:
+                break
+
+        return selected or excerpts[:3]
+
     @staticmethod
     def _extract_primary_document_label(all_tool_content: str) -> str:
         """Return the first matched-document label when available."""
@@ -378,6 +562,8 @@ class SearchResultsPromptMixin:
             stripped = line.strip()
             if stripped.startswith("Current document: "):
                 return stripped.removeprefix("Current document: ").strip()
+            if stripped.startswith("Document: "):
+                return stripped.removeprefix("Document: ").strip()
             if stripped.startswith("Document 1: "):
                 return stripped.removeprefix("Document 1: ").strip()
         return ""
@@ -385,14 +571,92 @@ class SearchResultsPromptMixin:
     def _build_document_summary_prompt_results(
         self,
         all_tool_content: str,
+        *,
+        summary_focus: str | None = None,
     ) -> str:
         """Return excerpt-focused synthesis input for document summaries."""
+        analysis_mode = self._extract_document_analysis_mode(all_tool_content)
         excerpts = self._extract_rag_excerpt_bodies(all_tool_content)
+        if summary_focus == "premise":
+            excerpts = self._select_premise_summary_excerpts(excerpts)
         document_label = self._extract_primary_document_label(all_tool_content)
         sections: list[str] = []
+        if analysis_mode == "full_document":
+            full_document_text = self._extract_document_analysis_section(
+                all_tool_content,
+                "Full document text",
+                (),
+            )
+            if document_label:
+                sections.append(f"Current document: {document_label}")
+            if full_document_text:
+                sections.append(f"Full document text:\n{full_document_text}")
+            if sections:
+                return "\n\n".join(sections)
+        if analysis_mode == "chunked_document":
+            coverage_outline = self._extract_document_analysis_section(
+                all_tool_content,
+                "Document coverage",
+                ("Supporting evidence",),
+            )
+            supporting_evidence = self._extract_document_supporting_evidence(
+                all_tool_content,
+            )
+            refined_synthesis = self._extract_document_analysis_section(
+                all_tool_content,
+                "Refined whole-document synthesis",
+                ("Chunk summaries", "Supporting evidence"),
+            )
+            chunk_summaries = self._extract_document_analysis_section(
+                all_tool_content,
+                "Chunk summaries",
+                ("Supporting evidence",),
+            )
+            if document_label:
+                sections.append(f"Current document: {document_label}")
+            if coverage_outline:
+                sections.append(
+                    f"Document coverage:\n{coverage_outline}"
+                )
+            if supporting_evidence:
+                evidence_results = self._replace_current_document_label(
+                    supporting_evidence,
+                    document_label,
+                )
+                evidence_excerpts = self._extract_rag_excerpt_bodies(
+                    evidence_results,
+                )
+                if summary_focus == "premise":
+                    evidence_excerpts = self._select_premise_summary_excerpts(
+                        evidence_excerpts
+                    )
+                if evidence_excerpts:
+                    sections.extend(evidence_excerpts)
+                    return "\n\n".join(sections)
+            if refined_synthesis:
+                sections.append(
+                    "Refined whole-document synthesis:\n"
+                    f"{refined_synthesis}"
+                )
+            if chunk_summaries:
+                sections.append(f"Chunk summaries:\n{chunk_summaries}")
+            if len(sections) > 1:
+                return "\n\n".join(sections)
         if document_label:
             sections.append(f"Current document: {document_label}")
         if not excerpts:
+            supporting_evidence = self._extract_document_supporting_evidence(
+                all_tool_content
+            )
+            if supporting_evidence:
+                supporting_evidence = self._replace_current_document_label(
+                    supporting_evidence,
+                    document_label,
+                )
+                if "Current document:" in supporting_evidence:
+                    sections.clear()
+                sections.append(supporting_evidence)
+                return "\n\n".join(sections)
             if sections:
                 sections.append(all_tool_content)
                 return "\n\n".join(sections)

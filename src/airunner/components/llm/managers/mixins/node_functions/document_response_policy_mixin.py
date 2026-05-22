@@ -5,10 +5,6 @@ from typing import List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
-from airunner.components.llm.utils.document_query_routing import (
-    route_document_query,
-)
-
 
 class DocumentResponsePolicyMixin:
     """Provide deterministic document-response and routing decisions."""
@@ -41,6 +37,15 @@ class DocumentResponsePolicyMixin:
         )
         return bool(verified_content.strip())
 
+    def _should_run_document_conversational_pass(
+        self,
+        tool_name: str,
+    ) -> bool:
+        """Return whether one document reply should run a final chat pass."""
+        if not self._is_document_result_tool(tool_name):
+            return False
+        return self._get_document_answer_mode() != "synthesized"
+
     def _build_deterministic_document_response(
         self,
         all_tool_content: str,
@@ -72,19 +77,22 @@ class DocumentResponsePolicyMixin:
 
     def _should_force_document_tool_response(self, tool_name: str) -> bool:
         """Return whether one document tool should bypass replanning."""
+        llm_request = getattr(self, "llm_request", None)
+        request_plan = getattr(llm_request, "request_plan", None)
+        if getattr(llm_request, "planner_mode", None) == "select_tools":
+            return False
         if tool_name == "inspect_loaded_documents":
             return True
         if self._get_document_answer_mode() == "synthesized":
             return False
-        llm_request = getattr(self, "llm_request", None)
-        primary_tool = getattr(llm_request, "document_primary_tool", None)
+        primary_tool = getattr(request_plan, "primary_tool", None)
+        if not primary_tool:
+            primary_tool = getattr(llm_request, "document_primary_tool", None)
+        if not primary_tool:
+            primary_tool = getattr(llm_request, "preprocessed_primary_tool", None)
         if isinstance(primary_tool, str) and primary_tool:
             return tool_name == primary_tool
-        route = getattr(self, "_current_document_query_route", None)
-        return tool_name in {
-            "rag_search",
-            "analyze_loaded_document",
-        } and route is not None
+        return False
 
     def _should_disable_tools_for_followup(
         self,
@@ -104,121 +112,64 @@ class DocumentResponsePolicyMixin:
             for tool_call in last_ai_msg.tool_calls
         )
 
+    def _should_use_grounded_document_followup(
+        self,
+        messages: List[BaseMessage],
+    ) -> bool:
+        """Return whether synthesized follow-up should use grounded reply flow."""
+        if self._get_document_answer_mode() != "synthesized":
+            return False
+
+        current_turn_messages = self._get_current_turn_messages(messages)
+        last_ai_msg = self._get_last_tool_calling_ai_message(
+            current_turn_messages
+        )
+        if not last_ai_msg or not getattr(last_ai_msg, "tool_calls", None):
+            return False
+
+        return any(
+            str(tool_call.get("name") or "") == "analyze_loaded_document"
+            for tool_call in last_ai_msg.tool_calls
+        )
+
     def _get_document_query_intent(self, user_question: str) -> str | None:
         """Return the request-scoped document intent when available."""
         llm_request = getattr(self, "llm_request", None)
+        request_plan = getattr(llm_request, "request_plan", None)
+        intent = getattr(request_plan, "document_query_intent", None)
+        if isinstance(intent, str) and intent:
+            return intent
         intent = getattr(llm_request, "document_query_intent", None)
         if isinstance(intent, str) and intent:
             return intent
-        route = getattr(self, "_current_document_query_route", None)
-        intent = getattr(route, "intent", None)
-        if isinstance(intent, str) and intent:
-            return intent
-        routed = route_document_query(
-            user_question,
-            assume_document_mode=True,
-        )
-        if routed is not None:
-            return routed.intent
-        if self._is_document_about_question(user_question):
-            return "summary"
-        if self._is_document_structure_question(user_question):
-            return "structure"
-        if self._is_document_summary_question(user_question):
-            return "summary"
-        if self._is_document_identity_question(user_question):
-            return "identity"
         return None
 
     def _get_document_answer_mode(self) -> str | None:
         """Return the request-scoped document answer mode when available."""
         llm_request = getattr(self, "llm_request", None)
-        mode = getattr(llm_request, "document_answer_mode", None)
+        request_plan = getattr(llm_request, "request_plan", None)
+        mode = getattr(request_plan, "document_answer_mode", None)
         if isinstance(mode, str) and mode:
             return mode
-        route = getattr(self, "_current_document_query_route", None)
-        mode = getattr(route, "answer_mode", None)
+        mode = getattr(llm_request, "document_answer_mode", None)
         if isinstance(mode, str) and mode:
             return mode
         return None
 
-    @staticmethod
-    def _is_document_identity_question(user_question: str) -> bool:
-        """Return whether the user is asking to identify a document."""
-        normalized = " ".join(str(user_question or "").lower().split())
-        if not normalized:
-            return False
-
-        identity_phrases = (
-            "what is this document",
-            "what document is this",
-            "tell me what this document is",
-            "what is this file",
-            "what file is this",
-            "which document is this",
-            "which file is this",
-            "identify this document",
-            "identify the document",
-            "identify this file",
-        )
-        if any(phrase in normalized for phrase in identity_phrases):
-            return True
-
-        asks_identity = any(
-            phrase in normalized
-            for phrase in ("what is this", "which is this", "identify")
-        )
-        mentions_document = "document" in normalized or "file" in normalized
-        return asks_identity and mentions_document
-
-    @staticmethod
-    def _is_document_structure_question(user_question: str) -> bool:
-        """Return whether the user is asking for document structure."""
-        normalized = " ".join(str(user_question or "").lower().split())
-        if not normalized:
-            return False
-
-        structure_phrases = (
-            "table of contents",
-            "what chapters are",
-            "what are the chapters",
-            "chapter titles",
-            "what sections are",
-            "list the sections",
-            "document structure",
-        )
-        return any(phrase in normalized for phrase in structure_phrases)
-
-    @staticmethod
-    def _is_document_summary_question(user_question: str) -> bool:
-        """Return whether the user is asking for a document summary."""
-        normalized = " ".join(str(user_question or "").lower().split())
-        if not normalized:
-            return False
-
-        summary_phrases = (
-            "summarize this document",
-            "summarize the document",
-            "summary of this document",
-            "summary of the document",
-            "give me a summary",
-            "summarize it",
-        )
-        return any(phrase in normalized for phrase in summary_phrases)
-
-    @staticmethod
-    def _is_document_about_question(user_question: str) -> bool:
-        """Return whether the user is asking what a document/book is about."""
-        normalized = " ".join(str(user_question or "").lower().split())
-        if not normalized:
-            return False
-
-        patterns = (
-            r"\bwhat(?:'s| is)\s+(?:this|the)\s+(?:book|novel|story|document|file)\s+about\b",
-            r"\bwhat\s+is\s+the\s+(?:book|novel|story|document|file)\s+about\b",
-            r"\btell\s+me\s+about\s+(?:this|the)\s+(?:book|novel|story|document|file)\b",
-        )
-        return any(re.search(pattern, normalized) for pattern in patterns)
+    def _get_document_summary_focus(
+        self,
+        user_question: str,
+    ) -> str | None:
+        """Return the request-scoped summary subtype when available."""
+        llm_request = getattr(self, "llm_request", None)
+        request_plan = getattr(llm_request, "request_plan", None)
+        focus = getattr(request_plan, "document_summary_focus", None)
+        if isinstance(focus, str) and focus:
+            return focus
+        focus = getattr(llm_request, "document_summary_focus", None)
+        if isinstance(focus, str) and focus:
+            return focus
+        return None
 
     @staticmethod
     def _build_document_identity_response(all_tool_content: str) -> str:

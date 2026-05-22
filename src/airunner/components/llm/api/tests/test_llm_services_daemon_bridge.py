@@ -569,7 +569,7 @@ def test_stream_daemon_request_preserves_error_chunks():
     assert emitted_responses[0].is_system_message is True
 
 
-def test_stream_daemon_request_inserts_spaces_between_word_chunks():
+def test_stream_daemon_request_keeps_word_chunks_lossless():
     chunks = [
         {
             "message": "Hello",
@@ -605,7 +605,7 @@ def test_stream_daemon_request_inserts_spaces_between_word_chunks():
 
     assert [response.message for response in emitted_responses] == [
         "Hello",
-        " world",
+        "world",
     ]
 
 
@@ -830,15 +830,11 @@ def _daemon_bridge_service(emitted_responses, emitted_signals=None):
             request_id=request_id,
         )
     )
-    service._daemon_output_looks_like_tool_turn = lambda text, chunk: (
-        LLMAPIService._daemon_output_looks_like_tool_turn(
-            service,
-            text,
+    service._daemon_chunk_has_tool_signal = lambda chunk, visible_parts: (
+        LLMAPIService._daemon_chunk_has_tool_signal(
             chunk,
+            visible_parts,
         )
-    )
-    service._daemon_text_looks_like_tool_call_json = lambda text: (
-        LLMAPIService._daemon_text_looks_like_tool_call_json(text)
     )
     return service
 

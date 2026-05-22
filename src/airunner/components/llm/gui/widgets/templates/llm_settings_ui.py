@@ -15,13 +15,13 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
-    QFrame, QGridLayout, QGroupBox, QHBoxLayout,
-    QHeaderView, QLabel, QLayout, QLineEdit,
-    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QLayout, QLineEdit, QPushButton, QScrollArea,
+    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
+import airunner.feather_rc
 
 class Ui_llm_settings_widget(object):
     def setupUi(self, llm_settings_widget):
@@ -33,6 +33,129 @@ class Ui_llm_settings_widget(object):
         self.gridLayout_4.setHorizontalSpacing(0)
         self.gridLayout_4.setVerticalSpacing(10)
         self.gridLayout_4.setContentsMargins(10, 10, 10, 10)
+        self.model_selection_group = QGroupBox(llm_settings_widget)
+        self.model_selection_group.setObjectName(u"model_selection_group")
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        self.model_selection_group.setFont(font)
+        self.verticalLayout_2 = QVBoxLayout(self.model_selection_group)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(9, 9, 9, 9)
+        self.model_dropdown = QComboBox(self.model_selection_group)
+        self.model_dropdown.setObjectName(u"model_dropdown")
+        self.model_dropdown.setEditable(True)
+
+        self.verticalLayout_2.addWidget(self.model_dropdown)
+
+        self.model_path = QLineEdit(self.model_selection_group)
+        self.model_path.setObjectName(u"model_path")
+
+        self.verticalLayout_2.addWidget(self.model_path)
+
+        self.quantization_layout = QVBoxLayout()
+        self.quantization_layout.setObjectName(u"quantization_layout")
+        self.quantization_label = QLabel(self.model_selection_group)
+        self.quantization_label.setObjectName(u"quantization_label")
+        font1 = QFont()
+        font1.setPointSize(9)
+        font1.setBold(False)
+        self.quantization_label.setFont(font1)
+
+        self.quantization_layout.addWidget(self.quantization_label)
+
+        self.quantization_dropdown = QComboBox(self.model_selection_group)
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.setObjectName(u"quantization_dropdown")
+        self.quantization_dropdown.setEnabled(False)
+        self.quantization_dropdown.setFont(font1)
+
+        self.quantization_layout.addWidget(self.quantization_dropdown)
+
+
+        self.verticalLayout_2.addLayout(self.quantization_layout)
+
+        self.model_info_label = QLabel(self.model_selection_group)
+        self.model_info_label.setObjectName(u"model_info_label")
+        font2 = QFont()
+        font2.setPointSize(9)
+        font2.setBold(False)
+        font2.setItalic(True)
+        self.model_info_label.setFont(font2)
+        self.model_info_label.setWordWrap(True)
+
+        self.verticalLayout_2.addWidget(self.model_info_label)
+
+        self.delete_buttons_layout = QHBoxLayout()
+        self.delete_buttons_layout.setObjectName(u"delete_buttons_layout")
+        self.download_model_button = QPushButton(self.model_selection_group)
+        self.download_model_button.setObjectName(u"download_model_button")
+        self.download_model_button.setEnabled(False)
+        self.download_model_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/lucide/light/cloud-download.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.download_model_button.setIcon(icon)
+
+        self.delete_buttons_layout.addWidget(self.download_model_button)
+
+        self.start_quantize_button = QPushButton(self.model_selection_group)
+        self.start_quantize_button.setObjectName(u"start_quantize_button")
+        self.start_quantize_button.setEnabled(False)
+        self.start_quantize_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/lucide/light/shrink.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.start_quantize_button.setIcon(icon1)
+
+        self.delete_buttons_layout.addWidget(self.start_quantize_button)
+
+        self.delete_safetensors_button = QPushButton(self.model_selection_group)
+        self.delete_safetensors_button.setObjectName(u"delete_safetensors_button")
+        self.delete_safetensors_button.setEnabled(False)
+        self.delete_safetensors_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/lucide/light/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.delete_safetensors_button.setIcon(icon2)
+
+        self.delete_buttons_layout.addWidget(self.delete_safetensors_button)
+
+        self.delete_quantized_button = QPushButton(self.model_selection_group)
+        self.delete_quantized_button.setObjectName(u"delete_quantized_button")
+        self.delete_quantized_button.setEnabled(False)
+        self.delete_quantized_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.delete_quantized_button.setIcon(icon2)
+
+        self.delete_buttons_layout.addWidget(self.delete_quantized_button)
+
+
+        self.verticalLayout_2.addLayout(self.delete_buttons_layout)
+
+
+        self.gridLayout_4.addWidget(self.model_selection_group, 3, 0, 1, 1)
+
+        self.line_2 = QFrame(llm_settings_widget)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_4.addWidget(self.line_2, 1, 0, 1, 1)
+
+        self.groupBox = QGroupBox(llm_settings_widget)
+        self.groupBox.setObjectName(u"groupBox")
+        self.groupBox.setFont(font)
+        self.verticalLayout = QVBoxLayout(self.groupBox)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(9, 9, 9, 9)
+        self.model_service = QComboBox(self.groupBox)
+        self.model_service.setObjectName(u"model_service")
+
+        self.verticalLayout.addWidget(self.model_service)
+
+
+        self.gridLayout_4.addWidget(self.groupBox, 2, 0, 1, 1)
+
         self.scrollArea = QScrollArea(llm_settings_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setFrameShadow(QFrame.Shadow.Plain)
@@ -40,7 +163,7 @@ class Ui_llm_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 559, 499))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 559, 305))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -62,10 +185,10 @@ class Ui_llm_settings_widget(object):
 
         self.override_parameters = QGroupBox(self.scrollAreaWidgetContents)
         self.override_parameters.setObjectName(u"override_parameters")
-        font = QFont()
-        font.setPointSize(9)
-        font.setBold(True)
-        self.override_parameters.setFont(font)
+        font3 = QFont()
+        font3.setPointSize(9)
+        font3.setBold(True)
+        self.override_parameters.setFont(font3)
         self.override_parameters.setCheckable(True)
         self.override_parameters.setChecked(False)
         self.gridLayout_12 = QGridLayout(self.override_parameters)
@@ -301,9 +424,6 @@ class Ui_llm_settings_widget(object):
 
         self.pushButton = QPushButton(self.override_parameters)
         self.pushButton.setObjectName(u"pushButton")
-        font1 = QFont()
-        font1.setPointSize(9)
-        font1.setBold(False)
         self.pushButton.setFont(font1)
 
         self.gridLayout_12.addWidget(self.pushButton, 11, 0, 1, 1)
@@ -357,148 +477,12 @@ class Ui_llm_settings_widget(object):
 
         self.label_2 = QLabel(llm_settings_widget)
         self.label_2.setObjectName(u"label_2")
-        font2 = QFont()
-        font2.setPointSize(11)
-        font2.setBold(True)
-        self.label_2.setFont(font2)
+        font4 = QFont()
+        font4.setPointSize(11)
+        font4.setBold(True)
+        self.label_2.setFont(font4)
 
         self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
-
-        self.line_2 = QFrame(llm_settings_widget)
-        self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.Shape.HLine)
-        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.gridLayout_4.addWidget(self.line_2, 1, 0, 1, 1)
-
-        self.groupBox = QGroupBox(llm_settings_widget)
-        self.groupBox.setObjectName(u"groupBox")
-        font3 = QFont()
-        font3.setPointSize(10)
-        font3.setBold(True)
-        self.groupBox.setFont(font3)
-        self.verticalLayout = QVBoxLayout(self.groupBox)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(9, 9, 9, 9)
-        self.model_service = QComboBox(self.groupBox)
-        self.model_service.setObjectName(u"model_service")
-
-        self.verticalLayout.addWidget(self.model_service)
-
-
-        self.gridLayout_4.addWidget(self.groupBox, 2, 0, 1, 1)
-
-        self.model_selection_group = QGroupBox(llm_settings_widget)
-        self.model_selection_group.setObjectName(u"model_selection_group")
-        self.model_selection_group.setFont(font3)
-        self.verticalLayout_2 = QVBoxLayout(self.model_selection_group)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(9, 9, 9, 9)
-        self.model_dropdown = QComboBox(self.model_selection_group)
-        self.model_dropdown.setObjectName(u"model_dropdown")
-        self.model_dropdown.setEditable(True)
-
-        self.verticalLayout_2.addWidget(self.model_dropdown)
-
-        self.model_path = QLineEdit(self.model_selection_group)
-        self.model_path.setObjectName(u"model_path")
-
-        self.verticalLayout_2.addWidget(self.model_path)
-
-        self.quantization_layout = QVBoxLayout()
-        self.quantization_layout.setObjectName(u"quantization_layout")
-        self.quantization_label = QLabel(self.model_selection_group)
-        self.quantization_label.setObjectName(u"quantization_label")
-        self.quantization_label.setFont(font1)
-
-        self.quantization_layout.addWidget(self.quantization_label)
-
-        self.quantization_dropdown = QComboBox(self.model_selection_group)
-        self.quantization_dropdown.addItem("")
-        self.quantization_dropdown.addItem("")
-        self.quantization_dropdown.addItem("")
-        self.quantization_dropdown.addItem("")
-        self.quantization_dropdown.setObjectName(u"quantization_dropdown")
-        self.quantization_dropdown.setEnabled(False)
-        self.quantization_dropdown.setFont(font1)
-
-        self.quantization_layout.addWidget(self.quantization_dropdown)
-
-
-        self.verticalLayout_2.addLayout(self.quantization_layout)
-
-        self.model_info_label = QLabel(self.model_selection_group)
-        self.model_info_label.setObjectName(u"model_info_label")
-        font4 = QFont()
-        font4.setPointSize(9)
-        font4.setBold(False)
-        font4.setItalic(True)
-        self.model_info_label.setFont(font4)
-        self.model_info_label.setWordWrap(True)
-
-        self.verticalLayout_2.addWidget(self.model_info_label)
-
-        self.download_model_button = QPushButton(self.model_selection_group)
-        self.download_model_button.setObjectName(u"download_model_button")
-        self.download_model_button.setEnabled(False)
-
-        self.verticalLayout_2.addWidget(self.download_model_button)
-
-        self.start_quantize_button = QPushButton(self.model_selection_group)
-        self.start_quantize_button.setObjectName(u"start_quantize_button")
-        self.start_quantize_button.setEnabled(False)
-
-        self.verticalLayout_2.addWidget(self.start_quantize_button)
-
-        self.delete_buttons_layout = QHBoxLayout()
-        self.delete_buttons_layout.setObjectName(u"delete_buttons_layout")
-        self.delete_safetensors_button = QPushButton(self.model_selection_group)
-        self.delete_safetensors_button.setObjectName(u"delete_safetensors_button")
-        self.delete_safetensors_button.setEnabled(False)
-
-        self.delete_buttons_layout.addWidget(self.delete_safetensors_button)
-
-        self.delete_quantized_button = QPushButton(self.model_selection_group)
-        self.delete_quantized_button.setObjectName(u"delete_quantized_button")
-        self.delete_quantized_button.setEnabled(False)
-
-        self.delete_buttons_layout.addWidget(self.delete_quantized_button)
-
-
-        self.verticalLayout_2.addLayout(self.delete_buttons_layout)
-
-
-        self.gridLayout_4.addWidget(self.model_selection_group, 3, 0, 1, 1)
-
-        self.adapters_group = QGroupBox(llm_settings_widget)
-        self.adapters_group.setObjectName(u"adapters_group")
-        self.adapters_group.setFont(font3)
-        self.verticalLayout_3 = QVBoxLayout(self.adapters_group)
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.verticalLayout_3.setContentsMargins(9, 9, 9, 9)
-        self.adapters_table = QTableWidget(self.adapters_group)
-        if (self.adapters_table.columnCount() < 3):
-            self.adapters_table.setColumnCount(3)
-        __qtablewidgetitem = QTableWidgetItem()
-        self.adapters_table.setHorizontalHeaderItem(0, __qtablewidgetitem)
-        __qtablewidgetitem1 = QTableWidgetItem()
-        self.adapters_table.setHorizontalHeaderItem(1, __qtablewidgetitem1)
-        __qtablewidgetitem2 = QTableWidgetItem()
-        self.adapters_table.setHorizontalHeaderItem(2, __qtablewidgetitem2)
-        self.adapters_table.setObjectName(u"adapters_table")
-        self.adapters_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.adapters_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.adapters_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-
-        self.verticalLayout_3.addWidget(self.adapters_table)
-
-        self.refresh_adapters_button = QPushButton(self.adapters_group)
-        self.refresh_adapters_button.setObjectName(u"refresh_adapters_button")
-
-        self.verticalLayout_3.addWidget(self.refresh_adapters_button)
-
-
-        self.gridLayout_4.addWidget(self.adapters_group, 5, 0, 1, 1)
 
         QWidget.setTabOrder(self.seed, self.random_seed)
 
@@ -515,6 +499,32 @@ class Ui_llm_settings_widget(object):
 
     def retranslateUi(self, llm_settings_widget):
         llm_settings_widget.setWindowTitle(QCoreApplication.translate("llm_settings_widget", u"Form", None))
+        self.model_selection_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model", None))
+        self.model_path.setPlaceholderText(QCoreApplication.translate("llm_settings_widget", u"Model path or identifier", None))
+        self.quantization_label.setText(QCoreApplication.translate("llm_settings_widget", u"Quantization:", None))
+        self.quantization_dropdown.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"2-bit (50% VRAM, -15% quality)", None))
+        self.quantization_dropdown.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"4-bit (balanced, recommended)", None))
+        self.quantization_dropdown.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"8-bit (200% VRAM, best quality)", None))
+        self.quantization_dropdown.setItemText(3, QCoreApplication.translate("llm_settings_widget", u"GGUF Q4_K_M (smallest, fastest)", None))
+
+        self.model_info_label.setText(QCoreApplication.translate("llm_settings_widget", u"VRAM: -- GB | Context: -- tokens | Tool Calling: --", None))
+#if QT_CONFIG(tooltip)
+        self.download_model_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Download Model from HuggingFace", None))
+#endif // QT_CONFIG(tooltip)
+        self.download_model_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.start_quantize_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.", None))
+#endif // QT_CONFIG(tooltip)
+        self.start_quantize_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.delete_safetensors_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Delete original model files", None))
+#endif // QT_CONFIG(tooltip)
+        self.delete_safetensors_button.setText(QCoreApplication.translate("llm_settings_widget", u"Original", None))
+#if QT_CONFIG(tooltip)
+        self.delete_quantized_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Delete quantized files", None))
+#endif // QT_CONFIG(tooltip)
+        self.delete_quantized_button.setText(QCoreApplication.translate("llm_settings_widget", u"Quantized", None))
+        self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Provider", None))
         self.override_parameters.setTitle(QCoreApplication.translate("llm_settings_widget", u"Override Prameters", None))
         self.random_seed.setText(QCoreApplication.translate("llm_settings_widget", u"Random seed", None))
         self.length_penalty.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.length_penalty", None))
@@ -536,40 +546,15 @@ class Ui_llm_settings_widget(object):
         self.early_stopping.setText(QCoreApplication.translate("llm_settings_widget", u"Early stopping", None))
         self.use_cache.setText(QCoreApplication.translate("llm_settings_widget", u"Use Cache", None))
         self.do_sample.setText(QCoreApplication.translate("llm_settings_widget", u"Do sample", None))
-        self.enable_trajectory_logging.setText(QCoreApplication.translate("llm_settings_widget", u"Log Trajectories (Debug)", None))
 #if QT_CONFIG(tooltip)
         self.enable_trajectory_logging.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Enable detailed logging of agent trajectories for debugging", None))
 #endif // QT_CONFIG(tooltip)
+        self.enable_trajectory_logging.setText(QCoreApplication.translate("llm_settings_widget", u"Log Trajectories (Debug)", None))
         self.pushButton.setText(QCoreApplication.translate("llm_settings_widget", u"Reset Settings to Default", None))
         self.repetition_penalty.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.repetition_penalty", None))
         self.repetition_penalty.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Repetition Penalty", None))
         self.min_length.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.min_length", None))
         self.min_length.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Min Length", None))
         self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
-        self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Provider", None))
-        self.model_selection_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model", None))
-        self.model_path.setPlaceholderText(QCoreApplication.translate("llm_settings_widget", u"Model path or identifier", None))
-        self.quantization_label.setText(QCoreApplication.translate("llm_settings_widget", u"Quantization:", None))
-        self.quantization_dropdown.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"2-bit (50% VRAM, -15% quality)", None))
-        self.quantization_dropdown.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"4-bit (balanced, recommended)", None))
-        self.quantization_dropdown.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"8-bit (200% VRAM, best quality)", None))
-        self.quantization_dropdown.setItemText(3, QCoreApplication.translate("llm_settings_widget", u"GGUF Q4_K_M (smallest, fastest)", None))
-
-        self.model_info_label.setText(QCoreApplication.translate("llm_settings_widget", u"VRAM: -- GB | Context: -- tokens | Tool Calling: --", None))
-        self.download_model_button.setText(QCoreApplication.translate("llm_settings_widget", u"Download Model from HuggingFace", None))
-        self.start_quantize_button.setText(QCoreApplication.translate("llm_settings_widget", u"Start Manual Quantization", None))
-#if QT_CONFIG(tooltip)
-        self.start_quantize_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.", None))
-#endif // QT_CONFIG(tooltip)
-        self.delete_safetensors_button.setText(QCoreApplication.translate("llm_settings_widget", u"Delete Original Files", None))
-        self.delete_quantized_button.setText(QCoreApplication.translate("llm_settings_widget", u"Delete Quantized", None))
-        self.adapters_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"LoRA Adapters", None))
-        ___qtablewidgetitem = self.adapters_table.horizontalHeaderItem(0)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("llm_settings_widget", u"Enabled", None));
-        ___qtablewidgetitem1 = self.adapters_table.horizontalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("llm_settings_widget", u"Adapter Name", None));
-        ___qtablewidgetitem2 = self.adapters_table.horizontalHeaderItem(2)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("llm_settings_widget", u"Path", None));
-        self.refresh_adapters_button.setText(QCoreApplication.translate("llm_settings_widget", u"Refresh Adapters", None))
     # retranslateUi
 

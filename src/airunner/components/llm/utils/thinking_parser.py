@@ -221,7 +221,7 @@ def strip_thinking_tags(response: str) -> str:
     cleaned = cleaned.replace("<think>", "").replace("</think>", "")
     # Remove any orphaned bracket tags (case-insensitive)
     cleaned = re.sub(r"\[/?THINK\]", "", cleaned, flags=re.IGNORECASE)
-    return cleaned.strip()
+    return cleaned
 
 
 def has_thinking_content(response: str) -> bool:

@@ -1,4 +1,6 @@
+import gc
 import threading
+import weakref
 
 from PySide6.QtCore import QObject, Slot
 import pytest
@@ -142,6 +144,16 @@ class NoArgReceiver(QObject):
         self.called = True
 
 
+class DictReceiver(QObject):
+    def __init__(self):
+        super().__init__()
+        self.called = []
+
+    @Slot(dict)
+    def cb(self, data):
+        self.called.append(data)
+
+
 def test_emit_signal_supports_qobject_zero_arg_slots():
     mediator = SignalMediator()
     mediator.signals = {}
@@ -155,3 +167,24 @@ def test_emit_signal_supports_qobject_zero_arg_slots():
     )
 
     assert receiver.called is True
+
+
+def test_emit_signal_prunes_destroyed_qobject_callbacks():
+    mediator = SignalMediator()
+    mediator.signals = {}
+
+    receiver = DictReceiver()
+    receiver_ref = weakref.ref(receiver)
+    mediator.register(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, receiver.cb)
+
+    del receiver
+    gc.collect()
+
+    assert receiver_ref() is None
+
+    mediator.emit_signal(
+        SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+        {"ignored": True},
+    )
+
+    assert mediator.signals[SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL] == []

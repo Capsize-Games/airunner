@@ -17,6 +17,29 @@ class DummyNodeFunctionsMixin(NodeFunctionsMixin):
         self._interrupted = False
 
 
+class DirectGenerationNodeFunctionsMixin(DummyNodeFunctionsMixin):
+    def __init__(self):
+        super().__init__()
+        self._token_callback = Mock()
+        self.stream_prompt = None
+
+    def _stream_internal_response(
+        self,
+        prompt,
+        generation_kwargs=None,
+        *,
+        thinking_metadata=None,
+        buffer_visible_output=False,
+    ):
+        self.stream_prompt = {
+            "prompt": prompt,
+            "generation_kwargs": generation_kwargs,
+            "thinking_metadata": thinking_metadata,
+            "buffer_visible_output": buffer_visible_output,
+        }
+        return AIMessage(content="Clean direct output", tool_calls=[])
+
+
 def _make_tool(name: str, return_direct: bool):
     tool = Mock()
     tool.name = name
@@ -142,3 +165,51 @@ class TestReturnDirectToolRouting:
                 "metadata": None,
             },
         ]
+
+    def test_force_response_node_generates_marker_backed_output(self):
+        mixin = DirectGenerationNodeFunctionsMixin()
+        mixin._tools = [_make_tool("generate_direct_response", True)]
+        state = {
+            "messages": [
+                HumanMessage(content="summarize this plainly"),
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": "tool-call-1",
+                            "name": "generate_direct_response",
+                            "args": {
+                                "prompt": "Write a terse summary."
+                            },
+                        }
+                    ],
+                ),
+                ToolMessage(
+                    content=(
+                        "__DIRECT_GENERATION_REQUEST__:"
+                        "Write a terse summary."
+                    ),
+                    tool_call_id="tool-call-1",
+                    name="generate_direct_response",
+                ),
+            ]
+        }
+
+        result = mixin._force_response_node(state)
+
+        assert result["workflow_continuation"] is False
+        message = result["messages"][0]
+        assert isinstance(message, AIMessage)
+        assert message.content == "Clean direct output"
+        assert message.tool_calls == []
+        assert mixin.stream_prompt["generation_kwargs"] == {}
+        assert mixin.stream_prompt["thinking_metadata"] is None
+        assert mixin.stream_prompt["buffer_visible_output"] is True
+        prompt_messages = mixin.stream_prompt["prompt"]
+        assert prompt_messages[0].content.startswith(
+            "Return only the requested output."
+        )
+        assert prompt_messages[1].content == "Write a terse summary."
+        mixin._token_callback.assert_called_once_with(
+            "Clean direct output"
+        )

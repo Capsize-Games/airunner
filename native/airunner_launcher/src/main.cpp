@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <csignal>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -91,6 +92,7 @@ struct CliOptions {
     std::optional<fs::path> manifest_path;
     std::optional<fs::path> repo_root;
     std::optional<fs::path> python_executable;
+    bool no_fork = false;
     bool print_plan = false;
     bool dry_run = false;
     bool diagnose = false;
@@ -335,6 +337,10 @@ CliOptions parse_args(int argc, char **argv)
             options.python_executable = fs::path(argv[++index]);
             continue;
         }
+        if (arg == "--no-fork") {
+            options.no_fork = true;
+            continue;
+        }
         if (arg == "--print-plan") {
             options.print_plan = true;
             continue;
@@ -357,6 +363,7 @@ CliOptions parse_args(int argc, char **argv)
                 << "  --manifest <path>\n"
                 << "  --repo-root <path>\n"
                 << "  --python <path>\n"
+                << "  --no-fork\n"
                 << "  --print-plan\n"
                 << "  --dry-run\n"
                 << "  --diagnose\n";
@@ -637,7 +644,8 @@ int run_process(
     const fs::path &python_executable,
     const std::string &entrypoint,
     const std::vector<std::string> &app_args,
-    const std::map<std::string, std::string> &environment)
+    const std::map<std::string, std::string> &environment,
+    bool no_fork)
 {
     for (const auto &[key, value] : environment) {
         _putenv_s(key.c_str(), value.c_str());
@@ -669,8 +677,31 @@ int run_process(
     const fs::path &python_executable,
     const std::string &entrypoint,
     const std::vector<std::string> &app_args,
-    const std::map<std::string, std::string> &environment)
+    const std::map<std::string, std::string> &environment,
+    bool no_fork)
 {
+    std::vector<std::string> args = {
+        python_executable.string(), "-m", entrypoint,
+    };
+    args.insert(args.end(), app_args.begin(), app_args.end());
+
+    std::vector<char *> argv;
+    argv.reserve(args.size() + 1);
+    for (auto &arg : args) {
+        argv.push_back(arg.data());
+    }
+    argv.push_back(nullptr);
+
+    if (no_fork) {
+        for (const auto &[key, value] : environment) {
+            setenv(key.c_str(), value.c_str(), 1);
+        }
+
+        execv(python_executable.c_str(), argv.data());
+        throw std::runtime_error(
+            "execv() failed for --no-fork mode: " + std::string(strerror(errno)));
+    }
+
     SignalForwardingGuard signal_forwarding_guard;
     const pid_t pid = fork();
     if (pid < 0) {
@@ -683,18 +714,6 @@ int run_process(
         for (const auto &[key, value] : environment) {
             setenv(key.c_str(), value.c_str(), 1);
         }
-
-        std::vector<std::string> args = {
-            python_executable.string(), "-m", entrypoint,
-        };
-        args.insert(args.end(), app_args.begin(), app_args.end());
-
-        std::vector<char *> argv;
-        argv.reserve(args.size() + 1);
-        for (auto &arg : args) {
-            argv.push_back(arg.data());
-        }
-        argv.push_back(nullptr);
 
         execv(python_executable.c_str(), argv.data());
         std::perror("execv");
@@ -759,7 +778,8 @@ int main(int argc, char **argv)
             plan.python_executable,
             plan.entrypoint,
             plan.app_args,
-            environment);
+            environment,
+            options.no_fork);
     } catch (const std::exception &error) {
         std::cerr << "airunner launcher error: " << error.what() << '\n';
         return 1;

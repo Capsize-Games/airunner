@@ -16,12 +16,12 @@ from airunner.components.llm.tools.rag_tools_helpers import (
     analyze_loaded_document_impl,
     build_document_structure_result,
     build_single_document_summary_results,
-    expand_query_with_active_document,
     format_loaded_document_results,
     format_rag_search_results,
     format_summary_evidence_results,
     get_active_document_entries,
-    is_summary_query,
+    request_document_query_intent,
+    request_rewritten_query,
     search_knowledge_base_documents_impl,
 )
 from airunner.components.llm.utils.document_extraction import extract_text
@@ -170,10 +170,11 @@ def analyze_loaded_document(
     name="rag_search",
     category=ToolCategory.RAG,
     description=(
-        "Search through LOADED documents in memory for relevant information. "
-        "IMPORTANT: Only works if documents have been loaded into memory "
-        "first. If this fails because no documents are loaded, inform the "
-        "user that documents need to be loaded first."
+        "Search through LOADED documents in memory for relevant excerpts, "
+        "passages, and localized facts. IMPORTANT: Only works if documents "
+        "have been loaded into memory first. Use analyze_loaded_document "
+        "instead for whole-document summaries, premise/theme questions, or "
+        "broad document transformations."
     ),
     return_direct=False,
     requires_api=True,
@@ -196,8 +197,9 @@ def rag_search(
         "rag_search called (%s)",
         summarize_text(query, label="query"),
     )
-    summary_query = is_summary_query(query)
     rag_manager = api
+    request_intent = request_document_query_intent(rag_manager)
+    summary_query = request_intent == "summary"
 
     logger.debug(
         "rag_manager available=%s has_search=%s",
@@ -233,10 +235,10 @@ def rag_search(
                 )
                 return result_text
 
-        effective_query = expand_query_with_active_document(query, rag_manager)
+        effective_query = request_rewritten_query(rag_manager) or query
         if effective_query != query:
             logger.info(
-                "Expanded RAG query with active document context (%s)",
+                "Using request-rewritten RAG query (%s)",
                 summarize_text(
                     effective_query,
                     label="effective_query",
@@ -302,9 +304,11 @@ def rag_search(
         "Search across ALL knowledge base documents to find the most "
         "relevant ones. This is a broad search across document titles and "
         "paths - like a search engine for your entire knowledge base. Use "
-        "this BEFORE rag_search to determine which documents should be "
-        "loaded. If documents aren't indexed, this tool will automatically "
-        "discover and index them."
+        "this BEFORE loading documents or using rag_search to determine "
+        "which documents should be loaded. Do not use this for questions "
+        "about documents that are already loaded into the current chat. If "
+        "documents aren't indexed, this tool will automatically discover "
+        "and index them."
     ),
     return_direct=False,
     requires_api=True,
@@ -334,11 +338,11 @@ def search_knowledge_base_documents(
 
 @tool(
     name="save_to_knowledge_base",
-    category=ToolCategory.RAG,
+    category=ToolCategory.RESEARCH,
     description=(
-        "Save content to the knowledge base for future RAG retrieval. "
-        "This allows the agent to build its own knowledge base over time "
-        "by saving important information for later reference."
+        "Save notes or findings to the persistent knowledge base for later "
+        "retrieval. This stores new knowledge for future research or recall; "
+        "it is not an active-document analysis tool for the current chat."
     ),
     return_direct=False,
     requires_api=True,

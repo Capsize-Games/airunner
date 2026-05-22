@@ -354,6 +354,38 @@ def best_neighboring_scene_paragraph(
     return candidates[0][2]
 
 
+def best_early_current_setting_paragraph(paragraphs: list[str]) -> str:
+    """Return the strongest early present-frame setting paragraph."""
+    if not paragraphs:
+        return ""
+
+    window_limit = min(
+        len(paragraphs),
+        max(12, min(120, len(paragraphs) // 8)),
+    )
+    ranked = sorted(
+        (
+            (premise_current_setting_score(paragraph), index, paragraph)
+            for index, paragraph in enumerate(paragraphs[:window_limit])
+            if premise_current_setting_score(paragraph) > 0
+        ),
+        key=lambda item: (-item[0], item[1]),
+    )
+    if not ranked:
+        return ""
+    early_candidates = [
+        paragraph
+        for score, _index, paragraph in sorted(
+            ranked,
+            key=lambda item: item[1],
+        )
+        if score >= 4
+    ]
+    if early_candidates:
+        return early_candidates[0]
+    return ranked[0][2]
+
+
 def build_premise_evidence_documents(
     metadata: dict[str, Any],
     text: str,
@@ -379,6 +411,10 @@ def build_premise_evidence_documents(
         seen.add(cleaned)
         selected.append((label, cleaned))
         label_counts[label] = label_counts.get(label, 0) + 1
+
+    opening_setting = best_early_current_setting_paragraph(paragraphs)
+    if opening_setting:
+        add("Current setting", opening_setting)
 
     opening_window = [
         paragraph
@@ -413,7 +449,10 @@ def build_premise_evidence_documents(
     ]
     scored_hooks.sort(key=lambda item: (-item[0], item[1]))
     for _score, index, paragraph in scored_hooks:
-        if len(selected) < premise_limit - 1:
+        if (
+            len(selected) < premise_limit - 1
+            and label_counts.get("Current setting", 0) == 0
+        ):
             neighbor = best_neighboring_scene_paragraph(hook_window, index)
             if neighbor:
                 add("Current setting", neighbor)

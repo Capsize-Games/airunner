@@ -26,6 +26,12 @@ from airunner.components.llm.config.provider_config import LLMProviderConfig
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):
     widget_class_ = Ui_llm_settings_widget
+    icons = [
+        ("cloud-download", "download_model_button"),
+        ("shrink", "start_quantize_button"),
+        ("trash-2", "delete_safetensors_button"),
+        ("trash-2", "delete_quantized_button"),
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -168,9 +174,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
                     # Download button visibility/state handled by _update_quantize_button_state
                     self.ui.download_model_button.setVisible(True)
-                    self.ui.download_model_button.setText(
-                        f"Download {model_info['name']}"
-                    )
                 else:
                     self.logger.warning(
                         f"No model_info found for model_id: {model_id}"

@@ -55,6 +55,47 @@ def test_route_document_query_routes_summary_to_retrieval():
     assert route.intent == "summary"
     assert route.force_tool == "rag_search"
     assert route.answer_mode == "synthesized"
+    assert route.summary_focus == "overview"
+
+
+def test_route_document_query_marks_book_about_as_premise_summary():
+    """Book-about document prompts should carry a premise-summary subtype."""
+    route = route_document_query(
+        "what is this book about?",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "summary"
+    assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
+    assert route.summary_focus == "premise"
+
+
+def test_route_document_query_marks_premise_theme_prompt_as_premise_summary():
+    """Premise/theme prompts should carry the same summary subtype."""
+    route = route_document_query(
+        "what is the premise and theme of this book?",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "summary"
+    assert route.summary_focus == "premise"
+
+
+def test_route_document_query_marks_explain_premise_prompt_as_summary():
+    """Broader premise phrasing should still enter the summary route."""
+    route = route_document_query(
+        "explain the premise of this book",
+        assume_document_mode=True,
+    )
+
+    assert route is not None
+    assert route.intent == "summary"
+    assert route.force_tool == "rag_search"
+    assert route.answer_mode == "synthesized"
+    assert route.summary_focus == "premise"
 
 
 def test_route_document_query_defaults_to_retrieval_in_document_mode():

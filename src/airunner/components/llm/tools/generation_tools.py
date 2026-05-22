@@ -11,6 +11,14 @@ from typing import Annotated, Any
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 
 
+DIRECT_GENERATION_REQUEST_PREFIX = "__DIRECT_GENERATION_REQUEST__:"
+
+
+def _build_direct_generation_request(prompt: str) -> str:
+    """Return the internal marker used by direct-generation tools."""
+    return f"{DIRECT_GENERATION_REQUEST_PREFIX}{prompt}"
+
+
 @tool(
     name="generate_direct_response",
     category=ToolCategory.GENERATION,
@@ -21,7 +29,7 @@ from airunner.components.llm.core.tool_registry import tool, ToolCategory
         "conversational phrases. Returns the generated text directly to the caller."
     ),
     return_direct=True,
-    requires_agent=True,
+    requires_agent=False,
 )
 def generate_direct_response(
     prompt: Annotated[str, "The generation prompt or instruction"],
@@ -35,19 +43,11 @@ def generate_direct_response(
 
     Args:
         prompt: The generation task to perform
-        agent: The agent instance (automatically injected)
+        agent: Unused compatibility argument
 
     """
-    if not agent:
-        return "Error: Agent not available"
-
-    # Use the agent's generation capabilities directly
-    # The system prompt override will be handled by the caller
-    # This tool simply signals that direct generation is requested
-
-    # Return a marker that tells the workflow manager to use direct generation
-    # The actual generation happens in the workflow
-    return f"__DIRECT_GENERATION_REQUEST__:{prompt}"
+    _ = agent
+    return _build_direct_generation_request(prompt)
 
 
 @tool(
@@ -59,7 +59,7 @@ def generate_direct_response(
         "product descriptions, etc. Returns only the description text."
     ),
     return_direct=True,
-    requires_agent=True,
+    requires_agent=False,
 )
 def generate_description(
     subject: Annotated[
@@ -74,23 +74,18 @@ def generate_description(
     Args:
         subject: The subject to describe
         context: Context or content to base the description on
-        agent: The agent instance (automatically injected)
+        agent: Unused compatibility argument
 
     """
-    if not agent:
-        return "Error: Agent not available"
+    _ = agent
 
-    # Create a focused prompt for direct description generation
     generation_prompt = (
         f"Write a book-jacket description for: {subject}\n\n"
-        f"Based on this content:\n{context[:1000]}\n\n"  # Limit context to avoid overwhelming
+        f"Based on this content:\n{context[:1000]}\n\n"
         f"Write ONLY the description (3-5 sentences). "
         f"Start directly with the description, no preamble like 'Here is' or 'This book'."
     )
-
-    # Return a marker that tells the workflow manager to use direct generation
-    # The actual generation happens in the workflow; include the prompt after marker
-    return f"__DIRECT_GENERATION_REQUEST__:{generation_prompt}"
+    return _build_direct_generation_request(generation_prompt)
 
 
 @tool(
@@ -101,7 +96,7 @@ def generate_description(
         "Returns only the category name without explanation or preamble."
     ),
     return_direct=True,
-    requires_agent=True,
+    requires_agent=False,
 )
 def categorize(
     subject: Annotated[str, "What to categorize"],
@@ -114,11 +109,10 @@ def categorize(
     Args:
         subject: The subject being categorized
         content: Content to analyze
-        agent: The agent instance (automatically injected)
+        agent: Unused compatibility argument
 
     """
-    if not agent:
-        return "Error: Agent not available"
+    _ = agent
 
     prompt = f"Subject: {subject}\n\nContent: {content}\n\nReturn only the category name."
-    return f"__DIRECT_GENERATION_REQUEST__:{prompt}"
+    return _build_direct_generation_request(prompt)

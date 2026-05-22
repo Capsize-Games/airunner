@@ -32,6 +32,235 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="model_selection_group">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="title">
+      <string>Model</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="topMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
+      <item>
+       <widget class="QComboBox" name="model_dropdown">
+        <property name="editable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="model_path">
+        <property name="placeholderText">
+         <string>Model path or identifier</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="quantization_layout">
+        <item>
+         <widget class="QLabel" name="quantization_label">
+          <property name="font">
+           <font>
+            <pointsize>9</pointsize>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Quantization:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="quantization_dropdown">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>9</pointsize>
+            <bold>false</bold>
+           </font>
+          </property>
+          <item>
+           <property name="text">
+            <string>2-bit (50% VRAM, -15% quality)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>4-bit (balanced, recommended)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>8-bit (200% VRAM, best quality)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GGUF Q4_K_M (smallest, fastest)</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="model_info_label">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+          <italic>true</italic>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>VRAM: -- GB | Context: -- tokens | Tool Calling: --</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="delete_buttons_layout">
+        <item>
+         <widget class="QPushButton" name="download_model_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Download Model from HuggingFace</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../../../gui/resources/feather.qrc">
+            <normaloff>:/light/icons/lucide/light/cloud-download.svg</normaloff>:/light/icons/lucide/light/cloud-download.svg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="start_quantize_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../../../gui/resources/feather.qrc">
+            <normaloff>:/light/icons/lucide/light/shrink.svg</normaloff>:/light/icons/lucide/light/shrink.svg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="delete_safetensors_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Delete original model files</string>
+          </property>
+          <property name="text">
+           <string>Original</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../../../gui/resources/feather.qrc">
+            <normaloff>:/light/icons/lucide/light/trash-2.svg</normaloff>:/light/icons/lucide/light/trash-2.svg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="delete_quantized_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Delete quantized files</string>
+          </property>
+          <property name="text">
+           <string>Quantized</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../../../gui/resources/feather.qrc">
+            <normaloff>:/light/icons/lucide/light/trash-2.svg</normaloff>:/light/icons/lucide/light/trash-2.svg</iconset>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="title">
+      <string>Provider</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="topMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
+      <item>
+       <widget class="QComboBox" name="model_service"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="4" column="0">
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShadow">
@@ -49,7 +278,7 @@
         <x>0</x>
         <y>0</y>
         <width>559</width>
-        <height>499</height>
+        <height>305</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -657,13 +886,13 @@
             <property name="verticalSpacing">
              <number>10</number>
             </property>
-                <item row="0" column="0">
+            <item row="0" column="0">
              <widget class="QCheckBox" name="enable_trajectory_logging">
-              <property name="text">
-               <string>Log Trajectories (Debug)</string>
-              </property>
               <property name="toolTip">
                <string>Enable detailed logging of agent trajectories for debugging</string>
+              </property>
+              <property name="text">
+               <string>Log Trajectories (Debug)</string>
               </property>
              </widget>
             </item>
@@ -807,260 +1036,6 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="Line" name="line_2">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QGroupBox" name="groupBox">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>Provider</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
-      <property name="topMargin">
-       <number>9</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>9</number>
-      </property>
-      <item>
-       <widget class="QComboBox" name="model_service"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QGroupBox" name="model_selection_group">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>Model</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
-      <property name="topMargin">
-       <number>9</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>9</number>
-      </property>
-      <item>
-       <widget class="QComboBox" name="model_dropdown">
-        <property name="editable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="model_path">
-        <property name="placeholderText">
-         <string>Model path or identifier</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="quantization_layout">
-        <item>
-         <widget class="QLabel" name="quantization_label">
-          <property name="font">
-           <font>
-            <pointsize>9</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Quantization:</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QComboBox" name="quantization_dropdown">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>9</pointsize>
-            <bold>false</bold>
-           </font>
-          </property>
-          <item>
-           <property name="text">
-            <string>2-bit (50% VRAM, -15% quality)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>4-bit (balanced, recommended)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>8-bit (200% VRAM, best quality)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>GGUF Q4_K_M (smallest, fastest)</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QLabel" name="model_info_label">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-          <bold>false</bold>
-          <italic>true</italic>
-         </font>
-        </property>
-        <property name="text">
-         <string>VRAM: -- GB | Context: -- tokens | Tool Calling: --</string>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="download_model_button">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Download Model from HuggingFace</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="start_quantize_button">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Start Manual Quantization</string>
-        </property>
-        <property name="toolTip">
-         <string>Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="delete_buttons_layout">
-        <item>
-         <widget class="QPushButton" name="delete_safetensors_button">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Delete Original Files</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="delete_quantized_button">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Delete Quantized</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QGroupBox" name="adapters_group">
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="title">
-      <string>LoRA Adapters</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <property name="leftMargin">
-       <number>9</number>
-      </property>
-      <property name="topMargin">
-       <number>9</number>
-      </property>
-      <property name="rightMargin">
-       <number>9</number>
-      </property>
-      <property name="bottomMargin">
-       <number>9</number>
-      </property>
-      <item>
-       <widget class="QTableWidget" name="adapters_table">
-        <property name="contextMenuPolicy">
-         <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
-        </property>
-        <property name="editTriggers">
-         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-        </property>
-        <property name="selectionBehavior">
-         <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
-        </property>
-        <column>
-         <property name="text">
-          <string>Enabled</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Adapter Name</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Path</string>
-         </property>
-        </column>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="refresh_adapters_button">
-        <property name="text">
-         <string>Refresh Adapters</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -1075,7 +1050,9 @@
   <tabstop>seed</tabstop>
   <tabstop>random_seed</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../../../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>override_parameters</sender>
@@ -1161,7 +1138,7 @@
    <sender>quantization_dropdown</sender>
    <signal>currentIndexChanged(int)</signal>
    <receiver>llm_settings_widget</receiver>
-    <slot>handle_quantization_changed(int)</slot>
+   <slot>handle_quantization_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>290</x>

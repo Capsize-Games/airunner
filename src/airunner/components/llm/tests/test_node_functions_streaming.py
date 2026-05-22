@@ -150,6 +150,19 @@ def test_headless_reasoning_deltas_still_persist_thinking_content():
     mixin._token_callback.assert_called_once_with("Hello!")
 
 
+def test_streaming_response_preserves_visible_spaces_between_chunks():
+    """Visible streamed chunks should keep model-emitted leading spaces."""
+    mixin = NodeFunctionsMixinDouble([_chunk("Hello"), _chunk(" world")])
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.content == "Hello world"
+    assert [call.args[0] for call in mixin._token_callback.call_args_list] == [
+        "Hello",
+        " world",
+    ]
+
+
 def test_headless_streaming_emits_structured_thinking_phase_chunks(
     monkeypatch,
 ):
@@ -264,6 +277,37 @@ def test_forced_tool_choice_turn_suppresses_visible_planning_text():
     mixin._token_callback.assert_not_called()
 
 
+def test_required_tool_choice_turn_suppresses_visible_planning_text():
+    """Required-tool turns should also hide interim planning prose."""
+    mixin = NodeFunctionsMixinDouble(
+        [
+            _chunk(
+                "I'll inspect the attached document before I answer."
+            ),
+            _tool_call_chunk("inspect_loaded_documents"),
+        ]
+    )
+    mixin._tool_choice = "any"
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.content == ""
+    assert len(message.tool_calls) == 1
+    assert message.tool_calls[0]["name"] == "inspect_loaded_documents"
+    mixin._token_callback.assert_not_called()
+
+
+def test_required_tool_choice_replays_visible_text_without_tool_call():
+    """Required-tool turns should flush content if no tool call arrives."""
+    mixin = NodeFunctionsMixinDouble([_chunk("I can answer directly.")])
+    mixin._tool_choice = "any"
+
+    message = mixin._generate_streaming_response([], {})
+
+    assert message.content == "I can answer directly."
+    mixin._token_callback.assert_called_once_with("I can answer directly.")
+
+
 def test_tool_call_json_detection_handles_flat_tool_query_shape():
     """Legacy flat tool JSON should still be recognized as a tool call."""
     mixin = NodeFunctionsMixinDouble([])
@@ -354,8 +398,8 @@ class _DocumentConversationalPassChatModel:
         return iter(self._responses.pop(0))
 
 
-def test_forced_response_stream_disables_thinking_and_tools():
-    """Forced synthesis should request a plain visible answer."""
+def test_forced_response_stream_keeps_thinking_but_disables_tools():
+    """Forced synthesis should keep thinking on while disabling tools."""
     chat_model = _ThinkingSensitiveChatModel()
     mixin = NodeFunctionsMixinDouble([])
     mixin._chat_model = chat_model
@@ -366,14 +410,17 @@ def test_forced_response_stream_disables_thinking_and_tools():
         "What is this document?",
     )
 
-    assert message.content == "Visible answer"
-    assert chat_model.observed == [
-        {
-            "enable_thinking": False,
+    assert message.content == "draft hidden answer"
+    assert chat_model.observed
+    assert all(
+        observed
+        == {
+            "enable_thinking": True,
             "tools": None,
             "tool_choice": None,
         }
-    ]
+        for observed in chat_model.observed
+    )
     assert chat_model.enable_thinking is True
     assert chat_model.tools == [{"function": {"name": "rag_search"}}]
     assert chat_model.tool_choice == {
@@ -793,7 +840,7 @@ def test_forced_response_prompt_requests_thorough_summary():
     assert "Do not repeat the document title, author, or structure" in prompt
     assert "Do not mention file names, stored paths, excerpt numbers" in prompt
     assert "front-matter anecdotes or biographical trivia secondary" in prompt
-    assert "Do not infer divine, supernatural, or hidden-authority beliefs" in prompt
+    assert "Do not turn ambiguous mood, imagery, or one-off wording" in prompt
     assert "Evidence excerpts:" in prompt
     assert "Current document: The Satanic Bible - Anton LaVey.pdf" in prompt
     assert "Stored path:" not in prompt
@@ -827,6 +874,62 @@ def test_forced_response_prompt_handles_summary_evidence_shape():
     assert "currently loaded document the user is asking about" in prompt
     assert "do not ask the user to identify which book" in prompt.lower()
     assert "lead with those labeled spans first" in prompt
+
+
+def test_forced_response_prompt_uses_chunked_document_analysis_context():
+    """Chunked analysis should use consolidated document context."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    prompt = mixin._build_search_results_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Caribbean Mystery - Agatha Christie.epub\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Analysis pipeline: distributed_evidence_bundle\n\n"
+        "Requested analysis: Provide a summary of 'A Caribbean Mystery' "
+        "including its premise, themes, and key characters.\n\n"
+        "Document coverage:\n\n"
+        "1. MAJOR PALGRAVE TELLS A STORY\n"
+        "2. A DEATH IN THE HOTEL\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. Miss Marple is staying at a Caribbean resort.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. Palgrave dies before he can explain the "
+        "snapshot.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert "Document analysis context:" in prompt
+    assert "Document coverage:" in prompt
+    assert "A DEATH IN THE HOTEL" in prompt
+    assert "Supporting evidence:" not in prompt
+    assert "[Excerpt 1]" not in prompt
+    assert "Evidence excerpts:" not in prompt
+
+
+def test_forced_response_prompt_uses_full_document_text_for_small_docs():
+    """Small document analysis should pass full text directly."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+    prompt = mixin._build_search_results_prompt(
+        "Current document analysis:\n\n"
+        "Document: Short Notes.md\n\n"
+        "Analysis mode: full_document\n\n"
+        "Requested analysis: summarize this document\n\n"
+        "Estimated document tokens: 12\n\n"
+        "Full document text:\n\n"
+        "Short full document text.",
+        "analyze_loaded_document",
+        "summarize this document",
+    )
+
+    assert "Document analysis context:" in prompt
+    assert "Full document text:" in prompt
+    assert "Short full document text." in prompt
+    assert "Evidence excerpts:" not in prompt
 
 
 def test_forced_response_summary_runs_verification_pass():
@@ -1147,9 +1250,13 @@ def test_forced_response_keeps_thinking_updates_and_completes():
     )
 
     assert message.content == "Visible answer"
-    assert message.additional_kwargs["thinking_content"] == (
+    thinking_content = message.additional_kwargs["thinking_content"]
+    assert "document_synthesis" in thinking_content
+    assert "document_verification" in thinking_content
+    assert "Final Conversational Reply" in thinking_content
+    assert thinking_content.count(
         "Wait, one more check:\nUse the title only."
-    )
+    ) == 3
     assert message.additional_kwargs["thinking_metadata"]["stage"] == (
         "document_verification"
     )
@@ -1163,18 +1270,8 @@ def test_forced_response_keeps_thinking_updates_and_completes():
         for call in mixin._signal_emitter.emit_signal.call_args_list
         if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
     ]
-    preset_ids = {
-        call.args[1]["metadata"].get("preset_id")
-        for call in mixin._signal_emitter.emit_signal.call_args_list
-        if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
-        and call.args[1].get("metadata")
-    }
     assert statuses[:3] == ["started", "streaming", "completed"]
     assert statuses[-1] == "completed"
-    assert preset_ids == {
-        "document_synthesis",
-        "document_verification",
-    }
     assert thinking_updates[-1]["metadata"]["stage"] == (
         "document_verification"
     )

@@ -140,12 +140,12 @@ class TestCreateStreamingCallback:
 
         assert complete_response[0] == "Hello world"
 
-    def test_callback_inserts_missing_word_boundary_spaces(
+    def test_callback_keeps_word_chunks_lossless(
         self,
         mixin,
         llm_request,
     ):
-        """Adjacent word tokens should be normalized while streaming."""
+        """Adjacent word tokens should be forwarded without Python repair."""
         complete_response = [""]
         sequence_counter = [0]
 
@@ -156,11 +156,11 @@ class TestCreateStreamingCallback:
         callback("Hello")
         callback("world")
 
-        assert complete_response[0] == "Hello world"
+        assert complete_response[0] == "Helloworld"
         second_call = (
             mixin.api.llm.send_llm_text_streamed_signal.call_args_list[1][0][0]
         )
-        assert second_call.message == " world"
+        assert second_call.message == "world"
 
     def test_callback_increments_sequence(self, mixin, llm_request):
         """Should increment sequence counter for each token."""

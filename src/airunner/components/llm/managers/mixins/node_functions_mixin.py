@@ -115,11 +115,33 @@ class NodeFunctionsMixin(
         disable_tools_for_followup = self._should_disable_tools_for_followup(
             trimmed_messages
         )
+        grounded_document_followup = (
+            self._should_use_grounded_document_followup(trimmed_messages)
+        )
         chat_model_overrides = {}
         tools_backup = getattr(self, "_tools", None)
         followup_prompt_backup = None
 
         try:
+            if grounded_document_followup:
+                self.logger.info(
+                    "[CALL MODEL DEBUG] Using grounded synthesized "
+                    "document follow-up response"
+                )
+                tool_messages = self._get_current_turn_tool_messages(
+                    trimmed_messages
+                )
+                all_tool_content = self._combine_tool_results(tool_messages)
+                user_question = self._get_user_question(trimmed_messages)
+                response_message = self._generate_forced_response_message(
+                    all_tool_content,
+                    "analyze_loaded_document",
+                    user_question,
+                    generation_kwargs,
+                    message_history=trimmed_messages,
+                )
+                return {"messages": [response_message]}
+
             if disable_tools_for_followup:
                 self.logger.info(
                     "[CALL MODEL DEBUG] Disabling tools for synthesized "

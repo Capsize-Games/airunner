@@ -318,6 +318,67 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="align_center_horizontal">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>Align center horizontal</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/lucide/light/align-center-horizontal.svg</normaloff>:/light/icons/lucide/light/align-center-horizontal.svg</iconset>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="align_center_vertical">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>Align center vertical</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/lucide/light/align-center-vertical.svg</normaloff>:/light/icons/lucide/light/align-center-vertical.svg</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="active_grid_area_button">
               <property name="minimumSize">
                <size>

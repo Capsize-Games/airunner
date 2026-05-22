@@ -16,6 +16,7 @@ class ToolFilteringMixin:
         tool_categories: List[str],
         action=None,
         force_tool: Optional[str] = None,
+        allowed_tool_names: Optional[List[str]] = None,
     ) -> None:
         """Apply a tool category filter to the active workflow."""
         self.logger.info(
@@ -37,47 +38,9 @@ class ToolFilteringMixin:
         from airunner.components.llm.core.tool_registry import ToolCategory
 
         if tool_categories is not None and len(tool_categories) == 0:
-            disable_always = (
-                os.environ.get("AIRUNNER_DISABLE_ALWAYS_TOOLS", "0")
-                == "1"
-            )
-            if disable_always:
-                self.logger.info(
-                    "tool_categories=[] and AIRUNNER_DISABLE_ALWAYS_TOOLS=1 "
-                    "- disabling all tools"
-                )
-                self._workflow_manager.update_tools([])
-                self._workflow_manager._build_and_compile_workflow()
-                return
-
-            current_request = getattr(self, "llm_request", None)
-            current_prompt = getattr(current_request, "prompt", "") or ""
-            if self._is_simple_greeting_prompt(
-                current_prompt
-            ) or self._is_simple_no_tool_prompt(current_prompt):
-                self.logger.info(
-                    "tool_categories=[] for simple conversational prompt - "
-                    "disabling all tools"
-                )
-                self._workflow_manager.update_tools([])
-                self._workflow_manager._build_and_compile_workflow()
-                return
-
-            self.logger.info(
-                "tool_categories=[] - including only always-available tools "
-                "(knowledge)"
-            )
-            always_tools = self._tool_manager.get_tools_by_categories(
-                [ToolCategory(cat) for cat in self.ALWAYS_INCLUDE_CATEGORIES],
-                include_deferred=False,
-            )
-            self._workflow_manager.update_tools(always_tools)
+            self.logger.info("tool_categories=[] - disabling all tools")
+            self._workflow_manager.update_tools([])
             self._workflow_manager._build_and_compile_workflow()
-            self.logger.info(
-                "Always-available tools enabled - workflow rebuilt with %s "
-                "tools",
-                len(always_tools),
-            )
             return
 
         if tool_categories is None:
@@ -155,6 +118,18 @@ class ToolFilteringMixin:
             list(allowed_categories),
             include_deferred=True,
         )
+        if allowed_tool_names:
+            allowed_names = set(allowed_tool_names)
+            filtered_tools = [
+                tool
+                for tool in filtered_tools
+                if getattr(tool, "name", getattr(tool, "__name__", None))
+                in allowed_names
+            ]
+            self.logger.info(
+                "[TOOL FILTER] Restricted filtered tools to allowlist: %s",
+                sorted(allowed_names),
+            )
         if force_tool:
             forced_tools = [
                 tool
@@ -205,12 +180,28 @@ class ToolFilteringMixin:
         supports_forced_choice = bool(
             getattr(self, "supports_function_calling", False)
         )
+        planner_requires_tool = bool(
+            supports_forced_choice
+            and allowed_tool_names
+            and getattr(
+                getattr(self, "llm_request", None),
+                "planner_mode",
+                None,
+            )
+            == "select_tools"
+        )
         if force_tool:
             tool_choice = {
                 "type": "function",
                 "function": {"name": force_tool},
             }
             self.logger.info("[TOOL FILTER] Forcing tool: %s", force_tool)
+        elif planner_requires_tool:
+            tool_choice = "any"
+            self.logger.info(
+                "[TOOL FILTER] Planner mode requires a tool call from the "
+                "restricted allowlist"
+            )
         elif (
             supports_forced_choice
             and action == LLMActionType.PERFORM_RAG_SEARCH

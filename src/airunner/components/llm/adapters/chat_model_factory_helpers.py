@@ -39,11 +39,8 @@ def get_enable_thinking(
     llm_settings: Any,
 ) -> bool:
     """Resolve the effective thinking-mode setting."""
-    if db_settings is not None and hasattr(db_settings, "enable_thinking"):
-        db_value = getattr(db_settings, "enable_thinking", None)
-        if db_value is not None:
-            return db_value
-    return getattr(llm_settings, "enable_thinking", True)
+    _ = (db_settings, llm_settings)
+    return True
 
 
 def get_reasoning_effort(

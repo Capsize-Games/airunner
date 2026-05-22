@@ -387,6 +387,65 @@ class TestChatGGUFNativeTools:
         assert len(messages) == 2
         assert "<tools>" not in messages[0]["content"]
 
+    def test_convert_messages_injects_xml_tool_prompt_for_json_mode(self):
+        fake_llama = FakeLlama()
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model.tool_calling_mode = "json"
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="any",
+        )
+        chat_model.tool_calling_mode = "json"
+
+        messages = chat_model._convert_messages(
+            [
+                SystemMessage(content="You are a helpful assistant."),
+                HumanMessage(content="what time is it?"),
+            ]
+        )
+
+        assert len(messages) == 2
+        assert "<tools>" in messages[0]["content"]
+        assert "You MUST call at least one tool now." in messages[0][
+            "content"
+        ]
+
+    def test_generate_parses_xml_tools_without_native_binding_in_json_mode(
+        self,
+    ):
+        fake_llama = FakeLlama(
+            response={
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '<tool_call>{"name": '
+                                '"get_current_datetime", '
+                                '"arguments": {}}</tool_call>'
+                            ),
+                        }
+                    }
+                ]
+            }
+        )
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model.tool_calling_mode = "json"
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="any",
+        )
+        chat_model.tool_calling_mode = "json"
+
+        result = chat_model._generate([HumanMessage(content="what time is it?")])
+
+        call_kwargs = fake_llama.calls[0]
+        assert "tools" not in call_kwargs
+        assert "tool_choice" not in call_kwargs
+        message = result.generations[0].message
+        assert message.content == ""
+        assert message.tool_calls[0]["name"] == "get_current_datetime"
+        assert message.tool_calls[0]["args"] == {}
+
     def test_bind_tools_returns_isolated_model_copy(self):
         fake_llama = FakeLlama()
         chat_model = _build_chat_gguf(fake_llama)
@@ -782,6 +841,58 @@ class TestChatGGUFNativeTools:
         call_kwargs = fake_llama.calls[0]
         assert call_kwargs["tools"]
         assert chunks[-1].message.tool_calls[0]["name"] == "get_current_datetime"
+        assert chunks[-1].message.tool_calls[0]["args"] == {}
+
+    def test_stream_normalizes_any_tool_choice_to_required(self):
+        fake_llama = FakeLlama(stream_chunks=[])
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="any",
+        )
+
+        list(chat_model._stream([HumanMessage(content="what time is it?")]))
+
+        call_kwargs = fake_llama.calls[0]
+        assert chat_model.tool_choice == "any"
+        assert call_kwargs["tool_choice"] == "required"
+
+    def test_stream_parses_xml_tools_without_native_binding_in_json_mode(
+        self,
+    ):
+        fake_llama = FakeLlama(
+            stream_chunks=[
+                {
+                    "choices": [
+                        {
+                            "delta": {
+                                "content": (
+                                    '<tool_call>{"name": '
+                                    '"get_current_datetime", '
+                                    '"arguments": {}}</tool_call>'
+                                )
+                            }
+                        }
+                    ]
+                }
+            ]
+        )
+        chat_model = _build_chat_gguf(fake_llama)
+        chat_model.tool_calling_mode = "json"
+        chat_model = chat_model.bind_tools(
+            [get_current_datetime],
+            tool_choice="any",
+        )
+        chat_model.tool_calling_mode = "json"
+
+        chunks = list(chat_model._stream([HumanMessage(content="what time is it?")]))
+
+        call_kwargs = fake_llama.calls[0]
+        assert "tools" not in call_kwargs
+        assert "tool_choice" not in call_kwargs
+        assert chunks[-1].message.tool_calls[0]["name"] == (
+            "get_current_datetime"
+        )
         assert chunks[-1].message.tool_calls[0]["args"] == {}
 
     def test_stream_deduplicates_repeated_native_tool_name_deltas(self):

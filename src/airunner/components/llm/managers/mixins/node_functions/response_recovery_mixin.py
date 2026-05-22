@@ -11,6 +11,49 @@ from airunner.components.llm.utils.thinking_parser import strip_thinking_tags
 class ResponseRecoveryMixin:
     """Recover user-facing text from reasoning-heavy internal responses."""
 
+    @staticmethod
+    def _extract_answer_text_field(text: str) -> str:
+        """Extract one structured answer-text field when present."""
+        content = str(text or "").strip()
+        if not content:
+            return ""
+
+        tagged_match = re.search(
+            r"<answer_text>\s*(.*?)\s*</answer_text>",
+            content,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if tagged_match:
+            return tagged_match.group(1).strip()
+
+        labelled_match = re.search(
+            r"^answer_text\s*:\s*(.+)\Z",
+            content,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if labelled_match:
+            return labelled_match.group(1).strip()
+
+        return ""
+
+    def _sanitize_recovered_response_candidate(
+        self,
+        text: str,
+        *,
+        reject_structure_only: bool = False,
+    ) -> str:
+        """Return one user-facing candidate or an empty string."""
+        candidate = self._clean_reasoning_candidate(text)
+        if not candidate:
+            return ""
+        if self._looks_like_malformed_forced_response_fragment(candidate):
+            return ""
+        if reject_structure_only and self._looks_like_summary_scaffolding_response(
+            candidate
+        ):
+            return ""
+        return candidate
+
     def _recover_forced_response_content(
         self,
         response_message: Optional[AIMessage],
@@ -24,30 +67,19 @@ class ResponseRecoveryMixin:
         rejected_visible = ""
         visible_content = str(getattr(response_message, "content", "") or "")
         if visible_content.strip():
+            structured_visible = self._sanitize_recovered_response_candidate(
+                self._extract_answer_text_field(visible_content),
+                reject_structure_only=reject_structure_only,
+            )
+            if structured_visible:
+                return structured_visible
             cleaned_visible = self._strip_forced_response_label(visible_content)
-            if not self._looks_like_instruction_reflection(
-                cleaned_visible
-            ) and not self._looks_like_reasoning_header(
-                cleaned_visible
-            ) and not self._looks_like_verification_verdict_response(
-                cleaned_visible
-            ) and not self._looks_like_summary_prompt_echo(
-                cleaned_visible
-            ) and not self._looks_like_search_result_preface_response(
-                cleaned_visible
-            ) and not self._looks_like_summary_direction_response(
-                cleaned_visible
-            ) and not self._looks_like_document_summary_clarification_response(
-                cleaned_visible
-            ) and not self._looks_like_summary_format_description_response(
-                cleaned_visible
-            ) and not self._looks_like_malformed_forced_response_fragment(
-                cleaned_visible
-            ) and not (
-                reject_structure_only
-                and self._looks_like_summary_scaffolding_response(cleaned_visible)
-            ):
-                return cleaned_visible
+            visible_candidate = self._sanitize_recovered_response_candidate(
+                cleaned_visible,
+                reject_structure_only=reject_structure_only,
+            )
+            if visible_candidate:
+                return visible_candidate
             rejected_visible = cleaned_visible
 
         additional_kwargs = getattr(response_message, "additional_kwargs", {}) or {}
@@ -60,13 +92,21 @@ class ResponseRecoveryMixin:
         if not cleaned_thinking:
             return ""
 
-        drafted_response = self._extract_drafted_response_from_thinking(
-            cleaned_thinking
+        structured_thinking = self._sanitize_recovered_response_candidate(
+            self._extract_answer_text_field(cleaned_thinking),
+            reject_structure_only=reject_structure_only,
         )
-        if drafted_response and not (
-            reject_structure_only
-            and self._looks_like_summary_scaffolding_response(drafted_response)
-        ):
+        if structured_thinking:
+            self.logger.info(
+                "Recovered structured answer_text from reasoning output"
+            )
+            return structured_thinking
+
+        drafted_response = self._sanitize_recovered_response_candidate(
+            self._extract_drafted_response_from_thinking(cleaned_thinking),
+            reject_structure_only=reject_structure_only,
+        )
+        if drafted_response:
             self.logger.info(
                 "Recovered drafted forced response from reasoning-only output"
             )
@@ -88,11 +128,10 @@ class ResponseRecoveryMixin:
             if paragraph.strip()
         ]
         for paragraph in paragraphs:
-            candidate = self._clean_reasoning_candidate(paragraph)
-            if reject_structure_only and self._looks_like_summary_scaffolding_response(
-                candidate
-            ):
-                continue
+            candidate = self._sanitize_recovered_response_candidate(
+                paragraph,
+                reject_structure_only=reject_structure_only,
+            )
             if candidate:
                 self.logger.info(
                     "Recovered visible forced response from reasoning-only output"

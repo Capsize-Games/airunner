@@ -12,6 +12,12 @@ class ResponseNormalizationMixin:
         candidate = paragraph.strip()
         if not candidate:
             return ""
+        if re.search(
+            r"(?:^|\n)\s*\*\s+\*(?:final answer|critique|draft|review|constraint)[^*]*:\*",
+            candidate,
+            flags=re.IGNORECASE,
+        ):
+            return ""
         if candidate[:1] == candidate[-1:] and candidate[:1] in {'"', "'"}:
             candidate = candidate[1:-1].strip()
         candidate = cls._strip_forced_response_label(candidate)

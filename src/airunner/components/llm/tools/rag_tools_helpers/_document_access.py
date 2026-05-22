@@ -7,9 +7,6 @@ from typing import Any
 from airunner.components.llm.tools.rag_tools_helpers._document_splitting import (
     extract_document_structure_headings,
 )
-from airunner.components.llm.tools.rag_tools_helpers._query_classification import (
-    query_mentions_document_reference,
-)
 from airunner.components.llm.tools.rag_tools_helpers._result_formatting import (
     infer_filename_details,
 )
@@ -94,37 +91,6 @@ def get_active_document_entries(rag_manager: Any) -> list[dict[str, Any]]:
     return entries
 
 
-def document_query_context(document_name: str) -> str:
-    """Return one compact document label for query augmentation."""
-    label = os.path.basename(str(document_name or "")).strip()
-    if not label:
-        return ""
-
-    title_hint, author_hint = infer_filename_details(label)
-    if title_hint and author_hint:
-        return f"{title_hint} by {author_hint}"
-    if title_hint:
-        return title_hint
-
-    stem = os.path.splitext(label)[0].replace("_", " ").strip()
-    return stem or label
-
-
-def expand_query_with_active_document(query: str, rag_manager: Any) -> str:
-    """Augment one pronoun query with the single active document name."""
-    if not query_mentions_document_reference(query):
-        return query
-
-    active_names = get_active_document_names(rag_manager)
-    if len(active_names) != 1:
-        return query
-
-    context = document_query_context(active_names[0])
-    if not context:
-        return query
-    return f"{query.strip()} Document context: {context}"
-
-
 def build_document_structure_result(
     rag_manager: Any,
     *,
@@ -159,7 +125,6 @@ def build_document_structure_result(
 
 __all__ = [
     "build_document_structure_result",
-    "expand_query_with_active_document",
     "get_active_document_entries",
     "get_single_active_document_path",
 ]
