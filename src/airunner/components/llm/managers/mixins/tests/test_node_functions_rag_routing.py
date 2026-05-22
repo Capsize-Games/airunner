@@ -662,6 +662,26 @@ def test_recover_forced_response_content_rejects_verification_meta_text():
     assert recovered == ""
 
 
+def test_recover_forced_response_content_rejects_search_results_preface():
+    """Search-engine style prefaced summaries should not surface directly."""
+    mixin = _DummyNodeFunctions()
+    response = AIMessage(
+        content=(
+            "Based on the search results, this appears to be a mystery novel "
+            "about a murder and a photograph. Would you like me to search "
+            "for more specific details?"
+        ),
+        tool_calls=[],
+    )
+
+    recovered = mixin._recover_forced_response_content(
+        response,
+        reject_structure_only=True,
+    )
+
+    assert recovered == ""
+
+
 def test_generate_response_message_keeps_draft_when_verifier_returns_meta_text():
     """Bad verifier meta output should not replace a usable drafted answer."""
     mixin = _VerificationFallbackNodeFunctions()

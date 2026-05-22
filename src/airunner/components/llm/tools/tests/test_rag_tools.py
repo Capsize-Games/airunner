@@ -335,6 +335,40 @@ def test_rag_search_book_about_query_ignores_substring_marker_false_positives(
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")
 @patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_book_about_query_preserves_current_frame_setting(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise evidence should keep the present-frame resort setting."""
+    file_path = "/library/A Caribbean Mystery - Agatha Christie.epub"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = "\n\n".join(
+        [
+            "Major Palgrave drifts into old recollections about overseas postings and people he met years ago.",
+            "He repeats a doctor's story about recognizing a killer from a photograph in another country.",
+            "The reminiscence keeps circling through distant colonies and army gossip.",
+            "At the Golden Palm resort on St. Honore, Miss Marple sits among the other guests and endures Major Palgrave's chatter.",
+            "Before he can finish, Major Palgrave is distracted while trying to show Miss Marple a snapshot of a murderer.",
+            "When he is found dead, Miss Marple begins investigating the killing among the hotel guests.",
+        ]
+    )
+    api = SimpleNamespace(
+        search=Mock(),
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Caribbean Mystery - Agatha Christie.epub"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "Golden Palm resort on St. Honore" in result
+    assert "snapshot of a murderer" in result
+    assert "distant colonies and army gossip" not in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
 def test_rag_search_summary_omits_filename_inference_metadata(
     mock_resolve,
     mock_extract,

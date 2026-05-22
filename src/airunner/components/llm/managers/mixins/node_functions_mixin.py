@@ -1537,6 +1537,25 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         )
         return sum(marker in lowered for marker in markers) >= 2
 
+    @staticmethod
+    def _looks_like_search_result_preface_response(text: str) -> bool:
+        """Return True for search-engine style summaries and offers."""
+        lowered = " ".join(str(text or "").lower().split())
+        if not lowered:
+            return False
+        if lowered.startswith("based on the search results"):
+            return True
+        if lowered.startswith("from the search results"):
+            return True
+        return any(
+            marker in lowered
+            for marker in (
+                "would you like me to search",
+                "i can help you find more information",
+                "i can help you find more details",
+            )
+        )
+
     def _emit_final_thinking_signal(
         self,
         response_message: Optional[AIMessage],
@@ -1589,6 +1608,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 ) and not self._looks_like_verification_verdict_response(
                     cleaned_visible
             ) and not self._looks_like_summary_prompt_echo(
+                cleaned_visible
+            ) and not self._looks_like_search_result_preface_response(
                 cleaned_visible
             ) and not self._looks_like_malformed_forced_response_fragment(
                 cleaned_visible
@@ -1956,6 +1977,8 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         if self._looks_like_instruction_reflection(candidate):
             return ""
         if self._looks_like_summary_prompt_echo(candidate):
+            return ""
+        if self._looks_like_search_result_preface_response(candidate):
             return ""
         if self._looks_like_reasoning_header(candidate):
             return ""

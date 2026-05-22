@@ -97,6 +97,39 @@ _PREMISE_GROUNDED_MYSTERY_MARKERS = (
     "trick",
     "wall",
 )
+_PREMISE_SCENE_MARKERS = (
+    "beach",
+    "dining room",
+    "guest",
+    "guests",
+    "hotel",
+    "island",
+    "pool",
+    "resort",
+    "room",
+    "shore",
+    "staying",
+    "terrace",
+    "verandah",
+)
+_PREMISE_BACKSTORY_MARKERS = (
+    "another country",
+    "doctor's story",
+    "had once",
+    "old recollections",
+    "once",
+    "overseas",
+    "recollection",
+    "recollections",
+    "reminiscence",
+    "reminiscences",
+    "story about",
+    "told him",
+    "told me",
+    "told her",
+    "used to",
+    "years ago",
+)
 _PREMISE_DIALOGUE_MARKERS = (
     " asked ",
     " cried ",
@@ -622,6 +655,14 @@ def _premise_has_marker(text: str, marker: str) -> bool:
     )
 
 
+def _premise_count_hits(text: str, markers: tuple[str, ...]) -> int:
+    """Return how many grounded markers appear in one text span."""
+    lowered = str(text or "").lower()
+    if not lowered:
+        return 0
+    return sum(_premise_has_marker(lowered, marker) for marker in markers)
+
+
 def _premise_paragraph_score(paragraph: str) -> int:
     """Score one paragraph for premise-level summary usefulness."""
     source = str(paragraph or "")
@@ -629,35 +670,37 @@ def _premise_paragraph_score(paragraph: str) -> int:
     if not lowered:
         return 0
 
-    plot_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_PLOT_MARKERS
-    )
+    plot_hits = _premise_count_hits(lowered, _PREMISE_PLOT_MARKERS)
     if plot_hits == 0:
         return 0
-    atmosphere_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_ATMOSPHERE_MARKERS
+    atmosphere_hits = _premise_count_hits(
+        lowered, _PREMISE_ATMOSPHERE_MARKERS
     )
-    context_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_CONTEXT_MARKERS
+    context_hits = _premise_count_hits(lowered, _PREMISE_CONTEXT_MARKERS)
+    grounded_hits = _premise_count_hits(
+        lowered, _PREMISE_GROUNDED_MYSTERY_MARKERS
     )
-    grounded_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_GROUNDED_MYSTERY_MARKERS
+    scene_hits = _premise_count_hits(lowered, _PREMISE_SCENE_MARKERS)
+    backstory_hits = _premise_count_hits(
+        lowered, _PREMISE_BACKSTORY_MARKERS
     )
     dialogue_penalty = _premise_dialogue_penalty(source)
     word_count = len(lowered.split())
     length_bonus = 1 if 20 <= word_count <= 140 else 0
+    if backstory_hits and not scene_hits and plot_hits <= 1 and grounded_hits <= 2:
+        return 0
     score = (
         plot_hits * 5
         + grounded_hits * 3
         + atmosphere_hits
         + context_hits
+        + scene_hits * 3
         + length_bonus
     )
-    return max(0, score - dialogue_penalty)
+    penalty = dialogue_penalty + backstory_hits * 4
+    if scene_hits:
+        penalty = max(0, penalty - scene_hits * 3)
+    return max(0, score - penalty)
 
 
 def _premise_dialogue_penalty(paragraph: str) -> int:
@@ -684,19 +727,60 @@ def _premise_opening_score(paragraph: str) -> int:
     lowered = str(paragraph or "").lower()
     if not lowered:
         return 0
-    context_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_CONTEXT_MARKERS
+    context_hits = _premise_count_hits(lowered, _PREMISE_CONTEXT_MARKERS)
+    grounded_hits = _premise_count_hits(
+        lowered, _PREMISE_GROUNDED_MYSTERY_MARKERS
     )
-    grounded_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_GROUNDED_MYSTERY_MARKERS
+    atmosphere_hits = _premise_count_hits(
+        lowered, _PREMISE_ATMOSPHERE_MARKERS
     )
-    atmosphere_hits = sum(
-        _premise_has_marker(lowered, marker)
-        for marker in _PREMISE_ATMOSPHERE_MARKERS
+    scene_hits = _premise_count_hits(lowered, _PREMISE_SCENE_MARKERS)
+    backstory_hits = _premise_count_hits(
+        lowered, _PREMISE_BACKSTORY_MARKERS
     )
-    return context_hits * 3 + grounded_hits * 2 + atmosphere_hits
+    return max(
+        0,
+        context_hits * 3
+        + grounded_hits * 2
+        + atmosphere_hits
+        + scene_hits * 4
+        - backstory_hits * 4
+        - min(_premise_dialogue_penalty(paragraph), 4),
+    )
+
+
+def _premise_neighbor_scene_score(paragraph: str) -> int:
+    """Score one neighboring paragraph for current-scene support."""
+    lowered = str(paragraph or "").lower()
+    if not lowered:
+        return 0
+    scene_hits = _premise_count_hits(lowered, _PREMISE_SCENE_MARKERS)
+    if scene_hits == 0:
+        return 0
+    context_hits = _premise_count_hits(lowered, _PREMISE_CONTEXT_MARKERS)
+    backstory_hits = _premise_count_hits(
+        lowered, _PREMISE_BACKSTORY_MARKERS
+    )
+    score = scene_hits * 4 + context_hits * 2 - backstory_hits * 4
+    return max(0, score - min(_premise_dialogue_penalty(paragraph), 4))
+
+
+def _best_neighboring_scene_paragraph(
+    paragraphs: list[str],
+    center_index: int,
+) -> str:
+    """Return the best nearby current-scene paragraph for one hook."""
+    candidates: list[tuple[int, int, str]] = []
+    for neighbor_index in (center_index - 1, center_index + 1):
+        if 0 <= neighbor_index < len(paragraphs):
+            paragraph = paragraphs[neighbor_index]
+            score = _premise_neighbor_scene_score(paragraph)
+            if score > 0:
+                candidates.append((score, abs(neighbor_index - center_index), paragraph))
+    if not candidates:
+        return ""
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    return candidates[0][2]
 
 
 def _build_premise_evidence_documents(
@@ -752,6 +836,13 @@ def _build_premise_evidence_documents(
     ]
     scored_hooks.sort(key=lambda item: (-item[0], item[1]))
     for _score, _index, paragraph in scored_hooks:
+        if len(selected) < premise_limit - 1:
+            neighbor = _best_neighboring_scene_paragraph(
+                hook_window,
+                _index,
+            )
+            if neighbor:
+                add("Current setting", neighbor)
         add("Premise detail", paragraph)
         if len(selected) >= premise_limit:
             break
