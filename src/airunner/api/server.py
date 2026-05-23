@@ -163,13 +163,11 @@ def create_app(
 
         Accepted headers (first one wins):
         - X-Tenant-Key
-        - X-Uwuchat-Namespace
         - X-Namespace
         """
 
         header_value = (
             (request.headers.get("x-tenant-key") or "").strip()
-            or (request.headers.get("x-uwuchat-namespace") or "").strip()
             or (request.headers.get("x-namespace") or "").strip()
         )
 

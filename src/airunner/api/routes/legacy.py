@@ -138,7 +138,6 @@ class LegacyLLMGenerateRequest(BaseModel):
     do_tts_reply: bool = False
     system_prompt: Optional[str] = None
     search_hints: Optional[Dict[str, Any]] = None
-    # Optional conversation identifiers used by UwUChat.
     conversation_id: Optional[int] = None
     node_id: Optional[str] = None
 
