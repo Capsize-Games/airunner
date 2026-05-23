@@ -53,7 +53,6 @@ class LLMAPIService(APIServiceBase):
         request_id: Optional[str] = None,
         callback: Optional[callable] = None,
         conversation_id: Optional[int] = None,
-        enable_consciousness: Optional[bool] = None,
         **kwargs,
     ):
         """Send an LLM generation request.
@@ -109,8 +108,6 @@ class LLMAPIService(APIServiceBase):
             data["conversation_id"] = conversation_id
         if node_id is not None:
             data["node_id"] = node_id
-        if enable_consciousness is not None:
-            data["enable_consciousness"] = enable_consciousness
 
         if callback:
             from airunner.utils.application.signal_mediator import (
@@ -128,7 +125,6 @@ class LLMAPIService(APIServiceBase):
             search_hints,
             conversation_id,
             node_id,
-            enable_consciousness,
             signal_data=data,
         ):
             self.logger.info("LLM API: Daemon request queued")
@@ -379,7 +375,6 @@ class LLMAPIService(APIServiceBase):
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
         signal_data: Optional[dict] = None,
     ) -> bool:
         """Route a GUI request through the daemon when that client is ready."""
@@ -401,7 +396,6 @@ class LLMAPIService(APIServiceBase):
                 search_hints,
                 conversation_id,
                 node_id,
-                enable_consciousness,
                 signal_data,
             ),
             daemon=True,
@@ -436,7 +430,6 @@ class LLMAPIService(APIServiceBase):
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
         signal_data: Optional[dict],
     ) -> None:
         """Use the daemon when it is already reachable, else fall back."""
@@ -458,7 +451,6 @@ class LLMAPIService(APIServiceBase):
             search_hints,
             conversation_id,
             node_id,
-            enable_consciousness,
         )
 
     def _stream_daemon_request(
@@ -471,7 +463,6 @@ class LLMAPIService(APIServiceBase):
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
     ) -> None:
         """Emit streamed LLM responses received from the daemon client."""
         state = _DaemonStreamState(
@@ -488,7 +479,6 @@ class LLMAPIService(APIServiceBase):
                 search_hints=search_hints,
                 conversation_id=conversation_id,
                 node_id=node_id,
-                enable_consciousness=enable_consciousness,
             ):
                 if chunk.get("keepalive"):
                     continue

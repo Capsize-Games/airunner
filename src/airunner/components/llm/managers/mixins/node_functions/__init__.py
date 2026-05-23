@@ -1,8 +1,5 @@
 """Support mixins and helpers for node-function orchestration."""
 
-from airunner.components.llm.managers.mixins.node_functions.consciousness_integration_mixin import (  # noqa: E501
-    ConsciousnessIntegrationMixin,
-)
 from airunner.components.llm.managers.mixins.node_functions.document_response_policy_mixin import (  # noqa: E501
     DocumentResponsePolicyMixin,
 )
@@ -53,7 +50,6 @@ from airunner.components.llm.managers.mixins.node_functions.response_recovery_mi
 )
 
 __all__ = [
-    "ConsciousnessIntegrationMixin",
     "DocumentResponsePolicyMixin",
     "DocumentConversationalFollowupMixin",
     "ForcedResponseMixin",

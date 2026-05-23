@@ -9,9 +9,6 @@ from typing import Optional, Dict, Any, List
 
 from langchain_core.messages import HumanMessage, AIMessage
 
-from airunner.components.llm.managers.mixins.node_functions import (
-    ConsciousnessIntegrationMixin,
-)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -19,16 +16,8 @@ from airunner.utils.application import get_logger
 DEFAULT_WORKFLOW_RECURSION_LIMIT = 20
 
 
-class StreamingMixin(ConsciousnessIntegrationMixin):
+class StreamingMixin:
     """Manages workflow execution and streaming."""
-
-    def _maybe_consciousness_pre_turn(self, messages: List[Any]) -> None:
-        """Call the pre-turn consciousness hook when enabled."""
-        self._run_consciousness_hook("on_pre_turn", messages=messages)
-
-    def _maybe_consciousness_post_turn(self, messages: List[Any]) -> None:
-        """Call the post-turn consciousness hook when enabled."""
-        self._run_consciousness_hook("on_post_turn", messages=messages)
 
     def __init__(self):
         """Initialize streaming mixin."""
@@ -66,7 +55,6 @@ class StreamingMixin(ConsciousnessIntegrationMixin):
         self._executed_tools = []
 
         input_messages = [HumanMessage(user_input)]
-        self._maybe_consciousness_pre_turn(input_messages)
         config = self._create_config()
 
         math_context = self._get_math_context()
@@ -77,7 +65,6 @@ class StreamingMixin(ConsciousnessIntegrationMixin):
             )
 
         # Ensure we emit end-of-turn bookkeeping even for non-streaming calls.
-        self._maybe_consciousness_post_turn(input_messages)
 
         # Add executed tools list to result
         result["tools"] = self._executed_tools.copy()
@@ -111,12 +98,6 @@ class StreamingMixin(ConsciousnessIntegrationMixin):
         initial_state = self._create_initial_state(
             user_input, generation_kwargs, images=images
         )
-        try:
-            initial_messages = initial_state.get("messages") or []
-            if isinstance(initial_messages, list):
-                self._maybe_consciousness_pre_turn(initial_messages)
-        except Exception:
-            pass
         config = self._create_config()
 
         math_context = self._get_math_context()
@@ -176,12 +157,7 @@ class StreamingMixin(ConsciousnessIntegrationMixin):
                                 yield ai_messages[i]
                             last_yielded_count = ai_message_count
             finally:
-                try:
-                    initial_messages = initial_state.get("messages") or []
-                    if isinstance(initial_messages, list):
-                        self._maybe_consciousness_post_turn(initial_messages)
-                except Exception:
-                    pass
+                pass
 
     def _create_initial_state(
         self, user_input: str, generation_kwargs: Optional[Dict],
