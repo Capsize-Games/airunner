@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import os
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
@@ -32,7 +31,6 @@ if TYPE_CHECKING:
     from airunner.utils.audio.sound_device_manager import (
         SoundDeviceManager,
     )
-
 
 class API(App):
     _instance = None

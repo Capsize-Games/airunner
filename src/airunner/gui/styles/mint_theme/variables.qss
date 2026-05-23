@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: #3eb489;              /* Mint green */
+@darkprimary-color: #2e8c6a;          /* Darker mint green */
+@darkerprimary-color: #1e5c44;        /* Even darker mint */
+@secondary-color: #aaf0d1;            /* Pale mint/aqua */
+@darksecondary-color: #6fdcbf;        /* Muted aqua */
+@darkersecondary-color: #3e8c7a;      /* Deep teal */
+@success-color: #7fffd4;              /* Aquamarine (success) */
+@danger-color: #ff6f61;               /* Soft coral (danger) */
+@warning-color: #fffac8;              /* Pastel yellow (warning) */
+@info-color: #b2f7ef;                 /* Light minty blue (info) */
+@light-color: #ffffff;                /* Pure white for text */
+@dim-color: #7ec8a9;                  /* Muted mint green (darker for contrast) */
+@dark-color: #183c32;                 /* Dark teal background for contrast */
+@line-color-light: #2e8c6a;           /* Darker mint for lines */
+@line-color-dark: #1e5c44;            /* Even darker mint for lines */
+/* END_VARIABLES */

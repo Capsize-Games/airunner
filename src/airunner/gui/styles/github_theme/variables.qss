@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: #2f81f7;              /* GitHub blue */
+@darkprimary-color: #1f6feb;          /* Darker GitHub blue */
+@darkerprimary-color: #0d419d;        /* Even darker blue */
+@secondary-color: #6e7681;            /* GitHub gray */
+@darksecondary-color: #484f58;        /* Dark gray */
+@darkersecondary-color: #24292f;      /* Deepest gray (background) */
+@success-color: #238636;              /* GitHub green */
+@danger-color: #da3633;               /* GitHub red */
+@warning-color: #e3b341;              /* GitHub yellow */
+@info-color: #a5d6ff;                 /* Light blue (info) */
+@light-color: #c9d1d9;                /* Light gray (text) */
+@dim-color: #8b949e;                  /* Dim gray */
+@dark-color: #0d1117;                 /* GitHub dark background */
+@line-color-light: #30363d;           /* Light border gray */
+@line-color-dark: #21262d;            /* Dark border gray */
+/* END_VARIABLES */
