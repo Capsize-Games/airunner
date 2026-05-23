@@ -255,7 +255,7 @@ def test_prepare_managed_daemon_launch_skips_launcher_import_outside_tests(
     real_import = builtins.__import__
 
     def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "airunner_services.database.setup":
+        if name == "airunner_model.setup_database":
             return SimpleNamespace(
                 setup_database=lambda: calls.append("setup_database")
             )
@@ -278,7 +278,7 @@ def test_prepare_managed_daemon_launch_imports_launcher_in_tests(
     real_import = builtins.__import__
 
     def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "airunner_services.database.setup":
+        if name == "airunner_model.setup_database":
             return SimpleNamespace(
                 setup_database=lambda: calls.append("setup_database")
             )

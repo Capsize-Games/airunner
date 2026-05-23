@@ -30,7 +30,7 @@ from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
 from airunner.components.chat.gui.widgets.chat_attachment_pill_widget import (
     ChatAttachmentPillWidget,
 )
-from airunner.components.documents.data.models.document import Document
+from airunner_model.models.document import Document
 from airunner.components.documents.document_import import (
     chat_image_suffixes,
     import_document_to_library,
@@ -38,7 +38,7 @@ from airunner.components.documents.document_import import (
     is_rag_document_path,
     rag_document_suffixes,
 )
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.components.llm.managers.agent.document_loader import (
     extract_text_from_file,
 )

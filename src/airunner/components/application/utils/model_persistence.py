@@ -3,7 +3,7 @@
 import os
 from typing import Any, Dict
 
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -103,7 +103,7 @@ def _persist_lora_trigger_words(
     session, file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for a LoRA model."""
-    from airunner.components.art.data.lora import Lora
+    from airunner_model.models.lora import Lora
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
@@ -141,7 +141,7 @@ def _persist_embedding_trigger_words(
     session, file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for an embedding."""
-    from airunner.components.art.data.embedding import Embedding
+    from airunner_model.models.embedding import Embedding
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
@@ -183,10 +183,10 @@ def _persist_model_trigger_words(
     """Persist trigger words for a checkpoint/model."""
     # Ensure both ends of the relationship are registered before using AIModels
     # to avoid SQLAlchemy registry resolution errors.
-    from airunner.components.art.data.generator_settings import (
+    from airunner_model.models.generator_settings import (
         GeneratorSettings,  # noqa: F401 - imported for side-effect
     )
-    from airunner.components.art.data.ai_models import AIModels
+    from airunner_model.models.ai_models import AIModels
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]

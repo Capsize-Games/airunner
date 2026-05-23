@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from airunner.components.art.data.ai_models import AIModels
+from airunner_model.models.ai_models import AIModels
 from airunner.enums import SignalCode, ImageGenerator, StableDiffusionVersion
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,

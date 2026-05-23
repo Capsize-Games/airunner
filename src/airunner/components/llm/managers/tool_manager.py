@@ -264,7 +264,7 @@ class ToolManager(
             List of dynamically loaded tool functions
         """
         try:
-            from airunner.components.llm.data.llm_tool import LLMTool
+            from airunner_model.models.llm_tool import LLMTool
 
             custom_tools = []
             enabled_tools = LLMTool.objects.filter_by(enabled=True) or []

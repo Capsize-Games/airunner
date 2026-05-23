@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 import sounddevice as sd
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.settings.data.sound_settings import SoundSettings
+from airunner_model.models.sound_settings import SoundSettings
 from airunner.components.settings.gui.widgets.sound_settings.templates.sound_settings_ui import (
     Ui_SoundSettings,
 )

@@ -8,7 +8,7 @@ pipeline to free GPU memory.
 
 import gc
 
-from airunner.components.art.data.lora import Lora
+from airunner_model.models.lora import Lora
 from airunner.components.art.managers.stablediffusion import model_loader
 from airunner.enums import ModelStatus, ModelType
 from airunner.utils.memory import clear_memory

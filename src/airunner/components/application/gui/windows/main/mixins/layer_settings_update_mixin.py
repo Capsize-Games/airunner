@@ -1,21 +1,21 @@
 """Mixin providing layer-specific settings update operations."""
 
 from typing import Any, Dict, Type, Optional
-from airunner.components.data.session_manager import session_scope
-from airunner.components.art.data.controlnet_settings import (
+from airunner_model.session import session_scope
+from airunner_model.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.image_to_image_settings import (
+from airunner_model.models.brush_settings import BrushSettings
+from airunner_model.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.outpaint_settings import (
+from airunner_model.models.outpaint_settings import (
     OutpaintSettings,
 )
-from airunner.components.art.data.drawingpad_settings import (
+from airunner_model.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner.components.art.data.metadata_settings import (
+from airunner_model.models.metadata_settings import (
     MetadataSettings,
 )
 

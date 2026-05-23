@@ -69,7 +69,7 @@ def setup_test_environment(request):
 
     # Force session_manager to use the test database
     # This must happen AFTER setting the environment variable
-    from airunner.components.data.session_manager import reset_engine
+    from airunner_model.session import reset_engine
 
     reset_engine()
 

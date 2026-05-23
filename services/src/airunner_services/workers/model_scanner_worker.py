@@ -19,7 +19,7 @@ from typing import List, Optional
 from airunner_services.contract_enums import ImageGenerator
 from airunner_services.contract_enums import SignalCode
 from airunner_services.contract_enums import StableDiffusionVersion
-from airunner_services.database.models.ai_models import AIModels
+from airunner_model.models.ai_models import AIModels
 from airunner_services.workers.worker import Worker
 
 

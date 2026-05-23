@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Optional
 
 from llama_cloud import MessageRole
 
-from airunner_services.database.models.chatbot import Chatbot
-from airunner_services.database.models.llm_generator_settings import (
+from airunner_model.models.chatbot import Chatbot
+from airunner_model.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.llm.get_chatbot import get_chatbot

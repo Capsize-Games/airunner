@@ -455,7 +455,7 @@ def _build_daemon_client(config_path: Path):
 def _prepare_managed_daemon_launch() -> None:
     """Run database and test-mode setup before launching a managed daemon."""
     from airunner.launcher import _configure_test_mode
-    from airunner.setup_database import setup_database
+    from services.src.airunner_services.setup_database import setup_database
 
     setup_database()
     if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":

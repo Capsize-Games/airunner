@@ -6,7 +6,7 @@ import shutil
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from airunner_services.database.models.document import (
+from airunner_model.models.document import (
     Document as DBDocument,
 )
 from airunner_services.llm.managers.agent.vector_index import (

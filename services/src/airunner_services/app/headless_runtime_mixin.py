@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional
 
 from airunner_services.knowledge import get_knowledge_base
-from airunner_services.database.models.application_settings import (
+from airunner_model.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_services.database.session import session_scope
+from airunner_model.session import session_scope
 from airunner_services.lifecycle_service import CoreLifecycleService
 from airunner_services.utils.application.runtime_primitives import (
     QCoreApplication,

@@ -13,7 +13,7 @@ from airunner_model.runtimes.whisper_cpp_runtime_settings import (
 def _load_path_settings() -> Any:
     """Return persisted path settings when the service database is available."""
     try:
-        from airunner_services.database.models.path_settings import (
+        from airunner_model.models.path_settings import (
             PathSettings,
         )
 

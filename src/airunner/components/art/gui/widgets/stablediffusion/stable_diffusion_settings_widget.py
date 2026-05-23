@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 
 import torch
 
-from airunner.components.art.data.ai_models import AIModels
+from airunner_model.models.ai_models import AIModels
 from airunner.utils.vram_utils import (
     estimate_vram_from_path,
     get_available_precisions,
@@ -20,7 +20,7 @@ from airunner.utils.vram_utils import (
     is_precision_safe_for_vram,
 )
 from airunner.utils.model_dtype_utils import detect_model_dtype
-from airunner.components.art.data.schedulers import Schedulers
+from airunner_model.models.schedulers import Schedulers
 from airunner.enums import (
     DEFAULT_IMAGE_GENERATOR,
     SignalCode,

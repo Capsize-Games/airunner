@@ -7,8 +7,8 @@ management, and viewport compensation for window resizes.
 from typing import Dict, Tuple, Optional
 from PySide6.QtCore import QPointF
 
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner_model.models.canvas_layer import CanvasLayer
+from airunner_model.models.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,

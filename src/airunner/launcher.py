@@ -21,7 +21,7 @@ from airunner_startup_env import (
 configure_early_torch_allocator_environment()
 
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
-from airunner.setup_database import setup_database
+from airunner_model.setup_database import setup_database
 from airunner.utils.application import get_logger
 from airunner.utils.application.logging_utils import (
     configure_noisy_loggers,
@@ -132,7 +132,7 @@ def _write_component_settings_cache(signature: str) -> None:
 
 def register_component_settings():
     """Register settings for each component with a data/settings.py Pydantic dataclass."""
-    from airunner.components.settings.data.airunner_settings import (
+    from airunner_model.models.airunner_settings import (
         AIRunnerSettings,
     )
 
@@ -317,14 +317,14 @@ def _configure_test_mode():
     1. Creates default settings if they don't exist
     2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
     """
-    from airunner.components.data.session_manager import _get_session
-    from airunner.components.llm.data.llm_generator_settings import (
+    from airunner_model.session import _get_session
+    from airunner_model.models.llm_generator_settings import (
         LLMGeneratorSettings,
     )
-    from airunner.components.settings.data.application_settings import (
+    from airunner_model.models.application_settings import (
         ApplicationSettings,
     )
-    from airunner.components.settings.data.path_settings import PathSettings
+    from airunner_model.models.path_settings import PathSettings
 
     Session = _get_session()
     with Session() as session:
@@ -514,7 +514,7 @@ def main():
 
     # --- SSL certificate auto-generation ---
     _update_splash(splash, "Generating SSL certificates...")
-    from airunner.components.settings.data.path_settings import PathSettings
+    from airunner_model.models.path_settings import PathSettings
 
     path_settings = PathSettings.objects.first()
     if not path_settings:

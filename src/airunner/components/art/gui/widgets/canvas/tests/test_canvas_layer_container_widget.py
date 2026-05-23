@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 from airunner.components.art.gui.widgets.canvas.canvas_layer_container_widget import (
     CanvasLayerContainerWidget,
 )
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner_model.models.canvas_layer import CanvasLayer
+from airunner_model.models.drawingpad_settings import DrawingPadSettings
 
 
 class TestCanvasLayerContainerWidget:

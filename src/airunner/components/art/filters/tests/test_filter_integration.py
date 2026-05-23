@@ -4,8 +4,8 @@ import pytest
 from PIL import Image
 import numpy as np
 
-from airunner.components.art.data.image_filter import ImageFilter
-from airunner.components.art.data.image_filter_value import ImageFilterValue
+from airunner_model.models.image_filter import ImageFilter
+from airunner_model.models.image_filter_value import ImageFilterValue
 from airunner.components.art.utils.image_filter_utils import (
     get_filter_values,
     build_filter_instance,

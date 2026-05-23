@@ -14,7 +14,7 @@ from compel import ReturnedEmbeddingsType, Compel
 import torch
 from safetensors.torch import load_file
 
-from airunner.components.art.data.embedding import Embedding
+from airunner_model.models.embedding import Embedding
 from airunner.components.art.managers.stablediffusion import prompt_utils
 from airunner.enums import StableDiffusionVersion
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (

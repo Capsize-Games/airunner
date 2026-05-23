@@ -409,10 +409,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         Returns:
             Tuple of (should_download, download_info)
         """
-        from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
+        from airunner_services.bootstrap.openvoice_bootstrap_data import (
             OPENVOICE_FILES,
         )
-        from airunner.components.tts.data.bootstrap.openvoice_languages import (
+        from airunner_services.bootstrap.openvoice_languages import (
             OPENVOICE_CORE_MODELS,
             OPENVOICE_LANGUAGE_MODELS,
         )

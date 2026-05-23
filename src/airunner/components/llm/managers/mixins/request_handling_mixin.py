@@ -6,8 +6,8 @@ from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
-from airunner.components.data.session_manager import session_scope
-from airunner.components.documents.data.models.document import Document
+from airunner_model.session import session_scope
+from airunner_model.models.document import Document
 from airunner.components.llm.managers.request_plan import RequestPlan
 from airunner.enums import LLMActionType, SignalCode
 

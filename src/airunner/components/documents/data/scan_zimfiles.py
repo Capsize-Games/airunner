@@ -1,6 +1,6 @@
 import os
 import json
-from airunner.components.documents.data.models.zimfile import ZimFile
+from airunner_model.models.zimfile import ZimFile
 
 
 def scan_zimfiles(zim_dir: str) -> bool:

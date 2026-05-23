@@ -45,7 +45,7 @@ def _env_float(name: str, default: float) -> float:
 def _load_llm_settings() -> Any:
     """Return persisted LLM settings when the database is available."""
     try:
-        from airunner.components.llm.data.llm_generator_settings import (
+        from airunner_model.models.llm_generator_settings import (
             LLMGeneratorSettings,
         )
 
@@ -57,7 +57,7 @@ def _load_llm_settings() -> Any:
 def _load_path_settings() -> Any:
     """Return persisted path settings when the database is available."""
     try:
-        from airunner.components.settings.data.path_settings import PathSettings
+        from airunner_model.models.path_settings import PathSettings
 
         return PathSettings.objects.first()
     except Exception:

@@ -254,7 +254,7 @@ class AutonomousControlTools(BaseTool):
                 analyze_user_behavior(days_back=7)
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
                 from airunner_services.llm.data.conversation import (

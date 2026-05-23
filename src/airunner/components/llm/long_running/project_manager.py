@@ -23,7 +23,7 @@ from airunner.components.llm.long_running.data.project_state import (
     FeatureCategory,
     DecisionOutcome,
 )
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text

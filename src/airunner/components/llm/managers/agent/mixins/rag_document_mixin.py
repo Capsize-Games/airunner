@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 import hashlib
 from datetime import datetime
 
-from airunner.components.documents.data.models.document import (
+from airunner_model.models.document import (
     Document as DBDocument,
 )
 

@@ -96,7 +96,7 @@ class DatabaseTestCase(BaseTestCase):
     @classmethod
     def setUpClass(cls):
         """Set up test database."""
-        from airunner.components.data.session_manager import session_scope
+        from airunner_model.session import session_scope
 
         cls.session_scope = session_scope
 

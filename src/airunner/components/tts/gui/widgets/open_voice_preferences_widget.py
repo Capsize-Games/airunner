@@ -8,7 +8,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.tts.gui.widgets.templates.open_voice_preferences_ui import (
     Ui_open_voice_preferences,
 )
-from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
+from airunner_model.models.openvoice_settings import OpenVoiceSettings
 from airunner.enums import AvailableLanguage, TTSModel
 from airunner.utils.path_policy import (
     PathPolicyError,

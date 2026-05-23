@@ -4,7 +4,7 @@ Quick test to verify scheduler switching behavior.
 Run this to check if schedulers are actually being changed correctly.
 """
 import diffusers
-from airunner.components.art.data.schedulers import Schedulers
+from airunner_model.models.schedulers import Schedulers
 from airunner.enums import Scheduler
 
 # Test that our schedulers database has the right mappings

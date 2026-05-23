@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog, QPushButton
 
-from airunner.components.documents.data.models.document import Document
+from airunner_model.models.document import Document
 from airunner.components.documents.document_import import (
     import_documents_to_library,
     is_rag_document_path,

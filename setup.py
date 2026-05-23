@@ -39,11 +39,6 @@ setup(
     extras_require={},
     package_data={
         "airunner": [
-            # Alembic migrations
-            "alembic/*.py",
-            "alembic/*.mako",
-            "alembic/versions/*.py",
-            "*.ini",
             # GUI resources
             "gui/cursors/*",
             "gui/images/*",

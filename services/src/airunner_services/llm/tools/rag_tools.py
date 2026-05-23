@@ -9,9 +9,9 @@ import os
 from typing import Annotated, Any
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
-from airunner_services.database.models.document import Document
-from airunner_services.database.models.path_settings import PathSettings
-from airunner_services.database.session import session_scope
+from airunner_model.models.document import Document
+from airunner_model.models.path_settings import PathSettings
+from airunner_model.session import session_scope
 from airunner_services.contract_enums import SignalCode
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger

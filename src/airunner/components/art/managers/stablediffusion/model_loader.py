@@ -5,8 +5,8 @@ from typing import Any, Dict, Optional
 
 from diffusers import SchedulerMixin
 
-from airunner.components.art.data.lora import Lora
-from airunner.components.art.data.schedulers import Schedulers
+from airunner_model.models.lora import Lora
+from airunner_model.models.schedulers import Schedulers
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 

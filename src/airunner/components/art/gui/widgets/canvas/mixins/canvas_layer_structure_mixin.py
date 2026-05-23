@@ -5,13 +5,13 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.image_to_image_settings import (
+from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner_model.models.controlnet_settings import ControlnetSettings
+from airunner_model.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner_model.models.outpaint_settings import OutpaintSettings
+from airunner_model.models.canvas_layer import CanvasLayer
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )

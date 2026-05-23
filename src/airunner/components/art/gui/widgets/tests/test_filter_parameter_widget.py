@@ -23,7 +23,7 @@ class TestFilterParameterWidgetCallbackSignature:
         from airunner.components.art.utils.image_filter_utils import (
             FilterValueData,
         )
-        from airunner.components.art.data.image_filter_value import (
+        from airunner_model.models.image_filter_value import (
             ImageFilterValue,
         )
 

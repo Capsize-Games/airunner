@@ -5,7 +5,7 @@ This helps diagnose if the adapter knowledge is being applied to the model.
 """
 import json
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
+from airunner_model.models.fine_tuned_model import FineTunedModel
 
 
 def test_adapter_loading():

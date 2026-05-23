@@ -8,7 +8,7 @@ from airunner.components.llm.managers.tools.conversation_tools import (
     ConversationTools,
 )
 from airunner.components.llm.tests.base_test_case import DatabaseTestCase
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.enums import SignalCode
 
 

@@ -41,10 +41,10 @@ from airunner_services.model_management.model_registry import (
     ModelType as RegistryModelType,
     ModelProvider,
 )
-from airunner_services.database.models.generator_settings import (
+from airunner_model.models.generator_settings import (
     GeneratorSettings,
 )
-from airunner_services.database.models.path_settings import PathSettings
+from airunner_model.models.path_settings import PathSettings
 from airunner_services.contract_enums import StableDiffusionVersion
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -391,7 +391,7 @@ def _resolve_art_model_path(model_version: Optional[str] = None) -> str:
         return ""
 
     try:
-        from airunner_services.database.session import session_scope
+        from airunner_model.session import session_scope
 
         with session_scope() as session:
             path_settings = session.query(PathSettings).first()
@@ -458,7 +458,7 @@ def _resolve_art_model_version() -> str:
     # This avoids defaulting to an unavailable model when only local art
     # models are installed.
     try:
-        from airunner_services.database.session import session_scope
+        from airunner_model.session import session_scope
 
         with session_scope() as session:
             path_settings = session.query(PathSettings).first()
@@ -477,7 +477,7 @@ def _resolve_art_model_version() -> str:
 
     # Prefer a DB-configured version only if it's actually available locally.
     try:
-        from airunner_services.database.session import session_scope
+        from airunner_model.session import session_scope
 
         with session_scope() as session:
             settings = session.query(GeneratorSettings).first()
@@ -762,7 +762,7 @@ async def unload_art_component(component: str, req: Request):
 def _resolve_zimage_txt2img_dir() -> str:
     """Return the txt2img directory for Z-Image models inside the container."""
     try:
-        from airunner_services.database.session import session_scope
+        from airunner_model.session import session_scope
 
         with session_scope() as session:
             path_settings = session.query(PathSettings).first()

@@ -29,7 +29,7 @@ def test_preload_creates_llm_row(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRUNNER_DEFAULT_LLM_HF_PATH", default_model_path)
     _configure_test_database(monkeypatch, db_url)
 
-    from airunner.setup_database import setup_database
+    from services.src.airunner_services.setup_database import setup_database
 
     setup_database()
 
@@ -42,8 +42,8 @@ def test_preload_creates_llm_row(tmp_path, monkeypatch):
     )
     service.preload_llm_model()
 
-    from airunner.components.data.session_manager import session_scope
-    from airunner.components.llm.data.llm_generator_settings import (
+    from airunner_model.session import session_scope
+    from airunner_model.models.llm_generator_settings import (
         LLMGeneratorSettings,
     )
 
@@ -65,7 +65,7 @@ def test_preload_emits_llm_load_signal(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRUNNER_DEFAULT_LLM_HF_PATH", default_model_path)
     _configure_test_database(monkeypatch, db_url)
 
-    from airunner.setup_database import setup_database
+    from services.src.airunner_services.setup_database import setup_database
 
     setup_database()
 

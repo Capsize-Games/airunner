@@ -227,13 +227,6 @@ if DEV_ENV:
     default_name = "airunner.dev.db"
 AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", default_name)
 
-# Set the database URL
-DB_PATH = os.path.join(AIRUNNER_BASE_PATH, "data", AIRUNNER_DB_NAME)
-default_url = "sqlite:///" + DB_PATH
-AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
-if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:
-    AIRUNNER_DB_URL = default_url
-
 # LLM Behavior Control
 AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS = int(
     os.environ.get("AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS", 5)

@@ -10,8 +10,8 @@ from PySide6.QtCore import Slot
 from airunner.components.tts.gui.widgets.templates.voice_settings_ui import (
     Ui_voice_settings,
 )
-from airunner.components.settings.data.voice_settings import VoiceSettings
-from airunner.components.tts.data.models.espeak_settings import EspeakSettings
+from airunner_model.models.voice_settings import VoiceSettings
+from airunner_model.models.espeak_settings import EspeakSettings
 from airunner.components.tts.gui.widgets.espeak_preferences_widget import (
     EspeakPreferencesWidget,
 )
@@ -21,7 +21,7 @@ from airunner.components.tts.gui.widgets.open_voice_preferences_widget import (
 )
 from airunner.enums import TTSModel
 from airunner.enums import SignalCode
-from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
+from airunner_model.models.openvoice_settings import OpenVoiceSettings
 
 
 class VoiceSettingsWidget(BaseWidget):

@@ -6,7 +6,7 @@ from compel import (
     DiffusersTextualInversionManager,
 )
 
-from airunner.components.art.data.lora import Lora
+from airunner_model.models.lora import Lora
 from airunner.components.art.utils.model_file_checker import (
     ModelFileChecker,
 )

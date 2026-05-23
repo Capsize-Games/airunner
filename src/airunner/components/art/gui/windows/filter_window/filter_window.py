@@ -1,5 +1,5 @@
 
-from airunner.components.art.data.image_filter import ImageFilter
+from airunner_model.models.image_filter import ImageFilter
 from airunner.components.art.utils.image_filter_utils import (
     get_filter_values,
     build_filter_instance,

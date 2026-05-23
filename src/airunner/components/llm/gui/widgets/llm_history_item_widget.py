@@ -2,7 +2,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.components.llm.gui.widgets.templates.llm_history_item_ui import (
     Ui_llm_history_item_widget,
 )

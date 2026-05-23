@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import airunner.setup_database as setup_database_module
+import services.src.airunner_services.setup_database as setup_database_module
 
 
 def _reset_setup_cache() -> None:

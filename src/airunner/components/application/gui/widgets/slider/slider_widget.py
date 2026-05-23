@@ -8,7 +8,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.slider.templates.slider_ui import (
     Ui_slider_widget,
 )
-from airunner.components.art.data.lora import Lora
+from airunner_model.models.lora import Lora
 
 
 class SliderWidget(BaseWidget):

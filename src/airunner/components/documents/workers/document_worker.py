@@ -3,7 +3,7 @@ from PySide6.QtCore import QFileSystemWatcher, QEventLoop
 
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
-from airunner.components.documents.data.models.document import Document
+from airunner_model.models.document import Document
 
 
 class DocumentWorker(Worker):

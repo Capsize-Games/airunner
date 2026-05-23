@@ -1,10 +1,10 @@
 """Mixin providing AI model, LoRA, and embedding management operations."""
 
 from typing import List, Optional
-from airunner.components.data.session_manager import session_scope
-from airunner.components.art.data.ai_models import AIModels
-from airunner.components.art.data.lora import Lora
-from airunner.components.art.data.embedding import Embedding
+from airunner_model.session import session_scope
+from airunner_model.models.ai_models import AIModels
+from airunner_model.models.lora import Lora
+from airunner_model.models.embedding import Embedding
 from airunner.components.application.data import table_to_class
 
 

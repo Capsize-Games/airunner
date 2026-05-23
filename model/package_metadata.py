@@ -14,7 +14,11 @@ README = (
     Path(__file__).resolve().parents[1] / "README.md"
 ).read_text(encoding="utf-8")
 
-MODEL_REQUIREMENTS = ["pydantic>=2.7,<3.0"]
+MODEL_REQUIREMENTS = [
+    "pydantic>=2.7,<3.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+]
 
 DEVELOPMENT_REQUIREMENTS = [
     "pytest",

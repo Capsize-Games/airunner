@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 from PySide6.QtCore import QCoreApplication
 
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 from airunner.components.knowledge import get_knowledge_base
-from airunner.components.settings.data.application_settings import (
+from airunner_model.models.application_settings import (
     ApplicationSettings,
 )
 from airunner.services.lifecycle_service import CoreLifecycleService

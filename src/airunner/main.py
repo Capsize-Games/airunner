@@ -239,7 +239,7 @@ from airunner.components.application.api.api import API
 ###############################################################
 # Import Alembic modules to run migrations.
 ################################################################
-from airunner.setup_database import setup_database
+from services.src.airunner_services.setup_database import setup_database
 
 # These may be set by launcher.py for early splash screen
 _launcher_splash = None

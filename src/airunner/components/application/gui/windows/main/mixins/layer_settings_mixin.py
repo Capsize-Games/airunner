@@ -4,7 +4,7 @@ from typing import Type, Any, Optional, List, Dict
 
 from sqlalchemy.orm import joinedload
 
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 from airunner.components.application.gui.windows.main.settings_model_factory import (
     get_settings_model,
 )

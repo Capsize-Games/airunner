@@ -5,7 +5,7 @@ import threading
 from typing import Dict, List
 
 from airunner.enums import SignalCode
-from airunner.components.documents.data.models.document import (
+from airunner_model.models.document import (
     Document as DBDocument,
 )
 from airunner.components.llm.managers.agent.mixins.rag_indexing_mixin import (

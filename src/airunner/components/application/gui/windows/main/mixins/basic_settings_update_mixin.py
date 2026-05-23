@@ -1,30 +1,30 @@
 """Mixin providing basic settings update operations."""
 
 from typing import Any, Dict, Type, Optional
-from airunner.components.settings.data.application_settings import (
+from airunner_model.models.application_settings import (
     ApplicationSettings,
 )
-from airunner.components.tts.data.models.espeak_settings import EspeakSettings
-from airunner.components.art.data.grid_settings import GridSettings
-from airunner.components.art.data.active_grid_settings import (
+from airunner_model.models.espeak_settings import EspeakSettings
+from airunner_model.models.grid_settings import GridSettings
+from airunner_model.models.active_grid_settings import (
     ActiveGridSettings,
 )
-from airunner.components.settings.data.path_settings import PathSettings
-from airunner.components.art.data.memory_settings import MemorySettings
-from airunner.components.llm.data.llm_generator_settings import (
+from airunner_model.models.path_settings import PathSettings
+from airunner_model.models.memory_settings import MemorySettings
+from airunner_model.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner.components.stt.data.whisper_settings import (
+from airunner_model.models.whisper_settings import (
     WhisperSettings,
 )
-from airunner.components.art.data.generator_settings import (
+from airunner_model.models.generator_settings import (
     GeneratorSettings,
 )
-from airunner.components.art.data.controlnet_settings import (
+from airunner_model.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner.components.art.data.saved_prompt import SavedPrompt
-from airunner.components.settings.data.font_setting import FontSetting
+from airunner_model.models.saved_prompt import SavedPrompt
+from airunner_model.models.font_setting import FontSetting
 
 
 class BasicSettingsUpdateMixin:

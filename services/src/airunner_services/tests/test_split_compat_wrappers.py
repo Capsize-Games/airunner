@@ -1610,7 +1610,7 @@ def test_gui_application_data_imports_api_surface() -> None:
         application_data_source
     )
     assert "airunner_services.application_data" not in application_data_source
-    assert "airunner_services.database.models" not in application_data_source
+    assert "airunner_model.models" not in application_data_source
     assert "from airunner.components.application.data.shortcut_keys" in (
         application_data_source
     )
@@ -1620,7 +1620,7 @@ def test_gui_application_data_imports_api_surface() -> None:
     assert "from airunner.components.data.models.base import BaseModel" in (
         shortcut_keys_source
     )
-    assert "airunner_services.database.models.shortcut_keys" not in (
+    assert "airunner_model.models.shortcut_keys" not in (
         shortcut_keys_source
     )
 
@@ -1998,7 +1998,7 @@ def test_gui_headless_launch_sources_avoid_service_launch_imports() -> None:
         "airunner_services.daemon_client.gui_daemon_client",
         "airunner_services.api.server",
         "airunner_services.utils.application",
-        "airunner_services.database.setup",
+        "airunner_model.setup_database",
     )
 
     for path in checked_paths:
@@ -2048,7 +2048,7 @@ def test_gui_setup_database_source_avoids_service_setup_import() -> None:
     ).read_text(encoding="utf-8")
 
     assert "airunner_api" not in source
-    assert "airunner_services.database.setup" not in source
+    assert "airunner_model.setup_database" not in source
     assert "airunner.utils.db.engine" in source
 
 
@@ -2144,7 +2144,7 @@ def test_gui_user_model_is_localized() -> None:
 
     from airunner.components.data.models.base import BaseModel as LegacyBaseModel
     from airunner.components.user.data.user import User as LegacyUser
-    from airunner_services.database.models.user import User
+    from airunner_model.models.user import User
 
     source = Path("gui/src/airunner/components/user/data/user.py").read_text(
         encoding="utf-8"
@@ -2154,7 +2154,7 @@ def test_gui_user_model_is_localized() -> None:
     assert LegacyUser.__module__ == "airunner.components.user.data.user"
     assert issubclass(LegacyUser, LegacyBaseModel)
     assert not issubclass(LegacyUser, User)
-    assert "airunner_services.database.models.user" not in source
+    assert "airunner_model.models.user" not in source
     assert "import_module" not in source
     assert "sys.modules[__name__]" not in source
 
@@ -2356,16 +2356,16 @@ def test_seed_model_wrappers_share_identity() -> None:
     from airunner.components.settings.data.font_setting import (
         FontSetting as LegacyFontSetting,
     )
-    from airunner_services.database.models.controlnet_model import (
+    from airunner_model.models.controlnet_model import (
         ControlnetModel,
     )
-    from airunner_services.database.models.font_setting import FontSetting
-    from airunner_services.database.models.pipeline_model import PipelineModel
-    from airunner_services.database.models.prompt_template import (
+    from airunner_model.models.font_setting import FontSetting
+    from airunner_model.models.pipeline_model import PipelineModel
+    from airunner_model.models.prompt_template import (
         PromptTemplate,
     )
-    from airunner_services.database.models.schedulers import Schedulers
-    from airunner_services.database.models.shortcut_keys import ShortcutKeys
+    from airunner_model.models.schedulers import Schedulers
+    from airunner_model.models.shortcut_keys import ShortcutKeys
 
     assert LegacyControlnetModel is ControlnetModel
     assert LegacyFontSetting is not FontSetting
@@ -2387,14 +2387,14 @@ def test_settings_models_share_identity_across_split_paths() -> None:
     from airunner.components.settings.data.path_settings import (
         PathSettings as LegacyPathSettings,
     )
-    from airunner_services.database.models.ai_models import AIModels
-    from airunner_services.database.models.application_settings import (
+    from airunner_model.models.ai_models import AIModels
+    from airunner_model.models.application_settings import (
         ApplicationSettings,
     )
-    from airunner_services.database.models.llm_generator_settings import (
+    from airunner_model.models.llm_generator_settings import (
         LLMGeneratorSettings,
     )
-    from airunner_services.database.models.path_settings import PathSettings
+    from airunner_model.models.path_settings import PathSettings
 
     assert LegacyAIModels is AIModels
     assert LegacyApplicationSettings is not ApplicationSettings
@@ -2407,7 +2407,7 @@ def test_gui_application_settings_is_gui_owned() -> None:
     from airunner.components.settings.data.application_settings import (
         ApplicationSettings as LegacyApplicationSettings,
     )
-    from airunner_services.database.models.application_settings import (
+    from airunner_model.models.application_settings import (
         ApplicationSettings,
     )
 
@@ -2439,11 +2439,11 @@ def test_gui_application_settings_source_avoids_service_model_import() -> None:
         / "headless_runtime_mixin.py"
     ).read_text(encoding="utf-8")
 
-    assert "airunner_services.database.models.application_settings" not in (
+    assert "airunner_model.models.application_settings" not in (
         application_settings_source
     )
     assert (
-        "from airunner_services.database.models.application_settings import"
+        "from airunner_model.models.application_settings import"
         not in headless_source
     )
 
@@ -2453,7 +2453,7 @@ def test_gui_path_settings_is_gui_owned() -> None:
     from airunner.components.settings.data.path_settings import (
         PathSettings as LegacyPathSettings,
     )
-    from airunner_services.database.models.path_settings import PathSettings
+    from airunner_model.models.path_settings import PathSettings
 
     assert LegacyPathSettings is not PathSettings
     assert LegacyPathSettings.__module__ == (
@@ -2475,7 +2475,7 @@ def test_gui_path_settings_source_avoids_service_model_import() -> None:
         / "path_settings.py"
     ).read_text(encoding="utf-8")
 
-    assert "airunner_services.database.models.path_settings" not in (
+    assert "airunner_model.models.path_settings" not in (
         path_settings_source
     )
 
@@ -2488,10 +2488,10 @@ def test_conversation_models_share_identity_across_split_paths() -> None:
     )
     from airunner.components.llm.data.summary import Summary as LegacySummary
     from airunner.components.user.data.user import User as LegacyUser
-    from airunner_services.database.models.chatbot import Chatbot
-    from airunner_services.database.models.conversation import Conversation
-    from airunner_services.database.models.summary import Summary
-    from airunner_services.database.models.user import User
+    from airunner_model.models.chatbot import Chatbot
+    from airunner_model.models.conversation import Conversation
+    from airunner_model.models.summary import Summary
+    from airunner_model.models.user import User
 
     assert LegacyChatbot is Chatbot
     assert LegacyConversation is Conversation
@@ -2857,7 +2857,7 @@ def test_generator_settings_and_tenant_wrappers_share_identity() -> None:
     )
     from airunner.components.data import tenant as legacy_tenant
     from airunner_services.data import tenant
-    from airunner_services.database.models.generator_settings import (
+    from airunner_model.models.generator_settings import (
         GeneratorSettings,
     )
 
@@ -3483,10 +3483,10 @@ def test_target_model_wrappers_share_identity() -> None:
     from airunner.components.llm.data.target_files import (
         TargetFiles as LegacyTargetFiles,
     )
-    from airunner_services.database.models.target_directories import (
+    from airunner_model.models.target_directories import (
         TargetDirectories,
     )
-    from airunner_services.database.models.target_files import TargetFiles
+    from airunner_model.models.target_files import TargetFiles
 
     assert LegacyTargetDirectories is TargetDirectories
     assert LegacyTargetFiles is TargetFiles
@@ -3527,25 +3527,25 @@ def test_database_model_wrappers_share_identity() -> None:
     from airunner.components.tts.data.models.espeak_settings import (
         EspeakSettings as LegacyEspeakSettings,
     )
-    from airunner_services.database.models.active_grid_settings import (
+    from airunner_model.models.active_grid_settings import (
         ActiveGridSettings,
     )
-    from airunner_services.database.models.brush_settings import BrushSettings
-    from airunner_services.database.models.chatstore import Chatstore
-    from airunner_services.database.models.espeak_settings import (
+    from airunner_model.models.brush_settings import BrushSettings
+    from airunner_model.models.chatstore import Chatstore
+    from airunner_model.models.espeak_settings import (
         EspeakSettings,
     )
-    from airunner_services.database.models.grid_settings import GridSettings
-    from airunner_services.database.models.image_filter import ImageFilter
-    from airunner_services.database.models.image_filter_value import (
+    from airunner_model.models.grid_settings import GridSettings
+    from airunner_model.models.image_filter import ImageFilter
+    from airunner_model.models.image_filter_value import (
         ImageFilterValue,
     )
-    from airunner_services.database.models.metadata_settings import (
+    from airunner_model.models.metadata_settings import (
         MetadataSettings,
     )
-    from airunner_services.database.models.saved_prompt import SavedPrompt
-    from airunner_services.database.models.stt_settings import STTSettings
-    from airunner_services.database.models.whisper_settings import (
+    from airunner_model.models.saved_prompt import SavedPrompt
+    from airunner_model.models.stt_settings import STTSettings
+    from airunner_model.models.whisper_settings import (
         WhisperSettings,
     )
 
@@ -3586,19 +3586,19 @@ def test_application_data_wrapper_shares_identity() -> None:
         "airunner.components.settings.data.application_settings"
     )
     assert table_to_class["application_settings"].__module__ == (
-        "airunner_services.database.models.application_settings"
+        "airunner_model.models.application_settings"
     )
     assert table_to_class["brush_settings"].__module__ == (
-        "airunner_services.database.models.brush_settings"
+        "airunner_model.models.brush_settings"
     )
     assert table_to_class["chatstore"].__module__ == (
-        "airunner_services.database.models.chatstore"
+        "airunner_model.models.chatstore"
     )
     assert table_to_class["image_filter_settings"].__module__ == (
-        "airunner_services.database.models.image_filter"
+        "airunner_model.models.image_filter"
     )
     assert table_to_class["image_filter_values"].__module__ == (
-        "airunner_services.database.models.image_filter_value"
+        "airunner_model.models.image_filter_value"
     )
 
 
@@ -3621,7 +3621,7 @@ def test_base_and_parser_wrappers_follow_current_ownership() -> None:
         parse_thinking_response as legacy_parse_thinking_response,
     )
     from airunner_services.database.base import BaseModel
-    from airunner_services.database.base_manager import BaseManager
+    from airunner_model.base_manager import BaseManager
     from airunner_services.llm.gpt_oss_parser import GPTOSSStreamParser
     from airunner_services.llm.llm_response import LLMResponse
     from airunner_services.llm.stream_text import combine_stream_chunks
@@ -3648,7 +3648,7 @@ def test_session_manager_wrapper_is_gui_owned() -> None:
     from airunner.components.data.session_manager import (
         session_scope as legacy_session_scope,
     )
-    from airunner_services.database.session import reset_engine, session_scope
+    from airunner_model.session import reset_engine, session_scope
 
     assert legacy_reset_engine is not reset_engine
     assert legacy_session_scope is not session_scope
@@ -3669,10 +3669,10 @@ def test_gui_data_base_sources_avoid_service_imports() -> None:
     )
 
     assert "airunner_services.database.base" not in base_source
-    assert "airunner_services.database.base_manager" not in (
+    assert "airunner_model.base_manager" not in (
         base_manager_source
     )
-    assert "airunner_services.database.session" not in session_source
+    assert "airunner_model.session" not in session_source
     assert "airunner_services.settings" not in base_source
     assert "airunner_services.settings" not in base_manager_source
     assert "airunner_services.settings" not in session_source
@@ -3745,18 +3745,18 @@ def test_additional_settings_models_share_identity() -> None:
     from airunner.components.tts.data.models.openvoice_settings import (
         OpenVoiceSettings as LegacyOpenVoiceSettings,
     )
-    from airunner_services.database.models.airunner_settings import (
+    from airunner_model.models.airunner_settings import (
         AIRunnerSettings,
     )
-    from airunner_services.database.models.language_settings import (
+    from airunner_model.models.language_settings import (
         LanguageSettings,
     )
-    from airunner_services.database.models.openvoice_settings import (
+    from airunner_model.models.openvoice_settings import (
         OpenVoiceSettings,
     )
-    from airunner_services.database.models.rag_settings import RAGSettings
-    from airunner_services.database.models.sound_settings import SoundSettings
-    from airunner_services.database.models.voice_settings import VoiceSettings
+    from airunner_model.models.rag_settings import RAGSettings
+    from airunner_model.models.sound_settings import SoundSettings
+    from airunner_model.models.voice_settings import VoiceSettings
 
     assert LegacyAIRunnerSettings is not AIRunnerSettings
     assert LegacyLanguageSettings is not LanguageSettings
@@ -3774,10 +3774,10 @@ def test_tts_settings_models_follow_current_ownership() -> None:
     from airunner.components.tts.data.models.openvoice_settings import (
         OpenVoiceSettings as LegacyOpenVoiceSettings,
     )
-    from airunner_services.database.models.espeak_settings import (
+    from airunner_model.models.espeak_settings import (
         EspeakSettings,
     )
-    from airunner_services.database.models.openvoice_settings import (
+    from airunner_model.models.openvoice_settings import (
         OpenVoiceSettings,
     )
 
@@ -3823,11 +3823,11 @@ def test_gui_plain_settings_models_are_gui_owned() -> None:
     from airunner.components.settings.data.voice_settings import (
         VoiceSettings as LegacyVoiceSettings,
     )
-    from airunner_services.database.models.airunner_settings import (
+    from airunner_model.models.airunner_settings import (
         AIRunnerSettings,
     )
-    from airunner_services.database.models.font_setting import FontSetting
-    from airunner_services.database.models.voice_settings import VoiceSettings
+    from airunner_model.models.font_setting import FontSetting
+    from airunner_model.models.voice_settings import VoiceSettings
 
     assert LegacyAIRunnerSettings is not AIRunnerSettings
     assert LegacyAIRunnerSettings.__module__ == (
@@ -3877,13 +3877,13 @@ def test_gui_plain_settings_sources_avoid_service_models() -> None:
         / "voice_settings.py"
     ).read_text(encoding="utf-8")
 
-    assert "airunner_services.database.models.airunner_settings" not in (
+    assert "airunner_model.models.airunner_settings" not in (
         airunner_source
     )
-    assert "airunner_services.database.models.font_setting" not in (
+    assert "airunner_model.models.font_setting" not in (
         font_source
     )
-    assert "airunner_services.database.models.voice_settings" not in (
+    assert "airunner_model.models.voice_settings" not in (
         voice_source
     )
 
@@ -3896,10 +3896,10 @@ def test_gui_client_local_settings_models_are_gui_owned() -> None:
     from airunner.components.settings.data.sound_settings import (
         SoundSettings as LegacySoundSettings,
     )
-    from airunner_services.database.models.language_settings import (
+    from airunner_model.models.language_settings import (
         LanguageSettings,
     )
-    from airunner_services.database.models.sound_settings import SoundSettings
+    from airunner_model.models.sound_settings import SoundSettings
 
     assert LegacyLanguageSettings is not LanguageSettings
     assert LegacyLanguageSettings.__module__ == (
@@ -3935,10 +3935,10 @@ def test_gui_client_local_settings_sources_avoid_service_models() -> None:
         / "sound_settings.py"
     ).read_text(encoding="utf-8")
 
-    assert "airunner_services.database.models.language_settings" not in (
+    assert "airunner_model.models.language_settings" not in (
         language_source
     )
-    assert "airunner_services.database.models.sound_settings" not in (
+    assert "airunner_model.models.sound_settings" not in (
         sound_source
     )
 
@@ -3963,20 +3963,20 @@ def test_art_layer_models_share_identity() -> None:
     from airunner.components.art.data.outpaint_settings import (
         OutpaintSettings as LegacyOutpaintSettings,
     )
-    from airunner_services.database.models.canvas_layer import CanvasLayer
-    from airunner_services.database.models.controlnet_settings import (
+    from airunner_model.models.canvas_layer import CanvasLayer
+    from airunner_model.models.controlnet_settings import (
         ControlnetSettings,
     )
-    from airunner_services.database.models.drawingpad_settings import (
+    from airunner_model.models.drawingpad_settings import (
         DrawingPadSettings,
     )
-    from airunner_services.database.models.image_to_image_settings import (
+    from airunner_model.models.image_to_image_settings import (
         ImageToImageSettings,
     )
-    from airunner_services.database.models.memory_settings import (
+    from airunner_model.models.memory_settings import (
         MemorySettings,
     )
-    from airunner_services.database.models.outpaint_settings import (
+    from airunner_model.models.outpaint_settings import (
         OutpaintSettings,
     )
 
@@ -3994,8 +3994,8 @@ def test_llm_and_agent_models_follow_current_ownership() -> None:
         AgentConfig as LegacyAgentConfig,
     )
     from airunner.components.llm.data.llm_tool import LLMTool as LegacyLLMTool
-    from airunner_services.database.models.agent_config import AgentConfig
-    from airunner_services.database.models.llm_tool import LLMTool
+    from airunner_model.models.agent_config import AgentConfig
+    from airunner_model.models.llm_tool import LLMTool
 
     assert LegacyAgentConfig is not AgentConfig
     assert LegacyLLMTool is LLMTool
@@ -4195,15 +4195,15 @@ def test_long_running_project_models_share_identity() -> None:
     from airunner.components.llm.long_running.data.project_state import (
         SessionState as LegacySessionState,
     )
-    from airunner_services.database.models.project_state import DecisionMemory
-    from airunner_services.database.models.project_state import DecisionOutcome
-    from airunner_services.database.models.project_state import FeatureCategory
-    from airunner_services.database.models.project_state import FeatureStatus
-    from airunner_services.database.models.project_state import ProgressEntry
-    from airunner_services.database.models.project_state import ProjectFeature
-    from airunner_services.database.models.project_state import ProjectState
-    from airunner_services.database.models.project_state import ProjectStatus
-    from airunner_services.database.models.project_state import SessionState
+    from airunner_model.models.project_state import DecisionMemory
+    from airunner_model.models.project_state import DecisionOutcome
+    from airunner_model.models.project_state import FeatureCategory
+    from airunner_model.models.project_state import FeatureStatus
+    from airunner_model.models.project_state import ProgressEntry
+    from airunner_model.models.project_state import ProjectFeature
+    from airunner_model.models.project_state import ProjectState
+    from airunner_model.models.project_state import ProjectStatus
+    from airunner_model.models.project_state import SessionState
 
     assert LegacyDecisionMemory is DecisionMemory
     assert LegacyDecisionOutcome is DecisionOutcome
@@ -4224,8 +4224,8 @@ def test_gui_document_models_are_gui_owned() -> None:
     from airunner.components.documents.data.models.zimfile import (
         ZimFile as LegacyZimFile,
     )
-    from airunner_services.database.models.document import Document
-    from airunner_services.database.models.zimfile import ZimFile
+    from airunner_model.models.document import Document
+    from airunner_model.models.zimfile import ZimFile
 
     assert LegacyDocument is not Document
     assert LegacyDocument.__tablename__ == Document.__tablename__
@@ -4255,10 +4255,10 @@ def test_gui_document_sources_avoid_service_imports() -> None:
         encoding="utf-8"
     )
 
-    assert "airunner_services.database.models.document" not in document_source
-    assert "airunner_services.database.models.zimfile" not in zimfile_source
+    assert "airunner_model.models.document" not in document_source
+    assert "airunner_model.models.zimfile" not in zimfile_source
     assert "airunner_services.documents.scan_zimfiles" not in scan_source
-    assert "airunner_services.database.models.zimfile" not in scan_source
+    assert "airunner_model.models.zimfile" not in scan_source
 
 
 def test_document_archive_utilities_follow_current_ownership() -> None:

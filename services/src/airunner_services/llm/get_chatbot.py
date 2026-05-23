@@ -1,6 +1,6 @@
 """Service-owned chatbot selection helper."""
 
-from airunner_services.database.models.chatbot import Chatbot
+from airunner_model.models.chatbot import Chatbot
 from airunner_services.utils.application.get_logger import get_logger
 
 

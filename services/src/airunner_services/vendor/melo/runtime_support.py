@@ -15,7 +15,7 @@ def get_melo_logger():
 def _get_path_settings() -> Optional[object]:
     """Return persisted path settings when available."""
     try:
-        from airunner_services.database.models.path_settings import (
+        from airunner_model.models.path_settings import (
             PathSettings,
         )
 

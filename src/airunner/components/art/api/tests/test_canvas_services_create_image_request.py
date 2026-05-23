@@ -7,15 +7,15 @@ from PIL import Image
 
 from airunner.components.art.api import canvas_services as module
 from airunner.components.art.api.canvas_services import CanvasAPIService
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.image_to_image_settings import (
+from airunner_model.models.canvas_layer import CanvasLayer
+from airunner_model.models.controlnet_settings import ControlnetSettings
+from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner_model.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner_model.models.outpaint_settings import OutpaintSettings
+from airunner_model.models.brush_settings import BrushSettings
+from airunner_model.models.metadata_settings import MetadataSettings
 from airunner.enums import GeneratorSection, SignalCode
 
 

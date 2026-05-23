@@ -16,12 +16,12 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 from PySide6.QtCore import Signal, Qt
-from airunner.components.agents.data.agent_config import AgentConfig
+from airunner_model.models.agent_config import AgentConfig
 from airunner.components.agents.templates import (
     list_templates,
     get_template,
 )
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 
 
 class AgentConfigWidget(QWidget):

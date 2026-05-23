@@ -22,9 +22,9 @@ from airunner.components.llm.gui.widgets.templates.llm_tool_manager_ui import (
 from airunner.components.llm.gui.widgets.llm_tool_editor_widget import (
     LLMToolEditorWidget,
 )
-from airunner.components.llm.data.llm_tool import LLMTool
+from airunner_model.models.llm_tool import LLMTool
 from airunner.enums import SignalCode
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 
 
 

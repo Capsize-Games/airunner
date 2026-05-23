@@ -126,7 +126,7 @@ class SafetyCheckerWorker(Worker):
 
         try:
             # Safety checker is stored as a standalone model
-            from airunner.components.settings.data.path_settings import (
+            from airunner_model.models.path_settings import (
                 PathSettings,
             )
 

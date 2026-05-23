@@ -2,7 +2,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.data.embedding import Embedding
+from airunner_model.models.embedding import Embedding
 from airunner.components.art.gui.widgets.embeddings.embedding_trigger_word_widget import (
     EmbeddingTriggerWordWidget,
 )

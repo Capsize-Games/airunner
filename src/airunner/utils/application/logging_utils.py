@@ -63,7 +63,7 @@ def _get_log_file_path(root_logger: logging.Logger) -> Optional[str]:
     """Determine the log file path."""
     try:
         # Import locally to avoid circular dependency
-        from airunner.components.settings.data.path_settings import (
+        from airunner_model.models.path_settings import (
             PathSettings,
         )
 

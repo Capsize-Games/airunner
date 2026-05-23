@@ -5,8 +5,8 @@ For now, these tests verify basic widget functionality programmatically.
 """
 
 import pytest
-from airunner.components.agents.data.agent_config import AgentConfig
-from airunner.components.data.session_manager import session_scope
+from airunner_model.models.agent_config import AgentConfig
+from airunner_model.session import session_scope
 
 
 @pytest.fixture

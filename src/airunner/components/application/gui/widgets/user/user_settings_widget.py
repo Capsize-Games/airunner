@@ -4,7 +4,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.user.templates.user_settings_ui import (
     Ui_user_settings_widget,
 )
-from airunner.components.user.data.user import User
+from airunner_model.models.user import User
 from airunner.utils.location import get_lat_lon
 
 

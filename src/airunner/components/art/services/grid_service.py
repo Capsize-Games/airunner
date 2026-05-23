@@ -44,8 +44,8 @@ def _missing():
 
 
 try:
-    from airunner.components.data.session_manager import session_scope  # type: ignore
-    from airunner.components.art.data.active_grid_settings import (
+    from airunner_model.session import session_scope  # type: ignore
+    from airunner_model.models.active_grid_settings import (
         ActiveGridSettings,
     )
 except Exception:

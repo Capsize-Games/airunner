@@ -7,10 +7,10 @@ from typing import Dict, Optional
 from airunner_services.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
-from airunner_services.database.models.llm_generator_settings import (
+from airunner_model.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner_services.database.session import session_scope
+from airunner_model.session import session_scope
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
 

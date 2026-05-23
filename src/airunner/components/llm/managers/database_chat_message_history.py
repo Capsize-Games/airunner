@@ -10,7 +10,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.components.llm.utils.thinking_parser import (
     extract_thinking_and_response,
     normalize_thinking_content,

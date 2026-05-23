@@ -638,8 +638,8 @@ class KnowledgeBase:
             files: List of absolute file paths
         """
         try:
-            from airunner.components.documents.data.models.document import Document
-            from airunner.components.data.session_manager import session_scope
+            from airunner_model.models.document import Document
+            from airunner_model.session import session_scope
             
             with session_scope() as session:
                 for file_path in files:

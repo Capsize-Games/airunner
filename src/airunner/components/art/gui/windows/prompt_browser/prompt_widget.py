@@ -1,5 +1,5 @@
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.data.saved_prompt import SavedPrompt
+from airunner_model.models.saved_prompt import SavedPrompt
 from airunner.components.art.gui.windows.prompt_browser.templates.prompt_browser_prompt_widget_ui import (
     Ui_prompt_widget,
 )

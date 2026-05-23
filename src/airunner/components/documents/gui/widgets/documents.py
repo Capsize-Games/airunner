@@ -27,8 +27,8 @@ from PySide6.QtWidgets import (
 from airunner.enums import SignalCode
 from airunner.utils.settings import get_qsettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.documents.data.models.document import Document
-from airunner.components.documents.data.models.zimfile import ZimFile
+from airunner_model.models.document import Document
+from airunner_model.models.zimfile import ZimFile
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )

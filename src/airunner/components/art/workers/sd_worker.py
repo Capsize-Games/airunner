@@ -33,8 +33,8 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner.components.art.data.ai_models import AIModels
-from airunner.components.art.data.generator_settings import GeneratorSettings
+from airunner_model.models.ai_models import AIModels
+from airunner_model.models.generator_settings import GeneratorSettings
 from airunner.enums import StableDiffusionVersion, normalize_art_version
 from airunner.components.application.exceptions import PipeNotLoadedException
 from airunner.utils.image import convert_image_to_binary

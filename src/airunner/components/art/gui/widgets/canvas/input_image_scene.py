@@ -4,12 +4,12 @@ from PIL import ImageQt
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QImage
 
-from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.image_to_image_settings import (
+from airunner_model.models.controlnet_settings import ControlnetSettings
+from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner_model.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner_model.models.outpaint_settings import OutpaintSettings
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,

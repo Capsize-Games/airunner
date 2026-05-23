@@ -11,7 +11,7 @@ from llama_cloud import MessageRole
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
 from airunner.enums import SignalCode, TemplateName
 from airunner.components.llm.gui.widgets.contentwidgets import (

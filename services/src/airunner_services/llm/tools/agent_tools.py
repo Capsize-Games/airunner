@@ -35,7 +35,7 @@ from airunner_services.agents.templates import (
     list_templates,
     template_exists,
 )
-from airunner_services.database.session import session_scope
+from airunner_model.session import session_scope
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
 
 

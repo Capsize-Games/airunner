@@ -11,7 +11,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 
-from airunner.components.settings.data.path_settings import PathSettings
+from airunner_model.models.path_settings import PathSettings
 from airunner.components.tools.url_safety import SSRFBlocked, safe_fetch_url, validate_url_for_fetch
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger

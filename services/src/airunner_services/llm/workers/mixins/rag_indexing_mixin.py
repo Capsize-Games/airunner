@@ -4,7 +4,7 @@ import os
 import threading
 from typing import Dict, List
 
-from airunner_services.database.models.document import Document as DBDocument
+from airunner_model.models.document import Document as DBDocument
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 from airunner_services.utils.path_policy import (
     PathPolicyError,

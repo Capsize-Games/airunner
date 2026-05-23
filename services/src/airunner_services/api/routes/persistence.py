@@ -10,7 +10,7 @@ from sqlalchemy.inspection import inspect as sqlalchemy_inspect
 from sqlalchemy.orm import Query, subqueryload
 
 from airunner_services.application_data import classes as model_classes
-from airunner_services.database.session import session_scope
+from airunner_model.session import session_scope
 
 
 router = APIRouter()

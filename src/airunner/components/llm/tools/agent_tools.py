@@ -30,13 +30,13 @@ import json
 from typing import Optional, List
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
-from airunner.components.agents.data.agent_config import AgentConfig
+from airunner_model.models.agent_config import AgentConfig
 from airunner.components.agents.templates import (
     get_template,
     list_templates,
     template_exists,
 )
-from airunner.components.data.session_manager import session_scope
+from airunner_model.session import session_scope
 
 
 @tool(

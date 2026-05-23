@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.components.llm.utils.thinking_parser import (
     normalize_thinking_content,
     strip_stored_thinking_prefix,

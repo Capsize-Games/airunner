@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from airunner.components.llm.managers.mixins.adapter_loader_mixin import (
     AdapterLoaderMixin,
 )
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
+from airunner_model.models.fine_tuned_model import FineTunedModel
 
 
 class MockLLMManager(AdapterLoaderMixin):

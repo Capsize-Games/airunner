@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, inspect
 
 def _configure_test_database(monkeypatch, db_url: str) -> None:
     import airunner.components.data.session_manager as session_manager
-    import airunner.setup_database as setup_database_module
+    import services.src.airunner_services.setup_database as setup_database_module
 
     monkeypatch.setenv("AIRUNNER_DATABASE_URL", db_url)
     session_manager.reset_engine()
@@ -18,12 +18,12 @@ def test_setup_database_bootstraps_core_startup_settings(
     db_url = f"sqlite:///{tmp_path / 'fresh-airunner.db'}"
     _configure_test_database(monkeypatch, db_url)
 
-    from airunner.components.data.session_manager import session_scope
-    from airunner.components.settings.data.application_settings import (
+    from airunner_model.session import session_scope
+    from airunner_model.models.application_settings import (
         ApplicationSettings,
     )
-    from airunner.components.settings.data.path_settings import PathSettings
-    from airunner.setup_database import setup_database
+    from airunner_model.models.path_settings import PathSettings
+    from services.src.airunner_services.setup_database import setup_database
 
     setup_database()
 

@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from airunner.components.tts.data.bootstrap.openvoice_languages import (
+from airunner_services.bootstrap.openvoice_languages import (
     OPENVOICE_LANGUAGE_MODELS,
 )
 

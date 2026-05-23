@@ -1,7 +1,7 @@
 from typing import List, Type
 import os
 
-from airunner.components.art.data.embedding import Embedding
+from airunner_model.models.embedding import Embedding
 from airunner.components.art.utils.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
 

@@ -10,8 +10,8 @@ from PySide6.QtWidgets import (
     QComboBox,
 )
 
-from airunner.components.llm.data.chatbot import Chatbot
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
+from airunner_model.models.chatbot import Chatbot
+from airunner_model.models.fine_tuned_model import FineTunedModel
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.templates.llm_settings_ui import (
     Ui_llm_settings_widget,

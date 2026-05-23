@@ -14,7 +14,7 @@ from airunner.components.llm.managers.database_checkpoint_saver import (
 from airunner.components.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner.components.llm.utils.thinking_parser import (
     normalize_thinking_content,
     strip_thinking_tags,

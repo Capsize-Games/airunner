@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 from airunner.components.art.gui.widgets.canvas.simple_event import SimpleEvent
 
-from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner_model.models.canvas_layer import CanvasLayer
 
 from airunner.enums import CanvasToolName, EngineResponseCode
 from airunner.components.art.gui.widgets.canvas.mixins import (
@@ -43,7 +43,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 )
 from airunner.components.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.utils.layer_compositor import LayerCompositor
-from airunner.components.art.data.image_filter import ImageFilter
+from airunner_model.models.image_filter import ImageFilter
 from airunner.components.art.utils.image_filter_utils import (
     build_filter_object_from_model,
 )

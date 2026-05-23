@@ -3,8 +3,8 @@
 import importlib
 from typing import Any, Dict, List, Optional
 
-from airunner.components.art.data.image_filter import ImageFilter
-from airunner.components.art.data.image_filter_value import ImageFilterValue
+from airunner_model.models.image_filter import ImageFilter
+from airunner_model.models.image_filter_value import ImageFilterValue
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 

@@ -9,7 +9,7 @@ from typing import Iterable
 import torch
 from safetensors import safe_open
 
-from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
+from airunner_services.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
 

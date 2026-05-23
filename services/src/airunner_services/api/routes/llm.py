@@ -15,11 +15,11 @@ from fastapi import (
 from pydantic import BaseModel
 
 from airunner_services.llm.provider_config import LLMProviderConfig
-from airunner_services.database.models.llm_generator_settings import (
+from airunner_model.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.model_management.model_registry import ModelRegistry
-from airunner_services.database.models.path_settings import PathSettings
+from airunner_model.models.path_settings import PathSettings
 from airunner_services.ipc.messages import (
     EnvelopeStatus,
     RequestEnvelope,

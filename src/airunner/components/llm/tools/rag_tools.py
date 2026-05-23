@@ -7,8 +7,8 @@ base, and saving new content to the knowledge base.
 import os
 from typing import Annotated, Any
 
-from airunner.components.data.session_manager import session_scope
-from airunner.components.documents.data.models.document import Document
+from airunner_model.session import session_scope
+from airunner_model.models.document import Document
 from airunner.components.llm.core.tool_registry import ToolCategory, tool
 from airunner.components.llm.tools.rag_tools_helpers import (
     STANDARD_RETRIEVAL_K,
@@ -25,7 +25,7 @@ from airunner.components.llm.tools.rag_tools_helpers import (
     search_knowledge_base_documents_impl,
 )
 from airunner.components.llm.utils.document_extraction import extract_text
-from airunner.components.settings.data.path_settings import PathSettings
+from airunner_model.models.path_settings import PathSettings
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger

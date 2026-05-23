@@ -12,7 +12,7 @@ from airunner.components.llm.managers.database_checkpoint_saver import (
     DatabaseCheckpointSaver,
 )
 from airunner.components.llm.tests.base_test_case import DatabaseTestCase
-from airunner.components.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 
 
 class TestDatabaseChatMessageHistory(DatabaseTestCase):

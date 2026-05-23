@@ -36,7 +36,7 @@ class ConversationTools(BaseTool):
                 list_conversations(days_back=7)  # Get conversations from last week
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 
@@ -100,7 +100,7 @@ class ConversationTools(BaseTool):
                 get_conversation(42, include_messages=False)  # Just metadata
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 
@@ -169,7 +169,7 @@ class ConversationTools(BaseTool):
                 summarize_conversation(42)  # Summarize conversation #42
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 
@@ -199,7 +199,7 @@ class ConversationTools(BaseTool):
 
                     if summary:
                         # Save the summary
-                        from airunner_services.database.session import (
+                        from airunner_model.session import (
                             session_scope as update_scope,
                         )
 
@@ -241,7 +241,7 @@ class ConversationTools(BaseTool):
                 update_conversation_title("Health advice session", conversation_id=42)
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 
@@ -300,7 +300,7 @@ class ConversationTools(BaseTool):
                 switch_conversation(42)  # Switch to conversation #42
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 
@@ -365,7 +365,7 @@ class ConversationTools(BaseTool):
                     return "Failed to create new conversation."
 
                 if title:
-                    from airunner_services.database.session import (
+                    from airunner_model.session import (
                         session_scope,
                     )
 
@@ -414,7 +414,7 @@ class ConversationTools(BaseTool):
                 search_conversations("health advice", search_messages=False)
             """
             try:
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 
@@ -508,7 +508,7 @@ class ConversationTools(BaseTool):
                         "Call again with confirm=True to proceed."
                     )
 
-                from airunner_services.database.session import (
+                from airunner_model.session import (
                     session_scope,
                 )
 

@@ -11,7 +11,7 @@ import json
 import os
 from typing import List, TYPE_CHECKING
 
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
+from airunner_model.models.fine_tuned_model import FineTunedModel
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 if TYPE_CHECKING:

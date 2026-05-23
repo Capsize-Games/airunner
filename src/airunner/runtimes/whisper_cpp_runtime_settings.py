@@ -54,7 +54,7 @@ def _env_bool(name: str, default: bool) -> bool:
 def _load_path_settings() -> Any:
     """Return persisted path settings when the database is available."""
     try:
-        from airunner.components.settings.data.path_settings import PathSettings
+        from airunner_model.models.path_settings import PathSettings
 
         return PathSettings.objects.first()
     except Exception:

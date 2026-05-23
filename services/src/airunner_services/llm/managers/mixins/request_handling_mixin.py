@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from airunner_services.database.models.document import Document
-from airunner_services.database.session import session_scope
+from airunner_model.models.document import Document
+from airunner_model.session import session_scope
 from airunner_services.llm_workflow_events import (
     resolve_llm_workflow_event_sink,
 )

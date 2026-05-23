@@ -28,20 +28,20 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 from airunner.components.data.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
-from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
+from airunner_services.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
-from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
+from airunner_services.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
+from airunner_services.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
-from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
+from airunner_services.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
+from airunner_services.bootstrap.whisper import WHISPER_FILES
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ART_ENABLED
 from airunner.utils.application import get_logger

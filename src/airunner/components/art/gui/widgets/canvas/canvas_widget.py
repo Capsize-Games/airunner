@@ -15,21 +15,21 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.data.session_manager import _get_session
+from airunner_model.session import _get_session
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import (
+from airunner_model.models.canvas_layer import CanvasLayer
+from airunner_model.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner.components.art.data.controlnet_settings import (
+from airunner_model.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner.components.art.data.image_to_image_settings import (
+from airunner_model.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner_model.models.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.dialogs.new_document_dialog import (
     NewDocumentConfig,
     NewDocumentDialog,

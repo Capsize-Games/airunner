@@ -21,7 +21,7 @@ from diffusers import (
 )
 from PIL.Image import Image
 
-from airunner.components.art.data.controlnet_model import ControlnetModel
+from airunner_model.models.controlnet_model import ControlnetModel
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )

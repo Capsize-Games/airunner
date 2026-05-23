@@ -149,7 +149,7 @@ class WorkerManager(Worker):
         layer_id = self._get_current_selected_layer_id()
         if layer_id is None:
             try:
-                from airunner.components.art.data.canvas_layer import (
+                from airunner_model.models.canvas_layer import (
                     CanvasLayer,
                 )
 
@@ -161,7 +161,7 @@ class WorkerManager(Worker):
 
         image_binary = None
         try:
-            from airunner.components.art.data.drawingpad_settings import (
+            from airunner_model.models.drawingpad_settings import (
                 DrawingPadSettings,
             )
 
@@ -1459,7 +1459,7 @@ class WorkerManager(Worker):
             # or a real failure (show error)
             # The safety checker worker emits FAILED only after download fails or load fails
             # If NSFW filter is enabled, we should NOT proceed - show error instead
-            from airunner.components.settings.data.application_settings import (
+            from airunner_model.models.application_settings import (
                 ApplicationSettings,
             )
             app_settings = self._get_or_create_application_settings()
@@ -1532,7 +1532,7 @@ class WorkerManager(Worker):
         Args:
             data: Image generation request data
         """
-        from airunner.components.settings.data.application_settings import (
+        from airunner_model.models.application_settings import (
             ApplicationSettings,
         )
 
@@ -1569,7 +1569,7 @@ class WorkerManager(Worker):
         not have bootstrap rows yet. Image generation expects ApplicationSettings
         to exist; without it, requests crash and art jobs stay RUNNING forever.
         """
-        from airunner.components.settings.data.application_settings import (
+        from airunner_model.models.application_settings import (
             ApplicationSettings,
         )
 
@@ -2501,7 +2501,7 @@ class WorkerManager(Worker):
         from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
             OpenVoiceLanguageDialog,
         )
-        from airunner.components.tts.data.bootstrap.openvoice_languages import (
+        from airunner_services.bootstrap.openvoice_languages import (
             OPENVOICE_CORE_MODELS,
             OPENVOICE_LANGUAGE_MODELS,
         )

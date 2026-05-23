@@ -11,8 +11,8 @@ from airunner.components.application.gui.windows.main import (
     ModelLoadBalancer,
     WorkerManager,
 )
-from airunner.components.art.data.ai_models import AIModels
-from airunner.components.data.session_manager import session_scope
+from airunner_model.models.ai_models import AIModels
+from airunner_model.session import session_scope
 from airunner.enums import ModelService, SignalCode
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH, AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger

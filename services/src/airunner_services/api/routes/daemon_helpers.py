@@ -170,7 +170,7 @@ def _configured_llm_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     """Merge persisted LLM model identity into runtime metadata."""
     merged = dict(metadata)
     try:
-        from airunner_services.database.models.llm_generator_settings import (
+        from airunner_model.models.llm_generator_settings import (
             LLMGeneratorSettings,
         )
 

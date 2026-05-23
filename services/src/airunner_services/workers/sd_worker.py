@@ -27,8 +27,8 @@ from airunner_services.contract_enums import StableDiffusionVersion
 from airunner_services.contract_enums import normalize_art_version
 from airunner_services.utils.image import convert_image_to_binary
 from airunner_services.application_exceptions import PipeNotLoadedException
-from airunner_services.database.models import AIModels
-from airunner_services.database.models import GeneratorSettings
+from airunner_model.models import AIModels
+from airunner_model.models import GeneratorSettings
 from airunner_services.requests.image_request import ImageRequest
 from airunner_services.requests.image_response import ImageResponse
 from airunner_services.utils.application.enum_resolver import (

@@ -17,9 +17,9 @@ from compel import (
 from transformers import CLIPImageProcessor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
-from airunner.components.art.data.embedding import Embedding
-from airunner.components.art.data.lora import Lora
-from airunner.components.art.data.schedulers import Schedulers
+from airunner_model.models.embedding import Embedding
+from airunner_model.models.lora import Lora
+from airunner_model.models.schedulers import Schedulers
 from airunner.components.art.managers.stablediffusion.safe_textual_inversion_manager import (
     SafeDiffusersTextualInversionManager,
 )

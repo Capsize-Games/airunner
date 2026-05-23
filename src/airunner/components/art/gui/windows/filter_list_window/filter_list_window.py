@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from airunner.components.art.data.image_filter import ImageFilter
+from airunner_model.models.image_filter import ImageFilter
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 

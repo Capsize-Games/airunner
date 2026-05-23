@@ -3,19 +3,19 @@ import sqlalchemy as sa
 
 from PySide6 import QtCore
 
-from airunner.components.application.data.shortcut_keys import ShortcutKeys
-from airunner.components.art.data.ai_models import AIModels
-from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
+from airunner_model.models.shortcut_keys import ShortcutKeys
+from airunner_model.models.ai_models import AIModels
+from airunner_services.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
-from airunner.components.art.data.controlnet_model import ControlnetModel
-from airunner.components.art.data.schedulers import Schedulers
-from airunner.components.llm.data.prompt_template import PromptTemplate
-from airunner.components.models.data.pipeline_model import PipelineModel
-from airunner.components.settings.data.bootstrap.font_settings_bootstrap_data import (
+from airunner_model.models.controlnet_model import ControlnetModel
+from airunner_model.models.schedulers import Schedulers
+from airunner_model.models.prompt_template import PromptTemplate
+from airunner_model.models.pipeline_model import PipelineModel
+from airunner_services.bootstrap.font_settings_bootstrap_data import (
     font_settings_bootstrap_data,
 )
-from airunner.components.art.data.bootstrap.imagefilter_bootstrap_data import (
+from airunner_services.bootstrap.imagefilter_bootstrap_data import (
     imagefilter_bootstrap_data,
 )
 from airunner.components.data.bootstrap.model_bootstrap_data import (
@@ -24,10 +24,10 @@ from airunner.components.data.bootstrap.model_bootstrap_data import (
 from airunner.components.data.bootstrap.pipeline_bootstrap_data import (
     pipeline_bootstrap_data,
 )
-from airunner.components.llm.data.bootstrap.prompt_templates_bootstrap_data import (
+from airunner_services.bootstrap.prompt_templates_bootstrap_data import (
     prompt_templates_bootstrap_data,
 )
-from airunner.components.settings.data.font_setting import FontSetting
+from airunner_model.models.font_setting import FontSetting
 from airunner.enums import SignalCode, Scheduler
 
 

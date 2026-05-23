@@ -11,17 +11,17 @@ This module consolidates file requirements from:
 from airunner.settings import AIRUNNER_ART_ENABLED
 
 # Import existing bootstrap data
-from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
+from airunner_services.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner.components.art.data.bootstrap.rmbg_bootstrap_data import (
+from airunner_services.bootstrap.rmbg_bootstrap_data import (
     RMBG_FILES,
 )
-from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
+from airunner_services.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
-from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
-from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
+from airunner_services.bootstrap.whisper import WHISPER_FILES
+from airunner_services.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
 
