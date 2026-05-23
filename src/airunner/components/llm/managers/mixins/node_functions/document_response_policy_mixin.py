@@ -1,13 +1,54 @@
 """Document response policy helpers for node functions."""
 
+import json
 import re
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 
 
 class DocumentResponsePolicyMixin:
     """Provide deterministic document-response and routing decisions."""
+
+    @staticmethod
+    def _extract_structured_narrative_layers(
+        payload: dict[str, Any],
+    ) -> set[str]:
+        """Return normalized primary and secondary narrative layers."""
+        layers = {str(payload.get("primary_narrative_layer") or "").strip()}
+        secondary = payload.get("secondary_narrative_layers")
+        if isinstance(secondary, list):
+            layers.update(str(value or "").strip() for value in secondary)
+        return {layer for layer in layers if layer}
+
+    def _should_disable_document_stage_thinking(
+        self,
+        all_tool_content: str,
+        tool_name: str,
+    ) -> bool:
+        """Return whether hidden document stages should disable thinking."""
+        if not self._is_document_result_tool(tool_name):
+            return False
+        extractor = getattr(
+            self,
+            "_extract_document_structured_analysis",
+            None,
+        )
+        if not callable(extractor):
+            return True
+        raw_analysis = extractor(all_tool_content)
+        if not raw_analysis:
+            return True
+        try:
+            payload = json.loads(raw_analysis)
+        except Exception:
+            return True
+        layers = self._extract_structured_narrative_layers(payload)
+        return not layers.intersection({
+            "frame_or_recollection",
+            "layered_or_mixed",
+            "production_process",
+        })
 
     def _should_verify_document_response(
         self,

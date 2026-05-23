@@ -107,6 +107,8 @@ class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):
         self.align_canvas_items_to_viewport = Mock()
         self.update_active_grid_area_position = Mock()
         self.updateImagePositions = Mock()
+        self.lock_document_to_center = Mock(return_value=False)
+        self.can_pan_document = Mock(return_value=True)
         self._apply_viewport_compensation = Mock()
         self._preview_centered_layout = Mock()
         self.update_active_grid_settings = Mock()
@@ -275,6 +277,19 @@ class TestEventHandlerMixin:
         mixin._pan_update_timer.start.assert_called_once_with(1)
         event.accept.assert_called_once()
 
+    def test_mousePressEvent_blocks_pan_when_document_fits(self, qapp):
+        """Middle-mouse pan should not start when the document fits."""
+        mixin = TestableEventHandlerMixin()
+        mixin.can_pan_document.return_value = False
+        event = Mock(spec=QMouseEvent)
+        event.button.return_value = Qt.MouseButton.MiddleButton
+        event.accept = Mock()
+
+        mixin.mousePressEvent(event)
+
+        assert mixin._middle_mouse_pressed is False
+        event.accept.assert_called_once()
+
     def test_mouseMoveEvent_during_active_pan_timer(self, qapp):
         """Test mouseMoveEvent sets pending flag when pan timer active."""
         mixin = TestableEventHandlerMixin()
@@ -375,6 +390,7 @@ class TestEventHandlerMixin:
         mixin.api.art.canvas.update_grid_info.assert_called_once_with(
             {"offset_x": 11.0, "offset_y": 22.0}
         )
+        mixin.lock_document_to_center.assert_called_once_with()
         event.accept.assert_called_once()
 
     def test_do_pan_update(self, qapp):

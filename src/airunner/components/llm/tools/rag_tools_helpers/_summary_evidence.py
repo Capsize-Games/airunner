@@ -58,6 +58,7 @@ def request_rewritten_query(rag_manager: Any) -> str | None:
 
 
 def build_summary_evidence_documents(
+    rag_manager: Any,
     metadata: dict[str, Any],
     text: str,
     *,
@@ -66,6 +67,19 @@ def build_summary_evidence_documents(
 ) -> list[Any]:
     """Build distributed summary evidence from one document text."""
     if summary_focus == "premise":
+        builder = getattr(
+            rag_manager,
+            "build_structured_premise_evidence_documents",
+            None,
+        )
+        if callable(builder):
+            premise_documents = builder(
+                metadata=metadata,
+                query=query,
+                text=text,
+            )
+            if premise_documents:
+                return premise_documents
         premise_documents = build_premise_evidence_documents(metadata, text)
         if premise_documents:
             return premise_documents
@@ -129,6 +143,7 @@ def build_single_document_summary_results(
         return []
 
     return build_summary_evidence_documents(
+        rag_manager,
         entries[0],
         text,
         query=query,

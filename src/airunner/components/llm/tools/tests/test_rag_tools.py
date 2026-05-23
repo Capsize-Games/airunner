@@ -11,6 +11,10 @@ from airunner.components.llm.tools.rag_tools import (
     search_knowledge_base_documents,
     save_to_knowledge_base,
 )
+from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
+from airunner.components.llm.tools.rag_tools_helpers._structured_document_analysis import (
+    build_structured_document_analysis_prompt,
+)
 
 
 def _summary_request(focus: str = "overview") -> SimpleNamespace:
@@ -763,6 +767,207 @@ def test_analyze_loaded_document_returns_chunked_context_for_large_docs(
     assert "1. INTRODUCTION" in result
     assert "2. THE BOOK OF SATAN" in result
     assert "Section: THE BOOK OF SATAN." in result
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_includes_structured_analysis_when_available(
+    mock_resolve,
+    mock_extract,
+):
+    """Chunked analysis should surface structured document analysis."""
+    file_path = "/library/A Graveyard for Lunatics - Ray Bradbury.mobi"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "A GRAVEYARD FOR LUNATICS\n\n"
+        "The narrator works on a Hollywood lot where filmmaking and the "
+        "cemetery next door seem to overlap.\n\n"
+        "A body on the wall pulls the narrator into a mystery tied to the "
+        "studio's past.\n\n"
+        "Roy and the studio crew move through staged effects while the "
+        "investigation keeps turning toward real danger."
+    )
+    api = SimpleNamespace(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        build_structured_document_analysis=lambda **_kwargs: {
+            "composition_cautions": [
+                "Keep staged production actions separate from literal "
+                "plot events."
+            ],
+            "primary_narrative_layer": "story_world_mystery",
+        },
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = analyze_loaded_document("explain this book to me", api=api)
+
+    assert "Structured document analysis:" in result
+    assert '"primary_narrative_layer": "story_world_mystery"' in result
+    assert '"composition_cautions": [' in result
+
+
+def test_structured_document_analysis_prompt_records_layered_frames():
+    """Analysis prompt should require structural layer recording."""
+    prompt = build_structured_document_analysis_prompt(
+        query="explain this book to me",
+        analyses=[
+            {
+                "title": "Opening context",
+                "summary": "A studio mystery overlaps with production work.",
+            }
+        ],
+        coverage_chunks=[("Opening context", "Body")],
+        refined_synthesis=(
+            "Overview: Story-world mystery and production framing overlap."
+        ),
+        evidence=[],
+        summary_focus="premise",
+    )
+
+    assert "secondary_narrative_layers" in prompt
+    assert "record that extra layer in secondary_narrative_layers" in prompt
+    assert "Use layered_or_mixed" in prompt
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_analyze_loaded_document_builds_structured_analysis_from_model(
+    mock_resolve,
+    mock_extract,
+):
+    """Chunked analysis should use the manager's model-built structure."""
+    file_path = "/library/A Graveyard for Lunatics - Ray Bradbury.mobi"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "A GRAVEYARD FOR LUNATICS\n\n"
+        "The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "A body on the wall pulls him into a mystery tied to the lot's past."
+    )
+
+    class _StructuredAnalysisAPI(SimpleNamespace):
+        build_structured_document_analysis = (
+            RAGMixin.build_structured_document_analysis
+        )
+
+    api = _StructuredAnalysisAPI(
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+            attached_document_total_tokens=9000,
+            attached_document_capabilities=[
+                {
+                    "path": file_path,
+                    "fits_current_context": False,
+                }
+            ],
+        ),
+        _invoke_request_preprocessor=Mock(
+            return_value=(
+                '{"composition_cautions": ['
+                '"Keep staged production actions separate from literal '
+                'plot events."], '
+                '"primary_narrative_layer": "layered_or_mixed", '
+                '"secondary_narrative_layers": ["production_process"], '
+                '"summary_priority": ["setting", "inciting_conflict"]}'
+            )
+        ),
+        _extract_json_object=lambda text: {
+            "composition_cautions": [
+                "Keep staged production actions separate from literal "
+                "plot events."
+            ],
+            "primary_narrative_layer": "layered_or_mixed",
+            "secondary_narrative_layers": ["production_process"],
+            "summary_priority": ["setting", "inciting_conflict"],
+        },
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = analyze_loaded_document("explain this book to me", api=api)
+
+    assert "Structured document analysis:" in result
+    assert '"primary_narrative_layer": "layered_or_mixed"' in result
+    api._invoke_request_preprocessor.assert_called_once()
+
+
+@patch("airunner.components.llm.tools.rag_tools.extract_text")
+@patch("airunner.components.llm.tools.rag_tools.resolve_existing_file")
+def test_rag_search_uses_structured_premise_evidence_when_available(
+    mock_resolve,
+    mock_extract,
+):
+    """Premise search should prefer model-selected evidence when available."""
+    file_path = "/library/A Graveyard for Lunatics - Ray Bradbury.mobi"
+    mock_resolve.return_value = file_path
+    mock_extract.return_value = (
+        "The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "Roy and the studio crew move through staged effects while the "
+        "investigation keeps drifting back toward the lot's history.\n\n"
+        "A body on the wall pulls the narrator into a mystery tied to the "
+        "studio's past."
+    )
+
+    class _StructuredPremiseAPI(SimpleNamespace):
+        build_structured_premise_evidence_documents = (
+            RAGMixin.build_structured_premise_evidence_documents
+        )
+
+    api = _StructuredPremiseAPI(
+        search=Mock(),
+        llm_request=SimpleNamespace(
+            document_query_intent="summary",
+            document_summary_focus="premise",
+        ),
+        _invoke_request_preprocessor=Mock(
+            return_value=(
+                '{"selected_spans": ['
+                '{"candidate_id": "span_1", '
+                '"role": "Current setting"}, '
+                '{"candidate_id": "span_2", '
+                '"role": "Production context"}, '
+                '{"candidate_id": "span_3", '
+                '"role": "Inciting incident"}]}'
+            )
+        ),
+        _extract_json_object=lambda _text: {
+            "selected_spans": [
+                {"candidate_id": "span_1", "role": "Current setting"},
+                {
+                    "candidate_id": "span_2",
+                    "role": "Production context",
+                },
+                {"candidate_id": "span_3", "role": "Inciting incident"},
+            ]
+        },
+        _get_active_document_paths=lambda: [file_path],
+        _get_active_document_names=lambda: [
+            "A Graveyard for Lunatics - Ray Bradbury.mobi"
+        ],
+    )
+
+    result = rag_search("what is this book about?", api=api)
+
+    assert "Relevant excerpts:" in result
+    assert "Current setting. The narrator works on a Hollywood lot" in result
+    assert "Production context. Roy and the studio crew move through" in result
+    assert "Inciting incident. A body on the wall pulls the narrator" in result
+    api._invoke_request_preprocessor.assert_called_once()
 
 
 @patch("airunner.components.llm.tools.rag_tools.extract_text")

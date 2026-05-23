@@ -108,5 +108,5 @@ def test_create_from_settings_passes_reasoning_effort_to_gguf_model():
         )
 
     assert result == "gguf-model"
-    assert mock_create_gguf.call_args.kwargs["reasoning_effort"] == "low"
+    assert mock_create_gguf.call_args.kwargs["reasoning_effort"] == "high"
     assert mock_create_gguf.call_args.kwargs["tool_calling_mode"] == "react"

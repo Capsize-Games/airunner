@@ -8,6 +8,9 @@ from langchain_core.messages import AIMessage
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
+from airunner.components.llm.managers.database_checkpoint_saver import (
+    DatabaseCheckpointSaver,
+)
 from airunner.components.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
@@ -140,6 +143,65 @@ def test_messages_property_preserves_thinking_metadata(monkeypatch):
     assert messages[0].additional_kwargs["thinking_metadata"] == metadata
 
 
+def test_messages_property_skips_internal_stage_rows(monkeypatch):
+    """Hidden internal-stage rows should not re-enter conversation history."""
+    conversation = SimpleNamespace(
+        value=[
+            {
+                "role": "assistant",
+                "content": "",
+                "thinking_metadata": {"kind": "llm_stage_settings"},
+            },
+            {
+                "role": "assistant",
+                "content": "Visible reply",
+            },
+        ]
+    )
+    history = DatabaseChatMessageHistory.__new__(DatabaseChatMessageHistory)
+    history.ephemeral = False
+    history._conversation = conversation
+    history.conversation_id = 45
+    history.logger = Mock()
+
+    monkeypatch.setattr(
+        Conversation.objects,
+        "get",
+        lambda _conversation_id: conversation,
+    )
+
+    messages = history.messages
+
+    assert len(messages) == 1
+    assert messages[0].content == "Visible reply"
+
+
+def test_add_message_skips_internal_stage_assistant(monkeypatch):
+    """Internal-stage assistant messages should not persist to storage."""
+    conversation = SimpleNamespace(id=45, value=[])
+    history = DatabaseChatMessageHistory.__new__(DatabaseChatMessageHistory)
+    history.ephemeral = False
+    history._conversation = conversation
+    history.conversation_id = 45
+    history.logger = Mock()
+    history._load_conversation = lambda: None
+
+    update_mock = Mock()
+    monkeypatch.setattr(Conversation.objects, "update", update_mock)
+
+    history.add_message(
+        AIMessage(
+            content="Visible text that should stay internal",
+            additional_kwargs={
+                "thinking_metadata": {"kind": "llm_stage_settings"}
+            },
+        )
+    )
+
+    assert conversation.value == []
+    update_mock.assert_not_called()
+
+
 def test_load_conversation_history_strips_legacy_thinking_prefix():
     """Restarted conversation rendering should keep thinking separate."""
     conversation = SimpleNamespace(
@@ -257,6 +319,89 @@ def test_load_conversation_history_preserves_thinking_metadata():
     )
 
     assert messages[0]["thinking_metadata"] == metadata
+
+
+def test_load_conversation_history_skips_internal_stage_rows():
+    """Restarted conversation rendering should ignore hidden stage rows."""
+    conversation = SimpleNamespace(
+        id=45,
+        chatbot_name="Computer",
+        user_name="User",
+        value=[
+            {
+                "role": "assistant",
+                "content": "",
+                "thinking_metadata": {"kind": "llm_stage_settings"},
+                "timestamp": "2026-04-30T14:00:00+00:00",
+                "blocks": [{"block_type": "text", "text": ""}],
+            },
+            {
+                "role": "assistant",
+                "content": "Visible reply",
+                "timestamp": "2026-04-30T14:00:01+00:00",
+                "blocks": [
+                    {"block_type": "text", "text": "Visible reply"}
+                ],
+            },
+        ],
+    )
+
+    messages = ConversationHistoryManager().load_conversation_history(
+        conversation=conversation,
+    )
+
+    assert len(messages) == 1
+    assert messages[0]["content"] == "Visible reply"
+
+
+def test_checkpoint_saver_ignores_internal_stage_rows_when_counting():
+    """Checkpoint append logic should ignore hidden stage rows in DB count."""
+    conversation = SimpleNamespace(
+        id=45,
+        value=[
+            {"role": "user", "content": "Explain this book to me"},
+            {
+                "role": "assistant",
+                "content": "",
+                "thinking_metadata": {"kind": "llm_stage_settings"},
+            },
+        ],
+    )
+    added_messages = []
+
+    message_history = SimpleNamespace(
+        conversation_id=45,
+        _conversation=conversation,
+        _load_conversation=lambda: None,
+        add_message=lambda message: added_messages.append(message),
+    )
+    saver = DatabaseCheckpointSaver.__new__(DatabaseCheckpointSaver)
+    saver.logger = Mock()
+    saver.conversation_id = 45
+    saver.ephemeral = False
+    saver.stateless = False
+    saver.message_history = message_history
+    DatabaseCheckpointSaver.clear_all_checkpoint_state()
+
+    result = DatabaseCheckpointSaver.put(
+        saver,
+        {"configurable": {"thread_id": "45"}},
+        {
+            "id": "checkpoint-1",
+            "channel_values": {
+                "messages": [
+                    AIMessage(content="Explain this book to me"),
+                    AIMessage(content="Visible saved reply"),
+                ]
+            },
+        },
+        {},
+        {},
+    )
+
+    assert len(added_messages) == 1
+    assert added_messages[0].content == "Visible saved reply"
+    assert result["configurable"]["thread_id"] == "45"
 
 
 def test_load_conversation_history_preserves_tool_usage_metadata():

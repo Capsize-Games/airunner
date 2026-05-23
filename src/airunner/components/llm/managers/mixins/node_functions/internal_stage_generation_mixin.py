@@ -11,10 +11,36 @@ from airunner.components.llm.config.generation_presets import (
 class InternalStageGenerationMixin:
     """Apply document-stage presets and emit debug metadata."""
 
+    def _should_increase_document_stage_reasoning(
+        self,
+        *,
+        all_tool_content: str,
+        tool_name: str,
+        user_question: str,
+        stage: WorkflowGenerationStage,
+    ) -> bool:
+        """Return whether one internal stage needs extra reasoning."""
+        if stage != WorkflowGenerationStage.DOCUMENT_VERIFICATION:
+            return False
+        if not self._is_document_result_tool(tool_name):
+            return False
+        if self._get_document_query_intent(user_question) != "summary":
+            return False
+
+        should_disable = getattr(
+            self,
+            "_should_disable_document_stage_thinking",
+            None,
+        )
+        if not callable(should_disable):
+            return False
+        return not should_disable(all_tool_content, tool_name)
+
     def _prepare_internal_response_generation_kwargs(
         self,
         generation_kwargs: Optional[Dict],
         *,
+        all_tool_content: str = "",
         tool_name: str,
         user_question: str,
         stage: WorkflowGenerationStage = (
@@ -28,9 +54,17 @@ class InternalStageGenerationMixin:
         if self._get_document_query_intent(user_question) != "summary":
             return prepared
 
-        return get_workflow_generation_preset(stage).apply_to_generation_kwargs(
+        prepared = get_workflow_generation_preset(stage).apply_to_generation_kwargs(
             prepared
         )
+        if self._should_increase_document_stage_reasoning(
+            all_tool_content=all_tool_content,
+            tool_name=tool_name,
+            user_question=user_question,
+            stage=stage,
+        ):
+            prepared["reasoning_effort"] = "high"
+        return prepared
 
     @staticmethod
     def _collect_generation_debug_settings(

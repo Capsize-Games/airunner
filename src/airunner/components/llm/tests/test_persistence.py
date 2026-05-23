@@ -341,6 +341,54 @@ class TestDatabaseCheckpointSaver(DatabaseTestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(messages[0].content, "Test message")
 
+    def test_put_checkpoint_ignores_internal_stage_rows_in_count(self):
+        """Checkpoint saves should not count hidden stage rows as replies."""
+        conv = self.create_test_record(
+            Conversation,
+            title="Hidden Stage Count",
+            timestamp=datetime.now(),
+            value=[
+                {
+                    "role": "user",
+                    "content": "Explain this book to me",
+                    "blocks": [
+                        {
+                            "block_type": "text",
+                            "text": "Explain this book to me",
+                        }
+                    ],
+                },
+                {
+                    "role": "assistant",
+                    "content": "",
+                    "blocks": [{"block_type": "text", "text": ""}],
+                    "thinking_metadata": {"kind": "llm_stage_settings"},
+                },
+            ],
+            current=True,
+        )
+
+        saver = DatabaseCheckpointSaver(conversation_id=conv.id)
+        config = {"configurable": {"thread_id": str(conv.id)}}
+        checkpoint = {
+            "v": 1,
+            "ts": datetime.now().isoformat(),
+            "channel_values": {
+                "messages": [
+                    HumanMessage(content="Explain this book to me"),
+                    AIMessage(content="Visible saved reply"),
+                ]
+            },
+        }
+
+        saver.put(config, checkpoint, {}, {})
+
+        refreshed = Conversation.objects.get(conv.id)
+        assistant_rows = [
+            msg for msg in refreshed.value if msg.get("role") == "assistant"
+        ]
+        self.assertEqual(assistant_rows[-1]["content"], "Visible saved reply")
+
 
 class TestPersistenceIntegration(DatabaseTestCase):
     """Integration tests for persistence layer."""

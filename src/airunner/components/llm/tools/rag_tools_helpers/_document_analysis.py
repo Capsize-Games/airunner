@@ -18,6 +18,10 @@ from airunner.components.llm.tools.rag_tools_helpers._result_formatting import (
     document_label,
     format_summary_evidence_results,
 )
+from airunner.components.llm.tools.rag_tools_helpers._structured_document_analysis import (
+    build_structured_document_analysis,
+    request_structured_document_analysis_builder,
+)
 from airunner.components.llm.tools.rag_tools_helpers._summary_evidence import (
     build_summary_evidence_documents,
     request_document_summary_focus,
@@ -89,12 +93,15 @@ def build_full_document_analysis(
 
 
 def build_chunked_document_analysis(
+    rag_manager: Any,
     metadata: dict[str, Any],
     *,
     query: str,
     text: str,
     estimated_tokens: int,
     summary_focus: str | None = None,
+    structured_analysis_builder: Any = None,
+    logger: Any = None,
 ) -> str:
     """Return one chunked whole-document analysis context string."""
     analyses = build_chunk_analyses(
@@ -103,6 +110,7 @@ def build_chunked_document_analysis(
         summary_focus=summary_focus,
     )
     evidence = build_summary_evidence_documents(
+        rag_manager,
         metadata,
         text,
         query=query,
@@ -132,11 +140,29 @@ def build_chunked_document_analysis(
             ]
         )
     refined_synthesis = build_refined_document_synthesis(analyses)
+    structured_document_analysis = build_structured_document_analysis(
+        structured_analysis_builder,
+        metadata=metadata,
+        query=query,
+        analyses=analyses,
+        evidence=evidence,
+        coverage_chunks=coverage_chunks,
+        refined_synthesis=refined_synthesis,
+        summary_focus=summary_focus,
+        logger=logger,
+    )
     if refined_synthesis:
         sections.extend(
             [
                 "Refined whole-document synthesis:",
                 refined_synthesis,
+            ]
+        )
+    if structured_document_analysis:
+        sections.extend(
+            [
+                "Structured document analysis:",
+                structured_document_analysis,
             ]
         )
     chunk_summaries = format_chunk_analyses(analyses)
@@ -216,11 +242,16 @@ def analyze_loaded_document_impl(
         )
 
     chunked = build_chunked_document_analysis(
+        rag_manager,
         entries[0],
         query=query,
         text=text,
         estimated_tokens=estimated_tokens,
         summary_focus=request_document_summary_focus(rag_manager),
+        structured_analysis_builder=(
+            request_structured_document_analysis_builder(rag_manager)
+        ),
+        logger=logger,
     )
     if chunked:
         return chunked

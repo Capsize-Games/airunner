@@ -15,6 +15,9 @@ from langchain_core.runnables import RunnableConfig
 from airunner.components.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
+from airunner.components.llm.utils.persistence_filters import (
+    is_internal_stage_message_dict,
+)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -136,6 +139,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     1 for msg in existing_value 
                     if msg.get("role") in ("user", "assistant", "bot")
                     and msg.get("metadata_type") not in ("tool_calls", "tool_result")
+                    and not is_internal_stage_message_dict(msg)
                 )
                 checkpoint_count = len(messages)
                 

@@ -214,12 +214,12 @@ DEFAULT_WORKFLOW_PRESET = WorkflowGenerationPreset()
 WORKFLOW_GENERATION_PRESETS = {
     WorkflowGenerationStage.DOCUMENT_SYNTHESIS: WorkflowGenerationPreset(
         min_max_new_tokens=1024,
-        reasoning_effort="low",
+        reasoning_effort="high",
         temperature=0.1,
     ),
     WorkflowGenerationStage.DOCUMENT_VERIFICATION: WorkflowGenerationPreset(
         min_max_new_tokens=1024,
-        reasoning_effort="low",
+        reasoning_effort="high",
         temperature=0.1,
     ),
 }
