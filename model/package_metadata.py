@@ -1,4 +1,4 @@
-"""Canonical build metadata for the API package surface."""
+"""Canonical build metadata for the model package surface."""
 
 from __future__ import annotations
 
@@ -14,13 +14,7 @@ README = (
     Path(__file__).resolve().parents[1] / "README.md"
 ).read_text(encoding="utf-8")
 
-API_REQUIREMENTS = [
-    f"airunner-model=={VERSION}",
-    "pydantic>=2.7,<3.0",
-    "fastapi==0.115.0",
-    "python-multipart>=0.0.27",
-    "uvicorn[standard]==0.34.0",
-]
+MODEL_REQUIREMENTS = ["pydantic>=2.7,<3.0"]
 
 DEVELOPMENT_REQUIREMENTS = [
     "pytest",
@@ -39,7 +33,7 @@ DEVELOPMENT_REQUIREMENTS = [
 
 
 def build_extras_require() -> dict[str, list[str]]:
-    """Return the API package extras map."""
+    """Return the model package extras map."""
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
@@ -47,12 +41,12 @@ def build_extras_require() -> dict[str, list[str]]:
 
 
 def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
-    """Return the setuptools metadata for the API package surface."""
+    """Return the setuptools metadata for the model package surface."""
     return {
-        "name": "airunner-api",
+        "name": "airunner-model",
         "version": VERSION,
         "author": "Capsize LLC",
-        "description": "AIRunner transport-neutral API contract package",
+        "description": "AIRunner inference and runtime contract package",
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "Apache-2.0",
@@ -61,15 +55,15 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "package_dir": {"": package_source_dir},
         "packages": find_packages(package_source_dir),
         "python_requires": ">=3.13.3",
-        "install_requires": API_REQUIREMENTS,
+        "install_requires": MODEL_REQUIREMENTS,
         "extras_require": build_extras_require(),
         "include_package_data": True,
     }
 
 
 __all__ = [
-    "API_REQUIREMENTS",
     "DEVELOPMENT_REQUIREMENTS",
+    "MODEL_REQUIREMENTS",
     "VERSION",
     "build_setup_kwargs",
 ]

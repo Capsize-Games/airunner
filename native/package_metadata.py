@@ -1,4 +1,4 @@
-"""Canonical build metadata for the API package surface."""
+"""Canonical build metadata for the native package surface."""
 
 from __future__ import annotations
 
@@ -14,12 +14,10 @@ README = (
     Path(__file__).resolve().parents[1] / "README.md"
 ).read_text(encoding="utf-8")
 
-API_REQUIREMENTS = [
-    f"airunner-model=={VERSION}",
-    "pydantic>=2.7,<3.0",
-    "fastapi==0.115.0",
-    "python-multipart>=0.0.27",
-    "uvicorn[standard]==0.34.0",
+NATIVE_CONSOLE_SCRIPTS = [
+    "airunner=airunner_native.launcher:main",
+    "airunner-build-end-user-bundle="
+    "airunner_native.bin.build_end_user_bundle:main",
 ]
 
 DEVELOPMENT_REQUIREMENTS = [
@@ -37,22 +35,31 @@ DEVELOPMENT_REQUIREMENTS = [
     "tqdm>=4.0.0",
 ]
 
+NATIVE_BASE_REQUIREMENTS = [
+    f"airunner-model=={VERSION}",
+    f"airunner-api=={VERSION}",
+    f"airunner-services=={VERSION}",
+]
+
 
 def build_extras_require() -> dict[str, list[str]]:
-    """Return the API package extras map."""
+    """Return optional extras for the native package surface."""
+    gui_requirements = [f"airunner=={VERSION}"]
     return {
         "development": DEVELOPMENT_REQUIREMENTS,
         "dev": DEVELOPMENT_REQUIREMENTS,
+        "gui": gui_requirements,
+        "desktop": gui_requirements,
     }
 
 
 def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
-    """Return the setuptools metadata for the API package surface."""
+    """Return the setuptools metadata for the native package surface."""
     return {
-        "name": "airunner-api",
+        "name": "airunner-native",
         "version": VERSION,
         "author": "Capsize LLC",
-        "description": "AIRunner transport-neutral API contract package",
+        "description": "AIRunner native launcher and bundle tooling",
         "long_description": README,
         "long_description_content_type": "text/markdown",
         "license": "Apache-2.0",
@@ -61,15 +68,18 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "package_dir": {"": package_source_dir},
         "packages": find_packages(package_source_dir),
         "python_requires": ">=3.13.3",
-        "install_requires": API_REQUIREMENTS,
+        "install_requires": NATIVE_BASE_REQUIREMENTS,
         "extras_require": build_extras_require(),
         "include_package_data": True,
+        "entry_points": {"console_scripts": NATIVE_CONSOLE_SCRIPTS},
     }
 
 
 __all__ = [
-    "API_REQUIREMENTS",
     "DEVELOPMENT_REQUIREMENTS",
+    "NATIVE_BASE_REQUIREMENTS",
+    "NATIVE_CONSOLE_SCRIPTS",
     "VERSION",
+    "build_extras_require",
     "build_setup_kwargs",
 ]

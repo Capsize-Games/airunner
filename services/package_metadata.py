@@ -8,7 +8,7 @@ from typing import Any
 from setuptools import find_packages
 
 
-VERSION = "5.7.0"
+VERSION = "6.0.0"
 
 README = (
     Path(__file__).resolve().parents[1] / "README.md"
@@ -25,10 +25,7 @@ CORE_REQUIREMENTS = [
     "etils[epath]==1.12.2",
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
-    "fastapi==0.115.0",
-    "python-multipart>=0.0.27",
     "python-dotenv==1.2.2",
-    "uvicorn[standard]==0.34.0",
 ]
 
 ML_RUNTIME_REQUIREMENTS = [
