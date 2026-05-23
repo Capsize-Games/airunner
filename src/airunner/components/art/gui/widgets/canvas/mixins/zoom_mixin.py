@@ -30,6 +30,7 @@ class ZoomMixin:
 
         # Redraw lines
         self.do_draw()
+        self.lock_document_to_center()
 
         self._update_zoom_grid_info()
 
@@ -46,6 +47,7 @@ class ZoomMixin:
 
         # Redraw grid lines
         self.do_draw()
+        self.lock_document_to_center()
 
         self._update_zoom_grid_info()
 

@@ -1209,17 +1209,34 @@ class _SummaryBudgetCapturingChatModel:
                 _reasoning_chunk(
                     "",
                     (
-                        '"Let\'s focus on the substantive content:" '
-                        "The document presents a realist philosophy that "
-                        "rejects mystical morality."
+                        '"Let\'s focus on the substantive content."\n'
+                        "<answer_text>The document presents a realist "
+                        "philosophy that rejects mystical morality."
+                        "</answer_text>"
                     ),
                 )
             ]
         )
 
 
+class _LayeredSummaryBudgetCapturingChatModel:
+    """Fake model that records hidden-stage thinking for layered cases."""
+
+    def __init__(self):
+        self.enable_thinking = True
+        self.tools = None
+        self.tool_choice = None
+        self.observed_kwargs = []
+        self.observed_enable_thinking = []
+
+    def stream(self, *_args, **kwargs):
+        self.observed_kwargs.append(dict(kwargs))
+        self.observed_enable_thinking.append(self.enable_thinking)
+        return iter([_chunk("<answer_text>Visible answer</answer_text>")])
+
+
 def test_forced_response_summary_uses_larger_internal_budget():
-    """Summary synthesis should not inherit the tiny outer RAG budget."""
+    """Summary stages should keep their larger budget and max reasoning."""
     mixin = NodeFunctionsMixinDouble([])
     mixin._chat_model = _SummaryBudgetCapturingChatModel()
     mixin.llm_request = SimpleNamespace(document_query_intent="summary")
@@ -1237,14 +1254,84 @@ def test_forced_response_summary_uses_larger_internal_budget():
     )
     assert len(mixin._chat_model.observed_kwargs) == 2
     assert mixin._chat_model.observed_kwargs[0]["max_new_tokens"] == 1024
-    assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "low"
+    assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "high"
     assert mixin._chat_model.observed_kwargs[0]["temperature"] == 0.1
-    assert mixin._chat_model.observed_enable_thinking[0] is False
+    assert mixin._chat_model.observed_enable_thinking[0] is True
     assert mixin._chat_model.observed_kwargs[1]["max_new_tokens"] == 1024
-    assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "low"
+    assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "high"
     assert mixin._chat_model.observed_kwargs[1]["temperature"] == 0.1
-    assert mixin._chat_model.observed_enable_thinking[1] is False
+    assert mixin._chat_model.observed_enable_thinking[1] is True
     assert mixin._chat_model.enable_thinking is True
+
+
+def test_forced_response_summary_keeps_thinking_for_layered_analysis():
+    """Layered structured analysis should keep hidden-stage thinking on."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _LayeredSummaryBudgetCapturingChatModel()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    message = mixin._generate_response_message_from_results(
+        "Current document analysis:\n\n"
+        "Document: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Structured document analysis:\n\n"
+        "{\n"
+        '  "primary_narrative_layer": "layered_or_mixed"\n'
+        "}\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. A body on the wall pulls him into a mystery.",
+        "analyze_loaded_document",
+        "explain this book to me",
+        generation_kwargs={"max_new_tokens": 300, "reasoning_effort": "high"},
+    )
+
+    assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "high"
+    assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "high"
+    assert mixin._chat_model.observed_enable_thinking == [True, True]
+
+
+def test_forced_response_summary_keeps_thinking_for_secondary_layers():
+    """Secondary layered signals should also keep hidden-stage thinking on."""
+    mixin = NodeFunctionsMixinDouble([])
+    mixin._chat_model = _LayeredSummaryBudgetCapturingChatModel()
+    mixin.llm_request = SimpleNamespace(document_query_intent="summary")
+
+    message = mixin._generate_response_message_from_results(
+        "Current document analysis:\n\n"
+        "Document: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Structured document analysis:\n\n"
+        "{\n"
+        '  "composition_cautions": [\n'
+        '    "Keep staged production actions separate from literal plot events."\n'
+        "  ],\n"
+        '  "primary_narrative_layer": "story_world_mystery",\n'
+        '  "secondary_narrative_layers": ["production_process"]\n'
+        "}\n\n"
+        "Refined whole-document synthesis:\n\n"
+        "Overview: The narrator moves through a Hollywood lot mystery while production and memory layers overlap.\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "[Excerpt 2]\n"
+        "Production context. Roy and the crew move through staged effects.\n\n"
+        "[Excerpt 3]\n"
+        "Inciting incident. A body on the wall pulls him into a mystery.",
+        "analyze_loaded_document",
+        "explain this book to me",
+        generation_kwargs={"max_new_tokens": 300, "reasoning_effort": "high"},
+    )
+
+    assert mixin._chat_model.observed_kwargs[0]["reasoning_effort"] == "high"
+    assert mixin._chat_model.observed_kwargs[1]["reasoning_effort"] == "high"
+    assert mixin._chat_model.observed_enable_thinking == [True, True]
 
 
 class _InternalSynthesisReasoningChatModel:
@@ -1263,15 +1350,14 @@ class _InternalSynthesisReasoningChatModel:
         return iter(
             [
                 _reasoning_chunk(
-                    "Visible answer",
-                    "Wait, one more check:\nUse the title only.",
+                    "",
+                    "Wait, one more check:\nUse the title only.\n"
+                    "<answer_text>Visible answer</answer_text>",
                 )
             ]
         )
-
-
-def test_forced_response_disables_hidden_stage_thinking_and_completes():
-    """Hidden document stages should not spend output budget on thinking."""
+def test_forced_response_keeps_hidden_stage_thinking_and_completes():
+    """Hidden document stages should preserve thinking when enabled."""
     mixin = NodeFunctionsMixinDouble([])
     mixin._chat_model = _InternalSynthesisReasoningChatModel()
     mixin.llm_request = SimpleNamespace(document_query_intent="summary")
@@ -1283,10 +1369,13 @@ def test_forced_response_disables_hidden_stage_thinking_and_completes():
     )
 
     assert message.content == "Visible answer"
-    assert message.additional_kwargs.get("thinking_content", "") == ""
-    assert message.additional_kwargs["thinking_metadata"]["stage"] == (
-        "document_verification"
+    thinking_content = message.additional_kwargs.get(
+        "thinking_content",
+        "",
     )
+    assert "document_synthesis" in thinking_content
+    assert "document_verification" in thinking_content
+    assert "Use the title only." in thinking_content
     statuses = [
         call.args[1]["status"]
         for call in mixin._signal_emitter.emit_signal.call_args_list
@@ -1297,8 +1386,14 @@ def test_forced_response_disables_hidden_stage_thinking_and_completes():
         for call in mixin._signal_emitter.emit_signal.call_args_list
         if call.args[0] == SignalCode.LLM_THINKING_SIGNAL
     ]
-    assert statuses == ["completed"]
-    assert all(update["content"] == "" for update in thinking_updates)
+    assert statuses[0] == "started"
+    assert "streaming" in statuses
+    assert statuses[-1] == "completed"
+    assert statuses.count("completed") >= 2
+    assert any(
+        "Use the title only." in update["content"]
+        for update in thinking_updates
+    )
     assert thinking_updates[-1]["metadata"]["stage"] == (
         "document_verification"
     )

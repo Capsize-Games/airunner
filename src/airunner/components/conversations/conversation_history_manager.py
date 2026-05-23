@@ -11,6 +11,9 @@ from airunner.components.llm.utils.gpt_oss_parser import (
     has_gpt_oss_markup,
     parse_gpt_oss_response,
 )
+from airunner.components.llm.utils.persistence_filters import (
+    is_internal_stage_message_dict,
+)
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -162,6 +165,12 @@ class ConversationHistoryManager:
                 if not isinstance(msg_obj, dict):
                     self.logger.warning(
                         f"Skipping invalid message object (not a dict) in conversation {conversation_id}: {msg_obj}"
+                    )
+                    continue
+                if is_internal_stage_message_dict(msg_obj):
+                    self.logger.debug(
+                        "Skipping internal-stage assistant row in conversation %s",
+                        conversation_id,
                     )
                     continue
 

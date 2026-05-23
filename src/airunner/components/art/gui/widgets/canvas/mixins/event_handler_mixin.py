@@ -52,6 +52,9 @@ class EventHandlerMixin:
             event: Qt mouse event.
         """
         if event.button() == Qt.MouseButton.MiddleButton:
+            if not self.can_pan_document():
+                event.accept()
+                return
             self._middle_mouse_pressed = True
             self.last_pos = event.pos()
             event.accept()
@@ -67,7 +70,10 @@ class EventHandlerMixin:
         Args:
             event: Qt mouse event.
         """
-        if event.button() == Qt.MouseButton.MiddleButton:
+        if (
+            event.button() == Qt.MouseButton.MiddleButton
+            and self._middle_mouse_pressed
+        ):
             self.save_canvas_offset()
             self._middle_mouse_pressed = False
             self.last_pos = None
@@ -139,6 +145,7 @@ class EventHandlerMixin:
             self.zoom_handler.zoom_level = 1.0
             self.setTransform(self.zoom_handler.on_zoom_level_changed())
             self.do_draw()
+            self.lock_document_to_center()
             self.api.art.canvas.update_grid_info(
                 self.get_grid_info_payload()
             )
@@ -446,6 +453,7 @@ class EventHandlerMixin:
         # Rebuild the grid item with the updated viewport size so grid lines
         # follow the same compensated shift as the canvas content.
         self.do_draw(force_draw=True)
+        self.lock_document_to_center()
 
     def enterEvent(self, event: QEvent) -> None:
         """Handle event when mouse enters the widget.

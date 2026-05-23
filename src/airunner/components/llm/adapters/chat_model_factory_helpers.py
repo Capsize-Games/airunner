@@ -47,23 +47,14 @@ def get_reasoning_effort(
     db_settings: Any,
     llm_settings: Any,
 ) -> str:
-    """Resolve the effective GPT-OSS reasoning-effort setting."""
-    allowed = {"low", "medium", "high"}
+    """Resolve the effective reasoning-effort setting.
 
-    if db_settings is not None and hasattr(db_settings, "reasoning_effort"):
-        db_value = str(
-            getattr(db_settings, "reasoning_effort", "medium") or "medium"
-        ).strip().lower()
-        if db_value in allowed:
-            return db_value
-
-    ui_value = str(
-        getattr(llm_settings, "reasoning_effort", "medium") or "medium"
-    ).strip().lower()
-    if ui_value in allowed:
-        return ui_value
-
-    return "medium"
+    AIRunner now treats maximum reasoning effort as the global runtime
+    default. Adapters that do not support reasoning-effort levels can
+    ignore this value safely.
+    """
+    _ = (db_settings, llm_settings)
+    return "high"
 
 
 def get_chatbot_params(

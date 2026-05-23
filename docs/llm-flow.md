@@ -118,6 +118,10 @@ flowchart LR
   `document_answer_mode`.
 - This replaces active-path keyword and sentence heuristics for tool
   choice and document intent classification.
+- Do not reintroduce keyword lists, regex routing, word-hit scoring,
+  sentence matching, or similar heuristics for tool choice, query
+  classification, or summary-mode selection. Those decisions belong to
+  the LLM preprocess contract.
 
 ### 5. Request-Scoped Preparation
 
@@ -171,19 +175,25 @@ flowchart LR
   duplicate-call recovery, and task-completing tool replies.
 - Document-specific grounded replies can swap to a saved final chat
   prompt before the visible answer is generated. Those internal passes
-  can unbind tools. Request-level thinking still stays on, but hidden
-  document synthesis and verification now run with model thinking
-  disabled so they spend their budget on the committed answer rather
-  than on internal reasoning prose.
+  can unbind tools. Request-level thinking still stays on. Hidden
+  document synthesis and verification now disable model thinking for
+  flat document cases, but layered/frame-heavy document summaries can
+  keep hidden-stage thinking enabled when structured document analysis
+  says that extra reasoning is needed.
 - In `ChatGGUF`, those hidden-stage generation presets are now applied
   as per-call adapter overrides, so stage-specific `max_new_tokens`,
   `temperature`, `reasoning_effort`, and `enable_thinking` settings
   reach `llama.cpp` instead of remaining manager-side metadata only.
 - For large attached documents, `analyze_loaded_document` now carries a
   reduced whole-document bundle with coverage, a deterministic refined
-  synthesis, chunk summaries, and supporting evidence so hidden
-  synthesis/verification stages do not have to reason over raw excerpt
-  inventories alone.
+  synthesis, chunk summaries, model-built structured document analysis,
+  and supporting evidence so hidden synthesis/verification stages do
+  not have to reason over raw excerpt inventories alone.
+- Premise-focused document evidence now comes from model-selected span
+  roles over structural candidate spans rather than marker or sentence
+  heuristics. Verification uses the structured document-analysis layer
+  and composition cautions to reject summaries that collapse staged,
+  remembered, or frame-level material into literal plot facts.
 - Internal document synthesis and verification now use a dedicated
   `answer_text` block contract so the visible reply comes only from one
   explicit committed answer field instead of free-form recovery.

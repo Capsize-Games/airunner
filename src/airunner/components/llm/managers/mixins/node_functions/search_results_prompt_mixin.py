@@ -1,5 +1,6 @@
 """Search-result and document prompt builders for node functions."""
 
+import json
 import re
 from typing import Any
 
@@ -16,6 +17,7 @@ class SearchResultsPromptMixin:
         "Nested anecdote.",
         "Frame narrative.",
         "Background detail.",
+        "Production context.",
     )
 
     @staticmethod
@@ -73,6 +75,152 @@ class SearchResultsPromptMixin:
         if match is None:
             return ""
         return match.group(1).strip()
+
+    def _extract_document_structured_analysis(
+        self: Any,
+        all_tool_content: str,
+    ) -> str:
+        """Return one structured-document-analysis section when present."""
+        return self._extract_document_analysis_section(
+            all_tool_content,
+            "Structured document analysis",
+            (
+                "Refined whole-document synthesis",
+                "Chunk summaries",
+                "Supporting evidence",
+            ),
+        )
+
+    def _extract_document_structured_analysis_payload(
+        self: Any,
+        all_tool_content: str,
+    ) -> dict[str, Any]:
+        """Return parsed structured-document-analysis data when valid."""
+        raw_analysis = self._extract_document_structured_analysis(
+            all_tool_content,
+        )
+        if not raw_analysis:
+            return {}
+        try:
+            payload = json.loads(raw_analysis)
+        except Exception:
+            return {}
+        return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
+    def _collect_structured_narrative_layers(
+        payload: dict[str, Any],
+    ) -> set[str]:
+        """Return normalized narrative-layer labels from one payload."""
+        layers: set[str] = set()
+        primary = str(payload.get("primary_narrative_layer") or "").strip()
+        if primary:
+            layers.add(primary)
+        secondary = payload.get("secondary_narrative_layers")
+        if not isinstance(secondary, list):
+            return layers
+        for value in secondary:
+            label = str(value or "").strip()
+            if label:
+                layers.add(label)
+        return layers
+
+    def _build_structured_document_guidance(
+        self: Any,
+        all_tool_content: str,
+        *,
+        for_verification: bool = False,
+    ) -> str:
+        """Return prompt guidance derived from structured analysis."""
+        payload = self._extract_document_structured_analysis_payload(
+            all_tool_content,
+        )
+        if not payload:
+            return ""
+
+        parts = [
+            "If structured document analysis is present below, treat it as "
+            "grounded evidence about narrative layers and composition "
+            "cautions.",
+        ]
+        layers = self._collect_structured_narrative_layers(payload)
+        if layers.intersection(
+            {
+                "frame_or_recollection",
+                "layered_or_mixed",
+                "production_process",
+            }
+        ):
+            parts.append(
+                "Keep staged, remembered, quoted, and frame-level material "
+                "separate from literal story-world events unless the "
+                "evidence states that transition explicitly."
+            )
+            parts.append(
+                "Treat production-context or frame-layer excerpts as "
+                "describing staging, authorship, recollection, or "
+                "constructed scenes unless the evidence explicitly says "
+                "those acts occur in the primary story world."
+            )
+            if for_verification:
+                parts.append(
+                    "If the draft collapses those layers into direct plot "
+                    "events, narrator agency, or confirmed motives, treat "
+                    "that as unsupported and rewrite it."
+                )
+            else:
+                parts.append(
+                    "Do not collapse those layers into direct plot events, "
+                    "narrator agency, or confirmed motives unless the "
+                    "evidence states that explicitly."
+                )
+
+        cautions = payload.get("composition_cautions")
+        if isinstance(cautions, list):
+            caution_items = [
+                str(item or "").strip()
+                for item in cautions
+                if str(item or "").strip()
+            ]
+        else:
+            caution_items = []
+        if caution_items:
+            if for_verification:
+                parts.append(
+                    "If the draft violates those composition cautions, "
+                    "treat that as unsupported and rewrite it."
+                )
+            else:
+                parts.append(
+                    "Follow those composition cautions when composing the "
+                    "answer."
+                )
+            parts.append(
+                "Grounded composition cautions: "
+                f"{'; '.join(caution_items[:3])}."
+            )
+
+        return " ".join(parts) + "\n\n"
+
+    def _should_preserve_secondary_premise_context(
+        self: Any,
+        all_tool_content: str,
+    ) -> bool:
+        """Return whether premise prompts should keep one secondary excerpt."""
+        layers = self._collect_structured_narrative_layers(
+            self._extract_document_structured_analysis_payload(
+                all_tool_content,
+            )
+        )
+        return bool(
+            layers.intersection(
+                {
+                    "frame_or_recollection",
+                    "layered_or_mixed",
+                    "production_process",
+                }
+            )
+        )
 
     @staticmethod
     def _extract_document_analysis_section(
@@ -183,6 +331,11 @@ class SearchResultsPromptMixin:
                         "Inciting incident.",
                     )
                 )
+                structured_guidance = (
+                    self._build_structured_document_guidance(
+                        all_tool_content,
+                    )
+                )
                 summary_guidance = (
                     "If the user is asking for a summary of the document, "
                     "synthesize the evidence below into a substantive "
@@ -238,6 +391,7 @@ class SearchResultsPromptMixin:
                         "them central. Do not introduce generic dramatic "
                         "padding, extra motives, or relationship dynamics "
                         "unless the excerpts explicitly support them.\n\n"
+                        + structured_guidance
                         + role_guidance
                         + summary_guidance
                     )
@@ -249,7 +403,7 @@ class SearchResultsPromptMixin:
                         "character profiles."
                     )
                 else:
-                    rag_guidance = summary_guidance
+                    rag_guidance = structured_guidance + summary_guidance
                     response_style = (
                         "Start with the central themes, not opening trivia. "
                         "Synthesize across excerpts and avoid repetition."
@@ -389,6 +543,9 @@ class SearchResultsPromptMixin:
                 "Background detail.",
             )
         )
+        structured_document_analysis = self._extract_document_structured_analysis(
+            all_tool_content,
+        )
         if (
             self._is_document_result_tool(tool_name)
             and document_intent == "summary"
@@ -429,13 +586,18 @@ class SearchResultsPromptMixin:
             else "Answer directly in one or two concise paragraphs."
         )
         if document_intent == "summary":
+            structured_guidance = self._build_structured_document_guidance(
+                all_tool_content,
+                for_verification=True,
+            )
             if document_summary_focus == "premise":
                 verification_focus = (
                     "Lead with the premise, setting, central conflict, and "
                     "major relationships that the excerpts support. Prefer "
                     "recurring core details over isolated late-scene "
                     "events. Remove generic dramatic padding unless the "
-                    "excerpts explicitly support it."
+                    "excerpts explicitly support it. "
+                    + structured_guidance
                 )
                 if has_evidence_role_labels:
                     verification_focus += (
@@ -447,7 +609,8 @@ class SearchResultsPromptMixin:
                 verification_focus = (
                     "Lead with the document's central subject, major themes, "
                     "or recurring claims that the excerpts support. Prefer "
-                    "the strongest repeated evidence over isolated details."
+                    "the strongest repeated evidence over isolated details. "
+                    + structured_guidance
                 )
         elif document_intent == "extract":
             verification_focus = (
@@ -501,6 +664,13 @@ class SearchResultsPromptMixin:
             "leakage, or unsupported scene details. If the draft is weak, ignore "
             "it and answer directly from the evidence. If the evidence is "
             "incomplete, say so briefly instead of guessing.\n"
+            "Do not treat a draft claim as supported just because matching "
+            "words appear in the evidence. Verify the structural status of "
+            "each claim: whether it belongs to the document's primary frame, "
+            "to a nested quote, anecdote, example, citation, hypothetical, "
+            "or to a staged or constructed artifact. If the draft promotes "
+            "nested or constructed material into primary document reality, "
+            "rewrite or remove that claim.\n"
             "Do not answer with claim-by-claim verdicts such as Supported, "
             "Not supported, or Partially supported.\n"
             "Do not answer with bare category labels such as 'Setting, "
@@ -531,6 +701,8 @@ class SearchResultsPromptMixin:
     def _select_premise_summary_excerpts(
         self,
         excerpts: list[str],
+        *,
+        preserve_secondary_context: bool = False,
     ) -> list[str]:
         """Return the highest-signal excerpt subset for premise summaries."""
         if not excerpts:
@@ -541,6 +713,11 @@ class SearchResultsPromptMixin:
             for excerpt in excerpts
             if excerpt.startswith(self._PREMISE_PRIMARY_EXCERPT_PREFIXES)
         ]
+        secondary_excerpts = [
+            excerpt
+            for excerpt in excerpts
+            if excerpt.startswith(self._PREMISE_SECONDARY_EXCERPT_PREFIXES)
+        ]
         supporting_excerpts = [
             excerpt
             for excerpt in excerpts
@@ -548,7 +725,27 @@ class SearchResultsPromptMixin:
             and excerpt not in primary_excerpts
         ]
 
-        selected = primary_excerpts[:3]
+        selected: list[str] = []
+        if preserve_secondary_context and secondary_excerpts:
+            if primary_excerpts:
+                selected.append(primary_excerpts[0])
+            for excerpt in secondary_excerpts:
+                if excerpt in selected:
+                    continue
+                selected.append(excerpt)
+                break
+        else:
+            selected = primary_excerpts[:3]
+
+        remaining_primary_excerpts = [
+            excerpt for excerpt in primary_excerpts if excerpt not in selected
+        ]
+        for excerpt in remaining_primary_excerpts:
+            if excerpt in selected:
+                continue
+            selected.append(excerpt)
+            if len(selected) >= 3:
+                break
         for excerpt in supporting_excerpts:
             if excerpt in selected:
                 continue
@@ -579,10 +776,22 @@ class SearchResultsPromptMixin:
     ) -> str:
         """Return excerpt-focused synthesis input for document summaries."""
         analysis_mode = self._extract_document_analysis_mode(all_tool_content)
+        preserve_secondary_context = (
+            summary_focus == "premise"
+            and self._should_preserve_secondary_premise_context(
+                all_tool_content,
+            )
+        )
         excerpts = self._extract_rag_excerpt_bodies(all_tool_content)
         if summary_focus == "premise":
-            excerpts = self._select_premise_summary_excerpts(excerpts)
+            excerpts = self._select_premise_summary_excerpts(
+                excerpts,
+                preserve_secondary_context=preserve_secondary_context,
+            )
         document_label = self._extract_primary_document_label(all_tool_content)
+        structured_document_analysis = self._extract_document_structured_analysis(
+            all_tool_content,
+        )
         sections: list[str] = []
         if analysis_mode == "full_document":
             full_document_text = self._extract_document_analysis_section(
@@ -592,6 +801,11 @@ class SearchResultsPromptMixin:
             )
             if document_label:
                 sections.append(f"Current document: {document_label}")
+            if structured_document_analysis:
+                sections.append(
+                    "Structured document analysis:\n"
+                    f"{structured_document_analysis}"
+                )
             if full_document_text:
                 sections.append(f"Full document text:\n{full_document_text}")
             if sections:
@@ -625,6 +839,11 @@ class SearchResultsPromptMixin:
                 sections.append(
                     f"Document coverage:\n{coverage_outline}"
                 )
+            if structured_document_analysis:
+                sections.append(
+                    "Structured document analysis:\n"
+                    f"{structured_document_analysis}"
+                )
             evidence_excerpts: list[str] = []
             if supporting_evidence:
                 evidence_results = self._replace_current_document_label(
@@ -636,7 +855,10 @@ class SearchResultsPromptMixin:
                 )
                 if summary_focus == "premise":
                     evidence_excerpts = self._select_premise_summary_excerpts(
-                        evidence_excerpts
+                        evidence_excerpts,
+                        preserve_secondary_context=(
+                            preserve_secondary_context
+                        ),
                     )
             if refined_synthesis:
                 sections.append(
@@ -644,7 +866,11 @@ class SearchResultsPromptMixin:
                     f"{refined_synthesis}"
                 )
                 if summary_focus == "premise" and evidence_excerpts:
-                    sections.extend(evidence_excerpts[:2])
+                    sections.extend(
+                        evidence_excerpts[
+                            : 3 if preserve_secondary_context else 2
+                        ]
+                    )
                 return "\n\n".join(sections)
             if evidence_excerpts:
                 sections.extend(evidence_excerpts)

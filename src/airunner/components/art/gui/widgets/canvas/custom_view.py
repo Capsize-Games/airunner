@@ -5,8 +5,9 @@ from PySide6.QtCore import (
     QEvent,
     QRectF,
     QSize,
+    Qt,
 )
-from PySide6.QtGui import QColor, QBrush, QFont
+from PySide6.QtGui import QColor, QBrush, QFont, QPen
 from PySide6.QtWidgets import (
     QGraphicsView,
 )
@@ -19,6 +20,10 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
 from airunner.components.art.gui.widgets.canvas.brush_scene import BrushScene
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
@@ -538,6 +543,73 @@ class CustomGraphicsView(
         width, height = self.document_size()
         return QRectF(origin.x(), origin.y(), width, height)
 
+    def display_document_rect(self) -> QRectF:
+        """Return the document rectangle in display-space scene coordinates."""
+        rect = self.document_rect()
+        if rect.isEmpty():
+            return QRectF()
+        view_state = ViewState(
+            canvas_offset=QPointF(self.canvas_offset),
+            grid_compensation=QPointF(self._grid_compensation_offset),
+        )
+        origin = CanvasPositionManager.absolute_to_display(
+            rect.topLeft(),
+            view_state,
+        )
+        return QRectF(origin.x(), origin.y(), rect.width(), rect.height())
+
+    def visible_scene_rect(self) -> QRectF:
+        """Return the scene rect currently visible in the viewport."""
+        return self.mapToScene(self.viewport().rect()).boundingRect()
+
+    def document_is_fully_visible(self) -> bool:
+        """Return whether the entire document is visible in the viewport."""
+        document_rect = self.display_document_rect()
+        visible_rect = self.visible_scene_rect()
+        if document_rect.isEmpty() or visible_rect.isEmpty():
+            return False
+        return visible_rect.adjusted(-0.5, -0.5, 0.5, 0.5).contains(
+            document_rect
+        )
+
+    def can_pan_document(self) -> bool:
+        """Return whether manual panning should currently be allowed."""
+        return not self.document_is_fully_visible()
+
+    def centered_canvas_offset_for_document(self) -> QPointF:
+        """Return the pan offset that centers the document in view."""
+        document_rect = self.document_rect()
+        display_rect = self.display_document_rect()
+        visible_rect = self.visible_scene_rect()
+        if document_rect.isEmpty() or display_rect.isEmpty():
+            return QPointF(self.canvas_offset)
+        desired_x = visible_rect.center().x() - (display_rect.width() / 2.0)
+        desired_y = visible_rect.center().y() - (
+            display_rect.height() / 2.0
+        )
+        total_x = document_rect.left() - desired_x
+        total_y = document_rect.top() - desired_y
+        return QPointF(
+            total_x + self._grid_compensation_offset.x(),
+            total_y + self._grid_compensation_offset.y(),
+        )
+
+    def lock_document_to_center(self) -> bool:
+        """Center the document whenever the full document fits in view."""
+        if self.can_pan_document():
+            return False
+        target_offset = self.centered_canvas_offset_for_document()
+        delta_x = abs(target_offset.x() - self.canvas_offset.x())
+        delta_y = abs(target_offset.y() - self.canvas_offset.y())
+        if delta_x < 0.5 and delta_y < 0.5:
+            return False
+        self.canvas_offset = target_offset
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
+        self.draw_grid()
+        self.viewport().update()
+        return True
+
     def fit_document_in_view(self) -> None:
         """Zoom out when needed so the full document fits the viewport."""
         rect = self.document_rect()
@@ -558,7 +630,23 @@ class CustomGraphicsView(
             self.scene.setSceneRect(scene_rect)
 
         self.centerOn(rect.center())
+        self.lock_document_to_center()
         self._update_zoom_grid_info()
+
+    def drawForeground(self, painter, rect) -> None:
+        """Draw a fixed border around the current document area."""
+        super().drawForeground(painter, rect)
+        document_rect = self.display_document_rect()
+        if document_rect.isEmpty():
+            return
+        painter.save()
+        pen = QPen(QColor("#7a7a7a"))
+        pen.setWidth(2)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(document_rect)
+        painter.restore()
 
     def _get_default_text_font(self):
         font = QFont()

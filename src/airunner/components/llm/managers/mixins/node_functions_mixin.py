@@ -10,7 +10,6 @@ from typing import Any, Dict, List, TYPE_CHECKING
 from langchain_core.messages import AIMessage, BaseMessage, trim_messages
 
 from airunner.components.llm.managers.mixins.node_functions import (
-    ConsciousnessIntegrationMixin,
     DocumentConversationalFollowupMixin,
     DocumentResponsePolicyMixin,
     ForcedResponseMixin,
@@ -34,7 +33,6 @@ if TYPE_CHECKING:
 
 
 class NodeFunctionsMixin(
-    ConsciousnessIntegrationMixin,
     DocumentConversationalFollowupMixin,
     DocumentResponsePolicyMixin,
     ForcedResponseMixin,
@@ -63,22 +61,6 @@ class NodeFunctionsMixin(
         "get_workflow_status",
     }
 
-    def _maybe_consciousness_pre_llm(self, messages: List[Any]) -> None:
-        """Call the pre-LLM consciousness hook when enabled."""
-        self._run_consciousness_hook("on_pre_llm", messages=messages)
-
-    def _maybe_consciousness_post_llm(
-        self,
-        ai_message: Any,
-        messages: List[Any],
-    ) -> None:
-        """Call the post-LLM consciousness hook when enabled."""
-        self._run_consciousness_hook(
-            "on_post_llm",
-            ai_message,
-            messages=messages,
-        )
-
     def _call_model(self, state: "WorkflowState") -> Dict[str, Any]:
         """Call the model with trimmed message history."""
         messages = list(state.get("messages") or [])
@@ -101,10 +83,6 @@ class NodeFunctionsMixin(
             )
 
         generation_kwargs = state.get("generation_kwargs", {})
-        try:
-            self._maybe_consciousness_pre_llm(messages)
-        except Exception:
-            pass
 
         chat_model = getattr(self, "_chat_model", None)
         if chat_model and getattr(chat_model, "is_vision_model", False):
@@ -195,11 +173,6 @@ class NodeFunctionsMixin(
                 additional_kwargs={"error": "no_message_generated"},
                 tool_calls=[],
             )
-
-        try:
-            self._maybe_consciousness_post_llm(response_message, messages)
-        except Exception:
-            pass
 
         return {"messages": [response_message]}
 

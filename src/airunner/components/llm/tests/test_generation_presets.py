@@ -34,7 +34,7 @@ def test_document_synthesis_preset_sets_minimum_budget_and_reasoning_effort():
     )
 
     assert resolved["max_new_tokens"] == 1024
-    assert resolved["reasoning_effort"] == "low"
+    assert resolved["reasoning_effort"] == "high"
     assert resolved["temperature"] == 0.1
 
 
@@ -49,5 +49,5 @@ def test_document_verification_preset_preserves_larger_existing_budget():
     )
 
     assert resolved["max_new_tokens"] == 2048
-    assert resolved["reasoning_effort"] == "low"
+    assert resolved["reasoning_effort"] == "high"
     assert resolved["temperature"] == 0.1

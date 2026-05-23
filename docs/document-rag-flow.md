@@ -40,6 +40,13 @@ The key architectural change is this: active document routing no longer
 depends on raw prompt keyword heuristics. Downstream document policy,
 prompt building, and chunk selection now read request metadata instead.
 
+This rule is now explicit across the document stack: do not add keyword
+lists, regex routing, word-hit scoring, sentence matching, or other
+heuristic shortcuts to choose tools or improve summary quality. Tool
+choice belongs to the LLM preprocess step, and summary-quality gains
+should come from structured document analysis plus grounded synthesis
+and verification.
+
 The retrieval layer also normalizes the local E5 embedding inputs the
 way the model expects: document queries use a `query:` prefix and
 indexed passages use a `passage:` prefix. Persisted indexes that were
@@ -109,11 +116,11 @@ flowchart LR
    or replace the draft only through a valid `answer_text` block; meta
    fragments, verifier commentary, and other reasoning text no longer
    count as successful document finalization.
-- Those hidden synthesis and verification passes now run with model
-   thinking disabled even though request-level thinking remains enabled.
-   That keeps the internal stage budget focused on emitting the
-   committed `answer_text` block instead of spending the turn on hidden
-   reasoning prose.
+- Those hidden synthesis and verification passes now default to model
+   thinking disabled for flat document cases even though request-level
+   thinking remains enabled. When structured document analysis marks a
+   layered or frame-heavy document, hidden-stage thinking can stay on so
+   the internal pass has enough budget to preserve narrative boundaries.
 - For local GGUF execution, `ChatGGUF` now enforces those hidden-stage
    presets at the adapter boundary, so per-pass `max_new_tokens`,
    `temperature`, `reasoning_effort`, and `enable_thinking` overrides
@@ -167,11 +174,15 @@ Current roles:
   structure headings.
 - `analyze_loaded_document()` returns either full-document text for
    small documents or a chunked evidence bundle with document coverage,
-   deterministic refined synthesis, chunk summaries, and supporting
-   excerpts for larger documents.
+   deterministic refined synthesis, chunk summaries, model-built
+   structured document analysis, and supporting excerpts for larger
+   documents.
 - `rag_search()` performs excerpt retrieval and wider fallback search.
 - Summary evidence and chunk frontloading now use request metadata,
   especially `document_summary_focus`, instead of reparsing the prompt.
+- Premise-focused supporting evidence now uses model-selected span roles
+  over structural candidate spans instead of lexical premise scoring.
+  Do not extend heuristic premise scorers for the active path.
 - `rag_search()` also uses the preprocess-owned rewritten query when one
    is available instead of pronoun-based document expansion in the tool
    layer.
@@ -275,16 +286,19 @@ Example: "summarize the document for me" or
    context, while `rag_search()` remains the excerpt and fallback search
    path.
 4. Large-document `analyze_loaded_document()` turns now expose document
-   coverage plus supporting evidence instead of deterministic map/reduce
-   chunk summaries.
-5. Summary evidence selection and chunk frontloading now follow request
-   metadata instead of query-text heuristics.
+   coverage, structured document analysis, and supporting evidence
+   instead of deterministic map/reduce chunk summaries alone.
+5. Premise evidence selection now uses model-chosen role spans from the
+   document structure, while summary chunk frontloading still follows
+   request metadata.
 6. Before search runs, legacy pre-prefix embeddings are upgraded to the
    current E5 strategy when needed.
 7. Summary cleanup removes filename, path, and label clutter from the
    synthesis input.
 8. Grounded synthesis and verification rewrite unsupported or stray
-   details before the answer becomes visible.
+   details before the answer becomes visible, and structured narrative
+   cautions can explicitly reject drafts that collapse staged,
+   remembered, or frame-level material into literal plot facts.
 9. The final visible answer uses the normal chat prompt and history
    layer rather than raw tool output.
 
@@ -317,7 +331,8 @@ just in one place.
   and
   [
   _summary_evidence.py](../src/airunner/components/llm/tools/rag_tools_helpers/_summary_evidence.py)
-  control evidence coverage.
+   control evidence coverage, structured document analysis, and
+   model-selected premise evidence.
 - [document_response_policy_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/document_response_policy_mixin.py)
   and
   [search_results_prompt_mixin.py](../src/airunner/components/llm/managers/mixins/node_functions/search_results_prompt_mixin.py)

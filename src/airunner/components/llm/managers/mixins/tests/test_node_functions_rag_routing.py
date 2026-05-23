@@ -1072,6 +1072,171 @@ def test_build_search_results_prompt_uses_request_metadata_for_vague_book_prompt
     assert "Current setting. Miss Marple is staying" in prompt
 
 
+def test_build_search_results_prompt_carries_structured_document_analysis():
+    """Summary prompts should carry structured document-analysis context."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Document coverage:\n\n"
+        "1. Opening context\n"
+        "2. Studio mystery\n\n"
+        "Structured document analysis:\n\n"
+        "{\n"
+        '  "composition_cautions": [\n'
+        '    "Keep staged production actions separate from literal plot events."\n'
+        "  ],\n"
+        '  "primary_narrative_layer": "story_world_mystery"\n'
+        "}\n\n"
+        "Refined whole-document synthesis:\n\n"
+        "Overview: A studio mystery unfolds beside a cemetery.\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. A body on the wall pulls him into a mystery.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert "Structured document analysis:" in prompt
+    assert "primary_narrative_layer" in prompt
+    assert (
+        "treat it as grounded evidence about narrative layers" in prompt
+    )
+
+
+def test_build_search_results_verification_prompt_uses_structured_analysis():
+    """Verification prompts should preserve structured analysis hints."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_verification_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Document coverage:\n\n"
+        "1. Opening context\n"
+        "2. Studio mystery\n\n"
+        "Structured document analysis:\n\n"
+        "{\n"
+        '  "composition_cautions": [\n'
+        '    "Keep staged production actions separate from literal plot events."\n'
+        "  ],\n"
+        '  "primary_narrative_layer": "story_world_mystery"\n'
+        "}\n\n"
+        "Refined whole-document synthesis:\n\n"
+        "Overview: A studio mystery unfolds beside a cemetery.\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "[Excerpt 2]\n"
+        "Inciting incident. A body on the wall pulls him into a mystery.",
+        "analyze_loaded_document",
+        "explain this book to me",
+        "Draft answer.",
+    )
+
+    assert "Structured document analysis:" in prompt
+    assert (
+        "treat it as grounded evidence about narrative layers" in prompt
+    )
+
+
+def test_build_search_results_verification_prompt_rejects_layer_collapse():
+    """Verification prompts should reject narrative-layer collapse."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_verification_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Structured document analysis:\n\n"
+        "{\n"
+        '  "composition_cautions": [\n'
+        '    "Keep staged production actions separate from literal plot events."\n'
+        "  ],\n"
+        '  "primary_narrative_layer": "layered_or_mixed",\n'
+        '  "secondary_narrative_layers": ["production_process"]\n'
+        "}\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "[Excerpt 2]\n"
+        "Production context. Roy and the crew move through staged effects.\n\n"
+        "[Excerpt 3]\n"
+        "Inciting incident. A body on the wall pulls him into a mystery.",
+        "analyze_loaded_document",
+        "explain this book to me",
+        "Draft answer.",
+    )
+
+    assert "If the draft collapses those layers into direct plot events" in prompt
+    assert "treat that as unsupported and rewrite it" in prompt
+    assert "Production context. Roy and the crew move through staged effects." in prompt
+    assert "Do not treat a draft claim as supported just because matching words appear" in prompt
+    assert "nested quote, anecdote, example, citation, hypothetical" in prompt
+
+
+def test_build_search_results_prompt_preserves_layered_secondary_context():
+    """Layered premise prompts should keep one secondary context excerpt."""
+    mixin = _DummyNodeFunctions()
+    mixin.llm_request = SimpleNamespace(
+        document_query_intent="summary",
+        document_summary_focus="premise",
+    )
+
+    prompt = mixin._build_search_results_prompt(
+        "Current document analysis:\n\n"
+        "Document: A Graveyard for Lunatics - Ray Bradbury.mobi\n\n"
+        "Analysis mode: chunked_document\n\n"
+        "Structured document analysis:\n\n"
+        "{\n"
+        '  "composition_cautions": [\n'
+        '    "Keep staged production actions separate from literal plot events."\n'
+        "  ],\n"
+        '  "primary_narrative_layer": "story_world_mystery",\n'
+        '  "secondary_narrative_layers": ["production_process"]\n'
+        "}\n\n"
+        "Refined whole-document synthesis:\n\n"
+        "Overview: A studio mystery unfolds beside a cemetery while production and plot overlap.\n\n"
+        "Supporting evidence:\n\n"
+        "Current document: loaded document\n\n"
+        "Relevant excerpts:\n"
+        "[Excerpt 1]\n"
+        "Current setting. The narrator works on a Hollywood lot beside a cemetery.\n\n"
+        "[Excerpt 2]\n"
+        "Production context. Roy and the crew move through staged effects.\n\n"
+        "[Excerpt 3]\n"
+        "Inciting incident. A body on the wall pulls him into a mystery.",
+        "analyze_loaded_document",
+        "explain this book to me",
+    )
+
+    assert "Production context. Roy and the crew move through staged effects." in prompt
+    assert "Treat production-context or frame-layer excerpts as describing staging" in prompt
+    assert prompt.index("Production context. Roy and the crew move through staged effects.") < prompt.index("Inciting incident. A body on the wall pulls him into a mystery.")
+
+
 def test_build_search_results_verification_prompt_uses_request_metadata():
     """Verification should use request metadata when the user prompt is vague."""
     mixin = _DummyNodeFunctions()
@@ -1867,6 +2032,7 @@ def test_generate_response_message_skips_final_chat_pass_for_synthesis():
         "Miss Marple looks into a resort murder after a doctor realizes he "
         "once recognized a killer from a snapshot."
     )
+    assert "thinking_metadata" not in response.additional_kwargs
 
 
 def test_document_conversational_pass_uses_final_system_prompt_override():

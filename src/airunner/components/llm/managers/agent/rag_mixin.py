@@ -19,6 +19,8 @@ The RAGMixin is composed of several focused mixins:
     - RAGSearchMixin: Search and retrieval interface
     - RAGLifecycleMixin: Initialization and cleanup
 """
+from typing import Any
+
 from airunner.components.llm.managers.agent.mixins import (
     RAGPropertiesMixin,
     RAGDocumentMixin,
@@ -26,6 +28,12 @@ from airunner.components.llm.managers.agent.mixins import (
     RAGIndexingMixin,
     RAGSearchMixin,
     RAGLifecycleMixin,
+)
+from airunner.components.llm.tools.rag_tools_helpers._structured_document_analysis import (
+    build_structured_document_analysis_prompt,
+    build_structured_premise_candidate_spans,
+    build_structured_premise_evidence_prompt,
+    format_structured_premise_evidence_documents,
 )
 
 
@@ -57,3 +65,63 @@ class RAGMixin(
         # Reload after changes
         my_instance.reload_rag()
     """
+
+    def build_structured_document_analysis(
+        self,
+        *,
+        metadata: dict[str, Any],
+        query: str,
+        analyses: list[dict[str, str]],
+        evidence: list[Any],
+        coverage_chunks: list[tuple[str, str]],
+        refined_synthesis: str,
+        summary_focus: str | None,
+    ) -> dict[str, Any] | str:
+        """Return model-built structured analysis for one document bundle."""
+        invoke = getattr(self, "_invoke_request_preprocessor", None)
+        extract_json = getattr(self, "_extract_json_object", None)
+        if not callable(invoke) or not callable(extract_json):
+            return ""
+
+        prompt_text = build_structured_document_analysis_prompt(
+            query=query,
+            analyses=analyses,
+            coverage_chunks=coverage_chunks,
+            refined_synthesis=refined_synthesis,
+            evidence=evidence,
+            summary_focus=summary_focus,
+        )
+        response_text = invoke(prompt_text)
+        if not response_text:
+            return ""
+        payload = extract_json(response_text)
+        return payload if isinstance(payload, dict) else ""
+
+    def build_structured_premise_evidence_documents(
+        self,
+        *,
+        metadata: dict[str, Any],
+        query: str,
+        text: str,
+    ) -> list[Any]:
+        """Return model-selected premise evidence docs for one document."""
+        invoke = getattr(self, "_invoke_request_preprocessor", None)
+        extract_json = getattr(self, "_extract_json_object", None)
+        if not callable(invoke) or not callable(extract_json):
+            return []
+
+        candidates = build_structured_premise_candidate_spans(text)
+        if not candidates:
+            return []
+        prompt_text = build_structured_premise_evidence_prompt(
+            query=query,
+            candidates=candidates,
+        )
+        response_text = invoke(prompt_text)
+        if not response_text:
+            return []
+        return format_structured_premise_evidence_documents(
+            extract_json(response_text),
+            candidates=candidates,
+            metadata=metadata,
+        )

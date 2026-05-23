@@ -228,6 +228,7 @@ class TestSceneManagement:
     def test_set_scene_rect(self, custom_view):
         """Test setting scene rect to viewport size."""
         _ = custom_view.scene  # Ensure scene exists
+        custom_view.settings.value = Mock(return_value=None)
         with patch.object(custom_view, "viewport") as mock_viewport:
             mock_viewport.return_value.size.return_value = QSize(800, 600)
             custom_view.set_scene_rect()
@@ -285,6 +286,61 @@ class TestSceneManagement:
 
         assert custom_view.document_rect() == QRectF(144, 44, 1920, 1080)
 
+    def test_display_document_rect_applies_offsets(self, custom_view):
+        """Display rect should include pan and compensation offsets."""
+        custom_view.application_settings.document_width = 640
+        custom_view.application_settings.document_height = 512
+        custom_view.center_pos = QPointF(144, 44)
+        custom_view.canvas_offset = QPointF(40, 30)
+        custom_view._grid_compensation_offset = QPointF(5, 10)
+
+        assert custom_view.display_document_rect() == QRectF(
+            109,
+            24,
+            640,
+            512,
+        )
+
+    def test_document_is_fully_visible_when_view_contains_document(
+        self, custom_view
+    ):
+        """Pan should be disabled when the full document fits."""
+        custom_view.display_document_rect = Mock(
+            return_value=QRectF(100, 80, 200, 150)
+        )
+        custom_view.visible_scene_rect = Mock(
+            return_value=QRectF(0, 0, 500, 400)
+        )
+
+        assert custom_view.document_is_fully_visible() is True
+        assert custom_view.can_pan_document() is False
+
+    def test_lock_document_to_center_updates_pan_offset(self, custom_view):
+        """Visible documents should snap back to the viewport center."""
+        custom_view.canvas_offset = QPointF(0, 0)
+        custom_view._grid_compensation_offset = QPointF(10, 20)
+        custom_view.update_active_grid_area_position = Mock()
+        custom_view.updateImagePositions = Mock()
+        custom_view.draw_grid = Mock()
+        custom_view.viewport().update = Mock()
+        custom_view.document_rect = Mock(
+            return_value=QRectF(140, 110, 200, 150)
+        )
+        custom_view.display_document_rect = Mock(
+            return_value=QRectF(100, 80, 200, 150)
+        )
+        custom_view.visible_scene_rect = Mock(
+            return_value=QRectF(0, 0, 400, 300)
+        )
+
+        changed = custom_view.lock_document_to_center()
+
+        assert changed is True
+        assert custom_view.canvas_offset == QPointF(50, 55)
+        custom_view.update_active_grid_area_position.assert_called_once_with()
+        custom_view.updateImagePositions.assert_called_once_with()
+        custom_view.draw_grid.assert_called_once_with()
+
     def test_clamp_active_grid_absolute_position_keeps_grid_in_document(
         self, custom_view
     ):
@@ -308,6 +364,7 @@ class TestSceneManagement:
             on_zoom_level_changed=Mock(return_value=Mock()),
         )
         custom_view.centerOn = Mock()
+        custom_view.lock_document_to_center = Mock()
         custom_view.setTransform = Mock()
         custom_view._update_zoom_grid_info = Mock()
         _ = custom_view.scene
@@ -327,6 +384,21 @@ class TestSceneManagement:
             custom_view.zoom_handler.on_zoom_level_changed.return_value
         )
         custom_view.centerOn.assert_called_once_with(QPointF(944, 644))
+        custom_view.lock_document_to_center.assert_called_once_with()
+
+    def test_zoom_level_change_recenters_visible_document(self, custom_view):
+        """Zoom changes should re-lock the document when it fits."""
+        custom_view.setTransform = Mock()
+        custom_view.do_draw = Mock()
+        custom_view.lock_document_to_center = Mock()
+        custom_view._update_zoom_grid_info = Mock()
+        custom_view.zoom_handler.on_zoom_level_changed = Mock(
+            return_value=Mock()
+        )
+
+        custom_view.on_zoom_level_changed_signal()
+
+        custom_view.lock_document_to_center.assert_called_once_with()
 
     def test_align_canvas_items_preserves_existing_active_grid_position(
         self, custom_view

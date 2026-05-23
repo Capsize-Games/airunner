@@ -21,6 +21,10 @@ from airunner.components.llm.utils.gpt_oss_parser import (
     has_gpt_oss_markup,
     parse_gpt_oss_response,
 )
+from airunner.components.llm.utils.persistence_filters import (
+    is_internal_stage_message_dict,
+    is_internal_stage_metadata,
+)
 from airunner.utils.application.get_logger import get_logger
 
 
@@ -117,6 +121,8 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 # Skip metadata entries (tool calls and tool results)
                 # These are stored for debugging but not sent to the LLM
                 if msg.get("metadata_type") in ("tool_calls", "tool_result"):
+                    continue
+                if is_internal_stage_message_dict(msg):
                     continue
 
                 role = msg.get("role", "user")
@@ -325,6 +331,18 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             elif isinstance(message, SystemMessage):
                 role = "system"
                 name = "System"
+
+            if (
+                isinstance(message, AIMessage)
+                and hasattr(message, "additional_kwargs")
+                and is_internal_stage_metadata(
+                    (message.additional_kwargs or {}).get("thinking_metadata")
+                )
+            ):
+                self.logger.debug(
+                    "Skipping internal-stage assistant message during persistence"
+                )
+                return
 
             now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 

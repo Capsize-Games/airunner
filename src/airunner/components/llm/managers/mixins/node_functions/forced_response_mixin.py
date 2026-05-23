@@ -373,6 +373,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             internal_generation_kwargs = (
                 self._prepare_internal_response_generation_kwargs(
                     generation_kwargs,
+                    all_tool_content=all_tool_content,
                     tool_name=tool_name,
                     user_question=user_question,
                     stage=WorkflowGenerationStage.DOCUMENT_SYNTHESIS,
@@ -389,7 +390,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
                 internal_generation_kwargs,
                 thinking_metadata=thinking_metadata,
                 buffer_visible_output=True,
-                disable_thinking=document_tool,
+                disable_thinking=False,
             )
             if response_message is None:
                 return None
@@ -464,11 +465,18 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
 
             grounded_message = AIMessage(
                 content=visible_content,
-                additional_kwargs=getattr(
-                    response_message,
-                    "additional_kwargs",
-                    {},
-                ),
+                additional_kwargs={
+                    key: value
+                    for key, value in (
+                        getattr(
+                            response_message,
+                            "additional_kwargs",
+                            {},
+                        )
+                        or {}
+                    ).items()
+                    if key != "thinking_metadata"
+                },
                 tool_calls=[],
             )
             if (
@@ -612,6 +620,7 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
         verification_generation_kwargs = (
             self._prepare_internal_response_generation_kwargs(
                 generation_kwargs,
+                all_tool_content=all_tool_content,
                 tool_name=tool_name,
                 user_question=user_question,
                 stage=WorkflowGenerationStage.DOCUMENT_VERIFICATION,
@@ -632,5 +641,5 @@ Now call the NEXT workflow tool to continue. Do NOT repeat start_workflow."""
             verification_generation_kwargs,
             thinking_metadata=thinking_metadata,
             buffer_visible_output=True,
-            disable_thinking=self._is_document_result_tool(tool_name),
+            disable_thinking=False,
         )
