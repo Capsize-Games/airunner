@@ -63,9 +63,9 @@ print("Test 1: Simple generation WITHOUT tool filtering")
 print("=" * 70)
 
 try:
-    print("Sending request to /llm/generate...")
+    print("Sending request to /api/v1/llm/chat/stream...")
     response = requests.post(
-        "http://127.0.0.1:8188/llm/generate",
+        "http://127.0.0.1:8188/api/v1/llm/chat/stream",
         json={
             "prompt": "What is 2+2?",
             "max_tokens": 50,
@@ -88,7 +88,7 @@ print("=" * 70)
 try:
     print("Sending request with tool_categories=['SYSTEM']...")
     response = requests.post(
-        "http://127.0.0.1:8188/llm/generate",
+        "http://127.0.0.1:8188/api/v1/llm/chat/stream",
         json={
             "prompt": "Create a calendar event tomorrow at 2pm",
             "max_tokens": 50,

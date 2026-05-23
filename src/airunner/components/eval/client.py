@@ -70,7 +70,7 @@ class AIRunnerClient:
         """
         try:
             response = requests.get(
-                f"{self.base_url}/health",
+                f"{self.base_url}/api/v1/health",
                 timeout=5,
             )
             response.raise_for_status()
@@ -89,7 +89,7 @@ class AIRunnerClient:
         """
         try:
             response = requests.post(
-                f"{self.base_url}/admin/reset_memory", timeout=self.timeout
+                f"{self.base_url}/api/v1/admin/reset_memory", timeout=self.timeout
             )
             response.raise_for_status()
             return response.json()
@@ -107,12 +107,13 @@ class AIRunnerClient:
         """
         try:
             response = requests.get(
-                f"{self.base_url}/llm/models",
+                f"{self.base_url}/api/v1/llm/models",
                 timeout=self.timeout,
             )
             response.raise_for_status()
             data = response.json()
-            return data.get("models", [])
+            # v1 returns list directly: [{"id":...,"name":...,...}]
+            return list(data) if isinstance(data, list) else []
         except requests.RequestException as e:
             raise AIRunnerClientError(f"Failed to list models: {e}")
 
@@ -156,7 +157,7 @@ class AIRunnerClient:
 
         try:
             response = requests.post(
-                f"{self.base_url}/llm/generate",
+                f"{self.base_url}/api/v1/llm/chat/stream",
                 json=request_data,
                 timeout=self.timeout,
                 stream=True,
@@ -248,7 +249,7 @@ class AIRunnerClient:
 
         try:
             response = requests.post(
-                f"{self.base_url}/llm/generate",
+                f"{self.base_url}/api/v1/llm/chat/stream",
                 json=request_data,
                 stream=True,
                 timeout=self.timeout,

@@ -329,7 +329,10 @@ class MainWindow(
         self.single_click_timer.timeout.connect(self.handle_single_click)
         self._updating_settings = True
         self._updating_settings = False
-        self.worker_manager = create_worker(WorkerManager)
+        self.worker_manager = create_worker(
+            WorkerManager,
+            signal_api_adapter=getattr(self.api, "api_adapter", None),
+        )
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,
             logger=getattr(self, "logger", None),

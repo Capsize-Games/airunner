@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Launch the AI Runner API service as a standalone backend.
+#
+# Usage:
+#   api/bin/airunner_api_service [--host 127.0.0.1] [--port 8188]
+#
+# The PYTHONPATH is configured to resolve the transitional wrapper
+# imports that chain through api/ → airunner_services → airunner_model.
+#
+# This script expects to run from the project root directory.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Build the Python path so all transitional wrapper packages resolve.
+PYTHONPATH=""
+for _dir in \
+    "$PROJECT_ROOT/api/src" \
+    "$PROJECT_ROOT/model/src" \
+    "$PROJECT_ROOT/native/src" \
+    "$PROJECT_ROOT/src/airunner/services/src" \
+    "$PROJECT_ROOT/src"; do
+    if [ -d "$_dir" ]; then
+        if [ -z "$PYTHONPATH" ]; then
+            PYTHONPATH="$_dir"
+        else
+            PYTHONPATH="$PYTHONPATH:$_dir"
+        fi
+    fi
+done
+export PYTHONPATH
+
+# Use the project virtualenv when available.
+if [ -f "$PROJECT_ROOT/venv/bin/python3" ]; then
+    PYTHON="$PROJECT_ROOT/venv/bin/python3"
+else
+    PYTHON="python3"
+fi
+
+exec "$PYTHON" -m airunner_api.service_entrypoint "$@"

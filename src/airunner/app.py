@@ -109,10 +109,13 @@ class App(
         super().__init__()
         self.runtime_registry = build_runtime_registry(app_instance=self)
         self.daemon_client = None
+        self.api_bridge = None
+        self.api_adapter = None
         if not self.headless:
             self.daemon_client = GuiDaemonClient(
                 detect_stale_dev_daemon=DEV_ENV,
             )
+            self._init_api_bridge()
         self._register_signals()
         self._ensure_mathjax()
 
@@ -346,6 +349,29 @@ class App(
         self._worker_manager = None
         self._model_load_balancer = None
         self._sounddevice_manager = None
+
+    def _init_api_bridge(self) -> None:
+        """Create the API bridge and signal adapter for GUI-to-backend
+        communication. When the API backend feature flag is enabled,
+        execution triggers are routed through this bridge instead of
+        local in-process workers.
+        """
+        if not self.daemon_client:
+            return
+        from airunner.api.api_bridge import APIBridge
+        from airunner.api.signal_api_adapter import SignalAPIAdapter
+
+        self.api_bridge = APIBridge(
+            self.daemon_client,
+            signal_emitter=self.emit_signal,
+        )
+        self.api_adapter = SignalAPIAdapter(
+            self.api_bridge,
+            emit_signal=self.emit_signal,
+        )
+        self.logger.debug(
+            "API bridge and signal adapter initialized for GUI backend"
+        )
 
     def _register_signals(self) -> None:
         """Register signal handlers."""

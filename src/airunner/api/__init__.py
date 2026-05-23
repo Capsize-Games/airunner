@@ -1,10 +1,10 @@
-"""
-FastAPI server for AI Runner remote access.
+"""GUI-facing API package — bridge, adapters, and client facades."""
 
-Provides HTTP REST and WebSocket APIs for:
-- LLM chat and completion
-- Art generation (Stable Diffusion)
-- TTS (Text-to-Speech)
-- STT (Speech-to-Text)
-- Model management
-"""
+from airunner.api.api_bridge import APIBridge, APIBridgeError
+from airunner.api.signal_api_adapter import SignalAPIAdapter
+
+__all__ = [
+    "APIBridge",
+    "APIBridgeError",
+    "SignalAPIAdapter",
+]

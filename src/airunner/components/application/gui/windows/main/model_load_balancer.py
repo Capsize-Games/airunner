@@ -245,16 +245,28 @@ class ModelLoadBalancer(MediatorMixin):
         return loaded
 
     def _daemon_load(self, model_types: List[ModelType]) -> None:
-        """Load models through the daemon control API."""
+        """Load models through the daemon control API without blocking the GUI thread.
+
+        Delegates to the worker manager's async runtime control so the
+        LOADING/LOADED/FAILED lifecycle runs in a background thread.
+        """
         client = self._daemon_client()
         if client is None:
             return
         for model_type in model_types:
-            if self._worker_manager_runtime_control("load", model_type):
-                continue
             runtime_name = _RUNTIME_NAMES.get(model_type)
             if runtime_name is None:
                 continue
+            # Use async dispatch to avoid blocking the GUI thread on
+            # daemon HTTP calls that may take seconds to time out.
+            manager = getattr(self, "worker_manager", None)
+            controller = getattr(
+                manager, "_control_daemon_runtime_async", None
+            )
+            if controller is not None:
+                controller(runtime_name, "load", model_type)
+                continue
+            # Fallback: synchronous dispatch (legacy path)
             self._emit_model_status(model_type, ModelStatus.LOADING)
             try:
                 client.load_runtime(runtime_name)

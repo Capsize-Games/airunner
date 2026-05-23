@@ -90,14 +90,14 @@ class FakeSession:
 
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
-        if url.endswith("/health"):
+        if url.endswith("/api/v1/health"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
             return FakeResponse(
                 payload=self.ready_state.get("health_payload")
                 or {"status": "ready"}
             )
-        if url.endswith("/admin/shutdown"):
+        if url.endswith("/api/v1/admin/shutdown"):
             if self.ready_state.get("shutdown_effective", True):
                 self.ready_state["ready"] = False
             return FakeResponse(payload={"status": "ok"})
@@ -154,15 +154,15 @@ class FakeSession:
             return FakeResponse(payload={"status": "cancelled"})
         if url.endswith("/api/v1/stt/transcribe"):
             return FakeResponse(payload={"text": "hello", "language": "en"})
-        if url.endswith("/llm/generate"):
+        if url.endswith("/api/v1/llm/chat/stream"):
             response = FakeResponse(lines=self.stream_lines)
             self.last_stream_response = response
             return response
-        if url.endswith("/admin/interrupt"):
+        if url.endswith("/api/v1/daemon/runtimes/llm/cancel"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
             return FakeResponse(payload={"status": "ok"})
-        if url.endswith("/admin/llm/unload"):
+        if url.endswith("/api/v1/daemon/runtimes/llm/unload"):
             if not self.ready_state["ready"]:
                 raise requests.ConnectionError("daemon down")
             return FakeResponse(payload={"status": "ok", "queued": True})
@@ -344,7 +344,7 @@ def test_stream_llm_request_posts_expected_payload_and_headers():
     assert [chunk["message"] for chunk in chunks] == ["hello", " world"]
     method, url, kwargs = session.calls[-1]
     assert method == "POST"
-    assert url.endswith("/llm/generate")
+    assert url.endswith("/api/v1/llm/chat/stream")
     assert kwargs["headers"]["x-request-id"] == "req-123"
     assert kwargs["json"]["prompt"] == "Say hello"
     assert kwargs["json"]["conversation_id"] == 7
@@ -590,9 +590,9 @@ def test_unload_local_llm_posts_admin_unload_endpoint():
 
     response = client.unload_local_llm()
 
-    assert response == {"status": "ok", "queued": True}
+    assert response == {"status": "ok"}
     assert session.calls[-1][0] == "POST"
-    assert session.calls[-1][1].endswith("/admin/llm/unload")
+    assert session.calls[-1][1].endswith("/api/v1/daemon/runtimes/llm/unload")
 
 
 def test_transcribe_audio_posts_multipart_request():

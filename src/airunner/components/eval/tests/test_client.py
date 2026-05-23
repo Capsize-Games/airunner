@@ -21,7 +21,7 @@ def test_health_check_success(client):
     """Test successful health check."""
     responses.add(
         responses.GET,
-        "http://localhost:8188/health",
+        "http://localhost:8188/api/v1/health",
         json={"status": "ready"},
         status=200,
     )
@@ -35,7 +35,7 @@ def test_health_check_failure(client):
     """Test health check failure."""
     responses.add(
         responses.GET,
-        "http://localhost:8188/health",
+        "http://localhost:8188/api/v1/health",
         status=500,
     )
 
@@ -48,23 +48,32 @@ def test_list_models_success(client):
     """Test listing models."""
     responses.add(
         responses.GET,
-        "http://localhost:8188/llm/models",
-        json={"models": ["model1", "model2"]},
+        "http://localhost:8188/api/v1/llm/models",
+        json=[{"id": "model1", "name": "model1", "loaded": False, "size_mb": None}],
         status=200,
     )
 
     models = client.list_models()
-    assert models == ["model1", "model2"]
+    assert models == [{"id": "model1", "name": "model1", "loaded": False, "size_mb": None}]
 
 
 @responses.activate
 def test_generate_success(client):
     """Test non-streaming generation."""
+    ndjson_lines = json.dumps({
+        "message": "Hello, world!",
+        "is_first_message": True,
+        "is_end_of_message": True,
+        "done": True,
+        "sequence_number": 0,
+        "action": "CHAT",
+    })
     responses.add(
         responses.POST,
-        "http://localhost:8188/llm/generate",
-        json={"text": "Hello, world!", "done": True},
+        "http://localhost:8188/api/v1/llm/chat/stream",
+        body=ndjson_lines + "\n",
         status=200,
+        content_type="application/x-ndjson",
     )
 
     result = client.generate("Say hello")
@@ -81,12 +90,12 @@ def test_generate_with_params(client):
         assert payload["model"] == "test-model"
         assert payload["max_tokens"] == 100
         assert payload["temperature"] == 0.7
-        assert payload["stream"] is False
+        assert payload["stream"] is True
         return (200, {}, json.dumps({"text": "Response"}))
 
     responses.add_callback(
         responses.POST,
-        "http://localhost:8188/llm/generate",
+        "http://localhost:8188/api/v1/llm/chat/stream",
         callback=request_callback,
         content_type="application/json",
     )
@@ -102,26 +111,26 @@ def test_generate_with_params(client):
 @responses.activate
 def test_generate_stream_not_allowed(client):
     """Test that stream=True raises ValueError in generate()."""
-    with pytest.raises(ValueError, match="use generate_stream"):
+    with pytest.raises(ValueError, match="generate_stream"):
         client.generate("Test", stream=True)
 
 
 @responses.activate
 def test_generate_stream_success(client):
     """Test streaming generation."""
-    # Mock streaming response
+    # Mock streaming response in NDJSON format
     stream_data = [
-        {"text": "Hello", "done": False},
-        {"text": " ", "done": False},
-        {"text": "world", "done": False},
-        {"text": "!", "done": True},
+        {"message": "Hello", "is_end_of_message": False, "done": False, "sequence_number": 0, "action": "CHAT"},
+        {"message": " ", "is_end_of_message": False, "done": False, "sequence_number": 1, "action": "CHAT"},
+        {"message": "world", "is_end_of_message": False, "done": False, "sequence_number": 2, "action": "CHAT"},
+        {"message": "!", "is_end_of_message": True, "done": True, "sequence_number": 3, "action": "CHAT"},
     ]
 
     ndjson_response = "\n".join(json.dumps(chunk) for chunk in stream_data)
 
     responses.add(
         responses.POST,
-        "http://localhost:8188/llm/generate",
+        "http://localhost:8188/api/v1/llm/chat/stream",
         body=ndjson_response,
         status=200,
         content_type="application/x-ndjson",
@@ -130,7 +139,7 @@ def test_generate_stream_success(client):
 
     chunks = list(client.generate_stream("Test"))
     assert len(chunks) == 4
-    assert chunks[0]["text"] == "Hello"
+    assert chunks[0]["message"] == "Hello"
     assert chunks[-1]["done"] is True
 
 
@@ -139,7 +148,7 @@ def test_generate_failure(client):
     """Test generation request failure."""
     responses.add(
         responses.POST,
-        "http://localhost:8188/llm/generate",
+        "http://localhost:8188/api/v1/llm/chat/stream",
         status=500,
     )
 

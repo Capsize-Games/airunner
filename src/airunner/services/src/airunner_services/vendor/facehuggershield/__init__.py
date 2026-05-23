@@ -1,0 +1,1 @@
+from airunner_services.vendor.facehuggershield import huggingface

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from typing import Any, Iterable, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -80,12 +81,47 @@ class SidecarLLMClient(RuntimeClient):
         """Stream deltas from the sidecar's OpenAI-compatible endpoint."""
         invocation = LLMInvocationRequest.model_validate(request.payload)
         try:
+            self._ensure_capable()
             self._launcher.start()
             payload = self._chat_payload(invocation, stream=True)
             with self._open_request(payload) as response:
                 yield from self._stream_response(request.request_id, response)
         except RuntimeError as exc:
             yield self._failure_delta(request.request_id, str(exc))
+
+    def _ensure_capable(self) -> None:
+        """Verify the sidecar can be started before attempting a request.
+
+        Raises RuntimeError with a clear diagnostic when the environment
+        is missing a GGUF model or the llama-server executable.
+
+        Skipped when the launcher is externally provided (test injection
+        or custom deployment).
+        """
+        if not self._managed_launcher:
+            return
+        if not self._settings.model_path:
+            raise RuntimeError(
+                "No LLM model configured. Please select a GGUF model in "
+                "Settings to use the local LLM."
+            )
+        executable = self._settings.executable
+        if not self._executable_exists(executable):
+            raise RuntimeError(
+                f"llama-server binary not found: {executable}. "
+                "Please install llama.cpp or set "
+                "AIRUNNER_LLAMA_SERVER_BIN to the full path."
+            )
+
+    @staticmethod
+    def _executable_exists(executable: str) -> bool:
+        """Return True when an executable can be located."""
+        if shutil.which(executable) is not None:
+            return True
+        import os
+        from pathlib import Path
+        expanded = os.path.expanduser(executable)
+        return Path(expanded).exists()
 
     def healthcheck(self) -> RuntimeHealth:
         """Return the health of the managed llama.cpp runtime."""
@@ -152,6 +188,7 @@ class SidecarLLMClient(RuntimeClient):
         """Execute a non-streaming chat completion through the sidecar."""
         invocation = LLMInvocationRequest.model_validate(request.payload)
         try:
+            self._ensure_capable()
             self._prepare_launcher()
             self._launcher.start()
             with self._open_request(self._chat_payload(invocation)) as response:

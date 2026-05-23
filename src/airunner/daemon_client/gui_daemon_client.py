@@ -133,7 +133,7 @@ class GuiDaemonClient:
 
     def health_check(self) -> Dict[str, Any]:
         """Return the daemon health payload."""
-        response = self._request("GET", "/health", auto_start=False)
+        response = self._request("GET", "/api/v1/health", auto_start=False)
         return response.json()
 
     def is_available(self, *, timeout_seconds: float = 0.2) -> bool:
@@ -156,8 +156,11 @@ class GuiDaemonClient:
         """Interrupt the active daemon-side LLM request."""
         response = self._request(
             "POST",
-            "/admin/interrupt",
-            json_payload={"kind": "process"},
+            "/api/v1/daemon/runtimes/llm/cancel",
+            json_payload={
+                "provider": "local",
+                "deployment_mode": "default",
+            },
             auto_start=False,
         )
         return response.json()
@@ -168,10 +171,14 @@ class GuiDaemonClient:
         auto_start: bool = False,
         timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
-        """Interrupt and queue unload for the daemon's local-worker LLM."""
+        """Unload the daemon's local LLM runtime."""
         response = self._request(
             "POST",
-            "/admin/llm/unload",
+            "/api/v1/daemon/runtimes/llm/unload",
+            json_payload={
+                "provider": "local",
+                "deployment_mode": "default",
+            },
             auto_start=auto_start,
             timeout_seconds=timeout_seconds,
         )
@@ -519,7 +526,7 @@ class GuiDaemonClient:
         headers = {"x-request-id": request_id}
         with self._request(
             "POST",
-            "/llm/generate",
+            "/api/v1/llm/chat/stream",
             json_payload=self._llm_payload(
                 prompt,
                 llm_request,
@@ -578,7 +585,7 @@ class GuiDaemonClient:
         try:
             response = self._session.request(
                 "GET",
-                f"{self.base_url}/health",
+                f"{self.base_url}/api/v1/health",
                 timeout=timeout_seconds,
             )
             response.raise_for_status()
@@ -638,7 +645,7 @@ class GuiDaemonClient:
         try:
             response = self._session.request(
                 "POST",
-                f"{self.base_url}/admin/shutdown",
+                f"{self.base_url}/api/v1/admin/shutdown",
                 timeout=5,
             )
             response.raise_for_status()

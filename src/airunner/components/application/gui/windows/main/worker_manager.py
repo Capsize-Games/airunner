@@ -21,7 +21,7 @@ _STREAM_TTS_WORKER_SLEEP_MS = 1
 
 
 class WorkerManager(Worker):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, signal_api_adapter=None, **kwargs):
         self.signal_handlers = {
             SignalCode.REMOVE_BACKGROUND: self.on_remove_background_signal,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
@@ -116,6 +116,19 @@ class WorkerManager(Worker):
             )
 
         self.model_scanner_worker.add_to_queue("scan_for_models")
+
+        # Merge API adapter handlers with precedence over local handlers.
+        # When the API backend feature flag is enabled, execution triggers
+        # go through the signal-to-API adapter instead of local workers.
+        self._signal_api_adapter = signal_api_adapter
+        if self._signal_api_adapter is not None:
+            adapter_handlers = self._signal_api_adapter.signal_handlers
+            self.signal_handlers.update(adapter_handlers)
+            if self.logger:
+                self.logger.debug(
+                    "Merged %d API adapter handlers into WorkerManager",
+                    len(adapter_handlers),
+                )
 
     @property
     def background_removal_worker(self):
