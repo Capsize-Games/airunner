@@ -31,7 +31,7 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_memory_stats)
-        self.timer.start(500)
+        self.timer.start(50)
         self.update_memory_stats()
 
     def showEvent(self, event):
