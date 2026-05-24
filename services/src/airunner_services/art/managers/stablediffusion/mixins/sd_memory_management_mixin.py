@@ -5,6 +5,8 @@ This mixin handles all memory efficiency settings including VAE slicing,
 attention slicing, CPU offload, ToMe SD, and other VRAM optimizations.
 """
 
+from dataclasses import asdict, is_dataclass
+
 import torch
 import tomesd
 from diffusers.models.attention_processor import (
@@ -37,7 +39,9 @@ class SDMemoryManagementMixin:
         Applies settings like VAE slicing, attention slicing, CPU offload,
         ToMe SD, xformers, and torch.compile based on current memory settings.
         """
-        self._current_memory_settings = self.memory_settings.to_dict()
+        self._current_memory_settings = self._settings_to_dict(
+            self.memory_settings
+        )
         if not self._pipe:
             self.logger.error("Pipe is None, unable to apply memory settings")
             return
@@ -83,6 +87,21 @@ class SDMemoryManagementMixin:
         self._apply_memory_setting(
             "tome_sd_applied", "use_tome_sd", self._apply_tome
         )
+
+    def _settings_to_dict(self, settings: object) -> dict:
+        """Convert settings object to dict, supporting both ORM
+        models and bridge dataclasses.
+
+        Args:
+            settings: MemorySettings ORM instance or MemorySettingsData
+                      dataclass.
+
+        Returns:
+            Dictionary of setting key-value pairs.
+        """
+        if is_dataclass(settings):
+            return asdict(settings)
+        return settings.to_dict()
 
     def _apply_memory_setting(self, setting_name, attribute_name, apply_func):
         """
