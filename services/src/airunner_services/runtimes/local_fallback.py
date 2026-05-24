@@ -1156,7 +1156,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         progress_callback: Optional[ProgressCallback] = None,
     ) -> ResponseEnvelope:
         """Generate art through the current callback-based worker flow."""
-        from airunner_services.requests.image_request import (
+        from airunner_services.art.managers.stablediffusion.image_request import (
             ImageRequest,
         )
         from airunner_services.contract_enums import SignalCode

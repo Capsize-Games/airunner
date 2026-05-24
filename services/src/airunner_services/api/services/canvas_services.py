@@ -26,8 +26,8 @@ from airunner_model.models.metadata_settings import (
 from airunner_model.models.outpaint_settings import (
     OutpaintSettings,
 )
-from airunner_services.requests.image_request import ImageRequest
-from airunner_services.requests.image_response import ImageResponse
+from airunner_services.art.managers.stablediffusion.image_request import ImageRequest
+from airunner_services.art.managers.stablediffusion.image_response import ImageResponse
 
 
 def _point_coordinates(point: Any) -> tuple[int, int]:

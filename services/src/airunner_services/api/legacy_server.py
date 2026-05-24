@@ -43,10 +43,10 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from airunner_services.requests.llm_request import LLMRequest
-from airunner_services.requests.image_request import (
+from airunner_services.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
-from airunner_services.requests.image_response import (
+from airunner_services.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner_services.contract_enums import LLMActionType, SignalCode, EngineResponseCode

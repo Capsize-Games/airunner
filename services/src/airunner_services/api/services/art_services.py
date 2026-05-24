@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 	from airunner_services.api.services.image_filter_services import (
 		ImageFilterAPIServices,
 	)
-	from airunner_services.requests.image_request import ImageRequest
+	from airunner_services.art.managers.stablediffusion.image_request import ImageRequest
 
 
 class ARTAPIService(APIServiceBase):

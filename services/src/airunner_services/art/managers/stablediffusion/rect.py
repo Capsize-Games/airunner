@@ -1,7 +1,26 @@
-"""Compatibility wrapper for the service-owned Rect helper."""
+"""Service-owned rectangle helper for image generation responses."""
 
-from importlib import import_module as _import_module
-import sys
+from dataclasses import dataclass
 
-_module = _import_module("airunner_services.requests.rect")
-sys.modules[__name__] = _module
+
+@dataclass
+class Rect:
+    """Simple rectangle container used by art request and response types."""
+
+    x: int
+    y: int
+    width: int
+    height: int
+
+    def left(self) -> int:
+        """Return the x-coordinate of the left edge."""
+        return self.x
+
+    def top(self) -> int:
+        """Return the y-coordinate of the top edge."""
+        return self.y
+
+    def translate(self, x: int, y: int):
+        """Translate the rectangle by the given x and y offsets."""
+        self.x += x
+        self.y += y

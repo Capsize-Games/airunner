@@ -29,8 +29,8 @@ from airunner_services.utils.image import convert_image_to_binary
 from airunner_services.application_exceptions import PipeNotLoadedException
 from airunner_model.models import AIModels
 from airunner_model.models import GeneratorSettings
-from airunner_services.requests.image_request import ImageRequest
-from airunner_services.requests.image_response import ImageResponse
+from airunner_services.art.managers.stablediffusion.image_request import ImageRequest
+from airunner_services.art.managers.stablediffusion.image_response import ImageResponse
 from airunner_services.utils.application.enum_resolver import (
 	model_action_type,
 )

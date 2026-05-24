@@ -11,11 +11,11 @@ __all__ = [
 
 def __getattr__(name: str):
 	if name == "ImageRequest":
-		from .image_request import ImageRequest
+		from ..art.managers.stablediffusion.image_request import ImageRequest
 
 		return ImageRequest
 	if name == "ImageResponse":
-		from .image_response import ImageResponse
+		from ..art.managers.stablediffusion.image_response import ImageResponse
 
 		return ImageResponse
 	if name == "LLMRequest":
@@ -27,7 +27,7 @@ def __getattr__(name: str):
 
 		return OpenVoiceTTSRequest
 	if name == "Rect":
-		from .rect import Rect
+		from ..art.managers.stablediffusion.rect import Rect
 
 		return Rect
 	raise AttributeError(f"module {__name__} has no attribute {name}")
