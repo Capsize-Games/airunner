@@ -314,7 +314,10 @@ class UIRuntimeMixin:
 
     def _post_splash_startup(self):
         """Continue startup after the splash screen is visible."""
+        import sys
+        print("[DEBUG] _post_splash_startup called", file=sys.stderr)
         self.show_main_application(self.app)
+        print("[DEBUG] show_main_application returned", file=sys.stderr)
 
     @staticmethod
     def signal_handler(_signal: int, _frame: object) -> None:
@@ -441,35 +444,35 @@ class UIRuntimeMixin:
         window._main_window_loaded_signal_emitted = True
         api.main_window_loaded(window)
 
-    @staticmethod
-    def _prewarm_daemon_art_runtime(window: object) -> None:
-        """Kick off art daemon prewarm as soon as the window exists."""
-        worker_manager = getattr(window, "worker_manager", None)
-        starter = getattr(worker_manager, "_start_art_runtime_prewarm", None)
-        if callable(starter):
-            starter()
-
     def show_main_application(self, app: QApplication) -> None:
         """Show the main application window."""
         if self.headless:
             return
 
+        import sys
+        print("[DEBUG] Resolving window class...", file=sys.stderr)
         window_class = self.main_window_class_
         if not window_class:
+            print("[DEBUG] Importing MainWindow...", file=sys.stderr)
             from airunner.components.application.gui.windows.main.main_window import (
                 MainWindow,
             )
+            print("[DEBUG] MainWindow imported", file=sys.stderr)
 
             window_class = MainWindow
 
         try:
+            import sys
+            print("[DEBUG] Creating main window...", file=sys.stderr)
             self.update_splash_message(
                 self.splash,
                 "Initializing main window...",
             )
+            print("[DEBUG] Calling window_class...", file=sys.stderr)
             window = window_class(app=self, **self.window_class_params)
+            print("[DEBUG] Main window created", file=sys.stderr)
             app.main_window = window
-            self._prewarm_daemon_art_runtime(window)
+            # Art prewarm removed
             self._present_main_window(window, app)
 
             if self.splash:

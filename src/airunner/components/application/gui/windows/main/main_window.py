@@ -2839,10 +2839,8 @@ class MainWindow(
         """Prefer live local worker state over non-ready daemon summaries."""
         if daemon_status in (ModelStatus.LOADED, ModelStatus.LOADING):
             return daemon_status
-        worker_manager = getattr(self, "worker_manager", None)
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
-        if worker is None:
-            return daemon_status
+        # Local LLM worker removed; daemon handles all LLM state
+        return daemon_status
         status_getter = getattr(worker, "current_model_status", None)
         if not callable(status_getter):
             return daemon_status
@@ -2864,10 +2862,8 @@ class MainWindow(
         """Ignore stale failed events while a local load is still healthy."""
         if status is not ModelStatus.FAILED:
             return status
-        worker_manager = getattr(self, "worker_manager", None)
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
-        if worker is None:
-            return status
+        # Local LLM worker removed; daemon handles all LLM state
+        return status
         status_getter = getattr(worker, "current_model_status", None)
         if not callable(status_getter):
             return status

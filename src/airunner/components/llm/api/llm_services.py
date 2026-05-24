@@ -130,7 +130,23 @@ class LLMAPIService(APIServiceBase):
             self.logger.info("LLM API: Daemon request queued")
             return
 
-        LLMAPIService._emit_local_generation_request(self, data)
+        self.logger.error(
+            "LLM API: Daemon unavailable — cannot process LLM request. "
+            "Ensure the daemon is running."
+        )
+        self.send_llm_text_streamed_signal(
+            LLMResponse(
+                message=(
+                    "Error: Daemon is not running. "
+                    "Please start the daemon and try again."
+                ),
+                is_first_message=True,
+                is_end_of_message=True,
+                action=action,
+                request_id=resolved_request_id,
+                is_system_message=True,
+            )
+        )
 
     def clear_history(self, **kwargs):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, kwargs)
@@ -182,13 +198,12 @@ class LLMAPIService(APIServiceBase):
     def unload(self, data: Optional[dict] = None) -> None:
         """Unload the active LLM without blocking the caller."""
         payload = dict(data or {})
-        if LLMAPIService._local_llm_should_handle_unload(self):
-            self._emit_local_unload_request(payload)
-            return
 
         client = self._daemon_client()
         if client is None:
-            self._emit_local_unload_request(payload)
+            self.logger.error(
+                "LLM API: Daemon unavailable — cannot unload LLM."
+            )
             return
 
         thread = threading.Thread(
@@ -197,38 +212,6 @@ class LLMAPIService(APIServiceBase):
             daemon=True,
         )
         thread.start()
-
-    def _emit_local_unload_request(self, payload: dict) -> None:
-        """Emit one best-effort local unload request."""
-        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
-        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, payload)
-
-    def _local_llm_should_handle_unload(self) -> bool:
-        """Return True when the GUI-local worker owns the live LLM."""
-        from airunner.enums import ModelStatus
-
-        worker_manager_getter = getattr(self, "_worker_manager", None)
-        if not callable(worker_manager_getter):
-            return False
-
-        worker_manager = worker_manager_getter()
-        if worker_manager is None:
-            return False
-
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
-        if worker is None:
-            return False
-
-        status_getter = getattr(worker, "current_model_status", None)
-        if callable(status_getter):
-            try:
-                status = status_getter()
-            except Exception:
-                status = None
-            if status in (ModelStatus.LOADING, ModelStatus.LOADED):
-                return True
-
-        return getattr(worker, "_pending_llm_request", None) is not None
 
     def _run_daemon_unload(self, client, payload: dict) -> None:
         """Interrupt and queue one daemon-side LLM unload."""
@@ -240,7 +223,10 @@ class LLMAPIService(APIServiceBase):
         try:
             client.unload_local_llm(auto_start=False)
         except RuntimeError:
-            self._emit_local_unload_request(payload)
+            self.logger.error(
+                "LLM API: Daemon unload failed — daemon may be "
+                "unreachable."
+            )
 
     def delete_messages_after_id(self, message_id: int):
         self.emit_signal(
@@ -349,23 +335,6 @@ class LLMAPIService(APIServiceBase):
                 return worker_manager
         return None
 
-    def _prewarm_tts_runtime_for_request(
-        self,
-        llm_request: LLMRequest,
-    ) -> None:
-        """Start sidecar TTS early when one daemon reply will be spoken."""
-        worker_manager = self._worker_manager()
-        if worker_manager is None:
-            return
-        app_settings = getattr(worker_manager, "application_settings", None)
-        if not getattr(llm_request, "do_tts_reply", False) and not bool(
-            getattr(app_settings, "tts_enabled", False)
-        ):
-            return
-        prewarm = getattr(worker_manager, "_start_tts_runtime_prewarm", None)
-        if callable(prewarm):
-            prewarm()
-
     def _send_request_via_daemon(
         self,
         prompt: str,
@@ -403,11 +372,6 @@ class LLMAPIService(APIServiceBase):
         thread.start()
         return True
 
-    def _emit_local_generation_request(self, data: dict) -> None:
-        """Emit one local-worker request when daemon routing is skipped."""
-        self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
-        self.logger.info("LLM API: Signal emitted")
-
     def _daemon_is_immediately_available(self, client) -> bool:
         """Return True when one daemon can accept a request right now."""
         if getattr(client, "state", None) is DaemonConnectionState.CONNECTED:
@@ -432,16 +396,22 @@ class LLMAPIService(APIServiceBase):
         node_id: Optional[str],
         signal_data: Optional[dict],
     ) -> None:
-        """Use the daemon when it is already reachable, else fall back."""
-        if not LLMAPIService._daemon_is_immediately_available(self, client):
-            if signal_data is not None:
-                LLMAPIService._emit_local_generation_request(
-                    self,
-                    signal_data,
-                )
-            return
+        """Route an LLM request through the daemon when it is reachable."""
+        import time
 
-        LLMAPIService._prewarm_tts_runtime_for_request(self, llm_request)
+        deadline = time.monotonic() + 10.0
+        while not LLMAPIService._daemon_is_immediately_available(
+            self, client
+        ):
+            if time.monotonic() >= deadline:
+                self.logger.error(
+                    "LLM API: Daemon not available after waiting "
+                    "10s — cannot process LLM request."
+                )
+                return
+            time.sleep(0.5)
+
+        # TTS prewarm removed
         self._stream_daemon_request(
             client,
             prompt,

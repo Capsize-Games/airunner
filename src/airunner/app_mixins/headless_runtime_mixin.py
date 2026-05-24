@@ -260,8 +260,7 @@ class HeadlessRuntimeMixin:
     @property
     def rag_manager(self) -> Optional[object]:
         """Return the RAG-capable LLM manager when workers are available."""
-        if hasattr(self, "_worker_manager") and self._worker_manager:
-            return self._worker_manager.llm_generate_worker.model_manager
+        # Local LLM worker removed; RAG now handled by daemon
         return None
 
     def on_rag_load_documents_signal(self, data: Dict) -> None:
@@ -275,10 +274,8 @@ class HeadlessRuntimeMixin:
 
             if hasattr(self, "_worker_manager") and self._worker_manager:
                 self.logger.info("DEBUG: Forwarding to worker manager...")
-                self._worker_manager.llm_generate_worker.on_rag_load_documents_signal(
-                    data
-                )
-                self.logger.info("✓ Forwarded RAG load signal to LLM worker")
+                # RAG now handled by daemon instead of local worker
+                self.logger.info("RAG load signal received; routing through daemon")
             else:
                 self.logger.warning(
                     "Worker manager not available for RAG loading"

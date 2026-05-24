@@ -526,7 +526,7 @@ class GuiDaemonClient:
         headers = {"x-request-id": request_id}
         with self._request(
             "POST",
-            "/api/v1/llm/chat/stream",
+            "/llm/generate",
             json_payload=self._llm_payload(
                 prompt,
                 llm_request,

@@ -238,7 +238,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not worker_manager:
             return False
 
-        worker = getattr(worker_manager, "_llm_generate_worker", None)
+        worker = getattr(worker_manager, "_llm_worker_removed", None)
         if worker is None:
             return False
 
@@ -314,7 +314,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             return False
         
         if hasattr(api, '_worker_manager') and api._worker_manager:
-            worker = getattr(api._worker_manager, 'sd_worker', None)
+            worker = None  # sd_worker removed; daemon handles art
             if worker:
                 manager = getattr(worker, 'model_manager', None)
                 if manager:
@@ -331,7 +331,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if worker_manager is None:
             return "unloaded"
 
-        worker = getattr(worker_manager, "_sd_worker", None)
+        worker = getattr(worker_manager, "_sd_worker_removed", None)
         if worker is None:
             return "unloaded"
 

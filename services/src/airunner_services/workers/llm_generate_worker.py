@@ -24,7 +24,15 @@ from airunner_services.workers.worker import Worker
 
 
 SignalCode = signal_code_proxy(
-	{"LLM_TEXT_STREAMED_SIGNAL": "llm_text_streamed_signal"}
+	{
+		"LLM_TEXT_STREAMED_SIGNAL": "llm_text_streamed_signal",
+		"LLM_TEXT_GENERATE_REQUEST_SIGNAL": (
+			"llm_text_generate_request_signal"
+		),
+		"LLM_CLEAR_HISTORY_SIGNAL": (
+			"llm_clear_history_signal"
+		),
+	}
 )
 
 
@@ -38,6 +46,14 @@ class LLMGenerateWorker(
 
 	def __init__(self):
 		"""Initialize worker state and deferred LLM lifecycle helpers."""
+		self.signal_handlers = {
+			SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: (
+				self.on_llm_request_signal
+			),
+			SignalCode.LLM_CLEAR_HISTORY_SIGNAL: (
+				self.on_llm_clear_history_signal
+			),
+		}
 		self._model_manager: Optional[LLMModelManager] = None
 		self._model_manager_lock = threading.Lock()
 		self._interrupted = False

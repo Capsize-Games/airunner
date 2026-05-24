@@ -89,10 +89,11 @@ class ModelLoadBalancer(MediatorMixin):
             return
 
         self._last_non_art_models = []
+        # LLM state tracked by daemon; local worker removed
+        # TTS/STT workers removed; daemon handles all runtimes
         for model_type, worker in [
-            (ModelType.LLM, self.worker_manager.llm_generate_worker),
-            (ModelType.TTS, self.worker_manager.tts_generator_worker),
-            (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
+            (ModelType.TTS, None),
+            (ModelType.STT, None),
         ]:
             if not worker:
                 continue
@@ -113,9 +114,7 @@ class ModelLoadBalancer(MediatorMixin):
                 self._last_non_art_models.append(model_type)
                 worker.unload()
                 self._emit_model_status(model_type, ModelStatus.UNLOADED)
-        if self.worker_manager.sd_worker:
-            self.worker_manager.sd_worker.load_model_manager()
-            self._emit_model_status(ModelType.SD, ModelStatus.LOADED)
+        # SD model loading now handled exclusively by daemon
         if self.logger:
             self.logger.info(
                 f"Switched to art mode. Unloaded: {self._last_non_art_models}"
@@ -140,11 +139,11 @@ class ModelLoadBalancer(MediatorMixin):
         for model_type in self._last_non_art_models:
             worker = None
             if model_type == ModelType.LLM:
-                worker = self.worker_manager.llm_generate_worker
+                worker = None  # local LLM worker removed; daemon handles LLM
             elif model_type == ModelType.TTS:
-                worker = self.worker_manager.tts_generator_worker
+                worker = None
             elif model_type == ModelType.STT:
-                worker = self.worker_manager.stt_audio_processor_worker
+                worker = None
             if worker:
                 worker.load()
                 self._emit_model_status(model_type, ModelStatus.LOADED)
@@ -153,11 +152,11 @@ class ModelLoadBalancer(MediatorMixin):
             if model_type not in self._last_non_art_models:
                 worker = None
                 if model_type == ModelType.LLM:
-                    worker = self.worker_manager.llm_generate_worker
+                    worker = None  # local LLM worker removed; daemon handles LLM
                 elif model_type == ModelType.TTS:
-                    worker = self.worker_manager.tts_generator_worker
+                    worker = None
                 elif model_type == ModelType.STT:
-                    worker = self.worker_manager.stt_audio_processor_worker
+                    worker = None
                 if worker:
                     worker.load()
                     self._emit_model_status(model_type, ModelStatus.LOADED)
@@ -173,11 +172,11 @@ class ModelLoadBalancer(MediatorMixin):
             return self._merge_local_llm_loaded_model(loaded_models)
 
         loaded = []
+        # LLM/SD state tracked by daemon; local workers removed
+        # TTS/STT workers removed; daemon handles all runtimes
         for model_type, worker in [
-            (ModelType.LLM, self.worker_manager.llm_generate_worker),
-            (ModelType.TTS, self.worker_manager.tts_generator_worker),
-            (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
-            (ModelType.SD, self.worker_manager.sd_worker),
+            (ModelType.TTS, None),
+            (ModelType.STT, None),
         ]:
             if worker and getattr(worker, "is_loaded", lambda: True)():
                 loaded.append(model_type)
@@ -188,7 +187,8 @@ class ModelLoadBalancer(MediatorMixin):
         loaded_models: List[ModelType],
     ) -> List[ModelType]:
         """Keep local LLM state visible when daemon status is stale."""
-        worker = getattr(self.worker_manager, "_llm_generate_worker", None)
+        # Local LLM worker removed; daemon handles all LLM state
+        worker = None
         if worker is None:
             return loaded_models
         status_getter = getattr(worker, "current_model_status", None)

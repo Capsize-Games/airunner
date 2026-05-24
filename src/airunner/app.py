@@ -113,7 +113,13 @@ class App(
         self.api_adapter = None
         if not self.headless:
             self.daemon_client = GuiDaemonClient(
-                detect_stale_dev_daemon=DEV_ENV,
+                detect_stale_dev_daemon=(
+                    DEV_ENV
+                    and os.environ.get(
+                        "AIRUNNER_DISABLE_STALE_DAEMON_CHECK"
+                    )
+                    != "1"
+                ),
             )
             self._init_api_bridge()
         self._register_signals()
@@ -233,13 +239,6 @@ class App(
         Extensions are optional and must never prevent Airunner from starting.
         """
         try:
-            # Ensure the built-in web tools are registered first.
-            # Extensions rely on name-based override semantics.
-            try:
-                from airunner.components.llm.tools import web_tools  # noqa: F401
-            except Exception:
-                pass
-
             from airunner.components.llm.core.extensions_loader import (
                 load_extensions,
             )

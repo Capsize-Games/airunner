@@ -28,13 +28,7 @@ try:
     else:
         print("✗ No Qt app instance")
 
-    # Check if worker exists
-    if hasattr(app, "_llm_generate_worker"):
-        print(
-            f"✓ LLM worker exists: {type(app._llm_generate_worker).__name__}"
-        )
-    else:
-        print("✗ LLM worker not initialized")
+    # Local LLM worker removed; daemon handles all LLM
 
     print("\nShutting down...")
     app.cleanup()

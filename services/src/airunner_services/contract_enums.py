@@ -37,9 +37,109 @@ class SignalCode(Enum):
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
     LLM_CLEAR_HISTORY_SIGNAL = "llm_clear_history_signal"
     LLM_LOAD_SIGNAL = "llm_load_signal"
+    LLM_TEXT_GENERATE_REQUEST_SIGNAL = (
+        "llm_text_generate_request_signal"
+    )
+    LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_THINKING_SIGNAL = "llm_thinking_signal"
     LLM_TOOL_STATUS_SIGNAL = "llm_tool_status_signal"
     LLM_UNLOAD_SIGNAL = "llm_unload_signal"
+    AI_MODELS_SAVE_OR_UPDATE_SIGNAL = (
+        "ai_models_save_or_update_signal"
+    )
+    APPLICATION_ACTIVE_GRID_AREA_UPDATED = (
+        "active_grid_area_updated"
+    )
+    APPLICATION_SETTINGS_ERROR = (
+        "application_settings_error"
+    )
+    APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = (
+        "stop_image_generator_progress_bar_signal"
+    )
+    ART_MODEL_DOWNLOAD_REQUIRED = "art_model_download_required"
+    CANCEL_HUGGINGFACE_DOWNLOAD = (
+        "cancel_huggingface_download"
+    )
+    CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
+    CHATBOT_CHANGED = "chatbot_changed_signal"
+    DELETE_MESSAGES_AFTER_ID = "delete_messages_after_id"
+    DOCUMENT_COLLECTION_CHANGED = (
+        "document_collection_changed_signal"
+    )
+    DOCUMENT_INDEXED = "document_indexed_signal"
+    DOCUMENT_INDEX_FAILED = "document_index_failed_signal"
+    GENERATOR_FORM_UPDATE_VALUES_SIGNAL = (
+        "generator_form_update_values"
+    )
+    IMAGE_EXPORTED = "image_exported_signal"
+    KNOWLEDGE_FACT_ADDED = "knowledge_fact_added_signal"
+    LAYERS_SHOW_SIGNAL = "show_layers_signal"
+    LLM_CONVERT_TO_GGUF_SIGNAL = (
+        "llm_convert_to_gguf_signal"
+    )
+    LLM_IMAGE_PROMPT_GENERATED_SIGNAL = (
+        "llm_image_prompt_generated_signal"
+    )
+    LLM_MODEL_CHANGED = "llm_model_changed_signal"
+    LLM_MODEL_DOWNLOAD_REQUIRED = (
+        "llm_model_download_required"
+    )
+    LLM_QUANTIZATION_COMPLETE = (
+        "llm_quantization_complete"
+    )
+    LLM_QUANTIZATION_FAILED = "llm_quantization_failed"
+    LLM_QUANTIZATION_PROGRESS = (
+        "llm_quantization_progress"
+    )
+    LLM_TEXT_STREAM_PROCESS_SIGNAL = (
+        "llm_text_stream_process_signal"
+    )
+    MISSING_REQUIRED_MODELS = "missing_required_models"
+    MOOD_SUMMARY_UPDATE_STARTED = (
+        "mood_summary_update_started_signal"
+    )
+    QUEUE_LOAD_CONVERSATION = (
+        "queue_load_conversation_signal"
+    )
+    RAG_DOCUMENT_ADDED = "rag_document_added_signal"
+    RAG_INDEXING_COMPLETE = "rag_indexing_complete_signal"
+    RAG_INDEXING_PROGRESS = "rag_indexing_progress_signal"
+    RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
+    SAFETY_CHECKER_FILTER_COMPLETE = (
+        "safety_checker_filter_complete"
+    )
+    SAFETY_CHECKER_FILTER_REQUEST = (
+        "safety_checker_filter_request"
+    )
+    SAFETY_CHECKER_UNLOAD_SIGNAL = (
+        "safety_checker_unload_signal"
+    )
+    SD_GENERATE_SIGNAL = "sd_generate_signal"
+    SD_LOAD_PROMPT_SIGNAL = (
+        "load_saved_stablediffuion_prompt_signal"
+    )
+    SD_PIPELINE_LOADED_SIGNAL = (
+        "sd_pipeline_loaded_signal"
+    )
+    SD_SAVE_PROMPT_SIGNAL = (
+        "save_stablediffusion_prompt_signal"
+    )
+    SD_UPDATE_BATCH_IMAGES_SIGNAL = (
+        "sd_update_batch_images_signal"
+    )
+    SD_UPSCALE_SIGNAL = "sd_upscale_signal"
+    START_HUGGINGFACE_DOWNLOAD = (
+        "start_huggingface_download"
+    )
+    STT_START_CAPTURE_SIGNAL = "stt_start_capture"
+    STT_STOP_CAPTURE_SIGNAL = "stt_stop_capture"
+    TOGGLE_LLM_SIGNAL = "toggle_llm_signal"
+    TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = (
+        "tts_generator_worker_add_to_stream"
+    )
+    UPSCALE_COMPLETED = "upscale_completed_signal"
+    UPSCALE_FAILED = "upscale_failed_signal"
+    UPSCALE_PROGRESS = "upscale_progress_signal"
     LOAD_CONVERSATION_SIGNAL = "load_conversation_signal"
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
     NEW_CONVERSATION_SIGNAL = "new_conversation_signal"
