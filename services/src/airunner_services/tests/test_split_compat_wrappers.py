@@ -437,10 +437,10 @@ def test_gui_utility_sources_avoid_service_imports() -> None:
 
 def test_art_rmbg_wrappers_share_identity() -> None:
     """Legacy GUI RMBG imports should resolve to service-owned modules."""
-    from airunner.components.art.managers.rmbg.rmbg_model_manager import (
+    from airunner_services.art.managers.rmbg.rmbg_model_manager import (
         RMBGModelManager as LegacyRMBGModelManager,
     )
-    from airunner.components.art.managers.rmbg.rmbg_model_manager import (
+    from airunner_services.art.managers.rmbg.rmbg_model_manager import (
         RMBGModelSpec as LegacyRMBGModelSpec,
     )
     from airunner.components.art.workers.background_removal_worker import (
@@ -3063,13 +3063,13 @@ def test_sd_worker_uses_service_worker_base() -> None:
 
 def test_art_model_manager_wrappers_share_identity() -> None:
     """Legacy art model-manager imports should resolve to services."""
-    from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
-        SDXLModelManager as LegacySDXLModelManager,
+    from airunner_services.model_management.sdxl_model_manager import (
+        SDXLModelManager as LegacySDXLModelManager
     )
-    from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
+    from airunner_services.model_management.x4_upscale_manager import (
         X4UpscaleManager as LegacyX4UpscaleManager,
     )
-    from airunner.components.art.managers.zimage.zimage_model_manager import (
+    from airunner_services.model_management.zimage_model_manager import (
         ZImageModelManager as LegacyZImageModelManager,
     )
     from airunner_services.model_management.sdxl_model_manager import (
@@ -3684,13 +3684,13 @@ def test_service_api_and_request_wrappers_follow_current_ownership() -> None:
     from airunner.components.art.api.art_services import (
         ARTAPIService as LegacyARTAPIService,
     )
-    from airunner.components.art.managers.stablediffusion.image_request import (
+    from airunner_services.art.managers.stablediffusion.image_request import (
         ImageRequest as LegacyImageRequest,
     )
-    from airunner.components.art.managers.stablediffusion.image_response import (
+    from airunner_services.art.managers.stablediffusion.image_response import (
         ImageResponse as LegacyImageResponse,
     )
-    from airunner.components.art.managers.stablediffusion.rect import (
+    from airunner_services.art.managers.stablediffusion.rect import (
         Rect as LegacyRect,
     )
     from airunner.components.llm.managers.llm_request import (

@@ -1,21 +1,11 @@
 import base64
 import io
 import os
-import threading
 from functools import partial
 from typing import Dict, Optional
 
 import torch
 from PIL import Image
-from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
-    SDXLModelManager,
-)
-from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
-    X4UpscaleManager,
-)
-from airunner.components.art.managers.zimage.zimage_model_manager import (
-    ZImageModelManager,
-)
 
 from airunner.enums import (
     EngineResponseCode,
@@ -36,7 +26,6 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 from airunner_model.models.ai_models import AIModels
 from airunner_model.models.generator_settings import GeneratorSettings
 from airunner.enums import StableDiffusionVersion, normalize_art_version
-from airunner.components.application.exceptions import PipeNotLoadedException
 from airunner.utils.image import convert_image_to_binary
 from airunner.utils.memory import apply_cudnn_benchmark
 
@@ -49,13 +38,6 @@ class SDWorker(Worker):
 
     def __init__(self, image_export_worker):
         self.image_export_worker = image_export_worker
-        self._sdxl: Optional[SDXLModelManager] = None
-        self._zimage: Optional[ZImageModelManager] = None
-        self._sd: Optional[SDModelManager] = None
-        self._sdxl: Optional[SDXLModelManager] = None
-        self._x4_upscaler: Optional[X4UpscaleManager] = None
-        self._model_manager = None
-        self._model_manager_lock = threading.Lock()  # Protects lazy model manager creation
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
         self._current_model = None
         self._current_version = None
@@ -98,98 +80,39 @@ class SDWorker(Worker):
     def version(self, value: StableDiffusionVersion):
         self._version = value
 
-    @property
-    def model_manager(self):
-        # Fast path: return cached manager without acquiring lock.
-        if self._model_manager is not None:
-            return self._model_manager
-
-        # Determine which manager class to construct *before*
-        # entering the critical section.  Version lookup is
-        # read-only and does not require the lock.
-        version = self.version
-
-        if version in (
-            StableDiffusionVersion.Z_IMAGE_TURBO,
-        ):
-            manager = self.zimage
-        elif version in (
-            StableDiffusionVersion.SDXL1_0,
-            StableDiffusionVersion.SDXL_TURBO,
-            StableDiffusionVersion.SDXL_LIGHTNING,
-            StableDiffusionVersion.SDXL_HYPER,
-        ):
-            manager = self.sdxl
-        elif version == StableDiffusionVersion.X4_UPSCALER:
-            manager = self.x4_upscaler
-        else:
-            raise ValueError(
-                f"Unsupported Stable Diffusion version: {version}"
-            )
-
-        # Publish under lock only after construction succeeds.
-        with self._model_manager_lock:
-            if self._model_manager is None:
-                self._model_manager = manager
-            else:
-                # Another thread won the race; discard ours.
-                manager = self._model_manager
-
-        return manager
-
-    @model_manager.setter
-    def model_manager(self, value):
-        with self._model_manager_lock:
-            self._model_manager = value
-
-    @property
-    def zimage(self):
-        if self._zimage is None:
-            self._zimage = ZImageModelManager()
-            self._zimage.image_export_worker = self.image_export_worker
-        return self._zimage
-
-    @property
-    def sdxl(self):
-        if self._sdxl is None:
-            self._sdxl = SDXLModelManager()
-            self._sdxl.image_export_worker = self.image_export_worker
-        return self._sdxl
-
-    @property
-    def x4_upscaler(self):
-        if self._x4_upscaler is None:
-            self._x4_upscaler = X4UpscaleManager()
-            self._x4_upscaler.image_export_worker = self.image_export_worker
-        return self._x4_upscaler
-
     def scan_for_embeddings(self):
-        if self.model_manager:
-            self.model_manager.scan_for_embeddings()
+        # if self.model_manager:
+        #     self.model_manager.scan_for_embeddings()
+        pass
 
     def delete_missing_embeddings(self, message):
-        if self.model_manager:
-            self.model_manager.delete_missing_embeddings(message)
+        # if self.model_manager:
+        #     self.model_manager.delete_missing_embeddings(message)
+        pass
 
     def get_embeddings(self, message):
-        if self.model_manager:
-            self.model_manager.get_embeddings(message)
+        # if self.model_manager:
+        #     self.model_manager.get_embeddings(message)
+        pass
 
     def on_update_lora_signal(self, data=None):
         print("ON UPDATE LORA SIGNAL")
         self._reload_lora()
 
     def _reload_lora(self):
-        if self.model_manager:
-            self.model_manager.reload_lora()
+        # if self.model_manager:
+        #     self.model_manager.reload_lora()
+        pass
 
     def on_update_embeddings_signal(self):
-        if self.model_manager:
-            self.model_manager.reload_embeddings()
+        # if self.model_manager:
+        #     self.model_manager.reload_embeddings()
+        pass
 
     def on_add_lora_signal(self, message):
-        if self.model_manager:
-            self.model_manager.on_add_lora_signal(message)
+        # if self.model_manager:
+        #     self.model_manager.on_add_lora_signal(message)
+        pass
 
     def on_load_controlnet_signal(self, data=None):
         self.add_to_queue(
@@ -201,12 +124,14 @@ class SDWorker(Worker):
         )
 
     def on_input_image_settings_changed_signal(self, data: Dict):
-        if self.model_manager:
-            self.model_manager.settings_changed(data)
+        # if self.model_manager:
+        #     self.model_manager.settings_changed(data)
+        pass
 
     def on_unload_controlnet_signal(self, _data=None):
-        if self.model_manager:
-            self._unload_controlnet()
+        # if self.model_manager:
+        #     self._unload_controlnet()
+        pass
 
     def on_load_art_signal(self, data: Dict = None):
         self.add_to_queue(
@@ -347,8 +272,6 @@ class SDWorker(Worker):
         new_version = StableDiffusionVersion(version)
         if new_version is not self.version:
             self.version = new_version
-            # Reset model manager when version changes so the correct one is selected
-            self._model_manager = None
         return data
 
     def load_model_manager(self, data: Dict = None):
@@ -358,50 +281,50 @@ class SDWorker(Worker):
         data = self._process_image_request(data)
         do_reload = data.get("do_reload", False)
         # Ensure the model manager is instantiated before we try to set the image_request
-        mm = self.model_manager
+        # mm = self.model_manager
         self.logger.debug(f"[LOAD DEBUG] load_model_manager: mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}, model_is_loaded={mm.model_is_loaded if mm else 'N/A'}")
         image_request = data.get("image_request")
         requested_signature = self._requested_model_signature(image_request)
-        if mm and mm.model_is_loaded and requested_signature != (
-            self._current_model,
-            self._current_version,
-            self._current_pipeline,
-        ):
-            do_reload = True
+        # if mm and mm.model_is_loaded and requested_signature != (
+        #     self._current_model,
+        #     self._current_version,
+        #     self._current_pipeline,
+        # ):
+        #     do_reload = True
         # Attach the image_request to the model manager BEFORE loading so model_path property
         # resolves to the ImageRequest.model_path instead of falling back to stale generator_settings.model
-        if mm and image_request is not None:
-            try:
-                mm.image_request = image_request
-            except Exception:
-                pass
-        if mm:
-            if do_reload:
-                mm.reload()
-            elif not mm.model_is_loaded:
-                mm.load()
-            # Debug: log which path will be used
-            try:
-                self.logger.debug(
-                    "[LOAD DEBUG] After load: mm._pipe=%s, mm=%s",
-                    getattr(mm, "_pipe", "N/A"),
-                    id(mm),
-                )
-            except Exception:
-                pass
-            if mm.model_is_loaded:
-                self._record_loaded_model_signature(image_request)
-        # Only call the callback if the model is actually loaded
-        # If a download was triggered, the callback will be called after download completes
-        if data and mm and mm.model_is_loaded:
-            callback = data.get("callback", None)
-            if callback is not None:
-                self.logger.debug(f"[LOAD DEBUG] Calling callback with mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}")
-                callback(data)
-        elif data and mm and self._has_terminal_model_load_failure(mm):
-            callback = data.get("callback", None)
-            if callback is not None:
-                callback(data)
+        # if mm and image_request is not None:
+        #     try:
+        #         mm.image_request = image_request
+        #     except Exception:
+        #         pass
+        # if mm:
+        #     if do_reload:
+        #         mm.reload()
+        #     elif not mm.model_is_loaded:
+        #         mm.load()
+        #     # Debug: log which path will be used
+        #     try:
+        #         self.logger.debug(
+        #             "[LOAD DEBUG] After load: mm._pipe=%s, mm=%s",
+        #             getattr(mm, "_pipe", "N/A"),
+        #             id(mm),
+        #         )
+        #     except Exception:
+        #         pass
+        #     if mm.model_is_loaded:
+        #         self._record_loaded_model_signature(image_request)
+        # # Only call the callback if the model is actually loaded
+        # # If a download was triggered, the callback will be called after download completes
+        # if data and mm and mm.model_is_loaded:
+        #     callback = data.get("callback", None)
+        #     if callback is not None:
+        #         self.logger.debug(f"[LOAD DEBUG] Calling callback with mm={id(mm)}, mm._pipe={getattr(mm, '_pipe', 'N/A')}")
+        #         callback(data)
+        # elif data and mm and self._has_terminal_model_load_failure(mm):
+        #     callback = data.get("callback", None)
+        #     if callback is not None:
+        #         callback(data)
 
     @staticmethod
     def _has_terminal_model_load_failure(model_manager) -> bool:
@@ -431,46 +354,8 @@ class SDWorker(Worker):
         )
 
     def unload_model_manager(self, data: Dict = None):
-        if self._model_manager is not None:
-            # CRITICAL: Store reference before clearing to check which manager it is
-            manager_ref = self._model_manager
-
-            # Unload the manager
-            self._model_manager.unload()
-            self.model_manager = None
-
-            # Clear the specific manager reference to allow garbage collection
-            # Without this, the manager stays in memory even after unload()
-            if manager_ref is self._sd:
-                self.logger.info(">>> Unloading SD model manager")
-                self._sd.image_export_worker.stop()
-                del self._sd.image_export_worker
-                self._sd.image_export_worker = None
-                del self._sd
-                self._sd = None
-            elif manager_ref is self._sdxl:
-                self.logger.info(">>> Unloading SDXL model manager")
-                self._sdxl.image_export_worker.stop()
-                del self._sdxl.image_export_worker
-                self._sdxl.image_export_worker = None
-                del self._sdxl
-                self._sdxl = None
-            elif manager_ref is self._zimage:
-                self.logger.info(">>> Unloading Z-Image model manager")
-                self._zimage.image_export_worker.stop()
-                del self._zimage.image_export_worker
-                self._zimage.image_export_worker = None
-                del self._zimage
-                self._zimage = None
-            elif manager_ref is self._x4_upscaler:
-                self.logger.info(">>> Unloading X4 Upscaler model manager")
-                self._x4_upscaler.image_export_worker.stop()
-                del self._x4_upscaler.image_export_worker
-                self._x4_upscaler.image_export_worker = None
-                del self._x4_upscaler
-                self._x4_upscaler = None
-
-            self._clear_loaded_model_signature()
+        self.logger.info(">>> Stopping image export worker")
+        self.image_export_worker.stop()            
 
         if data:
             callback = data.get("callback", None)
@@ -478,16 +363,19 @@ class SDWorker(Worker):
                 callback(data)
 
     def _load_controlnet(self):
-        if self.model_manager:
-            self.model_manager.load_controlnet()
+        # if self.model_manager:
+        #     self.model_manager.load_controlnet()
+        pass
 
     def _unload_controlnet(self):
-        if self.model_manager:
-            self.model_manager.unload_controlnet()
+        # if self.model_manager:
+        #     self.model_manager.unload_controlnet()
+        pass
 
     def on_tokenizer_load_signal(self, data: Dict = None):
-        if self.model_manager:
-            self.model_manager.sd_load_tokenizer(data)
+        # if self.model_manager:
+        #     self.model_manager.sd_load_tokenizer(data)
+        pass
 
     @staticmethod
     def on_sd_cancel_signal(_data=None):
@@ -534,8 +422,8 @@ class SDWorker(Worker):
             except RuntimeError:
                 pass
             return
-        if self.model_manager:
-            self.model_manager.interrupt_image_generation()
+        # if self.model_manager:
+        #     self.model_manager.interrupt_image_generation()
 
     def on_change_scheduler_signal(self, data: Dict):
         scheduler_name = data["scheduler"]
@@ -547,19 +435,18 @@ class SDWorker(Worker):
                 f"[SCHEDULER] Deferring scheduler change to '{scheduler_name}' until generation completes"
             )
             self._pending_scheduler = scheduler_name
-        elif self.model_manager:
-            # Apply immediately if not generating
-            self.model_manager._load_scheduler(scheduler_name)
+        # elif self.model_manager:
+        #     # Apply immediately if not generating
+        #     self.model_manager._load_scheduler(scheduler_name)
 
     def _apply_scheduler_change(self, scheduler_name: str):
         """Apply a scheduler change. Used for deferred scheduler changes after generation."""
-        if self.model_manager:
-            self.model_manager._load_scheduler(scheduler_name)
+        # if self.model_manager:
+        #     self.model_manager._load_scheduler(scheduler_name)
+        pass
 
     def on_model_status_changed_signal(self, message: Dict):
         if message.get("model") != ModelType.SD:
-            return
-        if self._model_manager is None:
             return
         if self.__requested_action is ModelAction.CLEAR:
             self.on_unload_art_signal()
@@ -568,9 +455,9 @@ class SDWorker(Worker):
     def start_worker_thread(self):
         if not self.application_settings.sd_enabled:
             return
-        model_manager = self.model_manager
-        if model_manager is not None:
-            model_manager.load()
+        # model_manager = self.model_manager
+        # if model_manager is not None:
+        #     model_manager.load()
 
     def handle_message(self, message: Optional[Dict] = None):
         if message is not None:
@@ -842,60 +729,61 @@ class SDWorker(Worker):
         }
 
     def _finalize_do_generate_signal(self, message: Dict):
-        mm = self.model_manager
-        self.logger.debug(f"[FINALIZE DEBUG] _finalize: mm={id(mm) if mm else None}, mm._pipe={getattr(mm, '_pipe', 'N/A') if mm else 'N/A'}")
-        if mm:
-            # Don't try to generate if model isn't loaded yet (e.g., download in progress)
-            if not mm.model_is_loaded:
-                if self._has_terminal_model_load_failure(mm):
-                    self._notify_failed_model_load(
-                        message.get("image_request", None)
-                    )
-                    return
-                self.logger.info(
-                    "Model not loaded yet, skipping generation (download may be in progress)"
-                )
-                return
+        # mm = self.model_manager
+        # self.logger.debug(f"[FINALIZE DEBUG] _finalize: mm={id(mm) if mm else None}, mm._pipe={getattr(mm, '_pipe', 'N/A') if mm else 'N/A'}")
+        # if mm:
+        #     # Don't try to generate if model isn't loaded yet (e.g., download in progress)
+        #     if not mm.model_is_loaded:
+        #         if self._has_terminal_model_load_failure(mm):
+        #             self._notify_failed_model_load(
+        #                 message.get("image_request", None)
+        #             )
+        #             return
+        #         self.logger.info(
+        #             "Model not loaded yet, skipping generation (download may be in progress)"
+        #         )
+        #         return
 
-            try:
-                self._is_generating = True
-                mm.handle_generate_signal(message)
-            except (PipeNotLoadedException, TypeError) as e:
-                error_message = getattr(e, "message", str(e))
-                self.handle_error(error_message)
-                image_request = message.get("image_request", None)
-                err = "Image model failed to load"
-                if (
-                    image_request is not None
-                    and getattr(image_request, "model_path", None) == ""
-                ):
-                    err = "You must select a model before generating images."
-                if image_request is not None and image_request.callback:
-                    image_request.callback(err)
-                self.send_missing_model_alert(err)
-            except Exception as e:
-                import traceback
-                tb = traceback.format_exc()
-                error_msg = str(e) if str(e) else f"{type(e).__name__}"
-                self.handle_error(f"Unexpected error: {error_msg}\n{tb}")
-                image_request = message.get("image_request", None)
-                failure_message = (
-                    "An unexpected error occurred during image generation. "
-                    "Please check logs."
-                )
-                if image_request is not None and image_request.callback:
-                    image_request.callback(failure_message)
-                self.send_missing_model_alert(
-                    failure_message
-                )
-            finally:
-                self._is_generating = False
-                # Apply any scheduler change that was deferred during generation
-                if self._pending_scheduler is not None:
-                    pending = self._pending_scheduler
-                    self._pending_scheduler = None
-                    self.logger.info(f"Applying deferred scheduler change to: {pending}")
-                    self._apply_scheduler_change(pending)
+        #     try:
+        #         self._is_generating = True
+        #         mm.handle_generate_signal(message)
+        #     except (PipeNotLoadedException, TypeError) as e:
+        #         error_message = getattr(e, "message", str(e))
+        #         self.handle_error(error_message)
+        #         image_request = message.get("image_request", None)
+        #         err = "Image model failed to load"
+        #         if (
+        #             image_request is not None
+        #             and getattr(image_request, "model_path", None) == ""
+        #         ):
+        #             err = "You must select a model before generating images."
+        #         if image_request is not None and image_request.callback:
+        #             image_request.callback(err)
+        #         self.send_missing_model_alert(err)
+        #     except Exception as e:
+        #         import traceback
+        #         tb = traceback.format_exc()
+        #         error_msg = str(e) if str(e) else f"{type(e).__name__}"
+        #         self.handle_error(f"Unexpected error: {error_msg}\n{tb}")
+        #         image_request = message.get("image_request", None)
+        #         failure_message = (
+        #             "An unexpected error occurred during image generation. "
+        #             "Please check logs."
+        #         )
+        #         if image_request is not None and image_request.callback:
+        #             image_request.callback(failure_message)
+        #         self.send_missing_model_alert(
+        #             failure_message
+        #         )
+        #     finally:
+        #         self._is_generating = False
+        #         # Apply any scheduler change that was deferred during generation
+        #         if self._pending_scheduler is not None:
+        #             pending = self._pending_scheduler
+        #             self._pending_scheduler = None
+        #             self.logger.info(f"Applying deferred scheduler change to: {pending}")
+        #             self._apply_scheduler_change(pending)
+        pass
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")
