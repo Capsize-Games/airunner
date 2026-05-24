@@ -1,15 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, JSON
+"""Compatibility re-export for the User model.
 
-from airunner.components.data.models.base import BaseModel
+This model was consolidated into ``airunner_model.models.user``.
+This module is kept as a backward-compatible shim.
+"""
 
+from airunner_model.models.user import User
 
-class User(BaseModel):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String, nullable=False, default="User")
-    zipcode = Column(String, nullable=True)
-    location_display_name = Column(String, nullable=True)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    unit_system = Column(String, nullable=True, default="imperial")
-    data = Column(JSON, nullable=True)
+__all__ = ["User"]

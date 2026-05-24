@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 # Import Base from our local module, not the shared one
-from airunner.components.data.models.base import Base
+from airunner_model.base import Base
 
 
 @pytest.fixture(autouse=True, scope="function")

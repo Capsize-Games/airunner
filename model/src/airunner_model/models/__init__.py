@@ -56,9 +56,13 @@ from airunner_model.models.path_settings import PathSettings
 from airunner_model.models.pipeline_model import PipelineModel
 from airunner_model.models.prompt_template import PromptTemplate
 from airunner_model.models.project_state import DecisionMemory
+from airunner_model.models.project_state import DecisionOutcome
+from airunner_model.models.project_state import FeatureCategory
+from airunner_model.models.project_state import FeatureStatus
 from airunner_model.models.project_state import ProgressEntry
 from airunner_model.models.project_state import ProjectFeature
 from airunner_model.models.project_state import ProjectState
+from airunner_model.models.project_state import ProjectStatus
 from airunner_model.models.project_state import SessionState
 from airunner_model.models.rag_settings import RAGSettings
 from airunner_model.models.saved_prompt import SavedPrompt
@@ -95,9 +99,14 @@ __all__ = [
     "ControlnetSettings",
     "Conversation",
     "DecisionMemory",
+    "DecisionOutcome",
     "DrawingPadSettings",
     "Document",
+    "Embedding",
     "EspeakSettings",
+    "FeatureCategory",
+    "FeatureStatus",
+    "FineTunedModel",
     "FontSetting",
     "GeneratorSettings",
     "GridSettings",
@@ -107,16 +116,18 @@ __all__ = [
     "LanguageSettings",
     "LLMTool",
     "LLMGeneratorSettings",
+    "Lora",
     "MemorySettings",
     "MetadataSettings",
     "OpenVoiceSettings",
     "OutpaintSettings",
     "PathSettings",
     "PipelineModel",
-    "PromptTemplate",
     "ProgressEntry",
     "ProjectFeature",
     "ProjectState",
+    "ProjectStatus",
+    "PromptTemplate",
     "RAGSettings",
     "SavedPrompt",
     "Schedulers",
@@ -131,7 +142,4 @@ __all__ = [
     "VoiceSettings",
     "WhisperSettings",
     "ZimFile",
-    "Lora",
-    "Embedding",
-    "FineTunedModel",
 ]

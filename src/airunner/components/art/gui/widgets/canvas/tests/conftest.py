@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from airunner.components.data.models.base import Base
+from airunner_model.base import Base
 
 
 # Speed up tests by mocking slow-to-import modules that aren't needed for unit tests
