@@ -62,24 +62,41 @@ class SDPropertiesMixin:
         return get_hardware_profiler()
 
     @property
+    def active_grid_settings(self) -> Any:
+        """Return active grid configuration from persisted settings."""
+        from airunner_model.models.active_grid_settings import (
+            ActiveGridSettings,
+        )
+        return self._load_settings(ActiveGridSettings)
+
+    @property
+    def drawing_pad_settings(self) -> Any:
+        """Return drawing pad configuration from persisted settings."""
+        from airunner_model.models.drawingpad_settings import (
+            DrawingPadSettings,
+        )
+        return self._load_settings(DrawingPadSettings)
+
+    @property
     def active_rect(self) -> Rect:
         """Get active canvas rectangle with drawing pad offset.
 
         Returns:
             Rect object representing the active generation area.
         """
-        pos = self.active_grid_settings.pos
+        ags = self.active_grid_settings
+        ags_x = getattr(ags, "pos_x", 0) or 0
+        ags_y = getattr(ags, "pos_y", 0) or 0
         active_rect = Rect(
-            pos[0],
-            pos[1],
+            ags_x,
+            ags_y,
             self.image_request.width,
             self.image_request.height,
         )
-        drawing_pad_pos = self.drawing_pad_settings.pos
-        active_rect.translate(
-            -drawing_pad_pos[0],
-            -drawing_pad_pos[1],
-        )
+        dps = self.drawing_pad_settings
+        dps_x = getattr(dps, "pos_x", 0) or 0
+        dps_y = getattr(dps, "pos_y", 0) or 0
+        active_rect.translate(-dps_x, -dps_y)
         return active_rect
 
     @property

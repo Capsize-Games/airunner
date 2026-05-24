@@ -68,6 +68,8 @@ class BaseDiffusersModelManager(
 
     def __init__(self, *args, **kwargs):
         self._scheduler = None
+        self._loaded_lora = {}
+        self._loaded_embeddings = []
         super().__init__(*args, **kwargs)
         self._initialize_model_status()
         self._pipeline: Optional[str] = None

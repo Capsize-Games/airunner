@@ -718,6 +718,8 @@ class SDWorker(Worker):
         if image_bytes is None:
             return
 
+        print("*"*100)
+        print("Daemon art generation succeeded, publishing result")
         try:
             self._publish_daemon_art_result(
                 message,
@@ -747,6 +749,8 @@ class SDWorker(Worker):
         image_request: ImageRequest,
         image_bytes: bytes,
     ) -> None:
+        print("*"*100)
+        print("Publishing daemon art result to canvas and callbacks")
         image = Image.open(io.BytesIO(image_bytes)).copy()
         data = self._daemon_result_data(image_request)
         export_callback = partial(
@@ -755,6 +759,8 @@ class SDWorker(Worker):
             image,
             data,
         )
+        print("*"*100)
+        print("Constructing ImageResponse for canvas and callbacks")
         response = ImageResponse(
             images=[image],
             data=data,
@@ -767,11 +773,28 @@ class SDWorker(Worker):
         )
         sent_to_canvas = False
         if response.node_id is None and hasattr(self.api, "art"):
+            print("*"*100)
+            print("No node_id in response, sending image to canvas")
             try:
                 self.api.art.canvas.send_image_to_canvas(response)
                 sent_to_canvas = True
+                print("*"*100)
+                print("Image sent to canvas successfully")
             except Exception as exc:
-                self.logger.debug(f"Failed to send image to canvas: {exc}")
+                print("*"*100)
+                print("Failed to send image to canvas:", exc)
+                self.logger.warning(
+                    "Failed to send image to canvas: %s",
+                    exc,
+                )
+        else:
+            print("*"*100)
+            print("Node_id present in response or no canvas available, skipping canvas delivery")
+            self.logger.info(
+                "Skipping canvas delivery: node_id=%s has_art=%s",
+                response.node_id,
+                hasattr(self.api, "art"),
+            )
         if not sent_to_canvas:
             export_callback()
         if image_request.callback:

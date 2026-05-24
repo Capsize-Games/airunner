@@ -1204,6 +1204,13 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         )
         self._cache_art_model_metadata(image_request)
 
+        # Ensure the SD worker is created and registered for signals
+        # before we emit DO_GENERATE_SIGNAL.  The worker is lazily
+        # instantiated by ServiceWorkerManager; accessing it here
+        # triggers creation and signal-handler registration so the
+        # signal below is received.
+        self._headless_art_worker(create=True)
+
         progress_handler = None
         if progress_callback is not None:
             progress_handler = self._build_art_progress_handler(progress_callback)

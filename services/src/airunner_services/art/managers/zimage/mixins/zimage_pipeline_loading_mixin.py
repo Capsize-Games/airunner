@@ -70,6 +70,17 @@ class ZImagePipelineLoadingMixin:
         missing_files = get_missing_files_for_mode(model_path, load_mode)
         if not missing_files:
             return False, {}
+        # In sidecar / headless mode there is no WorkerManager to
+        # process ART_MODEL_DOWNLOAD_REQUIRED.  Skip the download
+        # trigger and let the caller proceed (the pipeline may still
+        # load successfully with the files that are present).
+        if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
+            self.logger.info(
+                "Z-Image companion files missing in sidecar mode "
+                "(skipping download trigger): %s",
+                missing_files,
+            )
+            return False, {}
         repo_id = ModelFileChecker.get_repo_id_for_version(version, pipeline_action)
         if repo_id is None:
             return False, {"error": "Unable to resolve Z-Image download source"}
@@ -114,14 +125,17 @@ class ZImagePipelineLoadingMixin:
         
         _clear_gpu_memory()
         
-        # Determine if we have a complete pretrained directory structure
+        # Determine if we have a complete pretrained directory structure.
+        # For Z-Image Turbo the companion files (text_encoder, tokenizer,
+        # vae, scheduler) live in the version-specific model directory,
+        # not in the safetensors checkpoint directory.  Resolve the
+        # correct companion directory first.
         model_path = Path(self.model_path)
         is_single_file = model_path.is_file()
-        
-        if is_single_file:
-            model_dir = model_path.parent
-        else:
-            model_dir = model_path
+        companion_dir = self._resolve_zimage_companion_dir(model_path)
+        model_dir = companion_dir if companion_dir else (
+            model_path.parent if is_single_file else model_path
+        )
         
         has_pretrained_structure = self._has_complete_pretrained_structure(model_dir)
 
@@ -215,26 +229,76 @@ class ZImagePipelineLoadingMixin:
         """
         return detect_fp8_checkpoint(model_path)
 
-    def _ensure_zimage_files_available(self) -> None:
-        """Ensure Z-Image model files exist locally, otherwise trigger download.
-        
-        Checks for missing companion files (text_encoder, tokenizer, vae, scheduler)
-        and triggers a download if any are missing or incomplete.
+    def _resolve_zimage_companion_dir(self, checkpoint_path: Path) -> Optional[Path]:
+        """Return the Z-Image Turbo txt2img directory when it exists.
+
+        The safetensors checkpoint may live in any directory, but the
+        companion files (text_encoder, tokenizer, vae, scheduler) are
+        version-specific and should be loaded from the canonical
+        Z-Image Turbo model directory.
         """
+        from airunner_model.models.path_settings import PathSettings
+        from airunner_model.session import session_scope
+
+        try:
+            with session_scope() as session:
+                path_settings = session.query(PathSettings).first()
+                base_path = (
+                    getattr(path_settings, "base_path", "") or ""
+                ).strip()
+        except Exception:
+            base_path = ""
+        base_path = base_path or os.path.expanduser(
+            os.path.join("~", ".local", "share", "airunner")
+        )
+        zimage_dir = (
+            Path(base_path).expanduser()
+            / "art" / "models" / "Z-Image Turbo" / "txt2img"
+        )
+        if zimage_dir.is_dir():
+            self.logger.info(
+                "Resolved Z-Image companion directory: %s",
+                zimage_dir,
+            )
+            return zimage_dir
+        return None
+
+    def _ensure_zimage_files_available(self) -> None:
+        """Ensure Z-Image model files exist locally, otherwise trigger download."""
         model_path = Path(self.model_path)
         load_mode = get_active_zimage_load_mode(model_path)
         if load_mode != "pretrained_directory" and not model_path.exists():
             raise RuntimeError(f"Selected Z-Image checkpoint missing: {model_path}")
 
-        missing_files = get_missing_files_for_mode(model_path, load_mode)
+        # Check companion files in the canonical Z-Image Turbo
+        # directory, not the safetensors parent directory.
+        companion_dir = self._resolve_zimage_companion_dir(model_path)
+        search_dir = companion_dir if companion_dir else (
+            model_path.parent if model_path.is_file() else model_path
+        )
+        missing_files = get_missing_files_for_mode(search_dir, load_mode)
         if not missing_files:
             self.logger.info(
-                "All Z-Image model files present for %s",
+                "All Z-Image model files present for %s (checked %s)",
                 load_mode,
+                search_dir,
             )
             return
 
-        model_dir = model_path.parent if model_path.is_file() else model_path
+        # In sidecar/headless mode there is no WorkerManager to
+        # handle ART_MODEL_DOWNLOAD_REQUIRED, and the companion
+        # files should already exist in the Z-Image Turbo directory.
+        # Log a warning and let the pipeline loading proceed — it
+        # will surface a clearer error if a component is missing.
+        if os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") == "1":
+            self.logger.warning(
+                "Z-Image companion files missing in sidecar mode "
+                "(checked %s): %s",
+                search_dir,
+                missing_files,
+            )
+            return
+
         repo_id = ModelFileChecker.get_repo_id_for_version(
             "Z-Image Turbo",
             "txt2img",
@@ -243,24 +307,24 @@ class ZImagePipelineLoadingMixin:
             raise RuntimeError(
                 "Could not resolve a download source for Z-Image Turbo"
             )
-        
+
         self.logger.info(
             f"Missing {len(missing_files)} Z-Image model files, triggering download from {repo_id}"
         )
         self.logger.debug(f"Missing files: {missing_files}")
-        
+
         self.emit_signal(
             SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
             {
                 "repo_id": repo_id,
-                "model_path": str(model_dir),
+                "model_path": str(search_dir),
                 "missing_files": missing_files,
                 "version": "Z-Image Turbo",
                 "pipeline_action": "txt2img",
             },
         )
         raise RuntimeError(
-            f"Z-Image model files missing from {model_dir}, download triggered"
+            f"Z-Image model files missing from {search_dir}, download triggered"
         )
 
     def _load_from_pretrained(self, model_path: str, pipeline_class: Any, data: Dict):
@@ -489,9 +553,12 @@ class ZImagePipelineLoadingMixin:
         
         self.logger.info(f"Precision settings - use_quantization: {use_quant}, bits: {quant_bits}, dtype: {model_dtype}")
         
-        # Get the directory containing the checkpoint - companion folders
-        # (text_encoder, tokenizer, vae, scheduler) are in the same directory
-        model_dir = os.path.dirname(model_path)
+        # Companion folders (text_encoder, tokenizer, vae, scheduler)
+        # live in the version-specific Z-Image Turbo directory, not
+        # necessarily in the safetensors checkpoint directory.
+        checkpoint_path = Path(model_path)
+        companion_dir = self._resolve_zimage_companion_dir(checkpoint_path)
+        model_dir = str(companion_dir) if companion_dir else os.path.dirname(model_path)
         self.logger.info(f"Loading companion files from: {model_dir}")
         
         # Calculate text encoder VRAM budget

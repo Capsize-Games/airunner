@@ -49,6 +49,20 @@ class SDWorker(Worker):
 	queue_type = QueueType.GET_LAST_ITEM
 
 	def __init__(self, image_export_worker):
+		self.signal_handlers = {
+			SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
+			SignalCode.SD_LOAD_SIGNAL: self.on_load_art_signal,
+			SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: (
+				self.on_interrupt_image_generation_signal
+			),
+			SignalCode.CHANGE_SCHEDULER_SIGNAL: (
+				self.on_change_scheduler_signal
+			),
+			SignalCode.MODEL_STATUS_CHANGED_SIGNAL: (
+				self.on_model_status_changed_signal
+			),
+			SignalCode.SD_ART_MODEL_CHANGED: self.on_art_model_changed,
+		}
 		self.image_export_worker = image_export_worker
 		self._sdxl: Optional[SDXLModelManager] = None
 		self._zimage: Optional[ZImageModelManager] = None
@@ -304,8 +318,8 @@ class SDWorker(Worker):
 		data = self._process_image_request(data)
 		do_reload = data.get("do_reload", False)
 		mm = self.model_manager
-		self.logger.debug(
-			"[LOAD DEBUG] load_model_manager: mm=%s, mm._pipe=%s, "
+		self.logger.info(
+			"[LOAD] load_model_manager: mm=%s, mm._pipe=%s, "
 			"model_is_loaded=%s",
 			id(mm),
 			getattr(mm, "_pipe", "N/A"),
@@ -326,9 +340,21 @@ class SDWorker(Worker):
 				pass
 		if mm:
 			if do_reload:
+				self.logger.info("[LOAD] Reloading model")
 				mm.reload()
 			elif not mm.model_is_loaded:
+				self.logger.info(
+					"[LOAD] Loading model: path=%s version=%s",
+					getattr(image_request, "model_path", None),
+					getattr(image_request, "version", None),
+				)
 				mm.load()
+				self.logger.info(
+					"[LOAD] load() returned: model_is_loaded=%s "
+					"pipe=%s",
+					mm.model_is_loaded,
+					getattr(mm, "_pipe", "N/A") is not None,
+				)
 			try:
 				self.logger.debug(
 					"[LOAD DEBUG] After load: mm._pipe=%s, mm=%s",
@@ -342,16 +368,22 @@ class SDWorker(Worker):
 		if data and mm and mm.model_is_loaded:
 			callback = data.get("callback", None)
 			if callback is not None:
-				self.logger.debug(
-					"[LOAD DEBUG] Calling callback with mm=%s, mm._pipe=%s",
-					id(mm),
-					getattr(mm, "_pipe", "N/A"),
+				self.logger.info(
+					"[LOAD] Model loaded, calling generation "
+					"callback"
 				)
 				callback(data)
 		elif data and mm and self._has_terminal_model_load_failure(mm):
+			self.logger.error("[LOAD] Model load FAILED")
 			callback = data.get("callback", None)
 			if callback is not None:
 				callback(data)
+		elif data and mm:
+			self.logger.info(
+				"[LOAD] Model not loaded and not failed — "
+				"download may be in progress or loading "
+				"still running"
+			)
 
 	@staticmethod
 	def _has_terminal_model_load_failure(model_manager) -> bool:
@@ -778,10 +810,12 @@ class SDWorker(Worker):
 
 	def _finalize_do_generate_signal(self, message: Dict):
 		mm = self.model_manager
-		self.logger.debug(
-			"[FINALIZE DEBUG] _finalize: mm=%s, mm._pipe=%s",
+		self.logger.info(
+			"[FINALIZE] _finalize_do_generate_signal called: "
+			"mm=%s, mm._pipe=%s, model_is_loaded=%s",
 			id(mm) if mm else None,
 			getattr(mm, "_pipe", "N/A") if mm else "N/A",
+			mm.model_is_loaded if mm else "N/A",
 		)
 		if mm:
 			if not mm.model_is_loaded:

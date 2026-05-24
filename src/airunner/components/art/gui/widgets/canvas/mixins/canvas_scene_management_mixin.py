@@ -14,6 +14,7 @@ from airunner.components.art.utils.canvas_position_manager import (
     ViewState,
 )
 from airunner.components.art.managers.stablediffusion.rect import Rect
+from airunner_model.models.canvas_layer import CanvasLayer
 import time
 
 
@@ -42,9 +43,11 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             outpaint_box_rect: Optional bounding box for outpaint.
             generated: Whether this image was generated (vs user-imported).
         """
-        self.logger.debug(
-            "[SCENE DEBUG] _add_image_to_scene generated=%s",
+        self.logger.info(
+            "[CANVAS DEBUG] _add_image_to_scene generated=%s "
+            "image_size=%s",
             generated,
+            image.size if image else None,
         )
         if image is None or not self._should_update_scene(generated):
             self.logger.debug(
@@ -188,10 +191,27 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             else:
                 active_layer_item = self._get_active_layer_item()
 
-        self.logger.debug(
-            "[ITEM DEBUG] active_layer_item=%s self.item=%s",
-            active_layer_item,
-            getattr(self, "item", "NO ATTR"),
+        # If still no layer item in a layer canvas, create a default layer
+        if active_layer_item is None and layer_canvas:
+            self.logger.info(
+                "[CANVAS DEBUG] No layer item in scene — "
+                "creating default layer"
+            )
+            self._ensure_default_canvas_layer()
+            self._refresh_layer_display()
+            if getattr(type(self), "_get_layer_canvas_item", None) is not None:
+                active_layer_item = type(self)._get_layer_canvas_item(self)
+            elif callable(resolve_layer_item):
+                active_layer_item = resolve_layer_item()
+            else:
+                active_layer_item = self._get_active_layer_item()
+
+        self.logger.info(
+            "[CANVAS DEBUG] active_layer_item=%s self.item=%s "
+            "layer_canvas=%s",
+            active_layer_item is not None,
+            getattr(self, "item", None) is not None,
+            layer_canvas,
         )
         if active_layer_item is not None:
             remove_legacy_item = getattr(
@@ -212,8 +232,13 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             if q_image is not None and not q_image.isNull():
                 try:
                     active_layer_item.updateImage(q_image)
-                    self.logger.debug(
-                        "Updated active layer item with filtered image"
+                    self.logger.info(
+                        "[CANVAS DEBUG] Updated layer item pos=(%s,%s) "
+                        "visible=%s image_size=%s",
+                        active_layer_item.pos().x(),
+                        active_layer_item.pos().y(),
+                        active_layer_item.isVisible(),
+                        q_image.size().toTuple(),
                     )
                     if generated:
                         self._update_active_layer_item_position(
@@ -232,6 +257,10 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
             return
 
         if layer_canvas:
+            self.logger.warning(
+                "[CANVAS DEBUG] Still no layer item after "
+                "creating default layer — image not displayed"
+            )
             self.current_active_image = image
             return
 
@@ -259,8 +288,50 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
                     root_point.y(),
                 )
             else:
-                self.logger.warning(f"[ITEM DEBUG] Cannot create item - QImage conversion failed")
+                self.logger.warning(
+                    "[ITEM DEBUG] Cannot create item - "
+                    "QImage conversion failed"
+                )
                 self.current_active_image = image
+
+    def _ensure_default_canvas_layer(self) -> None:
+        """Create a default canvas layer if none exist yet.
+
+        Called when a generated image arrives but no layer items
+        have been created for the drawing pad canvas yet.  This
+        mirrors the logic in CanvasWidget._create_default_canvas_layer.
+        """
+        from airunner_model.models.drawingpad_settings import (
+            DrawingPadSettings,
+        )
+
+        # Pick a non-conflicting default name
+        base = "Layer"
+        index = 1
+        name = f"{base} {index}"
+        while CanvasLayer.objects.filter_by(name=name):
+            index += 1
+            name = f"{base} {index}"
+
+        layer = CanvasLayer.objects.create(
+            order=0,
+            name=name,
+            visible=True,
+            opacity=100,
+        )
+        if layer is None:
+            return
+
+        # Initialize default drawing pad settings for the new layer
+        try:
+            origin = self._get_default_image_position()
+            DrawingPadSettings.objects.create(
+                layer_id=layer.id,
+                x_pos=int(origin.x()),
+                y_pos=int(origin.y()),
+            )
+        except Exception:
+            pass
 
     def _update_active_layer_item_position(
         self,
