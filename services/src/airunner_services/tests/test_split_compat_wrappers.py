@@ -2784,7 +2784,7 @@ def test_gui_bootstrap_seed_sources_avoid_service_imports() -> None:
     assert "airunner_services.bootstrap.prompt_templates_bootstrap_data" not in (
         prompt_templates_source
     )
-    assert "airunner_services.llm.data.bootstrap" not in (
+    assert "airunner_model.models.bootstrap" not in (
         llm_bootstrap_init_source
     )
     assert "airunner_services.llm.__init__" not in llm_package_source

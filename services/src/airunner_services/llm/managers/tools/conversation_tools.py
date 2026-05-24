@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from langchain_core.tools import tool
 
-from airunner_services.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 from airunner_services.tools.base_tool import BaseTool
 
 

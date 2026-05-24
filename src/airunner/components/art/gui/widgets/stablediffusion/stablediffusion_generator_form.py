@@ -576,6 +576,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def _build_generate_request(self, data=None):
         data = data or {}
         callback = data.get("finalize", None)
+        print("*"*100)
+        print("Building image request for generation with data:")
         additional_prompts = [
             {
                 "prompt": container.get_prompt(),
@@ -583,6 +585,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
             }
             for _prompt_id, container in self._prompt_containers.items()
         ]
+        print("*"*100)
+        print("calling api.art.canvas.create_image_request with additional_prompts:")
         return self.api.art.canvas.create_image_request(
             additional_prompts=additional_prompts, callback=callback
         )
@@ -596,10 +600,16 @@ class StableDiffusionGeneratorForm(BaseWidget):
         return resource_manager.get_model_state(model_path) is ModelState.LOADED
 
     def do_generate(self, data=None):
+        print("*"*100)
+        print("stablediffusion_generator_form.do_generate() called")
         data = data or {}
         image_request = data.get("image_request")
         if image_request is None:
+            print("*"*100)
+            print("Calling _build_generate_request to construct image request for generation")
             image_request = self._build_generate_request(data)
+        print("*"*100)
+        print(f"calling api.art.send_request with image_request: {image_request}")
         self.api.art.send_request(image_request=image_request)
 
     @Slot()

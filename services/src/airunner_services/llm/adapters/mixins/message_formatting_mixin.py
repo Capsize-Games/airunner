@@ -258,7 +258,7 @@ class MessageFormattingMixin:
                 self.logger.debug(f"[THINKING] enable_thinking={user_wants_thinking} (from instance attr)")
             else:
                 # Read from database for real-time toggle support
-                from airunner_services.llm.data.llm_generator_settings import LLMGeneratorSettings
+                from airunner_model.models.llm_generator_settings import LLMGeneratorSettings
                 db_settings = LLMGeneratorSettings.objects.first()
                 user_wants_thinking = True  # Default to enabled
                 if db_settings is not None:

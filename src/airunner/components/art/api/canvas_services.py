@@ -279,6 +279,8 @@ class CanvasAPIService(APIServiceBase):
         if type(custom_path) is tuple:
             custom_path = None
 
+        print("*"*100)
+        print("setting ImageRequest")
         image_request = ImageRequest(
             prompt=self.generator_settings.prompt,
             negative_prompt=self.generator_settings.negative_prompt,
@@ -308,7 +310,6 @@ class CanvasAPIService(APIServiceBase):
             original_size=generator_settings.original_size,
             negative_target_size=generator_settings.negative_target_size,
             negative_original_size=generator_settings.negative_original_size,
-            lora_scale=generator_settings.lora_scale,
             additional_prompts=kwargs.get("additional_prompts", []),
             callback=kwargs.get("callback", None),
             image=image,
@@ -322,6 +323,8 @@ class CanvasAPIService(APIServiceBase):
             outpaint_mask_blur=self.outpaint_settings.mask_blur,
             controlnet_image=controlnet_image,
         )
+        print("*"*100)
+        print("returning ImageRequest")
         return image_request
 
     def input_image_changed(self, section: str, setting: str, value: Any):

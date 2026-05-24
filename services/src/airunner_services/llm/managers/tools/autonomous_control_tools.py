@@ -257,7 +257,7 @@ class AutonomousControlTools(BaseTool):
                 from airunner_model.session import (
                     session_scope,
                 )
-                from airunner_services.llm.data.conversation import (
+                from airunner_model.models.conversation import (
                     Conversation,
                 )
                 from datetime import datetime, timedelta

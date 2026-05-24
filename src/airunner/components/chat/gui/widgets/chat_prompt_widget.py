@@ -418,28 +418,47 @@ class ChatPromptWidget(BaseWidget):
         self.enable_send_button()
 
     def do_generate(self, prompt_override=None):
+        print("*"*100)
+        print("chat_prompt_widget.do_generate() called")
+        
         prompt = (
             self.prompt
             if (prompt_override is None or prompt_override == "")
             else prompt_override
         )
+        print("*"*100)
+        print(f"Prompt after override check: '{prompt}'")
+
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
             return
 
         if self.generating:
             if self.held_message is None:
+                print("*"*100)
+                print("Generation in progress, holding new prompt for after interruption")
                 self.held_message = prompt
                 self.disable_send_button()
                 self.on_stop_button_clicked()
             return
+        print("*"*100)
+        print("No generation in progress, proceeding with generation")
         self.generating = True
         self._set_generation_button_visibility(True)
+        print("*"*100)
+        print(f"Generated request_id will be for prompt: '{prompt}'")
 
         request_id = str(uuid4())
+        print("*"*100)
+        print(f"Generated request_id: {request_id}")
 
         self.clear_prompt()
+        print("*"*100)
+        print("Prompt cleared, processing events to update UI...")
+
         QApplication.processEvents()
+        print("*"*100)
+        print("UI updated, preparing generation request...")
 
         self.logger.info(
             f"do_generate called with prompt: "

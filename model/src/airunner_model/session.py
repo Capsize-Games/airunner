@@ -202,7 +202,7 @@ def session_scope():
         session.rollback()
         raise
     finally:
-        session.close()
+        Session.remove()
 
 
 __all__ = ["reset_engine", "session_scope"]

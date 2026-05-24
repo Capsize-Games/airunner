@@ -331,7 +331,7 @@ class SDWorker(Worker):
                 target_size=settings.target_size,
                 negative_original_size=settings.negative_original_size,
                 negative_target_size=settings.negative_target_size,
-                lora_scale=settings.lora_scale,
+                lora_scale=1.0,
                 width=self.application_settings.working_width,
                 height=self.application_settings.working_height,
             )

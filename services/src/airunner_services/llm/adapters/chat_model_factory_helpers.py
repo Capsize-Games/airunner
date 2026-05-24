@@ -7,7 +7,7 @@ from typing import Any
 
 def get_db_settings() -> Any:
     """Return persisted LLM generator settings when available."""
-    from airunner_services.llm.data.llm_generator_settings import (
+    from airunner_model.models.llm_generator_settings import (
         LLMGeneratorSettings,
     )
 

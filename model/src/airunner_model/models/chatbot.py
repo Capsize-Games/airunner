@@ -89,10 +89,18 @@ class Chatbot(BaseModel):
         """Convert the model instance to its dataclass representation."""
         dataclass_cls = self.get_dataclass()
         data = self.to_dict()
-        data["target_files"] = list(getattr(self, "target_files", []))
-        data["target_directories"] = list(
-            getattr(self, "target_directories", [])
-        )
+        try:
+            data["target_files"] = list(
+                getattr(self, "target_files", []) or []
+            )
+        except Exception:
+            data["target_files"] = []
+        try:
+            data["target_directories"] = list(
+                getattr(self, "target_directories", []) or []
+            )
+        except Exception:
+            data["target_directories"] = []
         return dataclass_cls(**data)
 
     @classmethod

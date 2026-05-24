@@ -29,7 +29,7 @@ Examples:
 import json
 from typing import Optional, List
 
-from airunner_services.agents.data.agent_config import AgentConfig
+from airunner_model.models.agent_config import AgentConfig
 from airunner_services.agents.templates import (
     get_template,
     list_templates,

@@ -79,7 +79,7 @@ class ModelAvailabilityMixin:
             self._missing_gguf = False
             return self._verify_model_files(model_path)
 
-        from airunner_services.llm.data.bootstrap.llm_file_bootstrap_data import (
+        from airunner_services.bootstrap.llm_file_bootstrap_data import (
             LLM_FILE_BOOTSTRAP_DATA,
         )
 

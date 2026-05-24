@@ -6,7 +6,7 @@ loading, clearing, and managing conversation history in the database.
 
 from typing import TYPE_CHECKING, Dict, Optional
 
-from airunner_services.llm.data.conversation import Conversation
+from airunner_model.models.conversation import Conversation
 
 if TYPE_CHECKING:
     from airunner_services.llm.managers.llm_model_manager import (
