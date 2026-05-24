@@ -293,10 +293,23 @@ class SidecarArtClient(RuntimeClient):
 			try:
 				settings = self._settings_for_invocation(invocation)
 				self._ensure_launcher(settings)
-				self._require_launcher().start()
+				launcher = self._require_launcher()
+				print(
+					"[SidecarArtClient] Starting sidecar launcher "
+					f"(endpoint={launcher.endpoint})"
+				)
+				launcher.start()
+				print(
+					"[SidecarArtClient] Sidecar launcher ready, "
+					"submitting art job"
+				)
 				if self._last_known_model_status not in {"loaded", "ready"}:
 					self._remember_model_status("loading")
 				job_id = self._submit_job(invocation)
+				print(
+					"[SidecarArtClient] Art job submitted to sidecar: "
+					f"job_id={job_id}"
+				)
 				if progress_callback is not None:
 					progress_callback(
 						{

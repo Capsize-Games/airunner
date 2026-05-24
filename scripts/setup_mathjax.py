@@ -24,7 +24,7 @@ if os.environ.get("MATHJAX_INSTALL_DIR"):
 else:
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     STATIC_DIR = os.path.abspath(
-        os.path.join(SCRIPT_DIR, "..", "static", "mathjax")
+        os.path.join(SCRIPT_DIR, "..", "src", "airunner", "static", "mathjax")
     )
 ZIP_PATH = os.path.join(STATIC_DIR, "mathjax.zip")
 

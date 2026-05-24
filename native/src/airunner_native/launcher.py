@@ -225,7 +225,7 @@ def build_ui_if_needed():
     if not ui_build_marker.exists():
         try:
             subprocess.run(
-                [sys.executable, "-m", "airunner.bin.build_ui"],
+                [sys.executable, "scripts/build_ui.py"],
                 check=True,
             )
             with ui_build_marker.open("w", encoding="utf-8") as marker:

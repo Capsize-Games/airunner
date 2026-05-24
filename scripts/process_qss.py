@@ -33,8 +33,8 @@ def build_ui(path):
 def generate_resources():
     print("Generating resources.py")
     here = os.path.dirname(os.path.abspath(__file__))
-    target = os.path.join(here, "..", "gui", "resources", "feather_rc.py")
-    qrc = os.path.join(here, "..", "gui", "resources", "feather.qrc")
+    target = os.path.join(here, "..", "src", "airunner", "gui", "resources", "feather_rc.py")
+    qrc = os.path.join(here, "..", "src", "airunner", "gui", "resources", "feather.qrc")
     executable = shutil.which("pyside6-rcc") or shutil.which("pyrcc6")
     if executable is None:
         if os.path.exists(target):
@@ -48,7 +48,7 @@ def generate_resources():
             target,
             qrc,
         ],
-        cwd=str(Path(__file__).parent.parent),
+        cwd=str(Path(__file__).parent.parent / "src" / "airunner"),
     )
 
 
@@ -147,7 +147,7 @@ def process_qss(_path=None):
     # Process all manifest files in the styles directory and its subdirectories
     script_dir = os.path.dirname(os.path.abspath(__file__))
     styles_dir = os.path.abspath(
-        os.path.join(script_dir, "..", "gui", "styles")
+        os.path.join(script_dir, "..", "src", "airunner", "gui", "styles")
     )
     process_directory(styles_dir)
 
@@ -190,10 +190,11 @@ def write_css_variables(variables, out_path):
 
 
 def build_all_theme_css():
-    styles_dir = Path(__file__).parent.parent / "gui" / "styles"
+    styles_dir = Path(__file__).parent.parent / "src" / "airunner" / "gui" / "styles"
     # Output directories for generated runtime CSS consumers
     output_targets = [
         Path(__file__).parent.parent
+        / "src" / "airunner"
         / "components"
         / "chat"
         / "gui"

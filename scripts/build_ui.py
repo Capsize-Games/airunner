@@ -17,7 +17,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from airunner.bin.process_qss import build_all_theme_css, generate_resources, process_qss
+from scripts.process_qss import build_all_theme_css, generate_resources, process_qss
 
 
 def _find_uic_executable() -> str:
@@ -60,7 +60,7 @@ def adjust_resource_imports(input_file, output_file):
 
 def build_ui():
     """Builds all UI files in the project if needed."""
-    base_path = Path(__file__).parent.parent
+    base_path = Path(__file__).parent.parent / "src" / "airunner"
     uic_executable = _find_uic_executable()
     print(f"Base path: {base_path}")
     ui_files = list(base_path.glob("**/*.ui"))

@@ -69,7 +69,7 @@ def build_ui_if_needed():
     if not os.path.exists(ui_build_marker):
         try:
             subprocess.run(
-                [sys.executable, "-m", "airunner.bin.build_ui"],
+                [sys.executable, "scripts/build_ui.py"],
                 check=True,
             )
             with open(ui_build_marker, "w") as marker:

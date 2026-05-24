@@ -91,7 +91,7 @@ def test_gui_package_metadata_owns_qt_not_service_profiles() -> None:
     ]
     assert set(extras_require) == {"development", "dev"}
     assert extras_require["development"] == module.DEVELOPMENT_REQUIREMENTS
-    assert "airunner-tests=airunner.bin.run_tests:main" in console_scripts
+    assert "airunner-tests=scripts.run_tests:main" in console_scripts
     assert "airunner=airunner_native.launcher:main" not in console_scripts
     assert "airunner-headless=airunner.bin.airunner_headless:main" not in (
         console_scripts

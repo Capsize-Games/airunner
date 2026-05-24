@@ -909,39 +909,34 @@ def test_gui_os_utility_sources_avoid_service_imports() -> None:
 
 
 def test_bin_wrappers_share_identity() -> None:
-    """Legacy GUI bin modules should reflect current command ownership."""
+    """Legacy bin modules should reflect current command ownership."""
     from pathlib import Path
 
-    from airunner.bin.code_quality_report import main as legacy_quality_main
-    from airunner.bin.coverage_report import main as legacy_coverage_main
-    from airunner.bin.kill_zombie_processes import (
-        kill_zombie_processes as legacy_kill_zombie_processes,
+    from scripts.code_quality_report import main as legacy_quality_main
+    from scripts.coverage_report import main as legacy_coverage_main
+    from scripts.mypy_shortcut import main as legacy_mypy_main
+    from scripts.remove_unused_imports import (
+        main as legacy_remove_unused_main,
     )
-    from airunner.bin.mypy_shortcut import main as legacy_mypy_main
-    from airunner.bin.remove_unused_imports import main as legacy_remove_unused_main
-    from airunner.bin.run_tests import main as legacy_run_tests_main
-    from airunner.bin.run_tests import run_package_tests as legacy_package_tests
+    from scripts.run_tests import main as legacy_run_tests_main
 
-    assert legacy_quality_main.__module__ == "airunner.bin.code_quality_report"
-    assert legacy_coverage_main.__module__ == "airunner.bin.coverage_report"
-    assert legacy_kill_zombie_processes.__module__ == (
-        "airunner.bin.kill_zombie_processes"
-    )
-    assert legacy_mypy_main.__module__ == "airunner.bin.mypy_shortcut"
+    assert legacy_quality_main.__module__ == "scripts.code_quality_report"
+    assert legacy_coverage_main.__module__ == "scripts.coverage_report"
+    assert legacy_mypy_main.__module__ == "scripts.mypy_shortcut"
     assert legacy_remove_unused_main.__module__ == (
-        "airunner.bin.remove_unused_imports"
+        "scripts.remove_unused_imports"
     )
-    assert legacy_run_tests_main.__module__ == "airunner.bin.run_tests"
-    assert legacy_package_tests.__module__ == "airunner.bin.run_tests"
+    assert legacy_run_tests_main.__module__ == "scripts.run_tests"
 
+    # Verify that stale bin wrappers no longer exist
     for path in (
         Path("gui/src/airunner/bin/cleanup_llm_models.py"),
         Path("gui/src/airunner/bin/docker_wrapper.py"),
         Path("gui/src/airunner/bin/generate_cert.py"),
     ):
-        source = path.read_text(encoding="utf-8")
-        assert "airunner_services" not in source, path.as_posix()
-        assert "import_module" not in source, path.as_posix()
+        assert not path.exists(), (
+            f"Stale wrapper should not exist: {path.as_posix()}"
+        )
         assert "sys.modules[__name__]" not in source, path.as_posix()
 
     for path in (
