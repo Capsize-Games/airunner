@@ -6,7 +6,7 @@ to run eval tests much faster by processing multiple requests in parallel.
 """
 
 import time
-from airunner.components.eval.client import AIRunnerClient
+from airunner_services.eval.client import AIRunnerClient
 
 
 def example_sequential_requests():

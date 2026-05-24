@@ -82,12 +82,6 @@ _FORBIDDEN_IMPORT_PATTERNS = (
         r"utils\.model_file_checker\b"
     ),
     re.compile(r"\b(?:from|import)\s+airunner\.components\.agents\b"),
-    re.compile(r"\b(?:from|import)\s+airunner\.components\.eval\b"),
-    re.compile(
-        r"\b(?:from|import)\s+airunner\.components\.tools\."
-        r"(?:base_tool|url_safety|web_content_extractor|search_tool|"
-        r"search_providers|scrapy)\b"
-    ),
     re.compile(
         r"\b(?:from|import)\s+airunner\.components\.stt\.executors\b"
     ),
@@ -2878,26 +2872,7 @@ def test_download_routes_wrapper_shares_identity() -> None:
 
 
 def test_tools_runtime_wrappers_follow_current_ownership() -> None:
-    """Legacy pure tools imports should reflect current ownership."""
-    from airunner.components.tools.base_tool import BaseTool as LegacyBaseTool
-    from airunner.components.tools.scrapy import (
-        LLMGuidedSpider as LegacyLLMGuidedSpider,
-    )
-    from airunner.components.tools.scrapy.llm_crawler_controller import (
-        LLMCrawlerController as LegacyLLMCrawlerController,
-    )
-    from airunner.components.tools.search_providers import (
-        DuckDuckGoProvider as LegacyDuckDuckGoProvider,
-    )
-    from airunner.components.tools.search_tool import (
-        AggregatedSearchTool as LegacyAggregatedSearchTool,
-    )
-    from airunner.components.tools.url_safety import (
-        validate_url_for_fetch as legacy_validate_url_for_fetch,
-    )
-    from airunner.components.tools.web_content_extractor import (
-        WebContentExtractor as LegacyWebContentExtractor,
-    )
+    """Tools utilities are owned by services layer."""
     from airunner_services.tools.base_tool import BaseTool
     from airunner_services.tools.scrapy import LLMGuidedSpider
     from airunner_services.tools.scrapy.llm_crawler_controller import (
@@ -2910,13 +2885,25 @@ def test_tools_runtime_wrappers_follow_current_ownership() -> None:
         WebContentExtractor,
     )
 
-    assert LegacyBaseTool is BaseTool
-    assert LegacyLLMGuidedSpider is LLMGuidedSpider
-    assert LegacyLLMCrawlerController is LLMCrawlerController
-    assert LegacyDuckDuckGoProvider is DuckDuckGoProvider
-    assert LegacyAggregatedSearchTool is AggregatedSearchTool
-    assert legacy_validate_url_for_fetch is not validate_url_for_fetch
-    assert LegacyWebContentExtractor is WebContentExtractor
+    assert BaseTool.__module__ == "airunner_services.tools.base_tool"
+    assert LLMGuidedSpider.__module__ == (
+        "airunner_services.tools.scrapy.spiders.llm_guided_spider"
+    )
+    assert LLMCrawlerController.__module__ == (
+        "airunner_services.tools.scrapy.llm_crawler_controller"
+    )
+    assert DuckDuckGoProvider.__module__ == (
+        "airunner_services.tools.search_providers.duckduckgo_provider"
+    )
+    assert AggregatedSearchTool.__module__ == (
+        "airunner_services.tools.search_tool"
+    )
+    assert validate_url_for_fetch.__module__ == (
+        "airunner_services.tools.url_safety"
+    )
+    assert WebContentExtractor.__module__ == (
+        "airunner_services.tools.web_content_extractor"
+    )
 
 
 def test_scan_and_persistence_wrappers_follow_current_ownership() -> None:
@@ -4102,23 +4089,18 @@ def test_llm_request_sources_avoid_service_and_shared_imports() -> None:
 
 
 def test_eval_wrappers_share_identity() -> None:
-    """Legacy eval imports should resolve to service-owned code."""
-    from airunner.components.eval import AIRunnerClient as LegacyAIRunnerClient
-    from airunner.components.eval import (
-        create_correctness_evaluator as legacy_create_correctness_evaluator,
-    )
-    from airunner.components.eval.math_tools import (
-        SafePythonExecutor as LegacySafePythonExecutor,
-    )
+    """Eval utilities are owned by services layer."""
     from airunner_services.eval import AIRunnerClient
     from airunner_services.eval import create_correctness_evaluator
     from airunner_services.eval.math_tools import SafePythonExecutor
 
-    assert LegacyAIRunnerClient is AIRunnerClient
-    assert legacy_create_correctness_evaluator is (
-        create_correctness_evaluator
+    assert AIRunnerClient.__module__ == "airunner_services.eval.client"
+    assert create_correctness_evaluator.__module__ == (
+        "airunner_services.eval.evaluators"
     )
-    assert LegacySafePythonExecutor is SafePythonExecutor
+    assert SafePythonExecutor.__module__ == (
+        "airunner_services.eval.math_tools"
+    )
 
 
 def test_long_running_project_models_share_identity() -> None:
@@ -4231,9 +4213,6 @@ def test_gui_document_network_and_archive_sources_avoid_service_imports() -> Non
     """GUI network and archive helpers should not import services."""
     repo_root = Path(__file__).resolve().parents[4]
     gui_root = repo_root / "gui" / "src" / "airunner"
-    url_safety_source = (
-        gui_root / "components" / "tools" / "url_safety.py"
-    ).read_text(encoding="utf-8")
     kiwix_source = (
         gui_root / "components" / "documents" / "kiwix_api.py"
     ).read_text(encoding="utf-8")
@@ -4241,7 +4220,6 @@ def test_gui_document_network_and_archive_sources_avoid_service_imports() -> Non
         gui_root / "components" / "zimreader" / "zimreader.py"
     ).read_text(encoding="utf-8")
 
-    assert "airunner_services.tools.url_safety" not in url_safety_source
     assert "airunner_services.kiwix_api" not in kiwix_source
     assert "airunner_services.zimreader" not in zimreader_source
     assert "airunner_services.settings" not in kiwix_source

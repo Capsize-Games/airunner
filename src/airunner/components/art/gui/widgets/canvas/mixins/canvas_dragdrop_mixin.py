@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlparse
 from PIL import Image
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
 
-from airunner.components.tools.url_safety import safe_fetch_bytes
+from airunner_services.tools.url_safety import safe_fetch_bytes
 from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
 
 

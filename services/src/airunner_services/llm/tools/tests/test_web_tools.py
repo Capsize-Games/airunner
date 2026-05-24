@@ -20,7 +20,7 @@ def reset_web_tool_rate_limit():
 class TestSearchWeb:
     """Tests for search_web tool."""
 
-    @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
+    @patch("airunner_services.tools.search_tool.AggregatedSearchTool")
     def test_search_web_success(self, mock_search_tool):
         """Test successful web search with results."""
         # Mock search results
@@ -51,7 +51,7 @@ class TestSearchWeb:
             "test query", category="web"
         )
 
-    @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
+    @patch("airunner_services.tools.search_tool.AggregatedSearchTool")
     def test_search_web_no_results(self, mock_search_tool):
         """Test web search with no results."""
         mock_search_tool.aggregated_search_sync.return_value = {
@@ -62,7 +62,7 @@ class TestSearchWeb:
 
         assert result == {"results": []}
 
-    @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
+    @patch("airunner_services.tools.search_tool.AggregatedSearchTool")
     def test_search_web_missing_duckduckgo_key(self, mock_search_tool):
         """Test web search with missing duckduckgo key in results."""
         mock_search_tool.aggregated_search_sync.return_value = {"other": []}
@@ -71,7 +71,7 @@ class TestSearchWeb:
 
         assert result == {"results": []}
 
-    @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
+    @patch("airunner_services.tools.search_tool.AggregatedSearchTool")
     def test_search_web_exception(self, mock_search_tool):
         """Test web search with exception."""
         mock_search_tool.aggregated_search_sync.side_effect = Exception(
@@ -83,7 +83,7 @@ class TestSearchWeb:
         assert "Error searching web" in result
         assert "API Error" in result
 
-    @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
+    @patch("airunner_services.tools.search_tool.AggregatedSearchTool")
     def test_search_web_limits_to_five_results(self, mock_search_tool):
         """Test that search web limits results to 5."""
         # Create 10 mock results
@@ -108,7 +108,7 @@ class TestSearchWeb:
         assert "Result 5" not in result["summary"]
         assert "Result 9" not in result["summary"]
 
-    @patch("airunner.components.tools.search_tool.AggregatedSearchTool")
+    @patch("airunner_services.tools.search_tool.AggregatedSearchTool")
     def test_search_web_truncates_long_snippets(self, mock_search_tool):
         """Test that long snippets are truncated."""
         long_snippet = "A" * 500
@@ -135,7 +135,7 @@ class TestScrapeWebsite:
     """Tests for scrape_website tool."""
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_success(self, mock_extractor):
         """Test successful website scraping."""
@@ -153,7 +153,7 @@ class TestScrapeWebsite:
         )
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_with_selector(self, mock_extractor):
         """Test scraping with CSS selector."""
@@ -167,7 +167,7 @@ class TestScrapeWebsite:
         assert result["content"] == "Target content"
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_removes_scripts(self, mock_extractor):
         """Test that scripts and styles are removed."""
@@ -184,7 +184,7 @@ class TestScrapeWebsite:
         assert "color: red" not in result["content"]
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_timeout(self, mock_extractor):
         """Test handling of request timeout."""
@@ -198,7 +198,7 @@ class TestScrapeWebsite:
         assert "timed out" in result["error"].lower()
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_connection_error(self, mock_extractor):
         """Test handling of connection error."""
@@ -211,7 +211,7 @@ class TestScrapeWebsite:
         assert "Error scraping" in result["error"]
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_http_error(self, mock_extractor):
         """Test handling of HTTP error."""
@@ -224,7 +224,7 @@ class TestScrapeWebsite:
         assert "Error scraping" in result["error"]
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_invalid_selector(self, mock_extractor):
         """Test handling of non-matching CSS selector."""
@@ -239,7 +239,7 @@ class TestScrapeWebsite:
         assert "Could not extract content" in result["error"]
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_truncates_long_content(self, mock_extractor):
         """Test that very long content is returned."""
@@ -255,7 +255,7 @@ class TestScrapeWebsite:
         assert "A" in result["content"]
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_uses_browser_headers(self, mock_extractor):
         """Test that browser-like headers are sent."""
@@ -271,7 +271,7 @@ class TestScrapeWebsite:
         mock_extractor.fetch_and_extract_with_metadata.assert_called_once()
 
     @patch(
-        "airunner.components.tools.web_content_extractor.WebContentExtractor"
+        "airunner_services.tools.web_content_extractor.WebContentExtractor"
     )
     def test_scrape_website_has_timeout(self, mock_extractor):
         """Test that requests have a timeout."""
