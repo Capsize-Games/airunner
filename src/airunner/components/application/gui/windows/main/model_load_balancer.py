@@ -222,14 +222,6 @@ class ModelLoadBalancer(MediatorMixin):
         client = self._daemon_client()
         if client is None:
             return None
-        availability_check = getattr(client, "is_available", None)
-        if callable(availability_check):
-            try:
-                if not availability_check(timeout_seconds=0.2):
-                    return None
-            except TypeError:
-                if not availability_check():
-                    return None
         try:
             status = client.daemon_runtime_status()
         except RuntimeError:

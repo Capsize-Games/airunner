@@ -69,6 +69,30 @@ class AIRunnerDaemon:
         self._setup_signal_handlers()
         self.lifecycle_service = None
 
+    def _acquire_lock(self) -> bool:
+        """Return True when no other daemon is listening on the configured port.
+
+        Attempts a TCP connection to the port.  If something answers,
+        another daemon is already running.
+        """
+        import socket
+
+        server_config = self.config.config.get("server", {})
+        host = server_config.get("host", "127.0.0.1")
+        port = int(server_config.get("port", 8188))
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        try:
+            sock.connect((host, port))
+            # Connected — another daemon is listening
+            return False
+        except (OSError, ConnectionRefusedError, socket.timeout):
+            # Nothing listening — port is free
+            return True
+        finally:
+            sock.close()
+
     def _setup_logging(self):
         """Configure logging for daemon mode."""
         log_config = self.config.config.get("logging", {})
@@ -135,6 +159,14 @@ class AIRunnerDaemon:
     def start(self):
         """Start the daemon."""
         logger.info("Starting AI Runner daemon...")
+
+        if not self._acquire_lock():
+            logger.error(
+                "Daemon is already running on port %s. "
+                "Stop the existing instance first.",
+                self.config.config.get("server", {}).get("port", 8188),
+            )
+            sys.exit(1)
 
         try:
             self.app = self._create_headless_app()

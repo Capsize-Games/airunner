@@ -23,38 +23,6 @@ daemon_running() {
 }
 
 # --------------------------------------------------
-# Stop existing daemon if running
-# --------------------------------------------------
-stop_services() {
-    echo "=== Stopping AI Runner services ==="
-
-    if [[ -f "${PID_FILE}" ]]; then
-        local pid
-        pid="$(head -n1 "${PID_FILE}")"
-        if kill -0 "${pid}" 2>/dev/null; then
-            echo "Stopping daemon (PID ${pid})..."
-            kill -TERM "${pid}" 2>/dev/null || true
-
-            # Wait up to 5s for graceful shutdown
-            local deadline=$((SECONDS + 5))
-            while kill -0 "${pid}" 2>/dev/null; do
-                if (( SECONDS >= deadline )); then
-                    echo "Force-killing daemon..."
-                    kill -KILL "${pid}" 2>/dev/null || true
-                    break
-                fi
-                sleep 0.2
-            done
-        fi
-        rm -f "${PID_FILE}"
-    fi
-
-    # Clean up any leftover daemon processes
-    pkill -f "airunner_services.daemon" 2>/dev/null || true
-    echo "Services stopped."
-}
-
-# --------------------------------------------------
 # Launch daemon
 # --------------------------------------------------
 start_services() {
@@ -100,7 +68,6 @@ start_services() {
 # --------------------------------------------------
 # Main
 # --------------------------------------------------
-stop_services
 start_services
 
 echo ""
