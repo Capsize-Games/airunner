@@ -590,7 +590,7 @@ class WorkerManager(Worker):
             return True
         return False
 
-    def _is_optional_runtime_unload(action: str, model_type) -> bool:
+    def _is_optional_runtime_unload(self, action: str, model_type) -> bool:
         """Return True for best-effort TTS/STT unload requests."""
         from airunner.enums import ModelType
 

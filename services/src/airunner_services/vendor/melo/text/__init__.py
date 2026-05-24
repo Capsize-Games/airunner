@@ -1,4 +1,4 @@
-from airunner_services.contract_enums import AvailableLanguage
+from airunner.enums import AvailableLanguage
 from airunner_services.vendor.melo.text.symbols import *
 
 

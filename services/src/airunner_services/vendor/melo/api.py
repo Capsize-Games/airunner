@@ -6,14 +6,14 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch
 from typing import Dict
-from airunner_services.utils.memory import clear_memory
+from airunner.utils.memory import clear_memory
 from airunner_services.vendor.melo import utils
 from airunner_services.vendor.melo.models import SynthesizerTrn
 from airunner_services.vendor.melo.split_utils import split_sentence
 from airunner_services.vendor.melo.text.cleaner import Cleaner
 from airunner_services.vendor.melo import commons
 from airunner_services.vendor.melo.text import cleaned_text_to_sequence
-from airunner_services.contract_enums import AvailableLanguage
+from airunner.enums import AvailableLanguage
 from airunner_services.vendor.melo.runtime_support import resolve_tts_model_path
 
 

@@ -5,7 +5,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import pool
 
 from services.src.airunner_services.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
-from airunner.utils.db.engine import create_configured_engine
+from airunner_model.db.engine import create_configured_engine
 
 
 def _db_url() -> str:

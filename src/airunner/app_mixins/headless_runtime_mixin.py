@@ -16,7 +16,7 @@ from airunner.components.knowledge import get_knowledge_base
 from airunner_model.models.application_settings import (
     ApplicationSettings,
 )
-from airunner.services.lifecycle_service import CoreLifecycleService
+# CoreLifecycleService moved to services package; headless mode removed from GUI
 from airunner.settings import AIRUNNER_HEADLESS_SERVER_HOST
 from airunner.settings import AIRUNNER_HEADLESS_SERVER_PORT
 from airunner.settings import AIRUNNER_USER_DATA_PATH
@@ -206,14 +206,9 @@ class HeadlessRuntimeMixin:
         if getattr(self, "art", None) is None:
             self.art = art_service_class()
 
-    def ensure_lifecycle_service(self) -> CoreLifecycleService:
-        """Return the reusable lifecycle service for this App."""
-        if self.lifecycle_service is None:
-            self.lifecycle_service = CoreLifecycleService(
-                signal_source=self,
-                logger=self.logger,
-            )
-        return self.lifecycle_service
+    def ensure_lifecycle_service(self):
+        """Lifecycle service now managed by daemon."""
+        return None
 
     def initialize_headless_lifecycle(self, preload_llm: bool = True) -> None:
         """Initialize headless workers and optionally preload the local LLM."""

@@ -1,6 +1,6 @@
 import re
 
-from airunner_services.contract_enums import AvailableLanguage
+from airunner.enums import AvailableLanguage
 
 
 def split_sentence(

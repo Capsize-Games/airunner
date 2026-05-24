@@ -481,6 +481,10 @@ class SDWorker(Worker):
 		pass
 
 	def on_do_generate_signal(self, message: Dict):
+		print(
+			"[SDWorker] on_do_generate_signal received, "
+			"queuing generate action"
+		)
 		self.add_to_queue(
 			{
 				"action": ModelAction.GENERATE,
@@ -590,6 +594,12 @@ class SDWorker(Worker):
 	def _generate_image(self, message: Dict):
 		image_request = message.get("image_request")
 		client = self._daemon_client()
+		path_label = "daemon" if client is not None else "local"
+		print(
+			f"[SDWorker._generate_image] path={path_label} "
+			f"version={getattr(image_request, 'version', None)} "
+			f"model={getattr(image_request, 'model_path', None)}"
+		)
 		self.logger.info(
 			"SDWorker::_generate_image using %s path for version=%s "
 			"model=%s",
@@ -600,6 +610,7 @@ class SDWorker(Worker):
 		if client is not None:
 			self._generate_image_via_daemon(message)
 			return
+		print("[SDWorker._generate_image] Loading model manager locally")
 		message["callback"] = self._finalize_do_generate_signal
 		self.load_model_manager(message)
 

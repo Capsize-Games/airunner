@@ -1,7 +1,7 @@
 import copy
 from importlib import import_module
 
-from airunner_services.contract_enums import AvailableLanguage
+from airunner.enums import AvailableLanguage
 from airunner_services.vendor.melo.text import cleaned_text_to_sequence
 
 
@@ -9,35 +9,35 @@ class Cleaner:
     def __init__(self):
         self.language_module_map = {
             AvailableLanguage.ZH: (
-                "airunner_services.vendor.melo.text.chinese",
+                "airunner.vendor.melo.text.chinese",
                 "Chinese",
             ),
             AvailableLanguage.JP: (
-                "airunner_services.vendor.melo.text.japanese",
+                "airunner.vendor.melo.text.japanese",
                 "Japanese",
             ),
             AvailableLanguage.EN: (
-                "airunner_services.vendor.melo.text.english",
+                "airunner.vendor.melo.text.english",
                 "English",
             ),
             AvailableLanguage.ZH_MIX_EN: (
-                "airunner_services.vendor.melo.text.chinese_mix",
+                "airunner.vendor.melo.text.chinese_mix",
                 "ChineseMix",
             ),
             AvailableLanguage.KR: (
-                "airunner_services.vendor.melo.text.korean",
+                "airunner.vendor.melo.text.korean",
                 "Korean",
             ),
             AvailableLanguage.FR: (
-                "airunner_services.vendor.melo.text.french",
+                "airunner.vendor.melo.text.french",
                 "French",
             ),
             AvailableLanguage.SP: (
-                "airunner_services.vendor.melo.text.spanish",
+                "airunner.vendor.melo.text.spanish",
                 "Spanish",
             ),
             AvailableLanguage.ES: (
-                "airunner_services.vendor.melo.text.spanish",
+                "airunner.vendor.melo.text.spanish",
                 "Spanish",
             ),
         }

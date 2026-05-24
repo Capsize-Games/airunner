@@ -1,0 +1,20 @@
+"""Compatibility re-exports from airunner_model.contracts."""
+from airunner_model.contracts import (
+    ArtInvocationRequest,
+    ArtInvocationResponse,
+    ChatMessage,
+    LLMInvocationRequest,
+    LLMInvocationResponse,
+    MessageRole,
+    RuntimeAction,
+    RuntimeDescriptor,
+    RuntimeHealth,
+    RuntimeHealthStatus,
+    RuntimeKind,
+    RuntimeMode,
+    STTInvocationRequest,
+    STTInvocationResponse,
+    TransportKind,
+    TTSInvocationRequest,
+    TTSInvocationResponse,
+)

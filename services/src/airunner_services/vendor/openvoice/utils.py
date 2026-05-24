@@ -2,7 +2,7 @@ import re
 import json
 import numpy as np
 
-from airunner_services.contract_enums import AvailableLanguage
+from airunner.enums import AvailableLanguage
 
 
 def get_hparams_from_file(config_path):

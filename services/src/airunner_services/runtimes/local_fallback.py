@@ -1209,7 +1209,22 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         # instantiated by ServiceWorkerManager; accessing it here
         # triggers creation and signal-handler registration so the
         # signal below is received.
-        self._headless_art_worker(create=True)
+        print(
+            "[LocalFallbackArtClient] Creating SD worker and emitting "
+            f"DO_GENERATE_SIGNAL model={image_request.model_path!r} "
+            f"version={image_request.version!r}"
+        )
+        sd_worker = self._headless_art_worker(create=True)
+        if sd_worker is None:
+            print(
+                "[LocalFallbackArtClient] ERROR: SD worker could not "
+                "be created (worker_manager not found on signal_source)"
+            )
+        else:
+            print(
+                "[LocalFallbackArtClient] SD worker created: "
+                f"type={type(sd_worker).__name__}"
+            )
 
         progress_handler = None
         if progress_callback is not None:

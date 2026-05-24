@@ -16,7 +16,7 @@ from airunner.utils.path_policy import (
 )
 
 try:
-    from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
+    from airunner_services.vendor.facehuggershield.darklock.restrict_os_access import (
         RestrictOSAccess,
     )
 except Exception:  # pragma: no cover - darklock may be unavailable in tests

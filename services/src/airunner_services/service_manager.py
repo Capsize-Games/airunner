@@ -6,34 +6,20 @@ background service/daemon across Linux (systemd), macOS (LaunchAgent),
 and Windows (NSSM/Task Scheduler).
 """
 
-import logging
 import os
+import sys
 import platform
 import subprocess
-import sys
-from enum import Enum
 from pathlib import Path
 from typing import Optional
+from enum import Enum
 
-from airunner_native.linux_bundle_layout import build_linux_bundle_layout
-from airunner_services.config.runtime_layout import (
-    build_runtime_directory_layout,
-)
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application import get_logger
+from airunner.linux_bundle_layout import build_linux_bundle_layout
+from airunner.runtime_layout import build_runtime_directory_layout
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-
-
-def _named_logger(name: str):
-    """Return one concrete logger for a module or helper class."""
-    get_named_logger = getattr(logger, "getLogger", None)
-    if callable(get_named_logger):
-        return get_named_logger(name)
-    get_child = getattr(logger, "getChild", None)
-    if callable(get_child):
-        return get_child(name)
-    return logging.getLogger(name)
 
 
 class ServicePlatform(Enum):
@@ -72,10 +58,11 @@ class ServiceManager:
         Args:
             config_path: Path to daemon configuration file (daemon.yaml)
         """
-        self.logger = _named_logger(__name__)
+        self.logger = logger.getLogger(__name__)
         self.platform = self._detect_platform()
         self.config_path = config_path or self._default_config_path()
 
+        # Platform-specific handlers
         self._handlers = {
             ServicePlatform.LINUX: LinuxSystemdHandler(),
             ServicePlatform.MACOS: MacOSLaunchAgentHandler(),
@@ -87,12 +74,13 @@ class ServiceManager:
         system = platform.system().lower()
         if system == "linux":
             return ServicePlatform.LINUX
-        if system == "darwin":
+        elif system == "darwin":
             return ServicePlatform.MACOS
-        if system == "windows":
+        elif system == "windows":
             return ServicePlatform.WINDOWS
-        self.logger.warning(f"Unknown platform: {system}")
-        return ServicePlatform.UNKNOWN
+        else:
+            self.logger.warning(f"Unknown platform: {system}")
+            return ServicePlatform.UNKNOWN
 
     def _default_config_path(self) -> Path:
         """Get default configuration path."""
@@ -103,7 +91,15 @@ class ServiceManager:
         return layout.config_file("daemon")
 
     def install(self, **kwargs) -> bool:
-        """Install AI Runner as a service."""
+        """
+        Install AI Runner as a service.
+
+        Args:
+            **kwargs: Platform-specific installation options
+
+        Returns:
+            True if installation successful, False otherwise
+        """
         if self.platform == ServicePlatform.UNKNOWN:
             self.logger.error("Cannot install service on unknown platform")
             return False
@@ -120,7 +116,12 @@ class ServiceManager:
             return False
 
     def uninstall(self) -> bool:
-        """Uninstall AI Runner service."""
+        """
+        Uninstall AI Runner service.
+
+        Returns:
+            True if uninstallation successful, False otherwise
+        """
         if self.platform == ServicePlatform.UNKNOWN:
             self.logger.error("Cannot uninstall service on unknown platform")
             return False
@@ -131,6 +132,7 @@ class ServiceManager:
             return False
 
         try:
+            # Stop service before uninstalling
             self.stop()
             return handler.uninstall()
         except Exception as e:
@@ -138,7 +140,12 @@ class ServiceManager:
             return False
 
     def start(self) -> bool:
-        """Start the AI Runner service."""
+        """
+        Start the AI Runner service.
+
+        Returns:
+            True if service started successfully, False otherwise
+        """
         handler = self._handlers.get(self.platform)
         if not handler:
             return False
@@ -150,7 +157,12 @@ class ServiceManager:
             return False
 
     def stop(self) -> bool:
-        """Stop the AI Runner service."""
+        """
+        Stop the AI Runner service.
+
+        Returns:
+            True if service stopped successfully, False otherwise
+        """
         handler = self._handlers.get(self.platform)
         if not handler:
             return False
@@ -162,11 +174,21 @@ class ServiceManager:
             return False
 
     def restart(self) -> bool:
-        """Restart the AI Runner service."""
+        """
+        Restart the AI Runner service.
+
+        Returns:
+            True if service restarted successfully, False otherwise
+        """
         return self.stop() and self.start()
 
     def status(self) -> ServiceState:
-        """Check service status."""
+        """
+        Check service status.
+
+        Returns:
+            Current service state
+        """
         handler = self._handlers.get(self.platform)
         if not handler:
             return ServiceState.UNKNOWN
@@ -178,7 +200,12 @@ class ServiceManager:
             return ServiceState.UNKNOWN
 
     def is_installed(self) -> bool:
-        """Check if service is installed."""
+        """
+        Check if service is installed.
+
+        Returns:
+            True if service is installed, False otherwise
+        """
         handler = self._handlers.get(self.platform)
         if not handler:
             return False
@@ -194,24 +221,30 @@ class ServiceHandlerBase:
     """Base class for platform-specific service handlers."""
 
     def __init__(self):
-        self.logger = _named_logger(self.__class__.__name__)
+        self.logger = logger.getLogger(self.__class__.__name__)
 
     def install(self, config_path: Path, **kwargs) -> bool:
+        """Install service on this platform."""
         raise NotImplementedError
 
     def uninstall(self) -> bool:
+        """Uninstall service from this platform."""
         raise NotImplementedError
 
     def start(self) -> bool:
+        """Start the service."""
         raise NotImplementedError
 
     def stop(self) -> bool:
+        """Stop the service."""
         raise NotImplementedError
 
     def status(self) -> ServiceState:
+        """Get service status."""
         raise NotImplementedError
 
     def is_installed(self) -> bool:
+        """Check if service is installed."""
         raise NotImplementedError
 
 
@@ -232,13 +265,15 @@ class LinuxSystemdHandler(ServiceHandlerBase):
 
     def install(self, config_path: Path, **kwargs) -> bool:
         """Install systemd user service."""
+        # Get Python executable and airunner-daemon path
         bundle_layout = build_linux_bundle_layout(python_executable=sys.executable)
         daemon_script = bundle_layout.daemon_executable()
 
         if daemon_script is None:
+            # Fallback to module execution
             daemon_cmd = (
                 f"{bundle_layout.python_executable} "
-                "-m airunner_services.daemon"
+                "-m airunner.services.daemon"
             )
         else:
             daemon_cmd = str(daemon_script)
@@ -252,16 +287,21 @@ class LinuxSystemdHandler(ServiceHandlerBase):
         )
 
         try:
+            # Create systemd user directory if it doesn't exist
             self.service_file.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write service file
             self.service_file.write_text(service_content)
             self.logger.info(f"Created service file: {self.service_file}")
 
+            # Reload systemd daemon
             subprocess.run(
                 ["systemctl", "--user", "daemon-reload"],
                 check=True,
                 capture_output=True,
             )
 
+            # Enable service (auto-start on login)
             if kwargs.get("enable", True):
                 subprocess.run(
                     ["systemctl", "--user", "enable", self.SERVICE_NAME],
@@ -361,6 +401,7 @@ WantedBy=default.target
     def uninstall(self) -> bool:
         """Uninstall systemd user service."""
         try:
+            # Disable and stop service
             subprocess.run(
                 ["systemctl", "--user", "disable", self.SERVICE_NAME],
                 capture_output=True,
@@ -370,10 +411,12 @@ WantedBy=default.target
                 capture_output=True,
             )
 
+            # Remove service file
             if self.service_file.exists():
                 self.service_file.unlink()
                 self.logger.info(f"Removed service file: {self.service_file}")
 
+            # Reload systemd
             subprocess.run(
                 ["systemctl", "--user", "daemon-reload"], capture_output=True
             )
@@ -422,11 +465,12 @@ WantedBy=default.target
             status_str = result.stdout.strip()
             if status_str == "active":
                 return ServiceState.RUNNING
-            if status_str == "inactive":
+            elif status_str == "inactive":
                 return ServiceState.STOPPED
-            if status_str == "failed":
+            elif status_str == "failed":
                 return ServiceState.FAILED
-            return ServiceState.UNKNOWN
+            else:
+                return ServiceState.UNKNOWN
 
         except Exception as e:
             self.logger.error(f"Failed to get service status: {e}")
@@ -457,12 +501,14 @@ class MacOSLaunchAgentHandler(ServiceHandlerBase):
         daemon_script = Path(python_exe).parent / "airunner-daemon"
 
         if not daemon_script.exists():
-            daemon_cmd = [python_exe, "-m", "airunner_services.daemon"]
+            daemon_cmd = [python_exe, "-m", "airunner.services.daemon"]
         else:
             daemon_cmd = [str(daemon_script)]
 
+        # Add config path
         daemon_cmd.extend(["--config", str(config_path)])
 
+        # Create plist content
         plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -489,10 +535,14 @@ class MacOSLaunchAgentHandler(ServiceHandlerBase):
 """
 
         try:
+            # Create LaunchAgents directory if it doesn't exist
             self.plist_file.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write plist file
             self.plist_file.write_text(plist_content)
             self.logger.info(f"Created plist file: {self.plist_file}")
 
+            # Load the agent
             if kwargs.get("load", True):
                 subprocess.run(
                     ["launchctl", "load", str(self.plist_file)],
@@ -510,11 +560,13 @@ class MacOSLaunchAgentHandler(ServiceHandlerBase):
     def uninstall(self) -> bool:
         """Uninstall LaunchAgent."""
         try:
+            # Unload the agent
             subprocess.run(
                 ["launchctl", "unload", str(self.plist_file)],
                 capture_output=True,
             )
 
+            # Remove plist file
             if self.plist_file.exists():
                 self.plist_file.unlink()
                 self.logger.info(f"Removed plist file: {self.plist_file}")
@@ -561,10 +613,13 @@ class MacOSLaunchAgentHandler(ServiceHandlerBase):
             )
 
             if result.returncode == 0:
+                # Check if PID is present in output
                 if "PID" in result.stdout or '"PID" =' in result.stdout:
                     return ServiceState.RUNNING
-                return ServiceState.STOPPED
-            return ServiceState.UNKNOWN
+                else:
+                    return ServiceState.STOPPED
+            else:
+                return ServiceState.UNKNOWN
 
         except Exception as e:
             self.logger.error(f"Failed to get LaunchAgent status: {e}")
@@ -582,6 +637,7 @@ class WindowsServiceHandler(ServiceHandlerBase):
 
     def install(self, config_path: Path, **kwargs) -> bool:
         """Install Windows service using NSSM."""
+        # Check if NSSM is installed
         try:
             subprocess.run(
                 ["nssm", "version"], capture_output=True, check=True
@@ -596,13 +652,15 @@ class WindowsServiceHandler(ServiceHandlerBase):
         daemon_script = Path(python_exe).parent / "airunner-daemon.exe"
 
         if not daemon_script.exists():
+            # Use Python module execution
             app_path = python_exe
-            app_args = f"-m airunner_services.daemon --config {config_path}"
+            app_args = f"-m airunner.services.daemon --config {config_path}"
         else:
             app_path = str(daemon_script)
             app_args = f"--config {config_path}"
 
         try:
+            # Install service
             subprocess.run(
                 ["nssm", "install", self.SERVICE_NAME, app_path]
                 + app_args.split(),
@@ -610,6 +668,7 @@ class WindowsServiceHandler(ServiceHandlerBase):
                 capture_output=True,
             )
 
+            # Set service description
             subprocess.run(
                 [
                     "nssm",
@@ -621,6 +680,7 @@ class WindowsServiceHandler(ServiceHandlerBase):
                 capture_output=True,
             )
 
+            # Set startup type to automatic
             subprocess.run(
                 [
                     "nssm",
@@ -642,9 +702,12 @@ class WindowsServiceHandler(ServiceHandlerBase):
     def uninstall(self) -> bool:
         """Uninstall Windows service."""
         try:
+            # Stop service first
             subprocess.run(
                 ["nssm", "stop", self.SERVICE_NAME], capture_output=True
             )
+
+            # Remove service
             subprocess.run(
                 ["nssm", "remove", self.SERVICE_NAME, "confirm"],
                 check=True,
@@ -698,9 +761,10 @@ class WindowsServiceHandler(ServiceHandlerBase):
             status_str = result.stdout.strip().upper()
             if "RUNNING" in status_str or "SERVICE_RUNNING" in status_str:
                 return ServiceState.RUNNING
-            if "STOPPED" in status_str or "SERVICE_STOPPED" in status_str:
+            elif "STOPPED" in status_str or "SERVICE_STOPPED" in status_str:
                 return ServiceState.STOPPED
-            return ServiceState.UNKNOWN
+            else:
+                return ServiceState.UNKNOWN
 
         except Exception as e:
             self.logger.error(f"Failed to get service status: {e}")
@@ -714,6 +778,7 @@ class WindowsServiceHandler(ServiceHandlerBase):
                 capture_output=True,
                 text=True,
             )
+            # If status command succeeds, service is installed
             return result.returncode == 0
         except Exception:
             return False

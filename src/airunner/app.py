@@ -41,7 +41,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.utils.application.logging_utils import configure_headless_logging
 from airunner.daemon_client import GuiDaemonClient
-from airunner.runtimes.bootstrap import build_runtime_registry
+# Runtime registry now managed by daemon; import removed
 
 
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
@@ -107,7 +107,7 @@ class App(
             no_splash, main_window_class, window_class_params
         )
         super().__init__()
-        self.runtime_registry = build_runtime_registry(app_instance=self)
+        # Runtime registry now managed by daemon
         self.daemon_client = None
         self.api_bridge = None
         self.api_adapter = None

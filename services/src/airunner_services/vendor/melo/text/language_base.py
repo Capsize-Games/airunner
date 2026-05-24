@@ -3,7 +3,7 @@ import torch
 import os
 from g2p_en import G2p
 
-from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner.settings import AIRUNNER_BASE_PATH
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from airunner_services.vendor.melo.runtime_support import (
     get_melo_logger,

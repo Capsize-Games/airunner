@@ -10,8 +10,8 @@ from pydub import AudioSegment
 import torchaudio
 from time import perf_counter
 
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application import get_logger
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 model_size = "medium"
 model = None

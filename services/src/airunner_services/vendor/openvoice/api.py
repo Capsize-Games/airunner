@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import re
 import soundfile
-from airunner_services.contract_enums import AvailableLanguage
+from airunner.enums import AvailableLanguage
 from airunner_services.vendor.openvoice import utils
 from airunner_services.vendor.openvoice import commons
 import os
