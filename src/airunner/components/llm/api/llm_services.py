@@ -8,9 +8,6 @@ from airunner.components.llm.utils.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
 )
-from airunner.daemon_client.daemon_connection_state import (
-    DaemonConnectionState,
-)
 from airunner.enums import SignalCode
 from airunner.enums import LLMActionType
 from dataclasses import dataclass, field
@@ -221,7 +218,7 @@ class LLMAPIService(APIServiceBase):
             pass
 
         try:
-            client.unload_local_llm(auto_start=False)
+            client.unload_local_llm()
         except RuntimeError:
             self.logger.error(
                 "LLM API: Daemon unload failed — daemon may be "
@@ -374,15 +371,13 @@ class LLMAPIService(APIServiceBase):
 
     def _daemon_is_immediately_available(self, client) -> bool:
         """Return True when one daemon can accept a request right now."""
-        if getattr(client, "state", None) is DaemonConnectionState.CONNECTED:
-            return True
         availability_check = getattr(client, "is_available", None)
         if callable(availability_check):
             try:
                 return bool(availability_check(timeout_seconds=0.2))
             except TypeError:
                 return bool(availability_check())
-        return bool(client.ensure_connected(auto_start=False))
+        return bool(client.is_available())
 
     def _run_daemon_request_or_fallback(
         self,

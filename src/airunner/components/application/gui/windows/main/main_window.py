@@ -2568,7 +2568,6 @@ class MainWindow(
         status = None
         try:
             status = client.daemon_runtime_status(
-                auto_start=False,
                 timeout_seconds=self._daemon_status_request_timeout_seconds,
             )
         except RuntimeError:

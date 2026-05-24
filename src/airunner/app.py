@@ -18,7 +18,6 @@ from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
 from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
-    DEV_ENV,
     LOCAL_SERVER_PORT,
     MATHJAX_VERSION,
 )
@@ -112,15 +111,7 @@ class App(
         self.api_bridge = None
         self.api_adapter = None
         if not self.headless:
-            self.daemon_client = GuiDaemonClient(
-                detect_stale_dev_daemon=(
-                    DEV_ENV
-                    and os.environ.get(
-                        "AIRUNNER_DISABLE_STALE_DAEMON_CHECK"
-                    )
-                    != "1"
-                ),
-            )
+            self.daemon_client = GuiDaemonClient()
             self._init_api_bridge()
         self._register_signals()
         self._ensure_mathjax()

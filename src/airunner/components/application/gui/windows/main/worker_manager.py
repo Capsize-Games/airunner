@@ -807,7 +807,6 @@ class WorkerManager(Worker):
     ) -> bool:
         """Run one daemon load or unload request and wait for its state."""
         loaded = action == "load"
-        auto_start = loaded
         action_timeout = self._runtime_action_timeout_seconds(
             action,
             model_type,
@@ -826,7 +825,6 @@ class WorkerManager(Worker):
                 runtime_name,
                 deployment_mode=deployment_mode,
                 metadata=route_metadata,
-                auto_start=auto_start,
                 timeout_seconds=action_timeout,
             )
         except RuntimeError as exc:
@@ -846,7 +844,6 @@ class WorkerManager(Worker):
             runtime_name,
             loaded=loaded,
             deployment_mode=deployment_mode,
-            auto_start=auto_start,
             timeout_seconds=wait_timeout,
         )
 
@@ -967,7 +964,7 @@ class WorkerManager(Worker):
         except RuntimeError:
             pass
         try:
-            client.unload_local_llm(auto_start=False)
+            client.unload_local_llm()
         except RuntimeError as exc:
             return self._emit_daemon_runtime_failure(
                 "unload",
@@ -978,7 +975,6 @@ class WorkerManager(Worker):
         ready = client.wait_runtime_ready(
             "llm",
             loaded=False,
-            auto_start=False,
             timeout_seconds=self._runtime_wait_timeout_seconds(
                 "unload",
                 ModelType.LLM,

@@ -65,8 +65,8 @@ class APIBridge:
             return False
 
     def ensure_connected(self) -> bool:
-        """Ensure the daemon is connected, starting it if needed."""
-        return self._client.ensure_connected(auto_start=True)
+        """Ensure the daemon is connected."""
+        return self._client.is_available()
 
     # ------------------------------------------------------------------
     # Art generation
@@ -199,7 +199,6 @@ class APIBridge:
                 "max_tokens": max_tokens,
                 "stream": stream,
             },
-            auto_start=True,
             timeout_seconds=300.0,
         )
         return response.json()
@@ -302,7 +301,6 @@ class APIBridge:
                 "model_type": model_type,
                 "output_dir": output_dir,
             },
-            auto_start=True,
             timeout_seconds=30.0,
         )
         return response.json()

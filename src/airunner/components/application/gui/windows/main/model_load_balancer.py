@@ -231,7 +231,7 @@ class ModelLoadBalancer(MediatorMixin):
                 if not availability_check():
                     return None
         try:
-            status = client.daemon_runtime_status(auto_start=False)
+            status = client.daemon_runtime_status()
         except RuntimeError:
             return None
         if "runtimes" in status:
@@ -276,7 +276,6 @@ class ModelLoadBalancer(MediatorMixin):
             if not client.wait_runtime_ready(
                 runtime_name,
                 loaded=True,
-                auto_start=False,
             ):
                 self._emit_model_status(model_type, ModelStatus.FAILED)
                 continue
@@ -301,7 +300,6 @@ class ModelLoadBalancer(MediatorMixin):
             if not client.wait_runtime_ready(
                 runtime_name,
                 loaded=False,
-                auto_start=False,
             ):
                 self._emit_model_status(model_type, ModelStatus.FAILED)
                 continue

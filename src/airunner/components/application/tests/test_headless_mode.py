@@ -21,7 +21,7 @@ def _daemon_config():
 
 def test_daemon_creates_headless_app_without_embedded_server(monkeypatch):
     """Daemon headless bootstrap should disable embedded app server ownership."""
-    import airunner.services.daemon as daemon_module
+    import airunner_services.daemon as daemon_module
 
     captured = {}
 
@@ -52,7 +52,7 @@ def test_daemon_creates_headless_app_without_embedded_server(monkeypatch):
 
 def test_lifecycle_status_does_not_require_app_bootstrap():
     """Lifecycle status should be inspectable without launching App."""
-    from airunner.services.lifecycle_service import CoreLifecycleService
+    from airunner_services.lifecycle_service import CoreLifecycleService
 
     signal_source = SimpleNamespace(
         logger=FakeLogger(),

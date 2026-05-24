@@ -979,42 +979,24 @@ def test_dead_gui_bin_wrappers_removed() -> None:
 def test_shared_helper_wrappers_follow_current_ownership() -> None:
     """Legacy helper paths should reflect current GUI and shared ownership."""
     from airunner.dev_build_token import current_dev_build_token as legacy_token
-    from airunner.daemon_client import GuiDaemonClient as LegacyGuiDaemonClient
-    from airunner.daemon_client.daemon_connection_state import (
-        DaemonConnectionState as LegacyDaemonConnectionState,
-    )
-    from airunner_services.daemon_connection_state import (
-        DaemonConnectionState,
-    )
+    from airunner.daemon_client import GuiDaemonClient
     from airunner_services.dev_build_token import current_dev_build_token
-    assert LegacyGuiDaemonClient.__module__ == (
+    assert GuiDaemonClient.__module__ == (
         "airunner.daemon_client.gui_daemon_client"
     )
     assert legacy_token is not current_dev_build_token
     assert legacy_token.__module__ == "airunner.dev_build_token"
-    assert LegacyDaemonConnectionState is not DaemonConnectionState
-    assert LegacyDaemonConnectionState.__module__ == (
-        "airunner.daemon_client.daemon_connection_state"
-    )
 
 def test_api_client_wrappers_follow_current_ownership() -> None:
     """Daemon-client imports should reflect GUI vs API/service ownership."""
-    from airunner.daemon_client import DaemonLauncher as LegacyDaemonLauncher
     from airunner.daemon_client import GuiDaemonClient as LegacyGuiDaemonClient
-    from airunner_api.client import DaemonLauncher as APIDaemonLauncher
     from airunner_api.client import GuiDaemonClient as APIGuiDaemonClient
-    from airunner_services.daemon_client import DaemonLauncher
     from airunner_services.daemon_client import GuiDaemonClient
 
-    assert LegacyDaemonLauncher.__module__ == (
-        "airunner.daemon_client.daemon_launcher"
-    )
     assert LegacyGuiDaemonClient.__module__ == (
         "airunner.daemon_client.gui_daemon_client"
     )
-    assert LegacyDaemonLauncher is not APIDaemonLauncher
     assert LegacyGuiDaemonClient is not APIGuiDaemonClient
-    assert APIDaemonLauncher is DaemonLauncher
     assert APIGuiDaemonClient is GuiDaemonClient
 
 
