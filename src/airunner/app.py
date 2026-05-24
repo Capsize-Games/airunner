@@ -125,12 +125,6 @@ class App(
         self._register_signals()
         self._ensure_mathjax()
 
-        # Load explicitly enabled runtime extensions early so they can:
-        # - override built-in LLM tools by name (after built-ins are registered)
-        # - apply any UI monkey-patches before widgets are constructed
-        if self._should_load_optional_extensions():
-            self._load_optional_extensions()
-
         if self.headless:
             self._init_headless_mode()
         else:
@@ -159,11 +153,6 @@ class App(
             SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
             {"code": code, "message": message},
         )
-
-    @staticmethod
-    def _should_load_optional_extensions() -> bool:
-        """Return whether this process should scan optional extensions."""
-        return os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") != "1"
 
     def application_error(
         self,
@@ -232,30 +221,6 @@ class App(
     def quit_application(self) -> None:
         """Emit the shared quit signal used by the API wrapper."""
         self.emit_signal(SignalCode.QUIT_APPLICATION, {})
-
-    def _load_optional_extensions(self) -> None:
-        """Load explicitly enabled extensions from local extension roots.
-
-        Extensions are optional and must never prevent Airunner from starting.
-        """
-        try:
-            from airunner.components.llm.core.extensions_loader import (
-                load_extensions,
-            )
-
-            stats = load_extensions(force_reload=False)
-            if isinstance(stats, dict):
-                self.logger.info(
-                    "Extensions loaded: loaded=%s failed=%s roots=%s",
-                    stats.get("loaded"),
-                    stats.get("failed"),
-                    stats.get("roots"),
-                )
-        except Exception as exc:
-            try:
-                self.logger.debug("Extension loading skipped/failed: %s", exc)
-            except Exception:
-                pass
 
     @property
     def static_dir(self) -> str:

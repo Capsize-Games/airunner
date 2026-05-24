@@ -29,7 +29,6 @@ class LLMRequestDispatchMixin:
         request_id: Optional[str] = None,
         callback: Optional[Callable[..., object]] = None,
         conversation_id: Optional[int] = None,
-        enable_consciousness: Optional[bool] = None,
         **kwargs,
     ) -> None:
         """Queue one LLM request through daemon or local worker paths."""
@@ -53,7 +52,6 @@ class LLMRequestDispatchMixin:
             search_hints,
             conversation_id,
             node_id,
-            enable_consciousness,
         )
         LLMRequestDispatchMixin._register_pending_callback(
             resolved_request_id,
@@ -68,7 +66,6 @@ class LLMRequestDispatchMixin:
             search_hints,
             conversation_id,
             node_id,
-            enable_consciousness,
             signal_data=data,
         ):
             self.logger.info("LLM API: Daemon request queued")
@@ -116,7 +113,6 @@ class LLMRequestDispatchMixin:
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
     ) -> dict[str, Any]:
         """Return one local-worker signal payload for an LLM request."""
         data = {
@@ -137,8 +133,6 @@ class LLMRequestDispatchMixin:
             data["conversation_id"] = conversation_id
         if node_id is not None:
             data["node_id"] = node_id
-        if enable_consciousness is not None:
-            data["enable_consciousness"] = enable_consciousness
         return data
 
     @staticmethod
@@ -175,7 +169,6 @@ class LLMRequestDispatchMixin:
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
         signal_data: Optional[dict] = None,
     ) -> bool:
         """Route one request through the daemon when that client is ready."""
@@ -197,7 +190,6 @@ class LLMRequestDispatchMixin:
                 search_hints,
                 conversation_id,
                 node_id,
-                enable_consciousness,
                 signal_data,
             ),
             daemon=True,
@@ -262,7 +254,6 @@ class LLMRequestDispatchMixin:
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
         signal_data: Optional[dict],
     ) -> None:
         """Use the daemon when available, else emit the local fallback."""
@@ -290,5 +281,4 @@ class LLMRequestDispatchMixin:
             search_hints,
             conversation_id,
             node_id,
-            enable_consciousness,
         )

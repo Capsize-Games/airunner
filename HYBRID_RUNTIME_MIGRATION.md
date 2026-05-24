@@ -141,7 +141,6 @@ Issues:
 - #79 Refactor CI for sidecars, bundles, and contract tests
 
 Gate:
-- External plugins and extensions are manifest-gated and disabled by default.
 - Runtime config, log, cache, socket, and model directories are explicit.
 - Linux installers, service templates, Docker builds, and release workflows all
   understand the new profile and bundle layout.

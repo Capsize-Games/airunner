@@ -65,17 +65,8 @@ def _use_setup_cache() -> bool:
 
 
 def _version_locations(base: Path, alembic_dir: Path) -> list[Path]:
-    """Return the migration version directories for core and extensions."""
-    version_dirs = [alembic_dir / "versions"]
-    extensions_root = base.parent.parent / "extensions"
-    if not extensions_root.exists() or not extensions_root.is_dir():
-        return version_dirs
-
-    for child in sorted(extensions_root.iterdir(), key=lambda p: p.name):
-        versions_dir = child / "alembic" / "versions"
-        if versions_dir.exists() and versions_dir.is_dir():
-            version_dirs.append(versions_dir)
-    return version_dirs
+    """Return the migration version directories for core."""
+    return [alembic_dir / "versions"]
 
 
 def _migration_heads_cache_path() -> Path:

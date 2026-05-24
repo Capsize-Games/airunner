@@ -676,7 +676,6 @@ class GuiDaemonClient:
         search_hints: Optional[Dict[str, Any]] = None,
         conversation_id: Optional[int] = None,
         node_id: Optional[str] = None,
-        enable_consciousness: Optional[bool] = None,
     ) -> Iterable[Dict[str, Any]]:
         """Yield NDJSON chunks from the daemon's legacy LLM endpoint."""
         headers = {"x-request-id": request_id}
@@ -690,7 +689,6 @@ class GuiDaemonClient:
                 search_hints=search_hints,
                 conversation_id=conversation_id,
                 node_id=node_id,
-                enable_consciousness=enable_consciousness,
             ),
             headers=headers,
             stream=True,
@@ -1011,7 +1009,6 @@ class GuiDaemonClient:
         search_hints: Optional[Dict[str, Any]],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
     ) -> Dict[str, Any]:
         """Build the legacy daemon payload from an LLM request object."""
         payload = {
@@ -1026,8 +1023,6 @@ class GuiDaemonClient:
             payload["conversation_id"] = conversation_id
         if node_id is not None:
             payload["node_id"] = node_id
-        if enable_consciousness is not None:
-            payload["enable_consciousness"] = enable_consciousness
         return payload
 
     @staticmethod

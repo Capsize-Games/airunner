@@ -60,9 +60,6 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
         super().__init__()
         self.runtime_registry = build_runtime_registry(app_instance=self)
 
-        if self._should_load_optional_extensions():
-            self._load_optional_extensions()
-
         self._init_headless_mode()
         self._initialize_knowledge_system()
 
@@ -109,37 +106,6 @@ class ServiceApp(HeadlessRuntimeMixin, MediatorMixin):
             SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
             {"code": code, "message": message},
         )
-
-    @staticmethod
-    def _should_load_optional_extensions() -> bool:
-        """Return whether this process should scan optional extensions."""
-        return os.environ.get("AIRUNNER_ART_SIDECAR_PROCESS") != "1"
-
-    def _load_optional_extensions(self) -> None:
-        """Load explicitly enabled extensions from local extension roots."""
-        try:
-            try:
-                from airunner_services.tools import web_tools  # noqa: F401
-            except Exception:
-                pass
-
-            from airunner_services.extensions_loader import (
-                load_extensions,
-            )
-
-            stats = load_extensions(force_reload=False)
-            if isinstance(stats, dict):
-                self.logger.info(
-                    "Extensions loaded: loaded=%s failed=%s roots=%s",
-                    stats.get("loaded"),
-                    stats.get("failed"),
-                    stats.get("roots"),
-                )
-        except Exception as exc:
-            try:
-                self.logger.debug("Extension loading skipped/failed: %s", exc)
-            except Exception:
-                pass
 
     def application_error(
         self,

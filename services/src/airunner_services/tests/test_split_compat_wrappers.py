@@ -15,7 +15,6 @@ _FORBIDDEN_IMPORT_PATTERNS = (
     re.compile(r"\b(?:from|import)\s+airunner\.utils\.path_policy\b"),
     re.compile(r"\b(?:from|import)\s+airunner\.utils\.settings\b"),
     re.compile(r"\b(?:from|import)\s+airunner\.dev_build_token\b"),
-    re.compile(r"\b(?:from|import)\s+airunner\.extension_manifest\b"),
     re.compile(r"\b(?:from|import)\s+airunner\.shared_qsettings\b"),
     re.compile(r"\b(?:from|import)\s+airunner_shared\.shared_qsettings\b"),
     re.compile(
@@ -990,27 +989,10 @@ def test_shared_helper_wrappers_follow_current_ownership() -> None:
     from airunner.daemon_client.daemon_connection_state import (
         DaemonConnectionState as LegacyDaemonConnectionState,
     )
-    from airunner.extension_manifest import (
-        EXTENSION_ALLOWLIST_ENV as legacy_allowlist_env,
-    )
-    from airunner.extension_manifest import (
-        ExtensionManifest as LegacyExtensionManifest,
-    )
-    from airunner.extension_manifest import (
-        load_enabled_extension_ids as legacy_load_enabled_extension_ids,
-    )
-    from airunner.extension_manifest import (
-        resolve_enabled_manifest as legacy_resolve_enabled_manifest,
-    )
     from airunner_services.daemon_connection_state import (
         DaemonConnectionState,
     )
     from airunner_services.dev_build_token import current_dev_build_token
-    from airunner_services.extension_manifest import EXTENSION_ALLOWLIST_ENV
-    from airunner_services.extension_manifest import ExtensionManifest
-    from airunner_services.extension_manifest import load_enabled_extension_ids
-    from airunner_services.extension_manifest import resolve_enabled_manifest
-
     assert LegacyGuiDaemonClient.__module__ == (
         "airunner.daemon_client.gui_daemon_client"
     )
@@ -1020,18 +1002,6 @@ def test_shared_helper_wrappers_follow_current_ownership() -> None:
     assert LegacyDaemonConnectionState.__module__ == (
         "airunner.daemon_client.daemon_connection_state"
     )
-    assert legacy_allowlist_env == EXTENSION_ALLOWLIST_ENV
-    assert LegacyExtensionManifest is not ExtensionManifest
-    assert LegacyExtensionManifest.__module__ == "airunner.extension_manifest"
-    assert legacy_load_enabled_extension_ids is not load_enabled_extension_ids
-    assert legacy_load_enabled_extension_ids.__module__ == (
-        "airunner.extension_manifest"
-    )
-    assert legacy_resolve_enabled_manifest is not resolve_enabled_manifest
-    assert legacy_resolve_enabled_manifest.__module__ == (
-        "airunner.extension_manifest"
-    )
-
 
 def test_api_client_wrappers_follow_current_ownership() -> None:
     """Daemon-client imports should reflect GUI vs API/service ownership."""
@@ -2872,16 +2842,6 @@ def test_tts_request_wrappers_follow_current_ownership() -> None:
     assert LegacyOpenVoiceTTSRequest.__module__ == (
         "airunner.components.tts.managers.tts_request"
     )
-
-
-def test_extension_loader_wrapper_shares_identity() -> None:
-    """Legacy extension loader imports should resolve to services."""
-    from airunner.components.llm.core.extensions_loader import (
-        load_extensions as legacy_load_extensions,
-    )
-    from airunner_services.extensions_loader import load_extensions
-
-    assert legacy_load_extensions is load_extensions
 
 
 def test_web_tools_wrapper_shares_identity() -> None:

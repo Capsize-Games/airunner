@@ -114,7 +114,6 @@ class LegacyLLMGenerateRequest(BaseModel):
     # Optional conversation identifiers used by UwUChat.
     conversation_id: Optional[int] = None
     node_id: Optional[str] = None
-    enable_consciousness: Optional[bool] = None
 
 
 class LegacyInterruptRequest(BaseModel):
@@ -219,7 +218,6 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 search_hints=body.search_hints,
                 conversation_id=body.conversation_id,
                 node_id=body.node_id,
-                enable_consciousness=body.enable_consciousness,
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
@@ -326,7 +324,6 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 search_hints=body.search_hints,
                 conversation_id=body.conversation_id,
                 node_id=body.node_id,
-                enable_consciousness=body.enable_consciousness,
             )
             logger.info("llm/generate kickoff send_request returned request_id=%s", request_id)
         except Exception as exc:

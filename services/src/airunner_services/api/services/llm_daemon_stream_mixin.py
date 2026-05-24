@@ -41,7 +41,6 @@ class LLMDaemonStreamMixin:
         search_hints: Optional[dict],
         conversation_id: Optional[int],
         node_id: Optional[str],
-        enable_consciousness: Optional[bool],
     ) -> None:
         """Emit streamed LLM responses received from the daemon client."""
         state = _DaemonStreamState()
@@ -54,7 +53,6 @@ class LLMDaemonStreamMixin:
                 search_hints=search_hints,
                 conversation_id=conversation_id,
                 node_id=node_id,
-                enable_consciousness=enable_consciousness,
             ):
                 if chunk.get("keepalive"):
                     continue

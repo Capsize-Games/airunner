@@ -32,10 +32,6 @@ htmlcov
 network_access_attempts.log
 *.lprof
 .env*
-src/airunner/extensions/
-
-# Local convenience-only extensions (not part of the Airunner repo)
-extensions/
 
 # Documentation wiki checkout (separate git repo)
 airunner.wiki/
