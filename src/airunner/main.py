@@ -248,6 +248,16 @@ _launcher_app = None
 
 def main():
     global _launcher_splash, _launcher_app
+
+    # Enable faulthandler for debugging deadlocks.
+    # When the app freezes, send SIGUSR1 to dump all Python thread stacks:
+    #   kill -SIGUSR1 $(pgrep -f airunner)
+    import faulthandler
+    import signal
+    faulthandler.enable()
+    faulthandler.register(signal.SIGUSR1, all_threads=True,
+                          chain=False)
+
     startup_started_at = float(
         os.environ.setdefault(
             "AIRUNNER_PROCESS_START_TIME",

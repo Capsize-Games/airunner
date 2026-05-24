@@ -185,14 +185,10 @@ class BrushScene(CustomScene):
         self._rebind_active_painter()
 
     def drawBackground(self, painter, rect):
-        if self.painter is None:
-            # Attempt to bind to the current active image target first
-            self._rebind_active_painter()
-            if self.painter is None:
-                image = self._current_active_image_ref
-                if image is None:
-                    image = self.current_active_image
-                self.refresh_image(image)
+        # CRITICAL: Never perform database queries or blocking I/O
+        # during paint events.  The painter is only needed for brush
+        # strokes; if it is None, simply skip the stroke layer and
+        # let the base class draw the background.
         if self.painter is not None and self.painter.isActive():
             if self.last_pos and self.draw_button_down:
                 if self.current_tool is CanvasToolName.BRUSH:

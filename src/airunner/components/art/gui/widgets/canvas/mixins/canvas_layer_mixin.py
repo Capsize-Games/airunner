@@ -162,12 +162,23 @@ class CanvasLayerMixin:
 
         Only the main drawing pad scene and brush scene should render
         global layers; auxiliary scenes manage a single image item.
+
+        CRITICAL: This method must never perform database queries
+        during a paint cycle (drawBackground, paint events, etc.).
+        Database I/O during painting will deadlock the UI thread.
         """
         if getattr(self, "is_dragging", False):
             return
 
         canvas_type = getattr(self, "canvas_type", None)
         if canvas_type not in ("drawing_pad", "brush"):
+            return
+
+        # Guard: never query the database during a paint operation.
+        # QGraphicsScene does not expose paintingActive() directly
+        # on all Qt bindings; instead use a simple instance flag that
+        # callers set before/after triggering a repaint.
+        if getattr(self, "_in_paint_cycle", False):
             return
 
         layers = CanvasLayer.objects.order_by("order").all()

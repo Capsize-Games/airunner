@@ -100,33 +100,42 @@ class SDWorker(Worker):
 
     @property
     def model_manager(self):
-        # Use lock to prevent race condition when multiple threads access this property
-        # simultaneously (e.g., worker thread loading model while main thread handles signal)
+        # Fast path: return cached manager without acquiring lock.
+        if self._model_manager is not None:
+            return self._model_manager
+
+        # Determine which manager class to construct *before*
+        # entering the critical section.  Version lookup is
+        # read-only and does not require the lock.
+        version = self.version
+
+        if version in (
+            StableDiffusionVersion.Z_IMAGE_TURBO,
+        ):
+            manager = self.zimage
+        elif version in (
+            StableDiffusionVersion.SDXL1_0,
+            StableDiffusionVersion.SDXL_TURBO,
+            StableDiffusionVersion.SDXL_LIGHTNING,
+            StableDiffusionVersion.SDXL_HYPER,
+        ):
+            manager = self.sdxl
+        elif version == StableDiffusionVersion.X4_UPSCALER:
+            manager = self.x4_upscaler
+        else:
+            raise ValueError(
+                f"Unsupported Stable Diffusion version: {version}"
+            )
+
+        # Publish under lock only after construction succeeds.
         with self._model_manager_lock:
             if self._model_manager is None:
-                # IMPORTANT: Use self.version (which can be set from an incoming ImageRequest)
-                # rather than generator_settings.version, otherwise headless API requests
-                # can incorrectly route to the wrong model manager.
-                version = self.version
+                self._model_manager = manager
+            else:
+                # Another thread won the race; discard ours.
+                manager = self._model_manager
 
-                if version in (
-                    StableDiffusionVersion.Z_IMAGE_TURBO,
-                ):
-                    self._model_manager = self.zimage
-                elif version in (
-                    StableDiffusionVersion.SDXL1_0,
-                    StableDiffusionVersion.SDXL_TURBO,
-                    StableDiffusionVersion.SDXL_LIGHTNING,
-                    StableDiffusionVersion.SDXL_HYPER,
-                ):
-                    self._model_manager = self.sdxl
-                elif version == StableDiffusionVersion.X4_UPSCALER:
-                    self._model_manager = self.x4_upscaler
-                else:
-                    raise ValueError(
-                        f"Unsupported Stable Diffusion version: {version}"
-                    )
-            return self._model_manager
+        return manager
 
     @model_manager.setter
     def model_manager(self, value):

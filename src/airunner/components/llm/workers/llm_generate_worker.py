@@ -125,20 +125,32 @@ class LLMGenerateWorker(
         Returns:
             LLMModelManager instance
         """
+        # Fast path: return cached manager without acquiring lock.
+        if self._model_manager is not None:
+            return self._model_manager
+
+        # Construct the manager *outside* the critical section so the
+        # lock is never held across the LLMModelManager constructor.
+        manager = LLMModelManager()
+
+        if self.use_openrouter:
+            manager.llm_settings.use_local_llm = False
+            manager.llm_settings.use_openrouter = True
+        elif self.use_ollama:
+            manager.llm_settings.use_local_llm = False
+            manager.llm_settings.use_ollama = True
+        else:
+            manager.llm_settings.use_local_llm = True
+
+        # Publish under lock only after construction succeeds.
         with self._model_manager_lock:
             if self._model_manager is None:
-                self._model_manager = LLMModelManager()
+                self._model_manager = manager
+            else:
+                # Another thread won the race; discard ours.
+                manager = self._model_manager
 
-                if self.use_openrouter:
-                    self._model_manager.llm_settings.use_local_llm = False
-                    self._model_manager.llm_settings.use_openrouter = True
-                elif self.use_ollama:
-                    self._model_manager.llm_settings.use_local_llm = False
-                    self._model_manager.llm_settings.use_ollama = True
-                else:
-                    self._model_manager.llm_settings.use_local_llm = True
-
-            return self._model_manager
+        return manager
 
     @property
     def local_model_manager(self) -> LLMModelManager:
