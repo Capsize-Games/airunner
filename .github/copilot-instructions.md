@@ -4,7 +4,6 @@
 
 - Do not run or launch the AI Runner application as part of normal task execution.
 - The user will always test runtime behavior manually.
-- Limit validation to static analysis, targeted unit tests, linting, compilation, and read-only inspection unless the user explicitly asks for a specific command.
 - Do not create or modify automated tests unless the user explicitly asks for test changes.
 - When a change would normally be verified by launching the app, state that the user should verify it instead of starting the application.
 
@@ -12,7 +11,8 @@
 
 - Write clean Python code that is idiomatic and easy to read.
 - Keep line lengths to no more than 80 characters.
-- Keep classes at 500 lines of code or less and files under 550 lines of code.
+- Keep classes restricted to 300 lines of code
+- Keep files restricted to 300 lines of code.
 - Keep functions at 20 lines of code or less
 - Use meaningful names, clear structure, and maintainable formatting.
 - Follow the PEP 8 style guide for Python code.
@@ -20,8 +20,14 @@
 - Include docstrings for all functions and classes to explain their purpose and usage.
 - When you need to check code quality, use the `src/airunner/bin/code_quality_report.py` script
 - When you need to check code coverage use the `src/airunner/bin/coverage_report.py` script
-- Run existing automated tests when needed for validation, but do not add or change test files unless the user explicitly requests test changes. Use the `src/airunner/bin/run_tests.py` script to run tests.
 - Avoid multiple classes in a single file - we prefer one class per file for better organization and readability. Subdirectories are a good way to group related classes together while keeping each file focused and manageable.
+- Do not use inline import statements. All imports should be at the top of the file, grouped by standard library imports, third-party imports, and local application imports, in that order.
+
+## Testing
+
+- Only create functional automated tests. Avoid granular unit tests that require extensive mocking. Focus on testing the overall behavior and functionality of application features rather than isolated units of code.
+- Do not create tests for edge cases that are unlikely to occur in real-world usage. Instead, prioritize testing common use cases and scenarios that users are likely to encounter.
+- Avoid writing tests for src/airunner gui code unless the user explicitly requests it.
 
 ## Generated UI Files
 
