@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from airunner_services.ipc.messages import EnvelopeStatus, ResponseEnvelope
+from airunner_services.contract_enums import ModelStatus
 from airunner.runtimes.contracts import (
     RuntimeDescriptor,
     RuntimeKind,
@@ -116,8 +117,30 @@ class FakeSidecarProcessRegistry(FakeRegistry):
         return self.client
 
 
-def _request_for(client):
-    return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(runtime_registry=FakeRegistry(client))))
+class FakeLifecycleService:
+    """Lifecycle double that exposes daemon LLM unload state."""
+
+    def __init__(self, statuses):
+        self._statuses = list(statuses)
+        self.unload_sources = []
+
+    def current_llm_model_status(self):
+        if len(self._statuses) > 1:
+            return self._statuses.pop(0)
+        if self._statuses:
+            return self._statuses[0]
+        return None
+
+    def queue_llm_unload(self, source="daemon_admin_unload"):
+        self.unload_sources.append(source)
+        return True
+
+
+def _request_for(client, lifecycle_service=None):
+    state = SimpleNamespace(runtime_registry=FakeRegistry(client))
+    if lifecycle_service is not None:
+        state.lifecycle_service = lifecycle_service
+    return SimpleNamespace(app=SimpleNamespace(state=state))
 
 
 def test_generate_image_runs_art_runtime_job(monkeypatch):
@@ -143,6 +166,46 @@ def test_generate_image_runs_art_runtime_job(monkeypatch):
     assert response.status == "running"
     assert status.status == "completed"
     assert chunk.startswith(b"\x89PNG")
+    assert client.invocations[0].request_id == response.job_id
+
+
+def test_generate_image_unloads_daemon_llm_before_art(monkeypatch):
+    from airunner_api.routes.art import GenerationRequest, generate_image
+
+    client = FakeArtRuntimeClient()
+    lifecycle = FakeLifecycleService(
+        [ModelStatus.LOADED, ModelStatus.UNLOADED]
+    )
+    scheduled = []
+
+    async def fake_sleep(_seconds):
+        return None
+
+    def fake_create_task(coroutine):
+        scheduled.append(coroutine)
+        return SimpleNamespace(done=lambda: False)
+
+    async def run_test():
+        monkeypatch.setattr(
+            "airunner_api.routes.art.asyncio.create_task",
+            fake_create_task,
+        )
+        monkeypatch.setattr(
+            "airunner_api.routes.art.asyncio.sleep",
+            fake_sleep,
+        )
+        response = await generate_image(
+            GenerationRequest(prompt="A lighthouse"),
+            _request_for(client, lifecycle),
+        )
+        assert lifecycle.unload_sources == ["art_generate"]
+        assert client.invocations == []
+        await scheduled[0]
+        return response
+
+    response = asyncio.run(run_test())
+
+    assert response.status == "running"
     assert client.invocations[0].request_id == response.job_id
 
 

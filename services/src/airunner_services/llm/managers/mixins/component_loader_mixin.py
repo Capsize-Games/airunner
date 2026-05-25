@@ -207,15 +207,22 @@ class ComponentLoaderMixin:
     def _unload_chat_model(self) -> None:
         """Unload the chat model from memory.
 
-        Deletes the ChatModel instance and clears references.
+        Explicitly closes the llama.cpp wrapper (when present) before
+        deleting the ChatModel so that CUDA memory is released.
         """
         if self._chat_model is not None:
-            try:
-                del self._chat_model
-                self._chat_model = None
-            except Exception as e:
-                self.logger.warning(f"Error unloading chat model: {e}")
-                self._chat_model = None
+            chat = self._chat_model
+            llama = getattr(chat, "_llama", None)
+            if llama is not None and hasattr(llama, "close"):
+                try:
+                    llama.close()
+                except Exception as exc:
+                    self.logger.debug(
+                        "Failed to close llama.cpp model: %s", exc
+                    )
+                if hasattr(chat, "_llama"):
+                    chat._llama = None  # type: ignore[attr-defined]
+            self._chat_model = None
 
     def _unload_tool_manager(self) -> None:
         """Unload the tool manager.

@@ -45,6 +45,7 @@ from airunner_model.models.generator_settings import (
     GeneratorSettings,
 )
 from airunner_model.models.path_settings import PathSettings
+from airunner_services.contract_enums import ModelStatus
 from airunner_services.contract_enums import StableDiffusionVersion
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -53,6 +54,15 @@ _LOG_ART_STATUS_POLLS = os.environ.get(
     "AIRUNNER_LOG_ART_STATUS_POLLS",
     "0",
 ) == "1"
+_LLM_ART_BUSY_STATUSES = frozenset(
+    {
+        ModelStatus.LOADING,
+        ModelStatus.LOADED,
+        ModelStatus.READY,
+    }
+)
+_LLM_UNLOAD_TIMEOUT_SECONDS = 30.0
+_LLM_UNLOAD_POLL_SECONDS = 0.1
 
 
 # ====================
@@ -182,6 +192,42 @@ def resolve_art_client(registry: RuntimeRegistry) -> RuntimeClient:
     return client
 
 
+def _current_llm_status(req: Request) -> Optional[ModelStatus]:
+    """Return the current daemon-owned LLM status when available."""
+    lifecycle_service = getattr(req.app.state, "lifecycle_service", None)
+    status_getter = getattr(
+        lifecycle_service,
+        "current_llm_model_status",
+        None,
+    )
+    if not callable(status_getter):
+        return None
+    try:
+        return status_getter()
+    except Exception:
+        logger.debug(
+            "Failed to read LLM status before art request",
+            exc_info=True,
+        )
+        return None
+
+
+def _llm_blocks_art(req: Request) -> bool:
+    """Return True when the daemon still has an active LLM in VRAM."""
+    return _current_llm_status(req) in _LLM_ART_BUSY_STATUSES
+
+
+async def _wait_for_llm_unload(req: Request) -> bool:
+    """Wait briefly for the daemon LLM unload to complete."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + _LLM_UNLOAD_TIMEOUT_SECONDS
+    while _llm_blocks_art(req):
+        if loop.time() >= deadline:
+            return False
+        await asyncio.sleep(_LLM_UNLOAD_POLL_SECONDS)
+    return True
+
+
 async def _invoke_art_control(
     req: Request,
     *,
@@ -191,6 +237,12 @@ async def _invoke_art_control(
     metadata: Optional[dict] = None,
 ):
     """Invoke one non-job art runtime request."""
+    if action in (RuntimeAction.INVOKE, RuntimeAction.LOAD_MODEL):
+        await _unload_llm_before_art(
+            req,
+            source=f"art_{action.value}",
+        )
+
     request_metadata = dict(metadata or {})
     if component is not None:
         request_metadata["component"] = component
@@ -519,6 +571,40 @@ def _resolve_art_model_version() -> str:
 # ====================
 
 
+
+async def _unload_llm_before_art(
+    req: Request,
+    source: str = "art_request",
+) -> None:
+    """Release daemon-owned LLM VRAM before starting art work."""
+    if not _llm_blocks_art(req):
+        return
+
+    lifecycle_service = getattr(req.app.state, "lifecycle_service", None)
+    queue_unload = getattr(lifecycle_service, "queue_llm_unload", None)
+    if not callable(queue_unload):
+        raise HTTPException(
+            status_code=503,
+            detail="LLM runtime could not be unloaded for art",
+        )
+
+    logger.info("Queueing LLM unload before art request")
+    if not bool(queue_unload(source=source)):
+        raise HTTPException(
+            status_code=503,
+            detail="LLM runtime could not be unloaded for art",
+        )
+
+    if await _wait_for_llm_unload(req):
+        logger.info("LLM unload completed before art request")
+        return
+
+    raise HTTPException(
+        status_code=503,
+        detail="Timed out waiting for LLM unload before art",
+    )
+
+
 @router.post("/generate", response_model=GenerationResponse)
 async def generate_image(request: GenerationRequest, req: Request):
     """
@@ -543,6 +629,7 @@ async def generate_image(request: GenerationRequest, req: Request):
     seed_value = int(request.seed) if request.seed is not None else secrets.randbelow(2**31 - 1)
 
     try:
+        await _unload_llm_before_art(req, source="art_generate")
         client = resolve_art_client(require_runtime_registry(req))
         # Create job
         tracker = JobTracker()

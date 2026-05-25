@@ -35,6 +35,8 @@ from airunner_model.model_management.quantization_strategy import (
 from airunner_model.model_management.types import ModelState
 
 UnloadModelCallback = Callable[[str, str], None]
+OffloadModelCallback = Callable[[str, str], None]
+RestoreModelCallback = Callable[[str, str], None]
 
 
 class ModelResourceManager(
@@ -58,6 +60,8 @@ class ModelResourceManager(
         *,
         logger: Optional[Any] = None,
         unload_model_callback: Optional[UnloadModelCallback] = None,
+        offload_model_callback: Optional[OffloadModelCallback] = None,
+        restore_model_callback: Optional[RestoreModelCallback] = None,
         hardware_profiler: Optional[HardwareProfiler] = None,
         quantization_strategy: Optional[QuantizationStrategy] = None,
         registry: Optional[ModelRegistry] = None,
@@ -68,6 +72,8 @@ class ModelResourceManager(
             return
         self.logger = logger or logging.getLogger(__name__)
         self._unload_model_callback = unload_model_callback
+        self._offload_model_callback = offload_model_callback
+        self._restore_model_callback = restore_model_callback
         self.hardware_profiler = hardware_profiler or HardwareProfiler()
         self.quantization_strategy = (
             quantization_strategy or QuantizationStrategy()

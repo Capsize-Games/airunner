@@ -24,7 +24,7 @@ from airunner_services.api.routes.daemon_helpers import (
     resolve_runtime_client,
 )
 from airunner_services.ipc.messages import ResponseEnvelope
-from airunner_services.runtimes.contracts import RuntimeAction
+from airunner_services.runtimes.contracts import RuntimeAction, RuntimeKind
 
 router = APIRouter()
 
@@ -82,7 +82,11 @@ async def load_runtime(
     route_request: RuntimeRouteRequest,
     request: Request,
 ):
-    """Load the configured model for a runtime through the daemon API."""
+    """Load the configured model for a runtime through the daemon API.
+
+    Unloads any already-loaded runtimes before starting the new model,
+    since only one model can occupy VRAM at a time.
+    """
     runtime = parse_runtime_kind(runtime_name)
     client = resolve_runtime_client(
         request,
@@ -90,12 +94,83 @@ async def load_runtime(
         route_request.provider,
         route_request.deployment_mode,
     )
+    await _ensure_vram_available_for(
+        request,
+        route_request,
+        runtime_name,
+        runtime,
+    )
     return invoke_runtime_action(
         client,
         runtime,
         RuntimeAction.LOAD_MODEL,
         route_request,
     )
+
+
+async def _ensure_vram_available_for(
+    request: Request,
+    route_request: RuntimeRouteRequest,
+    target_name: str,
+    target_runtime: RuntimeKind,
+) -> None:
+    """Unload other loaded runtimes so the target has free VRAM."""
+    import asyncio
+    import logging
+
+    _log = logging.getLogger(__name__)
+
+    del target_name
+    summaries = collect_runtime_summaries(request)
+    _log.info(
+        "VRAM check for %s: found %d runtime summaries",
+        target_runtime.value,
+        len(summaries),
+    )
+    for summary in summaries:
+        _log.info(
+            "  runtime=%s loaded=%s provider=%s mode=%s",
+            summary.runtime,
+            summary.loaded,
+            summary.provider,
+            summary.mode,
+        )
+        if summary.runtime == target_runtime.value and summary.loaded:
+            _log.info("Target %s already loaded, skipping unload", target_runtime.value)
+            return
+    for summary in summaries:
+        if not summary.loaded:
+            continue
+        if summary.runtime == target_runtime.value:
+            continue
+        other_runtime = parse_runtime_kind(summary.runtime)
+        _log.info(
+            "Unloading %s (%s:%s) to free VRAM for %s",
+            other_runtime.value,
+            summary.provider,
+            summary.mode,
+            target_runtime.value,
+        )
+        try:
+            other_client = resolve_runtime_client(
+                request,
+                other_runtime,
+                summary.provider,
+                summary.mode,
+            )
+            await asyncio.to_thread(
+                invoke_runtime_action,
+                other_client,
+                other_runtime,
+                RuntimeAction.UNLOAD_MODEL,
+                route_request,
+            )
+        except Exception as exc:
+            _log.warning(
+                "Failed to unload %s: %s",
+                other_runtime.value,
+                exc,
+            )
 
 
 @router.post("/runtimes/{runtime_name}/unload", response_model=ResponseEnvelope)

@@ -12,6 +12,7 @@ class ModelState(Enum):
 	UNLOADED = "unloaded"
 	LOADING = "loading"
 	LOADED = "loaded"
+	LOADED_CPU = "loaded_cpu"
 	UNLOADING = "unloading"
 	BUSY = "busy"
 

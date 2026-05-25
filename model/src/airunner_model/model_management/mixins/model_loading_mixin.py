@@ -18,6 +18,41 @@ _PRIORITY_MAP = {
 class ModelLoadingMixin:
     """Mixin for load preparation and unload planning."""
 
+    def _prepare_cpu_restore(
+        self,
+        model_id: str,
+        model_type: str,
+    ) -> dict[str, Any]:
+        """Restore a CPU-offloaded model to GPU without full reload."""
+        self.set_model_state(model_id, ModelState.LOADING, model_type)
+        metadata = self.registry.get_model(model_id)
+        if metadata is None:
+            return self._unregistered_model_response(
+                "Model not in registry - cannot restore"
+            )
+        quantization = self._select_quantization(
+            metadata.size_gb,
+            None,
+        )
+        allocation = self.memory_allocator.allocate(model_id, quantization)
+        if allocation is None:
+            return self._allocation_failure_response(
+                model_id,
+                metadata,
+                quantization,
+            )
+        if hasattr(self, "_restore_model_callback"):
+            self._restore_model_callback(model_id, model_type)
+        self.set_model_state(model_id, ModelState.LOADED, model_type)
+        self.logger.info("Restored %s from CPU to GPU", model_id)
+        return {
+            "can_load": True,
+            "metadata": metadata,
+            "quantization": quantization,
+            "allocation": allocation,
+            "swapped_models": [],
+        }
+
     def prepare_model_loading(
         self,
         model_id: str,
@@ -25,7 +60,14 @@ class ModelLoadingMixin:
         preferred_quantization: Optional[Any] = None,
         auto_swap: bool = True,
     ) -> dict[str, Any]:
-        """Prepare memory and swap state for one model load."""
+        """Prepare memory and swap state for one model load.
+
+        Short-circuits to a CPU restore when the model is already
+        residing in system RAM (LOADED_CPU).
+        """
+        current_state = self._model_states.get(model_id)
+        if current_state is ModelState.LOADED_CPU:
+            return self._prepare_cpu_restore(model_id, model_type)
         self.set_model_state(model_id, ModelState.LOADING, model_type)
         metadata = self.registry.get_model(model_id)
         if metadata is None:
@@ -140,16 +182,25 @@ class ModelLoadingMixin:
         quantization: Any,
         auto_swap: bool,
     ) -> tuple[Any | None, list[str]]:
-        """Allocate memory directly or after a best-effort swap."""
+        """Allocate memory after a pre-flight check.
+
+        Checks available VRAM BEFORE loading.  When VRAM is insufficient
+        and ``auto_swap`` is enabled, offloads or unloads other models
+        to make room before allocating for the new model.
+        """
         allocation = self.memory_allocator.allocate(model_id, quantization)
-        if allocation is not None or not auto_swap:
+        if allocation is not None:
             return allocation, []
+        if not auto_swap:
+            return None, []
         self.logger.info(
             "Insufficient memory for %s, attempting auto-swap",
             model_id,
         )
-        swap_result = self.request_model_swap(model_id, model_type)
-        if not swap_result["success"]:
+        swapped = self._prepare_for_load_with_swap(
+            model_id, model_type, quantization
+        )
+        if not swapped:
             return None, []
         allocation = self.memory_allocator.allocate(model_id, quantization)
         if allocation is None:
@@ -159,7 +210,127 @@ class ModelLoadingMixin:
             model_id,
             quantization.description,
         )
-        return allocation, list(swap_result["unloaded_models"])
+        return allocation, swapped
+
+    def _prepare_for_load_with_swap(
+        self,
+        model_id: str,
+        model_type: str,
+        quantization: Any,
+    ) -> list[str]:
+        """Offload or unload models to free VRAM ahead of loading.
+
+        Computes exactly how much VRAM is needed and only swaps enough
+        models to satisfy that requirement.  Lower-priority models are
+        swapped first.
+        """
+        required_vram = getattr(quantization, "estimated_memory_gb", 0.0)
+        available = self.memory_allocator._get_available_vram()
+        shortfall = required_vram - available
+        if shortfall <= 0:
+            return []
+
+        candidates = self._models_for_capacity(shortfall)
+        if not candidates:
+            self.logger.warning(
+                "Cannot free enough VRAM for %s (needed %.1f GB)",
+                model_id,
+                shortfall,
+            )
+            return []
+
+        self.logger.info(
+            "Swapping %d model(s) to free %.1f GB for %s",
+            len(candidates),
+            required_vram,
+            model_id,
+        )
+        swapped: list[str] = []
+        for swap_model_id, swap_model_type in candidates:
+            self._swap_or_unload(swap_model_id, swap_model_type)
+            swapped.append(swap_model_id)
+        return swapped
+
+    def _models_for_capacity(
+        self,
+        needed_vram_gb: float,
+    ) -> list[tuple[str, str]]:
+        """Return ordered (model_id, model_type) pairs to free capacity.
+
+        Sorted by priority (lowest first) and VRAM usage (largest first)
+        so we unload as few models as possible.
+        """
+        candidates: list[tuple[str, str, int, float]] = []
+        for model_id, state in self._model_states.items():
+            allocation = self.memory_allocator._allocations.get(model_id)
+            if allocation is None:
+                continue
+            model_type = self._model_types.get(model_id, "unknown")
+            model_priority = _PRIORITY_MAP.get(model_type, 2)
+            candidates.append((
+                model_id,
+                model_type,
+                model_priority,
+                allocation.vram_allocated_gb,
+            ))
+
+        candidates.sort(key=lambda c: (c[2], -c[3]))
+        result: list[tuple[str, str]] = []
+        freed = 0.0
+        for model_id, model_type, _, vram in candidates:
+            result.append((model_id, model_type))
+            freed += vram
+            if freed >= needed_vram_gb:
+                break
+        return result
+
+    def _swap_or_unload(self, model_id: str, model_type: str) -> None:
+        """Offload one model to CPU when RAM allows, otherwise unload."""
+        if self._can_offload_to_cpu(model_id):
+            try:
+                self.logger.info(
+                    "Offloading %s to CPU (model_id=%s)",
+                    model_type,
+                    model_id,
+                )
+                self._offload_to_cpu(model_id, model_type)
+                return
+            except NotImplementedError:
+                self.logger.info(
+                    "CPU offload not available for %s, will unload",
+                    model_type,
+                )
+        self.logger.info(
+            "Unloading %s (model_id=%s)",
+            model_type,
+            model_id,
+        )
+        self._unload_model_for_swap(model_id, model_type)
+
+    def _can_offload_to_cpu(self, model_id: str) -> bool:
+        """Return True when one model fits in available system RAM."""
+        allocation = self.memory_allocator._allocations.get(model_id)
+        if allocation is None:
+            return False
+        available_ram = self.memory_allocator._get_available_ram()
+        return available_ram >= allocation.vram_allocated_gb
+
+    def _offload_to_cpu(self, model_id: str, model_type: str) -> None:
+        """Move one model from GPU to CPU RAM.
+
+        When CPU offloading is not supported by the model manager,
+        logs a warning and raises NotImplementedError so the caller
+        can fall back to a full unload.
+        """
+        callback = getattr(self, "_offload_model_callback", None)
+        if callback is None:
+            raise NotImplementedError(
+                f"No offload callback configured for {model_type}"
+            )
+        self.set_model_state(model_id, ModelState.LOADING, model_type)
+        callback(model_id, model_type)
+        self.memory_allocator.deallocate(model_id)
+        self.set_model_state(model_id, ModelState.LOADED_CPU, model_type)
 
     def _allocation_failure_response(
         self,
@@ -278,7 +449,9 @@ class ModelLoadingMixin:
         target_priority: int,
     ) -> tuple[str, str, int, float] | None:
         """Return one unload candidate when the model qualifies."""
-        if state not in (ModelState.LOADED, ModelState.UNLOADED):
+        del target_priority
+        if state not in (ModelState.LOADED, ModelState.UNLOADED,
+                         ModelState.LOADED_CPU):
             self.logger.debug(
                 "Skipping %s - state %s not eligible for unload",
                 model_id,
@@ -290,21 +463,6 @@ class ModelLoadingMixin:
             return None
         model_type = self._model_types.get(model_id, "unknown")
         model_priority = _PRIORITY_MAP.get(model_type, 2)
-        self.logger.debug(
-            "Checking %s: type=%s, priority=%s, target_priority=%s",
-            model_id,
-            model_type,
-            model_priority,
-            target_priority,
-        )
-        if model_priority > target_priority:
-            self.logger.debug(
-                "Skipping %s - priority %s > target %s",
-                model_id,
-                model_priority,
-                target_priority,
-            )
-            return None
         allocation = self.memory_allocator._allocations.get(model_id)
         if allocation is None:
             self.logger.debug(
@@ -313,9 +471,10 @@ class ModelLoadingMixin:
             )
             return None
         self.logger.debug(
-            "Added %s as unload candidate (VRAM: %.1fGB)",
+            "Added %s as unload candidate (VRAM: %.1fGB, priority=%s)",
             model_id,
             allocation.vram_allocated_gb,
+            model_priority,
         )
         return (
             model_id,
