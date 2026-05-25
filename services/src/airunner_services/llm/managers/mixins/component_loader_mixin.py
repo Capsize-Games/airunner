@@ -8,6 +8,7 @@ This mixin handles:
 """
 
 import gc
+import os
 import traceback
 from typing import TYPE_CHECKING
 
@@ -280,6 +281,19 @@ class ComponentLoaderMixin:
     def _park_unused_model_on_cpu(self) -> bool:
         """Keep one offloadable local model in CPU memory for reuse."""
         if not self._should_keep_unused_model_in_cpu_memory():
+            return False
+
+        current_model_path = str(getattr(self, "_current_model_path", "") or "")
+        try:
+            requested_model_path = str(getattr(self, "model_path", "") or "")
+        except Exception:
+            requested_model_path = ""
+        if (
+            current_model_path
+            and requested_model_path
+            and os.path.normpath(current_model_path)
+            != os.path.normpath(requested_model_path)
+        ):
             return False
 
         candidates = [

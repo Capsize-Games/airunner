@@ -553,7 +553,11 @@ class ChatGGUF(BaseChatModel):
                 "GGUF inference will run on CPU until llama-cpp-python is rebuilt with GGML_CUDA=on."
             )
 
-        self.logger.info("Loading GGUF model from %s", self.model_path)
+        self.logger.info(
+            "Loading GGUF model file=%s from %s",
+            os.path.basename(self.model_path),
+            self.model_path,
+        )
         self.logger.info(
             f"  chat_format={self._detected_format or 'auto'}, "
             f"n_ctx={self.n_ctx}, "

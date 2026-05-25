@@ -6,6 +6,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from airunner_model.models.document import Document
+from airunner_model.models.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
 from airunner_model.session import session_scope
 from airunner_services.llm_workflow_events import (
     resolve_llm_workflow_event_sink,
@@ -22,6 +25,7 @@ class RequestHandlingMixin:
     ) -> Dict[str, Any]:
         """Handle an incoming request for LLM generation."""
         self.logger.info("handle_request called on instance %s", id(self))
+        self._invalidate_setting_cache(LLMGeneratorSettings)
 
         self._current_request_id = data.get("request_id")
         if not self._current_request_id:

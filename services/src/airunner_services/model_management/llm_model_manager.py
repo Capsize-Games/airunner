@@ -1,5 +1,7 @@
 """Service-owned top-level LLM model manager."""
 
+import os
+
 from typing import Any, List, Optional
 
 from transformers import AutoModelForCausalLM
@@ -36,6 +38,7 @@ from airunner_services.contract_enums import ModelStatus, ModelType
 from airunner_services.conversations.conversation_history_manager import (
 	ConversationHistoryManager,
 )
+from airunner_services.llm.config.provider_config import LLMProviderConfig
 from airunner_services.model_management import ModelResourceManager
 from airunner_services.utils.memory import apply_cudnn_benchmark
 from airunner_services.utils.memory.clear_memory import clear_memory
@@ -118,20 +121,12 @@ class LLMModelManager(
 
 	def load(self) -> None:
 		"""Load the LLM model and its supporting orchestration components."""
+		current_status = self.model_status[ModelType.LLM]
 		self.logger.info(
 			"load() called, current status: %s",
-			self.model_status[ModelType.LLM],
+			current_status,
 		)
 		apply_cudnn_benchmark(self.memory_settings)
-		if self.model_status[ModelType.LLM] in (
-			ModelStatus.LOADING,
-			ModelStatus.LOADED,
-		):
-			self.logger.info(
-				"Returning early - model already in state: %s",
-				self.model_status[ModelType.LLM],
-			)
-			return
 
 		self._last_load_error = None
 		if not self._validate_model_path():
@@ -139,12 +134,49 @@ class LLMModelManager(
 		if not self._check_and_download_model():
 			return
 
+		target_model_path = self.model_path
+		target_model_id = self._resolve_model_id_from_path(target_model_path)
+		target_model_name = self._resolve_model_name(target_model_id)
+
+		if current_status is ModelStatus.LOADING:
+			self.logger.info(
+				"Returning early - model is already loading "
+				"(model_id=%s, model_name=%s)",
+				target_model_id or "unknown",
+				target_model_name or "unknown",
+			)
+			return
+
+		if current_status is ModelStatus.LOADED:
+			if self._current_model_path == target_model_path:
+				self.logger.info(
+					"Returning early - requested model already loaded "
+					"(model_id=%s, model_name=%s)",
+					target_model_id or "unknown",
+					target_model_name or "unknown",
+				)
+				return
+
+			current_model_id = self._resolve_model_id_from_path(
+				self._current_model_path,
+			)
+			current_model_name = self._resolve_model_name(current_model_id)
+			self.logger.info(
+				"[LLM LOAD] Switching models: %s (%s) -> %s (%s)",
+				current_model_id or "unknown",
+				current_model_name or "unknown",
+				target_model_id or "unknown",
+				target_model_name or "unknown",
+			)
+			self.unload()
+
 		self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
-		self.unload()
-		self._current_model_path = self.model_path
+		self._current_model_path = target_model_path
 		self.logger.info(
-			"[LLM LOAD] Resolved model path: %s",
+			"[LLM LOAD] Resolved model path: %s (model_id=%s, model_name=%s)",
 			self._current_model_path,
+			target_model_id or "unknown",
+			target_model_name or "unknown",
 		)
 
 		resource_manager = ModelResourceManager()
@@ -169,8 +201,10 @@ class LLMModelManager(
 		self._load_local_llm_components()
 		self._load_chat_model()
 		self.logger.info(
-			"[LLM LOAD] Chat model loaded: %s (model_path=%s)",
+			"[LLM LOAD] Chat model loaded: %s (model_id=%s, model_name=%s, model_path=%s)",
 			self._chat_model is not None,
+			target_model_id or "unknown",
+			target_model_name or "unknown",
 			self._current_model_path,
 		)
 		self._load_tool_manager()
@@ -190,6 +224,31 @@ class LLMModelManager(
 		)
 		resource_manager.model_loaded(self._current_model_path)
 
+	def _resolve_model_id_from_path(
+		self,
+		model_path: Optional[str],
+	) -> str:
+		"""Return the configured local model id for one resolved model path."""
+		if model_path:
+			resolved = LLMProviderConfig.resolve_model_id(
+				"local",
+				os.path.basename(str(model_path)),
+			)
+			if resolved:
+				return resolved
+
+		return LLMProviderConfig.resolve_model_id(
+			"local",
+			getattr(self.llm_generator_settings, "model_id", "") or "",
+		)
+
+	def _resolve_model_name(self, model_id: str) -> str:
+		"""Return the display name for one configured local model id."""
+		if not model_id:
+			return ""
+		model_info = LLMProviderConfig.get_model_info("local", model_id)
+		return str(model_info.get("name", "") or model_id)
+
 	def unload(self) -> None:
 		"""Unload all LLM components and clear reserved resources."""
 		if self.model_status[ModelType.LLM] in (
@@ -197,6 +256,17 @@ class LLMModelManager(
 			ModelStatus.UNLOADED,
 		):
 			return
+
+		current_model_id = self._resolve_model_id_from_path(
+			self._current_model_path,
+		)
+		current_model_name = self._resolve_model_name(current_model_id)
+		self.logger.info(
+			"[LLM UNLOAD] Unloading model_id=%s model_name=%s model_path=%s",
+			current_model_id or "unknown",
+			current_model_name or "unknown",
+			self._current_model_path or self.model_path,
+		)
 
 		self._last_load_error = None
 		self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
@@ -208,4 +278,5 @@ class LLMModelManager(
 			model_type="llm",
 		)
 		clear_memory(self.device)
+		self._current_model_path = None
 		self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
