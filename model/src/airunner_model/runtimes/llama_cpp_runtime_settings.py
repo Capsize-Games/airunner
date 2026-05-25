@@ -124,11 +124,6 @@ def _resolve_model_path(
     if env_override:
         return os.path.expanduser(env_override)
 
-    stored_path = _candidate_model_path(llm_settings)
-    resolved_from_dir = _gguf_in_directory(stored_path)
-    if resolved_from_dir is not None:
-        return resolved_from_dir
-
     provider_config = _load_provider_config()
     if provider_config is not None and model_id and model_id != "custom":
         expected = provider_config.get_expected_local_artifact_path(
@@ -139,8 +134,14 @@ def _resolve_model_path(
         if expected.lower().endswith(".gguf"):
             return expected
 
+    stored_path = _candidate_model_path(llm_settings)
     if stored_path.endswith(".gguf"):
         return os.path.expanduser(stored_path)
+
+    resolved_from_dir = _gguf_in_directory(stored_path)
+    if resolved_from_dir is not None:
+        return resolved_from_dir
+
     return None
 
 

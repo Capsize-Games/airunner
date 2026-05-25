@@ -553,7 +553,7 @@ class ChatGGUF(BaseChatModel):
                 "GGUF inference will run on CPU until llama-cpp-python is rebuilt with GGML_CUDA=on."
             )
 
-        self.logger.info("Loading GGUF model")
+        self.logger.info("Loading GGUF model from %s", self.model_path)
         self.logger.info(
             f"  chat_format={self._detected_format or 'auto'}, "
             f"n_ctx={self.n_ctx}, "
@@ -2144,11 +2144,15 @@ For each function call, return a json object with function name and arguments wi
         return "\n".join(lines)
 
 
-def find_gguf_file(model_dir: str) -> Optional[str]:
+def find_gguf_file(
+    model_dir: str,
+    preferred_filename: Optional[str] = None,
+) -> Optional[str]:
     """Find a GGUF file in a model directory.
 
     Args:
         model_dir: Directory to search
+        preferred_filename: Preferred GGUF filename when one is known
 
     Returns:
         Path to GGUF file if found, None otherwise
@@ -2158,10 +2162,23 @@ def find_gguf_file(model_dir: str) -> Optional[str]:
         return None
 
     # Look for GGUF files (prefer Q4_K_M)
-    gguf_files = list(model_path.glob("*.gguf"))
+    gguf_files = sorted(
+        model_path.glob("*.gguf"),
+        key=lambda path: path.name.lower(),
+    )
 
     if not gguf_files:
         return None
+
+    if preferred_filename:
+        preferred_name = str(preferred_filename).strip()
+        for gguf_file in gguf_files:
+            if gguf_file.name == preferred_name:
+                return str(gguf_file)
+        preferred_name = preferred_name.lower()
+        for gguf_file in gguf_files:
+            if gguf_file.name.lower() == preferred_name:
+                return str(gguf_file)
 
     # Prefer Q4_K_M quantization
     for f in gguf_files:

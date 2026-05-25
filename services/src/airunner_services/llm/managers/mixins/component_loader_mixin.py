@@ -90,7 +90,10 @@ class ComponentLoaderMixin:
             return
 
         try:
-            self.logger.info("Creating ChatModel via factory")
+            self.logger.info(
+                "Creating ChatModel via factory for model_path=%s",
+                self._current_model_path,
+            )
             self._chat_model = ChatModelFactory.create_from_settings(
                 llm_settings=self.llm_settings,
                 model=self._model,
@@ -101,7 +104,9 @@ class ComponentLoaderMixin:
             self._release_local_execution_ownership()
             self._last_load_error = None
             self.logger.info(
-                f"ChatModel created: {type(self._chat_model).__name__}"
+                "ChatModel created: %s (model_path=%s)",
+                type(self._chat_model).__name__,
+                self._current_model_path,
             )
 
             # NOTE: RAG system initialization is now LAZY

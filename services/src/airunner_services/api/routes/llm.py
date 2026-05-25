@@ -179,7 +179,7 @@ def _persist_model_selection(model_id: str) -> str:
     base_path = getattr(path_settings, "base_path", AIRUNNER_BASE_PATH)
     settings.model_id = resolved_id
     settings.model_version = resolved_id
-    settings.model_path = LLMProviderConfig.get_local_storage_path(
+    settings.model_path = LLMProviderConfig.get_expected_local_artifact_path(
         base_path,
         "local",
         model_id=resolved_id,

@@ -2037,11 +2037,11 @@ class ChatPromptWidget(BaseWidget):
         model_id: str,
         repo_id: str = "",
     ) -> str:
-        """Return the configured local storage path for one local model."""
+        """Return the expected local artifact path for one local model."""
         base_path = os.path.expanduser(
             getattr(self.path_settings, "base_path", "~/.local/share/airunner")
         )
-        return LLMProviderConfig.get_local_storage_path(
+        return LLMProviderConfig.get_expected_local_artifact_path(
             base_path,
             "local",
             model_id=model_id,

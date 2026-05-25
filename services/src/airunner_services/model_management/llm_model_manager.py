@@ -142,10 +142,14 @@ class LLMModelManager(
 		self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
 		self.unload()
 		self._current_model_path = self.model_path
+		self.logger.info(
+			"[LLM LOAD] Resolved model path: %s",
+			self._current_model_path,
+		)
 
 		resource_manager = ModelResourceManager()
 		prepare_result = resource_manager.prepare_model_loading(
-			model_id=self.model_path,
+			model_id=self._current_model_path,
 			model_type="llm",
 		)
 		if not prepare_result["can_load"]:
@@ -165,8 +169,9 @@ class LLMModelManager(
 		self._load_local_llm_components()
 		self._load_chat_model()
 		self.logger.info(
-			"[LLM LOAD] Chat model loaded: %s",
+			"[LLM LOAD] Chat model loaded: %s (model_path=%s)",
 			self._chat_model is not None,
+			self._current_model_path,
 		)
 		self._load_tool_manager()
 		self.logger.info(
@@ -183,7 +188,7 @@ class LLMModelManager(
 			"[LLM LOAD] Model status updated to: %s",
 			self.model_status[ModelType.LLM],
 		)
-		resource_manager.model_loaded(self.model_path)
+		resource_manager.model_loaded(self._current_model_path)
 
 	def unload(self) -> None:
 		"""Unload all LLM components and clear reserved resources."""

@@ -55,6 +55,7 @@ class ChatModelFactory:
         chat_format: Optional[str] = None,
         use_yarn: bool = False,  # Disabled by default - requires more VRAM
         yarn_orig_ctx: int = 32768,  # Qwen3 native context
+        preferred_filename: Optional[str] = None,
     ) -> ChatGGUF:
         """
         Create a ChatModel for GGUF models via llama-cpp-python.
@@ -82,12 +83,20 @@ class ChatModelFactory:
             chat_format: Optional llama.cpp chat format override
             use_yarn: Enable YaRN for extended context (requires more VRAM)
             yarn_orig_ctx: Original context length for YaRN scaling
+            preferred_filename: Preferred GGUF filename when model_path is a directory
 
         Returns:
             ChatGGUF instance
         """
         # If model_path is a directory, find the GGUF file
-        gguf_file = find_gguf_file(model_path) if not model_path.endswith(".gguf") else model_path
+        gguf_file = (
+            find_gguf_file(
+                model_path,
+                preferred_filename=preferred_filename,
+            )
+            if not model_path.endswith(".gguf")
+            else model_path
+        )
 
         if not gguf_file:
             raise ValueError(f"No GGUF file found in {model_path}")
@@ -397,6 +406,9 @@ class ChatModelFactory:
                     try:
                         return ChatModelFactory.create_gguf_model(
                             model_path=gguf_path,
+                            preferred_filename=model_info.get(
+                                "gguf_filename",
+                            ),
                             enable_thinking=enable_thinking,
                             reasoning_effort=reasoning_effort,
                             tool_calling_mode=model_info.get(

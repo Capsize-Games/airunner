@@ -203,7 +203,7 @@ class PropertyMixin:
                 requested,
             )
             if resolved_model_id:
-                model_path = LLMProviderConfig.get_local_storage_path(
+                model_path = LLMProviderConfig.get_expected_local_artifact_path(
                     self.path_settings.base_path,
                     "local",
                     model_id=resolved_model_id,
@@ -254,7 +254,7 @@ class PropertyMixin:
             model_path,
         )
         if resolved_model_id and not os.path.isabs(model_path):
-            model_path = LLMProviderConfig.get_local_storage_path(
+            model_path = LLMProviderConfig.get_expected_local_artifact_path(
                 self.path_settings.base_path,
                 "local",
                 model_id=resolved_model_id,
@@ -264,7 +264,7 @@ class PropertyMixin:
         # Construct the full path
         if "/" not in model_path and "\\" not in model_path:
             if resolved_model_id:
-                model_path = LLMProviderConfig.get_local_storage_path(
+                model_path = LLMProviderConfig.get_expected_local_artifact_path(
                     self.path_settings.base_path,
                     "local",
                     model_id=resolved_model_id,
@@ -278,16 +278,12 @@ class PropertyMixin:
 
         saved_model_id = getattr(self.llm_generator_settings, "model_id", None)
         if saved_model_id and saved_model_id != "custom":
-            recovered_path = LLMProviderConfig.get_local_storage_path(
-                self.path_settings.base_path,
-                "local",
-                model_id=saved_model_id,
-            )
             expected_artifact_path = LLMProviderConfig.get_expected_local_artifact_path(
                 self.path_settings.base_path,
                 "local",
                 model_id=saved_model_id,
             )
+            recovered_path = expected_artifact_path
             if (
                 expected_artifact_path.lower().endswith(".gguf")
                 and os.path.exists(expected_artifact_path)
@@ -295,7 +291,7 @@ class PropertyMixin:
                 and os.path.normpath(model_path) != os.path.normpath(recovered_path)
             ):
                 self.logger.info(
-                    "Recovered stale local model path '%s' to shared GGUF storage '%s'",
+                    "Recovered stale local model path '%s' to expected GGUF artifact '%s'",
                     model_path,
                     recovered_path,
                 )
@@ -321,7 +317,7 @@ class PropertyMixin:
             if saved_model_id and saved_model_id != "custom":
                 model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                 if model_info:
-                    recovered_path = LLMProviderConfig.get_local_storage_path(
+                    recovered_path = LLMProviderConfig.get_expected_local_artifact_path(
                         self.path_settings.base_path,
                         "local",
                         model_id=saved_model_id,
@@ -350,7 +346,7 @@ class PropertyMixin:
             if saved_model_id and saved_model_id != "custom":
                 model_info = LLMProviderConfig.get_model_info("local", saved_model_id)
                 if model_info:
-                    recovered_path = LLMProviderConfig.get_local_storage_path(
+                    recovered_path = LLMProviderConfig.get_expected_local_artifact_path(
                         self.path_settings.base_path,
                         "local",
                         model_id=saved_model_id,

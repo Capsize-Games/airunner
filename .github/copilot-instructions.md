@@ -5,6 +5,7 @@
 - Do not run or launch the AI Runner application as part of normal task execution.
 - The user will always test runtime behavior manually.
 - Limit validation to static analysis, targeted unit tests, linting, compilation, and read-only inspection unless the user explicitly asks for a specific command.
+- Do not create or modify automated tests unless the user explicitly asks for test changes.
 - When a change would normally be verified by launching the app, state that the user should verify it instead of starting the application.
 
 ## Code Style and Quality
@@ -19,7 +20,7 @@
 - Include docstrings for all functions and classes to explain their purpose and usage.
 - When you need to check code quality, use the `src/airunner/bin/code_quality_report.py` script
 - When you need to check code coverage use the `src/airunner/bin/coverage_report.py` script
-- Always run automated tests to ensure that your code changes do not break existing functionality. Use the `src/airunner/bin/run_tests.py` script to run tests.
+- Run existing automated tests when needed for validation, but do not add or change test files unless the user explicitly requests test changes. Use the `src/airunner/bin/run_tests.py` script to run tests.
 - Avoid multiple classes in a single file - we prefer one class per file for better organization and readability. Subdirectories are a good way to group related classes together while keeping each file focused and manageable.
 
 ## Generated UI Files
