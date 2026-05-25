@@ -15,6 +15,13 @@ from airunner_services.utils.application.api_reference import (
 from airunner_services.utils.application.get_logger import get_logger
 
 
+def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
+    """Return True when one envelope-like response matches a status."""
+    status = getattr(response, "status", None)
+    value = getattr(status, "value", status)
+    return str(value or "").strip().lower() == expected.value
+
+
 class RuntimeRegistrySTTExecutor(STTExecutor):
     """Route STT model control and transcription through the runtime registry."""
 
@@ -100,7 +107,7 @@ class RuntimeRegistrySTTExecutor(STTExecutor):
         except Exception as exc:
             self.logger.warning("STT runtime %s failed: %s", action.value, exc)
             return None
-        if response.status is not EnvelopeStatus.SUCCEEDED:
+        if not _response_status_is(response, EnvelopeStatus.SUCCEEDED):
             error = response.error.message if response.error else action.value
             self.logger.warning("STT runtime %s failed: %s", action.value, error)
             return None

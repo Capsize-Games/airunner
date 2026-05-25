@@ -44,9 +44,10 @@ class ChatModelFactory:
     @staticmethod
     def create_gguf_model(
         model_path: str,
+        gguf_runtime_profile: Optional[str] = None,
         n_ctx: int = 32768,  # Qwen3 native context (use YaRN for extended)
         n_gpu_layers: int = -1,
-        n_batch: int = 512,
+        n_batch: int = 256,
         max_tokens: int = 32768,  # Qwen3 recommended output length
         temperature: float = 0.6,  # Qwen3 thinking mode recommended
         top_p: float = 0.95,  # Qwen3 thinking mode recommended
@@ -72,6 +73,7 @@ class ChatModelFactory:
 
         Args:
             model_path: Path to GGUF model file or directory containing GGUF
+            gguf_runtime_profile: Named runtime profile applied to this load
             n_ctx: Context window size (default: 32768 native Qwen3)
             n_gpu_layers: Layers to offload to GPU (-1 for all)
             n_batch: Batch size for prompt processing
@@ -107,6 +109,7 @@ class ChatModelFactory:
 
         return ChatGGUF(
             model_path=gguf_file,
+            gguf_runtime_profile=gguf_runtime_profile,
             n_ctx=n_ctx,
             n_gpu_layers=n_gpu_layers,
             n_batch=n_batch,
@@ -250,30 +253,43 @@ class ChatModelFactory:
         model_path: Optional[str],
     ) -> Optional[str]:
         """Resolve a local model identifier from settings or model path."""
-        model_id = getattr(db_settings, "model_id", None) if db_settings else None
-        if model_id:
-            return model_id
         if not model_path:
-            return None
-        return LLMProviderConfig.resolve_model_id(
+            model_id = (
+                getattr(db_settings, "model_id", None)
+                if db_settings
+                else None
+            )
+            return model_id or None
+
+        resolved_from_path = LLMProviderConfig.resolve_model_id(
             "local",
             os.path.basename(str(model_path)),
         )
+        if resolved_from_path:
+            return resolved_from_path
+
+        model_id = getattr(db_settings, "model_id", None) if db_settings else None
+        return model_id or None
 
     @staticmethod
     def _get_local_gguf_runtime_params(
         model_id: Optional[str],
+        profile_name: Optional[str] = None,
     ) -> dict[str, Any]:
         """Return llama.cpp runtime overrides for supported local GGUFs."""
         if not model_id:
             return {}
 
-        model_info = LLMProviderConfig.get_model_info("local", model_id) or {}
-        runtime_params: dict[str, Any] = {}
-        default_n_ctx = model_info.get("gguf_default_n_ctx")
-        if default_n_ctx:
-            runtime_params["n_ctx"] = int(default_n_ctx)
-        return runtime_params
+        runtime_params = LLMProviderConfig.get_gguf_runtime_profile(
+            "local",
+            model_id,
+            profile_name=profile_name or "default",
+        )
+        return {
+            key: value
+            for key, value in runtime_params.items()
+            if value is not None
+        }
 
     @staticmethod
     def create_from_settings(
@@ -282,6 +298,7 @@ class ChatModelFactory:
         tokenizer: Optional[Any] = None,
         chatbot: Optional[Any] = None,
         model_path: Optional[str] = None,
+        gguf_runtime_profile: Optional[str] = None,
     ) -> BaseChatModel:
         """
         Create appropriate ChatModel based on AI Runner settings.
@@ -381,6 +398,7 @@ class ChatModelFactory:
                     params.update(
                         ChatModelFactory._get_local_gguf_runtime_params(
                             resolved_model_id,
+                            profile_name=gguf_runtime_profile,
                         )
                     )
                     model_info = (
@@ -405,6 +423,7 @@ class ChatModelFactory:
                             preferred_filename=model_info.get(
                                 "gguf_filename",
                             ),
+                            gguf_runtime_profile=gguf_runtime_profile,
                             enable_thinking=enable_thinking,
                             reasoning_effort=reasoning_effort,
                             tool_calling_mode=model_info.get(

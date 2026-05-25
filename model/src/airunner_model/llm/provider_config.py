@@ -96,6 +96,17 @@ class LLMProviderConfig:
                 "Qwen3 8B",
                 "Qwen3-8B-Q4_K_M.gguf",
             ],
+            "gguf_runtime_profiles": {
+                "default": {
+                    "n_ctx": 32768,
+                    "n_batch": 256,
+                },
+                "combined_tts": {
+                    "n_ctx": 4096,
+                    "n_gpu_layers": 30,
+                    "n_batch": 256,
+                },
+            },
         },
         "qwen3.5-9b": {
             "name": "Qwen3.5-9B",
@@ -123,6 +134,17 @@ class LLMProviderConfig:
                 "Qwen3.5 9B",
                 "Qwen3.5-9B-Q8_0.gguf",
             ],
+            "gguf_runtime_profiles": {
+                "default": {
+                    "n_ctx": 32768,
+                    "n_batch": 256,
+                },
+                "combined_tts": {
+                    "n_ctx": 4096,
+                    "n_gpu_layers": 10,
+                    "n_batch": 256,
+                },
+            },
         },
         "gpt-oss-20b": {
             "name": "GPT-OSS 20B",
@@ -146,6 +168,7 @@ class LLMProviderConfig:
             "gguf_repo_id": "unsloth/gpt-oss-20b-GGUF",
             "gguf_filename": "gpt-oss-20b-F16.gguf",
             "gguf_default_n_ctx": 4096,
+            "gguf_default_n_batch": 256,
             "local_storage_subdir": "gpt_oss",
             "aliases": [
                 "GPT-OSS",
@@ -153,6 +176,17 @@ class LLMProviderConfig:
                 "gpt_oss",
                 "gpt-oss-20b-F16.gguf",
             ],
+            "gguf_runtime_profiles": {
+                "default": {
+                    "n_ctx": 4096,
+                    "n_batch": 256,
+                },
+                "combined_tts": {
+                    "n_ctx": 4096,
+                    "n_gpu_layers": 0,
+                    "n_batch": 256,
+                },
+            },
         },
         "qwen3-14b": {
             "name": "Qwen3-14B",
@@ -318,6 +352,28 @@ class LLMProviderConfig:
             if value:
                 aliases.append(str(value))
         return aliases
+
+    @staticmethod
+    def get_gguf_runtime_profile(
+        provider: str,
+        model_id: str,
+        profile_name: str = "default",
+    ) -> Dict[str, Any]:
+        """Return one GGUF runtime profile for one local model."""
+        model_info = LLMProviderConfig.get_model_info(provider, model_id) or {}
+        profiles = model_info.get("gguf_runtime_profiles") or {}
+        profile = profiles.get(profile_name) or {}
+        if profile:
+            return dict(profile)
+
+        legacy_profile: Dict[str, Any] = {}
+        default_n_ctx = model_info.get("gguf_default_n_ctx")
+        if default_n_ctx:
+            legacy_profile["n_ctx"] = int(default_n_ctx)
+        default_n_batch = model_info.get("gguf_default_n_batch")
+        if default_n_batch:
+            legacy_profile["n_batch"] = int(default_n_batch)
+        return legacy_profile
 
     @classmethod
     def get_models_for_provider(cls, provider: str) -> List[str]:

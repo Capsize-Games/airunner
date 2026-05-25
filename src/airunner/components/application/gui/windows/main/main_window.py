@@ -2611,12 +2611,12 @@ class MainWindow(
 
     def _sync_model_resource_manager_from_daemon(self, status: dict) -> None:
         """Mirror daemon runtime state into the shared resource manager."""
-        runtimes = status.get("runtimes")
-        if not isinstance(runtimes, list):
+        preferred_runtimes = MainWindow._preferred_runtime_summaries(status)
+        if not preferred_runtimes:
             return
 
         manager = ModelResourceManager()
-        for runtime in runtimes:
+        for runtime in preferred_runtimes.values():
             model_type = MainWindow._resource_model_type_from_runtime(runtime)
             if model_type is None:
                 continue
@@ -2891,10 +2891,19 @@ class MainWindow(
         return ModelStatus.UNLOADED
 
     @staticmethod
-    def _runtime_statuses_from_daemon_status(
+    def _preferred_runtime_mode_for_model(
+        model_type: ModelType,
+    ) -> Optional[str]:
+        """Return the preferred daemon route for one GUI model type."""
+        if model_type is ModelType.TTS:
+            return "sidecar"
+        return None
+
+    @staticmethod
+    def _preferred_runtime_summaries(
         status: dict,
-    ) -> dict[ModelType, ModelStatus]:
-        """Return GUI model statuses derived from daemon runtime summaries."""
+    ) -> dict[ModelType, dict]:
+        """Return one preferred daemon summary per GUI model type."""
         runtime_map = {
             "llm": ModelType.LLM,
             "tts": ModelType.TTS,
@@ -2904,11 +2913,42 @@ class MainWindow(
         runtimes = status.get("runtimes")
         if not isinstance(runtimes, list):
             return {}
-        statuses: dict[ModelType, ModelStatus] = {}
+
+        selected: dict[ModelType, dict] = {}
         for runtime in runtimes:
-            model_type = runtime_map.get(str(runtime.get("runtime", "")).lower())
+            model_type = runtime_map.get(
+                str(runtime.get("runtime", "")).lower()
+            )
             if model_type is None:
                 continue
+
+            existing = selected.get(model_type)
+            if existing is None:
+                selected[model_type] = runtime
+                continue
+
+            preferred_mode = MainWindow._preferred_runtime_mode_for_model(
+                model_type
+            )
+            if preferred_mode is None:
+                continue
+
+            runtime_mode = str(runtime.get("mode", "")).strip().lower()
+            existing_mode = str(existing.get("mode", "")).strip().lower()
+            if runtime_mode == preferred_mode and existing_mode != preferred_mode:
+                selected[model_type] = runtime
+
+        return selected
+
+    @staticmethod
+    def _runtime_statuses_from_daemon_status(
+        status: dict,
+    ) -> dict[ModelType, ModelStatus]:
+        """Return GUI model statuses derived from daemon runtime summaries."""
+        statuses: dict[ModelType, ModelStatus] = {}
+        for model_type, runtime in MainWindow._preferred_runtime_summaries(
+            status
+        ).items():
             statuses[model_type] = MainWindow._model_status_from_runtime_summary(
                 runtime
             )
@@ -2961,6 +3001,9 @@ class MainWindow(
         )
         is_loaded = loaded_name in loaded_models
         if desired_enabled == is_loaded:
+            self._runtime_preference_retry_after.pop(model_type, None)
+            return
+        if model_type is ModelType.TTS and desired_enabled and not is_loaded:
             self._runtime_preference_retry_after.pop(model_type, None)
             return
         if (
@@ -3056,7 +3099,6 @@ class MainWindow(
             button = getattr(self.ui, "speech_to_text_button", None)
             if button is not None:
                 button.setDisabled(False)
-        QApplication.processEvents()
 
     def _generate_drawingpad_mask(self):
         width = self.application_settings.working_width

@@ -372,9 +372,10 @@ class ChatGGUF(BaseChatModel):
     """
 
     model_path: str
+    gguf_runtime_profile: Optional[str] = None
     n_ctx: int = 32768  # Qwen3 native context (use YaRN for 131K)
     n_gpu_layers: int = -1
-    n_batch: int = 512
+    n_batch: int = 256
     max_tokens: int = 32768  # Qwen3 recommended output length
     temperature: float = 0.6  # Qwen3 thinking mode recommended
     top_p: float = 0.95  # Qwen3 thinking mode recommended  
@@ -418,12 +419,30 @@ class ChatGGUF(BaseChatModel):
         """Return identifying parameters for logging."""
         return {
             "model_path": self.model_path,
+            "gguf_runtime_profile": self.gguf_runtime_profile,
             "n_ctx": self.n_ctx,
             "n_gpu_layers": self.n_gpu_layers,
             "chat_format": self._detected_format,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
         }
+
+    def _runtime_signature(self, tuning: Dict[str, Any]) -> str:
+        """Return one concise runtime signature for logs."""
+        signature = {
+            "profile": self.gguf_runtime_profile or "default",
+            "chat_format": self._detected_format or "auto",
+            "n_ctx": self.n_ctx,
+            "n_gpu_layers": self.n_gpu_layers,
+            "n_batch": tuning.get("n_batch", self.n_batch),
+            "flash_attn": self.flash_attn,
+            "offload_kqv": tuning.get("offload_kqv"),
+            "op_offload": tuning.get("op_offload"),
+        }
+        return ", ".join(
+            f"{key}={value}" for key, value in signature.items()
+            if value is not None
+        )
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize the llama-cpp-python model after Pydantic init."""
@@ -553,6 +572,8 @@ class ChatGGUF(BaseChatModel):
                 "GGUF inference will run on CPU until llama-cpp-python is rebuilt with GGML_CUDA=on."
             )
 
+        self._apply_runtime_env_overrides()
+
         self.logger.info(
             "Loading GGUF model file=%s from %s",
             os.path.basename(self.model_path),
@@ -574,6 +595,10 @@ class ChatGGUF(BaseChatModel):
             )
 
         llama_tuning = self._resolve_llama_tuning()
+        self.logger.info(
+            "  runtime signature: %s",
+            self._runtime_signature(llama_tuning),
+        )
 
         # Build kwargs with optional YaRN support for extended context
         llama_kwargs = {
@@ -592,25 +617,11 @@ class ChatGGUF(BaseChatModel):
         self.logger.info(
             f"  llama.cpp tuning: {self._format_llama_tuning(llama_tuning)}"
         )
-        
-        # Add YaRN parameters for extended context (131K)
-        # YaRN (Yet another RoPE extensioN) allows extending context beyond native limit
-        if self.use_yarn and self.n_ctx > self.yarn_orig_ctx:
-            self.logger.info(
-                f"Enabling YaRN for extended context: {self.yarn_orig_ctx} -> {self.n_ctx}"
-            )
-            # rope_scaling_type: 2 = YARN in llama.cpp
-            llama_kwargs["rope_scaling_type"] = 2
-            llama_kwargs["yarn_orig_ctx"] = self.yarn_orig_ctx
-            # Calculate scaling factor: target_ctx / original_ctx
-            factor = self.n_ctx / self.yarn_orig_ctx
-            llama_kwargs["yarn_ext_factor"] = factor
-            llama_kwargs["yarn_attn_factor"] = 1.0
-            llama_kwargs["yarn_beta_fast"] = 32.0
-            llama_kwargs["yarn_beta_slow"] = 1.0
-        
         try:
-            self._llama = Llama(**llama_kwargs)
+            self._load_llama_with_context_fallback(
+                Llama,
+                llama_kwargs,
+            )
         except Exception as e:
             error_msg = str(e).lower()
             # Check for unsupported architecture error from llama.cpp
@@ -645,6 +656,98 @@ class ChatGGUF(BaseChatModel):
             )
 
         self.logger.info("✓ GGUF model loaded successfully")
+
+    def _apply_runtime_env_overrides(self) -> None:
+        """Apply optional llama.cpp runtime overrides from the environment."""
+        n_ctx_override = _get_int_env("AIRUNNER_GGUF_N_CTX")
+        if n_ctx_override is not None and n_ctx_override > 0:
+            self.n_ctx = n_ctx_override
+
+        n_gpu_layers_override = _get_int_env(
+            "AIRUNNER_GGUF_N_GPU_LAYERS"
+        )
+        if n_gpu_layers_override is not None:
+            self.n_gpu_layers = n_gpu_layers_override
+
+    def _load_llama_with_context_fallback(
+        self,
+        llama_cls,
+        base_kwargs: Dict[str, Any],
+    ) -> None:
+        """Load llama.cpp and retry smaller contexts on allocation failure."""
+        attempted_n_ctx = self.n_ctx
+        for n_ctx in self._context_retry_sequence():
+            try:
+                llama_kwargs = self._llama_kwargs_for_context(
+                    base_kwargs,
+                    n_ctx,
+                )
+                self._llama = llama_cls(**llama_kwargs)
+                self.n_ctx = n_ctx
+                return
+            except Exception as exc:
+                if not self._should_retry_context(exc, n_ctx):
+                    raise
+                next_n_ctx = self._next_retry_context(n_ctx)
+                if next_n_ctx is None:
+                    raise
+                self.logger.warning(
+                    "Failed to create llama_context at n_ctx=%s; "
+                    "retrying with n_ctx=%s",
+                    n_ctx,
+                    next_n_ctx,
+                )
+                attempted_n_ctx = next_n_ctx
+
+        self.n_ctx = attempted_n_ctx
+
+    def _llama_kwargs_for_context(
+        self,
+        base_kwargs: Dict[str, Any],
+        n_ctx: int,
+    ) -> Dict[str, Any]:
+        """Return llama.cpp kwargs for one specific context size."""
+        llama_kwargs = dict(base_kwargs)
+        llama_kwargs["n_ctx"] = n_ctx
+
+        if self.use_yarn and n_ctx > self.yarn_orig_ctx:
+            self.logger.info(
+                "Enabling YaRN for extended context: %s -> %s",
+                self.yarn_orig_ctx,
+                n_ctx,
+            )
+            llama_kwargs["rope_scaling_type"] = 2
+            llama_kwargs["yarn_orig_ctx"] = self.yarn_orig_ctx
+            factor = n_ctx / self.yarn_orig_ctx
+            llama_kwargs["yarn_ext_factor"] = factor
+            llama_kwargs["yarn_attn_factor"] = 1.0
+            llama_kwargs["yarn_beta_fast"] = 32.0
+            llama_kwargs["yarn_beta_slow"] = 1.0
+
+        return llama_kwargs
+
+    def _context_retry_sequence(self) -> tuple[int, ...]:
+        """Return candidate context sizes for llama.cpp retry attempts."""
+        fallback_values = [self.n_ctx]
+        for candidate in (16384, 8192, 4096):
+            if candidate < self.n_ctx:
+                fallback_values.append(candidate)
+        return tuple(fallback_values)
+
+    @staticmethod
+    def _next_retry_context(current_n_ctx: int) -> Optional[int]:
+        """Return the next smaller context retry target when one exists."""
+        for candidate in (16384, 8192, 4096):
+            if candidate < current_n_ctx:
+                return candidate
+        return None
+
+    @staticmethod
+    def _should_retry_context(exc: Exception, n_ctx: int) -> bool:
+        """Return True when one smaller llama context should be attempted."""
+        if n_ctx <= 4096:
+            return False
+        return "failed to create llama_context" in str(exc).lower()
 
     def _reload_with_tools(self) -> None:
         """No-op: tool bindings do not require runtime reloading."""

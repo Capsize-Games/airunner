@@ -36,7 +36,6 @@ from airunner_services.runtimes.openvoice_runtime_helpers import (
     expand_reference_speaker_path,
     precompute_reference_speaker,
     processed_target_dir,
-    warm_melo_tts,
 )
 from airunner_services.vendor.openvoice.api import ToneColorConverter
 
@@ -254,15 +253,11 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self.model = TTS(language=self.language)
             model_elapsed = perf_counter() - model_start
 
-            warm_start = perf_counter()
-            self._warm_model_components()
-            warm_elapsed = perf_counter() - warm_start
             self.logger.info(
                 "OpenVoice load timings: initialize=%.3fs "
-                "tts_init=%.3fs warm=%.3fs total=%.3fs",
+                "tts_init=%.3fs total=%.3fs",
                 initialize_elapsed,
                 model_elapsed,
-                warm_elapsed,
                 perf_counter() - load_start,
             )
         except Exception:

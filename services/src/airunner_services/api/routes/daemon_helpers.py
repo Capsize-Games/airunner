@@ -365,6 +365,12 @@ def ensure_vram_available_for(
             continue
 
         other_runtime = parse_runtime_kind(summary.runtime)
+        # Typed chat needs LLM generation and TTS synthesis to coexist.
+        if {
+            target_runtime,
+            other_runtime,
+        } == {RuntimeKind.LLM, RuntimeKind.TTS}:
+            continue
         logger.info(
             "Unloading %s (%s:%s) to free VRAM for %s",
             other_runtime.value,

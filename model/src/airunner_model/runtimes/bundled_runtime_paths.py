@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -20,6 +21,10 @@ def resolve_runtime_executable(env_name: str, binary_name: str) -> str:
 	if bundled_path is not None:
 		return str(bundled_path)
 
+	venv_path = _resolve_current_python_binary(binary_name)
+	if venv_path is not None:
+		return str(venv_path)
+
 	return binary_name
 
 
@@ -35,6 +40,21 @@ def _resolve_bundled_binary(binary_name: str) -> Optional[Path]:
 		if candidate_path.exists():
 			return candidate_path
 
+	return None
+
+
+def _resolve_current_python_binary(binary_name: str) -> Optional[Path]:
+	"""Return a sidecar binary installed next to the active Python."""
+	python_dirs = [Path(sys.executable).parent]
+	resolved_python_dir = Path(sys.executable).resolve().parent
+	if resolved_python_dir not in python_dirs:
+		python_dirs.append(resolved_python_dir)
+
+	for python_dir in python_dirs:
+		for candidate_name in _candidate_binary_names(binary_name):
+			candidate_path = python_dir / candidate_name
+			if candidate_path.exists():
+				return candidate_path
 	return None
 
 

@@ -440,8 +440,6 @@ class ChatPromptWidget(BaseWidget):
         request_id = str(uuid4())
 
         self.clear_prompt()
-
-        QApplication.processEvents()
         self.logger.info(
             f"do_generate called with prompt: "
             f"{prompt[:100] if prompt else 'None'}..."
@@ -471,7 +469,6 @@ class ChatPromptWidget(BaseWidget):
                 cleaned_prompt,
                 request_id=request_id,
             )
-            QApplication.processEvents()
 
         QTimer.singleShot(
             0,
@@ -556,7 +553,9 @@ class ChatPromptWidget(BaseWidget):
             action,
             getattr(self, "llm_generator_settings", None),
         )
-        llm_request.enable_thinking = True
+        llm_request.enable_thinking = (
+            self._is_thinking_enabled_for_request()
+        )
         llm_request.reasoning_effort = self._get_reasoning_effort_for_request()
         
         # Set force_tool if slash command specifies one
@@ -578,19 +577,26 @@ class ChatPromptWidget(BaseWidget):
             )
         
         self.logger.info(f"Sending request - action={action}, force_tool={llm_request.force_tool}, tool_categories={llm_request.tool_categories}")
-        
-        self.api.llm.send_request(
-            prompt=actual_prompt,
-            llm_request=llm_request,
-            action=action,
-            do_tts_reply=False,
-            conversation_id=conversation_id,
-            request_id=request_id,
-        )
+        try:
+            self.api.llm.send_request(
+                actual_prompt,
+                llm_request=llm_request,
+                action=action,
+                do_tts_reply=False,
+                conversation_id=conversation_id,
+                request_id=request_id,
+            )
+        except Exception as e:
+            self.logger.error(f"Error submitting generation request: {e}")
 
     def _is_thinking_enabled_for_request(self) -> bool:
         """Return the effective request thinking preference."""
-        return True
+        if not self._model_supports_thinking():
+            return False
+
+        return bool(
+            getattr(self.llm_generator_settings, "enable_thinking", True)
+        )
 
     def _get_reasoning_effort_for_request(self) -> Optional[str]:
         """Return the request-scoped GPT-OSS reasoning effort."""

@@ -314,7 +314,8 @@ class TTSVocalizerWorker(Worker):
 
     @property
     def playback_device(self):
-        playback_device = self.sound_settings.playback_device
+        sound_settings = getattr(self, "sound_settings", None)
+        playback_device = getattr(sound_settings, "playback_device", "")
         return playback_device if playback_device != "" else "pulse"
 
     def _initialize_stream(self, samplerate: int) -> bool:

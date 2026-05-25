@@ -2319,6 +2319,12 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     "sequence_number": getattr(response, "sequence_number", 0),
                     "action": action_str,
                     "tools": getattr(response, "tools", None),
+                    "error": bool(
+                        getattr(response, "is_system_message", False)
+                    ),
+                    "is_system_message": bool(
+                        getattr(response, "is_system_message", False)
+                    ),
                 }
                 try:
                     self.logger.debug(

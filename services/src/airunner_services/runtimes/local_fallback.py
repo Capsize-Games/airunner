@@ -481,6 +481,13 @@ class LocalFallbackLLMClient(_SignalRuntimeClient):
             setattr(request, "system_prompt", system_prompt)
         if invocation.tool_choice and invocation.tool_choice != "auto":
             setattr(request, "force_tool", invocation.tool_choice)
+        runtime_profile = invocation.metadata.get("gguf_runtime_profile")
+        if isinstance(runtime_profile, str) and runtime_profile.strip():
+            setattr(
+                request,
+                "gguf_runtime_profile",
+                runtime_profile.strip(),
+            )
         return request
 
     def _collect_response(
@@ -837,10 +844,47 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
         """Enable and load the local TTS model."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
 
+        worker = self._headless_tts_worker()
+        if worker is not None:
+            load_tts = getattr(worker, "_load_tts", None)
+            current_status = getattr(worker, "_current_tts_status", None)
+            if not callable(load_tts) or not callable(current_status):
+                return self._failure_response(
+                    request_id,
+                    "tts_load_failed",
+                    "Headless TTS worker is unavailable",
+                )
+
+            load_tts()
+            status = current_status()
+            self._cache_status(status)
+            if status in (ModelStatus.LOADED, ModelStatus.READY):
+                return ResponseEnvelope(
+                    request_id=request_id,
+                    status=EnvelopeStatus.SUCCEEDED,
+                    payload={"model_status": _model_status_value(status)},
+                    metadata=self._status_metadata(),
+                )
+            if status is ModelStatus.FAILED:
+                return self._failure_response(
+                    request_id,
+                    "tts_load_failed",
+                    "TTS load failed",
+                )
+            return self._failure_response(
+                request_id,
+                "tts_load_failed",
+                "TTS did not reach a loaded state",
+                retryable=True,
+            )
+
         return self._wait_for_model_status(
             request_id,
             emit_code=SignalCode.TTS_ENABLE_SIGNAL,
-            emit_data={},
+            emit_data={
+                "source": "runtime_control",
+                "request_scoped": True,
+            },
             success_statuses=(ModelStatus.LOADED, ModelStatus.READY),
             timeout_code="tts_load_timeout",
             failure_code="tts_load_failed",
@@ -850,6 +894,40 @@ class LocalFallbackTTSClient(_SignalRuntimeClient):
     def _unload_model(self, request_id: str) -> ResponseEnvelope:
         """Disable and unload the local TTS model."""
         from airunner_services.contract_enums import ModelStatus, SignalCode
+
+        worker = self._headless_tts_worker()
+        if worker is not None:
+            unload_tts = getattr(worker, "_unload_tts", None)
+            current_status = getattr(worker, "_current_tts_status", None)
+            if not callable(unload_tts) or not callable(current_status):
+                return self._failure_response(
+                    request_id,
+                    "tts_unload_failed",
+                    "Headless TTS worker is unavailable",
+                )
+
+            unload_tts()
+            status = current_status()
+            self._cache_status(status)
+            if status is ModelStatus.UNLOADED:
+                return ResponseEnvelope(
+                    request_id=request_id,
+                    status=EnvelopeStatus.SUCCEEDED,
+                    payload={"model_status": _model_status_value(status)},
+                    metadata=self._status_metadata(),
+                )
+            if status is ModelStatus.FAILED:
+                return self._failure_response(
+                    request_id,
+                    "tts_unload_failed",
+                    "TTS unload failed",
+                )
+            return self._failure_response(
+                request_id,
+                "tts_unload_failed",
+                "TTS did not unload cleanly",
+                retryable=True,
+            )
 
         return self._wait_for_model_status(
             request_id,

@@ -101,6 +101,11 @@ class ComponentLoaderMixin:
                 tokenizer=self._tokenizer,
                 chatbot=getattr(self, "chatbot", None),
                 model_path=self._current_model_path,
+                gguf_runtime_profile=getattr(
+                    self.llm_request,
+                    "gguf_runtime_profile",
+                    None,
+                ),
             )
             self._release_local_execution_ownership()
             self._last_load_error = None

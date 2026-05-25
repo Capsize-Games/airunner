@@ -19,6 +19,8 @@ from typing import Optional, Sequence
 from airunner_native.startup_env import (
     configure_early_torch_allocator_environment,
 )
+from airunner_native.repo_paths import resolve_gui_source_root
+from airunner_native.repo_paths import resolve_repo_root
 
 
 configure_early_torch_allocator_environment()
@@ -27,7 +29,7 @@ from airunner_native.settings import AIRUNNER_BASE_PATH
 from airunner_native.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 from airunner_native.settings import AIRUNNER_LOG_LEVEL
 from airunner_native.settings import LOCAL_SERVER_HOST
-from airunner_services.database.setup import setup_database
+from airunner_services.setup_database import setup_database
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.logging_utils import (
     configure_noisy_loggers,
@@ -60,9 +62,9 @@ def _facehugger_activate_kwargs() -> dict[str, object]:
         f"python{sys.version_info.major}.{sys.version_info.minor}",
         "site-packages",
     )
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = resolve_repo_root(Path(__file__))
     api_src_path = str(repo_root / "api" / "src")
-    gui_src_path = str(repo_root / "gui" / "src")
+    gui_src_path = str(resolve_gui_source_root(repo_root))
     model_src_path = str(repo_root / "model" / "src")
     services_src_path = str(repo_root / "services" / "src")
     native_src_path = str(repo_root / "native" / "src")

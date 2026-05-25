@@ -17,18 +17,49 @@ from airunner.enums import AvailableLanguage
 from airunner_services.vendor.melo.runtime_support import resolve_tts_model_path
 
 
+def _normalize_language(value) -> AvailableLanguage:
+    """Accept equivalent language enums from GUI or service layers."""
+    if isinstance(value, AvailableLanguage):
+        return value
+
+    member_name = getattr(value, "name", None)
+    if isinstance(member_name, str) and member_name in AvailableLanguage.__members__:
+        return AvailableLanguage[member_name]
+
+    member_value = getattr(value, "value", None)
+    if isinstance(member_value, str):
+        try:
+            return AvailableLanguage(member_value)
+        except ValueError:
+            pass
+
+    if isinstance(value, str):
+        alias = value.strip().upper()
+        if alias in AvailableLanguage.__members__:
+            return AvailableLanguage[alias]
+        try:
+            return AvailableLanguage(value)
+        except ValueError:
+            pass
+
+    raise ValueError(
+        f"Invalid language type: {type(value)}. Expected AvailableLanguage."
+    )
+
+
 class TTS(nn.Module):
     def __init__(
         self,
         language: AvailableLanguage = AvailableLanguage.EN,
     ):
         super().__init__()
-        self._language: AvailableLanguage = language
-        self.language = language
+        normalized_language = _normalize_language(language)
         self._device: str = None
         self.cleaner = Cleaner()
         self._hps = None
         self._model = None
+        self._language = normalized_language
+        self.cleaner.language = normalized_language
 
     @property
     def voice_model_paths(self) -> Dict:
@@ -111,10 +142,7 @@ class TTS(nn.Module):
 
     @language.setter
     def language(self, value: AvailableLanguage):
-        if not isinstance(value, AvailableLanguage):
-            raise ValueError(
-                f"Invalid language type: {type(value)}. Expected AvailableLanguage."
-            )
+        value = _normalize_language(value)
         # Only unload if the language actually changes
         if value is not self._language:
             self.unload()

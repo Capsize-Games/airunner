@@ -18,6 +18,28 @@ SignalCode = signal_code_proxy()
 class LLMRequestDispatchMixin:
     """Dispatch LLM requests through daemon or local fallback paths."""
 
+    @staticmethod
+    def _default_gguf_runtime_profile(
+        llm_request: Optional[LLMRequest],
+        do_tts_reply: bool,
+    ) -> Optional[str]:
+        """Return the implicit GGUF runtime profile for one request."""
+        if llm_request is None:
+            return None
+
+        profile = getattr(llm_request, "gguf_runtime_profile", None)
+        if isinstance(profile, str):
+            profile = profile.strip() or None
+        if profile:
+            return profile
+
+        model_service = getattr(llm_request, "model_service", None)
+        if isinstance(model_service, str):
+            model_service = model_service.strip().lower() or None
+        if do_tts_reply and model_service in (None, "local"):
+            return "combined_tts"
+        return None
+
     def send_request(
         self,
         prompt,
@@ -41,6 +63,9 @@ class LLMRequestDispatchMixin:
             kwargs,
         )
         resolved_request_id = request_id or str(uuid.uuid4())
+        tracker = getattr(self, "_register_request_tts_preference", None)
+        if callable(tracker):
+            tracker(resolved_request_id, do_tts_reply)
         data = LLMRequestDispatchMixin._build_request_signal_data(
             self,
             prompt,
@@ -100,6 +125,12 @@ class LLMRequestDispatchMixin:
                     f"{list(kwargs.keys())} - ignoring"
                 )
         llm_request.do_tts_reply = do_tts_reply
+        llm_request.gguf_runtime_profile = (
+            LLMRequestDispatchMixin._default_gguf_runtime_profile(
+                llm_request,
+                do_tts_reply,
+            )
+        )
         return llm_request
 
     def _build_request_signal_data(
@@ -221,29 +252,6 @@ class LLMRequestDispatchMixin:
                 return bool(availability_check())
         return bool(client.ensure_connected(auto_start=False))
 
-    def _prewarm_tts_runtime_for_request(
-        self,
-        llm_request: LLMRequest,
-    ) -> None:
-        """Start sidecar TTS early when one daemon reply will be spoken."""
-        worker_manager_getter = getattr(self, "_worker_manager", None)
-        if not callable(worker_manager_getter):
-            return
-
-        worker_manager = worker_manager_getter()
-        if worker_manager is None:
-            return
-
-        app_settings = getattr(worker_manager, "application_settings", None)
-        if not getattr(llm_request, "do_tts_reply", False) and not bool(
-            getattr(app_settings, "tts_enabled", False)
-        ):
-            return
-
-        prewarm = getattr(worker_manager, "_start_tts_runtime_prewarm", None)
-        if callable(prewarm):
-            prewarm()
-
     def _run_daemon_request_or_fallback(
         self,
         client,
@@ -268,10 +276,6 @@ class LLMRequestDispatchMixin:
                 )
             return
 
-        LLMRequestDispatchMixin._prewarm_tts_runtime_for_request(
-            self,
-            llm_request,
-        )
         self._stream_daemon_request(
             client,
             prompt,

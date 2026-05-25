@@ -79,6 +79,13 @@ def _runtime_error_status(response) -> int:
     return 500
 
 
+def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
+    """Return True when one envelope-like response matches a status."""
+    status = getattr(response, "status", None)
+    value = getattr(status, "value", status)
+    return str(value or "").strip().lower() == expected.value
+
+
 # ====================
 # API Endpoints
 # ====================
@@ -115,7 +122,7 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
                 },
             )
         )
-        if response.status is not EnvelopeStatus.SUCCEEDED:
+        if not _response_status_is(response, EnvelopeStatus.SUCCEEDED):
             raise HTTPException(
                 status_code=_runtime_error_status(response),
                 detail=response.error.message

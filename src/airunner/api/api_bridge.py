@@ -233,9 +233,17 @@ class APIBridge:
     # STT
     # ------------------------------------------------------------------
 
-    def transcribe_audio(self, audio_bytes: bytes) -> Dict[str, Any]:
+    def transcribe_audio(
+        self,
+        audio_bytes: bytes,
+        *,
+        mime_type: str = "application/octet-stream",
+    ) -> Dict[str, Any]:
         """Transcribe audio bytes to text."""
-        return self._client.transcribe_audio(audio_bytes)
+        return self._client.transcribe_audio(
+            audio_bytes,
+            mime_type=mime_type,
+        )
 
     # ------------------------------------------------------------------
     # Model lifecycle

@@ -26,7 +26,7 @@ from airunner_model.runtimes.sidecar_launcher import SidecarLauncher
 
 
 DEFAULT_PROVIDER = "local"
-LlamaSettingsResolver = Callable[[], LlamaCppRuntimeSettings]
+LlamaSettingsResolver = Callable[[Optional[str]], LlamaCppRuntimeSettings]
 
 
 class SidecarLLMClient(RuntimeClient):
@@ -45,7 +45,7 @@ class SidecarLLMClient(RuntimeClient):
 		self._settings_resolver = (
 			settings_resolver or resolve_llama_cpp_runtime_settings
 		)
-		resolved_settings = settings or self._settings_resolver()
+		resolved_settings = settings or self._resolve_settings(None)
 		self._settings = resolved_settings
 		self._launcher = launcher or SidecarLauncher(resolved_settings)
 		self._managed_launcher = launcher is None
@@ -79,6 +79,9 @@ class SidecarLLMClient(RuntimeClient):
 		"""Stream deltas from the sidecar's OpenAI-compatible endpoint."""
 		invocation = LLMInvocationRequest.model_validate(request.payload)
 		try:
+			self._prepare_launcher(
+				self._runtime_profile(invocation),
+			)
 			self._launcher.start()
 			payload = self._chat_payload(invocation, stream=True)
 			with self._open_request(payload) as response:
@@ -125,7 +128,7 @@ class SidecarLLMClient(RuntimeClient):
 		"""Start the managed llama.cpp process."""
 		messages = load_message_types()
 		try:
-			self._prepare_launcher(for_reload=True)
+			self._prepare_launcher(None, for_reload=True)
 			self._launcher.start()
 		except RuntimeError as exc:
 			return self._failure_response(
@@ -156,7 +159,7 @@ class SidecarLLMClient(RuntimeClient):
 		messages = load_message_types()
 		invocation = LLMInvocationRequest.model_validate(request.payload)
 		try:
-			self._prepare_launcher()
+			self._prepare_launcher(self._runtime_profile(invocation))
 			self._launcher.start()
 			with self._open_request(self._chat_payload(invocation)) as response:
 				data = self._decode_json(response)
@@ -193,6 +196,11 @@ class SidecarLLMClient(RuntimeClient):
 			payload["model"] = invocation.model
 		if invocation.tool_choice is not None:
 			payload["tool_choice"] = invocation.tool_choice
+		runtime_profile = invocation.metadata.get("gguf_runtime_profile")
+		if isinstance(runtime_profile, str) and runtime_profile.strip():
+			payload["metadata"] = {
+				"gguf_runtime_profile": runtime_profile.strip(),
+			}
 		return payload
 
 	def _open_request(self, payload: dict[str, Any]):
@@ -215,11 +223,34 @@ class SidecarLLMClient(RuntimeClient):
 		except URLError as exc:
 			raise RuntimeError(str(exc.reason)) from exc
 
-	def _prepare_launcher(self, *, for_reload: bool = False) -> None:
+	@staticmethod
+	def _runtime_profile(invocation: LLMInvocationRequest) -> Optional[str]:
+		"""Return the requested GGUF runtime profile from invocation metadata."""
+		profile = invocation.metadata.get("gguf_runtime_profile")
+		if not isinstance(profile, str):
+			return None
+		return profile.strip() or None
+
+	def _resolve_settings(
+		self,
+		runtime_profile: Optional[str],
+	) -> LlamaCppRuntimeSettings:
+		"""Resolve runtime settings with backward-compatible resolver calls."""
+		try:
+			return self._settings_resolver(runtime_profile)
+		except TypeError:
+			return self._settings_resolver()
+
+	def _prepare_launcher(
+		self,
+		runtime_profile: Optional[str],
+		*,
+		for_reload: bool = False,
+	) -> None:
 		"""Refresh managed launcher settings before starting the sidecar."""
 		if not self._managed_launcher:
 			return
-		resolved_settings = self._settings_resolver()
+		resolved_settings = self._resolve_settings(runtime_profile)
 		if resolved_settings == self._settings and not for_reload:
 			return
 		if for_reload:
@@ -291,6 +322,7 @@ class SidecarLLMClient(RuntimeClient):
 		metadata = {"endpoint": self._launcher.endpoint}
 		if self._settings.model_id:
 			metadata["model_id"] = self._settings.model_id
+		metadata["runtime_profile"] = self._settings.runtime_profile
 		if self._settings.model_path:
 			metadata["model_path"] = self._settings.model_path
 		return metadata

@@ -5,8 +5,17 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PID_FILE="${ROOT_DIR}/build/airunner-services.pid"
 LOG_DIR="${ROOT_DIR}/build/logs"
 DAEMON_PORT="${AIRUNNER_DAEMON_PORT:-8188}"
+DEV_VENV="${AIRUNNER_DEV_VENV:-${ROOT_DIR}/venv}"
+DEV_VENV_BIN="${DEV_VENV}/bin"
+SIDECAR_BIN_DIR="${ROOT_DIR}/build/runtime-sidecars/linux/bin"
 
 mkdir -p "${LOG_DIR}"
+
+if [[ ! -x "${DEV_VENV_BIN}/python" ]]; then
+    echo "Developer Python not found at ${DEV_VENV_BIN}/python" >&2
+    echo "Run ./scripts/install.sh first or set AIRUNNER_DEV_VENV." >&2
+    exit 1
+fi
 
 # --------------------------------------------------
 # Helpers
@@ -40,8 +49,16 @@ start_services() {
     export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
     export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
     export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/api/src:${ROOT_DIR}/model/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
+    export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
 
-    "${ROOT_DIR}/venv/bin/python" -m airunner_services.daemon \
+    if [[ -x "${SIDECAR_BIN_DIR}/llama-server" ]]; then
+        export AIRUNNER_LLAMA_SERVER_BIN="${SIDECAR_BIN_DIR}/llama-server"
+    fi
+    if [[ -x "${SIDECAR_BIN_DIR}/whisper-server" ]]; then
+        export AIRUNNER_WHISPER_SERVER_BIN="${SIDECAR_BIN_DIR}/whisper-server"
+    fi
+
+    "${DEV_VENV_BIN}/python" -m airunner_services.daemon \
         > "${LOG_DIR}/daemon.log" 2>&1 &
 
     local daemon_pid=$!

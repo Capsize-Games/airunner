@@ -22,7 +22,13 @@ class TTSAPIService(APIServiceBase):
 
 	def start(self) -> None:
 		"""Enable TTS."""
-		self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL, {})
+		self.emit_signal(
+			SignalCode.TTS_ENABLE_SIGNAL,
+			{
+				"source": "runtime_control",
+				"request_scoped": True,
+			},
+		)
 
 	def stop(self) -> None:
 		"""Disable TTS."""

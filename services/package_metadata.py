@@ -33,7 +33,7 @@ ML_RUNTIME_REQUIREMENTS = [
     "torchvision",
     "torchaudio",
     "accelerate==1.7.0",
-    "huggingface-hub>=0.24.0,<1.0",
+    "huggingface-hub>=1.5.0,<2.0",
     "tokenizers==0.22.0",
     "optimum==1.25.1",
 ]
@@ -337,6 +337,9 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
         "install_requires": install_requires,
         "extras_require": build_extras_require(),
         "package_data": {
+            "airunner_services": [
+                "assets/reference_speakers/*.wav",
+            ],
             "airunner_services.bin": ["*.sh"],
             "airunner_services.database": [
                 "alembic.ini",

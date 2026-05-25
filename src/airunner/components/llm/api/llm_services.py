@@ -303,6 +303,15 @@ class LLMAPIService(APIServiceBase):
         handler(dict(data))
         return True
 
+    @staticmethod
+    def _queue_tts_worker_message(worker, message: dict) -> bool:
+        """Queue one TTS stream event onto the worker thread."""
+        add_to_queue = getattr(worker, "add_to_queue", None)
+        if not callable(add_to_queue):
+            return False
+        add_to_queue(message)
+        return True
+
     def _tts_stream_worker(self):
         """Return the live GUI TTS worker when one exists."""
         worker_manager = self._worker_manager()
@@ -350,6 +359,8 @@ class LLMAPIService(APIServiceBase):
         if getattr(llm_request, "images", None):
             return False
 
+        self._start_request_scoped_tts_load(llm_request)
+
         thread = threading.Thread(
             target=LLMAPIService._run_daemon_request_or_fallback,
             args=(
@@ -368,6 +379,32 @@ class LLMAPIService(APIServiceBase):
         )
         thread.start()
         return True
+
+    def _start_request_scoped_tts_load(
+        self,
+        llm_request: LLMRequest,
+    ) -> None:
+        """Start TTS load only for the active spoken request."""
+        worker_manager = self._worker_manager()
+        if worker_manager is None:
+            return
+
+        app_settings = getattr(worker_manager, "application_settings", None)
+        if not bool(getattr(app_settings, "tts_enabled", False)):
+            return
+
+        ensure_tts = getattr(
+            worker_manager,
+            "_ensure_tts_loaded_for_request",
+            None,
+        )
+        if callable(ensure_tts):
+            ensure_tts(
+                {
+                    "source": "llm_request",
+                    "request_scoped": True,
+                }
+            )
 
     def _daemon_is_immediately_available(self, client) -> bool:
         """Return True when one daemon can accept a request right now."""
@@ -406,7 +443,6 @@ class LLMAPIService(APIServiceBase):
                 return
             time.sleep(0.5)
 
-        # TTS prewarm removed
         self._stream_daemon_request(
             client,
             prompt,

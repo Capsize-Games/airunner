@@ -9,35 +9,35 @@ class Cleaner:
     def __init__(self):
         self.language_module_map = {
             AvailableLanguage.ZH: (
-                "airunner.vendor.melo.text.chinese",
+                "airunner_services.vendor.melo.text.chinese",
                 "Chinese",
             ),
             AvailableLanguage.JP: (
-                "airunner.vendor.melo.text.japanese",
+                "airunner_services.vendor.melo.text.japanese",
                 "Japanese",
             ),
             AvailableLanguage.EN: (
-                "airunner.vendor.melo.text.english",
+                "airunner_services.vendor.melo.text.english",
                 "English",
             ),
             AvailableLanguage.ZH_MIX_EN: (
-                "airunner.vendor.melo.text.chinese_mix",
+                "airunner_services.vendor.melo.text.chinese_mix",
                 "ChineseMix",
             ),
             AvailableLanguage.KR: (
-                "airunner.vendor.melo.text.korean",
+                "airunner_services.vendor.melo.text.korean",
                 "Korean",
             ),
             AvailableLanguage.FR: (
-                "airunner.vendor.melo.text.french",
+                "airunner_services.vendor.melo.text.french",
                 "French",
             ),
             AvailableLanguage.SP: (
-                "airunner.vendor.melo.text.spanish",
+                "airunner_services.vendor.melo.text.spanish",
                 "Spanish",
             ),
             AvailableLanguage.ES: (
-                "airunner.vendor.melo.text.spanish",
+                "airunner_services.vendor.melo.text.spanish",
                 "Spanish",
             ),
         }

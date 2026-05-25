@@ -16,7 +16,7 @@ def build_runtime_registry(*, app_instance: Any | None = None):
 
 def setup_database() -> None:
     """Run the canonical database setup via the service layer."""
-    from airunner_services.database.setup import (
+    from airunner_services.setup_database import (
         setup_database as service_setup_database,
     )
 

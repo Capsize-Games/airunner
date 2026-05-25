@@ -3,6 +3,7 @@
 import io
 import queue
 import re
+import threading
 from typing import Dict, Optional, Type
 from uuid import uuid4
 
@@ -117,6 +118,48 @@ class TTSGeneratorWorker(Worker):
 
 		self._llm_spoken_visible_text = visible_text
 		return visible_text
+
+	def _current_visible_tts_text(self) -> str:
+		"""Return the full visible reply currently buffered for speech."""
+		if getattr(self, "_llm_thinking_active", False):
+			return ""
+		return strip_stored_thinking_prefix(
+			combine_stream_chunks(getattr(self, "_llm_raw_visible_chunks", [])),
+			getattr(self, "_llm_thinking_content", None),
+		)
+
+	def _generate_daemon_visible_reply_async(self, message: str) -> None:
+		"""Generate one daemon-backed GUI reply without the worker queue hop."""
+		threading.Thread(
+			target=self._generate,
+			args=(message,),
+			daemon=True,
+		).start()
+
+	def _forward_gui_audio_response(self, response) -> bool:
+		"""Forward one synthesized audio buffer into the live GUI playback path."""
+		api = self._current_api()
+		if api is None or getattr(api, "headless", False):
+			return False
+		main_window = getattr(api, "main_window", None) or getattr(
+			getattr(api, "app", None),
+			"main_window",
+			None,
+		)
+		if main_window is None:
+			return False
+		worker_manager = getattr(main_window, "worker_manager", None)
+		if worker_manager is None:
+			return False
+		handler = getattr(
+			worker_manager,
+			"on_tts_generator_worker_add_to_stream_signal",
+			None,
+		)
+		if not callable(handler):
+			return False
+		handler({"message": response})
+		return True
 
 	def on_llm_thinking_signal(self, data: Optional[Dict]) -> None:
 		"""Track active reasoning so TTS only speaks final visible text."""
@@ -338,6 +381,23 @@ class TTSGeneratorWorker(Worker):
 		if cleaned_message:
 			self._llm_raw_visible_chunks.append(cleaned_message)
 
+		if TTSGeneratorWorker._has_daemon_tts_capability(self):
+			if self.do_interrupt:
+				self.logger.debug("Unblocking TTS due to new message")
+				self.on_unblock_tts_generator_signal(None)
+			if response.is_end_of_message:
+				final_message = (
+					TTSGeneratorWorker._current_visible_tts_text(self).strip()
+				)
+				if final_message:
+					if final_message[-1] not in ".!?":
+						final_message += "."
+					self._generate_daemon_visible_reply_async(
+						final_message
+					)
+				TTSGeneratorWorker._reset_llm_stream_state(self)
+			return
+
 		queued_message = TTSGeneratorWorker._visible_tts_delta(self)
 		has_speakable_text = bool(queued_message.strip())
 		if not has_speakable_text and not response.is_end_of_message:
@@ -510,20 +570,45 @@ class TTSGeneratorWorker(Worker):
 			}
 		)
 
+	@staticmethod
+	def _is_control_queue_message(message) -> bool:
+		"""Return whether one queued payload must bypass interrupt drops."""
+		if not isinstance(message, dict):
+			return False
+		message_type = message.get("_message_type")
+		return isinstance(message_type, str) and bool(message_type.strip())
+
 	def add_to_queue(self, message):
-		if self.do_interrupt:
+		if self.do_interrupt and not self._is_control_queue_message(message):
 			return
 		super().add_to_queue(message)
 
 	def get_item_from_queue(self):
-		if self.do_interrupt:
+		message = super().get_item_from_queue()
+		if message is None:
 			return None
-		return super().get_item_from_queue()
+		if self.do_interrupt and not self._is_control_queue_message(message):
+			return None
+		return message
 
 	def handle_message(self, data):
 		message_type = data.get("_message_type") if data else None
 		if message_type == "interrupt":
 			self.on_interrupt_process_signal(data.get("data"))
+			return
+		if message_type == "unblock_tts_generator":
+			self.on_unblock_tts_generator_signal(data.get("data"))
+			return
+		if message_type == "llm_text_streamed":
+			self.on_llm_text_streamed_signal(data.get("data") or {})
+			return
+		if message_type == "llm_thinking":
+			self.on_llm_thinking_signal(data.get("data") or {})
+			return
+		if message_type == "application_settings_changed":
+			self.on_application_settings_changed_signal(
+				data.get("data") or {}
+			)
 			return
 		if message_type == "tts_enable":
 			self.on_enable_tts_signal(data.get("data"))
@@ -755,6 +840,8 @@ class TTSGeneratorWorker(Worker):
 			return
 
 		if response is not None:
+			if self._forward_gui_audio_response(response):
+				return
 			self.emit_signal(
 				SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
 				{"message": response},

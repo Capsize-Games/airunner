@@ -145,7 +145,7 @@ def _resolve_model_path(
     return None
 
 
-def _context_length(model_id: str) -> int:
+def _context_length(model_id: str, profile_name: str = "default") -> int:
     """Return the preferred llama.cpp context length for a model."""
     if not model_id:
         return DEFAULT_CONTEXT_LENGTH
@@ -153,6 +153,15 @@ def _context_length(model_id: str) -> int:
     provider_config = _load_provider_config()
     if provider_config is None:
         return DEFAULT_CONTEXT_LENGTH
+
+    runtime_profile = provider_config.get_gguf_runtime_profile(
+        "local",
+        model_id,
+        profile_name=profile_name,
+    )
+    default_n_ctx = runtime_profile.get("n_ctx")
+    if default_n_ctx:
+        return int(default_n_ctx)
 
     model_info = provider_config.get_model_info("local", model_id) or {}
     return int(
@@ -162,7 +171,11 @@ def _context_length(model_id: str) -> int:
     )
 
 
-def _gpu_layers(llm_settings: Any) -> int:
+def _gpu_layers(
+    llm_settings: Any,
+    model_id: str,
+    profile_name: str = "default",
+) -> int:
     """Return the configured GPU offload policy for llama.cpp."""
     override = os.environ.get("AIRUNNER_LLAMA_N_GPU_LAYERS", "").strip()
     if override:
@@ -170,6 +183,17 @@ def _gpu_layers(llm_settings: Any) -> int:
             return int(override)
         except ValueError:
             pass
+
+    provider_config = _load_provider_config()
+    if provider_config is not None and model_id:
+        runtime_profile = provider_config.get_gguf_runtime_profile(
+            "local",
+            model_id,
+            profile_name=profile_name,
+        )
+        default_n_gpu_layers = runtime_profile.get("n_gpu_layers")
+        if default_n_gpu_layers is not None:
+            return int(default_n_gpu_layers)
 
     use_gpu = True
     if llm_settings is not None:
@@ -186,6 +210,7 @@ class LlamaCppRuntimeSettings:
     port: int
     model_path: Optional[str]
     model_id: Optional[str]
+    runtime_profile: str
     n_ctx: int
     n_gpu_layers: int
     startup_timeout_seconds: float
@@ -199,6 +224,7 @@ class LlamaCppRuntimeSettings:
 def resolve_llama_cpp_runtime_settings(
     llm_settings: Any = None,
     path_settings: Any = None,
+    runtime_profile: Optional[str] = None,
 ) -> LlamaCppRuntimeSettings:
     """Resolve sidecar settings from environment and optional persisted state."""
     resolved_llm_settings = (
@@ -213,7 +239,8 @@ def resolve_llama_cpp_runtime_settings(
         AIRUNNER_BASE_PATH,
     )
     model_id = _candidate_model_id(resolved_llm_settings) or None
-    default_ctx = _context_length(model_id or "")
+    selected_profile = str(runtime_profile or "default").strip() or "default"
+    default_ctx = _context_length(model_id or "", selected_profile)
 
     return LlamaCppRuntimeSettings(
         executable=resolve_runtime_executable(
@@ -231,8 +258,13 @@ def resolve_llama_cpp_runtime_settings(
             model_id or "",
         ),
         model_id=model_id,
+        runtime_profile=selected_profile,
         n_ctx=_env_int("AIRUNNER_LLAMA_N_CTX", default_ctx),
-        n_gpu_layers=_gpu_layers(resolved_llm_settings),
+        n_gpu_layers=_gpu_layers(
+            resolved_llm_settings,
+            model_id or "",
+            selected_profile,
+        ),
         startup_timeout_seconds=_env_float(
             "AIRUNNER_LLAMA_STARTUP_TIMEOUT",
             DEFAULT_STARTUP_TIMEOUT_SECONDS,

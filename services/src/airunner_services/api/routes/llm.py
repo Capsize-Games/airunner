@@ -54,6 +54,7 @@ class ChatCompletionRequest(BaseModel):
 
     messages: List[ChatMessage]
     model: Optional[str] = None
+    gguf_runtime_profile: Optional[str] = None
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     stream: bool = False
@@ -71,6 +72,7 @@ class CompletionRequest(BaseModel):
     """Text completion request."""
 
     prompt: str
+    gguf_runtime_profile: Optional[str] = None
     max_tokens: int = 100
     temperature: float = 0.7
 
@@ -177,14 +179,22 @@ def _persist_model_selection(model_id: str) -> str:
 
     path_settings = PathSettings.objects.first()
     base_path = getattr(path_settings, "base_path", AIRUNNER_BASE_PATH)
-    settings.model_id = resolved_id
-    settings.model_version = resolved_id
-    settings.model_path = LLMProviderConfig.get_expected_local_artifact_path(
+    model_path = LLMProviderConfig.get_expected_local_artifact_path(
         base_path,
         "local",
         model_id=resolved_id,
     )
-    settings.save()
+    saved = LLMGeneratorSettings.objects.update(
+        pk=getattr(settings, "id", None),
+        model_id=resolved_id,
+        model_version=resolved_id,
+        model_path=model_path,
+    )
+    if not saved:
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to persist LLM model selection",
+        )
     return resolved_id
 
 
@@ -213,6 +223,7 @@ async def _invoke_llm_runtime(
     client: RuntimeClient,
     messages: List[RuntimeChatMessage],
     model: Optional[str],
+    gguf_runtime_profile: Optional[str],
     temperature: float,
     max_tokens: Optional[int],
 ) -> str:
@@ -220,6 +231,11 @@ async def _invoke_llm_runtime(
     invocation = LLMInvocationRequest(
         messages=messages,
         model=model,
+        metadata={
+            "gguf_runtime_profile": gguf_runtime_profile,
+        }
+        if gguf_runtime_profile
+        else {},
         temperature=temperature,
         max_tokens=max_tokens,
     )
@@ -299,6 +315,7 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
         client,
         _to_runtime_messages(request.messages),
         request.model,
+        request.gguf_runtime_profile,
         request.temperature,
         request.max_tokens,
     )
@@ -317,6 +334,7 @@ async def text_completion(request: CompletionRequest, req: Request):
         client,
         [RuntimeChatMessage(role=MessageRole.USER, content=request.prompt)],
         None,
+        request.gguf_runtime_profile,
         request.temperature,
         request.max_tokens,
     )
@@ -399,6 +417,13 @@ async def websocket_chat(websocket: WebSocket):
                         )
                     ],
                     max_tokens=data.get("max_tokens"),
+                    metadata={
+                        "gguf_runtime_profile": data.get(
+                            "gguf_runtime_profile"
+                        ),
+                    }
+                    if data.get("gguf_runtime_profile")
+                    else {},
                     temperature=float(data.get("temperature", 0.7)),
                     stream=True,
                 ).model_dump(),

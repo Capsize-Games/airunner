@@ -117,11 +117,21 @@ class SignalAPIAdapter:
         """Handle AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL."""
         audio_bytes = data.get("audio_bytes")
         if audio_bytes:
-            result = self._bridge.transcribe_audio(audio_bytes)
-            self._emit(
-                SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                result,
+            result = self._bridge.transcribe_audio(
+                audio_bytes,
+                mime_type=str(
+                    data.get("mime_type") or "application/octet-stream"
+                ),
             )
+            transcription = str(result.get("text", "") or "")
+            if transcription:
+                self._emit(
+                    SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+                    {
+                        "transcription": transcription,
+                        "language": result.get("language"),
+                    },
+                )
 
     # ------------------------------------------------------------------
     # Model lifecycle
@@ -175,9 +185,6 @@ class SignalAPIAdapter:
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: (
                 self.on_llm_request_signal
             ),
-            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL: (
-                self.on_tts_generate_signal
-            ),
             SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: (
                 self.on_stt_transcribe_signal
             ),
@@ -191,8 +198,6 @@ class SignalAPIAdapter:
             SignalCode.SD_UNLOAD_SIGNAL: self.on_unload_art_signal,
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_signal,
             SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_unload_signal,
-            SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
-            SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
             SignalCode.STT_LOAD_SIGNAL: self.on_stt_load_signal,
             SignalCode.STT_UNLOAD_SIGNAL: self.on_stt_unload_signal,
         }

@@ -48,12 +48,12 @@ class LanguageBase:
         self._tokenizer = None
         self._bert_model = None
         self._bert_tokenizer = None
-        self.eng_dict = self.get_dict()
         self.current_file_path = os.path.dirname(__file__)
         self.cmu_dict_path = os.path.join(
             self.current_file_path, "cmudict.rep"
         )
         self.cache_path = self.CACHE_PATH
+        self.eng_dict = self.get_dict()
 
     @property
     def device(self) -> str:

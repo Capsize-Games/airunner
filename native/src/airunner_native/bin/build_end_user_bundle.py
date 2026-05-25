@@ -29,10 +29,10 @@ from airunner_native.distribution.python_runtime_pins import (
     get_embedded_python_runtime,
 )
 from airunner_native.distribution.python_runtime_pins import pins_file_path
+from airunner_native.repo_paths import resolve_gui_project_root
 from airunner_native.repo_paths import resolve_repo_root
 
 
-PACKAGE_ICON = Path("gui/src/airunner/gui/images/icon64x64.png")
 PACKAGE_LICENSE = Path("LICENSE")
 PACKAGE_README = Path("README.md")
 
@@ -238,7 +238,7 @@ class BundleBuilder:
         )
         self.copy_file(pins_file_path(), self.paths.python_pins_path)
         self.copy_file(self.desktop_entry_source(), self.paths.desktop_entry_path)
-        self.copy_file(self.config.repo_root / PACKAGE_ICON, self.paths.icon_path)
+        self.copy_file(package_icon_path(self.config.repo_root), self.paths.icon_path)
         if self.config.spec.target_platform == "linux":
             self.copy_tree(
                 self.config.repo_root / "deployment" / "systemd",
@@ -369,9 +369,21 @@ def build_project_specs(repo_root: Path, spec: BundleSpec) -> list[str]:
         str(repo_root / "model"),
         str(repo_root / "api"),
         service_spec,
-        str(repo_root / "gui"),
+        str(resolve_gui_project_root(repo_root)),
         str(repo_root / "native"),
     ]
+
+
+def package_icon_path(repo_root: Path) -> Path:
+    """Return the icon path for the current GUI package layout."""
+    return (
+        resolve_gui_project_root(repo_root)
+        / "src"
+        / "airunner"
+        / "gui"
+        / "images"
+        / "icon64x64.png"
+    )
 
 
 def resolve_python_source(extracted_dir: Path) -> Path:

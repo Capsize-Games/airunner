@@ -83,6 +83,7 @@ class LLMModelManager(
 	_interrupted: bool = False
 	_current_request_id: Optional[str] = None
 	_last_load_error: Optional[str] = None
+	_active_gguf_runtime_profile: Optional[str] = None
 
 	llm_settings: LLMSettings
 
@@ -98,7 +99,25 @@ class LLMModelManager(
 		self._hw_profiler = None
 		self._current_request_id = None
 		self._last_load_error = None
+		self._active_gguf_runtime_profile = None
 		apply_cudnn_benchmark(self.memory_settings)
+
+	def _requested_gguf_runtime_profile(self) -> Optional[str]:
+		"""Return the normalized GGUF runtime profile for one request."""
+		if not self.llm_settings.use_local_llm:
+			return None
+
+		profile = getattr(self.llm_request, "gguf_runtime_profile", None)
+		if not isinstance(profile, str):
+			return "default"
+		return profile.strip() or "default"
+
+	def _runtime_signature(self, model_path: Optional[str]) -> str:
+		"""Return one concise local runtime signature for logs."""
+		return (
+			f"model_path={model_path or 'unset'}, "
+			f"profile={self._requested_gguf_runtime_profile() or 'default'}"
+		)
 
 	def _load_local_llm_components(self) -> None:
 		"""Load tokenizer and model for local LLM when needed."""
@@ -137,6 +156,11 @@ class LLMModelManager(
 		target_model_path = self.model_path
 		target_model_id = self._resolve_model_id_from_path(target_model_path)
 		target_model_name = self._resolve_model_name(target_model_id)
+		target_runtime_profile = self._requested_gguf_runtime_profile()
+		self.logger.info(
+			"[LLM LOAD] Requested runtime signature: %s",
+			self._runtime_signature(target_model_path),
+		)
 
 		if current_status is ModelStatus.LOADING:
 			self.logger.info(
@@ -148,27 +172,40 @@ class LLMModelManager(
 			return
 
 		if current_status is ModelStatus.LOADED:
-			if self._current_model_path == target_model_path:
+			if (
+				self._current_model_path == target_model_path
+				and self._active_gguf_runtime_profile == target_runtime_profile
+			):
 				self.logger.info(
 					"Returning early - requested model already loaded "
-					"(model_id=%s, model_name=%s)",
+					"(model_id=%s, model_name=%s, profile=%s)",
 					target_model_id or "unknown",
 					target_model_name or "unknown",
+					target_runtime_profile or "default",
 				)
 				return
 
-			current_model_id = self._resolve_model_id_from_path(
-				self._current_model_path,
-			)
-			current_model_name = self._resolve_model_name(current_model_id)
-			self.logger.info(
-				"[LLM LOAD] Switching models: %s (%s) -> %s (%s)",
-				current_model_id or "unknown",
-				current_model_name or "unknown",
-				target_model_id or "unknown",
-				target_model_name or "unknown",
-			)
-			self.unload()
+			if self._current_model_path == target_model_path:
+				self.logger.info(
+					"[LLM LOAD] Switching GGUF runtime profile: %s -> %s",
+					self._active_gguf_runtime_profile or "default",
+					target_runtime_profile or "default",
+				)
+				self.unload()
+				current_status = self.model_status[ModelType.LLM]
+			else:
+				current_model_id = self._resolve_model_id_from_path(
+					self._current_model_path,
+				)
+				current_model_name = self._resolve_model_name(current_model_id)
+				self.logger.info(
+					"[LLM LOAD] Switching models: %s (%s) -> %s (%s)",
+					current_model_id or "unknown",
+					current_model_name or "unknown",
+					target_model_id or "unknown",
+					target_model_name or "unknown",
+				)
+				self.unload()
 
 		self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
 		self._current_model_path = target_model_path
@@ -217,6 +254,7 @@ class LLMModelManager(
 			"[LLM LOAD] Workflow manager loaded: %s",
 			self._workflow_manager is not None,
 		)
+		self._active_gguf_runtime_profile = target_runtime_profile
 		self._update_model_status()
 		self.logger.info(
 			"[LLM LOAD] Model status updated to: %s",
@@ -279,4 +317,6 @@ class LLMModelManager(
 		)
 		clear_memory(self.device)
 		self._current_model_path = None
+		self._active_gguf_runtime_profile = None
 		self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
+		self.logger.info("[LLM UNLOAD] Runtime signature cleared")

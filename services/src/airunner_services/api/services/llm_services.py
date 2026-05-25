@@ -19,6 +19,9 @@ from airunner_services.api.services.llm_unload_routing_mixin import (
 	LLMUnloadRoutingMixin,
 )
 from airunner_services.llm.llm_response import LLMResponse
+from airunner_services.utils.application.api_reference import (
+	peek_registered_api,
+)
 from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
 
@@ -36,6 +39,16 @@ class LLMAPIService(
 
 	def __init__(self) -> None:
 		super().__init__()
+		self._headless_tts_response_buffer: dict[str, str] = {}
+		self._headless_tts_request_enabled: dict[str, bool] = {}
+
+	def _register_request_tts_preference(
+		self,
+		request_id: str,
+		do_tts_reply: bool,
+	) -> None:
+		"""Remember whether one request should be spoken headlessly."""
+		self._headless_tts_request_enabled[request_id] = bool(do_tts_reply)
 
 	def chatbot_changed(self) -> None:
 		"""Emit one chatbot-changed signal."""
@@ -66,6 +79,8 @@ class LLMAPIService(
 			except Exception:
 				pass
 		if self._forward_tts_stream_signal(data):
+			data["_skip_worker_manager_tts"] = True
+		elif self._forward_headless_tts_final_response(response):
 			data["_skip_worker_manager_tts"] = True
 		self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
 
@@ -98,21 +113,98 @@ class LLMAPIService(
 		return data
 
 	def _forward_tts_stream_signal(self, data: dict) -> bool:
-		"""Allow GUI subclasses to fast-path streamed chunks to TTS."""
+		"""Allow subclasses to fast-path streamed chunks to TTS."""
 		del data
 		return False
 
 	def _forward_tts_thinking_signal(self, data: dict) -> bool:
-		"""Allow GUI subclasses to fast-path thinking updates to TTS."""
+		"""Allow subclasses to fast-path thinking updates to TTS."""
 		del data
 		return False
 
+	def _forward_headless_tts_final_response(
+		self,
+		response: LLMResponse,
+	) -> bool:
+		"""Forward one completed visible reply to headless TTS."""
+		request_id = getattr(response, "request_id", None)
+		message = getattr(response, "message", "") or ""
+		if request_id and not self._headless_tts_request_enabled.get(
+			request_id,
+			True,
+		):
+			if getattr(response, "is_end_of_message", False):
+				self._headless_tts_response_buffer.pop(request_id, None)
+				self._headless_tts_request_enabled.pop(request_id, None)
+			return False
+
+		if request_id and message and not getattr(
+			response,
+			"is_system_message",
+			False,
+		):
+			buffered = self._headless_tts_response_buffer.get(request_id, "")
+			self._headless_tts_response_buffer[request_id] = (
+				buffered + message
+			)
+
+		if not request_id or not getattr(response, "is_end_of_message", False):
+			return False
+
+		full_message = self._headless_tts_response_buffer.pop(request_id, "")
+		self._headless_tts_request_enabled.pop(request_id, None)
+		if not full_message or getattr(response, "is_system_message", False):
+			return False
+
+		worker = self._tts_stream_worker()
+		handler = getattr(worker, "on_llm_text_streamed_signal", None)
+		if not callable(handler):
+			return False
+
+		handler(
+			{
+				"response": LLMResponse(
+					message=full_message,
+					is_end_of_message=True,
+					is_first_message=True,
+					sequence_number=getattr(
+						response,
+						"sequence_number",
+						0,
+					),
+					action=getattr(response, "action", None),
+					node_id=getattr(response, "node_id", None),
+					request_id=request_id,
+				),
+				"request_id": request_id,
+			}
+		)
+		return True
+
 	def _tts_stream_worker(self):
 		"""Return the active TTS stream worker when one exists."""
-		return None
+		worker_manager = self._worker_manager()
+		if worker_manager is None:
+			return None
+		return getattr(worker_manager, "tts_generator_worker", None)
 
 	def _worker_manager(self):
 		"""Return the active worker manager when one exists."""
+		refresher = getattr(self, "refresh_api_reference", None)
+		if callable(refresher):
+			refreshed_api = refresher()
+			if refreshed_api is not None:
+				self.api = refreshed_api
+
+		for candidate in (
+			getattr(self, "api", None),
+			peek_registered_api(),
+		):
+			if candidate is None:
+				continue
+			worker_manager = getattr(candidate, "_worker_manager", None)
+			if worker_manager is not None:
+				return worker_manager
 		return None
 
 	def _daemon_client(self):

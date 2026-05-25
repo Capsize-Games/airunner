@@ -116,6 +116,7 @@ class LegacyLLMGenerateRequest(BaseModel):
     action: str = "CHAT"
     stream: bool = True
     do_tts_reply: bool = False
+    gguf_runtime_profile: Optional[str] = None
     system_prompt: Optional[str] = None
     search_hints: Optional[Dict[str, Any]] = None
     # Optional conversation identifiers used by UwUChat.
@@ -154,6 +155,9 @@ def _build_llm_request(data: Dict[str, Any]) -> LLMRequest:
             except Exception:
                 # Ignore invalid types rather than rejecting the whole request.
                 pass
+
+    if data.get("tool_categories") is None and "tools" not in data:
+        llm_request.tool_categories = None
 
     # If an API backend is selected, treat "model" as an API model name, not a local model path.
     model_service = getattr(llm_request, "model_service", None)
@@ -304,6 +308,10 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
             # Newer clients expect tool_calls; keep tools for compatibility.
             "tool_calls": tools,
             "tools": tools,
+            "error": bool(getattr(response, "is_system_message", False)),
+            "is_system_message": bool(
+                getattr(response, "is_system_message", False)
+            ),
         }
 
         if usage_obj is not None and payload.get("is_end_of_message"):

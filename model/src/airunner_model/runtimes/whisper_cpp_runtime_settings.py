@@ -75,19 +75,44 @@ def _stt_base_directory(base_path: str, path_settings: Any) -> str:
     return os.path.join(os.path.expanduser(base_path), expanded)
 
 
-def _discover_model_path(model_directory: str) -> Optional[str]:
-    """Find the first whisper.cpp ggml model file in the STT directory."""
-    candidate = Path(os.path.expanduser(model_directory))
-    if candidate.is_file():
-        if candidate.name.startswith("ggml-") and candidate.suffix == ".bin":
-            return str(candidate)
-        return None
-    if not candidate.is_dir():
-        return None
+def _stt_candidate_directories(
+    base_path: str,
+    path_settings: Any,
+) -> list[str]:
+    """Return compatible STT model directories in lookup order."""
+    expanded_base = os.path.expanduser(base_path)
+    configured_directory = _stt_base_directory(base_path, path_settings)
+    candidates = [
+        configured_directory,
+        os.path.join(expanded_base, "models", "text/models/stt"),
+    ]
 
-    preferred = sorted(candidate.rglob("ggml-*.bin"))
-    if preferred:
-        return str(preferred[0])
+    unique_candidates: list[str] = []
+    for candidate in candidates:
+        normalized = os.path.normpath(os.path.expanduser(candidate))
+        if normalized in unique_candidates:
+            continue
+        unique_candidates.append(normalized)
+    return unique_candidates
+
+
+def _discover_model_path(model_directories: list[str]) -> Optional[str]:
+    """Find the first whisper.cpp ggml model file in compatible STT roots."""
+    for model_directory in model_directories:
+        candidate = Path(os.path.expanduser(model_directory))
+        if candidate.is_file():
+            if (
+                candidate.name.startswith("ggml-")
+                and candidate.suffix == ".bin"
+            ):
+                return str(candidate)
+            continue
+        if not candidate.is_dir():
+            continue
+
+        preferred = sorted(candidate.rglob("ggml-*.bin"))
+        if preferred:
+            return str(preferred[0])
     return None
 
 
@@ -96,7 +121,9 @@ def _candidate_model_path(base_path: str, path_settings: Any) -> Optional[str]:
     env_override = os.environ.get("AIRUNNER_WHISPER_MODEL_PATH", "").strip()
     if env_override:
         return os.path.expanduser(env_override)
-    return _discover_model_path(_stt_base_directory(base_path, path_settings))
+    return _discover_model_path(
+        _stt_candidate_directories(base_path, path_settings)
+    )
 
 
 @dataclass(frozen=True)

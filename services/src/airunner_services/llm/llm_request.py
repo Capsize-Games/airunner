@@ -54,6 +54,7 @@ class LLMRequest:
     model: str = ""
     model_service: Optional[str] = None
     api_model: Optional[str] = None
+    gguf_runtime_profile: Optional[str] = None
     dtype: Optional[str] = None
     force_tool: Optional[str] = None
     images: Optional[List[Any]] = field(default_factory=list)
@@ -86,6 +87,7 @@ class LLMRequest:
         data.pop("role")
         data.pop("model_service", None)
         data.pop("api_model", None)
+        data.pop("gguf_runtime_profile", None)
         data.pop("dtype", None)
         data.pop("reasoning_effort", None)
         data.pop("include_mood", None)

@@ -49,6 +49,23 @@ TTSLauncherFactory = Callable[[TTSDaemonRuntimeSettings], TTSLauncherLike]
 class SidecarTTSClient(RuntimeClient):
 	"""Route TTS envelopes through one supervised sidecar daemon."""
 
+	@staticmethod
+	def _normalize_model_type(value: Any) -> Optional[str]:
+		"""Return one stable TTS model name string for sidecar settings."""
+		if value is None:
+			return None
+		resolved = getattr(value, "value", value)
+		text = str(resolved).strip()
+		if not text:
+			return None
+		if "." in text:
+			text = text.split(".")[-1]
+		alias = {
+			"OPENVOICE": "OpenVoice",
+			"ESPEAK": "Espeak",
+		}
+		return alias.get(text.upper(), text)
+
 	def __init__(
 		self,
 		provider: str = DEFAULT_PROVIDER,
@@ -208,8 +225,10 @@ class SidecarTTSClient(RuntimeClient):
 				or self._base_settings.tts_model_path
 			),
 			tts_model_type=(
-				metadata.get("model_type")
-				or self._base_settings.tts_model_type
+				self._normalize_model_type(metadata.get("model_type"))
+				or self._normalize_model_type(
+					self._base_settings.tts_model_type
+				)
 			),
 		)
 
@@ -277,8 +296,10 @@ class SidecarTTSClient(RuntimeClient):
 			self._base_settings,
 			tts_model_path=invocation.model or self._base_settings.tts_model_path,
 			tts_model_type=(
-				metadata.get("model_type")
-				or self._base_settings.tts_model_type
+				self._normalize_model_type(metadata.get("model_type"))
+				or self._normalize_model_type(
+					self._base_settings.tts_model_type
+				)
 			),
 		)
 

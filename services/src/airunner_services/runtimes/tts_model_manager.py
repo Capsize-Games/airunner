@@ -136,6 +136,16 @@ class TTSModelManager(MediatorMixin):
         """Return the current TTS request object."""
         return self._tts_request
 
+    @property
+    def model_status(self) -> dict[ModelType, ModelStatus]:
+        """Return the per-component runtime status map."""
+        return self._model_status
+
+    @property
+    def status(self) -> ModelStatus:
+        """Return the primary TTS runtime status."""
+        return self._model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
+
     @tts_request.setter
     def tts_request(self, value: Optional[object]) -> None:
         """Set the current request and refresh manager state."""

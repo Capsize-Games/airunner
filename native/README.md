@@ -1,42 +1,70 @@
-# native
+# Native
 
-Top-level root for native launcher, bundle, and installer assets.
+The `native/` package owns AIRunner's launcher, bundle assembly, and the
+installer-facing logic that turns the Python packages and sidecars into a
+deliverable desktop application.
 
-Current status:
+```mermaid
+flowchart LR
+	Bundle[bundle archive or install root] --> Native[native/ launcher]
+	Native --> GUI[src/ desktop app]
+	Native --> Services[services/ daemon entry points]
+	Native --> Sidecars[llama.cpp and whisper.cpp sidecars]
+	Native --> Data[(embedded Python and runtime layout)]
+```
 
-- this is the real importable home of the native bootstrap package
-- it currently packages the physical `shared`, `services`, `gui`, and
-	`native` package roots
-- the target steady state is for `native` to package `model`, `api`,
-	`services`, and optionally `gui`
-- no service orchestration or GUI behavior should move here
+## What This Package Owns
 
-This directory now owns the launcher and runtime-sidecar build inputs, and the
-importable native-owned Python bootstrap package now lives in
-`native/src/airunner_native/`.
+- the `airunner` launcher entry point provided by `airunner_native`
+- end-user bundle assembly and runtime layout helpers
+- installer-facing bootstrap logic for bundled desktop delivery
+- repo-local support for pinned `llama.cpp` and `whisper.cpp` sidecars
 
-The canonical target architecture lives in
-`docs/architecture/layered_product_architecture.md`.
+Importable native code lives under `native/src/airunner_native/`.
 
-Canonical native package metadata now lives in `native/setup.py`.
+## Installation
 
-Checkout imports now resolve from `native/src/airunner_native/` directly via
-the repo bootstrap path configuration.
+AIRunner supports three installer paths, and `native/` is involved in all
+of them:
 
-Some current monorepo bootstrap and packaging flows still compose package
-roots through repo-local path wiring and `shared` installs. Treat that as
-transitional migration debt rather than the steady-state native package model.
+```bash
+# single-package end-user install
+./install.sh --bundle-archive dist/airunner-<version>-linux-desktop-bundle.tar.gz
 
-The native package owns the launcher entry point and bundle assembly. The
-desktop GUI is one optional packaged dependency of that launcher surface
-rather than a hard requirement for every install.
+# repo-local developer install
+./scripts/install.sh
 
-Default repo-local native validation:
+# distributed daemon and GUI-client install
+./deployment/install_distributed.sh --role daemon
+./deployment/install_distributed.sh --role gui-client
+```
 
-- `airunner-tests --package native`
-- `pytest native/src -m "not benchmark and not integration"`
+For isolated native tooling work in a checkout, install the split package
+stack first and then install `native/` in editable mode:
 
-Pair this with focused launcher or packaging smoke checks when a change touches
-bundle assembly, installer scripts, or launcher startup behavior. The broader
-package matrix and shim retirement plan live in
-`docs/architecture/package_split_contract.md`.
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install -e ./model
+pip install -e ./api
+pip install -e ./services
+pip install -e ./native[development]
+```
+
+## Test Running
+
+Native changes are validated through installer and launcher smoke checks plus
+the daemon-backed functional suites that consume the built sidecars:
+
+```bash
+./scripts/install.sh --help
+./deployment/install_distributed.sh --help
+./scripts/build_runtime_sidecars.sh --target-platform linux
+./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
+```
+
+Use the package split contract in
+[docs/architecture/package_split_contract.md](../docs/architecture/package_split_contract.md)
+when a launcher or installer change affects the wider package matrix.

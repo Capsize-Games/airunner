@@ -7,15 +7,28 @@ The packaged `airunner-headless.service` file is a relocatable template. Use
 `deployment/systemd/install.sh` to render it with the actual bundle root,
 Python executable, and runtime data directories for the current install.
 
-## Bundle Layout
+This surface is primarily for the `distributed` daemon install mode. The
+normal entry point is:
 
-Linux desktop and headless installs are expected to keep the AIRunner bundle
-root separate from the writable runtime data root.
+```bash
+./deployment/install_distributed.sh --role daemon --systemd
+```
 
-- Bundle root: the installed application directory, for example
-   `~/.local/airunner` or `/opt/airunner`
-- Bundle Python: one of `<bundle>/venv/bin/python`,
-   `<bundle>/.venv/bin/python`, or `<bundle>/bin/python`
+That command creates the daemon venv first, then calls this renderer with the
+resolved install root and Python path. Invoke `deployment/systemd/install.sh`
+directly only when you are manually rendering the service for a bundle or a
+custom venv layout.
+
+## Install Layout
+
+Linux desktop bundles and distributed daemon installs are expected to keep the
+AIRunner install root separate from the writable runtime data root.
+
+- Install root: the installed application directory, for example
+   `~/.local/airunner`, `~/.local/airunner/distributed/daemon`, or
+   `/opt/airunner`
+- Install Python: one of `<install>/venv/bin/python`,
+   `<install>/.venv/bin/python`, or `<install>/bin/python`
 - Runtime data root: `~/.local/share/airunner` unless `AIRUNNER_DATA_DIR`
    overrides it
 - Runtime configs: `<data>/runtime/configs`
@@ -28,6 +41,10 @@ The desktop launchers created by the top-level installer export
 `AIRUNNER_BUNDLE_ROOT`, `AIRUNNER_PYTHON`, and the standardized runtime
 directory variables so the daemon and sidecars can discover the bundle and
 runtime roots predictably after relocation.
+
+The distributed daemon installer passes the same resolved install root and
+Python path through `AIRUNNER_INSTALL_ROOT`, `AIRUNNER_TEMPLATE_ROOT`, and
+`AIRUNNER_PYTHON` before this renderer writes the systemd unit.
 
 ## Systemd Service Setup (Ubuntu/Debian)
 

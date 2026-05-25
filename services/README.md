@@ -1,62 +1,89 @@
-# services
+# Services
 
-Top-level root for the current AIRunner service orchestration package.
+The `services/` package is AIRunner's headless orchestration layer. It
+owns the daemon entry points, FastAPI server wiring, runtime registry,
+downloads, persistence, lifecycle control, and the modality services that
+coordinate LLM, STT, TTS, and art workloads.
 
-Current status:
+```mermaid
+flowchart LR
+    GUI[src/ GUI client] --> Daemon[services/ daemon routes]
+    API[api/ transport contracts] --> Daemon
+    Daemon --> Registry[runtime registry]
+    Registry --> Model[model/ shared runtime helpers]
+    Registry --> Sidecars[llama.cpp or whisper.cpp sidecars]
+    Daemon --> Data[(AIRUNNER_BASE_PATH)]
+```
 
-- this is the real importable home of the service package
-- it currently contains the service orchestration layer plus the embedded API
-	and model/runtime implementation that will be split further
-- no new GUI widgets, client-local settings, or other GUI-only behavior should
-	be added here
+## What This Package Owns
 
-Current ownership:
+- FastAPI server bootstrap and daemon entry points
+- runtime routing, runtime load or unload control, and health checks
+- service-level downloads, migrations, persistence, and settings
+- orchestration for daemon-backed LLM, TTS, STT, and art requests
 
-- API routes and server bootstrap
-- modality orchestration
-- runtime registry and sidecar coordination
-- shared persistence and jobs
+Importable service code lives under `services/src/airunner_services/`.
 
-Target direction:
+The package split contract is documented in
+[docs/architecture/package_split_contract.md](../docs/architecture/package_split_contract.md),
+and the package map lives in
+[docs/architecture/layered_product_architecture.md](../docs/architecture/layered_product_architecture.md).
 
-- `services/` should end at orchestration, persistence, downloads, policy,
-	agents, tools, and modality coordination
-- the future top-level `api/` package should own server-side wire schemas,
-	serialization rules, transport adapters, and API-side request handling
-- the future top-level `model/` package should own runtime and inference
-	implementation
-- consumer layers should own their own clients instead of importing
-	`airunner_api`
+## Installation
 
-The importable service-owned code lives in `services/src/airunner_services/`.
+For normal repo development, use the developer installer. It installs the
+split packages in editable mode and builds the pinned native sidecars used
+by daemon-backed functional tests:
 
-Checkout imports now resolve from `services/src/airunner_services/` directly.
+```bash
+./scripts/install.sh
+```
 
-The canonical target architecture lives in
-`docs/architecture/layered_product_architecture.md`.
+For an isolated service environment, install the local package stack and a
+service extra that matches the workload you are validating:
 
-Current monorepo bootstrap commands elsewhere in the repo still use
-repo-composed `PYTHONPATH` wiring and `shared` installs. That is transitional
-migration debt, not the intended steady-state service package model.
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install -e ./model
+pip install -e ./api
+pip install -e './services[headless,development]'
+```
 
-Service-owned CLI entry points and the database migration assets now live
-under `services/src/airunner_services/bin/` and
-`services/src/airunner_services/database/`.
+Use `services[desktop]` when you want the broader desktop-oriented extra
+set, and use `./deployment/install_distributed.sh` when you are installing
+the daemon or GUI client into separate roots.
 
-Runtime dependency profiles such as `llm-native`, `art-python`, `tts-python`,
-`desktop`, and `windows` are now owned by `services/package_metadata.py`.
+## Test Running
 
-Client-local GUI preferences such as the display language, selected
-playback and recording devices, and GUI-only `ApplicationSettings`
-state do not belong in the shared service database. The service-owned
-settings tables now retain only modality and runtime defaults that make
-sense for non-GUI clients.
+The quickest service checks are the daemon runtime smoke commands exposed
+by the repo test runner:
 
-Default repo-local service validation:
+```bash
+./venv/bin/python scripts/run_tests.py --llm-runtime-smoke
+./venv/bin/python scripts/run_tests.py --stt-runtime-smoke
+./venv/bin/python scripts/run_tests.py --art-runtime-smoke
+./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
+```
 
-- `airunner-tests --package services`
-- `pytest services/src -m "not benchmark and not integration"`
+The bootstrap sanity check for the server surface is:
 
-When a change touches daemon routes, workers, or runtime orchestration, pair
-that package surface with the relevant runtime smoke command documented in
-`docs/architecture/package_split_contract.md`.
+```bash
+./venv/bin/python -m pytest api/tests/test_service_bootstrap.py -v
+```
+
+When a change touches daemon routes, workers, or runtime coordination,
+pair those smoke checks with the relevant daemon-backed functional suites
+in `api/tests/`, especially:
+
+```bash
+./venv/bin/python -m pytest api/tests/test_tts_synthesize_functional.py -v --timeout=120
+./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest api/tests/test_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
+```
+
+The functional tests live under `api/tests/` because they validate the
+composed product boundary, even when the behavior under test is primarily
+owned by `services/`.

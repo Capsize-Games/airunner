@@ -76,8 +76,8 @@ def require_runtime_registry(request: Request) -> RuntimeRegistry:
 def resolve_tts_client(registry: RuntimeRegistry) -> RuntimeClient:
     """Resolve the preferred TTS runtime client for this process."""
     for deployment_mode in (
-        RuntimeMode.SIDECAR.value,
         RuntimeMode.LOCAL_FALLBACK.value,
+        RuntimeMode.SIDECAR.value,
     ):
         try:
             return registry.resolve(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Optional
 
 import librosa
@@ -22,6 +23,23 @@ from airunner_services.vendor.openvoice.api import (
 from airunner_services.vendor.openvoice.mel_processing import spectrogram_torch
 
 logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
+
+_DEFAULT_REFERENCE_SPEAKER = (
+    Path(__file__).resolve().parents[1]
+    / "assets"
+    / "reference_speakers"
+    / "bobross.wav"
+)
+
+
+def _bundled_reference_speaker_path() -> Optional[str]:
+    """Return the bundled reference speaker path when available."""
+    if not _DEFAULT_REFERENCE_SPEAKER.is_file():
+        return None
+    return normalize_local_path(
+        str(_DEFAULT_REFERENCE_SPEAKER),
+        label="Reference speaker path",
+    )
 
 
 class StreamingToneColorConverter(ToneColorConverter):
@@ -97,10 +115,10 @@ def expand_reference_speaker_path(
 ) -> Optional[str]:
     """Return a normalized reference speaker path or None."""
     if reference_speaker_path is None:
-        return None
+        return _bundled_reference_speaker_path()
     value = str(reference_speaker_path).strip()
     if not value or value == "default":
-        return None
+        return _bundled_reference_speaker_path()
     return normalize_local_path(value, label="Reference speaker path")
 
 
