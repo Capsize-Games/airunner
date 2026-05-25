@@ -12,7 +12,7 @@ from airunner_services.ipc.messages import (
     ResponseEnvelope,
 )
 from airunner_services.contract_enums import ModelStatus
-from airunner.runtimes.contracts import (
+from airunner_services.runtimes.contracts import (
     RuntimeDescriptor,
     RuntimeHealth,
     RuntimeHealthStatus,
@@ -20,7 +20,7 @@ from airunner.runtimes.contracts import (
     RuntimeMode,
     TransportKind,
 )
-from airunner.runtimes.registry import RuntimeRoute
+from airunner_services.runtimes.registry import RuntimeRoute
 
 
 class FakeRuntimeClient:
@@ -370,6 +370,139 @@ def test_load_runtime_invokes_control_action():
 
     assert client.invocations[0].action.value == "load_model"
     assert response.status is EnvelopeStatus.SUCCEEDED
+
+
+def test_load_runtime_waits_for_conflicting_runtime_to_unload(monkeypatch):
+    """Load requests should fail fast when another runtime stays loaded."""
+    from airunner_api.routes.daemon import RuntimeRouteRequest, load_runtime
+    from airunner_services.api.routes import daemon_helpers
+
+    art_client = FakeRuntimeClient(
+        RuntimeKind.ART,
+        status=RuntimeHealthStatus.READY,
+        metadata={"model_status": "loaded"},
+    )
+    art_client.descriptor.mode = RuntimeMode.SIDECAR
+    llm_client = FakeRuntimeClient(RuntimeKind.LLM)
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): llm_client,
+            RuntimeRoute(
+                RuntimeKind.ART,
+                provider="local",
+                deployment_mode="sidecar",
+            ).normalized(): art_client,
+        }
+    )
+
+    monkeypatch.setattr(
+        daemon_helpers,
+        "VRAM_UNLOAD_TIMEOUT_SECONDS",
+        0.01,
+    )
+    monkeypatch.setattr(
+        daemon_helpers,
+        "VRAM_UNLOAD_POLL_SECONDS",
+        0.0,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(
+            load_runtime(
+                "llm",
+                RuntimeRouteRequest(request_id="load-1"),
+                _fake_request(registry),
+            )
+        )
+
+    assert exc_info.value.status_code == 504
+    assert art_client.invocations[0].action.value == "unload_model"
+    assert llm_client.invocations == []
+
+
+def test_load_runtime_raises_for_api_envelope_failure_response():
+    """Load requests should not treat API-owned failed envelopes as success."""
+    from airunner_api.messages import (
+        EnvelopeStatus as APIEnvelopeStatus,
+        ErrorEnvelope as APIErrorEnvelope,
+        ResponseEnvelope as APIResponseEnvelope,
+    )
+    from airunner_api.routes.daemon import RuntimeRouteRequest, load_runtime
+
+    client = FakeRuntimeClient(RuntimeKind.LLM)
+    client.invoke_response = APIResponseEnvelope(
+        request_id="load-failed",
+        status=APIEnvelopeStatus.FAILED,
+        error=APIErrorEnvelope(
+            code="llm_load_failed",
+            message="api-owned failure",
+        ),
+    )
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): client,
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(
+            load_runtime(
+                "llm",
+                RuntimeRouteRequest(request_id="load-failed"),
+                _fake_request(registry),
+            )
+        )
+
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.detail == "api-owned failure"
+
+
+def test_load_runtime_requests_sidecar_process_release_for_llm():
+    """LLM VRAM arbitration should stop the art sidecar process."""
+    from airunner_api.routes.daemon import RuntimeRouteRequest, load_runtime
+
+    art_client = FakeRuntimeClient(
+        RuntimeKind.ART,
+        status=RuntimeHealthStatus.READY,
+        metadata={"model_status": "loaded"},
+    )
+    art_client.descriptor.mode = RuntimeMode.SIDECAR
+    llm_client = FakeRuntimeClient(RuntimeKind.LLM)
+
+    def unload_and_mark_stopped(request):
+        art_client.invocations.append(request)
+        art_client._status = RuntimeHealthStatus.STOPPED
+        art_client._metadata = {"model_status": "unloaded"}
+        return ResponseEnvelope(
+            request_id=request.request_id,
+            status=EnvelopeStatus.SUCCEEDED,
+            payload={"action": request.action.value},
+        )
+
+    art_client.invoke = unload_and_mark_stopped
+    registry = FakeRegistry(
+        {
+            RuntimeRoute(RuntimeKind.LLM, provider="local").normalized(): llm_client,
+            RuntimeRoute(
+                RuntimeKind.ART,
+                provider="local",
+                deployment_mode="sidecar",
+            ).normalized(): art_client,
+        }
+    )
+
+    response = asyncio.run(
+        load_runtime(
+            "llm",
+            RuntimeRouteRequest(request_id="load-2"),
+            _fake_request(registry),
+        )
+    )
+
+    assert response.status is EnvelopeStatus.SUCCEEDED
+    assert art_client.invocations[0].action.value == "unload_model"
+    assert art_client.invocations[0].metadata["release_process"] is True
+    assert llm_client.invocations[0].action.value == "load_model"
 
 
 def test_unload_runtime_invokes_control_action():

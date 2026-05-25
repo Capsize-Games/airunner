@@ -31,6 +31,13 @@ from pydantic import BaseModel, ConfigDict
 from airunner_services.model_management.model_registry import ModelRegistry
 from airunner_services.requests.llm_request import LLMRequest
 from airunner_services.contract_enums import LLMActionType, SignalCode
+from airunner_services.api.models.runtime_route_request import (
+    RuntimeRouteRequest,
+)
+from airunner_services.api.routes.daemon_helpers import (
+    ensure_vram_available_for,
+)
+from airunner_services.runtimes.contracts import RuntimeKind
 from airunner_services.api.routes.health import build_health_payload
 from airunner_services.utils.application.signal_mediator import SignalMediator
 
@@ -192,6 +199,15 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         bool(body.stream),
         len(prompt),
         str(getattr(action, "name", None) or getattr(action, "value", action)),
+    )
+
+    ensure_vram_available_for(
+        req,
+        RuntimeRouteRequest(
+            provider="local",
+            request_id=request_id,
+        ),
+        RuntimeKind.LLM,
     )
 
     if not body.stream:

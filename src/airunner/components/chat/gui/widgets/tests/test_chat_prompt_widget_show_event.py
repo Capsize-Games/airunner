@@ -302,6 +302,59 @@ def test_submit_generation_request_shows_loading_indicator_when_llm_is_cold():
     assert sent_requests
 
 
+def test_submit_generation_request_skips_non_art_switch_in_daemon_mode():
+    """Daemon-backed chat requests should not pre-switch out of art mode."""
+    sent_requests = []
+    model_load_balancer = SimpleNamespace(
+        get_loaded_models=lambda: [ModelType.SD],
+        switch_to_non_art_mode=Mock(),
+    )
+    widget = SimpleNamespace(
+        api=SimpleNamespace(
+            daemon_client=object(),
+            model_load_balancer=model_load_balancer,
+            llm=SimpleNamespace(
+                send_request=lambda **kwargs: sent_requests.append(kwargs)
+            ),
+        ),
+        ui=SimpleNamespace(
+            conversation=SimpleNamespace(show_model_loading_status=Mock()),
+            thinking_checkbox=SimpleNamespace(isChecked=lambda: False),
+        ),
+        _pending_model_loading_request_ids=set(),
+        _show_model_loading_indicator=Mock(),
+        start_progress_bar=Mock(),
+        _is_thinking_enabled_for_request=lambda: False,
+        _get_reasoning_effort_for_request=lambda: None,
+        _collect_images_for_llm=lambda: [],
+        _is_model_vision_capable=lambda: False,
+        _attached_documents=[],
+        llm_generator_settings=SimpleNamespace(enable_thinking=False),
+        logger=Mock(),
+        _estimate_token_count=lambda _prompt: 1,
+        _update_token_tracking_labels=Mock(),
+        _tokens_sent_last=0,
+        _tokens_sent_total=0,
+        _tokens_received_last=0,
+        _current_response_tokens=0,
+    )
+
+    ChatPromptWidget._submit_generation_request(
+        widget,
+        actual_prompt="Hello",
+        action=LLMActionType.CHAT,
+        conversation_id=1,
+        request_id="req-daemon",
+        slash_command=None,
+    )
+
+    model_load_balancer.switch_to_non_art_mode.assert_not_called()
+    widget._show_model_loading_indicator.assert_called_once_with(
+        "req-daemon"
+    )
+    assert sent_requests
+
+
 def test_model_loaded_clears_pending_inline_loading_indicator():
     """Loaded LLM status should remove any pending inline loading widgets."""
     conversation = SimpleNamespace(clear_model_loading_status=Mock())

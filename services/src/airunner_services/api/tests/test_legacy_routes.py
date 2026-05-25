@@ -41,6 +41,11 @@ def test_legacy_llm_generate_disables_tts_for_stream_bridge(monkeypatch):
 
     monkeypatch.setattr(legacy, "_get_airunner_api", lambda _req: api)
     monkeypatch.setattr(legacy.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr(
+        legacy,
+        "ensure_vram_available_for",
+        lambda _req, _route_request, _runtime: None,
+    )
 
     body = legacy.LegacyLLMGenerateRequest(prompt="Hello", stream=True)
     request = SimpleNamespace(headers={})
@@ -49,6 +54,39 @@ def test_legacy_llm_generate_disables_tts_for_stream_bridge(monkeypatch):
 
     assert captured["prompt"] == "Hello"
     assert captured["do_tts_reply"] is False
+
+
+def test_legacy_llm_generate_waits_for_vram_barrier(monkeypatch):
+    events = []
+
+    class ImmediateThread:
+        def __init__(self, *, target=None, args=(), daemon=None):
+            self._target = target
+            self._args = args
+
+        def start(self):
+            if self._target is not None:
+                self._target(*self._args)
+
+    def send_request(**kwargs):
+        events.append(("send", kwargs["request_id"]))
+
+    api = SimpleNamespace(llm=SimpleNamespace(send_request=send_request))
+
+    monkeypatch.setattr(legacy, "_get_airunner_api", lambda _req: api)
+    monkeypatch.setattr(legacy.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr(
+        legacy,
+        "ensure_vram_available_for",
+        lambda _req, _route_request, _runtime: events.append(("ensure",)),
+    )
+
+    body = legacy.LegacyLLMGenerateRequest(prompt="Hello", stream=True)
+    request = SimpleNamespace(headers={})
+
+    legacy.legacy_llm_generate(body, request)
+
+    assert events == [("ensure",), ("send", events[1][1])]
 
 
 def test_legacy_admin_llm_unload_prefers_live_worker(monkeypatch):

@@ -106,7 +106,8 @@ class Chatbot(BaseModel):
     @classmethod
     def make_current(cls, chatbot_id: int) -> None:
         """Mark one chatbot current and clear the current flag on others."""
-        Chatbot.objects.update_by({"current": True}, current=False)
+        for chatbot in Chatbot.objects.filter_by(current=True) or []:
+            Chatbot.objects.update(chatbot.id, current=False)
         Chatbot.objects.update(chatbot_id, current=True)
 
 

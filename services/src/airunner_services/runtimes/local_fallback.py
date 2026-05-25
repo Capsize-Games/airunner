@@ -999,6 +999,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             timeout_seconds=resolved_timeout,
             health_provider=health_provider,
             allows_model_control=True,
+            model_type=_resolve_model_type("SD"),
         )
         self._art_model_metadata: dict[str, Any] = {}
         self._rmbg_model_manager = None
@@ -1055,7 +1056,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
 
     def _unload_model(self, request: RequestEnvelope) -> ResponseEnvelope:
         """Unload the current art pipeline or one supported component."""
-        from airunner_services.contract_enums import SignalCode
+        from airunner_services.contract_enums import ModelStatus, SignalCode
 
         component = self._art_component(request)
         if component == "rmbg":
@@ -1072,11 +1073,25 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             return self._unload_safety_checker_component(request.request_id)
 
         self._art_model_metadata = {}
-        self._emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
+        response = self._wait_for_model_status(
+            request.request_id,
+            emit_code=SignalCode.SD_UNLOAD_SIGNAL,
+            emit_data={},
+            success_statuses=(ModelStatus.UNLOADED,),
+            timeout_code="art_unload_timeout",
+            failure_code="art_unload_failed",
+            action_name="Art unload",
+        )
+        if response.status is not EnvelopeStatus.SUCCEEDED:
+            return response
+        payload = {"accepted": True}
+        if response.payload is not None:
+            payload.update(response.payload)
         return ResponseEnvelope(
             request_id=request.request_id,
             status=EnvelopeStatus.SUCCEEDED,
-            payload={"accepted": True},
+            payload=payload,
+            metadata=response.metadata,
         )
     
     def _load_model(self, request: RequestEnvelope) -> ResponseEnvelope:

@@ -19,6 +19,7 @@ from airunner_services.api.routes.health import DaemonStatusResponse
 from airunner_services.api.routes.daemon_helpers import (
     cancel_runtime_action,
     collect_runtime_summaries,
+    ensure_vram_available_for,
     invoke_runtime_action,
     parse_runtime_kind,
     resolve_runtime_client,
@@ -116,61 +117,14 @@ async def _ensure_vram_available_for(
 ) -> None:
     """Unload other loaded runtimes so the target has free VRAM."""
     import asyncio
-    import logging
-
-    _log = logging.getLogger(__name__)
 
     del target_name
-    summaries = collect_runtime_summaries(request)
-    _log.info(
-        "VRAM check for %s: found %d runtime summaries",
-        target_runtime.value,
-        len(summaries),
+    await asyncio.to_thread(
+        ensure_vram_available_for,
+        request,
+        route_request,
+        target_runtime,
     )
-    for summary in summaries:
-        _log.info(
-            "  runtime=%s loaded=%s provider=%s mode=%s",
-            summary.runtime,
-            summary.loaded,
-            summary.provider,
-            summary.mode,
-        )
-        if summary.runtime == target_runtime.value and summary.loaded:
-            _log.info("Target %s already loaded, skipping unload", target_runtime.value)
-            return
-    for summary in summaries:
-        if not summary.loaded:
-            continue
-        if summary.runtime == target_runtime.value:
-            continue
-        other_runtime = parse_runtime_kind(summary.runtime)
-        _log.info(
-            "Unloading %s (%s:%s) to free VRAM for %s",
-            other_runtime.value,
-            summary.provider,
-            summary.mode,
-            target_runtime.value,
-        )
-        try:
-            other_client = resolve_runtime_client(
-                request,
-                other_runtime,
-                summary.provider,
-                summary.mode,
-            )
-            await asyncio.to_thread(
-                invoke_runtime_action,
-                other_client,
-                other_runtime,
-                RuntimeAction.UNLOAD_MODEL,
-                route_request,
-            )
-        except Exception as exc:
-            _log.warning(
-                "Failed to unload %s: %s",
-                other_runtime.value,
-                exc,
-            )
 
 
 @router.post("/runtimes/{runtime_name}/unload", response_model=ResponseEnvelope)

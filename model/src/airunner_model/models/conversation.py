@@ -223,7 +223,8 @@ class Conversation(BaseModel):
 	@classmethod
 	def make_current(cls, conversation_id):
 		"""Mark one conversation current and clear the flag on others."""
-		Conversation.objects.update_by({"current": True}, current=False)
+		for conversation in Conversation.objects.filter_by(current=True) or []:
+			Conversation.objects.update(conversation.id, current=False)
 		Conversation.objects.update(conversation_id, current=True)
 
 

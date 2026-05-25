@@ -2,19 +2,20 @@
 
 import base64
 
-import airunner.runtimes.sidecar_art_client as sidecar_art_client_module
+import airunner_model.runtimes.sidecar_art_client as model_sidecar_art_client_module
+import airunner_services.runtimes.sidecar_art_client as sidecar_art_client_module
 
-from airunner.ipc.messages import EnvelopeStatus, RequestEnvelope
-from airunner.runtimes.art_daemon_runtime_settings import (
+from airunner_api.messages import EnvelopeStatus, RequestEnvelope
+from airunner_services.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
 )
-from airunner.runtimes.contracts import (
+from airunner_services.runtimes.contracts import (
     RuntimeAction,
     RuntimeHealthStatus,
     RuntimeKind,
 )
-from airunner.runtimes.registry import RuntimeRegistry, RuntimeRoute
-from airunner.runtimes.sidecar_art_client import (
+from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute
+from airunner_services.runtimes.sidecar_art_client import (
     SidecarArtClient,
     register_sidecar_art_client,
 )
@@ -126,7 +127,8 @@ def test_load_model_starts_launcher():
 
 def test_invoke_round_trips_art_job_api(monkeypatch):
     monkeypatch.setattr(
-        "airunner.runtimes.sidecar_art_client.time.sleep",
+        model_sidecar_art_client_module.time,
+        "sleep",
         lambda _seconds: None,
     )
     launcher = FakeLauncher(_settings())
@@ -173,7 +175,8 @@ def test_invoke_round_trips_art_job_api(monkeypatch):
 
 def test_invoke_with_progress_reports_polled_job_updates(monkeypatch):
     monkeypatch.setattr(
-        "airunner.runtimes.sidecar_art_client.time.sleep",
+        model_sidecar_art_client_module.time,
+        "sleep",
         lambda _seconds: None,
     )
     progress_updates = []
@@ -224,6 +227,28 @@ def test_cancel_sends_remote_job_cancel():
     assert response.status is EnvelopeStatus.CANCELLED
     assert session.calls[0][0] == "DELETE"
     assert session.calls[0][1].endswith("/api/v1/art/cancel/job-9")
+
+
+def test_unload_model_keeps_launcher_warm_when_sidecar_is_ready():
+    launcher = FakeLauncher(_settings())
+    session = FakeSession([FakeResponse(payload={"status": "unloaded"})])
+    client = SidecarArtClient(
+        settings=_settings(),
+        launcher=launcher,
+        session=session,
+    )
+
+    response = client.invoke(_request(RuntimeAction.UNLOAD_MODEL))
+
+    assert response.status is EnvelopeStatus.SUCCEEDED
+    assert launcher.stopped == 0
+    assert session.calls == [
+        (
+            "DELETE",
+            "http://127.0.0.1:8190/api/v1/art/unload",
+            {"json": None, "timeout": 1.0},
+        )
+    ]
 
 
 def test_healthcheck_reports_launcher_status():
@@ -353,7 +378,8 @@ def test_register_sidecar_art_client_uses_explicit_sidecar_route():
 
 def test_invoke_forwards_skip_auto_export_to_sidecar(monkeypatch):
     monkeypatch.setattr(
-        "airunner.runtimes.sidecar_art_client.time.sleep",
+        model_sidecar_art_client_module.time,
+        "sleep",
         lambda _seconds: None,
     )
     launcher = FakeLauncher(_settings())
@@ -403,7 +429,8 @@ def test_managed_launcher_is_reused_when_request_settings_change(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "airunner.runtimes.sidecar_art_client.time.sleep",
+        model_sidecar_art_client_module.time,
+        "sleep",
         lambda _seconds: None,
     )
     created = []

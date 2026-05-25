@@ -98,9 +98,9 @@ class SidecarArtClient(RuntimeClient):
 		if request.action is RuntimeAction.STATUS:
 			return self._status_response(request.request_id)
 		if request.action is RuntimeAction.LOAD_MODEL:
-			return self._load_runtime(request.request_id)
+			return self._load_runtime(request)
 		if request.action is RuntimeAction.UNLOAD_MODEL:
-			return self._unload_runtime(request.request_id)
+			return self._unload_runtime(request)
 		if request.action is not RuntimeAction.INVOKE:
 			raise ValueError("SidecarArtClient only supports invoke")
 		return self._generate_image(request, progress_callback)
@@ -246,9 +246,10 @@ class SidecarArtClient(RuntimeClient):
 			metadata=health.metadata,
 		)
 
-	def _load_runtime(self, request_id: str) -> Any:
+	def _load_runtime(self, request: Any) -> Any:
 		"""Start the managed art daemon."""
 		messages = load_message_types()
+		request_id = request.request_id
 		try:
 			with self._invoke_lock:
 				self._ensure_launcher(self._settings)
@@ -266,18 +267,48 @@ class SidecarArtClient(RuntimeClient):
 			metadata=self._metadata(),
 		)
 
-	def _unload_runtime(self, request_id: str) -> Any:
-		"""Stop the managed art daemon."""
+	def _unload_runtime(self, request: Any) -> Any:
+		"""Unload the active art model without killing the sidecar."""
 		messages = load_message_types()
+		request_id = request.request_id
+		metadata = getattr(request, "metadata", None) or {}
+		release_process = bool(metadata.get("release_process", False))
 		with self._invoke_lock:
-			self._remember_model_status("unloaded")
 			launcher = self._launcher
 			if launcher is not None:
-				launcher.stop()
+				if release_process:
+					launcher.stop()
+					self._remember_model_status("unloaded")
+					return messages.ResponseEnvelope(
+						request_id=request_id,
+						status=messages.EnvelopeStatus.SUCCEEDED,
+						payload={
+							"model_status": "unloaded",
+							"process_stopped": True,
+						},
+						metadata=self._metadata(),
+					)
+				status, _details = launcher.health_status()
+				if status is RuntimeHealthStatus.READY:
+					try:
+						self._request("DELETE", "/unload")
+						self._remember_model_status("unloaded")
+					except RuntimeError:
+						launcher.stop()
+						self._remember_model_status("unloaded")
+				elif status in (
+					RuntimeHealthStatus.STARTING,
+					RuntimeHealthStatus.FAILED,
+				):
+					launcher.stop()
+					self._remember_model_status("unloaded")
 		return messages.ResponseEnvelope(
 			request_id=request_id,
 			status=messages.EnvelopeStatus.SUCCEEDED,
-			payload={"model_status": "unloaded"},
+			payload={
+				"model_status": "unloaded",
+				"process_stopped": release_process,
+			},
 			metadata=self._metadata(),
 		)
 

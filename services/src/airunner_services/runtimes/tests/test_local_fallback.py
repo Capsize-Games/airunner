@@ -14,7 +14,7 @@ from airunner_services.art.managers.stablediffusion.image_response import (
 )
 from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
-from airunner.runtimes.contracts import (
+from airunner_services.runtimes.contracts import (
     ChatMessage,
     MessageRole,
     RuntimeAction,
@@ -28,7 +28,7 @@ from airunner_services.runtimes.local_fallback import (
     LocalFallbackTTSClient,
     register_local_fallback_clients,
 )
-from airunner.runtimes.registry import RuntimeRegistry
+from airunner_services.runtimes.registry import RuntimeRegistry
 
 
 class FakeMediator:
@@ -445,7 +445,18 @@ class TestLocalFallbackArtClient:
 
         signal_source = FakeSignalSource(
             mediator,
-            responders={SignalCode.DO_GENERATE_SIGNAL: respond_to_generate},
+            responders={
+                SignalCode.DO_GENERATE_SIGNAL: respond_to_generate,
+                SignalCode.SD_UNLOAD_SIGNAL: (
+                    lambda _payload: mediator.emit_signal(
+                        SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                        {
+                            "model": ModelType.SD,
+                            "status": ModelStatus.UNLOADED,
+                        },
+                    )
+                ),
+            },
         )
         client = LocalFallbackArtClient(
             mediator=mediator,
@@ -493,6 +504,7 @@ class TestLocalFallbackArtClient:
         )
         assert cancel_response.status == EnvelopeStatus.CANCELLED
         assert unload_response.payload["accepted"] is True
+        assert unload_response.payload["model_status"] == "Unloaded"
 
     def test_invoke_with_progress_reports_signal_updates(self):
         mediator = FakeMediator()

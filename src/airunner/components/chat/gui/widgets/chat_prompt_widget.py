@@ -521,7 +521,8 @@ class ChatPromptWidget(BaseWidget):
         )
         art_model_loaded = ModelType.SD in loaded_models
         llm_loaded = ModelType.LLM in loaded_models
-        if art_model_loaded and not llm_loaded:
+        daemon_client = getattr(self.api, "daemon_client", None)
+        if art_model_loaded and not llm_loaded and daemon_client is None:
             model_load_balancer.switch_to_non_art_mode()
         if not llm_loaded:
             show_loading = getattr(

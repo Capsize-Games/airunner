@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any, List, Optional
 from uuid import uuid4
 
@@ -27,6 +29,8 @@ from airunner_services.runtimes.contracts import (
 )
 
 ART_MODEL_NAME = "SD"
+VRAM_UNLOAD_TIMEOUT_SECONDS = 15.0
+VRAM_UNLOAD_POLL_SECONDS = 0.1
 
 
 def get_runtime_registry(request: Request) -> Any:
@@ -282,6 +286,124 @@ def collect_runtime_summaries(request: Request) -> List[RuntimeSummaryResponse]:
     return sorted(summaries, key=lambda item: (item.runtime, item.provider))
 
 
+def _summary_matches_route(
+    summary: RuntimeSummaryResponse,
+    runtime: RuntimeKind,
+    provider: str,
+    deployment_mode: str,
+) -> bool:
+    """Return True when one summary matches the requested route."""
+    return (
+        summary.runtime == runtime.value
+        and summary.provider == provider
+        and summary.mode == deployment_mode
+    )
+
+
+def _wait_for_runtime_unload(
+    request: Request,
+    runtime: RuntimeKind,
+    provider: str,
+    deployment_mode: str,
+) -> None:
+    """Block until one runtime summary reports the route as unloaded."""
+    deadline = time.monotonic() + VRAM_UNLOAD_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        summaries = collect_runtime_summaries(request)
+        matching_summary = next(
+            (
+                summary
+                for summary in summaries
+                if _summary_matches_route(
+                    summary,
+                    runtime,
+                    provider,
+                    deployment_mode,
+                )
+            ),
+            None,
+        )
+        if matching_summary is None or not matching_summary.loaded:
+            return
+        time.sleep(VRAM_UNLOAD_POLL_SECONDS)
+
+    raise HTTPException(
+        status_code=504,
+        detail=(
+            f"Timed out waiting for {runtime.value} "
+            f"({provider}:{deployment_mode}) to unload"
+        ),
+    )
+
+
+def ensure_vram_available_for(
+    request: Request,
+    route_request: RuntimeRouteRequest,
+    target_runtime: RuntimeKind,
+) -> None:
+    """Unload conflicting loaded runtimes before one target load/invoke."""
+    logger = logging.getLogger(__name__)
+    summaries = collect_runtime_summaries(request)
+    logger.info(
+        "VRAM check for %s: found %d runtime summaries",
+        target_runtime.value,
+        len(summaries),
+    )
+    for summary in summaries:
+        logger.info(
+            "  runtime=%s loaded=%s provider=%s mode=%s",
+            summary.runtime,
+            summary.loaded,
+            summary.provider,
+            summary.mode,
+        )
+
+    for summary in summaries:
+        if not summary.loaded:
+            continue
+        if summary.runtime == target_runtime.value:
+            continue
+
+        other_runtime = parse_runtime_kind(summary.runtime)
+        logger.info(
+            "Unloading %s (%s:%s) to free VRAM for %s",
+            other_runtime.value,
+            summary.provider,
+            summary.mode,
+            target_runtime.value,
+        )
+        other_client = resolve_runtime_client(
+            request,
+            other_runtime,
+            summary.provider,
+            summary.mode,
+        )
+        unload_request = RuntimeRouteRequest(
+            provider=summary.provider,
+            deployment_mode=summary.mode,
+            request_id=route_request.request_id,
+            metadata=dict(route_request.metadata or {}),
+        )
+        if (
+            target_runtime is RuntimeKind.LLM
+            and other_runtime is RuntimeKind.ART
+            and summary.mode == "sidecar"
+        ):
+            unload_request.metadata["release_process"] = True
+        invoke_runtime_action(
+            other_client,
+            other_runtime,
+            RuntimeAction.UNLOAD_MODEL,
+            unload_request,
+        )
+        _wait_for_runtime_unload(
+            request,
+            other_runtime,
+            summary.provider,
+            summary.mode,
+        )
+
+
 def resolve_runtime_client(
     request: Request,
     runtime: RuntimeKind,
@@ -311,9 +433,16 @@ def runtime_failure_status(response: ResponseEnvelope) -> int:
     return 502
 
 
+def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
+    """Return True when one envelope-like response matches a status."""
+    status = getattr(response, "status", None)
+    value = getattr(status, "value", status)
+    return str(value or "").strip().lower() == expected.value
+
+
 def ensure_success(response: ResponseEnvelope) -> ResponseEnvelope:
     """Raise an HTTP error when a runtime control action fails."""
-    if response.status is not EnvelopeStatus.FAILED:
+    if not _response_status_is(response, EnvelopeStatus.FAILED):
         return response
 
     raise HTTPException(

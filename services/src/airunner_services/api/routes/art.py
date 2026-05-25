@@ -258,7 +258,7 @@ async def _invoke_art_control(
             metadata=request_metadata,
         ),
     )
-    if response.status is EnvelopeStatus.SUCCEEDED:
+    if _response_status_is(response, EnvelopeStatus.SUCCEEDED):
         return response
 
     error = getattr(response, "error", None)
@@ -290,6 +290,13 @@ async def _job_cancelled(tracker: JobTracker, job_id: str) -> bool:
     """Return True when the tracked art job has already been cancelled."""
     job = await tracker.get_status(job_id)
     return bool(job is not None and job.status is JobState.CANCELLED)
+
+
+def _response_status_is(response: object, expected: EnvelopeStatus) -> bool:
+    """Return True when one envelope-like response matches a status."""
+    status = getattr(response, "status", None)
+    value = getattr(status, "value", status)
+    return str(value or "").strip().lower() == expected.value
 
 
 async def _fail_art_job(
@@ -366,10 +373,10 @@ async def _run_art_job(
         await _fail_art_job(tracker, job_id, str(exc))
         return
 
-    if response.status is EnvelopeStatus.CANCELLED:
+    if _response_status_is(response, EnvelopeStatus.CANCELLED):
         await tracker.cancel_job(job_id)
         return
-    if response.status is EnvelopeStatus.FAILED:
+    if _response_status_is(response, EnvelopeStatus.FAILED):
         detail = response.error.message if response.error else "Art generation failed"
         await _fail_art_job(tracker, job_id, detail)
         return
@@ -782,6 +789,16 @@ async def cancel_job(job_id: str, req: Request):
         pass
 
     return {"status": "cancelled", "job_id": job_id}
+
+
+@router.delete("/unload")
+async def unload_art_model(req: Request):
+    """Unload the active art model while keeping the sidecar alive."""
+    await _invoke_art_control(
+        req,
+        action=RuntimeAction.UNLOAD_MODEL,
+    )
+    return {"status": "unloaded"}
 
 
 @router.post("/remove-background")

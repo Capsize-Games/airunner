@@ -5,10 +5,13 @@ import base64
 from types import SimpleNamespace
 
 import pytest
+from airunner_api.messages import EnvelopeStatus as APIEnvelopeStatus
+from airunner_api.messages import ErrorEnvelope as APIErrorEnvelope
+from airunner_api.messages import ResponseEnvelope as APIResponseEnvelope
 
 from airunner_services.ipc.messages import EnvelopeStatus, ResponseEnvelope
 from airunner_services.contract_enums import ModelStatus
-from airunner.runtimes.contracts import (
+from airunner_model.contracts import (
     RuntimeDescriptor,
     RuntimeKind,
     RuntimeMode,
@@ -75,6 +78,40 @@ class FakeProgressArtRuntimeClient(FakeArtRuntimeClient):
     def invoke_with_progress(self, request, progress_callback):
         progress_callback({"status": "running", "progress": 40.0})
         return self.invoke(request)
+
+
+class FakeAPIEnvelopeArtRuntimeClient(FakeArtRuntimeClient):
+    """Runtime client that returns API-owned envelope instances."""
+
+    def __init__(self, *, fail_message=None):
+        super().__init__()
+        self.fail_message = fail_message
+
+    def invoke(self, request):
+        self.invocations.append(request)
+        if self.fail_message is not None:
+            return APIResponseEnvelope(
+                request_id=request.request_id,
+                status=APIEnvelopeStatus.FAILED,
+                error=APIErrorEnvelope(
+                    code="art_failed",
+                    message=self.fail_message,
+                ),
+            )
+        if request.action.name in {"LOAD_MODEL", "UNLOAD_MODEL"}:
+            return APIResponseEnvelope(
+                request_id=request.request_id,
+                status=APIEnvelopeStatus.SUCCEEDED,
+                payload={
+                    "accepted": True,
+                    "component": request.metadata.get("component"),
+                },
+            )
+        return APIResponseEnvelope(
+            request_id=request.request_id,
+            status=APIEnvelopeStatus.SUCCEEDED,
+            payload={"images": [PNG_B64], "image_count": 1},
+        )
 
 
 class FakeRegistry:
@@ -275,6 +312,38 @@ def test_generate_image_updates_job_progress_when_runtime_reports_it(
     assert any(job_id == response.job_id and progress == 40.0 for job_id, progress, _status in recorded_progress)
 
 
+def test_generate_image_uses_api_envelope_failure_message(monkeypatch):
+    from airunner_api.routes.art import GenerationRequest, generate_image, get_job_status
+
+    client = FakeAPIEnvelopeArtRuntimeClient(
+        fail_message="actual-sidecar-error",
+    )
+    scheduled = []
+
+    def fake_create_task(coroutine):
+        scheduled.append(coroutine)
+        return SimpleNamespace(done=lambda: False)
+
+    async def run_test():
+        monkeypatch.setattr(
+            "airunner_api.routes.art.asyncio.create_task",
+            fake_create_task,
+        )
+        response = await generate_image(
+            GenerationRequest(prompt="A lighthouse"),
+            _request_for(client),
+        )
+        await scheduled[0]
+        status = await get_job_status(response.job_id)
+        return response, status
+
+    response, status = asyncio.run(run_test())
+
+    assert response.status == "running"
+    assert status.status == "failed"
+    assert status.error == "actual-sidecar-error"
+
+
 def test_generate_image_can_mark_job_to_skip_auto_export(monkeypatch):
     from airunner_api.routes.art import GenerationRequest, generate_image
 
@@ -363,7 +432,7 @@ def test_get_result_prefers_cached_png_bytes():
 
 def test_resolve_art_client_requires_explicit_sidecar_route():
     from airunner_api.routes.art import resolve_art_client
-    from airunner.runtimes.registry import RuntimeRegistry
+    from airunner_model.runtimes.registry import RuntimeRegistry
 
     with pytest.raises(Exception) as exc_info:
         resolve_art_client(RuntimeRegistry())
@@ -420,3 +489,16 @@ def test_art_component_routes_forward_component_control():
     assert unloaded.status == "unloaded"
     assert client.invocations[0].metadata["component"] == "rmbg"
     assert client.invocations[1].metadata["component"] == "safety_checker"
+
+
+def test_art_component_routes_accept_api_envelope_success():
+    from airunner_api.routes.art import load_art_component
+
+    client = FakeAPIEnvelopeArtRuntimeClient()
+
+    async def run_test():
+        return await load_art_component("rmbg", _request_for(client))
+
+    loaded = asyncio.run(run_test())
+
+    assert loaded.status == "loaded"

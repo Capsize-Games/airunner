@@ -10,12 +10,17 @@ Based on ComfyUI's comfy/text_encoders/z_image.py implementation.
 from __future__ import annotations
 
 import gc
+import hashlib
 import logging
 import os
+from pathlib import Path
+import shutil
+import tempfile
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
+import transformers
 from safetensors import safe_open
 from transformers import (
     Qwen2Tokenizer,
@@ -26,10 +31,59 @@ from transformers import (
 )
 
 from airunner_services.art.runtime_memory import clear_memory
+from airunner_services.settings import AIRUNNER_BASE_PATH
 
 logger = logging.getLogger(__name__)
 
 _SAFE_TENSORS_FORMATS = {"pt", "tf", "flax", "mlx"}
+
+
+def _quantized_cache_root() -> Path:
+    """Return the app-managed cache root for quantized text encoders."""
+    return (
+        Path(AIRUNNER_BASE_PATH).expanduser()
+        / "art"
+        / "cache"
+        / "text_encoder_quantized"
+    )
+
+
+def _quantized_cache_path(
+    model_path: str,
+    quantization: str,
+    dtype_name: str,
+) -> Path:
+    """Return the cache path for one quantized text encoder source."""
+    source = os.path.abspath(model_path)
+    fingerprint = "|".join(
+        [
+            source,
+            quantization,
+            dtype_name,
+            str(torch.__version__),
+            str(transformers.__version__),
+        ]
+    )
+    cache_key = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
+    return _quantized_cache_root() / f"{cache_key}-{quantization}"
+
+
+def _quantized_cache_is_ready(cache_path: Path) -> bool:
+    """Return True when one quantized cache directory looks complete."""
+    if not cache_path.is_dir() or not (cache_path / "config.json").is_file():
+        return False
+    patterns = (
+        "*.safetensors",
+        "*.safetensors.index.json",
+        "*.bin",
+        "*.bin.index.json",
+    )
+    return any(any(cache_path.glob(pattern)) for pattern in patterns)
+
+
+def _remove_cache_dir(path: Path) -> None:
+    """Delete one cache directory or best-effort partial cache."""
+    shutil.rmtree(path, ignore_errors=True)
 
 
 def _resolve_transformers_weights_override(model_path: str) -> Optional[str]:
@@ -249,30 +303,43 @@ class ZImageTextEncoder(nn.Module):
             model_path: Path to model weights
         """
         try:
+            load_path = model_path
+            cache_path = self._quantized_cache_path(model_path)
+            use_quantized_cache = self._should_use_quantized_cache()
+            cache_hit = use_quantized_cache and _quantized_cache_is_ready(
+                cache_path
+            )
+            if cache_hit:
+                load_path = str(cache_path)
+                logger.info(
+                    "Loading cached %s text encoder weights",
+                    self.quantization,
+                )
+
             # Model imports are handled at module level
             
             # Load config
             config = AutoConfig.from_pretrained(
-                model_path,
+                load_path,
                 trust_remote_code=True,
             )
 
             transformers_weights = _resolve_transformers_weights_override(
-                model_path
+                load_path
             )
             if transformers_weights is not None:
                 config.transformers_weights = transformers_weights
             
             # Configure quantization
             quantization_config = None
-            if self.quantization == "4bit":
+            if not cache_hit and self.quantization == "4bit":
                 quantization_config = BitsAndBytesConfig(
                     load_in_4bit=True,
                     bnb_4bit_compute_dtype=self.dtype,
                     bnb_4bit_use_double_quant=True,
                     bnb_4bit_quant_type="nf4",
                 )
-            elif self.quantization == "8bit":
+            elif not cache_hit and self.quantization == "8bit":
                 quantization_kwargs = {"load_in_8bit": True}
                 if self._enable_cpu_offload:
                     quantization_kwargs[
@@ -285,7 +352,11 @@ class ZImageTextEncoder(nn.Module):
             # Load model
             # Choose device_map strategy: prefer provided map, else auto when quantized
             device_map = self._device_map
-            if device_map is None and (quantization_config is not None or self._device is None):
+            if device_map is None and (
+                quantization_config is not None
+                or cache_hit
+                or self._device is None
+            ):
                 device_map = "auto"
 
             load_kwargs = {
@@ -299,14 +370,21 @@ class ZImageTextEncoder(nn.Module):
                 load_kwargs["max_memory"] = self._max_memory
 
             self.model = AutoModel.from_pretrained(
-                model_path,
+                load_path,
                 **load_kwargs,
             )
             
-            if self._device is not None and quantization_config is None:
+            if (
+                self._device is not None
+                and quantization_config is None
+                and not cache_hit
+            ):
                 self.model = self.model.to(self._device)
             
             self.model.eval()
+
+            if use_quantized_cache and not cache_hit:
+                self._save_quantized_cache(cache_path)
             
             # Load tokenizer from tokenizer_path if provided, else from model_path
             tok_path = self.tokenizer_path if self.tokenizer_path else model_path
@@ -317,6 +395,40 @@ class ZImageTextEncoder(nn.Module):
         except Exception as e:
             logger.error(f"Failed to load text encoder: {e}")
             raise
+
+    def _quantized_cache_path(self, model_path: str) -> Path:
+        """Return the app-managed cache directory for this model."""
+        quantization = self.quantization or "none"
+        dtype_name = str(self.dtype).replace("torch.", "")
+        return _quantized_cache_path(model_path, quantization, dtype_name)
+
+    def _should_use_quantized_cache(self) -> bool:
+        """Return True when this load should persist pre-quantized weights."""
+        return self.quantization in {"4bit", "8bit"}
+
+    def _save_quantized_cache(self, cache_path: Path) -> None:
+        """Persist one pre-quantized text encoder for future cold loads."""
+        if self.model is None or _quantized_cache_is_ready(cache_path):
+            return
+        cache_root = cache_path.parent
+        cache_root.mkdir(parents=True, exist_ok=True)
+        temp_dir = Path(tempfile.mkdtemp(dir=cache_root))
+        try:
+            self.model.save_pretrained(temp_dir)
+            _remove_cache_dir(cache_path)
+            temp_dir.rename(cache_path)
+            logger.info(
+                "Saved cached %s text encoder weights",
+                self.quantization,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to save cached %s text encoder weights: %s",
+                self.quantization,
+                exc,
+            )
+            _remove_cache_dir(cache_path)
+            _remove_cache_dir(temp_dir)
 
     @property
     def uses_accelerate_offload(self) -> bool:
