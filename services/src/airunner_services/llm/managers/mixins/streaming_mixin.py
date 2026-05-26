@@ -29,6 +29,7 @@ class StreamingMixin:
         # Store current mood for attaching to AI messages
         self._current_mood = "neutral"
         self._current_emoji = "😐"
+        self._assistant_turn_index = 0
 
     def _auto_learn_from_message(self, user_input: str) -> None:
         """Previously auto-extracted facts - now handled via LLM tools.
@@ -54,6 +55,7 @@ class StreamingMixin:
         """
         # Reset executed tools list for this invocation
         self._executed_tools = []
+        self._assistant_turn_index = 0
 
         input_messages = [HumanMessage(user_input)]
         config = self._create_config()
@@ -86,6 +88,7 @@ class StreamingMixin:
         """
         # Reset executed tools list for this invocation
         self._executed_tools = []
+        self._assistant_turn_index = 0
 
         # Automatically learn facts from user message (non-blocking)
         self._auto_learn_from_message(user_input)

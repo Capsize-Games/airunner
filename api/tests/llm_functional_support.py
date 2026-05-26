@@ -278,6 +278,14 @@ def visible_digits(message: str) -> str:
     return re.sub(r"[^0-9]", "", visible_llm_message(message))
 
 
+def visible_last_number(message: str) -> str:
+    """Return the last visible number-like token from one LLM response."""
+    matches = re.findall(r"\d(?:[\s.,_-]*\d)*", visible_llm_message(message))
+    if not matches:
+        return ""
+    return re.sub(r"[^0-9]", "", matches[-1])
+
+
 def llm_request_payload(
     model_id: str,
     *,
@@ -308,10 +316,6 @@ def llm_request_payload(
 def combined_llama_env_overrides(model_id: str) -> dict[str, str]:
     """Return stable combined-mode llama.cpp overrides for one model."""
     overrides = {
-        "qwen3-8b": {
-            "AIRUNNER_GGUF_N_CTX": "4096",
-            "AIRUNNER_GGUF_N_GPU_LAYERS": "30",
-        },
         "qwen3.5-9b": {
             "AIRUNNER_GGUF_N_CTX": "4096",
             "AIRUNNER_GGUF_N_GPU_LAYERS": "10",

@@ -2430,8 +2430,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             f"_handle_llm_non_stream ENTERED with request_id={request_id}"
         )
 
-        # Collect all response chunks
-        complete_message = []
+        # Collect visible assistant chunks by generation pass so the final
+        # HTTP payload reflects the last assistant answer rather than any
+        # intermediary pre-tool planning text.
+        complete_message_by_turn: dict[int, list[str]] = {}
         executed_tools = []  # Track tools executed
         complete_event = threading.Event()
 
@@ -2448,13 +2450,18 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 f"HTTP Callback Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
             )
             if response:
-                complete_message.append(response.message)
-                # Extract tools from response object if this is the final message
+                turn_index = int(getattr(response, "turn_index", 0) or 0)
+                message_type = getattr(response, "message_type", None)
                 if (
-                    response.is_end_of_message
-                    and hasattr(response, "tools")
-                    and response.tools
+                    response.message
+                    and not getattr(response, "is_system_message", False)
+                    and message_type != "system"
                 ):
+                    complete_message_by_turn.setdefault(turn_index, []).append(
+                        response.message
+                    )
+
+                if hasattr(response, "tools") and response.tools:
                     self.logger.info(
                         f"HTTP Callback Tools found in response: {response.tools}"
                     )
@@ -2508,16 +2515,20 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if complete_event.wait(
             timeout=self._timeout
         ):  # 5 minute timeout for longer generations
+            final_turn = max(complete_message_by_turn.keys(), default=0)
+            final_message = "".join(
+                complete_message_by_turn.get(final_turn, [])
+            )
             # Success - return complete message
             response_data = {
-                "message": "".join(complete_message),
+                "message": final_message,
                 "is_first_message": True,
                 "is_end_of_message": True,
                 "sequence_number": 0,
                 "action": (
                     action.value if hasattr(action, "value") else str(action)
                 ),
-                "tools": executed_tools,  # Include list of executed tools
+                "tools": list(dict.fromkeys(executed_tools)),
             }
         else:
             # Timeout

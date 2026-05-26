@@ -18,7 +18,6 @@ class LLMProviderConfig:
     """Available models for each LLM provider."""
 
     _SUPPORTED_LOCAL_MODEL_IDS = (
-        "qwen3-8b",
         "qwen3.5-9b",
         "gpt-oss-20b",
         "custom",
@@ -108,34 +107,6 @@ class LLMProviderConfig:
             # GGUF variant (official Qwen GGUF)
             "gguf_repo_id": "Qwen/Qwen2.5-7B-Instruct-GGUF",
             "gguf_filename": "qwen2.5-7b-instruct-q4_k_m.gguf",
-        },
-        "qwen3-8b": {
-            "name": "Qwen3-8B",
-            "repo_id": "Qwen/Qwen3-8B",
-            "model_type": "llm",
-            "function_calling": True,
-            "tool_calling_mode": "json",  # Structured JSON output
-            "supports_thinking": True,  # Qwen3 supports both modes via enable_thinking flag
-            "rag_capable": True,
-            "vision_capable": False,
-            "code_capable": True,
-            "context_length": 32768,  # 32K native, 131K with YaRN
-            "native_context_length": 32768,
-            "yarn_max_context_length": 131072,
-            "supports_yarn": True,
-            "vram_2bit_gb": 5,
-            "vram_4bit_gb": 8,
-            "vram_8bit_gb": 16,
-            "description": "Qwen3 8B - supports both thinking (<think>) and instruct modes via enable_thinking flag",
-            # GGUF variant (official Qwen GGUF)
-            "gguf_repo_id": "Qwen/Qwen3-8B-GGUF",
-            "gguf_filename": "Qwen3-8B-Q4_K_M.gguf",
-            "local_storage_subdir": "Qwen",
-            "aliases": [
-                "Qwen 3 8B",
-                "Qwen3 8B",
-                "Qwen3-8B-Q4_K_M.gguf",
-            ],
         },
         "qwen3.5-9b": {
             "name": "Qwen3.5-9B",

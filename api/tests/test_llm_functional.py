@@ -16,7 +16,7 @@ from llm_functional_support import visible_digits
 from llm_functional_support import wait_for_log_text
 
 
-_MODEL_IDS = ["qwen3-8b", "qwen3.5-9b", "gpt-oss-20b"]
+_MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 
 
 @pytest.mark.integration

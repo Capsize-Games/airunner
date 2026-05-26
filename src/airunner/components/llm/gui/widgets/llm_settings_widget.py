@@ -518,8 +518,8 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         # Set default model path if empty
         model_path = self.llm_generator_settings.model_path
         if not model_path:
-            # Set a sensible default: Qwen3 8B (best overall for agent tasks)
-            default_model_id = "qwen3-8b"
+            # Set a sensible default: Qwen3.5 9B for local agent tasks.
+            default_model_id = "qwen3.5-9b"
             model_info = LLMProviderConfig.get_model_info(
                 provider, default_model_id
             )

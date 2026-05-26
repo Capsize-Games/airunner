@@ -191,7 +191,7 @@ class PropertyMixin:
         model_path = None
         if self.llm_request is not None and self.llm_request.model:
             # Request-level override:
-            # - If the request provides a bare model name (e.g. "Qwen3-8B"),
+            # - If the request provides a bare model name (e.g. "Qwen3.5-9B"),
             #   interpret it as a directory under base_path/text/models/llm/causallm.
             # - If the request provides an absolute/relative filesystem path
             #   (contains a path separator or points to a *.gguf), use it as-is

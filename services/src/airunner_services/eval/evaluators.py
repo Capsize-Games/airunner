@@ -8,6 +8,7 @@ correctness, conciseness, helpfulness, etc.
 Based on the openevals pattern but adapted for AI Runner's architecture.
 """
 
+import re
 from typing import Dict, Any, Optional
 from airunner_services.eval.client import AIRunnerClient
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
@@ -157,7 +158,7 @@ class LLMAsJudge:
         response = self.client.generate(
             eval_prompt,
             temperature=0.3,
-            max_tokens=500,
+            max_tokens=128,
             **kwargs,
         )
 
@@ -239,7 +240,12 @@ class LLMAsJudge:
     def _parse_score_line(self, line: str) -> float:
         """Parse score from a line."""
         score_text = line.replace("Score:", "").strip()
-        score_text = score_text.split()[0].strip("[](),")
+        match = re.search(r"\d+(?:\.\d+)?", score_text)
+        if match is None:
+            self.logger.warning(f"Could not parse score from: {score_text}")
+            return 0.0
+
+        score_text = match.group(0)
         try:
             score = float(score_text)
             # Normalize to 0-1 range if it's 0-10

@@ -174,9 +174,7 @@ def _estimate_known_kv_cache_gb(
 ) -> Optional[float]:
     """Estimate KV-cache size for known shipped GGUF models."""
     filename = os.path.basename(str(model_path)).lower()
-    known_shapes = {
-        "qwen3-8b": (36, 8, 128, 128),
-    }
+    known_shapes = {}
 
     for marker, shape in known_shapes.items():
         if marker not in filename:
@@ -818,10 +816,7 @@ class ChatGGUF(BaseChatModel):
                     content = str(
                         msg.additional_kwargs.get("thinking_content") or ""
                     )
-                if content:
-                    msg_dict["content"] = content
-                elif not tool_calls:
-                    msg_dict["content"] = ""
+                msg_dict["content"] = content
                 if tool_calls:
                     msg_dict["tool_calls"] = tool_calls
                 converted.append(msg_dict)
@@ -1506,12 +1501,78 @@ For each function call, return a json object with function name and arguments wi
         self, content: str
     ) -> tuple[List[Dict[str, Any]], str]:
         """Extract text-encoded tool calls and cleaned response text."""
+        if self.tool_calling_mode == "json":
+            json_calls, json_text = self._parse_json_tool_calls(content)
+            if json_calls:
+                return json_calls, json_text
+
         react_calls, react_text = self._parse_react_tool_calls(content)
         if react_calls:
             return react_calls, react_text
 
         xml_calls, xml_text = self._parse_xml_tool_calls(content)
         return xml_calls, xml_text
+
+    def _parse_json_tool_calls(
+        self, content: str
+    ) -> tuple[List[Dict[str, Any]], str]:
+        """Parse JSON-mode tool calls embedded in assistant text."""
+        tool_calls: List[Dict[str, Any]] = []
+        cleaned = content
+        pattern = r'\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}'
+
+        for match in re.finditer(pattern, content or "", re.DOTALL):
+            json_str = match.group(0)
+            try:
+                payload = self._normalize_tool_payload(json.loads(json_str))
+            except json.JSONDecodeError:
+                continue
+            if not self._is_json_tool_payload(payload):
+                continue
+            tool_calls.append(self._build_json_tool_call(payload))
+            cleaned = cleaned.replace(json_str, "").strip()
+
+        return tool_calls, cleaned
+
+    def _is_json_tool_payload(self, payload: Any) -> bool:
+        """Return whether one parsed JSON object is a tool call payload."""
+        return isinstance(payload, dict) and bool(
+            payload.get("tool") or payload.get("name")
+        )
+
+    def _build_json_tool_call(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Build one normalized tool call from JSON-mode output."""
+        return {
+            "id": str(uuid.uuid4()),
+            "name": payload.get("tool") or payload.get("name"),
+            "args": payload.get("arguments") or payload.get("args") or {},
+            "type": "tool_call",
+        }
+
+    def _normalize_tool_payload(self, payload: Any) -> Any:
+        """Normalize spaced JSON keys and values from tool call output."""
+        if isinstance(payload, dict):
+            return {
+                str(key).strip(): self._normalize_tool_value(str(key), value)
+                for key, value in payload.items()
+            }
+        if isinstance(payload, list):
+            return [self._normalize_tool_payload(item) for item in payload]
+        return payload
+
+    def _normalize_tool_value(self, key: str, value: Any) -> Any:
+        """Normalize one tool payload value recursively."""
+        if isinstance(value, (dict, list)):
+            return self._normalize_tool_payload(value)
+        if not isinstance(value, str):
+            return value
+        cleaned = value.strip()
+        if key.strip() in {"tool", "name"}:
+            cleaned = re.sub(r"\s*_\s*", "_", cleaned)
+            return re.sub(r"\s+", "", cleaned)
+        if key.strip() == "code":
+            return re.sub(r"(?<=\d)\s+(?=\d)", "", cleaned)
+        return cleaned
 
     def _parse_gpt_oss_commentary_tool_calls(
         self, content: str
@@ -1783,6 +1844,22 @@ For each function call, return a json object with function name and arguments wi
 
         return tool_calls
 
+    @staticmethod
+    def _merge_streamed_text(existing: str, fragment: str) -> str:
+        """Merge one streamed text fragment without duplicating overlap."""
+        if not existing or not fragment:
+            return existing + fragment
+        if fragment == existing or existing.endswith(fragment):
+            return existing
+        if fragment.startswith(existing):
+            return fragment
+
+        max_overlap = min(len(existing), len(fragment))
+        for overlap in range(max_overlap, 0, -1):
+            if existing.endswith(fragment[:overlap]):
+                return existing + fragment[overlap:]
+        return existing + fragment
+
     def _merge_native_tool_call_deltas(
         self,
         tool_call_buffers: Dict[int, Dict[str, Any]],
@@ -1807,9 +1884,17 @@ For each function call, return a json object with function name and arguments wi
 
             function = raw_call.get("function") or {}
             if function.get("name"):
-                buffer["function"]["name"] += function["name"]
+                buffer["function"]["name"] = self._merge_streamed_text(
+                    buffer["function"]["name"],
+                    function["name"],
+                )
             if function.get("arguments"):
-                buffer["function"]["arguments"] += function["arguments"]
+                buffer["function"]["arguments"] = (
+                    self._merge_streamed_text(
+                        buffer["function"]["arguments"],
+                        function["arguments"],
+                    )
+                )
 
     def _finalize_native_tool_call_deltas(
         self, tool_call_buffers: Dict[int, Dict[str, Any]]

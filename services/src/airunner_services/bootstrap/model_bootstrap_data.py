@@ -52,17 +52,6 @@ ai_art_models = [
 
 llm_models = [
     {
-        "name": "Qwen3 8B",
-        "path": "Qwen/Qwen3-8B",
-        "branch": "main",
-        "version": "3.0",
-        "category": "llm",
-        "pipeline_action": "causallm",
-        "enabled": True,
-        "model_type": "llm",
-        "is_default": True,
-    },
-    {
         "name": "Qwen3.5 9B",
         "path": "Qwen/Qwen3.5-9B",
         "branch": "main",
@@ -71,7 +60,7 @@ llm_models = [
         "pipeline_action": "causallm",
         "enabled": True,
         "model_type": "llm",
-        "is_default": False,
+        "is_default": True,
     },
     {
         "name": "GPT-OSS 20B",

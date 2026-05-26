@@ -322,8 +322,8 @@ class HuggingFaceDownloader(
         The model will be stored in: local_dir/filename
 
         Args:
-            repo_id: GGUF repository ID (e.g., "Qwen/Qwen3-8B-GGUF")
-            filename: GGUF filename (e.g., "Qwen3-8B-Q4_K_M.gguf")
+            repo_id: GGUF repository ID (e.g., "unsloth/Qwen3.5-9B-GGUF")
+            filename: GGUF filename (e.g., "Qwen3.5-9B-Q8_0.gguf")
             local_dir: Local directory (default: cache_dir/model_name)
             revision: Git revision/branch
             progress_callback: Optional callback(filename, downloaded_bytes, total_bytes)

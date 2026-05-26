@@ -617,6 +617,9 @@ mkcert -install
 # Offscreen GUI end-to-end functional tests
 ./venv/bin/python -m pytest api/tests/test_gui_llm_tts_functional.py -v --timeout=1200
 ./venv/bin/python -m pytest api/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
+
+# Service-owned agent evals
+AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest api/tests/eval --tb=short -ra
 ```
 
 The functional suites under `api/tests/` use real local runtimes and skip
@@ -624,6 +627,10 @@ cleanly when required assets are missing. They cover API bootstrap,
 daemon-only LLM, daemon LLM plus TTS, standalone STT, standalone TTS,
 offscreen GUI LLM plus TTS, offscreen GUI STT plus LLM plus TTS, and the
 GUI conversation-progression path.
+
+The service-owned agent eval runbook lives in
+`docs/agent-eval-tests.md` and documents coverage, commands, tool
+surfaces, and current model notes.
 
 ---
 
@@ -639,6 +646,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 - [API and Model Extraction Plan](docs/architecture/api_model_extraction_plan.md)
 - [Deliverable-First Workflows](docs/deliverable_workflows.md)
 - [Hybrid Runtime Target](docs/hybrid-runtime-target.md)
+- [Agent Eval Tests](docs/agent-eval-tests.md)
 - [LLM Flow](docs/llm-flow.md)
 - [Document RAG Flow](docs/document-rag-flow.md)
 - [Systemd Distributed Deployment](deployment/systemd/README.md)

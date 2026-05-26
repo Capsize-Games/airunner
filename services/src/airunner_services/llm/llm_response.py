@@ -25,3 +25,5 @@ class LLMResponse:
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
+    message_type: Optional[str] = None
+    turn_index: int = 0

@@ -4,7 +4,7 @@ Test runner script for AI Runner project.
 
 This script provides a unified interface for running different test suites:
 - Unit tests: Safe component tests excluding GUI/widget-only suites
-- Eval tests: Evaluation framework tests in src/airunner/components/llm/tests/eval/
+- Eval tests: Daemon-backed LLM eval tests in api/tests/eval/
 - LLM runtime smoke tests: safe route/runtime checks with no app startup
 - STT runtime smoke tests: safe route/worker checks with no app startup
 - Art runtime smoke tests: safe daemon-backed art checks with no app startup
@@ -21,9 +21,8 @@ Usage:
     python run_tests.py --art-runtime-smoke # Run safe art runtime smoke tests
     python run_tests.py --tts-runtime-smoke # Run safe TTS runtime smoke tests
 
-Note: Eval tests use pytest fixtures to automatically manage the headless server.
-      The server will start/stop automatically when tests run.
-    The default unit suite skips GUI-only tests and blocks GUI app startup.
+Note: Eval tests start a fresh daemon process inside the test harness.
+        The default unit suite skips GUI-only tests and blocks GUI app startup.
 """
 
 import argparse
@@ -232,7 +231,7 @@ def run_eval_tests(
     Returns:
         Exit code from pytest
     """
-    test_path = Path("src/airunner/components/eval/tests")
+    test_path = Path("api/tests/eval")
 
     if not test_path.exists():
         print(f"Error: Eval tests directory not found at {test_path}")
@@ -264,12 +263,10 @@ def run_eval_tests(
     if skip_slow:
         cmd.extend(["-m", "not slow"])
 
-    # Pass model argument to pytest if specified
+    # Pass model path through the environment if specified.
     env = _build_pytest_env()
     if model:
         env["AIRUNNER_TEST_MODEL_PATH"] = model
-        # Also pass to pytest as --model flag
-        cmd.extend(["--model", model])
         print(f"Using model: {model}")
 
     description = (
@@ -280,7 +277,7 @@ def run_eval_tests(
 
 def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe llama.cpp runtime smoke suite."""
-    test_path = Path("src/airunner/api/tests")
+    test_path = Path("api/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -302,7 +299,7 @@ def run_llm_runtime_smoke_tests(verbose: bool = False) -> int:
 
 def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe STT runtime smoke suite."""
-    test_path = Path("src/airunner/api/tests")
+    test_path = Path("api/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -324,7 +321,7 @@ def run_stt_runtime_smoke_tests(verbose: bool = False) -> int:
 
 def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe art runtime smoke suite."""
-    test_path = Path("src/airunner/api/tests")
+    test_path = Path("api/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",
@@ -346,7 +343,7 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
 
 def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe TTS runtime smoke suite."""
-    test_path = Path("src/airunner/api/tests")
+    test_path = Path("api/tests")
     cmd = _pytest_command(
         str(test_path),
         "-m",

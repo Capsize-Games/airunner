@@ -216,14 +216,28 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
 
     if not body.stream:
         # Non-streaming: collect chunks and return once.
-        complete: list[str] = []
+        complete_by_turn: dict[int, list[str]] = {}
+        executed_tools: list[str] = []
         done = threading.Event()
 
         def collect_cb(data: dict):
             response = data.get("response")
             if not response:
                 return
-            complete.append(getattr(response, "message", "") or "")
+            turn_index = int(getattr(response, "turn_index", 0) or 0)
+            message = getattr(response, "message", "") or ""
+            message_type = getattr(response, "message_type", None)
+            if (
+                message
+                and not getattr(response, "is_system_message", False)
+                and message_type != "system"
+            ):
+                complete_by_turn.setdefault(turn_index, []).append(message)
+
+            tools = getattr(response, "tools", None)
+            if isinstance(tools, (list, tuple, set)):
+                executed_tools.extend(str(tool) for tool in tools if tool)
+
             if getattr(response, "is_end_of_message", False):
                 done.set()
 
@@ -245,7 +259,12 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         if not done.wait(timeout=300):
             raise HTTPException(status_code=504, detail="Request timeout")
 
-        return {"message": "".join(complete)}
+        final_turn = max(complete_by_turn.keys(), default=0)
+        return {
+            "message": "".join(complete_by_turn.get(final_turn, [])),
+            "tools": list(dict.fromkeys(executed_tools)),
+            "tool_calls": list(dict.fromkeys(executed_tools)),
+        }
 
     q: queue.Queue[bytes] = queue.Queue()
     done = threading.Event()
@@ -304,6 +323,8 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
             # Convenience flag used by some clients.
             "done": bool(getattr(response, "is_end_of_message", False)),
             "sequence_number": int(getattr(response, "sequence_number", 0) or 0),
+            "turn_index": int(getattr(response, "turn_index", 0) or 0),
+            "message_type": getattr(response, "message_type", None),
             "action": str(action_val_str),
             # Newer clients expect tool_calls; keep tools for compatibility.
             "tool_calls": tools,

@@ -9,9 +9,9 @@ Usage:
     airunner-hf-download                    # List all available models
     airunner-hf-download list               # List all available models
     airunner-hf-download list --type llm    # List only LLM models
-    airunner-hf-download qwen3-8b           # Download GGUF variant (default)
-    airunner-hf-download --full qwen3-8b    # Download full safetensors
-    airunner-hf-download Qwen/Qwen3-8B      # Download by repo_id
+    airunner-hf-download qwen3.5-9b         # Download GGUF variant (default)
+    airunner-hf-download --full qwen3.5-9b  # Download full safetensors
+    airunner-hf-download Qwen/Qwen3.5-9B    # Download by repo_id
     airunner-hf-download --downloaded       # List downloaded models
     airunner-hf-download --delete <model>   # Delete a downloaded model
 
@@ -19,11 +19,11 @@ Examples:
     # List all available models
     airunner-hf-download
 
-    # Download Qwen3 8B model (GGUF by default - smaller/faster)
-    airunner-hf-download qwen3-8b
+    # Download Qwen3.5 9B model (GGUF by default - smaller/faster)
+    airunner-hf-download qwen3.5-9b
 
     # Download full safetensors version (larger but higher precision)
-    airunner-hf-download --full qwen3-8b
+    airunner-hf-download --full qwen3.5-9b
 
     # Download Qwen3 Coder (14.7GB GGUF fits in 16GB VRAM)
     airunner-hf-download qwen3-coder-30b-a3b
@@ -35,7 +35,7 @@ Examples:
     airunner-hf-download --downloaded
 
     # Delete a model
-    airunner-hf-download --delete Qwen3-8B
+    airunner-hf-download --delete Qwen3.5-9B
 """
 
 import argparse
@@ -193,7 +193,7 @@ def find_model(identifier: str, models: Dict[str, List[Dict]]) -> Optional[Dict]
     """Find a model by key or repo_id.
     
     Args:
-        identifier: Model key (e.g., 'qwen3-8b') or repo_id (e.g., 'Qwen/Qwen3-8B')
+        identifier: Model key (e.g., 'qwen3.5-9b') or repo_id (e.g., 'Qwen/Qwen3.5-9B')
         models: Dictionary of all available models
         
     Returns:
@@ -724,7 +724,7 @@ def main():
         "model",
         nargs="?",
         default=None,
-        help="Model key (e.g., 'qwen3-8b') or repo_id (e.g., 'Qwen/Qwen3-8B'). "
+        help="Model key (e.g., 'qwen3.5-9b') or repo_id (e.g., 'Qwen/Qwen3.5-9B'). "
              "If omitted, lists available models.",
     )
     

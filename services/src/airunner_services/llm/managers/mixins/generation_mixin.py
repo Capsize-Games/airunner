@@ -67,6 +67,12 @@ MUTATING_TASK_TOOLS = {
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
 
+    def _current_assistant_turn_index(self) -> int:
+        """Return the current workflow assistant-turn index."""
+        workflow_manager = getattr(self, "_workflow_manager", None)
+        turn_index = getattr(workflow_manager, "_assistant_turn_index", 0)
+        return int(turn_index or 0)
+
     def _emit_visible_response(
         self,
         llm_request: Optional[Any],
@@ -87,6 +93,8 @@ class GenerationMixin:
                 is_first_message=(sequence_counter[0] == 1),
                 sequence_number=sequence_counter[0],
                 request_id=getattr(self, "_current_request_id", None),
+                message_type="assistant",
+                turn_index=self._current_assistant_turn_index(),
             )
         )
 
@@ -337,6 +345,8 @@ class GenerationMixin:
                     is_first_message=(sequence_counter[0] == 1),
                     sequence_number=sequence_counter[0],
                     request_id=getattr(self, "_current_request_id", None),
+                    message_type="assistant",
+                    turn_index=self._current_assistant_turn_index(),
                 )
             )
 
@@ -363,6 +373,8 @@ class GenerationMixin:
                 is_end_of_message=True,
                 sequence_number=sequence_counter + 1,
                 request_id=getattr(self, "_current_request_id", None),
+                message_type="assistant",
+                turn_index=self._current_assistant_turn_index(),
             )
         )
         return ""
@@ -421,6 +433,8 @@ class GenerationMixin:
                 message=error_message,
                 is_end_of_message=False,
                 request_id=getattr(self, "_current_request_id", None),
+                message_type="system",
+                turn_index=self._current_assistant_turn_index(),
             )
         )
         return error_message
@@ -847,6 +861,8 @@ class GenerationMixin:
                 prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
                 completion_tokens=int(completion_tokens) if completion_tokens is not None else None,
                 total_tokens=int(total_tokens) if total_tokens is not None else None,
+                message_type="assistant",
+                turn_index=self._current_assistant_turn_index(),
             )
         )
 
@@ -874,6 +890,8 @@ class GenerationMixin:
                 is_end_of_message=True,
                 request_id=getattr(self, "_current_request_id", None),
                 tools=executed_tools,
+                message_type="assistant",
+                turn_index=self._current_assistant_turn_index(),
             )
         )
 

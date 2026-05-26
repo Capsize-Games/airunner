@@ -1335,10 +1335,10 @@ class ChatPromptWidget(BaseWidget):
         model_path = getattr(settings, "model_path", "") or ""
 
         if model_service == ModelService.LOCAL.value:
-            # Check model_version first (e.g., "qwen3-8b")
+            # Check model_version first (e.g., "qwen3.5-9b")
             if self._lookup_model_supports_thinking(model_version):
                 return True
-            # Fall back to model_path (e.g., "Qwen/Qwen3-8B" or local path)
+            # Fall back to model_path (e.g., "Qwen/Qwen3.5-9B" or local path)
             return self._lookup_model_supports_thinking(model_path)
 
         return False

@@ -1,6 +1,7 @@
 """Service-owned LangChain tool manager."""
 
 import inspect
+from inspect import Signature
 from typing import Any, Callable, List, Optional
 
 from airunner_services.llm import tools  # noqa: F401
@@ -56,6 +57,7 @@ class ToolManager(
         sig = None
         accepted_kwargs = set()
         accepts_var_kwargs = False
+        visible_parameters = []
         try:
             sig = inspect.signature(tool_info.func)
             for param in sig.parameters.values():
@@ -66,6 +68,8 @@ class ToolManager(
                     inspect.Parameter.KEYWORD_ONLY,
                 ):
                     accepted_kwargs.add(param.name)
+                    if param.name != "api":
+                        visible_parameters.append(param)
         except Exception:
             sig = None
 
@@ -129,6 +133,12 @@ class ToolManager(
                 )
                 self.logger.error(error_msg)
                 return f"Error: {str(error)}"
+
+        if sig is not None:
+            wrapped.__signature__ = Signature(  # type: ignore[attr-defined]
+                parameters=visible_parameters,
+                return_annotation=sig.return_annotation,
+            )
 
         return wrapped
 

@@ -1,23 +1,6 @@
 """Service-owned bootstrap data for LLM model file requirements."""
 
 LLM_FILE_BOOTSTRAP_DATA = {
-    "Qwen/Qwen3-8B-GGUF": {
-        "path_settings": "llm_causallm_model_path",
-        "context_length": 32768,
-        "native_context_length": 32768,
-        "yarn_max_context_length": 131072,
-        "capabilities": {
-            "function_calling": True,
-            "thinking_capable": True,
-            "rag_capable": True,
-            "vision_capable": False,
-            "code_capable": True,
-            "is_embedding_model": False,
-        },
-        "files": {
-            "Qwen3-8B-Q4_K_M.gguf": 5027783488,
-        },
-    },
     "unsloth/Qwen3.5-9B-GGUF": {
         "path_settings": "llm_causallm_model_path",
         "context_length": 262144,

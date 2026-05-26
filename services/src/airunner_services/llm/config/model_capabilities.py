@@ -72,15 +72,6 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         gpu_memory_gb=5.0,
         priority=100,
     ),
-    "Qwen/Qwen3-8B": ModelSpec(
-        model_path="Qwen/Qwen3-8B",
-        capabilities=[ModelCapability.PRIMARY_CONVERSATION],
-        max_context=32768,  # 131K with YaRN
-        supports_function_calling=True,
-        quantization="4bit",
-        gpu_memory_gb=8.0,
-        priority=100,
-    ),
     "Qwen/Qwen3.5-9B": ModelSpec(
         model_path="Qwen/Qwen3.5-9B",
         capabilities=[
@@ -93,7 +84,7 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
         supports_function_calling=True,
         quantization="gguf",
         gpu_memory_gb=10.0,
-        priority=95,
+        priority=100,
     ),
     "openai/gpt-oss-20b": ModelSpec(
         model_path="openai/gpt-oss-20b",
@@ -164,7 +155,7 @@ MODEL_REGISTRY: Dict[str, ModelSpec] = {
 # Capability to Model Mapping
 # Maps capabilities to preferred models
 CAPABILITY_TO_MODEL: Dict[ModelCapability, str] = {
-    ModelCapability.PRIMARY_CONVERSATION: "Qwen/Qwen3-8B",
+    ModelCapability.PRIMARY_CONVERSATION: "Qwen/Qwen3.5-9B",
     ModelCapability.PROMPT_ENHANCEMENT: "Qwen/Qwen3.5-9B",
     ModelCapability.CODE_GENERATION: "openai/gpt-oss-20b",
     ModelCapability.CODE_EDITING: "openai/gpt-oss-20b",

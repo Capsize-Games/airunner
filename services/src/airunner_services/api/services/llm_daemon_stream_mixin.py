@@ -316,6 +316,8 @@ class LLMDaemonStreamMixin:
             request_id=request_id,
             tools=chunk.get("tools") or chunk.get("tool_calls"),
             is_system_message=bool(chunk.get("error", False)),
+            message_type=chunk.get("message_type"),
+            turn_index=int(chunk.get("turn_index", 0) or 0),
         )
         usage = chunk.get("usage") or {}
         response.prompt_tokens = usage.get("prompt_tokens")

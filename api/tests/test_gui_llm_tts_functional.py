@@ -62,7 +62,7 @@ from airunner.components.application.gui.windows.main.worker_manager import (
 )
 
 
-_MODEL_ID = "qwen3-8b"
+_MODEL_ID = "qwen3.5-9b"
 _PROMPT = "/no_think\nReply with exactly the single digit 7."
 _PROGRESSION_FIRST_REPLY = "marigold"
 _PROGRESSION_SECOND_REPLY = f"ack{_PROGRESSION_FIRST_REPLY}"

@@ -137,11 +137,16 @@ class ToolExecutionMixin:
                         f"now enforcing '{next_tool}'"
                     )
                     self._force_tool = next_tool
+                    self._tool_choice = {
+                        "type": "function",
+                        "function": {"name": next_tool},
+                    }
                 else:
                     self.logger.info(
                         f"Clearing force_tool '{self._force_tool}' after successful execution"
                     )
                     self._force_tool = None
+                    self._tool_choice = None
                 # Rebind tools with new constraint (or without if cleared)
                 if hasattr(self, "_bind_tools_to_model"):
                     self._bind_tools_to_model()

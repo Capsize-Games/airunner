@@ -20,23 +20,6 @@ LLM_FILE_BOOTSTRAP_DATA = {
     # NOTE: Meta Llama 3.1 8B removed - outdated compared to Qwen3/Ministral3
     # Meta does not have an 8B model comparable to current generation models
     # Llama 3.3 is 70B only (too large for most consumer GPUs)
-    "Qwen/Qwen3-8B-GGUF": {
-        "path_settings": "llm_causallm_model_path",
-        "context_length": 32768,
-        "native_context_length": 32768,
-        "yarn_max_context_length": 131072,
-        "capabilities": {
-            "function_calling": True,
-            "thinking_capable": True,  # Supports both modes via enable_thinking flag
-            "rag_capable": True,
-            "vision_capable": False,
-            "code_capable": True,
-            "is_embedding_model": False,
-        },
-        "files": {
-            "Qwen3-8B-Q4_K_M.gguf": 5027783488,
-        },
-    },
     "unsloth/Qwen3.5-9B-GGUF": {
         "path_settings": "llm_causallm_model_path",
         "context_length": 262144,

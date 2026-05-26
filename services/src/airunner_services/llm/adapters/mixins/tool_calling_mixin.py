@@ -264,12 +264,12 @@ class ToolCallingMixin:
             try:
                 # Try parsing the JSON inside the tags
                 json_str = match.strip()
-                data = json.loads(json_str)
+                data = self._normalize_tool_payload(json.loads(json_str))
 
                 # Handle both flat format and nested format
                 if isinstance(data, dict):
                     # Check if it's a direct tool call with "tool"/"name" key
-                    if "tool" in data or "name" in data:
+                    if self._is_tool_payload(data):
                         tool_calls.append(self._extract_tool_call(data))
 
             except json.JSONDecodeError as e:
@@ -307,9 +307,11 @@ class ToolCallingMixin:
             (tool_calls, cleaned_text) tuple or None if parsing failed
         """
         try:
-            data = json.loads(response_text.strip())
+            data = self._normalize_tool_payload(
+                json.loads(response_text.strip())
+            )
 
-            if isinstance(data, dict) and ("tool" in data or "name" in data):
+            if isinstance(data, dict) and self._is_tool_payload(data):
                 tool_calls = [self._extract_tool_call(data)]
                 return (tool_calls, "")
 
@@ -338,8 +340,10 @@ class ToolCallingMixin:
         try:
             import ast
 
-            data = ast.literal_eval(response_text.strip())
-            if isinstance(data, dict) and ("tool" in data or "name" in data):
+            data = self._normalize_tool_payload(
+                ast.literal_eval(response_text.strip())
+            )
+            if isinstance(data, dict) and self._is_tool_payload(data):
                 tool_calls = [self._extract_tool_call(data)]
                 return (tool_calls, "")
         except (ValueError, SyntaxError) as ast_error:
@@ -361,8 +365,9 @@ class ToolCallingMixin:
         Returns:
             Tool call dictionary
         """
-        tool_name = data.get("tool") or data.get("name")
-        tool_args = data.get("arguments", {})
+        normalized = self._normalize_tool_payload(data)
+        tool_name = normalized.get("tool") or normalized.get("name")
+        tool_args = normalized.get("arguments") or normalized.get("args") or {}
         
         # Generate a deterministic ID based on tool name and arguments
         # This ensures identical tool calls get the same ID for deduplication
@@ -378,6 +383,37 @@ class ToolCallingMixin:
             "id": tool_call_id,
         }
 
+    def _is_tool_payload(self, data: dict) -> bool:
+        """Return whether one normalized dictionary looks like a tool call."""
+        if not isinstance(data, dict):
+            return False
+        return bool(data.get("tool") or data.get("name"))
+
+    def _normalize_tool_payload(self, data):
+        """Normalize spaced keys and string values in parsed tool JSON."""
+        if isinstance(data, dict):
+            return {
+                str(key).strip(): self._normalize_tool_value(str(key), value)
+                for key, value in data.items()
+            }
+        if isinstance(data, list):
+            return [self._normalize_tool_payload(item) for item in data]
+        return data
+
+    def _normalize_tool_value(self, key: str, value):
+        """Normalize one tool payload value recursively."""
+        if isinstance(value, (dict, list)):
+            return self._normalize_tool_payload(value)
+        if not isinstance(value, str):
+            return value
+        cleaned = value.strip()
+        if key.strip() in {"tool", "name"}:
+            cleaned = re.sub(r"\s*_\s*", "_", cleaned)
+            return re.sub(r"\s+", "", cleaned)
+        if key.strip() == "code":
+            return re.sub(r"(?<=\d)\s+(?=\d)", "", cleaned)
+        return cleaned
+
     def _extract_tool_calls_from_list(self, data: list) -> List[dict]:
         """Extract tool calls from list of dictionaries.
 
@@ -389,8 +425,11 @@ class ToolCallingMixin:
         """
         tool_calls = []
         for item in data:
-            if isinstance(item, dict) and ("tool" in item or "name" in item):
-                tool_calls.append(self._extract_tool_call(item))
+            normalized = self._normalize_tool_payload(item)
+            if isinstance(normalized, dict) and self._is_tool_payload(
+                normalized
+            ):
+                tool_calls.append(self._extract_tool_call(normalized))
         return tool_calls
 
     def _try_parse_json_blocks(
@@ -410,8 +449,8 @@ class ToolCallingMixin:
         tool_calls = []
         for match in matches:
             try:
-                data = json.loads(match)
-                if "tool" in data or "name" in data:
+                data = self._normalize_tool_payload(json.loads(match))
+                if self._is_tool_payload(data):
                     tool_calls.append(self._extract_tool_call(data))
             except json.JSONDecodeError as e:
                 self.logger.error(f"Failed to parse JSON block: {e}")
@@ -436,7 +475,7 @@ class ToolCallingMixin:
         Returns:
             (tool_calls, cleaned_text) tuple or None if no JSON found
         """
-        json_pattern = r'\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*(?:"tool"|"name")(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}'
+        json_pattern = r'\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}'
 
         tool_calls = []
         cleaned_text = response_text
@@ -444,8 +483,8 @@ class ToolCallingMixin:
         for match in re.finditer(json_pattern, response_text, re.DOTALL):
             json_str = match.group(0)
             try:
-                data = json.loads(json_str)
-                if "tool" in data or "name" in data:
+                data = self._normalize_tool_payload(json.loads(json_str))
+                if self._is_tool_payload(data):
                     tool_calls.append(self._extract_tool_call(data))
                     self.logger.debug(
                         f"Parsed embedded JSON tool call: {tool_calls[-1]['name']}"

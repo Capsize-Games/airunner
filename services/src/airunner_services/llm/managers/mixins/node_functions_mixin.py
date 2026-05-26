@@ -579,14 +579,18 @@ Based on the search results above, provide a clear, conversational answer to the
 
         chat_model = self._chat_model
 
-        # Temporarily disable tools/JSON mode so the adapter does not buffer
+        # Temporarily disable tools/forced tool choice/JSON mode so the
+        # adapter can answer from tool results without another tool call.
         tools_backup = getattr(chat_model, "tools", None)
+        tool_choice_backup = getattr(chat_model, "tool_choice", None)
         mode_backup = getattr(chat_model, "tool_calling_mode", None)
         json_mode_backup = getattr(chat_model, "use_json_mode", None)
 
         try:
             if hasattr(chat_model, "tools"):
                 chat_model.tools = None
+            if hasattr(chat_model, "tool_choice"):
+                chat_model.tool_choice = None
             # Only try to set tool_calling_mode if it's not a read-only property
             try:
                 if hasattr(chat_model, "tool_calling_mode"):
@@ -606,6 +610,8 @@ Based on the search results above, provide a clear, conversational answer to the
         finally:
             if hasattr(chat_model, "tools"):
                 chat_model.tools = tools_backup
+            if hasattr(chat_model, "tool_choice"):
+                chat_model.tool_choice = tool_choice_backup
             # Only try to restore tool_calling_mode if it's not a read-only property
             try:
                 if hasattr(chat_model, "tool_calling_mode"):
@@ -746,6 +752,8 @@ Based on the search results above, provide a clear, conversational answer to the
         ):
             return "end"
 
+        force_tool = getattr(self, "_force_tool", None)
+
         # Check if any of the called tools need a response
         for tool_call in last_ai_msg.tool_calls:
             tool_name = tool_call.get("name", "")
@@ -757,6 +765,18 @@ Based on the search results above, provide a clear, conversational answer to the
             if self._should_return_tool_direct(tool_name):
                 self.logger.info(
                     f"[ROUTE DEBUG] Tool '{tool_name}' is return_direct - routing to force_response"
+                )
+                return "force_response"
+
+            if (
+                force_tool
+                and force_tool != "search_web"
+                and tool_name == force_tool
+            ):
+                self.logger.info(
+                    "[ROUTE DEBUG] Forced tool '%s' completed - routing to "
+                    "force_response",
+                    tool_name,
                 )
                 return "force_response"
             
@@ -1062,6 +1082,12 @@ Based on the search results above, provide a clear, conversational answer to the
 
         # Build prompt with tool instructions
         prompt = self._build_prompt(trimmed_messages)
+
+        self._assistant_turn_index = getattr(
+            self,
+            "_assistant_turn_index",
+            0,
+        ) + 1
 
         # Generate response
         response_message = self._generate_response(prompt, generation_kwargs)

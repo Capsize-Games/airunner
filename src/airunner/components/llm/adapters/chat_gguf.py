@@ -175,9 +175,7 @@ def _estimate_known_kv_cache_gb(
 ) -> Optional[float]:
     """Estimate KV-cache size for known shipped GGUF models."""
     filename = os.path.basename(str(model_path)).lower()
-    known_shapes = {
-        "qwen3-8b": (36, 8, 128, 128),
-    }
+    known_shapes = {}
 
     for marker, shape in known_shapes.items():
         if marker not in filename:
