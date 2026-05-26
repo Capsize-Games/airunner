@@ -22,20 +22,20 @@ from PySide6.QtWidgets import QWizard
 from airunner.components.data.bootstrap.model_bootstrap_data import (
     model_bootstrap_data,
 )
-from airunner_services.bootstrap.controlnet_bootstrap_data import (
+from airunner_model.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
-from airunner_services.bootstrap.sd_file_bootstrap_data import (
+from airunner_model.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner_services.bootstrap.openvoice_bootstrap_data import (
+from airunner_model.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
-from airunner_services.bootstrap.llm_file_bootstrap_data import (
+from airunner_model.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner_services.bootstrap.whisper import WHISPER_FILES
+from airunner_model.bootstrap.whisper import WHISPER_FILES
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader

@@ -52,7 +52,7 @@ Temporary fix for windows - Facehuggershield is not working correctly
 on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
-    from airunner_services.vendor.facehuggershield.huggingface import activate
+    from facehuggershield.huggingface import activate
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"
@@ -239,7 +239,7 @@ from airunner.components.application.api.api import API
 ###############################################################
 # Import Alembic modules to run migrations.
 ################################################################
-from services.src.airunner_services.setup_database import setup_database
+from airunner_model.setup_database import setup_database
 
 # These may be set by launcher.py for early splash screen
 _launcher_splash = None

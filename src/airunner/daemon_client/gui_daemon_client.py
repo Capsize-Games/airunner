@@ -15,8 +15,8 @@ from urllib.parse import urlencode
 import requests
 
 from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner_model.runtimes.daemon_config import DaemonConfig
 from airunner.enums import LLMActionType
-from airunner_services.daemon_config import DaemonConfig
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 

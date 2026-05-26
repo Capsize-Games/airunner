@@ -1,27 +1,16 @@
-"""Unified model file requirements for all AI Runner model types.
+"""Unified model file requirements for all AI Runner model types."""
 
-This module consolidates file requirements from:
-- Art models (SD, SDXL, Z-Image, ControlNet)
-- RMBG background-removal models
-- LLM models (Llama, Qwen, etc.)
-- STT models (Whisper)
-- TTS models (OpenVoice)
-"""
-
-from airunner.settings import AIRUNNER_ART_ENABLED
-
-# Import existing bootstrap data
-from airunner_services.bootstrap.sd_file_bootstrap_data import (
+from airunner_model.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner_services.bootstrap.rmbg_bootstrap_data import (
-    RMBG_FILES,
-)
-from airunner_services.bootstrap.llm_file_bootstrap_data import (
+from airunner_model.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
-from airunner_services.bootstrap.whisper import WHISPER_FILES
-from airunner_services.bootstrap.openvoice_bootstrap_data import (
+from airunner_model.bootstrap.rmbg_bootstrap_data import (
+    RMBG_FILES,
+)
+from airunner_model.bootstrap.whisper import WHISPER_FILES
+from airunner_model.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
 

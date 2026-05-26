@@ -18,7 +18,7 @@ from airunner.utils.application.ui_loader import (
     load_ui_from_string,
 )
 from airunner.utils.application.log_hygiene import summarize_text
-from services.src.airunner_services.setup_database import setup_database
+from airunner_model.setup_database import setup_database
 
 if TYPE_CHECKING:
     from airunner.components.art.api.art_services import ARTAPIService

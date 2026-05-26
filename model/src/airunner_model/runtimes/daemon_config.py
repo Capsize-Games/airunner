@@ -1,19 +1,20 @@
-"""Configuration model and persistence for daemon mode."""
+"""Shared configuration model and persistence for daemon runtimes."""
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+from typing import Optional
 
 import yaml
 
-from airunner_services.config.runtime_layout import (
+from airunner_model.runtimes.runtime_layout import (
     build_runtime_directory_layout,
 )
-from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.utils.application import get_logger
 
-logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
+logger = logging.getLogger(__name__)
 
 
 class DaemonConfig:
@@ -29,7 +30,7 @@ class DaemonConfig:
         layout = build_runtime_directory_layout()
         return layout.config_file("daemon")
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """Load configuration from file."""
         if not self.config_path.exists():
             return self._default_config()
@@ -46,7 +47,7 @@ class DaemonConfig:
             )
             return self._default_config()
 
-    def _default_config(self) -> Dict[str, Any]:
+    def _default_config(self) -> dict[str, Any]:
         """Get default configuration."""
         layout = build_runtime_directory_layout()
         return {
@@ -94,3 +95,6 @@ class DaemonConfig:
                 self.config_path,
                 exc,
             )
+
+
+__all__ = ["DaemonConfig"]

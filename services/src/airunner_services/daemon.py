@@ -37,6 +37,7 @@ _configure_daemon_environment()
 
 from logging.handlers import RotatingFileHandler
 
+from airunner_model.runtimes.daemon_config import DaemonConfig
 from airunner_services.api.server import APIServer
 from airunner_services.app import ServiceApp
 from airunner_services.model_management.model_resource_manager import (
@@ -44,8 +45,6 @@ from airunner_services.model_management.model_resource_manager import (
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-
-from airunner_services.daemon_config import DaemonConfig
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 App = ServiceApp

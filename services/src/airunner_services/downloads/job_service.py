@@ -28,8 +28,8 @@ from airunner_services.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
 from airunner_services.utils.job_tracker import JobState, JobStatus, JobTracker
-from airunner_services.utils.path_policy import normalize_local_path
 from airunner_services.utils.zip_utils import safe_extract_zip
+from airunner_model.runtimes.file_policy import normalize_local_path
 
 
 class DownloadJobService:

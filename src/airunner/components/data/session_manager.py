@@ -1,11 +1,11 @@
 import os
 
 from contextlib import contextmanager
-from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import pool
+from sqlalchemy.orm import scoped_session, sessionmaker
 
-from services.src.airunner_services.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
 from airunner_model.db.engine import create_configured_engine
+from airunner_model.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
 
 
 def _db_url() -> str:
@@ -99,7 +99,7 @@ def _ensure_tenant_ready(tenant: str) -> None:
     # connections (each Engine creates its own pool). NullPool ensures we open
     # only what we need for this one-off DDL/migration.
     from sqlalchemy import text
-    from services.src.airunner_services.setup_database import setup_database
+    from airunner_model.setup_database import setup_database
 
     # Create schema in the base DB (public search_path).
     base_engine = create_configured_engine(

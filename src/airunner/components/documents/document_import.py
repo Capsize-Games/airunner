@@ -10,13 +10,13 @@ from pathlib import Path
 from typing import Iterable
 
 from airunner_model.models.document import Document
-from airunner.utils.path_policy import (
+from airunner_model.runtimes.file_policy import (
     normalize_local_path,
     resolve_existing_file,
 )
 
 try:
-    from airunner_services.vendor.facehuggershield.darklock.restrict_os_access import (
+    from facehuggershield.darklock.restrict_os_access import (
         RestrictOSAccess,
     )
 except Exception:  # pragma: no cover - darklock may be unavailable in tests

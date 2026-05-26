@@ -134,7 +134,7 @@ def get_all_available_models() -> Dict[str, List[Dict]]:
     
     # Get TTS models from OpenVoice bootstrap
     try:
-        from airunner_services.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
+        from airunner_model.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
         for repo_id in OPENVOICE_FILES.keys():
             name = repo_id.split("/")[-1]
             models["tts"].append({
@@ -152,7 +152,7 @@ def get_all_available_models() -> Dict[str, List[Dict]]:
     
     # Get STT models from Whisper bootstrap
     try:
-        from airunner_services.bootstrap.whisper import WHISPER_FILES
+        from airunner_model.bootstrap.whisper import WHISPER_FILES
         for repo_id in WHISPER_FILES.keys():
             name = repo_id.split("/")[-1]
             models["stt"].append({

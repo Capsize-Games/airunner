@@ -11,7 +11,7 @@ import scrapy
 from typing import Callable, Optional, Set, Dict, List
 
 from airunner_services.tools.web_content_extractor import WebContentExtractor
-from airunner_services.tools.url_safety import SSRFBlocked, validate_url_for_fetch
+from airunner_model.url_safety import SSRFBlocked, validate_url_for_fetch
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 from airunner_services.utils.application.log_hygiene import fingerprint_value

@@ -29,7 +29,7 @@ from airunner_native.settings import AIRUNNER_BASE_PATH
 from airunner_native.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 from airunner_native.settings import AIRUNNER_LOG_LEVEL
 from airunner_native.settings import LOCAL_SERVER_HOST
-from airunner_services.setup_database import setup_database
+from airunner_model.setup_database import setup_database
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.logging_utils import (
     configure_noisy_loggers,
@@ -41,13 +41,11 @@ logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
 
 def _activate_facehugger_shield() -> None:
-    """Activate the service-owned Facehugger guard for desktop startup."""
+    """Activate the standalone Facehugger Shield package."""
     if AIRUNNER_DISABLE_FACEHUGGERSHIELD:
         return
 
-    from airunner_services.vendor.facehuggershield.huggingface import (
-        activate,
-    )
+    from facehuggershield.huggingface import activate
 
     activate(**_facehugger_activate_kwargs())
 

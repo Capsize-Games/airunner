@@ -14,10 +14,12 @@ from pathlib import Path
 from typing import Optional
 from enum import Enum
 
-from airunner.linux_bundle_layout import build_linux_bundle_layout
-from airunner.runtime_layout import build_runtime_directory_layout
-from airunner.settings import AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
+from airunner_model.runtimes.runtime_layout import (
+    build_runtime_directory_layout,
+)
+from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 

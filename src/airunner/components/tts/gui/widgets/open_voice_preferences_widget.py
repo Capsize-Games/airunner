@@ -9,12 +9,12 @@ from airunner.components.tts.gui.widgets.templates.open_voice_preferences_ui imp
     Ui_open_voice_preferences,
 )
 from airunner_model.models.openvoice_settings import OpenVoiceSettings
-from airunner.enums import AvailableLanguage, TTSModel
-from airunner.utils.path_policy import (
+from airunner_model.runtimes.file_policy import (
     PathPolicyError,
     normalize_local_path,
     resolve_existing_file,
 )
+from airunner.enums import AvailableLanguage, TTSModel
 
 
 _AUDIO_FILE_SUFFIXES = (".wav", ".mp3", ".ogg")

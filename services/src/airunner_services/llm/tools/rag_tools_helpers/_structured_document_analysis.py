@@ -7,14 +7,14 @@ from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any
 
-from airunner.components.llm.tools.rag_tools_helpers._document_splitting import (
+from airunner_services.llm.tools.rag_tools_helpers._document_splitting import (
     build_section_summary_units,
     select_evenly_spaced_items,
     split_document_paragraphs,
     split_document_sections,
     truncate_summary_evidence,
 )
-from airunner.components.llm.tools.rag_tools_helpers._shared import (
+from airunner_services.llm.tools.rag_tools_helpers._shared import (
     SUMMARY_EVIDENCE_LIMIT,
 )
 

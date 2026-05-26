@@ -1,6 +1,8 @@
-"""Service-owned bootstrap data for art model file requirements."""
+"""Shared bootstrap data for art model file requirements."""
 
-from airunner_services.settings import AIRUNNER_ART_ENABLED
+from __future__ import annotations
+
+from airunner_model.settings import AIRUNNER_ART_ENABLED
 
 
 SD_FILE_BOOTSTRAP_DATA = {

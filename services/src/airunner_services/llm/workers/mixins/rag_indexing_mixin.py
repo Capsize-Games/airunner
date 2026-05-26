@@ -5,11 +5,11 @@ import threading
 from typing import Dict, List
 
 from airunner_model.models.document import Document as DBDocument
-from airunner_services.utils.application.enum_resolver import signal_code_proxy
-from airunner_services.utils.path_policy import (
+from airunner_model.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
 )
+from airunner_services.utils.application.enum_resolver import signal_code_proxy
 
 
 _DOCUMENT_FILE_SUFFIXES = (

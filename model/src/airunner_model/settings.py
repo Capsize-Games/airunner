@@ -46,9 +46,24 @@ def get_log_level_from_env() -> int:
 
 AIRUNNER_LOG_LEVEL = get_log_level_from_env()
 
+AIRUNNER_ART_ENABLED = os.environ.get("AIRUNNER_ART_ENABLED", "1") == "1"
+
+AIRUNNER_DEFAULT_STT_HF_PATH = os.environ.get(
+    "AIRUNNER_DEFAULT_STT_HF_PATH",
+    "ggerganov/whisper.cpp",
+)
+
+AIRUNNER_DEFAULT_STT_MODEL_FILENAME = os.environ.get(
+    "AIRUNNER_DEFAULT_STT_MODEL_FILENAME",
+    "ggml-large-v3.bin",
+)
+
 
 __all__ = [
+    "AIRUNNER_ART_ENABLED",
     "AIRUNNER_BASE_PATH",
+    "AIRUNNER_DEFAULT_STT_HF_PATH",
+    "AIRUNNER_DEFAULT_STT_MODEL_FILENAME",
     "AIRUNNER_DB_URL",
     "AIRUNNER_LOG_LEVEL",
     "DEV_ENV",

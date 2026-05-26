@@ -5,11 +5,11 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-from airunner_services.contract_enums import Scheduler
-from airunner_services.contract_enums import SignalCode
-from airunner_services.bootstrap.controlnet_bootstrap_data import (
+from airunner_model.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
+from airunner_services.contract_enums import Scheduler
+from airunner_services.contract_enums import SignalCode
 from airunner_services.bootstrap.font_settings_bootstrap_data import (
     font_settings_bootstrap_data,
 )

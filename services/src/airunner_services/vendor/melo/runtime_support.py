@@ -3,8 +3,8 @@
 import os
 from typing import Optional
 
-from airunner.settings import AIRUNNER_BASE_PATH
-from airunner.utils.application.get_logger import get_logger
+from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_services.utils.application import get_logger
 
 
 def get_melo_logger():

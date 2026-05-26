@@ -1,5 +1,5 @@
 # punctuation = ["!", "?", "…", ",", ".", "'", "-"]
-from airunner.enums import AvailableLanguage
+from airunner_services.contract_enums import AvailableLanguage
 
 
 punctuation = ["!", "?", "…", ",", ".", "'", "-", "¿", "¡"]

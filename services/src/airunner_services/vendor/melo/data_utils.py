@@ -4,7 +4,7 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 from loguru import logger
-from airunner.enums import AvailableLanguage
+from airunner_services.contract_enums import AvailableLanguage
 from airunner_services.vendor.melo.mel_processing import (
     spectrogram_torch,
     mel_spectrogram_torch,

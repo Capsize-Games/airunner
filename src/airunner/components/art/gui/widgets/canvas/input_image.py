@@ -314,7 +314,7 @@ class InputImage(BaseWidget):
     def load_image(self, file_path: str):
         # Allow this explicit user action even when darklock is active.
         try:
-            from airunner_services.vendor.facehuggershield.darklock.restrict_os_access import (
+            from facehuggershield.darklock.restrict_os_access import (
                 RestrictOSAccess,
             )
 

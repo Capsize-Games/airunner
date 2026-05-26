@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 
 import requests
 
+from airunner_model.runtimes.daemon_config import DaemonConfig
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.daemon_connection_state import (
     DaemonConnectionState,
@@ -21,7 +22,6 @@ from airunner_services.daemon_connection_state import (
 from airunner_services.daemon_client.launcher import DaemonLauncher
 from airunner_services.dev_build_token import current_dev_build_token
 from airunner_services.contract_enums import LLMActionType
-from airunner_services.daemon_config import DaemonConfig
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 

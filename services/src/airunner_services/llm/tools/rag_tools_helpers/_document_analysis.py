@@ -4,25 +4,25 @@ from typing import Any
 
 from langchain_core.messages.utils import count_tokens_approximately
 
-from airunner.components.llm.tools.rag_tools_helpers._document_access import (
+from airunner_services.llm.tools.rag_tools_helpers._document_access import (
     get_active_document_entries,
     get_single_active_document_path,
 )
-from airunner.components.llm.tools.rag_tools_helpers._document_analysis_pipeline import (
+from airunner_services.llm.tools.rag_tools_helpers._document_analysis_pipeline import (
     build_chunk_analyses,
     build_refined_document_synthesis,
     format_chunk_analyses,
     select_document_analysis_chunks,
 )
-from airunner.components.llm.tools.rag_tools_helpers._result_formatting import (
+from airunner_services.llm.tools.rag_tools_helpers._result_formatting import (
     document_label,
     format_summary_evidence_results,
 )
-from airunner.components.llm.tools.rag_tools_helpers._structured_document_analysis import (
+from airunner_services.llm.tools.rag_tools_helpers._structured_document_analysis import (
     build_structured_document_analysis,
     request_structured_document_analysis_builder,
 )
-from airunner.components.llm.tools.rag_tools_helpers._summary_evidence import (
+from airunner_services.llm.tools.rag_tools_helpers._summary_evidence import (
     build_summary_evidence_documents,
     request_document_summary_focus,
 )

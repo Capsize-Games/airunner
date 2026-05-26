@@ -2892,19 +2892,6 @@ class MainWindow(
             return daemon_status
         # Local LLM worker removed; daemon handles all LLM state
         return daemon_status
-        status_getter = getattr(worker, "current_model_status", None)
-        if not callable(status_getter):
-            return daemon_status
-        local_status = status_getter()
-        if local_status in (
-            ModelStatus.LOADED,
-            ModelStatus.LOADING,
-            ModelStatus.FAILED,
-        ):
-            return local_status
-        if daemon_status == ModelStatus.FAILED:
-            return ModelStatus.UNLOADED
-        return daemon_status
 
     def _normalize_direct_llm_status(
         self,
@@ -2914,18 +2901,6 @@ class MainWindow(
         if status is not ModelStatus.FAILED:
             return status
         # Local LLM worker removed; daemon handles all LLM state
-        return status
-        status_getter = getattr(worker, "current_model_status", None)
-        if not callable(status_getter):
-            return status
-        local_status = status_getter()
-        if local_status in (ModelStatus.LOADING, ModelStatus.LOADED):
-            return local_status
-        if local_status in (None, ModelStatus.UNLOADED) and (
-            self._model_status.get(ModelType.LLM)
-            in (ModelStatus.LOADING, ModelStatus.LOADED)
-        ):
-            return self._model_status[ModelType.LLM]
         return status
 
     @staticmethod

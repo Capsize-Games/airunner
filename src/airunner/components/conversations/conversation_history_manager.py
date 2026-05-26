@@ -3,6 +3,9 @@
 from typing import Any, Dict, List, Optional
 
 from airunner_model.models.conversation import Conversation
+from airunner_model.conversation_history_formatter import (
+    load_formatted_conversation_history,
+)
 from airunner.components.llm.utils.thinking_parser import (
     normalize_thinking_content,
     strip_stored_thinking_prefix,
@@ -29,27 +32,6 @@ class ConversationHistoryManager:
     def __init__(self) -> None:
         """Initializes the ConversationHistoryManager."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-
-    def _extract_query_from_tool_call(self, tool_call: Dict[str, Any]) -> str:
-        """Extract a user-friendly query string from a tool call.
-
-        Args:
-            tool_call: Tool call dictionary with 'args' field
-
-        Returns:
-            Query string for display
-        """
-        args = tool_call.get("args", {})
-        if isinstance(args, dict):
-            # Try common query field names
-            for key in ("query", "search_query", "prompt", "input", "question"):
-                if key in args:
-                    return str(args[key])
-            # Fallback: return first string value
-            for value in args.values():
-                if isinstance(value, str) and value:
-                    return value
-        return ""
 
     def get_current_conversation(self) -> Optional[Conversation]:
         """Fetches the current conversation.
@@ -109,6 +91,7 @@ class ConversationHistoryManager:
         conversation_id: Optional[int] = None,
         max_messages: int = 50,
     ) -> List[Dict[str, Any]]:
+        """Load and format one conversation history for GUI consumers."""
         if conversation is None and conversation_id is not None:
             conversation = Conversation.objects.filter_by_first(
                 id=conversation_id
@@ -128,250 +111,15 @@ class ConversationHistoryManager:
                     "No conversation found. Returning empty history."
                 )
                 return []
-
-        self.logger.debug(
-            f"Loading conversation history for ID: {getattr(conversation, 'id', None)} (max: {max_messages})"
+        return load_formatted_conversation_history(
+            logger=self.logger,
+            conversation=conversation,
+            max_messages=max_messages,
+            normalize_thinking_content=normalize_thinking_content,
+            strip_stored_thinking_prefix=strip_stored_thinking_prefix,
+            has_gpt_oss_markup=has_gpt_oss_markup,
+            parse_gpt_oss_response=parse_gpt_oss_response,
+            skip_message=is_internal_stage_message_dict,
+            include_tool_status_metadata=True,
+            include_thinking_metadata=True,
         )
-        conversation_id = getattr(conversation, "id", None)
-        try:
-            raw_messages = getattr(conversation, "value", None)
-            if not isinstance(raw_messages, list):
-                self.logger.warning(
-                    f"Conversation {conversation_id} has invalid message data (not a list): {type(raw_messages)}"
-                )
-                return []
-            if not raw_messages:
-                self.logger.debug(
-                    f"Conversation {conversation_id} is empty."
-                )
-                return []
-
-            # Apply max_messages limit
-            if len(raw_messages) > max_messages:
-                raw_messages = raw_messages[-max_messages:]
-
-            # Track URLs from tool results for citation
-            pending_citations: List[str] = []
-            
-            # Track tool calls to attach to subsequent assistant message
-            pending_tool_usage: List[Dict[str, Any]] = []
-            # Track tool results to get details (domains, etc.)
-            pending_tool_results: Dict[str, str] = {}  # tool_call_id -> details
-            # Track pre-tool thinking content to attach to assistant message
-            pending_pre_tool_thinking: Optional[str] = None
-
-            formatted_messages: List[Dict[str, Any]] = []
-            for msg_idx, msg_obj in enumerate(raw_messages):
-                if not isinstance(msg_obj, dict):
-                    self.logger.warning(
-                        f"Skipping invalid message object (not a dict) in conversation {conversation_id}: {msg_obj}"
-                    )
-                    continue
-                if is_internal_stage_message_dict(msg_obj):
-                    self.logger.debug(
-                        "Skipping internal-stage assistant row in conversation %s",
-                        conversation_id,
-                    )
-                    continue
-
-                # Collect tool call metadata to attach to next assistant message
-                if msg_obj.get("metadata_type") == "tool_calls":
-                    tool_calls = msg_obj.get("tool_calls", [])
-                    tool_status_metadata = msg_obj.get("tool_status_metadata")
-                    for tc in tool_calls:
-                        pending_tool_usage.append({
-                            "tool_id": tc.get("id", ""),
-                            "tool_name": tc.get("name", "unknown"),
-                            "query": self._extract_query_from_tool_call(tc),
-                            "details": None,  # Will be filled from tool_result
-                            "metadata": (
-                                tool_status_metadata
-                                if isinstance(tool_status_metadata, dict)
-                                else None
-                            ),
-                        })
-                    # Also capture pre-tool thinking content
-                    pending_pre_tool_thinking = normalize_thinking_content(
-                        msg_obj.get("thinking_content")
-                    )
-                    if pending_pre_tool_thinking:
-                        self.logger.debug(
-                            f"Captured pre-tool thinking: {len(pending_pre_tool_thinking)} chars"
-                        )
-                    self.logger.debug(
-                        f"Collected {len(tool_calls)} tool calls for next assistant message"
-                    )
-                    continue
-
-                # Process tool_result to extract details (domains) for display
-                if msg_obj.get("metadata_type") == "tool_result":
-                    content_text = msg_obj.get("content", "")
-                    tool_call_id = msg_obj.get("tool_call_id", "")
-                    
-                    # Extract URLs using regex (matches http:// and https://)
-                    import re
-                    urls = re.findall(
-                        r'https?://[^\s<>"{}|\\^`\[\]]+', content_text
-                    )
-                    pending_citations.extend(urls)
-                    
-                    # Extract domain names for tool details
-                    if urls:
-                        domains = [url.split("/")[2] for url in urls[:3]]  # Top 3 domains
-                        details = ", ".join(domains)
-                        # Store details keyed by tool_call_id
-                        if tool_call_id:
-                            pending_tool_results[tool_call_id] = details
-                        # Also update any pending tool_usage entries
-                        for tu in pending_tool_usage:
-                            if tu.get("tool_id") == tool_call_id:
-                                tu["details"] = details
-                    
-                    self.logger.debug(
-                        f"Processed tool result: {tool_call_id}, details: {pending_tool_results.get(tool_call_id)}"
-                    )
-                    continue
-
-                # Skip tool_calls metadata (already processed above)
-                if msg_obj.get("metadata_type") == "tool_calls":
-                    continue
-
-                # Also skip by role for backward compatibility
-                role = msg_obj.get("role")
-                if role in ("tool_calls", "tool_result"):
-                    self.logger.debug(
-                        f"Skipping tool call message with role: {role}"
-                    )
-                    continue
-
-                is_bot = role == "assistant"
-                post_tool_thinking = normalize_thinking_content(
-                    msg_obj.get("thinking_content")
-                )
-
-                # Name extraction logic: prefer message-level, then conversation-level, then default
-                if is_bot:
-                    name = (
-                        msg_obj.get("bot_name")
-                        or getattr(conversation, "chatbot_name", None)
-                        or "Bot"
-                    )
-                else:
-                    name = (
-                        msg_obj.get("user_name")
-                        or getattr(conversation, "user_name", None)
-                        or "User"
-                    )
-
-                # Content extraction logic
-                content = msg_obj.get("content")
-                if content is None:
-                    # Try to extract from blocks if present
-                    blocks = msg_obj.get("blocks")
-                    if isinstance(blocks, list) and blocks:
-                        for block in blocks:
-                            if isinstance(block, dict) and "text" in block:
-                                content = block["text"]
-                                self.logger.debug(
-                                    f"Extracted content from blocks: {content[:50]}..."
-                                )
-                                break
-                        if content is None:
-                            content = ""
-                            self.logger.warning(
-                                f"No text found in blocks for message {msg_idx}"
-                            )
-                    else:
-                        content = ""
-                        self.logger.warning(
-                            f"No blocks found for message {msg_idx}"
-                        )
-                else:
-                    self.logger.debug(
-                        f"Content found directly in message {msg_idx}: {content[:50]}..."
-                    )
-
-                if is_bot:
-                    if has_gpt_oss_markup(content):
-                        parsed = parse_gpt_oss_response(content)
-                        content = parsed.content or content
-                        parsed_thinking = normalize_thinking_content(
-                            parsed.thinking_content
-                        )
-                        if parsed_thinking and not post_tool_thinking:
-                            post_tool_thinking = parsed_thinking
-                    content = strip_stored_thinking_prefix(
-                        content,
-                        post_tool_thinking,
-                    )
-
-                formatted_msg = {
-                    "name": name,
-                    "content": content,
-                    "is_bot": is_bot,
-                    "id": msg_idx,  # Simple index within this loaded history
-                }
-                
-                # Include thinking content for assistant messages
-                # Pre-tool thinking goes in pre_tool_thinking, post-tool in thinking_content
-                if is_bot:
-                    if pending_pre_tool_thinking:
-                        # Pre-tool thinking always goes in pre_tool_thinking field
-                        formatted_msg["pre_tool_thinking"] = pending_pre_tool_thinking
-                        pending_pre_tool_thinking = None
-                    if post_tool_thinking:
-                        # Post-tool thinking goes in thinking_content field
-                        formatted_msg["thinking_content"] = post_tool_thinking
-                    if isinstance(msg_obj.get("thinking_metadata"), dict):
-                        formatted_msg["thinking_metadata"] = msg_obj.get(
-                            "thinking_metadata"
-                        )
-                
-                # Include tool usage for assistant messages if we have pending tool calls
-                if is_bot and pending_tool_usage:
-                    formatted_msg["tool_usage"] = pending_tool_usage.copy()
-                    pending_tool_usage.clear()
-
-                # Clear pending citations without appending them
-                # (sources are shown in tool status details instead)
-                if is_bot and pending_citations:
-                    pending_citations.clear()
-
-                # Pass through mood/emoji fields if present
-                for key in ("bot_mood", "bot_mood_emoji", "user_mood"):
-                    if key in msg_obj:
-                        formatted_msg[key] = msg_obj[key]
-                formatted_messages.append(formatted_msg)
-            
-            # If there are pending tool calls or thinking that weren't attached to an assistant message
-            # (conversation was interrupted), create a synthetic assistant message to display them
-            if pending_tool_usage or pending_pre_tool_thinking:
-                self.logger.info(
-                    f"Creating synthetic assistant message for pending tool data: "
-                    f"{len(pending_tool_usage)} tools, "
-                    f"thinking={pending_pre_tool_thinking is not None}"
-                )
-                synthetic_msg = {
-                    "name": getattr(conversation, "chatbot_name", None) or "Bot",
-                    "content": "",  # Empty content - just showing widgets
-                    "is_bot": True,
-                    "id": len(formatted_messages),
-                }
-                if pending_pre_tool_thinking:
-                    # Use pre_tool_thinking so it renders BEFORE tool widgets
-                    synthetic_msg["pre_tool_thinking"] = pending_pre_tool_thinking
-                if pending_tool_usage:
-                    synthetic_msg["tool_usage"] = pending_tool_usage.copy()
-                formatted_messages.append(synthetic_msg)
-            
-            self.logger.info(
-                f"Successfully loaded {len(formatted_messages)} messages for conversation ID: {conversation_id}"
-            )
-            return formatted_messages
-
-        except Exception as e:
-            self.logger.error(
-                f"Error loading conversation history for ID {conversation_id}: {e}",
-                exc_info=True,
-            )
-            return []

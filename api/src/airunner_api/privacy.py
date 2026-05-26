@@ -6,12 +6,12 @@ from typing import Any
 
 
 def activate(*args: Any, **kwargs: Any) -> Any:
-    """Activate the Facehugger Shield helper via the service vendor shim."""
-    from airunner_services.vendor.facehuggershield.huggingface import (
-        activate as service_activate,
+    """Activate the standalone Facehugger Shield helper."""
+    from facehuggershield.huggingface import (
+        activate as shield_activate,
     )
 
-    return service_activate(*args, **kwargs)
+    return shield_activate(*args, **kwargs)
 
 
 __all__ = ["activate"]

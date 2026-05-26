@@ -1,7 +1,7 @@
 import copy
 from importlib import import_module
 
-from airunner.enums import AvailableLanguage
+from airunner_services.contract_enums import AvailableLanguage
 from airunner_services.vendor.melo.text import cleaned_text_to_sequence
 
 

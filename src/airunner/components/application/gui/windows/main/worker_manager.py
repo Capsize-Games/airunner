@@ -46,17 +46,13 @@ from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
 from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
     OpenVoiceLanguageDialog,
 )
-from airunner_services.bootstrap.openvoice_languages import (
+from airunner_model.bootstrap.openvoice_languages import (
     OPENVOICE_LANGUAGE_MODELS,
-)
-
-from airunner_services.workers.llm_generate_worker import (
-    LLMGenerateWorker,
 )
 from airunner.components.tts.workers.tts_vocalizer_worker import (
     TTSVocalizerWorker,
 )
-from airunner_services.workers.tts_generator_worker import (
+from airunner.components.tts.workers.tts_generator_worker import (
     TTSGeneratorWorker,
 )
 from airunner.components.stt.workers.audio_capture_worker import (
@@ -132,7 +128,6 @@ class WorkerManager(Worker):
         self._stt_audio_capture_worker = None
         # STT transcription now via daemon; local processor worker removed
         self._tts_generator_worker = None
-        self._llm_generate_worker = None
         self._tts_vocalizer_worker = None
         self._document_worker = None
         self._huggingface_download_worker = None
@@ -281,12 +276,6 @@ class WorkerManager(Worker):
                 sleep_time_in_ms=_STREAM_TTS_WORKER_SLEEP_MS,
             )
         return self._tts_vocalizer_worker
-
-    @property
-    def llm_generate_worker(self):
-        if self._llm_generate_worker is None:
-            self._llm_generate_worker = create_worker(LLMGenerateWorker)
-        return self._llm_generate_worker
 
     @property
     def document_worker(self):
@@ -626,37 +615,6 @@ class WorkerManager(Worker):
         except Exception:
             return None
 
-    def _llm_worker_for_unload(self, *, create: bool = False):
-        """Local LLM worker removed; daemon handles all LLM state."""
-        return None
-
-    def _local_llm_should_handle_unload(self) -> bool:
-        """Local LLM worker removed; daemon handles all LLM state."""
-        return False
-
-        worker = self._llm_worker_for_unload(create=False)
-        if worker is None:
-            return False
-        if not callable(
-            getattr(worker, "llm_on_interrupt_process_signal", None)
-        ):
-            return False
-        if not callable(getattr(worker, "add_to_queue", None)):
-            return False
-
-        status_getter = getattr(worker, "current_model_status", None)
-        if callable(status_getter):
-            try:
-                status = status_getter()
-            except Exception:
-                status = None
-            if status in (ModelStatus.LOADING, ModelStatus.LOADED):
-                return True
-
-        if getattr(worker, "_pending_llm_request", None) is not None:
-            return True
-        return False
-
     def _is_optional_runtime_unload(self, action: str, model_type) -> bool:
         """Return True for best-effort TTS/STT unload requests."""
 
@@ -745,30 +703,15 @@ class WorkerManager(Worker):
         message: str,
     ) -> bool:
         """Emit the right terminal status after one daemon action fails."""
-        local_status = self._preferred_local_llm_status_for_failure(
-            action,
-            runtime_name,
-            model_type,
-        )
-        if local_status is not None:
-            if self.logger:
-                self.logger.debug(
-                    "%s; keeping local LLM status=%s",
-                    message,
-                    local_status.value,
-                )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                {"model": model_type, "status": local_status},
-            )
-            return True
-
         if self.logger:
             if self._is_optional_runtime_unload(action, model_type):
                 self.logger.debug(message)
             else:
                 self.logger.warning(message)
         status = ModelStatus.FAILED
+        if runtime_name == "llm" and model_type is ModelType.LLM:
+            if action == "load":
+                status = ModelStatus.UNLOADED
         if self._is_optional_runtime_unload(action, model_type):
             status = ModelStatus.UNLOADED
         self.emit_signal(
@@ -776,47 +719,6 @@ class WorkerManager(Worker):
             {"model": model_type, "status": status},
         )
         return True
-
-    def _preferred_local_llm_status_for_failure(
-        self,
-        action: str,
-        runtime_name: str,
-        model_type,
-    ):
-        """Return one local LLM status that should override daemon failure."""
-        if runtime_name != "llm" or model_type is not ModelType.LLM:
-            return None
-
-        # Local LLM worker removed; daemon handles all LLM state
-        if True:
-            if action == "load":
-                return ModelStatus.UNLOADED
-            return None
-
-        current_model_status = getattr(worker, "current_model_status", None)
-        if not callable(current_model_status):
-            return None
-
-        try:
-            status = current_model_status()
-        except Exception:
-            return None
-
-        if action == "load" and status in (
-            ModelStatus.LOADING,
-            ModelStatus.LOADED,
-            ModelStatus.UNLOADED,
-            ModelStatus.FAILED,
-        ):
-            return status
-
-        if action == "unload" and status in (
-            ModelStatus.LOADED,
-            ModelStatus.UNLOADED,
-        ):
-            return status
-
-        return None
 
     def _revert_optional_runtime_load(
         self,
@@ -1155,17 +1057,8 @@ class WorkerManager(Worker):
 
     def _interrupt_active_daemon_art_job(self, data: Dict) -> bool:
         """Local SD worker removed; daemon handles all art state."""
+        del data
         return False
-        if callable(request_unload):
-            if not request_unload():
-                return False
-        elif not getattr(worker, "_active_daemon_job_id", None):
-            return False
-        else:
-            worker._pending_daemon_unload_after_cancel = True
-
-        worker.on_interrupt_image_generation_signal(data)
-        return True
 
     def on_unload_art_signal(self, data: Dict):
         data = data or {}
@@ -1442,32 +1335,8 @@ class WorkerManager(Worker):
     def on_llm_on_unload_signal(self, data):
         data = data or {}
 
-        if self._local_llm_should_handle_unload():
-            worker = self._llm_worker_for_unload(create=False)
-            if worker is None:
-                return
-            worker.llm_on_interrupt_process_signal(data)
-            worker.add_to_queue(
-                {
-                    "_message_type": "llm_unload",
-                    "data": data,
-                }
-            )
-            return
-
         if self._unload_daemon_llm_async():
             return
-        worker = self._llm_worker_for_unload(create=True)
-        if worker is None:
-            return
-
-        worker.llm_on_interrupt_process_signal(data)
-        worker.add_to_queue(
-            {
-                "_message_type": "llm_unload",
-                "data": data,
-            }
-        )
 
     def on_llm_load_model_signal(self, data):
         if self._control_daemon_runtime("llm", "load", ModelType.LLM):
@@ -1664,8 +1533,6 @@ class WorkerManager(Worker):
         # LLM interrupt now handled exclusively by the daemon
 
         if self._tts_generator_worker is not None:
-            print("*"*100)
-            print("queue tts worker message in interrupt")
             self._queue_tts_worker_message(
                 self.tts_generator_worker,
                 {
@@ -1682,8 +1549,6 @@ class WorkerManager(Worker):
         callback_handled = False
 
         if self._tts_generator_worker is not None:
-            print("*"*100)
-            print("queue tts worker message in unblock")
             self._queue_tts_worker_message(
                 self.tts_generator_worker,
                 {
@@ -1724,8 +1589,6 @@ class WorkerManager(Worker):
 
     def _stop_tts_activity_immediately(self) -> None:
         """Stop queued TTS playback before daemon unload completes."""
-        print("*"*100)
-        print("getting tts workers to stop activity immediately")
         generator = getattr(self, "_tts_generator_worker", None)
         if generator is not None:
             self._queue_tts_worker_message(

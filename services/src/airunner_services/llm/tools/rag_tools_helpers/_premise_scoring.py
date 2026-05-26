@@ -4,11 +4,11 @@ import re
 from types import SimpleNamespace
 from typing import Any
 
-from airunner.components.llm.tools.rag_tools_helpers._document_splitting import (
+from airunner_services.llm.tools.rag_tools_helpers._document_splitting import (
     split_document_paragraphs,
     truncate_summary_evidence,
 )
-from airunner.components.llm.tools.rag_tools_helpers._shared import (
+from airunner_services.llm.tools.rag_tools_helpers._shared import (
     SUMMARY_EVIDENCE_LIMIT,
 )
 

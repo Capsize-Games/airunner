@@ -34,7 +34,6 @@ from airunner_model.models.document import Document
 from airunner.components.documents.document_import import (
     chat_image_suffixes,
     import_document_to_library,
-    is_chat_image_path,
     is_rag_document_path,
     rag_document_suffixes,
 )
@@ -66,7 +65,10 @@ from airunner.settings import (
     SLASH_COMMANDS,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.utils.path_policy import PathPolicyError, resolve_existing_file
+from airunner_model.runtimes.file_policy import (
+    PathPolicyError,
+    resolve_existing_file,
+)
 from airunner.utils.image import convert_binary_to_image
 
 

@@ -1,13 +1,22 @@
+"""Shared bootstrap defaults for application path settings."""
+
+from __future__ import annotations
+
 import os
-from airunner.settings import AIRUNNER_ART_ENABLED
+
+from airunner_model.settings import AIRUNNER_ART_ENABLED
 
 
 PATH_SETTINGS_DATA = {
     "documents_path": os.path.expanduser(
         os.path.join("text", "other", "documents")
     ),
-    "ebook_path": os.path.expanduser(os.path.join("text", "other", "ebooks")),
-    "rag_index_path": os.path.expanduser(os.path.join("text", "rag", "db")),
+    "ebook_path": os.path.expanduser(
+        os.path.join("text", "other", "ebooks")
+    ),
+    "rag_index_path": os.path.expanduser(
+        os.path.join("text", "rag", "db")
+    ),
     "webpages_path": os.path.expanduser(
         os.path.join("text", "other", "webpages")
     ),
@@ -24,3 +33,6 @@ if AIRUNNER_ART_ENABLED:
     PATH_SETTINGS_DATA["image_path"] = os.path.expanduser(
         os.path.join("art", "other", "images")
     )
+
+
+__all__ = ["PATH_SETTINGS_DATA"]

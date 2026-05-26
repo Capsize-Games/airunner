@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-from airunner.components.llm.tools.rag_tools_helpers._shared import (
+from airunner_services.llm.tools.rag_tools_helpers._shared import (
     SUPPORTED_DOCUMENT_EXTENSIONS,
 )
 

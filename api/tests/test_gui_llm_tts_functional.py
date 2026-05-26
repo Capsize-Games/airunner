@@ -53,7 +53,7 @@ from airunner_model.models.openvoice_settings import OpenVoiceSettings
 from airunner_model.models.path_settings import PathSettings
 from airunner_model.models.voice_settings import VoiceSettings
 from airunner_model.session import reset_engine
-from airunner_services.setup_database import setup_database
+from airunner_model.setup_database import setup_database
 from airunner_services.workers.tts_generator_worker import (
     TTSGeneratorWorker,
 )

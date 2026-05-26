@@ -9,6 +9,11 @@ from setuptools import find_packages
 
 
 VERSION = "6.0.0"
+FACEHUGGERSHIELD_REQUIREMENT = (
+    "facehuggershield @ "
+    "https://github.com/Capsize-Games/facehuggershield/"
+    "archive/refs/tags/v1.0.0.tar.gz"
+)
 
 README = (
     Path(__file__).resolve().parents[1] / "README.md"
@@ -320,6 +325,7 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
     install_requires = [
         f"airunner-model=={VERSION}",
         f"airunner-api=={VERSION}",
+        FACEHUGGERSHIELD_REQUIREMENT,
         *CORE_REQUIREMENTS,
     ]
     return {

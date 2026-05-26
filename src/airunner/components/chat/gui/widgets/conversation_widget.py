@@ -812,6 +812,7 @@ class ConversationWidget(BaseWidget):
         mood_emoji: str = None,
         user_mood: str = None,
     ):
+        del first_message
         message = strip_names_from_message(
             message,
             self.user.username,

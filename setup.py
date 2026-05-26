@@ -5,11 +5,17 @@ from setuptools import find_packages, setup
 README = Path("README.md").read_text(encoding="utf-8")
 
 VERSION = "6.0.0"
+FACEHUGGERSHIELD_REQUIREMENT = (
+    "facehuggershield @ "
+    "https://github.com/Capsize-Games/facehuggershield/"
+    "archive/refs/tags/v1.0.0.tar.gz"
+)
 
 GUI_REQUIREMENTS = [
     "PySide6==6.9.0",
     "PySide6_Addons==6.9.0",
     "PySide6_Essentials==6.9.0",
+    FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
 

@@ -1,9 +1,8 @@
-"""OpenVoice language configuration and model requirements.
+"""OpenVoice language configuration and model requirements."""
 
-This module defines the models required for each language supported by OpenVoice.
-"""
+from __future__ import annotations
 
-# Core models required for all languages (English is the base)
+
 OPENVOICE_CORE_MODELS = [
     "google-bert/bert-base-multilingual-uncased",
     "google-bert/bert-base-uncased",
@@ -11,7 +10,6 @@ OPENVOICE_CORE_MODELS = [
     "myshell-ai/MeloTTS-English-v3",
 ]
 
-# Language-specific models
 OPENVOICE_LANGUAGE_MODELS = {
     "French": {
         "display_name": "French",
@@ -51,19 +49,19 @@ OPENVOICE_LANGUAGE_MODELS = {
 }
 
 
-def get_models_for_languages(selected_languages: list) -> list:
-    """Get all models required for the selected languages.
-    
-    Args:
-        selected_languages: List of language keys (e.g., ["French", "Spanish"])
-        
-    Returns:
-        List of model IDs to download
-    """
-    models = list(OPENVOICE_CORE_MODELS)  # Always include core models
-    
-    for lang in selected_languages:
-        if lang in OPENVOICE_LANGUAGE_MODELS:
-            models.extend(OPENVOICE_LANGUAGE_MODELS[lang]["models"])
-    
+def get_models_for_languages(selected_languages: list[str]) -> list[str]:
+    """Return the model ids required for the selected languages."""
+    models = list(OPENVOICE_CORE_MODELS)
+
+    for language in selected_languages:
+        if language in OPENVOICE_LANGUAGE_MODELS:
+            models.extend(OPENVOICE_LANGUAGE_MODELS[language]["models"])
+
     return models
+
+
+__all__ = [
+    "OPENVOICE_CORE_MODELS",
+    "OPENVOICE_LANGUAGE_MODELS",
+    "get_models_for_languages",
+]

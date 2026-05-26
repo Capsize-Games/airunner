@@ -1,3 +1,8 @@
+"""Shared bootstrap defaults for eSpeak preferences."""
+
+from __future__ import annotations
+
+
 ESPEAK_SETTINGS_DATA = {
     "voices": {
         "Male": [
@@ -16,3 +21,6 @@ ESPEAK_SETTINGS_DATA = {
     "volume": {"min": 0, "max": 100, "default": 100},
     "punctuation_modes": ["none", "all", "some"],
 }
+
+
+__all__ = ["ESPEAK_SETTINGS_DATA"]

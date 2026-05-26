@@ -39,6 +39,7 @@ for path in (
 from airunner_model.models.application_settings import ApplicationSettings
 from airunner_model.models.generator_settings import GeneratorSettings
 from airunner_model.models.path_settings import PathSettings
+from airunner_model.setup_database import setup_database
 from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
     get_active_zimage_load_mode,
     get_missing_files_for_mode,
@@ -55,7 +56,6 @@ from airunner_services.runtimes.contracts import (
     RuntimeKind,
 )
 from airunner_services.runtimes.local_fallback import LocalFallbackArtClient
-from airunner_services.setup_database import setup_database
 
 
 def _emit_result(status: str, **payload: object) -> None:

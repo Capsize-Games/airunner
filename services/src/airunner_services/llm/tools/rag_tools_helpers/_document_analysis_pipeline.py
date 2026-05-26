@@ -2,7 +2,7 @@
 
 import re
 
-from airunner.components.llm.tools.rag_tools_helpers._document_splitting import (
+from airunner_services.llm.tools.rag_tools_helpers._document_splitting import (
     select_evenly_spaced_items,
     split_document_paragraphs,
     split_document_sections,

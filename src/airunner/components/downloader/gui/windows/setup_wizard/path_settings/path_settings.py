@@ -2,7 +2,7 @@ import os
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Slot
 
-from airunner_services.bootstrap.path_settings_data import (
+from airunner_model.bootstrap.path_settings_data import (
     PATH_SETTINGS_DATA,
 )
 from airunner.components.downloader.gui.windows.setup_wizard.base_wizard import (

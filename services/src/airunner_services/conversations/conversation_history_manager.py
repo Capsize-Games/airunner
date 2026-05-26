@@ -2,6 +2,9 @@
 
 from typing import Any, Dict, List, Optional
 
+from airunner_model.conversation_history_formatter import (
+    load_formatted_conversation_history,
+)
 from airunner_services.llm.gpt_oss_parser import (
     has_gpt_oss_markup,
     parse_gpt_oss_response,
@@ -21,24 +24,6 @@ class ConversationHistoryManager:
     def __init__(self) -> None:
         """Initialize one conversation history manager."""
         self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-
-    def _extract_query_from_tool_call(self, tool_call: Dict[str, Any]) -> str:
-        """Extract a user-friendly query string from one tool call."""
-        args = tool_call.get("args", {})
-        if isinstance(args, dict):
-            for key in (
-                "query",
-                "search_query",
-                "prompt",
-                "input",
-                "question",
-            ):
-                if key in args:
-                    return str(args[key])
-            for value in args.values():
-                if isinstance(value, str) and value:
-                    return value
-        return ""
 
     def get_current_conversation(self) -> Optional[Conversation]:
         """Fetch the current conversation if one exists."""
@@ -253,234 +238,12 @@ class ConversationHistoryManager:
                     "No conversation found. Returning empty history."
                 )
                 return []
-
-        self.logger.debug(
-            "Loading conversation history for ID: %s (max: %s)",
-            getattr(conversation, "id", None),
-            max_messages,
+        return load_formatted_conversation_history(
+            logger=self.logger,
+            conversation=conversation,
+            max_messages=max_messages,
+            normalize_thinking_content=normalize_thinking_content,
+            strip_stored_thinking_prefix=strip_stored_thinking_prefix,
+            has_gpt_oss_markup=has_gpt_oss_markup,
+            parse_gpt_oss_response=parse_gpt_oss_response,
         )
-        conversation_id = getattr(conversation, "id", None)
-        try:
-            raw_messages = getattr(conversation, "value", None)
-            if not isinstance(raw_messages, list):
-                self.logger.warning(
-                    "Conversation %s has invalid message data (not a list): %s",
-                    conversation_id,
-                    type(raw_messages),
-                )
-                return []
-            if not raw_messages:
-                self.logger.debug(f"Conversation {conversation_id} is empty.")
-                return []
-
-            if len(raw_messages) > max_messages:
-                raw_messages = raw_messages[-max_messages:]
-
-            pending_citations: List[str] = []
-            pending_tool_usage: List[Dict[str, Any]] = []
-            pending_tool_results: Dict[str, str] = {}
-            pending_pre_tool_thinking: Optional[str] = None
-
-            formatted_messages: List[Dict[str, Any]] = []
-            for msg_idx, msg_obj in enumerate(raw_messages):
-                if not isinstance(msg_obj, dict):
-                    self.logger.warning(
-                        "Skipping invalid message object (not a dict) in "
-                        "conversation %s: %s",
-                        conversation_id,
-                        msg_obj,
-                    )
-                    continue
-
-                if msg_obj.get("metadata_type") == "tool_calls":
-                    tool_calls = msg_obj.get("tool_calls", [])
-                    for tool_call in tool_calls:
-                        pending_tool_usage.append(
-                            {
-                                "tool_id": tool_call.get("id", ""),
-                                "tool_name": tool_call.get(
-                                    "name", "unknown"
-                                ),
-                                "query": self._extract_query_from_tool_call(
-                                    tool_call
-                                ),
-                                "details": None,
-                            }
-                        )
-                    pending_pre_tool_thinking = normalize_thinking_content(
-                        msg_obj.get("thinking_content")
-                    )
-                    if pending_pre_tool_thinking:
-                        self.logger.debug(
-                            "Captured pre-tool thinking: %s chars",
-                            len(pending_pre_tool_thinking),
-                        )
-                    self.logger.debug(
-                        "Collected %s tool calls for next assistant "
-                        "message",
-                        len(tool_calls),
-                    )
-                    continue
-
-                if msg_obj.get("metadata_type") == "tool_result":
-                    content_text = msg_obj.get("content", "")
-                    tool_call_id = msg_obj.get("tool_call_id", "")
-
-                    import re
-
-                    urls = re.findall(
-                        r'https?://[^\s<>"{}|\\^`\[\]]+',
-                        content_text,
-                    )
-                    pending_citations.extend(urls)
-
-                    if urls:
-                        domains = [url.split("/")[2] for url in urls[:3]]
-                        details = ", ".join(domains)
-                        if tool_call_id:
-                            pending_tool_results[tool_call_id] = details
-                        for tool_usage in pending_tool_usage:
-                            if tool_usage.get("tool_id") == tool_call_id:
-                                tool_usage["details"] = details
-
-                    self.logger.debug(
-                        "Processed tool result: %s, details: %s",
-                        tool_call_id,
-                        pending_tool_results.get(tool_call_id),
-                    )
-                    continue
-
-                if msg_obj.get("metadata_type") == "tool_calls":
-                    continue
-
-                role = msg_obj.get("role")
-                if role in ("tool_calls", "tool_result"):
-                    self.logger.debug(
-                        f"Skipping tool call message with role: {role}"
-                    )
-                    continue
-
-                is_bot = role == "assistant"
-                post_tool_thinking = normalize_thinking_content(
-                    msg_obj.get("thinking_content")
-                )
-
-                if is_bot:
-                    name = (
-                        msg_obj.get("bot_name")
-                        or getattr(conversation, "chatbot_name", None)
-                        or "Bot"
-                    )
-                else:
-                    name = (
-                        msg_obj.get("user_name")
-                        or getattr(conversation, "user_name", None)
-                        or "User"
-                    )
-
-                content = msg_obj.get("content")
-                if content is None:
-                    blocks = msg_obj.get("blocks")
-                    if isinstance(blocks, list) and blocks:
-                        for block in blocks:
-                            if isinstance(block, dict) and "text" in block:
-                                content = block["text"]
-                                self.logger.debug(
-                                    "Extracted content from blocks: %s...",
-                                    content[:50],
-                                )
-                                break
-                        if content is None:
-                            content = ""
-                            self.logger.warning(
-                                f"No text found in blocks for message {msg_idx}"
-                            )
-                    else:
-                        content = ""
-                        self.logger.warning(
-                            f"No blocks found for message {msg_idx}"
-                        )
-                else:
-                    self.logger.debug(
-                        "Content found directly in message %s: %s...",
-                        msg_idx,
-                        content[:50],
-                    )
-
-                if is_bot:
-                    if has_gpt_oss_markup(content):
-                        parsed = parse_gpt_oss_response(content)
-                        content = parsed.content or content
-                        parsed_thinking = normalize_thinking_content(
-                            parsed.thinking_content
-                        )
-                        if parsed_thinking and not post_tool_thinking:
-                            post_tool_thinking = parsed_thinking
-                    content = strip_stored_thinking_prefix(
-                        content,
-                        post_tool_thinking,
-                    )
-
-                formatted_msg = {
-                    "name": name,
-                    "content": content,
-                    "is_bot": is_bot,
-                    "id": msg_idx,
-                }
-
-                if is_bot:
-                    if pending_pre_tool_thinking:
-                        formatted_msg[
-                            "pre_tool_thinking"
-                        ] = pending_pre_tool_thinking
-                        pending_pre_tool_thinking = None
-                    if post_tool_thinking:
-                        formatted_msg["thinking_content"] = post_tool_thinking
-
-                if is_bot and pending_tool_usage:
-                    formatted_msg["tool_usage"] = pending_tool_usage.copy()
-                    pending_tool_usage.clear()
-
-                if is_bot and pending_citations:
-                    pending_citations.clear()
-
-                for key in ("bot_mood", "bot_mood_emoji", "user_mood"):
-                    if key in msg_obj:
-                        formatted_msg[key] = msg_obj[key]
-                formatted_messages.append(formatted_msg)
-
-            if pending_tool_usage or pending_pre_tool_thinking:
-                self.logger.info(
-                    "Creating synthetic assistant message for pending tool "
-                    "data: %s tools, thinking=%s",
-                    len(pending_tool_usage),
-                    pending_pre_tool_thinking is not None,
-                )
-                synthetic_msg = {
-                    "name": getattr(conversation, "chatbot_name", None)
-                    or "Bot",
-                    "content": "",
-                    "is_bot": True,
-                    "id": len(formatted_messages),
-                }
-                if pending_pre_tool_thinking:
-                    synthetic_msg[
-                        "pre_tool_thinking"
-                    ] = pending_pre_tool_thinking
-                if pending_tool_usage:
-                    synthetic_msg["tool_usage"] = pending_tool_usage.copy()
-                formatted_messages.append(synthetic_msg)
-
-            self.logger.info(
-                "Successfully loaded %s messages for conversation ID: %s",
-                len(formatted_messages),
-                conversation_id,
-            )
-            return formatted_messages
-
-        except Exception as exc:
-            self.logger.error(
-                f"Error loading conversation history for ID {conversation_id}: {exc}",
-                exc_info=True,
-            )
-            return []

@@ -39,7 +39,7 @@ from airunner.components.documents.gui.widgets.kiwix_widget import KiwixWidget
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
     FileExplorerWidget,
 )
-from airunner.utils.path_policy import (
+from airunner_model.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_directory,
     resolve_existing_file,

@@ -14,6 +14,7 @@ from urllib.request import urlopen
 
 from airunner_native.linux_bundle_layout import LinuxBundleLayout
 from airunner_native.linux_bundle_layout import build_linux_bundle_layout
+from airunner_model.runtimes.daemon_config import DaemonConfig
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
 )
@@ -21,7 +22,6 @@ from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
-from airunner_services.daemon_config import DaemonConfig
 
 HealthOpener = Callable[..., Any]
 LaunchPreparer = Callable[[], None]

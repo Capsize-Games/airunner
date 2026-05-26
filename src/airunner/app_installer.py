@@ -19,8 +19,8 @@ from airunner.components.downloader.gui.windows.download_wizard.download_wizard_
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from services.src.airunner_services.setup_database import setup_database
-from services.src.airunner_services.settings import AIRUNNER_DB_URL
+from airunner_model.settings import AIRUNNER_DB_URL
+from airunner_model.setup_database import setup_database
 
 
 class AppInstaller(QObject, SettingsMixin, MediatorMixin):

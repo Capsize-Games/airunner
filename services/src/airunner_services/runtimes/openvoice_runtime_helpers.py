@@ -9,10 +9,10 @@ from typing import Optional
 import librosa
 import torch
 
+from airunner_model.runtimes.file_policy import normalize_local_path
 from airunner_services.contract_enums import AvailableLanguage
 from airunner_services.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application.get_logger import get_logger
-from airunner_services.utils.path_policy import normalize_local_path
 from airunner_services.runtimes.openvoice_exceptions import FileMissing
 from airunner_services.vendor.melo.api import TTS
 from airunner_services.vendor.openvoice import se_extractor

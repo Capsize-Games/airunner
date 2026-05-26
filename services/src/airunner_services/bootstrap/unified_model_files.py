@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from airunner_services.bootstrap.llm_file_bootstrap_data import (
+from airunner_model.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
-from airunner_services.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
-from airunner_services.bootstrap.rmbg_bootstrap_data import RMBG_FILES
-from airunner_services.bootstrap.sd_file_bootstrap_data import (
+from airunner_model.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
+from airunner_model.bootstrap.rmbg_bootstrap_data import RMBG_FILES
+from airunner_model.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner_services.bootstrap.whisper import WHISPER_FILES
+from airunner_model.bootstrap.whisper import WHISPER_FILES
 
 
 UNIFIED_MODEL_FILES = {

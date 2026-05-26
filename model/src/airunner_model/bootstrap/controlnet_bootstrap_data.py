@@ -1,4 +1,8 @@
-from airunner.settings import AIRUNNER_ART_ENABLED
+"""Shared bootstrap rows for ControlNet model metadata."""
+
+from __future__ import annotations
+
+from airunner_model.settings import AIRUNNER_ART_ENABLED
 
 
 controlnet_bootstrap_data = [
@@ -23,3 +27,6 @@ controlnet_bootstrap_data = [
 
 if not AIRUNNER_ART_ENABLED:
     controlnet_bootstrap_data = []
+
+
+__all__ = ["controlnet_bootstrap_data"]
