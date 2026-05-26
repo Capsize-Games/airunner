@@ -162,11 +162,11 @@ class RAGLifecycleMixin:
             self.logger.error(f"Error loading HTML into RAG: {e}")
 
     def load_file_into_rag(self, file_path: str) -> None:
-        """Load a local file (PDF/EPUB/HTML/MD/ZIM) into the unified RAG index.
+        """Load a local file into the unified RAG index.
 
-        This will use the configured reader for the file type (e.g. CustomEpubReader
-        for .epub), extract the document(s), and insert them into the unified index
-        using the same approach as load_html_into_rag.
+        This will use the configured reader for the file type, extract the
+        document(s), and insert them into the unified index using the same
+        approach as load_html_into_rag.
 
         Args:
             file_path: Absolute path to a file on disk
@@ -195,14 +195,14 @@ class RAGLifecycleMixin:
     ) -> None:
         """Load binary content into RAG, writing to a temporary file first.
 
-        Useful when callers provide raw bytes for EPUB/PDF content instead of
-        a file on disk. The data is written to a NamedTemporaryFile with the
-        provided extension and then loaded via load_file_into_rag.
+        Useful when callers provide raw bytes for EPUB, PDF, or MOBI content
+        instead of a file on disk. The data is written to a NamedTemporaryFile
+        with the provided extension and then loaded via load_file_into_rag.
 
         Args:
             content_bytes: Raw file bytes
             source_name: Identifier used in metadata/file name
-            file_ext: File extension (e.g. '.epub', '.pdf', '.txt')
+            file_ext: File extension (e.g. '.epub', '.pdf', '.mobi')
         """
         try:
             with tempfile.NamedTemporaryFile(

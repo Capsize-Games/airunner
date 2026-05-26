@@ -2171,10 +2171,14 @@ For each function call, return a json object with function name and arguments wi
         self.logger.info("[ChatGGUF._stream] Starting stream generation")
         converted_messages = self._convert_messages(messages)
         self.logger.info(f"[ChatGGUF._stream] Converted {len(converted_messages)} messages")
+
+        max_tokens = kwargs.get("max_new_tokens")
+        if max_tokens is None:
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
         
         chat_kwargs = {
             "messages": converted_messages,
-            "max_tokens": self.max_tokens,
+            "max_tokens": max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "top_k": self.top_k,
@@ -2196,7 +2200,10 @@ For each function call, return a json object with function name and arguments wi
         native_tool_call_buffers: Dict[int, Dict[str, Any]] = {}
         
         call_started = time.perf_counter()
-        self.logger.info(f"[ChatGGUF._stream] Calling create_chat_completion with max_tokens={self.max_tokens}")
+        self.logger.info(
+            "[ChatGGUF._stream] Calling create_chat_completion "
+            f"with max_tokens={max_tokens}"
+        )
         self.logger.info(f"[ChatGGUF._stream] Number of tools bound: {len(self.tools) if self.tools else 0}")
         self.logger.info(f"[ChatGGUF._stream] tool_choice: {self.tool_choice}")
         

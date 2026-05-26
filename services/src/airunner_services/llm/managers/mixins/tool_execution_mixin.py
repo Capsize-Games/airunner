@@ -147,9 +147,11 @@ class ToolExecutionMixin:
                     )
                     self._force_tool = None
                     self._tool_choice = None
-                # Rebind tools with new constraint (or without if cleared)
-                if hasattr(self, "_bind_tools_to_model"):
-                    self._bind_tools_to_model()
+                if next_tool:
+                    if hasattr(self, "_bind_tools_to_model"):
+                        self._bind_tools_to_model()
+                elif hasattr(self, "_unbind_tools_from_model"):
+                    self._unbind_tools_from_model()
 
         return result_state
 

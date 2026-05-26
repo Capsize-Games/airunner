@@ -1751,6 +1751,10 @@ Based on the search results above, provide a clear, conversational answer to the
         event_sink = resolve_llm_workflow_event_sink(self)
         has_event_sink = getattr(event_sink, "active", False)
         request_id = getattr(self, "_current_request_id", None)
+        requested_max_tokens = generation_kwargs.get("max_new_tokens")
+        if requested_max_tokens is None:
+            requested_max_tokens = generation_kwargs.get("max_tokens")
+        original_max_tokens = None
 
         def emit_thinking_signal(status: str, content: str) -> None:
             """Emit one request-scoped thinking update to the GUI."""
@@ -1804,6 +1808,14 @@ Based on the search results above, provide a clear, conversational answer to the
         # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
+            if (
+                requested_max_tokens is not None
+                and hasattr(self._chat_model, "max_tokens")
+            ):
+                original_max_tokens = getattr(
+                    self._chat_model, "max_tokens", None
+                )
+                self._chat_model.max_tokens = requested_max_tokens
             self.logger.info(f"[STREAM] Starting stream from chat_model type: {type(self._chat_model).__name__}")
             for chunk in self._chat_model.stream(
                 formatted_prompt, **generation_kwargs
@@ -2051,6 +2063,9 @@ Based on the search results above, provide a clear, conversational answer to the
             self.logger.error(
                 "Error during streamed model call: %s", exc, exc_info=True
             )
+        finally:
+            if original_max_tokens is not None:
+                self._chat_model.max_tokens = original_max_tokens
 
         return None
 

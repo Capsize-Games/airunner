@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import zipfile
 from typing import Any, Callable, Optional
 
@@ -148,6 +149,22 @@ def _load_epub_document(
     return _build_documents("\n\n".join(filter(None, texts)), metadata)
 
 
+def _load_mobi_document(
+    file_path: str,
+    metadata: dict[str, Any],
+) -> list[Document]:
+    """Load a MOBI file by unpacking it into an existing document format."""
+    import mobi
+
+    temp_dir, extracted_path = mobi.extract(file_path)
+    try:
+        extension = os.path.splitext(extracted_path)[1].lower()
+        loader = _FILE_LOADERS.get(extension, _load_text_document)
+        return loader(extracted_path, metadata)
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def _sorted_epub_entries(entries: list[str]) -> list[str]:
     html_entries = [
         entry
@@ -202,6 +219,7 @@ _FILE_LOADERS = {
     ".htm": _load_html_document,
     ".html": _load_html_document,
     ".md": _load_text_document,
+    ".mobi": _load_mobi_document,
     ".pdf": _load_pdf_document,
     ".zim": _load_zim_documents,
 }

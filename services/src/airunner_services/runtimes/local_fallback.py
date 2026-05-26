@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import os
 from queue import Empty, Queue
 from typing import Any, Callable, Iterable, Optional
 
@@ -36,11 +37,25 @@ from airunner_services.runtimes.art_daemon_runtime_settings import (
 )
 
 DEFAULT_PROVIDER = "local"
-DEFAULT_TIMEOUT_SECONDS = 120.0
 ProgressCallback = Callable[[dict[str, Any]], None]
 
 LLMRequestFactory = Callable[[LLMInvocationRequest], Any]
 HealthProvider = Callable[[], RuntimeHealthStatus]
+
+
+def _default_timeout_seconds() -> float:
+    """Return the local-fallback runtime timeout in seconds."""
+    configured = os.environ.get(
+        "AIRUNNER_LOCAL_FALLBACK_TIMEOUT_SECONDS",
+        "120",
+    )
+    try:
+        return float(configured)
+    except (TypeError, ValueError):
+        return 120.0
+
+
+DEFAULT_TIMEOUT_SECONDS = _default_timeout_seconds()
 
 
 def _build_signal_mediator() -> Any:

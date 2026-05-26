@@ -291,7 +291,6 @@ class ToolRegistry:
                 "airunner_services.llm.tools.rag_tools",
                 "airunner_services.llm.tools.knowledge_tools",
                 "airunner_services.llm.tools.user_data_tools",
-                "airunner_services.llm.tools.agent_tools",
                 "airunner_services.llm.tools.mood_tools",
                 "airunner_services.llm.tools.generation_tools",
                 "airunner_services.llm.tools.author_tools",

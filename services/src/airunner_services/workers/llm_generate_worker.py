@@ -191,19 +191,30 @@ class LLMGenerateWorker(
 								"web_content",
 							),
 						)
-					elif file_type.lower() in [".epub", "epub"]:
+					elif file_type.lower() in [
+						".epub",
+						"epub",
+						".mobi",
+						"mobi",
+						".pdf",
+						"pdf",
+					]:
 						content_bytes = (
 							content
 							if isinstance(content, (bytes, bytearray))
 							else str(content).encode("utf-8")
 						)
+						normalized_ext = str(file_type).lower()
+						if not normalized_ext.startswith("."):
+							normalized_ext = f".{normalized_ext}"
 						self.model_manager.load_bytes_into_rag(
 							content_bytes,
 							source_name=doc.get(
 								"source_name",
-								"epub_upload",
+								f"{normalized_ext.removeprefix('.')}"
+								"_upload",
 							),
-							file_ext=".epub",
+							file_ext=normalized_ext,
 						)
 					else:
 						self.model_manager.load_html_into_rag(

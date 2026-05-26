@@ -40,6 +40,7 @@ class WorkflowState(TypedDict, total=False):
     """State schema for the workflow."""
 
     messages: Annotated[list[BaseMessage], add_messages]
+    generation_kwargs: dict[str, Any]
     workflow_continuation: bool
 
 

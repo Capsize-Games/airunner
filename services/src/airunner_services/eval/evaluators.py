@@ -10,7 +10,7 @@ Based on the openevals pattern but adapted for AI Runner's architecture.
 
 import re
 from typing import Dict, Any, Optional
-from airunner_services.eval.client import AIRunnerClient
+from airunner_services.eval.judge_providers import JudgeClient
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
@@ -103,13 +103,13 @@ class LLMAsJudge:
     against reference answers.
 
     Args:
-        client: AIRunnerClient instance to use for evaluation
+        client: Judge client instance to use for evaluation
         prompt_template: Template string with {inputs}, {outputs}, {reference_outputs}
         feedback_key: Key name for this evaluation metric
         model: Optional model name to use for judging
 
     Attributes:
-        client: The AIRunnerClient instance
+        client: The judge client instance
         prompt_template: The evaluation prompt template
         feedback_key: The metric name
         model: Model to use for evaluation
@@ -117,7 +117,7 @@ class LLMAsJudge:
 
     def __init__(
         self,
-        client: AIRunnerClient,
+        client: JudgeClient,
         prompt_template: str,
         feedback_key: str,
         model: Optional[str] = None,
@@ -125,7 +125,7 @@ class LLMAsJudge:
         """Initialize the LLM-as-judge evaluator.
 
         Args:
-            client: AIRunnerClient instance
+            client: Judge client instance
             prompt_template: Prompt template with placeholders
             feedback_key: Name of the evaluation metric
             model: Optional model name
@@ -275,13 +275,13 @@ class LLMAsJudge:
 
 
 def create_correctness_evaluator(
-    client: AIRunnerClient,
+    client: JudgeClient,
     model: Optional[str] = None,
 ) -> LLMAsJudge:
     """Create a correctness evaluator.
 
     Args:
-        client: AIRunnerClient instance
+        client: Judge client instance
         model: Optional model name
 
     Returns:
@@ -296,13 +296,13 @@ def create_correctness_evaluator(
 
 
 def create_conciseness_evaluator(
-    client: AIRunnerClient,
+    client: JudgeClient,
     model: Optional[str] = None,
 ) -> LLMAsJudge:
     """Create a conciseness evaluator.
 
     Args:
-        client: AIRunnerClient instance
+        client: Judge client instance
         model: Optional model name
 
     Returns:
@@ -317,13 +317,13 @@ def create_conciseness_evaluator(
 
 
 def create_helpfulness_evaluator(
-    client: AIRunnerClient,
+    client: JudgeClient,
     model: Optional[str] = None,
 ) -> LLMAsJudge:
     """Create a helpfulness evaluator.
 
     Args:
-        client: AIRunnerClient instance
+        client: Judge client instance
         model: Optional model name
 
     Returns:
@@ -338,13 +338,13 @@ def create_helpfulness_evaluator(
 
 
 def create_relevance_evaluator(
-    client: AIRunnerClient,
+    client: JudgeClient,
     model: Optional[str] = None,
 ) -> LLMAsJudge:
     """Create a relevance evaluator.
 
     Args:
-        client: AIRunnerClient instance
+        client: Judge client instance
         model: Optional model name
 
     Returns:

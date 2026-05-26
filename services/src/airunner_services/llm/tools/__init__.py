@@ -14,7 +14,6 @@ from airunner_services.llm.tools import (
     rag_tools,
     knowledge_tools,
     user_data_tools,
-    agent_tools,
     mood_tools,
     generation_tools,  # Direct text generation tools
     # Phase 2: Mode-specific tools
@@ -48,7 +47,6 @@ __all__ = [
     "rag_tools",
     "knowledge_tools",
     "user_data_tools",
-    "agent_tools",
     "mood_tools",
     "generation_tools",
     # Phase 2: Mode-specific tools

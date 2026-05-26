@@ -28,25 +28,7 @@ class ToolManagementMixin:
         2. For local models, add COMPACT tool list to system prompt
         3. Let LangGraph's ToolNode handle parsing and execution
         """
-        # Reset to original unbound model
-        self._chat_model = self._original_chat_model
-
-        if hasattr(self._chat_model, "clear_bound_tools"):
-            try:
-                self._chat_model.clear_bound_tools()
-            except Exception as e:
-                self.logger.debug("Failed to clear bound tools via clear_bound_tools(): %s", e)
-        else:
-            if hasattr(self._chat_model, "tools"):
-                try:
-                    self._chat_model.tools = None
-                except Exception:
-                    pass
-            if hasattr(self._chat_model, "tool_choice"):
-                try:
-                    self._chat_model.tool_choice = None
-                except Exception:
-                    pass
+        self._unbind_tools_from_model()
 
         # Skip if no tools provided
         if not self._tools or len(self._tools) == 0:
@@ -64,6 +46,31 @@ class ToolManagementMixin:
             self.logger.warning(
                 f"Chat model does not support bind_tools() - tools will not be available"
             )
+
+    def _unbind_tools_from_model(self) -> None:
+        """Reset the current chat model to an unbound state."""
+        self._chat_model = self._original_chat_model
+
+        if hasattr(self._chat_model, "clear_bound_tools"):
+            try:
+                self._chat_model.clear_bound_tools()
+            except Exception as error:
+                self.logger.debug(
+                    "Failed to clear bound tools via clear_bound_tools(): %s",
+                    error,
+                )
+            return
+
+        if hasattr(self._chat_model, "tools"):
+            try:
+                self._chat_model.tools = None
+            except Exception:
+                pass
+        if hasattr(self._chat_model, "tool_choice"):
+            try:
+                self._chat_model.tool_choice = None
+            except Exception:
+                pass
 
     def _get_tool_calling_mode(self) -> str:
         """Get the tool calling mode from the chat model.

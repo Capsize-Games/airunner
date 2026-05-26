@@ -13,6 +13,8 @@ This script provides a unified interface for running different test suites:
 Usage:
     python run_tests.py --unit              # Run unit tests only
     python run_tests.py --eval              # Run eval tests only
+    python run_tests.py --eval --service groq --llm groq-model
+                                          # Run judged evals with Groq
     python run_tests.py --all               # Run unit + runtime smoke + eval
     python run_tests.py --unit --verbose    # Run unit tests with verbose output
     python run_tests.py --component llm     # Run tests for specific component
@@ -218,6 +220,8 @@ def run_eval_tests(
     model: str = None,
     skip_slow: bool = False,
     test_file: str = None,
+    judge_service: str = None,
+    judge_model: str = None,
 ) -> int:
     """
     Run evaluation framework tests.
@@ -268,6 +272,12 @@ def run_eval_tests(
     if model:
         env["AIRUNNER_TEST_MODEL_PATH"] = model
         print(f"Using model: {model}")
+    if judge_service:
+        env["AIRUNNER_TEST_JUDGE_SERVICE"] = judge_service
+        print(f"Using judge service: {judge_service}")
+    if judge_model:
+        env["AIRUNNER_TEST_JUDGE_MODEL"] = judge_model
+        print(f"Using judge model: {judge_model}")
 
     description = (
         f"Evaluation framework tests{' - ' + test_file if test_file else ''}"
@@ -372,6 +382,11 @@ def main():
 Examples:
   %(prog)s --unit                    Run all unit tests
     %(prog)s --eval                    Run eval tests only
+        %(prog)s --eval --judge-model qwen3.5-9b
+                                                                            Run judged evals with a
+                                                                            separate local judge model
+        %(prog)s --eval --service groq --llm llama-3.3-70b-versatile
+                                                                            Run judged evals through Groq
     %(prog)s --llm-runtime-smoke       Run safe llama.cpp runtime smoke tests
     %(prog)s --stt-runtime-smoke       Run safe STT runtime smoke tests
     %(prog)s --art-runtime-smoke       Run safe art runtime smoke tests
@@ -442,6 +457,28 @@ Examples:
     )
 
     parser.add_argument(
+        "--judge-model",
+        "--llm",
+        dest="judge_model",
+        type=str,
+        help=(
+            "Judge model name for judged evals. Use this to override "
+            "the local judge model or select an external judge model."
+        ),
+    )
+
+    parser.add_argument(
+        "--judge-service",
+        "--service",
+        dest="judge_service",
+        choices=["airunner", "local", "groq", "openrouter"],
+        help=(
+            "Judge provider for judged evals. Defaults to the local "
+            "AIRunner daemon."
+        ),
+    )
+
+    parser.add_argument(
         "--skip-slow",
         action="store_true",
         help="Skip slow integration tests in eval suite",
@@ -454,6 +491,15 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    if (
+        args.judge_service
+        and args.judge_service not in {"airunner", "local"}
+        and not args.judge_model
+    ):
+        parser.error(
+            "--judge-model/--llm is required for external judge services"
+        )
 
     # Default to running unit tests if no flags specified
     if not (
@@ -506,6 +552,8 @@ Examples:
             model=args.model,
             skip_slow=args.skip_slow,
             test_file=args.file,
+            judge_service=args.judge_service,
+            judge_model=args.judge_model,
         )
         exit_codes.append(exit_code)
 

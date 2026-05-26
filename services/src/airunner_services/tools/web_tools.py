@@ -1,5 +1,6 @@
 """Web search and scraping tools."""
 
+import asyncio
 import time
 from typing import Annotated
 
@@ -16,6 +17,44 @@ logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 _last_search_time = 0
 _SEARCH_COOLDOWN = 2.0
+
+
+def _respect_search_cooldown(search_label: str) -> None:
+	"""Apply rate limiting between successive internet tool requests."""
+	global _last_search_time
+	time_since_last = time.time() - _last_search_time
+	if time_since_last < _SEARCH_COOLDOWN:
+		wait_time = _SEARCH_COOLDOWN - time_since_last
+		logger.info(
+			"Rate limiting: waiting %.1fs before %s",
+			wait_time,
+			search_label,
+		)
+		time.sleep(wait_time)
+	_last_search_time = time.time()
+
+
+def _duckduckgo_web_results(query: str, num_results: int = 10) -> list[dict]:
+	"""Return DuckDuckGo web results for one query."""
+	from airunner_services.tools.search_providers.duckduckgo_provider import (
+		DuckDuckGoProvider,
+	)
+
+	provider = DuckDuckGoProvider()
+	return asyncio.run(provider.search(query, num_results=num_results))
+
+
+def _duckduckgo_news_results(
+	query: str,
+	num_results: int = 10,
+) -> list[dict]:
+	"""Return DuckDuckGo news results for one query."""
+	from airunner_services.tools.search_providers.duckduckgo_provider import (
+		DuckDuckGoProvider,
+	)
+
+	provider = DuckDuckGoProvider()
+	return asyncio.run(provider.news_search(query, num_results=num_results))
 
 
 @tool(
@@ -40,7 +79,6 @@ def search_web(
 	query: Annotated[str, "Search query to look up on the internet"],
 ) -> str:
 	"""Search the internet for information using DuckDuckGo."""
-	global _last_search_time
 
 	if not is_duckduckgo_allowed():
 		logger.info("Web search disabled by privacy settings")
@@ -54,37 +92,14 @@ def search_web(
 		}
 
 	try:
-		time_since_last = time.time() - _last_search_time
-		if time_since_last < _SEARCH_COOLDOWN:
-			wait_time = _SEARCH_COOLDOWN - time_since_last
-			logger.info(
-				"Rate limiting: waiting %.1fs before search",
-				wait_time,
-			)
-			time.sleep(wait_time)
-
-		_last_search_time = time.time()
-
-		from airunner_services.tools.search_tool import (
-			AggregatedSearchTool,
-		)
+		_respect_search_cooldown("search")
 
 		logger.info(
 			"Searching web (%s)",
 			summarize_text(query, label="query"),
 		)
 
-		results = AggregatedSearchTool.aggregated_search_sync(
-			query,
-			category="web",
-		)
-
-		logger.info(
-			"Search results keys: %s",
-			results.keys() if results else "None",
-		)
-
-		ddg_results = results.get("duckduckgo", []) if results else []
+		ddg_results = _duckduckgo_web_results(query, num_results=10)
 		logger.info("Got %d DuckDuckGo results", len(ddg_results))
 
 		if not ddg_results:
@@ -141,7 +156,6 @@ def search_news(
 	],
 ) -> str:
 	"""Search for recent news articles using DuckDuckGo News."""
-	global _last_search_time
 
 	if not is_duckduckgo_allowed():
 		logger.info("News search disabled by privacy settings")
@@ -155,30 +169,14 @@ def search_news(
 		}
 
 	try:
-		time_since_last = time.time() - _last_search_time
-		if time_since_last < _SEARCH_COOLDOWN:
-			wait_time = _SEARCH_COOLDOWN - time_since_last
-			logger.info(
-				"Rate limiting: waiting %.1fs before news search",
-				wait_time,
-			)
-			time.sleep(wait_time)
-
-		_last_search_time = time.time()
-
-		import asyncio
-
-		from airunner_services.tools.search_providers.duckduckgo_provider import (
-			DuckDuckGoProvider,
-		)
+		_respect_search_cooldown("news search")
 
 		logger.info(
 			"Searching news (%s)",
 			summarize_text(query, label="query"),
 		)
 
-		provider = DuckDuckGoProvider()
-		results = asyncio.run(provider.news_search(query, num_results=10))
+		results = _duckduckgo_news_results(query, num_results=10)
 
 		logger.info("Got %d news results", len(results))
 
