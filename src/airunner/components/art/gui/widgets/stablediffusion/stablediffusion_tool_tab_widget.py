@@ -1,6 +1,8 @@
+import importlib
 from typing import Optional
 
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QGridLayout, QSplitter
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stablediffusion_tool_tab_ui import (
@@ -13,6 +15,69 @@ class StablediffusionToolTabWidget(BaseWidget):
     widget_class_ = Ui_stablediffusion_tool_tab_widget
     _min_tab_index = 0
     _max_tab_index = 5
+    _page_widget_specs = {
+        0: (
+            (
+                "stable_diffusion_widget_placeholder",
+                "stable_diffusion_widget",
+                "airunner.components.art.gui.widgets.stablediffusion."
+                "stable_diffusion_settings_widget",
+                "StableDiffusionSettingsWidget",
+            ),
+        ),
+        1: (
+            (
+                "lora_container_widget_placeholder",
+                "lora_container_widget",
+                "airunner.components.art.gui.widgets.lora."
+                "lora_container_widget",
+                "LoraContainerWidget",
+            ),
+        ),
+        2: (
+            (
+                "embeddings_container_widget_placeholder",
+                "embeddings_container_widget",
+                "airunner.components.art.gui.widgets.embeddings."
+                "embeddings_container_widget",
+                "EmbeddingsContainerWidget",
+            ),
+        ),
+        3: (
+            (
+                "canvas_layer_container_placeholder",
+                "canvas_layer_container",
+                "airunner.components.art.gui.widgets.canvas."
+                "canvas_layer_container_widget",
+                "CanvasLayerContainerWidget",
+            ),
+        ),
+        4: (
+            (
+                "grid_preferences_placeholder",
+                "grid_preferences",
+                "airunner.components.art.gui.widgets.grid_preferences."
+                "grid_preferences_widget",
+                "GridPreferencesWidget",
+            ),
+            (
+                "active_grid_settings_widget_placeholder",
+                "active_grid_settings_widget",
+                "airunner.components.art.gui.widgets.active_grid_settings."
+                "active_grid_settings_widget",
+                "ActiveGridSettingsWidget",
+            ),
+        ),
+        5: (
+            (
+                "batch_container_placeholder",
+                "widget",
+                "airunner.components.art.gui.widgets.canvas."
+                "batch_container",
+                "BatchContainer",
+            ),
+        ),
+    }
 
     def __init__(self, *args, **kwargs):
         self._splitters = ["layer_tab_splitter"]
@@ -40,9 +105,64 @@ class StablediffusionToolTabWidget(BaseWidget):
             self.ui.tool_tab_widget_container.currentIndex()
         )
 
+    def _ensure_tool_page_loaded(self, index: int) -> None:
+        """Instantiate the selected tab page the first time it is shown."""
+        for spec in self._page_widget_specs.get(index, ()):  # pragma: no branch
+            self._attach_lazy_widget(*spec)
+
+    def _attach_lazy_widget(
+        self,
+        placeholder_attr: str,
+        widget_attr: str,
+        module_path: str,
+        class_name: str,
+    ):
+        """Replace one placeholder with its real child widget."""
+        widget = getattr(self.ui, widget_attr, None)
+        if widget is not None:
+            return widget
+        placeholder = getattr(self.ui, placeholder_attr, None)
+        if placeholder is None:
+            return None
+        parent = placeholder.parent()
+        widget = self._create_lazy_widget(module_path, class_name, parent)
+        widget.setObjectName(widget_attr)
+        self._replace_placeholder(placeholder, widget)
+        setattr(self.ui, placeholder_attr, None)
+        setattr(self.ui, widget_attr, widget)
+        return widget
+
+    def _create_lazy_widget(self, module_path: str, class_name: str, parent):
+        """Import and instantiate one deferred tool-tab widget."""
+        module = importlib.import_module(module_path)
+        factory = getattr(module, class_name)
+        return factory(parent)
+
+    def _replace_placeholder(self, placeholder, widget) -> None:
+        """Insert one widget where a placeholder currently lives."""
+        parent = placeholder.parent()
+        if isinstance(parent, QSplitter):
+            index = parent.indexOf(placeholder)
+            placeholder.hide()
+            placeholder.setParent(None)
+            parent.insertWidget(index, widget)
+            placeholder.deleteLater()
+            return
+        layout = parent.layout() or QGridLayout(parent)
+        index = layout.indexOf(placeholder)
+        row, column, row_span, column_span = 0, 0, 1, 1
+        if index >= 0:
+            row, column, row_span, column_span = layout.getItemPosition(index)
+            layout.removeWidget(placeholder)
+        placeholder.hide()
+        placeholder.setParent(None)
+        layout.addWidget(widget, row, column, row_span, column_span)
+        placeholder.deleteLater()
+
     def show_tool_page(self, index: int) -> None:
         """Select one tool-tab page and persist the choice."""
         clamped_index = self._clamp_tool_tab_index(index)
+        self._ensure_tool_page_loaded(clamped_index)
         self._requested_active_index = clamped_index
         self.ui.tool_tab_widget_container.setCurrentIndex(clamped_index)
         self.qsettings.setValue(
@@ -53,6 +173,7 @@ class StablediffusionToolTabWidget(BaseWidget):
     @Slot(int)
     def on_tool_tab_widget_container_currentChanged(self, index: int):
         index = self._clamp_tool_tab_index(index)
+        self._ensure_tool_page_loaded(index)
         self._requested_active_index = index
         self.qsettings.setValue(
             "tabs/stablediffusion_tool_tab/active_index", index

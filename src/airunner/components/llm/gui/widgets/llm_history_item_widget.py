@@ -12,70 +12,41 @@ class LLMHistoryItemWidget(BaseWidget):
     widget_class_ = Ui_llm_history_item_widget
 
     def __init__(self, *args, **kwargs):
+        """Initialize one lightweight row for the history sidebar."""
         self.conversation = kwargs.pop("conversation")
         super(LLMHistoryItemWidget, self).__init__(*args, **kwargs)
         self.spacer = QSpacerItem(
             20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
+        self.ui.conversation_description.setText(
+            self._conversation_summary_text()
+        )
+        self.ui.botname.setText(self._chatbot_name_text())
+        self.ui.timestamp.setText(self._timestamp_text())
 
-        # Prefer summarize() if callable, else use .summary
-        summary = None
-        if hasattr(self.conversation, "summarize") and callable(
-            self.conversation.summarize
-        ):
-            try:
-                summary = self.conversation.summarize()
-            except Exception as e:
-                if (
-                    e.__class__.__name__ == "DetachedInstanceError"
-                    or e.__class__.__name__ == "DummyDetachedError"
-                ):
-                    summary = "[Conversation unavailable]"
-                else:
-                    summary = f"[Error: {e}]"
-        if not summary:
-            summary = getattr(self.conversation, "summary", None)
-        if not summary or not isinstance(summary, str):
-            summary = "[Conversation unavailable]"
-        self.ui.conversation_description.setText(str(summary))
+    def _conversation_summary_text(self) -> str:
+        """Return the persisted summary text for one conversation row."""
+        summary = getattr(self.conversation, "summary", None)
+        if isinstance(summary, str) and summary.strip():
+            return summary
+        title = getattr(self.conversation, "title", None)
+        if isinstance(title, str) and title.strip():
+            return title
+        return "[Conversation]"
 
-        chatbot_name = "Unknown"
-        try:
-            chatbot_id = getattr(self.conversation, "chatbot_id", None)
-        except Exception as e:
-            if e.__class__.__name__ == "DetachedInstanceError":
-                chatbot_id = None
-            else:
-                raise
-        chatbot = None
-        try:
-            chatbot = self.get_chatbot_by_id(chatbot_id)
-        except Exception as e:
-            # Handle any database-related errors gracefully
-            self.logger.warning(f"Failed to get chatbot: {e}")
-            chatbot = None
+    def _chatbot_name_text(self) -> str:
+        """Return the stored chatbot label for one conversation row."""
+        chatbot_name = getattr(self.conversation, "chatbot_name", None)
+        if isinstance(chatbot_name, str) and chatbot_name.strip():
+            return chatbot_name
+        return "Unknown"
 
-        try:
-            if chatbot:
-                chatbot_name = chatbot.name
-        except Exception as e:
-            if (
-                e.__class__.__name__ == "DetachedInstanceError"
-                or e.__class__.__name__ == "DummyDetachedError"
-            ):
-                chatbot_name = "[unavailable]"
-            else:
-                chatbot_name = f"[Error: {e}]"
-
-        self.ui.botname.setText(chatbot_name)
-        try:
-            timestamp = str(self.conversation.timestamp)
-        except Exception as e:
-            if e.__class__.__name__ == "DetachedInstanceError":
-                timestamp = "[unavailable]"
-            else:
-                timestamp = f"[Error: {e}]"
-        self.ui.timestamp.setText(timestamp)
+    def _timestamp_text(self) -> str:
+        """Return the stored timestamp label for one conversation row."""
+        timestamp = getattr(self.conversation, "timestamp", None)
+        if timestamp is None:
+            return "[unavailable]"
+        return str(timestamp)
 
     @Slot()
     def action_load_conversation_clicked(self):

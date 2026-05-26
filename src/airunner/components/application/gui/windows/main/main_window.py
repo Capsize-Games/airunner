@@ -468,10 +468,29 @@ class MainWindow(
             self.ui.sidebar_tab.setCurrentIndex(page_index)
             self._sync_sidebar_button_states()
 
+        self._schedule_lazy_panel_prewarm()
+
         if self._post_startup_status_refresh_requested:
             return
         self._post_startup_status_refresh_requested = True
         self._refresh_model_status_from_daemon()
+
+    def _schedule_lazy_panel_prewarm(self) -> None:
+        """Preload slow panel widgets after the window becomes interactive."""
+        if getattr(self, "_lazy_panel_prewarm_scheduled", False):
+            return
+        self._lazy_panel_prewarm_scheduled = True
+        QTimer.singleShot(0, self._prewarm_history_panel)
+
+    def _prewarm_history_panel(self) -> None:
+        """Build the history panel outside the first-click path."""
+        try:
+            widget = self._ensure_left_history_loaded()
+            preload = getattr(widget, "preload_content", None)
+            if callable(preload):
+                preload()
+        except Exception:
+            self.logger.exception("Failed to prewarm history panel")
 
     def _schedule_main_window_loaded_signal(self) -> None:
         """Schedule the post-startup signal once after the window is shown."""
@@ -701,7 +720,9 @@ class MainWindow(
             if page_index == self._stats_sidebar_index:
                 self._ensure_stats_loaded()
             elif page_index == self._art_tools_sidebar_index:
-                self._ensure_art_tools_loaded()
+                self._ensure_art_tools_loaded(
+                    self._saved_art_tools_tab_index()
+                )
         except Exception:
             self.logger.exception(
                 "Failed to load sidebar page %s",
@@ -742,10 +763,7 @@ class MainWindow(
         tab_index = self._clamp_art_tools_tab_index(tab_index)
         if visible:
             try:
-                widget = self._ensure_art_tools_loaded()
-                show_tool_page = getattr(widget, "show_tool_page", None)
-                if callable(show_tool_page):
-                    show_tool_page(tab_index)
+                self._ensure_art_tools_loaded(tab_index)
             except Exception:
                 self.logger.exception(
                     "Failed to load art tools tab %s",
@@ -1457,7 +1475,7 @@ class MainWindow(
         )
 
         self._ensure_left_panel_host()
-        self._attach_lazy_widget(
+        return self._attach_lazy_widget(
             "left_history_page",
             "left_history_widget",
             "left_history_widget",
@@ -1611,7 +1629,7 @@ class MainWindow(
             placeholder_attr="art_prompt_placeholder",
         )
 
-    def _ensure_art_tools_loaded(self) -> None:
+    def _ensure_art_tools_loaded(self, tab_index: int | None = None) -> None:
         """Create the art settings page only when it is shown."""
         from airunner.components.art.gui.widgets.stablediffusion.stablediffusion_tool_tab_widget import (
             StablediffusionToolTabWidget,
@@ -1625,8 +1643,8 @@ class MainWindow(
             placeholder_attr="art_tools_placeholder",
         )
         show_tool_page = getattr(widget, "show_tool_page", None)
-        if callable(show_tool_page):
-            show_tool_page(self._saved_art_tools_tab_index())
+        if callable(show_tool_page) and tab_index is not None:
+            show_tool_page(self._clamp_art_tools_tab_index(tab_index))
         return widget
 
     @property

@@ -17,14 +17,6 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePolicy,
     QSplitter, QTabWidget, QWidget)
-
-from airunner.components.art.gui.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
-from airunner.components.art.gui.widgets.canvas.batch_container import BatchContainer
-from airunner.components.art.gui.widgets.canvas.canvas_layer_container_widget import CanvasLayerContainerWidget
-from airunner.components.art.gui.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
-from airunner.components.art.gui.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
-from airunner.components.art.gui.widgets.lora.lora_container_widget import LoraContainerWidget
-from airunner.components.art.gui.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
 import airunner.feather_rc
 
 class Ui_stablediffusion_tool_tab_widget(object):
@@ -53,10 +45,10 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_4.setHorizontalSpacing(0)
         self.gridLayout_4.setVerticalSpacing(10)
         self.gridLayout_4.setContentsMargins(10, 10, 0, 0)
-        self.stable_diffusion_widget = StableDiffusionSettingsWidget(self.tab_3)
-        self.stable_diffusion_widget.setObjectName(u"stable_diffusion_widget")
+        self.stable_diffusion_widget_placeholder = QWidget(self.tab_3)
+        self.stable_diffusion_widget_placeholder.setObjectName(u"stable_diffusion_widget_placeholder")
 
-        self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
+        self.gridLayout_4.addWidget(self.stable_diffusion_widget_placeholder, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
         self.tab_6 = QWidget()
@@ -66,10 +58,10 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_7.setHorizontalSpacing(0)
         self.gridLayout_7.setVerticalSpacing(10)
         self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.lora_container_widget = LoraContainerWidget(self.tab_6)
-        self.lora_container_widget.setObjectName(u"lora_container_widget")
+        self.lora_container_widget_placeholder = QWidget(self.tab_6)
+        self.lora_container_widget_placeholder.setObjectName(u"lora_container_widget_placeholder")
 
-        self.gridLayout_7.addWidget(self.lora_container_widget, 0, 0, 1, 1)
+        self.gridLayout_7.addWidget(self.lora_container_widget_placeholder, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_6, "")
         self.tab_7 = QWidget()
@@ -79,10 +71,10 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_8.setHorizontalSpacing(0)
         self.gridLayout_8.setVerticalSpacing(10)
         self.gridLayout_8.setContentsMargins(0, 0, 0, 0)
-        self.embeddings_container_widget = EmbeddingsContainerWidget(self.tab_7)
-        self.embeddings_container_widget.setObjectName(u"embeddings_container_widget")
+        self.embeddings_container_widget_placeholder = QWidget(self.tab_7)
+        self.embeddings_container_widget_placeholder.setObjectName(u"embeddings_container_widget_placeholder")
 
-        self.gridLayout_8.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.embeddings_container_widget_placeholder, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_7, "")
         self.tab_2 = QWidget()
@@ -93,9 +85,9 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.layer_tab_splitter = QSplitter(self.tab_2)
         self.layer_tab_splitter.setObjectName(u"layer_tab_splitter")
         self.layer_tab_splitter.setOrientation(Qt.Orientation.Vertical)
-        self.canvas_layer_container = CanvasLayerContainerWidget(self.layer_tab_splitter)
-        self.canvas_layer_container.setObjectName(u"canvas_layer_container")
-        self.layer_tab_splitter.addWidget(self.canvas_layer_container)
+        self.canvas_layer_container_placeholder = QWidget(self.layer_tab_splitter)
+        self.canvas_layer_container_placeholder.setObjectName(u"canvas_layer_container_placeholder")
+        self.layer_tab_splitter.addWidget(self.canvas_layer_container_placeholder)
 
         self.gridLayout_5.addWidget(self.layer_tab_splitter, 0, 0, 1, 1)
 
@@ -118,17 +110,12 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.splitter = QSplitter(self.scrollAreaWidgetContents)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Vertical)
-        self.grid_preferences = GridPreferencesWidget(self.splitter)
-        self.grid_preferences.setObjectName(u"grid_preferences")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.grid_preferences.sizePolicy().hasHeightForWidth())
-        self.grid_preferences.setSizePolicy(sizePolicy)
-        self.splitter.addWidget(self.grid_preferences)
-        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.splitter)
-        self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
-        self.splitter.addWidget(self.active_grid_settings_widget)
+        self.grid_preferences_placeholder = QWidget(self.splitter)
+        self.grid_preferences_placeholder.setObjectName(u"grid_preferences_placeholder")
+        self.splitter.addWidget(self.grid_preferences_placeholder)
+        self.active_grid_settings_widget_placeholder = QWidget(self.splitter)
+        self.active_grid_settings_widget_placeholder.setObjectName(u"active_grid_settings_widget_placeholder")
+        self.splitter.addWidget(self.active_grid_settings_widget_placeholder)
 
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
 
@@ -142,10 +129,10 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_9 = QGridLayout(self.tab)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
         self.gridLayout_9.setContentsMargins(0, 0, -1, 0)
-        self.widget = BatchContainer(self.tab)
-        self.widget.setObjectName(u"widget")
+        self.batch_container_placeholder = QWidget(self.tab)
+        self.batch_container_placeholder.setObjectName(u"batch_container_placeholder")
 
-        self.gridLayout_9.addWidget(self.widget, 0, 0, 1, 1)
+        self.gridLayout_9.addWidget(self.batch_container_placeholder, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab, "")
 
