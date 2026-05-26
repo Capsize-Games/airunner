@@ -77,6 +77,10 @@ class MediatorMixin:
         """
         self.mediator.register(code, slot_function)
 
+    def unregister(self, code: SignalCode, slot_function: Callable):
+        """Unregister one previously registered callback."""
+        self.mediator.unregister(code, slot_function)
+
     def unregister_signals(self):
         """
         Unregister all signal handlers that were registered by this instance.

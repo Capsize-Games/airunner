@@ -53,3 +53,5 @@ class DownloadThread(QThread):
 
     def stop(self):
         self._stop_event = True
+        if self.hf_downloader is not None:
+            self.hf_downloader.stop_download()

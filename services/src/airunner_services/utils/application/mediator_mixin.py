@@ -57,6 +57,10 @@ class MediatorMixin:
         """Register one callback for one signal key."""
         self.mediator.register(code, slot_function)
 
+    def unregister(self, code: object, slot_function: Callable) -> None:
+        """Unregister one previously registered callback."""
+        self.mediator.unregister(code, slot_function)
+
     def unregister_signals(self) -> None:
         """Unregister all handlers that belong to this instance."""
         for code, handler in list(self.signal_handlers.items()):

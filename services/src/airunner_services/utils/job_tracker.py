@@ -111,6 +111,21 @@ class JobTracker:
             job.updated_at = datetime.now()
             logger.debug("Job %s progress: %s%%", job_id, progress)
 
+    async def update_metadata(
+        self,
+        job_id: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Merge one metadata update into the tracked job state."""
+        async with self._lock:
+            if job_id not in self._jobs:
+                logger.warning("Job %s not found for metadata update", job_id)
+                return
+
+            job = self._jobs[job_id]
+            job.metadata.update(metadata)
+            job.updated_at = datetime.now()
+
     async def complete_job(self, job_id: str, result: Any) -> None:
         """Mark one job as complete and resolve any waiting future."""
         async with self._lock:

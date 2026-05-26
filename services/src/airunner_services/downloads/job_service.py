@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import threading
+import time
 import zipfile
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable
+
+try:
+    import nltk
+except ImportError:
+    nltk = None
 
 from airunner_services.settings import MODELS_DIR
 from airunner_services.config.local_settings_store import get_setting
@@ -22,10 +29,14 @@ from airunner_services.downloads.huggingface import (
     HuggingFaceDownloadRequest,
     prepare_huggingface_download_request,
 )
+from airunner_services.contract_enums import SignalCode as WorkerSignalCode
+from airunner_services.downloads.huggingface_download_worker import (
+    HuggingFaceDownloadWorker as ServiceHuggingFaceDownloadWorker,
+)
 from airunner_services.downloads.service import download_civitai_file
 from airunner_services.llm.utils.model_downloader import (
     DownloadCancelledError,
-    HuggingFaceDownloader,
+    HuggingFaceDownloader as SimpleHuggingFaceDownloader,
 )
 from airunner_services.utils.job_tracker import JobState, JobStatus, JobTracker
 from airunner_services.utils.zip_utils import safe_extract_zip
@@ -38,11 +49,17 @@ class DownloadJobService:
     def __init__(
         self,
         tracker: JobTracker | None = None,
-        huggingface_downloader: HuggingFaceDownloader | None = None,
+        huggingface_downloader: SimpleHuggingFaceDownloader | None = None,
+        huggingface_worker_factory: (
+            Callable[[], ServiceHuggingFaceDownloadWorker] | None
+        ) = None,
     ) -> None:
         self._tracker = tracker or JobTracker()
         self._huggingface_downloader = (
-            huggingface_downloader or HuggingFaceDownloader()
+            huggingface_downloader or SimpleHuggingFaceDownloader()
+        )
+        self._huggingface_worker_factory = (
+            huggingface_worker_factory or ServiceHuggingFaceDownloadWorker
         )
         self._cancel_events: dict[str, threading.Event] = {}
         self._threads: dict[str, threading.Thread] = {}
@@ -182,6 +199,23 @@ class DownloadJobService:
             extract_zip,
         )
 
+    async def start_nltk_download(self, data_names: list[str]) -> str:
+        """Create and start one NLTK data download job."""
+        resolved_names = [
+            name.strip() for name in data_names if str(name).strip()
+        ]
+        if not resolved_names:
+            raise ValueError("At least one NLTK data name is required")
+        metadata = {
+            "provider": "nltk",
+            "data_names": resolved_names,
+        }
+        return await self._start_job(
+            metadata,
+            self._run_nltk_download_job,
+            resolved_names,
+        )
+
     async def get_status(self, job_id: str) -> JobState | None:
         """Return the tracked state for one download job."""
         return await self._tracker.get_status(job_id)
@@ -239,6 +273,10 @@ class DownloadJobService:
         """Synchronously create one generic URL download job."""
         return asyncio.run(self.start_url_download(*args, **kwargs))
 
+    def start_nltk_download_sync(self, *args: Any, **kwargs: Any) -> str:
+        """Synchronously create one NLTK data download job."""
+        return asyncio.run(self.start_nltk_download(*args, **kwargs))
+
     def get_status_sync(self, job_id: str) -> JobState | None:
         """Synchronously return the status for one tracked job."""
         return asyncio.run(self.get_status(job_id))
@@ -275,42 +313,79 @@ class DownloadJobService:
     ) -> None:
         """Run one HuggingFace download inside a background thread."""
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
-        progress = _progress_reporter(job_id, self._tracker)
+        worker = self._huggingface_worker_factory()
+        completion: dict[str, Any] | None = None
+        failure: str | None = None
+        stop_watch = threading.Event()
+
+        def handle_signal(code: object, data: dict[str, Any] | None = None) -> None:
+            nonlocal completion, failure
+            payload = data or {}
+            if code == WorkerSignalCode.UPDATE_DOWNLOAD_LOG:
+                self._record_log_message(job_id, str(payload.get("message") or ""))
+                return
+            if code == WorkerSignalCode.UPDATE_DOWNLOAD_PROGRESS:
+                progress = float(payload.get("progress") or 0.0)
+                self._update_job(job_id, progress, JobStatus.RUNNING)
+                return
+            if code == WorkerSignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS:
+                self._record_file_progress(
+                    job_id,
+                    str(payload.get("filename") or ""),
+                    int(payload.get("downloaded") or 0),
+                    int(payload.get("total") or 0),
+                )
+                return
+            if code == WorkerSignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE:
+                completion = payload
+                return
+            if code == WorkerSignalCode.HUGGINGFACE_DOWNLOAD_FAILED:
+                failure = str(payload.get("error") or "Download failed")
+
+        def watch_cancel() -> None:
+            while not stop_watch.is_set():
+                if cancel_event.is_set():
+                    worker.is_cancelled = True
+                    return
+                time.sleep(0.05)
+
+        worker.emit_signal = handle_signal  # type: ignore[method-assign]
+        cancel_watcher = threading.Thread(target=watch_cancel, daemon=True)
+        cancel_watcher.start()
         try:
-            if request.model_type == "gguf" and request.gguf_filename:
-                downloaded_path = self._huggingface_downloader.download_gguf_model(
-                    request.repo_id,
-                    request.gguf_filename,
-                    local_dir=request.output_dir,
-                    progress_callback=progress,
-                    cancel_callback=cancel_event.is_set,
-                )
-            else:
-                downloaded_path = self._huggingface_downloader.download_model(
-                    request.repo_id,
-                    local_dir=request.output_dir,
-                    model_type=request.model_type,
-                    include_patterns=request.missing_files,
-                    progress_callback=progress,
-                    cancel_callback=cancel_event.is_set,
-                )
-            if cancel_event.is_set():
+            worker.handle_message(request.as_payload())
+            if cancel_event.is_set() or worker.is_cancelled:
                 self._cancel_job(job_id)
                 return
+            if failure is not None:
+                self._fail_job(job_id, failure)
+                return
+            if completion is None:
+                self._fail_job(
+                    job_id,
+                    "Download ended without completion signal",
+                )
+                return
+            model_path = str(completion.get("model_path") or request.output_dir or "")
             self._complete_job(
                 job_id,
                 {
                     "provider": "huggingface",
-                    "repo_id": request.repo_id,
-                    "model_type": request.model_type,
-                    "paths": [str(downloaded_path)],
+                    "repo_id": str(
+                        completion.get("repo_id") or request.repo_id
+                    ),
+                    "model_type": str(
+                        completion.get("model_type") or request.model_type
+                    ),
+                    "paths": [model_path] if model_path else [],
+                    "pipeline_action": completion.get("pipeline_action"),
                 },
             )
-        except DownloadCancelledError:
-            self._cancel_job(job_id)
         except Exception as exc:
             self._fail_job(job_id, str(exc))
         finally:
+            stop_watch.set()
+            cancel_watcher.join(timeout=0.1)
             self._forget_job(job_id)
 
     def _run_huggingface_file_job(
@@ -323,6 +398,7 @@ class DownloadJobService:
     ) -> None:
         """Run one single-file HuggingFace download inside a background thread."""
         self._update_job(job_id, 0.0, JobStatus.RUNNING)
+        self._record_log_message(job_id, f"Starting download: {filename}")
         last_progress = -1.0
 
         def progress(downloaded: int, total: int) -> None:
@@ -337,6 +413,12 @@ class DownloadJobService:
                     current_progress,
                     JobStatus.RUNNING,
                 )
+            )
+            self._record_file_progress(
+                job_id,
+                filename,
+                downloaded,
+                total,
             )
 
         try:
@@ -486,7 +568,23 @@ class DownloadJobService:
         output_root = Path(output_dir)
         output_root.mkdir(parents=True, exist_ok=True)
         output_path = output_root / filename
-        progress = _civitai_progress_reporter(job_id, self._tracker, 0, 0)
+        self._record_log_message(job_id, f"Starting download: {filename}")
+        last_progress = -1.0
+
+        def progress(downloaded: int, total: int) -> None:
+            nonlocal last_progress
+            current_progress = _coerce_progress(downloaded, total)
+            if current_progress < 100.0 and current_progress - last_progress < 1.0:
+                return
+            last_progress = current_progress
+            self._update_job(job_id, current_progress, JobStatus.RUNNING)
+            self._record_file_progress(
+                job_id,
+                filename,
+                downloaded,
+                total,
+            )
+
         try:
             completed = download_civitai_file(
                 url,
@@ -499,6 +597,7 @@ class DownloadJobService:
                 self._cancel_job(job_id)
                 return
             if extract_zip:
+                self._record_log_message(job_id, f"Extracting {filename}...")
                 with zipfile.ZipFile(output_path, "r") as archive:
                     safe_extract_zip(archive, output_root)
                 output_path.unlink(missing_ok=True)
@@ -516,6 +615,95 @@ class DownloadJobService:
         except Exception as exc:
             self._fail_job(job_id, str(exc))
         finally:
+            self._forget_job(job_id)
+
+    def _record_log_message(self, job_id: str, message: str) -> None:
+        """Persist one user-facing log message into job metadata."""
+        if not message:
+            return
+        self._update_job_metadata(
+            job_id,
+            {"last_log_message": message},
+        )
+
+    def _record_file_progress(
+        self,
+        job_id: str,
+        filename: str,
+        downloaded: int,
+        total: int,
+    ) -> None:
+        """Persist one file-progress update into job metadata."""
+        if not filename:
+            return
+        self._update_job_metadata(
+            job_id,
+            {
+                "file_progress": {
+                    "filename": filename,
+                    "downloaded": max(0, int(downloaded)),
+                    "total": max(0, int(total)),
+                }
+            },
+        )
+
+    def _update_job_metadata(
+        self,
+        job_id: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Push one metadata update into the shared tracker."""
+        asyncio.run(self._tracker.update_metadata(job_id, metadata))
+
+    def _run_nltk_download_job(
+        self,
+        job_id: str,
+        cancel_event: threading.Event,
+        data_names: list[str],
+    ) -> None:
+        """Run one NLTK data download job inside a background thread."""
+        self._update_job(job_id, 0.0, JobStatus.RUNNING)
+        if nltk is None:
+            self._fail_job(job_id, "NLTK is not installed")
+            self._forget_job(job_id)
+            return
+
+        original_limit = sys.getrecursionlimit()
+        total = max(1, len(data_names))
+        downloaded_names: list[str] = []
+
+        try:
+            sys.setrecursionlimit(1500)
+            for index, data_name in enumerate(data_names, start=1):
+                if cancel_event.is_set():
+                    self._cancel_job(job_id)
+                    return
+
+                completed = bool(nltk.download(data_name, quiet=True))
+                if not completed:
+                    raise RuntimeError(
+                        f"Failed to download NLTK {data_name}"
+                    )
+
+                downloaded_names.append(data_name)
+                progress = min(99.0, (float(index) / float(total)) * 100.0)
+                self._update_job(job_id, progress, JobStatus.RUNNING)
+
+            if cancel_event.is_set():
+                self._cancel_job(job_id)
+                return
+
+            self._complete_job(
+                job_id,
+                {
+                    "provider": "nltk",
+                    "data_names": downloaded_names,
+                },
+            )
+        except Exception as exc:
+            self._fail_job(job_id, str(exc))
+        finally:
+            sys.setrecursionlimit(original_limit)
             self._forget_job(job_id)
 
     def _update_job(

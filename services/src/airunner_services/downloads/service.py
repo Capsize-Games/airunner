@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from airunner_services.downloads.civitai import (
+    fetch_browser_model_info,
     download_file as civitai_download_file,
     fetch_model_info_for_url,
+    search_models,
 )
 from airunner_services.downloads.huggingface import (
     prepare_huggingface_download_request,
@@ -69,6 +71,42 @@ def prepare_huggingface_download_payload(
 def fetch_civitai_model_info(url: str, api_key: str = "") -> dict[str, Any]:
     """Return one selected-version-aware CivitAI metadata payload."""
     return fetch_model_info_for_url(url, api_key)
+
+
+def search_civitai_models(
+    query: str = "",
+    *,
+    base_models: list[str] | None = None,
+    model_types: list[str] | None = None,
+    limit: int = 20,
+    cursor: str | None = None,
+    api_key: str = "",
+) -> dict[str, Any]:
+    """Return one filtered CivitAI model-search payload."""
+    return search_models(
+        query,
+        base_models=base_models,
+        model_types=model_types,
+        limit=limit,
+        cursor=cursor,
+        api_key=api_key,
+    )
+
+
+def fetch_civitai_browser_model_info(
+    model_id: str,
+    *,
+    base_models: list[str] | None = None,
+    model_types: list[str] | None = None,
+    api_key: str = "",
+) -> dict[str, Any]:
+    """Return one filtered CivitAI model payload for the browser."""
+    return fetch_browser_model_info(
+        model_id,
+        base_models=base_models,
+        model_types=model_types,
+        api_key=api_key,
+    )
 
 
 def download_civitai_file(*args: Any, **kwargs: Any) -> bool:

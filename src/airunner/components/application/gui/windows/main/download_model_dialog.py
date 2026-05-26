@@ -1,567 +1,471 @@
-"""Dialog and logic for downloading models from CivitAI by URL."""
+"""Template-backed CivitAI browser dialog."""
 
+from __future__ import annotations
+
+import hashlib
+import os
+from typing import Any, Optional
+from urllib.parse import urlparse
+
+from PySide6.QtCore import QSize, Qt, QThread, QUrl
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
     QDialog,
-    QVBoxLayout,
+    QDialogButtonBox,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QPushButton,
-    QInputDialog,
     QMessageBox,
-    QScrollArea,
-    QWidget,
-    QSizePolicy,
     QProgressDialog,
-    QApplication,
+    QPushButton,
+    QSplitter,
+    QTextBrowser,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Qt, QThread
-import os
-from typing import Any, Dict, Optional
 
-from airunner.components.application.workers.qt_civitai_workers import (
-    ModelInfoWorker,
-    FileDownloadWorker,
-)
 from airunner.components.application.utils.model_persistence import (
     persist_trigger_words,
 )
+from airunner.components.application.workers.qt_civitai_workers import (
+    FileDownloadWorker,
+    ImageLoaderWorker,
+    ModelInfoWorker,
+    ModelSearchWorker,
+)
 from airunner.enums import StableDiffusionVersion
-from airunner.settings import AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
+from airunner.utils.application.ui_loader import load_ui_file
 
-
-# Mapping from CivitAI baseModel names to airunner version folder names.
-# CivitAI may use different naming conventions than airunner expects.
-CIVITAI_BASE_MODEL_MAP: Dict[str, str] = {
+BASE_MODEL_VALUES = {
+    "SDXL 1.0": "SDXL 1.0",
+    "Z-Image Turbo": "ZImageTurbo",
+}
+MODEL_TYPE_VALUES = {
+    "Checkpoint": "Checkpoint",
+    "LoRA": "LORA",
+    "Embedding": "TextualInversion",
+}
+MODEL_TYPES_BY_BASE = {
+    "SDXL 1.0": ["Checkpoint", "LoRA", "Embedding"],
+    "Z-Image Turbo": ["Checkpoint"],
+}
+CIVITAI_BASE_MODEL_MAP = {
     "ZImageTurbo": "Z-Image Turbo",
     "SDXL 1.0": "SDXL 1.0",
-    "SDXL Turbo": "SDXL Turbo",
-    "SDXL Lightning": "SDXL Lightning",
-    "SDXL Hyper": "SDXL Hyper",
 }
-
 SUPPORTED_ZIMAGE_BASE_MODELS = {StableDiffusionVersion.Z_IMAGE_TURBO.value}
 
 
 class DownloadModelDialog(QDialog):
-    @staticmethod
-    def _normalize_base_model(base_model: str) -> str:
-        """Normalize CivitAI base model name to airunner version folder name.
-        
-        Args:
-            base_model: The baseModel string from CivitAI API.
-            
-        Returns:
-            The normalized version folder name for airunner.
-        """
-        return CIVITAI_BASE_MODEL_MAP.get(base_model, base_model)
+    """Browse and download filtered CivitAI models."""
 
-    @staticmethod
-    def _get_model_subfolder(model_type: str, file_info: dict) -> str:
-        """Map model type and file info to correct subfolder."""
-        # Normalize type
-        t = (model_type or "checkpoint").strip().upper()
-        # Try to use file type if available
-        file_type = (file_info.get("type") or "").strip().upper()
-        fname = file_info.get("name", "").lower()
-        # LORA
-        if t == "LORA":
-            return "lora"
-        # Checkpoint (txt2img)
-        if t in ("CHECKPOINT", "MODEL"):
-            return "txt2img"
-        # Inpaint
-        if t == "INPAINT" or "inpaint" in fname:
-            return "inpaint"
-        # Embedding
-        if (
-            t in ("TEXTUAL EMBEDDING", "EMBEDDING", "TEXTUALINVERSION")
-            or file_type == "EMBEDDING"
-            or fname.endswith(".pt")
-        ):
-            return "embeddings"
-        # Fallback
-        return t.lower()
-
-    """Dialog for downloading a model from CivitAI by URL.
-
-    Attributes:
-        path_settings: Application path settings, used to resolve base paths.
-        application_settings: Global application settings (contains CivitAI API key).
-    """
-
-    def __init__(self, parent, path_settings, application_settings):
+    def __init__(self, parent, path_settings, application_settings) -> None:
         super().__init__(parent)
-        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
-        self.setWindowTitle("CivitAI Model Details")
-        # Start at a sensible size so very long descriptions don't grow the
-        # dialog off-screen. The dialog remains resizable so the user can
-        # expand it if they wish.
-        self.resize(700, 520)
-        self.setMinimumSize(520, 340)
         self.path_settings = path_settings
         self.application_settings = application_settings
-        self.model_info: Optional[Dict[str, Any]] = None
 
-        # Keep strong references to avoid GC while running
+        self._ui_root = self._load_ui()
+        self.browser_splitter = self._bind_widget(QSplitter, "browser_splitter")
+        self.search_line_edit = self._bind_widget(
+            QLineEdit,
+            "search_line_edit",
+        )
+        self.base_model_combo = self._bind_widget(
+            QComboBox,
+            "base_model_combo",
+        )
+        self.type_combo = self._bind_widget(QComboBox, "type_combo")
+        self.search_button = self._bind_widget(QPushButton, "search_button")
+        self.load_more_button = self._bind_widget(
+            QPushButton,
+            "load_more_button",
+        )
+        self.status_label = self._bind_widget(QLabel, "status_label")
+        self.results_list = self._bind_widget(QListWidget, "results_list")
+        self.selected_model_label = self._bind_widget(
+            QLabel,
+            "selected_model_label",
+        )
+        self.selected_model_meta_label = self._bind_widget(
+            QLabel,
+            "selected_model_meta_label",
+        )
+        self.preview_label = self._bind_widget(QLabel, "preview_label")
+        self.sample_images_list = self._bind_widget(
+            QListWidget,
+            "sample_images_list",
+        )
+        self.description_browser = self._bind_widget(
+            QTextBrowser,
+            "description_browser",
+        )
+        self.version_combo = self._bind_widget(QComboBox, "version_combo")
+        self.file_combo = self._bind_widget(QComboBox, "file_combo")
+        self.open_model_button = self._bind_widget(
+            QPushButton,
+            "open_model_button",
+        )
+        self.download_button = self._bind_widget(
+            QPushButton,
+            "download_button",
+        )
+        self.button_box = self._bind_widget(
+            QDialogButtonBox,
+            "button_box",
+        )
+
+        self._search_thread: Optional[QThread] = None
+        self._search_worker: Optional[ModelSearchWorker] = None
+        self._info_thread: Optional[QThread] = None
+        self._info_worker: Optional[ModelInfoWorker] = None
         self._download_thread: Optional[QThread] = None
         self._download_worker: Optional[FileDownloadWorker] = None
         self._progress_dialog: Optional[QProgressDialog] = None
-        self._info_thread: Optional[QThread] = None
-        self._info_worker: Optional[ModelInfoWorker] = None
+        self._image_threads: dict[str, QThread] = {}
+        self._image_workers: dict[str, ImageLoaderWorker] = {}
+        self._result_items: dict[str, QListWidgetItem] = {}
+        self._sample_items: dict[str, QListWidgetItem] = {}
+        self._model_cache: dict[str, dict[str, Any]] = {}
+        self._current_model: Optional[dict[str, Any]] = None
+        self._current_version: Optional[dict[str, Any]] = None
+        self._current_file: Optional[dict[str, Any]] = None
+        self._next_cursor: Optional[str] = None
+        self._append_results = False
+        self._requested_model_id: Optional[str] = None
+        self._initialized = False
 
-        # Store download context for persistence
-        self._current_version_data: Optional[Dict[str, Any]] = None
-        self._current_model_type: Optional[str] = None
-        self._current_file_info: Optional[Dict[str, Any]] = None
+        self._configure_ui()
 
-        # Widgets we may need to update on resize so text wraps instead of
-        # causing horizontal scrollbars.
-        self._desc_scroll: Optional[QScrollArea] = None
-        self._desc_label: Optional[QLabel] = None
+    def showEvent(self, event) -> None:
+        """Kick off the initial search once the dialog is visible."""
+        super().showEvent(event)
+        if self._initialized:
+            return
+        self._initialized = True
+        self._start_search()
 
-        self._setup_ui()
+    def closeEvent(self, event) -> None:
+        """Cancel one active download before the dialog closes."""
+        if self._download_worker is not None:
+            self._download_worker.cancel()
+        self._stop_thread(self._search_thread)
+        self._stop_thread(self._info_thread)
+        self._stop_thread(self._download_thread)
+        super().closeEvent(event)
 
-    def _setup_ui(self) -> None:
-        self.layout = QVBoxLayout(self)
-        self.list_widget = QListWidget(self)
-        # allow the list to expand within the dialog and to show its own
-        # scrollbars when needed
-        self.list_widget.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
+    def _configure_ui(self) -> None:
+        """Configure one browser dialog after loading the template."""
+        self.setWindowTitle("CivitAI Browser")
+        self.resize(1080, 720)
+        self.browser_splitter.setSizes([360, 720])
+        self.results_list.setIconSize(QSize(64, 64))
+        self.sample_images_list.setIconSize(QSize(120, 120))
+        self.sample_images_list.setViewMode(
+            self.sample_images_list.ViewMode.IconMode
         )
-        self.download_btn = QPushButton("Download Selected Version", self)
-        self.layout.addWidget(self.list_widget)
-        self.layout.addWidget(self.download_btn)
-        self.download_btn.clicked.connect(self._start_download)
+        self.sample_images_list.setResizeMode(
+            self.sample_images_list.ResizeMode.Adjust
+        )
+        self.sample_images_list.setSpacing(8)
+        self.description_browser.setOpenExternalLinks(True)
+        self.button_box.rejected.connect(self.reject)
+        self.search_button.clicked.connect(self._start_search)
+        self.load_more_button.clicked.connect(self._load_more)
+        self.base_model_combo.currentTextChanged.connect(
+            self._update_type_options
+        )
+        self.results_list.currentItemChanged.connect(
+            self._on_result_selected
+        )
+        self.version_combo.currentIndexChanged.connect(
+            self._on_version_changed
+        )
+        self.file_combo.currentIndexChanged.connect(
+            self._on_file_changed
+        )
+        self.sample_images_list.currentItemChanged.connect(
+            self._on_sample_selected
+        )
+        self.search_line_edit.returnPressed.connect(self._start_search)
+        self.open_model_button.clicked.connect(self._open_current_model)
+        self.download_button.clicked.connect(self._start_download)
+        self.load_more_button.setEnabled(False)
+        self.open_model_button.setEnabled(False)
+        self.download_button.setEnabled(False)
+        self._populate_base_models()
+        self._update_type_options()
 
-    def resizeEvent(self, event) -> None:
-        """Ensure the description label wraps to the current viewport width.
+    def _populate_base_models(self) -> None:
+        """Populate one constrained base-model selector."""
+        self.base_model_combo.clear()
+        for label in BASE_MODEL_VALUES:
+            self.base_model_combo.addItem(label)
 
-        QLabel will otherwise try to expand horizontally which can cause a
-        horizontal scrollbar to appear. By updating the label's maximum width
-        to match the scroll viewport we force word-wrapping.
-        """
-        try:
-            super().resizeEvent(event)
-        except Exception:
-            pass
-        try:
-            if self._desc_scroll and self._desc_label:
-                vw = self._desc_scroll.viewport().width()
-                # leave a small margin
-                self._desc_label.setMaximumWidth(max(40, vw - 4))
-        except Exception:
-            # don't let resize issues crash the UI
-            pass
+    def _update_type_options(self) -> None:
+        """Refresh model-type options for one selected base model."""
+        base_model = self.base_model_combo.currentText()
+        current = self.type_combo.currentText()
+        self.type_combo.blockSignals(True)
+        self.type_combo.clear()
+        for label in MODEL_TYPES_BY_BASE.get(base_model, ["Checkpoint"]):
+            self.type_combo.addItem(label)
+        match = self.type_combo.findText(current)
+        self.type_combo.setCurrentIndex(max(match, 0))
+        self.type_combo.blockSignals(False)
 
-    def fetch_and_display(self, url: str) -> None:
-        """Fetch model info from CivitAI and populate the UI (async)."""
-        api_key = getattr(self.application_settings, "civit_ai_api_key", "")
-        self._info_worker = ModelInfoWorker(url=url, api_key=api_key)
-        self._info_thread = QThread(self)
-        self._info_worker.moveToThread(self._info_thread)
-        self._info_worker.fetched.connect(self._on_info_fetched)
-        self._info_worker.error.connect(self._on_info_error)
-        self._info_thread.started.connect(self._info_worker.run)
-        # Cleanup thread when done
-        self._info_worker.fetched.connect(self._info_thread.quit)
-        self._info_worker.error.connect(self._info_thread.quit)
-        self._info_thread.finished.connect(self._on_info_thread_finished)
-        self._info_thread.start()
+    def _start_search(self) -> None:
+        """Start one new filtered browser search."""
+        self._append_results = False
+        self._next_cursor = None
+        self._run_search_worker(cursor=None)
 
-    def _on_info_thread_finished(self) -> None:
-        try:
-            if self._info_worker is not None:
-                self._info_worker.deleteLater()
-        except Exception:
-            pass
-        try:
-            if self._info_thread is not None:
-                self._info_thread.deleteLater()
-        except Exception:
-            pass
-        self._info_worker = None
-        self._info_thread = None
-
-    def _on_info_error(self, msg: str) -> None:
-        QMessageBox.critical(self, "CivitAI Error", msg)
-        self.reject()
-
-    def _on_info_fetched(self, data: Dict[str, Any]) -> None:
-        self.model_info = data
-        name = data.get("name", "Unknown")
-        desc = data.get("description", "")
-        # Insert the model name as a label (rich text allowed)
-        name_label = QLabel(f"<b>{name}</b>")
-        name_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.layout.insertWidget(0, name_label)
-
-        # Description can be very long — place it into a scroll area so the
-        # dialog doesn't expand to fit the entire text. The scroll area is
-        # given a reasonable maximum height and the label inside it will
-        # word-wrap.
-        if desc:
-            desc_label = QLabel(desc)
-            desc_label.setWordWrap(True)
-            desc_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            desc_label.setSizePolicy(
-                QSizePolicy.Preferred, QSizePolicy.Preferred
-            )
-
-            desc_container = QWidget()
-            desc_container_layout = QVBoxLayout(desc_container)
-            desc_container_layout.setContentsMargins(0, 0, 0, 0)
-            desc_container_layout.addWidget(desc_label)
-
-            scroll = QScrollArea()
-            scroll.setWidgetResizable(True)
-            scroll.setWidget(desc_container)
-            # Limit initial height so the dialog stays on-screen; user can
-            # expand the dialog to see more.
-            scroll.setMaximumHeight(220)
-            self.layout.insertWidget(1, scroll)
-
-            # Keep references so we can adjust maximum width on resize and
-            # avoid horizontal scrollbars. Update immediately to match the
-            # current size.
-            self._desc_scroll = scroll
-            self._desc_label = desc_label
-            try:
-                vw = scroll.viewport().width()
-                self._desc_label.setMaximumWidth(max(40, vw - 4))
-            except Exception:
-                pass
-        self.layout.insertWidget(2, QLabel("Select a version to download:"))
-        self.list_widget.clear()
-        for v in data.get("modelVersions", []):
-            # Extract file size from the first suitable file
-            file_size_str = ""
-            files = v.get("files", [])
-            for f in files:
-                if f.get("downloadUrl") and any(
-                    f.get("name", "").endswith(ext)
-                    for ext in [".safetensors", ".ckpt", ".pt", ".gguf"]
-                ):
-                    size_kb = f.get("sizeKB", 0) or 0
-                    if size_kb > 0:
-                        # Format size in a human-readable way
-                        if size_kb < 1024:
-                            file_size_str = f" ({size_kb:.0f} KB)"
-                        elif size_kb < 1024 * 1024:
-                            file_size_str = f" ({size_kb / 1024:.1f} MB)"
-                        else:
-                            file_size_str = (
-                                f" ({size_kb / (1024 * 1024):.2f} GB)"
-                            )
-                    break
-
-            item = QListWidgetItem(
-                f"Version {v.get('id')}: {v.get('name', '')}{file_size_str}"
-            )
-            item.setData(Qt.ItemDataRole.UserRole, v)
-            self.list_widget.addItem(item)
-
-    def _on_thread_finished(self) -> None:
-        try:
-            if self._download_worker is not None:
-                self._download_worker.deleteLater()
-        except Exception:
-            pass
-        try:
-            if self._download_thread is not None:
-                self._download_thread.deleteLater()
-        except Exception:
-            pass
-        self._download_worker = None
-        self._download_thread = None
-
-    def _cleanup_download(self) -> None:
-        """Stop thread, clear references, and close progress dialog if needed."""
-        try:
-            # Close and hide the progress UI immediately so further progress
-            # updates can't make it reappear.
-            if self._progress_dialog is not None:
-                try:
-                    self._progress_dialog.close()
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-        # Try to stop the worker thread cleanly. Avoid calling terminate()
-        # because it can crash the application (abort). Instead request the
-        # worker cancel and quit the thread, then wait a short time.
-        if self._download_thread is not None:
-            try:
-                # Disconnect worker signals so they can't call back into this
-                # dialog after we've closed the UI.
-                try:
-                    if self._download_worker is not None:
-                        try:
-                            self._download_worker.progress.disconnect()
-                        except Exception:
-                            pass
-                        try:
-                            self._download_worker.finished.disconnect()
-                        except Exception:
-                            pass
-                        try:
-                            self._download_worker.error.disconnect()
-                        except Exception:
-                            pass
-                        try:
-                            self._download_worker.canceled.disconnect()
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-
-                try:
-                    # Ask the thread to quit; the worker should notice the
-                    # cancel flag and exit its loop. Wait briefly for it to
-                    # finish.
-                    self._download_thread.quit()
-                    try:
-                        self._download_thread.wait(2000)
-                    except Exception:
-                        # If wait isn't available, just continue — don't
-                        # attempt to forcefully terminate the thread.
-                        self.logger.debug(
-                            "Thread wait not available", exc_info=True
-                        )
-                except Exception:
-                    self.logger.debug("Thread quit failed", exc_info=True)
-            except Exception:
-                # Protect against any unexpected errors while disconnecting
-                # or quitting the thread; we don't want this to crash the app.
-                self.logger.debug(
-                    "Error while cleaning up download thread", exc_info=True
-                )
-
-        # Drop the reference to the progress dialog so progress handlers
-        # return early and cannot re-show it.
-        self._progress_dialog = None
-
-    def _on_download_progress(self, current: int, total: int) -> None:
-        if not self._progress_dialog:
+    def _load_more(self) -> None:
+        """Append the next page of results when the API exposes one."""
+        if not self._next_cursor:
             return
-        if total <= 0:
-            self._progress_dialog.setRange(0, 0)
+        self._append_results = True
+        self._run_search_worker(cursor=self._next_cursor)
+
+    def _run_search_worker(self, cursor: Optional[str]) -> None:
+        """Run one search worker with the current filter set."""
+        if self._search_thread is not None:
             return
-        if (
-            self._progress_dialog.minimum() == 0
-            and self._progress_dialog.maximum() == 0
-        ):
-            self._progress_dialog.setRange(0, 100)
-        percent = max(0, min(100, int((current / total) * 100)))
-        self._progress_dialog.setValue(percent)
+        self.status_label.setText("Loading models...")
+        self.load_more_button.setEnabled(False)
+        self._search_worker = ModelSearchWorker(
+            query=self.search_line_edit.text().strip(),
+            base_models=[BASE_MODEL_VALUES[self.base_model_combo.currentText()]],
+            model_types=[MODEL_TYPE_VALUES[self.type_combo.currentText()]],
+            limit=20,
+            cursor=cursor,
+            api_key=self._api_key,
+        )
+        self._search_thread = self._start_worker_thread(
+            worker=self._search_worker,
+            success_signal=self._search_worker.fetched,
+            success_slot=self._on_search_results,
+            error_signal=self._search_worker.error,
+            error_slot=self._on_search_error,
+            clear_callback=self._clear_search_worker,
+        )
 
-    def _on_download_finished(self, save_path: str) -> None:
-        self.logger.info("Download completed successfully")
+    def _on_search_results(self, payload: dict[str, Any]) -> None:
+        """Render one browser search response in the results list."""
+        if not self._append_results:
+            self.results_list.clear()
+            self._result_items.clear()
+        items = payload.get("items", []) or []
+        self._next_cursor = (
+            payload.get("metadata", {}) or {}
+        ).get("nextCursor")
+        self.load_more_button.setEnabled(bool(self._next_cursor))
+        for model in items:
+            self._add_result_item(model)
+        count = self.results_list.count()
+        if count == 0:
+            self.status_label.setText("No matching models found.")
+            self._clear_details()
+            return
+        self.status_label.setText(f"Showing {count} filtered models")
+        if self.results_list.currentItem() is None:
+            self.results_list.setCurrentRow(0)
 
-        # Verify file exists
-        if os.path.exists(save_path):
-            file_size = os.path.getsize(save_path)
-            self.logger.info(f"Downloaded file size: {file_size} bytes")
+    def _add_result_item(self, model: dict[str, Any]) -> None:
+        """Append one model row and queue its thumbnail load."""
+        model_id = str(model.get("id") or "")
+        creator = (model.get("creator") or {}).get("username") or "Unknown"
+        model_type = model.get("type") or self.ui.type_combo.currentText()
+        base_model = ""
+        if model.get("modelVersions"):
+            base_model = str(model["modelVersions"][0].get("baseModel", ""))
+        text = f"{model.get('name', 'Unknown')}\n{creator} • {model_type}"
+        if base_model:
+            text = f"{text} • {base_model}"
+        item = QListWidgetItem(text)
+        item.setData(Qt.ItemDataRole.UserRole, model_id)
+        self.results_list.addItem(item)
+        self._result_items[model_id] = item
+        image_url = self._model_image_url(model)
+        if image_url:
+            self._start_image_worker(f"result:{model_id}", image_url)
+
+    def _on_search_error(self, message: str) -> None:
+        """Show one browser search failure without closing the dialog."""
+        self.status_label.setText("Failed to load models.")
+        QMessageBox.critical(self, "CivitAI", message)
+
+    def _on_result_selected(self, current, _previous) -> None:
+        """Fetch one selected model into the detail pane."""
+        if current is None:
+            self._clear_details()
+            return
+        model_id = str(current.data(Qt.ItemDataRole.UserRole) or "")
+        if not model_id:
+            return
+        cache_key = self._model_cache_key(model_id)
+        if cache_key in self._model_cache:
+            self._show_model(self._model_cache[cache_key])
+            return
+        self._requested_model_id = model_id
+        self.selected_model_label.setText("Loading model details...")
+        self._info_worker = ModelInfoWorker(
+            model_id=model_id,
+            base_models=[BASE_MODEL_VALUES[self.base_model_combo.currentText()]],
+            model_types=[MODEL_TYPE_VALUES[self.type_combo.currentText()]],
+            api_key=self._api_key,
+        )
+        self._info_thread = self._start_worker_thread(
+            worker=self._info_worker,
+            success_signal=self._info_worker.fetched,
+            success_slot=self._on_model_info,
+            error_signal=self._info_worker.error,
+            error_slot=self._on_model_error,
+            clear_callback=self._clear_info_worker,
+        )
+
+    def _on_model_info(self, model: dict[str, Any]) -> None:
+        """Store and display one fetched model payload."""
+        model_id = str(model.get("id") or "")
+        self._model_cache[self._model_cache_key(model_id)] = model
+        if model_id != self._requested_model_id:
+            return
+        self._show_model(model)
+
+    def _show_model(self, model: dict[str, Any]) -> None:
+        """Render one selected model in the detail pane."""
+        self._current_model = model
+        self.selected_model_label.setText(model.get("name", "Unknown"))
+        self.selected_model_meta_label.setText(self._model_meta(model))
+        description = model.get("description") or "<p>No description.</p>"
+        self.description_browser.setHtml(description)
+        self.open_model_button.setEnabled(True)
+        self.version_combo.blockSignals(True)
+        self.version_combo.clear()
+        selected_id = ((model.get("selectedVersion") or {}).get("id"))
+        selected_index = 0
+        for index, version in enumerate(model.get("modelVersions", [])):
+            label = str(version.get("name") or f"Version {index + 1}")
+            self.version_combo.addItem(label, version)
+            if selected_id is not None and version.get("id") == selected_id:
+                selected_index = index
+        self.version_combo.setCurrentIndex(selected_index)
+        self.version_combo.blockSignals(False)
+        self._on_version_changed(selected_index)
+
+    def _on_model_error(self, message: str) -> None:
+        """Show one model-detail failure and keep browsing enabled."""
+        self.selected_model_label.setText("Failed to load model details")
+        QMessageBox.critical(self, "CivitAI", message)
+
+    def _on_version_changed(self, _index: int) -> None:
+        """Refresh files and preview images for one selected version."""
+        version = self.version_combo.currentData()
+        self._current_version = version if isinstance(version, dict) else None
+        self.file_combo.blockSignals(True)
+        self.file_combo.clear()
+        if self._current_version is None:
+            self.file_combo.blockSignals(False)
+            self._clear_samples()
+            return
+        for file_info in self._current_version.get("files", []):
+            self.file_combo.addItem(self._file_label(file_info), file_info)
+        self.file_combo.blockSignals(False)
+        self._on_file_changed(self.file_combo.currentIndex())
+        self._populate_samples(self._current_version)
+
+    def _on_file_changed(self, _index: int) -> None:
+        """Store one selected file and enable download when possible."""
+        file_info = self.file_combo.currentData()
+        self._current_file = file_info if isinstance(file_info, dict) else None
+        self.download_button.setEnabled(self._current_file is not None)
+
+    def _populate_samples(self, version: dict[str, Any]) -> None:
+        """Render sample-image entries for one selected version."""
+        self._clear_samples()
+        images = [img for img in version.get("images", []) if img.get("url")]
+        for index, image in enumerate(images[:6]):
+            url = str(image.get("url"))
+            item = QListWidgetItem(f"Sample {index + 1}")
+            item.setData(Qt.ItemDataRole.UserRole, url)
+            self.sample_images_list.addItem(item)
+            self._sample_items[url] = item
+            self._start_image_worker(f"sample:{url}", url)
+        if self.sample_images_list.count() > 0:
+            self.sample_images_list.setCurrentRow(0)
         else:
-            self.logger.error("Download finished but file was not found")
+            self.preview_label.setText("No preview available")
 
-        # Disconnect the progress dialog's canceled signal BEFORE cleanup
-        # to prevent auto-close from triggering file deletion
-        try:
-            if self._progress_dialog is not None:
-                try:
-                    self._progress_dialog.canceled.disconnect()
-                except Exception:
-                    pass
-        except Exception:
-            pass
+    def _clear_samples(self) -> None:
+        """Clear one sample-image strip and its preview state."""
+        self.sample_images_list.clear()
+        self._sample_items.clear()
+        self.preview_label.setPixmap(QPixmap())
+        self.preview_label.setText("No preview selected")
 
-        # Persist trigger words immediately (no popup, no delay)
-        if (
-            self._current_version_data
-            and self._current_model_type is not None
-            and self._current_file_info
-        ):
-            try:
-                persist_trigger_words(
-                    self._current_version_data,
-                    self._current_model_type,
-                    self._current_file_info,
-                    save_path,
-                )
-                self.logger.info(
-                    "Successfully persisted trigger words"
-                )
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to persist trigger words: {e}",
-                    exc_info=True,
-                )
-
-        # Clear download context and cleanup (no extra popups)
-        self._current_version_data = None
-        self._current_model_type = None
-        self._current_file_info = None
-        self._cleanup_download()
-
-    def _on_download_failed(self, error: Exception) -> None:
-        self.logger.error(
-            f"Download failed with exception: {error}", exc_info=True
-        )
-
-        # Clear download context on failure
-        self._current_version_data = None
-        self._current_model_type = None
-        self._current_file_info = None
-
-        self._cleanup_download()
-        QMessageBox.critical(
-            self,
-            "Download Failed",
-            f"Error: {str(error) or 'Unknown error'}",
-        )
-
-    def _on_download_failed_str(self, msg: str) -> None:
-        self.logger.error(f"Download failed: {msg}")
-
-        # Clear download context on failure
-        self._current_version_data = None
-        self._current_model_type = None
-        self._current_file_info = None
-
-        self._cleanup_download()
-        QMessageBox.critical(self, "Download Failed", msg or "Unknown error")
-
-    def _on_download_canceled(self) -> None:
-        # Clear download context on cancellation
-        self._current_version_data = None
-        self._current_model_type = None
-        self._current_file_info = None
-
-        try:
-            if self._download_worker:
-                # Request worker cancel; this sets the worker flag but may not
-                # stop a blocking network call immediately. Call cancel first
-                # then run cleanup which will escalate if the thread doesn't
-                # stop in a short time.
-                try:
-                    self._download_worker.cancel()
-                except Exception:
-                    self.logger.debug(
-                        "Worker cancel call failed", exc_info=True
-                    )
-        except Exception:
-            self.logger.debug("Cancel call failed", exc_info=True)
-        # Perform cleanup (close dialog, stop thread). After cleanup, try to
-        # remove any partial file the worker may have left behind.
-        self._cleanup_download()
-        try:
-            sp = getattr(self._download_worker, "save_path", None)
-            if sp and os.path.exists(sp):
-                try:
-                    os.remove(sp)
-                except Exception:
-                    self.logger.debug(
-                        "Failed to remove partial download %s",
-                        sp,
-                        exc_info=True,
-                    )
-        except Exception:
-            self.logger.debug("Post-cancel cleanup failed", exc_info=True)
+    def _on_sample_selected(self, current, _previous) -> None:
+        """Show one selected sample image in the preview area."""
+        if current is None:
+            self.preview_label.setText("No preview selected")
+            return
+        url = str(current.data(Qt.ItemDataRole.UserRole) or "")
+        if not url:
+            return
+        cache_path = self._image_cache_path(url)
+        if os.path.exists(cache_path):
+            self._set_preview(cache_path)
+            return
+        self.preview_label.setText("Loading preview...")
 
     def _start_download(self) -> None:
-        selected = self.list_widget.currentItem()
-        if not selected:
-            QMessageBox.warning(
-                self, "No Selection", "Please select a version."
-            )
+        """Start one daemon-backed download for the selected file."""
+        if self._download_thread is not None or self._current_file is None:
             return
-        if self._download_thread is not None:
-            QMessageBox.information(
-                self,
-                "Download In Progress",
-                "A download is already in progress.",
-            )
+        if self._current_version is None or self._current_model is None:
             return
-
-        version = selected.data(Qt.ItemDataRole.UserRole)
-        files = version.get("files", []) if version else []
-        file_url: Optional[str] = None
-        file_name: Optional[str] = None
-        file_size_kb = 0
-        file_info = None
-        for f in files:
-            if f.get("downloadUrl") and any(
-                f.get("name", "").endswith(ext)
-                for ext in [".safetensors", ".ckpt", ".pt", ".gguf"]
-            ):
-                file_url = f["downloadUrl"]
-                file_name = f.get("name")
-                file_size_kb = f.get("sizeKB", 0) or 0
-                file_info = f
-                break
-        if not file_url or not file_name or not file_info:
-            QMessageBox.warning(
-                self,
-                "No Downloadable File",
-                "No suitable file found for this version.",
-            )
+        file_name = str(self._current_file.get("name") or "")
+        file_url = str(self._current_file.get("downloadUrl") or "")
+        file_size_kb = int(self._current_file.get("sizeKB") or 0)
+        if not file_name or not file_url:
+            QMessageBox.warning(self, "CivitAI", "No downloadable file found.")
             return
-
-        # Get baseModel (e.g., "SDXL 1.0") and type (e.g., "LORA")
-        # Normalize CivitAI base model names to airunner version folder names
-        raw_base_model = version.get("baseModel", "checkpoint")
-        base_model = self._normalize_base_model(raw_base_model)
+        base_model = self._normalize_base_model(
+            str(self._current_version.get("baseModel") or "")
+        )
         if (
             base_model.startswith("Z-Image")
             and base_model not in SUPPORTED_ZIMAGE_BASE_MODELS
         ):
-            QMessageBox.warning(
-                self,
-                "Unsupported Model",
-                (
-                    f"{base_model} is not supported. AIRunner currently "
-                    "supports Z-Image Turbo and SDXL art models only."
-                ),
-            )
+            QMessageBox.warning(self, "CivitAI", "Unsupported base model.")
             return
-        model_type = version.get(
-            "type", self.model_info.get("type", "checkpoint")
-        )
-        subfolder = self._get_model_subfolder(model_type, file_info)
-        base_path = os.path.expanduser(self.path_settings.base_path)
+        model_type = str(self._current_model.get("type") or "Checkpoint")
+        subfolder = self._model_subfolder(model_type, self._current_file)
         model_dir = os.path.join(
-            base_path, "art/models", base_model, subfolder
+            os.path.expanduser(self.path_settings.base_path),
+            "art/models",
+            base_model,
+            subfolder,
         )
         os.makedirs(model_dir, exist_ok=True)
         save_path = os.path.join(model_dir, file_name)
-
-        # Log download details for debugging
-        self.logger.info("Starting CivitAI download")
-        self.logger.info(f"  File: {file_name}")
-        self.logger.info(f"  Size: {file_size_kb} KB")
-        self.logger.info(f"  Base model: {base_model}")
-        self.logger.info(f"  Model type: {model_type}")
-        self.logger.info(f"  Subfolder: {subfolder}")
-
-        # Store context for persistence after successful download
-        self._current_version_data = version
-        self._current_model_type = model_type
-        self._current_file_info = file_info
-
-        api_key = getattr(self.application_settings, "civit_ai_api_key", "")
         self._download_worker = FileDownloadWorker(
             url=file_url,
             save_path=save_path,
-            api_key=api_key,
-            total_size_bytes=int(file_size_kb * 1024),
+            api_key=self._api_key,
+            total_size_bytes=file_size_kb * 1024,
         )
-        self._download_thread = QThread(self)
-        self._download_worker.moveToThread(self._download_thread)
-
+        self._download_thread = self._start_worker_thread(
+            worker=self._download_worker,
+            success_signal=self._download_worker.finished,
+            success_slot=self._on_download_finished,
+            error_signal=self._download_worker.error,
+            error_slot=self._on_download_failed,
+            clear_callback=self._clear_download_worker,
+            canceled_signal=self._download_worker.canceled,
+            canceled_slot=self._on_download_canceled,
+        )
         self._progress_dialog = QProgressDialog(
             f"Downloading {file_name}...\nDestination: {save_path}",
             "Cancel",
@@ -570,175 +474,319 @@ class DownloadModelDialog(QDialog):
             self,
         )
         self._progress_dialog.setWindowTitle("Downloading Model")
-        self._progress_dialog.setWindowModality(Qt.WindowModality.NonModal)
         self._progress_dialog.setMinimumDuration(0)
-        self._progress_dialog.setAutoClose(True)
-        self._progress_dialog.setAutoReset(True)
         self._progress_dialog.setRange(0, 0)
-
-        # Wire signals
+        self._progress_dialog.canceled.connect(self._download_worker.cancel)
         self._download_worker.progress.connect(self._on_download_progress)
-        self._download_worker.finished.connect(self._on_download_finished)
-        self._download_worker.error.connect(self._on_download_failed_str)
-        self._download_worker.canceled.connect(self._on_download_canceled)
-        # Use a local handler so we can close the progress dialog and
-        # perform cleanup immediately when the user presses Cancel. If we
-        # simply call the worker.cancel() the worker may be blocked and
-        # continue emitting progress, which can cause the dialog to reappear.
-        self._progress_dialog.canceled.connect(
-            self._on_progress_dialog_canceled
-        )
-
-        # Ensure thread cleans up non-blocking
-        self._download_thread.finished.connect(self._on_thread_finished)
-        self._download_worker.finished.connect(self._download_thread.quit)
-        self._download_worker.error.connect(self._download_thread.quit)
-        self._download_worker.canceled.connect(self._download_thread.quit)
-
-        # Start
-        self._download_thread.started.connect(self._download_worker.run)
-        self._download_thread.start()
         self._progress_dialog.show()
 
-    def _on_progress_dialog_canceled(self) -> None:
-        """Handle user pressing Cancel on the QProgressDialog.
+    def _on_download_progress(self, current: int, total: int) -> None:
+        """Mirror one daemon progress update into the progress dialog."""
+        if self._progress_dialog is None:
+            return
+        if total <= 0:
+            self._progress_dialog.setRange(0, 0)
+            return
+        if self._progress_dialog.maximum() == 0:
+            self._progress_dialog.setRange(0, 100)
+        percent = max(0, min(100, int((current / total) * 100)))
+        self._progress_dialog.setValue(percent)
 
-        Request worker cancellation and perform immediate cleanup so the
-        progress dialog cannot be re-shown by in-flight progress updates.
-        """
-        try:
-            if self._download_worker:
-                try:
-                    self._download_worker.cancel()
-                except Exception:
-                    self.logger.debug("Worker cancel failed", exc_info=True)
-        except Exception:
-            self.logger.debug("Error requesting worker cancel", exc_info=True)
-
-        # Immediately cleanup UI state so progress updates won't re-show
-        # the dialog. We also attempt to remove any partial file right
-        # away to respect the user's cancellation intent.
-        try:
-            sp = getattr(self._download_worker, "save_path", None)
-        except Exception:
-            sp = None
-
-        self._cleanup_download()
-
-        # Try to remove partial file if present
-        try:
-            if sp and os.path.exists(sp):
-                try:
-                    os.remove(sp)
-                except Exception:
-                    self.logger.debug(
-                        "Failed to remove partial download %s",
-                        sp,
-                        exc_info=True,
-                    )
-        except Exception:
-            self.logger.debug(
-                "Post-cancel partial file removal failed", exc_info=True
+    def _on_download_finished(self, save_path: str) -> None:
+        """Persist trigger words after one successful download."""
+        self._close_progress_dialog()
+        if self._current_version and self._current_file and self._current_model:
+            persist_trigger_words(
+                self._current_version,
+                str(self._current_model.get("type") or "Checkpoint"),
+                self._current_file,
+                save_path,
             )
 
-    def closeEvent(self, event) -> None:
-        """Ensure we don't destroy a running QThread when the dialog closes.
+    def _on_download_failed(self, message: str) -> None:
+        """Close progress UI and surface one download failure."""
+        self._close_progress_dialog()
+        QMessageBox.critical(self, "Download Failed", message)
 
-        If a download is running, request cancellation and wait briefly. If
-        the thread is still running after a short timeout, reparent it so it
-        isn't destroyed with the dialog and inform the user the download will
-        continue in the background.
-        """
-        try:
-            if (
-                self._download_thread is not None
-                and self._download_thread.isRunning()
-            ):
-                # Ask worker to cancel cooperatively
-                try:
-                    if self._download_worker is not None:
-                        self._download_worker.cancel()
-                except Exception:
-                    self.logger.debug(
-                        "Failed to request worker cancel", exc_info=True
-                    )
+    def _on_download_canceled(self) -> None:
+        """Close progress UI after one canceled download."""
+        self._close_progress_dialog()
 
-                # Try to quit the thread and wait shortly
-                try:
-                    self._download_thread.quit()
-                    try:
-                        self._download_thread.wait(2000)
-                    except Exception:
-                        self.logger.debug(
-                            "Thread wait not available or interrupted",
-                            exc_info=True,
-                        )
-                except Exception:
-                    self.logger.debug("Thread quit failed", exc_info=True)
+    def _open_current_model(self) -> None:
+        """Open one selected model page in the default browser."""
+        if self._current_model is None:
+            return
+        model_id = self._current_model.get("id")
+        if model_id is None:
+            return
+        QDesktopServices.openUrl(QUrl(f"https://civitai.com/models/{model_id}"))
 
-                # If still running, detach the thread from this dialog to avoid
-                # Qt complaining about destruction while running.
-                if self._download_thread.isRunning():
-                    try:
-                        # Reparent the thread to the application so it won't be
-                        # deleted when this dialog is destroyed.
-                        app = QApplication.instance()
-                        if app:
-                            self._download_thread.setParent(app)
-                        else:
-                            self.logger.warning(
-                                "No QApplication instance available for thread reparenting"
-                            )
-                            self._download_thread.setParent(None)
-                    except Exception:
-                        self.logger.debug(
-                            "Failed to reparent download thread", exc_info=True
-                        )
+    def _start_image_worker(self, key: str, url: str) -> None:
+        """Queue one safe thumbnail or sample-image fetch."""
+        if key in self._image_threads:
+            return
+        worker = ImageLoaderWorker(
+            key=key,
+            url=url,
+            cache_path=self._image_cache_path(url),
+        )
+        app = QApplication.instance()
+        thread = QThread(app)
+        worker.moveToThread(thread)
+        worker.loaded.connect(self._on_image_loaded)
+        worker.error.connect(self._on_image_error)
+        worker.loaded.connect(thread.quit)
+        worker.error.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(lambda key=key: self._clear_image_worker(key))
+        thread.started.connect(worker.run)
+        self._image_threads[key] = thread
+        self._image_workers[key] = worker
+        thread.start()
 
-                    # Let the user know the download will continue in background
-                    try:
-                        QMessageBox.information(
-                            self,
-                            "Download Continuing",
-                            "The download will continue in the background. You can monitor downloads from the main application.",
-                        )
-                    except Exception:
-                        pass
+    def _on_image_loaded(self, key: str, cache_path: str) -> None:
+        """Update one result or preview image from the local cache."""
+        if key.startswith("result:"):
+            self._set_result_icon(key[7:], cache_path)
+            return
+        if key.startswith("sample:"):
+            url = key[7:]
+            self._set_sample_icon(url, cache_path)
+            current = self.sample_images_list.currentItem()
+            if current is not None and current.data(Qt.ItemDataRole.UserRole) == url:
+                self._set_preview(cache_path)
 
-                # Clear local references so the dialog can be destroyed safely.
-                self._download_thread = None
-                self._download_worker = None
-        except Exception:
-            self.logger.debug(
-                "Error during dialog close handling", exc_info=True
+    def _on_image_error(self, key: str, _message: str) -> None:
+        """Ignore one image failure and keep browsing responsive."""
+        self._clear_image_worker(key)
+
+    def _set_result_icon(self, model_id: str, cache_path: str) -> None:
+        """Apply one loaded thumbnail to the search-results row."""
+        item = self._result_items.get(model_id)
+        if item is None:
+            return
+        pixmap = QPixmap(cache_path)
+        if pixmap.isNull():
+            return
+        item.setIcon(QIcon(pixmap.scaled(64, 64, Qt.KeepAspectRatio)))
+
+    def _set_sample_icon(self, url: str, cache_path: str) -> None:
+        """Apply one loaded sample image to the sample strip."""
+        item = self._sample_items.get(url)
+        if item is None:
+            return
+        pixmap = QPixmap(cache_path)
+        if pixmap.isNull():
+            return
+        item.setIcon(QIcon(pixmap.scaled(120, 120, Qt.KeepAspectRatio)))
+
+    def _set_preview(self, cache_path: str) -> None:
+        """Scale one cached image into the preview label."""
+        pixmap = QPixmap(cache_path)
+        if pixmap.isNull():
+            self.preview_label.setText("No preview available")
+            return
+        self.preview_label.setText("")
+        self.preview_label.setPixmap(
+            pixmap.scaled(
+                self.preview_label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
             )
+        )
 
-        # Proceed with normal close
-        try:
-            super().closeEvent(event)
-        except Exception:
-            event.accept()
+    def _clear_details(self) -> None:
+        """Reset the detail pane when no model is selected."""
+        self._current_model = None
+        self._current_version = None
+        self._current_file = None
+        self.selected_model_label.setText("Select a model")
+        self.selected_model_meta_label.setText("")
+        self.description_browser.clear()
+        self.open_model_button.setEnabled(False)
+        self.version_combo.clear()
+        self.file_combo.clear()
+        self.download_button.setEnabled(False)
+        self._clear_samples()
+
+    def _model_cache_key(self, model_id: str) -> str:
+        """Return one cache key for the active filter set and model id."""
+        return (
+            f"{model_id}:{self.base_model_combo.currentText()}:"
+            f"{self.type_combo.currentText()}"
+        )
+
+    def _model_meta(self, model: dict[str, Any]) -> str:
+        """Build one compact metadata line for the detail pane."""
+        stats = model.get("stats") or {}
+        creator = (model.get("creator") or {}).get("username") or "Unknown"
+        downloads = int(stats.get("downloadCount") or 0)
+        rating = int(stats.get("favoriteCount") or 0)
+        return (
+            f"{creator} • {model.get('type', 'Unknown')} • "
+            f"{downloads} downloads • {rating} favorites"
+        )
+
+    def _model_image_url(self, model: dict[str, Any]) -> str:
+        """Return one primary preview image URL for a model row."""
+        for version in model.get("modelVersions", []):
+            for image in version.get("images", []):
+                url = image.get("url") or image.get("thumbnailUrl")
+                if url:
+                    return str(url)
+        return ""
+
+    def _file_label(self, file_info: dict[str, Any]) -> str:
+        """Build one file selector label with size information."""
+        size_kb = float(file_info.get("sizeKB") or 0)
+        size_label = ""
+        if size_kb > 0:
+            if size_kb < 1024:
+                size_label = f"{size_kb:.0f} KB"
+            elif size_kb < 1024 * 1024:
+                size_label = f"{size_kb / 1024:.1f} MB"
+            else:
+                size_label = f"{size_kb / (1024 * 1024):.2f} GB"
+        suffix = f" ({size_label})" if size_label else ""
+        return f"{file_info.get('name', 'Unknown file')}{suffix}"
+
+    def _image_cache_path(self, url: str) -> str:
+        """Return one app-scoped cache path for a remote preview image."""
+        suffix = os.path.splitext(urlparse(url).path)[1] or ".img"
+        digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "cache",
+            "civitai",
+            f"{digest}{suffix}",
+        )
+
+    def _load_ui(self) -> QWidget:
+        """Load and embed the browser template widget into the dialog."""
+        ui_path = os.path.join(
+            os.path.dirname(__file__),
+            "templates",
+            "civitai_browser_dialog.ui",
+        )
+        ui_root = load_ui_file(ui_path, self)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(ui_root)
+        return ui_root
+
+    def _bind_widget(self, widget_type, object_name: str):
+        """Return one required child widget from the loaded UI tree."""
+        widget = self._ui_root.findChild(widget_type, object_name)
+        if widget is None:
+            raise RuntimeError(f"Missing UI widget: {object_name}")
+        return widget
+
+    def _normalize_base_model(self, base_model: str) -> str:
+        """Normalize one CivitAI base model into the local folder name."""
+        return CIVITAI_BASE_MODEL_MAP.get(base_model, base_model)
+
+    def _model_subfolder(self, model_type: str, file_info: dict[str, Any]) -> str:
+        """Map one browser selection onto the AIRunner art-model folder."""
+        normalized_type = model_type.strip().upper()
+        if normalized_type == "LORA":
+            return "lora"
+        if normalized_type == "TEXTUALINVERSION":
+            return "embeddings"
+        if normalized_type == "CHECKPOINT":
+            return "txt2img"
+        name = str(file_info.get("name") or "").lower()
+        if "inpaint" in name:
+            return "inpaint"
+        return normalized_type.lower() or "txt2img"
+
+    def _start_worker_thread(
+        self,
+        *,
+        worker,
+        success_signal,
+        success_slot,
+        error_signal,
+        error_slot,
+        clear_callback,
+        canceled_signal=None,
+        canceled_slot=None,
+    ) -> QThread:
+        """Move one QObject worker onto a QThread and start it."""
+        app = QApplication.instance()
+        thread = QThread(app)
+        worker.moveToThread(thread)
+        success_signal.connect(success_slot)
+        error_signal.connect(error_slot)
+        success_signal.connect(thread.quit)
+        error_signal.connect(thread.quit)
+        if canceled_signal is not None and canceled_slot is not None:
+            canceled_signal.connect(canceled_slot)
+            canceled_signal.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(clear_callback)
+        thread.started.connect(worker.run)
+        thread.start()
+        return thread
+
+    def _stop_thread(self, thread: Optional[QThread]) -> None:
+        """Quit one thread and wait briefly when it still exists."""
+        if thread is None:
+            return
+        thread.quit()
+        thread.wait(1000)
+
+    def _clear_search_worker(self) -> None:
+        """Clear one completed search worker reference."""
+        self._search_thread = None
+        self._search_worker = None
+
+    def _clear_info_worker(self) -> None:
+        """Clear one completed detail worker reference."""
+        self._info_thread = None
+        self._info_worker = None
+
+    def _clear_download_worker(self) -> None:
+        """Clear one completed download worker reference."""
+        self._download_thread = None
+        self._download_worker = None
+
+    def _clear_image_worker(self, key: str) -> None:
+        """Drop one completed image worker reference."""
+        self._image_threads.pop(key, None)
+        self._image_workers.pop(key, None)
+
+    def _close_progress_dialog(self) -> None:
+        """Close and forget the active progress dialog."""
+        if self._progress_dialog is not None:
+            self._progress_dialog.close()
+            self._progress_dialog = None
+
+    @property
+    def _api_key(self) -> str:
+        """Return the configured CivitAI API key."""
+        return str(
+            getattr(self.application_settings, "civit_ai_api_key", "")
+            or ""
+        )
 
 
 def show_download_model_dialog(parent, path_settings, application_settings):
-    # Check if CivitAI downloads are allowed
+    """Open the CivitAI browser when the provider is enabled."""
     from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
         is_civitai_allowed,
     )
+
     if not is_civitai_allowed():
         QMessageBox.warning(
             parent,
             "Downloads Disabled",
             "CivitAI downloads are disabled in privacy settings.\n\n"
-            "You can enable them in Preferences → Privacy & Security → External Services."
+            "You can enable them in Preferences -> Privacy & Security -> "
+            "External Services.",
         )
         return
-        
-    url, ok = QInputDialog.getText(
-        parent, "Download Model from CivitAI", "Paste CivitAI model URL:"
-    )
-    if not ok or not url:
-        return
+
     dialog = DownloadModelDialog(parent, path_settings, application_settings)
-    dialog.fetch_and_display(url)
     dialog.exec()

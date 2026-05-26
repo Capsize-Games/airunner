@@ -13,6 +13,15 @@ how to validate changes without blurring those boundaries again.
 | `src/` | desktop UI, daemon clients, user workflow surfaces |
 | `native/` | launcher, bundle assembly, install or distribution tooling |
 
+## Boundary Examples
+
+- CivitAI browse, search, model-detail fetches, and download jobs belong to
+	`services/`.
+- `src/` owns the desktop browser popup, daemon client calls, worker polling,
+	and local thumbnail presentation.
+- GUI code may cache preview images through the shared URL-safety helpers in
+	`model/`, but GUI code should not stream provider model downloads directly.
+
 ## Validation Matrix
 
 ### `api/`

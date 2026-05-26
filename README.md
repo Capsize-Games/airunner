@@ -315,7 +315,11 @@ AI Runner downloads essential TTS/STT models automatically. LLM and image models
 | `airunner-tests` | Run test suite |
 | `airunner-generate-cert` | Generate SSL certificate |
 
-**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` / `airunner-civitai-download` from the command line.
+**Note:** To download models, use *Tools → Download Models* from the main
+application menu. The GUI now opens a filtered CivitAI browser for SDXL 1.0
+and Z-Image Turbo models and queues downloads through the local daemon. You
+can also use `airunner-hf-download` / `airunner-civitai-download` from the
+command line.
 
 ### Rebuilding Qt UI Files
 

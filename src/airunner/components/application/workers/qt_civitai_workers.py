@@ -1,98 +1,98 @@
-"""Qt workers for CivitAI API operations (model info + file download).
-
-These workers are designed to run on a QThread and communicate with the GUI
-using Qt signals, keeping all network and file I/O off the main thread.
-
-They do not depend on application-specific mixins to remain thread-safe.
-"""
+"""Qt workers for the daemon-backed CivitAI browser."""
 
 from __future__ import annotations
 
-import logging
-from typing import Optional, Dict, Any
 import os
-import requests
+import time
+from typing import Optional
+
 from PySide6.QtCore import QObject, Signal
-from airunner.settings import AIRUNNER_LOG_LEVEL
-from airunner.utils.application import get_logger
-from airunner.utils.application.log_hygiene import fingerprint_value
+
+from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
+from airunner_model.url_safety import safe_fetch_bytes
+
+_IMAGE_MAX_BYTES = 5_000_000
 
 
-class ModelInfoWorker(QObject):
-    """Fetch model information from CivitAI in a background thread.
-
-    Signals:
-        fetched: Emitted with the model info dict on success.
-        error: Emitted with an error message on failure.
-    """
+class ModelSearchWorker(QObject):
+    """Fetch one filtered CivitAI search payload in a worker thread."""
 
     fetched = Signal(dict)
     error = Signal(str)
 
-    def __init__(self, url: str, api_key: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        *,
+        query: str = "",
+        base_models: Optional[list[str]] = None,
+        model_types: Optional[list[str]] = None,
+        limit: int = 20,
+        cursor: Optional[str] = None,
+        api_key: str = "",
+    ) -> None:
         super().__init__()
-        self.url = url
-        self.api_key = api_key or ""
-
-    @staticmethod
-    def _parse_url(url: str) -> Dict[str, Any]:
-        import re
-
-        model_id = None
-        model_version_id = None
-        m = re.search(r"/models/(\d+)", url)
-        if m:
-            model_id = m.group(1)
-        m2 = re.search(r"modelVersionId=(\d+)", url)
-        if m2:
-            model_version_id = m2.group(1)
-        return {"model_id": model_id, "model_version_id": model_version_id}
+        self._client = GuiDaemonClient()
+        self._query = query
+        self._base_models = base_models
+        self._model_types = model_types
+        self._limit = limit
+        self._cursor = cursor
+        self._api_key = api_key
 
     def run(self) -> None:
+        """Fetch one browser search payload and emit the result."""
         try:
-            ids = self._parse_url(self.url)
-            model_id = ids.get("model_id")
-            if not model_id:
-                self.error.emit("Invalid CivitAI model URL")
-                return
-            api_url = f"https://civitai.com/api/v1/models/{model_id}"
-            headers = {"Content-Type": "application/json"}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-            resp = requests.get(api_url, headers=headers, timeout=20)
-            resp.raise_for_status()
-            data = resp.json()
-            # Attach selectedVersion if requested in URL
-            mv_id = ids.get("model_version_id")
-            if mv_id:
-                for v in data.get("modelVersions", []):
-                    if str(v.get("id")) == mv_id:
-                        data["selectedVersion"] = v
-                        break
-            self.fetched.emit(data)
-        except Exception as e:  # noqa: BLE001 - bubble the message
-            # Provide detail for 401 to help user debug tokens
-            msg = str(e)
-            status = getattr(getattr(e, "response", None), "status_code", None)
-            if status == 401:
-                msg = f"401 Unauthorized: {msg}"
-            self.error.emit(msg)
+            payload = self._client.search_civitai_models(
+                query=self._query,
+                base_models=self._base_models,
+                model_types=self._model_types,
+                limit=self._limit,
+                cursor=self._cursor,
+                api_key=self._api_key,
+            )
+            self.fetched.emit(payload)
+        except Exception as exc:  # noqa: BLE001
+            self.error.emit(str(exc))
+
+
+class ModelInfoWorker(QObject):
+    """Fetch one filtered CivitAI model payload in a worker thread."""
+
+    fetched = Signal(dict)
+    error = Signal(str)
+
+    def __init__(
+        self,
+        *,
+        model_id: str,
+        base_models: Optional[list[str]] = None,
+        model_types: Optional[list[str]] = None,
+        api_key: str = "",
+    ) -> None:
+        super().__init__()
+        self._client = GuiDaemonClient()
+        self._model_id = model_id
+        self._base_models = base_models
+        self._model_types = model_types
+        self._api_key = api_key
+
+    def run(self) -> None:
+        """Fetch one browser detail payload and emit the result."""
+        try:
+            payload = self._client.fetch_civitai_model(
+                model_id=self._model_id,
+                base_models=self._base_models,
+                model_types=self._model_types,
+                api_key=self._api_key,
+            )
+            self.fetched.emit(payload)
+        except Exception as exc:  # noqa: BLE001
+            self.error.emit(str(exc))
 
 
 class FileDownloadWorker(QObject):
-    """Stream a file download from CivitAI with progress and cancel support.
+    """Mirror one daemon-backed CivitAI download job into Qt signals."""
 
-    Signals:
-        progress(int, int): current bytes, total bytes (0 if unknown)
-        finished(str): emitted with save path when done
-        error(str): error message
-        canceled(): emitted when user canceled and worker stopped
-    """
-
-    # Use object for the signal payload so very large byte counts (>
-    # 32-bit) don't raise OverflowError when PySide converts Python ints to
-    # C 'int'. Emitting Python objects avoids the C conversion and lets the
-    # receiver handle large integers safely.
     progress = Signal(object, object)
     finished = Signal(str)
     error = Signal(str)
@@ -100,137 +100,114 @@ class FileDownloadWorker(QObject):
 
     def __init__(
         self,
+        *,
         url: str,
         save_path: str,
-        api_key: Optional[str] = None,
+        api_key: str = "",
         total_size_bytes: int = 0,
     ) -> None:
         super().__init__()
-        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        self._client = GuiDaemonClient(poll_interval_seconds=0.10)
         self.url = url
         self.save_path = os.path.expanduser(save_path)
-        self.api_key = api_key or ""
-        self.total_size = max(0, int(total_size_bytes))
-        self._is_cancelled = False
-        self._retry_attempted = False  # Prevent infinite retry loop
+        self._api_key = api_key
+        self._total_size = max(0, int(total_size_bytes))
+        self._cancelled = False
+        self._job_id: Optional[str] = None
 
     def cancel(self) -> None:
-        self._is_cancelled = True
-
-    def _headers(self) -> dict:
-        h = {}
-        if self.api_key:
-            h["Authorization"] = f"Bearer {self.api_key}"
-        return h
-
-    def _try_download(self, url: str) -> bool:
-        self.logger.info("FileDownloadWorker starting download")
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug(
-                "Download target prepared (%s, %s)",
-                fingerprint_value(url, label="url"),
-                fingerprint_value(self.save_path, label="save_path"),
-            )
-        self.logger.info(f"Expected size: {self.total_size} bytes")
-
+        """Request cancellation for one active daemon job."""
+        self._cancelled = True
+        if self._job_id is None:
+            return
         try:
-            with requests.get(
-                url,
-                stream=True,
-                allow_redirects=True,
-                headers=self._headers(),
-                timeout=30,
-            ) as r:
-                self.logger.info(f"HTTP response status: {r.status_code}")
-                r.raise_for_status()
-
-                # Get total from headers if not provided
-                if self.total_size == 0:
-                    try:
-                        self.total_size = int(
-                            r.headers.get("content-length", 0)
-                        )
-                        self.logger.info(
-                            f"Size from headers: {self.total_size} bytes"
-                        )
-                    except Exception:
-                        self.total_size = 0
-                        self.logger.warning("Could not get size from headers")
-
-                os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
-                self.logger.info("Download directory prepared")
-
-                with open(self.save_path, "wb") as f:
-                    downloaded = 0
-                    last_progress_update = 0
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if self._is_cancelled:
-                            self.logger.info("Download cancelled by user")
-                            # best-effort cleanup of partial file
-                            try:
-                                f.close()
-                            except Exception:
-                                pass
-                            try:
-                                if os.path.exists(self.save_path):
-                                    os.remove(self.save_path)
-                                    self.logger.info(
-                                        "Removed partial download file"
-                                    )
-                            except Exception:
-                                pass
-                            self.canceled.emit()
-                            return False
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            # Throttle progress updates to every ~1MB to avoid flooding the event queue
-                            if downloaded - last_progress_update >= 1024 * 1024:
-                                self.progress.emit(downloaded, self.total_size)
-                                last_progress_update = downloaded
-
-                # Final progress update
-                self.progress.emit(downloaded, self.total_size)
-
-                self.logger.info(
-                    "Download complete: %d bytes written",
-                    downloaded,
-                )
-                self.finished.emit(self.save_path)
-                return True
-        except requests.HTTPError as http_err:
-            self.logger.error(f"HTTP error during download: {http_err}")
-            # If 401, retry ONCE with ?token=...
-            status = getattr(
-                getattr(http_err, "response", None), "status_code", None
-            )
-            if status == 401 and self.api_key and not self._retry_attempted:
-                self.logger.info("Got 401, retrying with token in URL")
-                self._retry_attempted = True  # Mark that we tried the retry
-                sep = "&" if "?" in url else "?"
-                token_url = f"{url}{sep}token={self.api_key}"
-                return self._try_download(token_url)
-
-            # If we already retried or no API key, emit error
-            if status == 401:
-                error_msg = (
-                    "401 Unauthorized: This model requires authentication. "
-                    "Please check that:\n"
-                    "1. Your CivitAI API key is valid (get it from https://civitai.com/user/account)\n"
-                    "2. You have access to this model (some models require early access)\n"
-                    "3. The model hasn't been removed or made private"
-                )
-                self.logger.error(error_msg)
-                self.error.emit(error_msg)
-            else:
-                self.error.emit(str(http_err))
-            return False
-        except Exception as e:  # noqa: BLE001
-            self.logger.error("Download failed with exception: %s", e)
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.exception("File download traceback")
-            self.error.emit(str(e))
-            return False
+            self._client.cancel_download_job(self._job_id)
+        except Exception:
+            return
 
     def run(self) -> None:
-        self._try_download(self.url)
+        """Start one daemon download job and poll until it finishes."""
+        try:
+            response = self._client.start_civitai_file_download(
+                url=self.url,
+                output_path=self.save_path,
+                file_size=self._total_size,
+                api_key=self._api_key or None,
+            )
+            self._job_id = str(response.get("job_id") or "")
+            if not self._job_id:
+                self.error.emit("Missing CivitAI download job id")
+                return
+            self._poll_job()
+        except Exception as exc:  # noqa: BLE001
+            self.error.emit(str(exc))
+
+    def _poll_job(self) -> None:
+        """Poll one daemon job and forward progress updates to the GUI."""
+        last_current = -1
+        while True:
+            status = self._client.download_job_status(self._job_id or "")
+            state = str(status.get("status", "")).lower()
+            progress = float(status.get("progress") or 0.0)
+            current = self._current_bytes(progress)
+            if current != last_current:
+                last_current = current
+                self.progress.emit(current, self._total_size)
+            if state == "completed":
+                self.finished.emit(self.save_path)
+                return
+            if state == "failed":
+                self.error.emit(
+                    str(status.get("error") or "Download failed")
+                )
+                return
+            if state == "cancelled":
+                self.canceled.emit()
+                return
+            time.sleep(0.10)
+
+    def _current_bytes(self, progress: float) -> int:
+        """Convert one percentage to a byte count for the progress UI."""
+        if self._total_size <= 0:
+            return 0
+        clamped = max(0.0, min(100.0, progress))
+        return int(round((clamped / 100.0) * self._total_size))
+
+
+class ImageLoaderWorker(QObject):
+    """Fetch and cache one remote image through the safe-fetch helper."""
+
+    loaded = Signal(str, str)
+    error = Signal(str, str)
+
+    def __init__(
+        self,
+        *,
+        key: str,
+        url: str,
+        cache_path: str,
+        max_bytes: int = _IMAGE_MAX_BYTES,
+    ) -> None:
+        super().__init__()
+        self._key = key
+        self._url = url
+        self._cache_path = cache_path
+        self._max_bytes = max_bytes
+
+    def run(self) -> None:
+        """Fetch one image into the cache and emit the saved file path."""
+        try:
+            if not os.path.exists(self._cache_path):
+                os.makedirs(
+                    os.path.dirname(self._cache_path),
+                    exist_ok=True,
+                )
+                payload = safe_fetch_bytes(
+                    self._url,
+                    max_bytes=self._max_bytes,
+                )
+                with open(self._cache_path, "wb") as file_pointer:
+                    file_pointer.write(payload)
+            self.loaded.emit(self._key, self._cache_path)
+        except Exception as exc:  # noqa: BLE001
+            self.error.emit(self._key, str(exc))

@@ -5,7 +5,7 @@ from typing import Optional, Any
 from airunner.components.application.workers.worker import Worker
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.enums import SignalCode, QueueType
-from airunner.components.application.workers.huggingface_download_worker import (
+from airunner.components.application.workers.daemon_huggingface_download_worker import (
     HuggingFaceDownloadWorker,
 )
 from airunner.settings import AIRUNNER_BASE_PATH

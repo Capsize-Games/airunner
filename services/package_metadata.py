@@ -23,6 +23,7 @@ CORE_REQUIREMENTS = [
     "numpy==2.2.5",
     "packaging>=24.0",
     "pillow==12.2.0",
+    "nltk>=3.9.1",
     "alembic==1.13.2",
     "aiosqlite==0.21.0",
     "sqlalchemy==2.0.38",

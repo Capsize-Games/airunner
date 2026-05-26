@@ -22,7 +22,7 @@ from airunner.enums import ModelStatus, ModelType
 from airunner.components.documents.workers.document_worker import (
     DocumentWorker,
 )
-from airunner.components.application.workers.huggingface_download_worker import (
+from airunner.components.application.workers.daemon_huggingface_download_worker import (
     HuggingFaceDownloadWorker,
 )
 from airunner.components.llm.gui.windows.huggingface_download_dialog import (

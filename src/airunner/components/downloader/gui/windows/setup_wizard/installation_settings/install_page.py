@@ -5,17 +5,6 @@ import sys
 import zipfile
 import time
 
-
-try:
-    import requests
-except ImportError:
-    requests = None
-
-try:
-    import nltk
-except ImportError:
-    nltk = None
-
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
@@ -34,6 +23,7 @@ from airunner_model.bootstrap.openvoice_bootstrap_data import (
 from airunner_model.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
+from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner_model.bootstrap.whisper import WHISPER_FILES
 from airunner.enums import SignalCode
@@ -119,6 +109,7 @@ class InstallWorker(
             self._safe_progress_emit,
             headless=headless,
         )
+        self._download_daemon_client = None
         # Optional debug flag to emit/log each queued download (helps trace unwanted downloads)
         self._debug_queue = debug_queue
         self._openvoice_zip_urls = [
@@ -166,6 +157,49 @@ class InstallWorker(
             except (OverflowError, ValueError, ZeroDivisionError):
                 # Last resort: emit safe minimal values
                 self.progress_updated.emit(0, 1)
+
+    def _daemon_client(self):
+        """Return one daemon client for service-owned downloads."""
+        if self._download_daemon_client is not None:
+            return self._download_daemon_client
+
+        api = getattr(self, "api", None)
+        daemon_client = getattr(api, "daemon_client", None)
+        if daemon_client is None:
+            daemon_client = GuiDaemonClient()
+
+        self._download_daemon_client = daemon_client
+        return daemon_client
+
+    def _download_job_progress(self, status):
+        """Map daemon job progress into the existing GUI signal shape."""
+        progress = float(status.get("progress") or 0.0)
+        clamped = max(0, min(100, int(round(progress))))
+        self._safe_progress_emit(clamped, 100)
+
+    def _download_nltk_data(self, data_names):
+        """Download NLTK data through the daemon download service."""
+        daemon_client = self._daemon_client()
+        job = daemon_client.start_nltk_download(data_names=data_names)
+        job_id = str(job.get("job_id") or "")
+        if not job_id:
+            raise RuntimeError("Daemon did not return a download job id")
+
+        result = daemon_client.wait_download_job(
+            job_id,
+            progress_callback=self._download_job_progress,
+        )
+        payload = result.get("result")
+        downloaded_names = data_names
+        if isinstance(payload, dict):
+            resolved_names = payload.get("data_names") or []
+            if resolved_names:
+                downloaded_names = resolved_names
+
+        for data_name in downloaded_names:
+            self.parent.update_download_log(
+                {"message": f"Downloaded NLTK {data_name}"}
+            )
 
     def download_stable_diffusion(self):
         if not self.models_enabled["stable_diffusion"]:
@@ -538,36 +572,47 @@ class InstallWorker(
 
     def _download_file_with_progress(self, url, dest_path, label=None):
         """
-        Download a file from a direct URL with progress reporting.
+        Download a file through the daemon download service.
         """
-        if requests is None:
-            raise ImportError(
-                "requests library is required for downloading files"
-            )
+        daemon_client = self._daemon_client()
+        destination = os.path.expanduser(dest_path)
+        output_dir = os.path.dirname(destination)
+        file_name = os.path.basename(destination)
 
-        chunk_size = 8192
+        job = daemon_client.start_url_download(
+            url=url,
+            output_dir=output_dir,
+            filename=file_name,
+            extract_zip=False,
+        )
+        job_id = str(job.get("job_id") or "")
+        if not job_id:
+            raise RuntimeError("Daemon did not return a download job id")
+
         try:
-            with requests.get(url, stream=True) as r:
-                r.raise_for_status()
-                total = int(r.headers.get("content-length", 0))
-                downloaded = 0
-                with open(dest_path, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=chunk_size):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total > 0:
-                                self._safe_progress_emit(downloaded, total)
+            result = daemon_client.wait_download_job(
+                job_id,
+                progress_callback=self._download_job_progress,
+            )
+            self._safe_progress_emit(100, 100)
+
+            final_path = destination
+            payload = result.get("result")
+            if isinstance(payload, dict):
+                paths = payload.get("paths") or []
+                if paths:
+                    final_path = str(paths[0])
+
             if label:
                 self.parent.update_download_log(
                     {"message": f"Downloaded {label}"}
                 )
 
             # Check if this is an OpenVoice zip file
-            if "openvoice" in dest_path and dest_path.endswith(".zip"):
-                self.handle_openvoice_zip_download_finished(dest_path)
+            if "openvoice" in final_path and final_path.endswith(".zip"):
+                self.handle_openvoice_zip_download_finished(final_path)
             self.emit_signal(
-                SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path}
+                SignalCode.DOWNLOAD_COMPLETE, {"file_name": final_path}
             )
             self.file_download_finished.emit()
 
@@ -1139,33 +1184,8 @@ class InstallWorker(
         )
         nltk_data = ["averaged_perceptron_tagger_eng", "punkt", "punkt_tab"]
 
-        if nltk is None:
-            self.logger.error(
-                "NLTK not available, skipping NLTK data download"
-            )
-            return
-
         try:
-            # Use a maximum recursion limiter to prevent potential recursion errors
-            original_limit = sys.getrecursionlimit()
-            sys.setrecursionlimit(1500)  # Set a reasonable limit
-
-            for data_name in nltk_data:
-                try:
-                    nltk.download(data_name, quiet=True)
-                    self.parent.update_download_log(
-                        {"message": f"Downloaded NLTK {data_name}"}
-                    )
-                except Exception as e:
-                    self.parent.update_download_log(
-                        {
-                            "message": f"Failed to download NLTK {data_name}: {e}"
-                        }
-                    )
-
-            # Reset recursion limit
-            sys.setrecursionlimit(original_limit)
-
+            self._download_nltk_data(nltk_data)
         except Exception as e:
             self.parent.update_download_log(
                 {"message": f"Failed to download NLTK data: {e}"}

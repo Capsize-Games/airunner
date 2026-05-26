@@ -9,7 +9,9 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from airunner_services.downloads.service import (
+    fetch_civitai_browser_model_info,
     fetch_civitai_model_info as fetch_civitai_model_info_service,
+    search_civitai_models,
 )
 from airunner_services.downloads.job_service import DownloadJobService
 
@@ -51,6 +53,26 @@ class CivitaiModelInfoRequest(BaseModel):
     api_key: str | None = None
 
 
+class CivitaiBrowserSearchRequest(BaseModel):
+    """Parameters for one CivitAI model browser search."""
+
+    query: str = ""
+    base_models: list[str] | None = None
+    model_types: list[str] | None = None
+    limit: int = Field(default=20, ge=1, le=50)
+    cursor: str | None = None
+    api_key: str | None = None
+
+
+class CivitaiBrowserModelRequest(BaseModel):
+    """Parameters for one CivitAI browser detail fetch."""
+
+    model_id: str
+    base_models: list[str] | None = None
+    model_types: list[str] | None = None
+    api_key: str | None = None
+
+
 class UrlDownloadRequest(BaseModel):
     """Parameters for one generic URL download job."""
 
@@ -58,6 +80,12 @@ class UrlDownloadRequest(BaseModel):
     output_dir: str
     filename: str | None = None
     extract_zip: bool = False
+
+
+class NltkDownloadRequest(BaseModel):
+    """Parameters for one NLTK data download job."""
+
+    data_names: list[str]
 
 
 class DownloadJobAcceptedResponse(BaseModel):
@@ -146,6 +174,20 @@ async def start_url_download(
 
 
 @router.post(
+    "/nltk",
+    response_model=DownloadJobAcceptedResponse,
+)
+async def start_nltk_download(
+    payload: NltkDownloadRequest,
+    request: Request,
+) -> DownloadJobAcceptedResponse:
+    """Queue one NLTK data download through the shared job service."""
+    service = get_download_job_service(request)
+    job_id = await service.start_nltk_download(payload.data_names)
+    return DownloadJobAcceptedResponse(job_id=job_id)
+
+
+@router.post(
     "/civitai/file",
     response_model=DownloadJobAcceptedResponse,
 )
@@ -174,6 +216,39 @@ async def fetch_civitai_model_info_route(
         payload.url,
         payload.api_key or "",
     )
+
+
+@router.post("/civitai/models")
+async def search_civitai_models_route(
+    payload: CivitaiBrowserSearchRequest,
+) -> dict[str, Any]:
+    """Return one filtered CivitAI browser search payload."""
+    return await asyncio.to_thread(
+        search_civitai_models,
+        payload.query,
+        base_models=payload.base_models,
+        model_types=payload.model_types,
+        limit=payload.limit,
+        cursor=payload.cursor,
+        api_key=payload.api_key or "",
+    )
+
+
+@router.post("/civitai/model")
+async def fetch_civitai_browser_model_route(
+    payload: CivitaiBrowserModelRequest,
+) -> dict[str, Any]:
+    """Return one filtered CivitAI browser detail payload."""
+    try:
+        return await asyncio.to_thread(
+            fetch_civitai_browser_model_info,
+            payload.model_id,
+            base_models=payload.base_models,
+            model_types=payload.model_types,
+            api_key=payload.api_key or "",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get(
@@ -214,20 +289,26 @@ async def cancel_download_job(
 
 
 __all__ = [
+    "CivitaiBrowserModelRequest",
+    "CivitaiBrowserSearchRequest",
     "CivitaiFileDownloadRequest",
     "CivitaiModelInfoRequest",
     "DownloadJobAcceptedResponse",
     "DownloadJobStatusResponse",
     "HuggingFaceDownloadRequest",
     "HuggingFaceFileDownloadRequest",
+    "NltkDownloadRequest",
     "UrlDownloadRequest",
     "cancel_download_job",
+    "fetch_civitai_browser_model_route",
     "fetch_civitai_model_info_route",
     "get_download_job_service",
     "get_download_job_status",
     "router",
+    "search_civitai_models_route",
     "start_civitai_file_download",
     "start_huggingface_download",
     "start_huggingface_file_download",
+    "start_nltk_download",
     "start_url_download",
 ]
