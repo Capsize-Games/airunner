@@ -1096,9 +1096,14 @@ For each function call, return a json object with function name and arguments wi
             (tool.get("function", tool) or {}).get("name")
             for tool in self.tools or []
         }
-        if tool_name in available_tools:
-            return tool_name
-        return None
+        if available_tools and tool_name not in available_tools:
+            self.logger.warning(
+                "Forced GPT-OSS tool %s missing from bound tools %s; "
+                "continuing with explicit tool_choice",
+                tool_name,
+                sorted(name for name in available_tools if name),
+            )
+        return tool_name
 
     def _render_gpt_oss_prefilled_tool_call(self, tool_name: str) -> str:
         """Render a partial Harmony tool call for one forced tool."""
@@ -1651,9 +1656,15 @@ For each function call, return a json object with function name and arguments wi
         if fenced:
             candidate = fenced.group(1).strip()
 
-        if candidate.startswith("{"):
+        if not candidate.startswith("{"):
+            return ""
+
+        try:
+            _, end_index = json.JSONDecoder().raw_decode(candidate)
+        except json.JSONDecodeError:
             return candidate
-        return ""
+
+        return candidate[:end_index].strip()
 
     def _parse_prefilled_gpt_oss_tool_call(
         self,
@@ -1666,7 +1677,7 @@ For each function call, return a json object with function name and arguments wi
             return []
 
         try:
-            arguments = json.loads(json_text)
+            arguments = self._normalize_tool_payload(json.loads(json_text))
         except json.JSONDecodeError as exc:
             self.logger.warning(
                 "Failed to parse prefilled GPT-OSS tool JSON for %s: %s",
@@ -2070,6 +2081,7 @@ For each function call, return a json object with function name and arguments wi
             )
             full_content: List[str] = []
             parser = GPTOSSStreamParser()
+            forced_tool_name = self._forced_gpt_oss_tool_name()
             for chunk in self._llama.create_completion(**completion_kwargs):
                 if self._interrupted:
                     break
@@ -2092,7 +2104,7 @@ For each function call, return a json object with function name and arguments wi
                         )
                     )
 
-                if parsed_delta.final_text:
+                if parsed_delta.final_text and not forced_tool_name:
                     chunk_msg = ChatGenerationChunk(
                         message=AIMessageChunk(content=parsed_delta.final_text)
                     )
@@ -2113,7 +2125,7 @@ For each function call, return a json object with function name and arguments wi
                         },
                     )
                 )
-            if parsed_tail.final_text:
+            if parsed_tail.final_text and not forced_tool_name:
                 tail_chunk = ChatGenerationChunk(
                     message=AIMessageChunk(content=parsed_tail.final_text)
                 )
@@ -2125,13 +2137,35 @@ For each function call, return a json object with function name and arguments wi
                 yield tail_chunk
 
             raw_text = "".join(full_content)
+            if forced_tool_name:
+                continuation_kwargs = dict(completion_kwargs)
+                continuation_kwargs["stream"] = False
+                raw_text = self._continue_prefilled_gpt_oss_tool_call(
+                    continuation_kwargs,
+                    raw_text,
+                )
+
             tool_calls = self._parse_gpt_oss_commentary_tool_calls(raw_text)
             if not tool_calls:
-                tool_calls, _ = self._extract_tool_calls(raw_text)
+                tool_calls = self._parse_prefilled_gpt_oss_tool_call(raw_text)
+            if not tool_calls:
+                tool_calls, cleaned_text = self._extract_tool_calls(raw_text)
+            else:
+                cleaned_text = ""
             if tool_calls:
                 yield ChatGenerationChunk(
                     message=AIMessageChunk(content="", tool_calls=tool_calls)
                 )
+            elif forced_tool_name and cleaned_text:
+                fallback_chunk = ChatGenerationChunk(
+                    message=AIMessageChunk(content=cleaned_text)
+                )
+                if run_manager:
+                    run_manager.on_llm_new_token(
+                        cleaned_text,
+                        chunk=fallback_chunk,
+                    )
+                yield fallback_chunk
             return
 
         self.logger.info("[ChatGGUF._stream] Starting stream generation")

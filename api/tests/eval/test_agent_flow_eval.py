@@ -16,7 +16,7 @@ from api.tests.llm_functional_support import visible_last_number
 
 
 _MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
-_TOOL_FLOW_MODEL_IDS = ["qwen3.5-9b"]
+_TOOL_FLOW_MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 
 
 def _flow_daemon_env(model_id: str) -> dict[str, str]:

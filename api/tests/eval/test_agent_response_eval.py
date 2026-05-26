@@ -14,8 +14,7 @@ from api.tests.llm_functional_support import daemon_env
 from api.tests.llm_functional_support import llm_artifact_path
 from api.tests.llm_functional_support import started_daemon
 
-
-_MODEL_ID = "qwen3.5-9b"
+_MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 _QUALITY_CASES = [
     pytest.param(
         "Reply with exactly: alpha.",
@@ -35,12 +34,12 @@ _QUALITY_CASES = [
 ]
 
 
-def _response_daemon_env() -> dict[str, str]:
+def _response_daemon_env(model_id: str) -> dict[str, str]:
     """Return stable daemon env overrides for judged response evals."""
     return daemon_env(
         llm_on=True,
         tts_on=False,
-        extra_env=combined_llama_env_overrides(_MODEL_ID),
+        extra_env=combined_llama_env_overrides(model_id),
     )
 
 
@@ -54,6 +53,7 @@ def _judge_input(prompt: str, system_prompt: str | None) -> str:
     )
 
 
+@pytest.mark.parametrize("model_id", _MODEL_IDS, ids=_MODEL_IDS)
 @pytest.mark.parametrize(
     ("prompt", "system_prompt", "reference_output"),
     _QUALITY_CASES,
@@ -63,18 +63,19 @@ def _judge_input(prompt: str, system_prompt: str | None) -> str:
 @pytest.mark.slow
 @pytest.mark.timeout(900)
 def test_agent_response_quality_against_reference(
+    model_id: str,
     prompt: str,
     system_prompt: str | None,
     reference_output: str,
 ) -> None:
     """Judge one final agent response against a short reference answer."""
-    artifact_path = llm_artifact_path(_MODEL_ID)
+    artifact_path = llm_artifact_path(model_id)
     if not artifact_path.is_file():
         pytest.skip(f"Missing local model artifact: {artifact_path}")
 
-    with started_daemon(_response_daemon_env()) as daemon:
+    with started_daemon(_response_daemon_env(model_id)) as daemon:
         payload = build_agent_request(
-            _MODEL_ID,
+            model_id,
             prompt,
             tool_categories=[],
             system_prompt=system_prompt,
@@ -85,7 +86,7 @@ def test_agent_response_quality_against_reference(
 
         scores = judge_against_reference(
             daemon.base_url,
-            model_id=_MODEL_ID,
+            model_id=model_id,
             prompt=_judge_input(prompt, system_prompt),
             output_text=result.visible_message,
             reference_output=reference_output,

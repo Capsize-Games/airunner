@@ -17,17 +17,16 @@ from api.tests.llm_functional_support import daemon_env
 from api.tests.llm_functional_support import llm_artifact_path
 from api.tests.llm_functional_support import started_daemon
 
-
-_MODEL_ID = "qwen3.5-9b"
+_MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 _Validator = Callable[[AgentEvalResult, Any], None]
 
 
-def _tool_daemon_env() -> dict[str, str]:
+def _tool_daemon_env(model_id: str) -> dict[str, str]:
     """Return stable daemon env overrides for tool-usage evals."""
     return daemon_env(
         llm_on=True,
         tts_on=False,
-        extra_env=combined_llama_env_overrides(_MODEL_ID),
+        extra_env=combined_llama_env_overrides(model_id),
     )
 
 
@@ -86,6 +85,7 @@ _TOOL_CASES = [
 ]
 
 
+@pytest.mark.parametrize("model_id", _MODEL_IDS, ids=_MODEL_IDS)
 @pytest.mark.eval
 @pytest.mark.integration
 @pytest.mark.slow
@@ -96,6 +96,7 @@ _TOOL_CASES = [
     _TOOL_CASES,
 )
 def test_agent_forced_tool_usage(
+    model_id: str,
     prompt: str,
     tool_categories: list[str],
     force_tool: str,
@@ -103,18 +104,18 @@ def test_agent_forced_tool_usage(
     validator: _Validator,
 ) -> None:
     """Validate one deterministic forced tool invocation and reply."""
-    artifact_path = llm_artifact_path(_MODEL_ID)
+    artifact_path = llm_artifact_path(model_id)
     if not artifact_path.is_file():
         pytest.skip(f"Missing local model artifact: {artifact_path}")
 
     payload = build_agent_request(
-        _MODEL_ID,
+        model_id,
         prompt,
         tool_categories=tool_categories,
         force_tool=force_tool,
         max_new_tokens=max_new_tokens,
     )
-    with started_daemon(_tool_daemon_env()) as daemon:
+    with started_daemon(_tool_daemon_env(model_id)) as daemon:
         result = run_agent_eval_case(daemon.base_url, payload)
         assert_success(result, daemon.log_path)
         validator(result, daemon.log_path)

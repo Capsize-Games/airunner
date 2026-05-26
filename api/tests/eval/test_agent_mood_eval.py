@@ -14,8 +14,7 @@ from api.tests.llm_functional_support import llm_artifact_path
 from api.tests.llm_functional_support import started_daemon
 from api.tests.llm_functional_support import wait_for_log_text
 
-
-_MODEL_ID = "qwen3.5-9b"
+_MODEL_IDS = ["qwen3.5-9b", "gpt-oss-20b"]
 _MOOD_CASES = [
     pytest.param(
         "thanks, that was really helpful",
@@ -35,9 +34,9 @@ _MOOD_CASES = [
 ]
 
 
-def _mood_daemon_env() -> dict[str, str]:
+def _mood_daemon_env(model_id: str) -> dict[str, str]:
     """Return daemon env overrides for deterministic mood evals."""
-    extra_env = combined_llama_env_overrides(_MODEL_ID)
+    extra_env = combined_llama_env_overrides(model_id)
     extra_env.update(
         {
             "AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS": "1",
@@ -60,24 +59,26 @@ def _seed_conversation() -> int:
     return int(conversation.id)
 
 
+@pytest.mark.parametrize("model_id", _MODEL_IDS, ids=_MODEL_IDS)
 @pytest.mark.parametrize(("prompt", "expected_mood"), _MOOD_CASES)
 @pytest.mark.eval
 @pytest.mark.integration
 @pytest.mark.slow
 @pytest.mark.timeout(900)
 def test_agent_updates_mood_from_followup_turn(
+    model_id: str,
     prompt: str,
     expected_mood: str,
 ) -> None:
     """Update agent mood from one persisted prior user turn."""
-    artifact_path = llm_artifact_path(_MODEL_ID)
+    artifact_path = llm_artifact_path(model_id)
     if not artifact_path.is_file():
         pytest.skip(f"Missing local model artifact: {artifact_path}")
 
     conversation_id = _seed_conversation()
-    with started_daemon(_mood_daemon_env()) as daemon:
+    with started_daemon(_mood_daemon_env(model_id)) as daemon:
         payload = build_agent_request(
-            _MODEL_ID,
+            model_id,
             prompt,
             tool_categories=[],
             use_memory=True,
