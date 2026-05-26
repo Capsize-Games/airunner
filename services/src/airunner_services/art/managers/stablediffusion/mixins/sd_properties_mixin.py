@@ -6,6 +6,7 @@ providing access to model configuration, pipeline settings, paths, and state.
 """
 
 import os
+from pathlib import Path
 from typing import Any, Dict, Optional, Type
 
 import torch
@@ -695,6 +696,21 @@ class SDPropertiesMixin:
                 self.pipeline,
             )
         )
+        if self.use_from_single_file and self.model_path:
+            model_path = Path(str(self.model_path)).expanduser()
+            version_dir = (
+                Path(self.path_settings.base_path).expanduser()
+                / "art"
+                / "models"
+                / self.version
+            )
+            for candidate in (
+                Path(path),
+                model_path.parent,
+                version_dir / "txt2img",
+            ):
+                if (candidate / "model_index.json").exists():
+                    return str(candidate)
         return path
 
     @property

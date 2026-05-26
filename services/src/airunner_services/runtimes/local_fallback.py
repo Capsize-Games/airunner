@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import os
 from queue import Empty, Queue
 from typing import Any, Callable, Iterable, Optional
@@ -143,17 +144,62 @@ def _resolve_art_request_strength(metadata: dict[str, Any]) -> float:
         return 0.5
 
 
-def _resolve_art_request_image(metadata: dict[str, Any]) -> Any:
-    """Return one decoded PIL image carried by the art invocation."""
-    image_b64 = metadata.get("image_b64")
-    if not image_b64:
+def _decode_art_metadata_image(encoded_image: Any) -> Any:
+    """Return one decoded PIL image from art request metadata."""
+    if not encoded_image:
         return None
     try:
-        from PIL import Image
-
-        image_bytes = base64.b64decode(image_b64)
+        image_bytes = base64.b64decode(encoded_image)
         with Image.open(io.BytesIO(image_bytes)) as image:
             return image.convert("RGB")
+    except Exception:
+        return None
+
+
+def _resolve_art_request_image(metadata: dict[str, Any]) -> Any:
+    """Return one decoded PIL image carried by the art invocation."""
+    return _decode_art_metadata_image(metadata.get("image_b64"))
+
+
+def _resolve_art_request_mask(metadata: dict[str, Any]) -> Any:
+    """Return one decoded mask image carried by the art invocation."""
+    return _decode_art_metadata_image(metadata.get("mask_b64"))
+
+
+def _resolve_art_request_outpaint_mask_blur(
+    metadata: dict[str, Any],
+) -> int:
+    """Return the requested outpaint blur radius."""
+    try:
+        return int(metadata.get("outpaint_mask_blur") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _resolve_art_active_rect(metadata: dict[str, Any]) -> Any:
+    """Return one decoded active rectangle for outpaint requests."""
+    raw_rect = metadata.get("active_rect")
+    if not raw_rect:
+        return None
+
+    if isinstance(raw_rect, str):
+        try:
+            raw_rect = json.loads(raw_rect)
+        except ValueError:
+            return None
+
+    if not isinstance(raw_rect, dict):
+        return None
+
+    try:
+        from airunner_services.art.managers.stablediffusion.rect import Rect
+
+        return Rect(
+            int(raw_rect.get("x", 0)),
+            int(raw_rect.get("y", 0)),
+            int(raw_rect.get("width", 0)),
+            int(raw_rect.get("height", 0)),
+        )
     except Exception:
         return None
 
@@ -1308,9 +1354,17 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
             height=invocation.height,
             callback=on_complete,
             image=_resolve_art_request_image(metadata),
+            mask=_resolve_art_request_mask(metadata),
             generator_section=generator_section,
+            outpaint_mask_blur=_resolve_art_request_outpaint_mask_blur(
+                metadata,
+            ),
         )
         self._cache_art_model_metadata(image_request)
+        signal_payload = {"image_request": image_request}
+        active_rect = _resolve_art_active_rect(metadata)
+        if active_rect is not None:
+            signal_payload["active_rect"] = active_rect
 
         # Ensure the SD worker is created and registered for signals
         # before we emit DO_GENERATE_SIGNAL.  The worker is lazily
@@ -1344,7 +1398,7 @@ class LocalFallbackArtClient(_SignalRuntimeClient):
         try:
             self._emit_signal(
                 SignalCode.DO_GENERATE_SIGNAL,
-                {"image_request": image_request},
+                signal_payload,
             )
             try:
                 result = image_queue.get(timeout=self._timeout_seconds)

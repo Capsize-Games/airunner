@@ -111,7 +111,11 @@ class SDGenerationPreparationMixin:
         if self.is_img2img:
             # Use image from image_request if available (passed from GUI),
             # otherwise fall back to img2img_image property
-            image = self.image_request.image if self.image_request.image is not None else self.img2img_image
+            image = (
+                self.image_request.image
+                if self.image_request.image is not None
+                else self.img2img_image
+            )
             if (
                 data["num_inference_steps"]
                 < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
@@ -120,17 +124,35 @@ class SDGenerationPreparationMixin:
                     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
                 )
         elif self.is_inpaint:
-            image = self.img2img_image_cached or self.drawing_pad_image
-            mask = self.drawing_pad_mask
-            if not image:
+            image = self.image_request.image
+            if image is None:
+                image = self.img2img_image_cached or self.drawing_pad_image
+            mask = self.image_request.mask
+            if mask is None:
+                mask = self.drawing_pad_mask
+            if image is None:
                 raise ValueError("No image provided for inpainting")
-            if not mask:
+            if mask is None:
                 raise ValueError("No mask provided for inpainting")
         elif self.is_outpaint:
-            image = self.outpaint_image
-            if not image:
+            image = self.image_request.image
+            if image is None:
+                image = self.outpaint_image
+            if image is None:
                 image = self.drawing_pad_image
-            mask = self.drawing_pad_mask
+            mask = self.image_request.mask
+            if mask is None:
+                mask = self.drawing_pad_mask
+            if image is None:
+                raise ValueError("No image provided for outpainting")
+            if mask is None:
+                raise ValueError("No mask provided for outpainting")
+            if active_rect is None:
+                from airunner_services.art.managers.stablediffusion.rect import (
+                    Rect,
+                )
+
+                active_rect = Rect(0, 0, width, height)
 
             # Crop the image based on the active grid location
             active_grid_x = active_rect.left()

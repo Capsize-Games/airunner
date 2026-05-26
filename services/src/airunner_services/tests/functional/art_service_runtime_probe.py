@@ -46,6 +46,9 @@ from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
 from airunner_model.session import reset_engine
 from airunner_services.app.service_app import ServiceApp
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
+from airunner_services.model_management.zimage_model_manager import (
+    ZImageModelManager,
+)
 from airunner_services.runtimes.contracts import (
     ArtInvocationRequest,
     RuntimeAction,
@@ -73,6 +76,7 @@ def _seed_art_runtime_settings(
     output_root: Path,
     version: str,
     scheduler: str,
+    pipeline_action: str,
 ) -> None:
     app_settings = _ensure_row(ApplicationSettings)
     ApplicationSettings.objects.update(
@@ -98,7 +102,7 @@ def _seed_art_runtime_settings(
     generator_settings = _ensure_row(GeneratorSettings)
     GeneratorSettings.objects.update(
         pk=getattr(generator_settings, "id", None),
-        pipeline_action="txt2img",
+        pipeline_action=pipeline_action,
         version=version,
         scheduler=scheduler,
         steps=4,
@@ -107,13 +111,47 @@ def _seed_art_runtime_settings(
     )
 
 
+def _encode_image_file(image_path: Path) -> str:
+    """Return one PNG base64 payload for a local image file."""
+    with Image.open(image_path) as image:
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def _zimage_supported_pipeline_actions() -> list[str]:
+    """Return the Z-Image actions exposed by the service manager."""
+    manager = object.__new__(ZImageModelManager)
+    return sorted(manager.pipeline_map.keys())
+
+
 def _build_request(
     *,
     model_path: Path,
     version: str,
     scheduler: str,
     prompt: str,
+    pipeline_action: str,
+    image_path: Path | None,
+    mask_path: Path | None,
+    strength: float | None,
+    active_rect: dict[str, int] | None,
 ) -> RequestEnvelope:
+    metadata = {
+        "version": version,
+        "pipeline": pipeline_action,
+        "scheduler": scheduler,
+        "skip_auto_export": True,
+    }
+    if strength is not None:
+        metadata["strength"] = strength
+    if image_path is not None:
+        metadata["image_b64"] = _encode_image_file(image_path)
+    if mask_path is not None:
+        metadata["mask_b64"] = _encode_image_file(mask_path)
+    if active_rect is not None:
+        metadata["active_rect"] = active_rect
+
     payload = ArtInvocationRequest(
         prompt=prompt,
         negative_prompt="",
@@ -124,12 +162,7 @@ def _build_request(
         cfg_scale=5.0,
         seed=1234,
         num_images=1,
-        metadata={
-            "version": version,
-            "pipeline": "txt2img",
-            "scheduler": scheduler,
-            "skip_auto_export": True,
-        },
+        metadata=metadata,
     ).model_dump()
     return RequestEnvelope(
         runtime=RuntimeKind.ART,
@@ -198,20 +231,67 @@ def main() -> int:
     parser.add_argument("--model-path", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--scheduler", required=True)
+    parser.add_argument("--pipeline-action", default="txt2img")
     parser.add_argument("--prompt", required=True)
+    parser.add_argument("--image-path")
+    parser.add_argument("--mask-path")
+    parser.add_argument("--strength", type=float)
+    parser.add_argument("--active-rect")
     parser.add_argument("--runtime-root", required=True)
     parser.add_argument("--output-root", required=True)
     args = parser.parse_args()
-
-    cuda_ready, reason = _cuda_ready()
-    if not cuda_ready:
-        _emit_result("skipped", reason=reason)
-        return 0
 
     model_path = Path(args.model_path)
     if not model_path.exists():
         _emit_result("failed", reason=f"Missing model path: {model_path}")
         return 1
+
+    image_path = Path(args.image_path) if args.image_path else None
+    mask_path = Path(args.mask_path) if args.mask_path else None
+    active_rect = None
+    if args.active_rect:
+        active_rect = json.loads(args.active_rect)
+
+    if args.pipeline_action in {"img2img", "inpaint", "outpaint"}:
+        if image_path is None or not image_path.exists():
+            _emit_result(
+                "failed",
+                reason=(
+                    f"Missing source image for {args.pipeline_action}: "
+                    f"{image_path}"
+                ),
+            )
+            return 1
+
+    if args.pipeline_action in {"inpaint", "outpaint"}:
+        if mask_path is None or not mask_path.exists():
+            _emit_result(
+                "failed",
+                reason=(
+                    f"Missing mask image for {args.pipeline_action}: "
+                    f"{mask_path}"
+                ),
+            )
+            return 1
+
+    if args.version == "Z-Image Turbo":
+        supported_actions = _zimage_supported_pipeline_actions()
+        if args.pipeline_action not in supported_actions:
+            _emit_result(
+                "unsupported",
+                reason=(
+                    "Z-Image Turbo service runtime does not expose "
+                    f"{args.pipeline_action}; supported actions: "
+                    f"{', '.join(supported_actions)}"
+                ),
+                supported_actions=supported_actions,
+            )
+            return 0
+
+    cuda_ready, reason = _cuda_ready()
+    if not cuda_ready:
+        _emit_result("skipped", reason=reason)
+        return 0
 
     if args.version == "Z-Image Turbo":
         load_mode = get_active_zimage_load_mode(model_path)
@@ -236,6 +316,7 @@ def main() -> int:
         output_root=output_root,
         version=args.version,
         scheduler=args.scheduler,
+        pipeline_action=args.pipeline_action,
     )
 
     app = None
@@ -252,6 +333,11 @@ def main() -> int:
                 version=args.version,
                 scheduler=args.scheduler,
                 prompt=args.prompt,
+                pipeline_action=args.pipeline_action,
+                image_path=image_path,
+                mask_path=mask_path,
+                strength=args.strength,
+                active_rect=active_rect,
             ),
             progress_updates.append,
         )
