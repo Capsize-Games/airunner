@@ -250,8 +250,9 @@ def main():
     global _launcher_splash, _launcher_app
 
     # Enable faulthandler for debugging deadlocks.
-    # When the app freezes, send SIGUSR1 to dump all Python thread stacks:
-    #   kill -SIGUSR1 $(pgrep -f airunner)
+    # When the GUI freezes, send SIGUSR1 to the Python GUI process:
+    #   GUI_PID="$(pgrep -n -f 'python.*-m airunner\.launcher')"
+    #   kill -SIGUSR1 "$GUI_PID"
     import faulthandler
     import signal
     faulthandler.enable()

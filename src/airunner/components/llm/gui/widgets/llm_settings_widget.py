@@ -72,11 +72,16 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
         self._deferred_startup_loaded = True
         self.initialize_form()
-        self._setup_adapters_table()
-        self._load_adapters()
+        if self._get_adapters_table() is not None:
+            self._setup_adapters_table()
+            self._load_adapters()
         self._setup_quantization_dropdown()
         self._setup_runtime_precision_dropdown()
         self._update_quantize_button_state()  # Initialize button state
+
+    def _get_adapters_table(self):
+        """Return the optional adapters table when present in the UI."""
+        return getattr(self.ui, "adapters_table", None)
 
     def _setup_runtime_preference_controls(self) -> None:
         """Add the moved footer precision selector to the settings panel."""
@@ -868,9 +873,13 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def _setup_adapters_table(self):
         """Configure the adapters table columns and behavior."""
-        self.ui.adapters_table.horizontalHeader().setStretchLastSection(True)
-        self.ui.adapters_table.setColumnWidth(0, 80)
-        self.ui.adapters_table.setColumnWidth(1, 200)
+        table = self._get_adapters_table()
+        if table is None:
+            return
+
+        table.horizontalHeader().setStretchLastSection(True)
+        table.setColumnWidth(0, 80)
+        table.setColumnWidth(1, 200)
 
     @Slot()
     def on_refresh_adapters_button_clicked(self):
@@ -879,7 +888,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def _load_adapters(self):
         """Load available adapters from database and populate table."""
-        self.ui.adapters_table.setRowCount(0)
+        table = self._get_adapters_table()
+        if table is None:
+            return
+
+        table.setRowCount(0)
 
         try:
             adapters = FineTunedModel.objects.all()
@@ -891,8 +904,8 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 ):
                     continue
 
-                row = self.ui.adapters_table.rowCount()
-                self.ui.adapters_table.insertRow(row)
+                row = table.rowCount()
+                table.insertRow(row)
 
                 checkbox_widget = QWidget()
                 checkbox_layout = QHBoxLayout(checkbox_widget)
@@ -907,15 +920,15 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
                 checkbox_layout.setAlignment(Qt.AlignCenter)
                 checkbox_layout.setContentsMargins(0, 0, 0, 0)
 
-                self.ui.adapters_table.setCellWidget(row, 0, checkbox_widget)
+                table.setCellWidget(row, 0, checkbox_widget)
 
                 name_item = QTableWidgetItem(adapter.name)
                 name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
-                self.ui.adapters_table.setItem(row, 1, name_item)
+                table.setItem(row, 1, name_item)
 
                 path_item = QTableWidgetItem(adapter.adapter_path)
                 path_item.setFlags(path_item.flags() & ~Qt.ItemIsEditable)
-                self.ui.adapters_table.setItem(row, 2, path_item)
+                table.setItem(row, 2, path_item)
 
         except Exception as e:
             self.logger.error(f"Error loading adapters: {e}")

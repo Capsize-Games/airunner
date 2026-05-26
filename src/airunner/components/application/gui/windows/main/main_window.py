@@ -67,6 +67,9 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
 )
 from airunner.utils.application import create_worker
+from airunner.utils.application.gui_probe import (
+    maybe_create_gui_probe_controller,
+)
 from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.settings import get_qsettings
 from airunner_model.models.shortcut_keys import ShortcutKeys
@@ -345,6 +348,7 @@ class MainWindow(
             self._refresh_model_status_from_daemon
         )
         self.initialize_ui()
+        self._gui_probe_controller = maybe_create_gui_probe_controller(self)
         self._daemon_status_timer.start(1000)
         self.last_tray_click_time = 0
         self.settings_window = None
@@ -675,24 +679,44 @@ class MainWindow(
 
     def _ensure_left_panel_page_loaded(self, page_index: int) -> None:
         """Load left-panel content lazily for the requested page."""
-        if page_index == self._left_documents_panel_index:
-            self._ensure_knowledgebase_loaded()
-        elif page_index == self._left_history_panel_index:
-            self._ensure_left_history_loaded()
-        elif page_index == self._left_llm_settings_panel_index:
-            self._ensure_left_llm_settings_loaded()
+        try:
+            if page_index == self._left_documents_panel_index:
+                self._ensure_knowledgebase_loaded()
+            elif page_index == self._left_history_panel_index:
+                self._ensure_left_history_loaded()
+            elif page_index == self._left_llm_settings_panel_index:
+                self._ensure_left_llm_settings_loaded()
+        except Exception:
+            self.logger.exception(
+                "Failed to load left panel page %s",
+                page_index,
+            )
+            return False
+
+        return True
 
     def _ensure_sidebar_page_loaded(self, page_index: int) -> None:
         """Load sidebar content lazily for the requested page."""
-        if page_index == self._stats_sidebar_index:
-            self._ensure_stats_loaded()
-        elif page_index == self._art_tools_sidebar_index:
-            self._ensure_art_tools_loaded()
+        try:
+            if page_index == self._stats_sidebar_index:
+                self._ensure_stats_loaded()
+            elif page_index == self._art_tools_sidebar_index:
+                self._ensure_art_tools_loaded()
+        except Exception:
+            self.logger.exception(
+                "Failed to load sidebar page %s",
+                page_index,
+            )
+            return False
+
+        return True
 
     def _toggle_sidebar_page(self, page_index: int, visible: bool) -> None:
         """Switch or hide the VS Code style right sidebar page."""
         if visible:
-            self._ensure_sidebar_page_loaded(page_index)
+            if not self._ensure_sidebar_page_loaded(page_index):
+                self._sync_sidebar_button_states()
+                return
             self.ui.sidebar_tab.setCurrentIndex(page_index)
             self._toggle_splitter_section(
                 True,
@@ -717,10 +741,18 @@ class MainWindow(
         """Show or hide one nested art-tools tab from the right sidebar."""
         tab_index = self._clamp_art_tools_tab_index(tab_index)
         if visible:
-            widget = self._ensure_art_tools_loaded()
-            show_tool_page = getattr(widget, "show_tool_page", None)
-            if callable(show_tool_page):
-                show_tool_page(tab_index)
+            try:
+                widget = self._ensure_art_tools_loaded()
+                show_tool_page = getattr(widget, "show_tool_page", None)
+                if callable(show_tool_page):
+                    show_tool_page(tab_index)
+            except Exception:
+                self.logger.exception(
+                    "Failed to load art tools tab %s",
+                    tab_index,
+                )
+                self._sync_sidebar_button_states()
+                return
             self._toggle_sidebar_page(self._art_tools_sidebar_index, True)
             return
 
@@ -861,7 +893,9 @@ class MainWindow(
     def _toggle_left_panel_page(self, page_index: int, visible: bool) -> None:
         """Switch or hide the shared left splitter panel page."""
         if visible:
-            self._ensure_left_panel_page_loaded(page_index)
+            if not self._ensure_left_panel_page_loaded(page_index):
+                self._sync_left_panel_button_states()
+                return
             self.ui.left_panel_tab.setCurrentIndex(page_index)
             if not self._left_panel_is_visible():
                 self._toggle_splitter_section(

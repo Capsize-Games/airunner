@@ -8,6 +8,7 @@ This script provides a unified interface for running different test suites:
 - LLM runtime smoke tests: safe route/runtime checks with no app startup
 - STT runtime smoke tests: safe route/worker checks with no app startup
 - Art runtime smoke tests: safe daemon-backed art checks with no app startup
+- Art service runtime tests: direct service-surface art checks with real models
 - TTS runtime smoke tests: safe daemon-backed TTS checks with no app startup
 
 Usage:
@@ -21,6 +22,7 @@ Usage:
     python run_tests.py --llm-runtime-smoke # Run safe LLM runtime smoke tests
     python run_tests.py --stt-runtime-smoke # Run safe STT runtime smoke tests
     python run_tests.py --art-runtime-smoke # Run safe art runtime smoke tests
+    python run_tests.py --art-service-runtime # Run direct art service tests
     python run_tests.py --tts-runtime-smoke # Run safe TTS runtime smoke tests
 
 Note: Eval tests start a fresh daemon process inside the test harness.
@@ -215,6 +217,37 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     )
 
 
+def _gui_component_targets(base_path: Path, component: str) -> list[Path] | None:
+    """Resolve one component into its GUI subtree."""
+    gui_path = base_path / component / "gui"
+    if gui_path.exists():
+        return [gui_path]
+    return None
+
+
+def run_gui_functional_tests(
+    component: str = None,
+    verbose: bool = False,
+) -> int:
+    """Run headless GUI functional tests with mocked backends."""
+    base_path = Path("src/airunner/components")
+    test_targets = [base_path]
+    description = "Headless GUI functional tests"
+
+    if component:
+        resolved = _gui_component_targets(base_path, component)
+        if resolved is None:
+            print(f"Error: GUI component '{component}' is not configured")
+            return 1
+        test_targets = resolved
+        description = f"Headless GUI functional tests for {component}"
+
+    cmd = _pytest_command(*[str(path) for path in test_targets])
+    cmd.append("-v" if verbose else "--tb=short")
+    cmd.extend(["--color=yes", "-ra", "-m", "gui_functional"])
+    return run_command(cmd, description, env=_build_pytest_env())
+
+
 def run_eval_tests(
     verbose: bool = False,
     model: str = None,
@@ -351,6 +384,28 @@ def run_art_runtime_smoke_tests(verbose: bool = False) -> int:
     )
 
 
+def run_art_service_runtime_tests(verbose: bool = False) -> int:
+    """Run the direct art service runtime suite."""
+    test_path = Path("services/src/airunner_services/tests/functional")
+    cmd = _pytest_command(
+        str(test_path),
+        "-m",
+        "art_service_runtime",
+    )
+
+    if verbose:
+        cmd.append("-v")
+    else:
+        cmd.append("--tb=short")
+
+    cmd.extend(["--color=yes", "-ra"])
+    return run_command(
+        cmd,
+        "Direct art service runtime tests",
+        env=_build_pytest_env(),
+    )
+
+
 def run_tts_runtime_smoke_tests(verbose: bool = False) -> int:
     """Run the safe TTS runtime smoke suite."""
     test_path = Path("api/tests")
@@ -390,6 +445,7 @@ Examples:
     %(prog)s --llm-runtime-smoke       Run safe llama.cpp runtime smoke tests
     %(prog)s --stt-runtime-smoke       Run safe STT runtime smoke tests
     %(prog)s --art-runtime-smoke       Run safe art runtime smoke tests
+    %(prog)s --art-service-runtime     Run direct art service runtime tests
     %(prog)s --tts-runtime-smoke       Run safe TTS runtime smoke tests
   %(prog)s --eval --model /path/to/model    Test with specific model
   %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
@@ -429,9 +485,21 @@ Examples:
     )
 
     parser.add_argument(
+        "--art-service-runtime",
+        action="store_true",
+        help="Run direct art service runtime tests",
+    )
+
+    parser.add_argument(
         "--tts-runtime-smoke",
         action="store_true",
         help="Run safe TTS runtime smoke tests",
+    )
+
+    parser.add_argument(
+        "--gui-functional",
+        action="store_true",
+        help="Run headless GUI functional tests with mocked backends",
     )
 
     parser.add_argument(
@@ -508,7 +576,9 @@ Examples:
         or args.llm_runtime_smoke
         or args.stt_runtime_smoke
         or args.art_runtime_smoke
+        or args.art_service_runtime
         or args.tts_runtime_smoke
+        or args.gui_functional
         or args.all
     ):
         args.unit = True
@@ -534,8 +604,19 @@ Examples:
         exit_code = run_art_runtime_smoke_tests(verbose=args.verbose)
         exit_codes.append(exit_code)
 
+    if args.art_service_runtime:
+        exit_code = run_art_service_runtime_tests(verbose=args.verbose)
+        exit_codes.append(exit_code)
+
     if args.tts_runtime_smoke or args.all:
         exit_code = run_tts_runtime_smoke_tests(verbose=args.verbose)
+        exit_codes.append(exit_code)
+
+    if args.gui_functional:
+        exit_code = run_gui_functional_tests(
+            component=args.component,
+            verbose=args.verbose,
+        )
         exit_codes.append(exit_code)
 
     # Run eval tests

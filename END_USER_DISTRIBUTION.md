@@ -46,7 +46,7 @@ Responsibilities:
 Current scaffold in this repo:
 - `native/airunner_launcher/` contains the first launcher project
 - `scripts/build_airunner_launcher.sh` builds it locally
-- `scripts/run_airunner_dev.sh` runs AIRunner through the native launcher in
+- `scripts/dev/run_gui.sh` runs AIRunner through the native launcher in
 	dev mode using the repository `venv`
 
 The launcher currently owns bundle-plan resolution, runtime environment

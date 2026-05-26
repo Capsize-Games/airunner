@@ -46,38 +46,31 @@ Cross-build the Windows launcher from Linux when MinGW-w64 is available:
 ./scripts/build_airunner_launcher.sh --target-platform windows
 ```
 
-Run AIRunner through the native launcher in dev mode:
+Run the full AIRunner dev stack:
 
 ```bash
-./scripts/run_airunner_dev.sh
+./scripts/run.sh
 ```
 
-Capture a native crash under gdb while following the launcher child process:
+Run only the GUI through the native launcher in dev mode:
 
 ```bash
-./scripts/run_airunner_dev.sh --gdb
+./scripts/dev/run_gui.sh
 ```
 
-That workflow switches the native launcher into an internal no-fork mode so
-gdb stays attached to the main AIRunner Python process instead of drifting into
-short-lived helper children. When the crash stops in gdb, run
-`airunner_dump` to write a full backtrace and local core file under
-`build/debug/core/`.
-
-Enable kernel core dumps around the same dev launch flow:
+Invoke the launcher binary directly when you need launcher-specific flags:
 
 ```bash
-./scripts/run_airunner_dev.sh --coredump
+./build/airunner-launcher/airunner --mode dev --repo-root "$PWD"
 ```
 
-If the host is using `systemd-coredump`, inspect the resulting crash with
-`coredumpctl list airunner` and `coredumpctl info airunner`.
+For Linux GUI hangs, use the workflow documented in
+[`docs/gui-hang-debugging.md`](../../docs/gui-hang-debugging.md). Start with
+the built-in `SIGUSR1` Python thread dump and move to `gdb` only when you need
+native backtraces. The launcher still supports `--no-fork` for advanced
+start-under-`gdb` sessions.
 
-If `kernel.core_pattern` is disabled on the host, the script reports that
-immediately and points you to `--gdb`, which can still write a local core file
-without changing system-wide settings.
-
-That flow uses the repository `venv` when present and sets `PYTHONPATH` to
+These dev flows use the repository `venv` when present and set `PYTHONPATH` to
 `src/` so the existing Python application code runs unchanged.
 
 ## Production Flow

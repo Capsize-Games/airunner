@@ -73,6 +73,10 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "gui: mark Qt widget tests excluded from safe unit runs"
     )
+    config.addinivalue_line(
+        "markers",
+        "gui_functional: mark headless GUI functional tests",
+    )
 
 
 def pytest_ignore_collect(

@@ -2,7 +2,7 @@
 
 ## Testing Boundary
 
-- Do not run or launch the AI Runner application as part of normal task execution.
+- Do not run or launch the AI Runner application as part of normal task execution unless you are instructed to do so by the user.
 - The user will always test runtime behavior manually.
 - Do not create or modify automated tests unless the user explicitly asks for test changes.
 - When a change would normally be verified by launching the app, state that the user should verify it instead of starting the application.

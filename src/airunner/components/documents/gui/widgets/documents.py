@@ -1,3 +1,4 @@
+import threading
 from typing import Dict
 import os
 import shutil
@@ -8,6 +9,8 @@ from PySide6.QtCore import (
     Qt,
     QEvent,
     QFileSystemWatcher,
+    QTimer,
+    Slot,
 )
 from PySide6.QtGui import (
     QIcon,
@@ -49,6 +52,7 @@ class DocumentsWidget(BaseWidget):
     titleChanged = Signal(str)
     urlChanged = Signal(str, str)
     faviconChanged = Signal(QIcon)
+    documentWatchPathsReady = Signal(int, object)
     widget_class_ = Ui_documents
 
     def __init__(self, *args, private: bool = False, **kwargs):
@@ -78,9 +82,17 @@ class DocumentsWidget(BaseWidget):
         }
         super().__init__(*args, **kwargs)
         self.setAcceptDrops(True)
+        self._document_watch_refresh_request = 0
+        self._document_watch_refresh_inflight = False
+        self._document_watch_apply_request = 0
+        self._document_watch_pending_additions: list[str] = []
+        self._document_watch_pending_removals: list[str] = []
         self._document_fs_watcher = QFileSystemWatcher(self)
         self._document_fs_watcher.directoryChanged.connect(
             self._on_document_library_changed
+        )
+        self.documentWatchPathsReady.connect(
+            self._apply_document_watch_paths,
         )
         self.knowledgeBasePanelWidget = self.ui.knowledge_base_panel_widget
         self.setup_file_explorer()
@@ -499,11 +511,32 @@ class DocumentsWidget(BaseWidget):
         return True
 
     def _refresh_document_watch_paths(self) -> None:
-        """Watch current document directories for external file changes."""
-        watcher = getattr(self, "_document_fs_watcher", None)
-        if watcher is None:
+        """Refresh watcher paths without blocking the GUI thread."""
+        self._document_watch_refresh_request += 1
+        request_id = self._document_watch_refresh_request
+        if self._document_watch_refresh_inflight:
             return
+        self._document_watch_refresh_inflight = True
+        threading.Thread(
+            target=self._scan_document_watch_paths,
+            args=(request_id,),
+            daemon=True,
+        ).start()
 
+    def _scan_document_watch_paths(self, request_id: int) -> None:
+        """Collect watched directories in a background thread."""
+        try:
+            desired_paths = self._collect_document_watch_paths()
+        except Exception as error:
+            self.logger.warning(
+                "Failed to scan document watch paths: %s",
+                error,
+            )
+            desired_paths = set()
+        self.documentWatchPathsReady.emit(request_id, desired_paths)
+
+    def _collect_document_watch_paths(self) -> set[str]:
+        """Return all document directories that should be watched."""
         desired_paths: set[str] = set()
         for root in (self.documents_path, self.zim_path):
             expanded_root = os.path.expanduser(root)
@@ -512,14 +545,95 @@ class DocumentsWidget(BaseWidget):
             desired_paths.add(expanded_root)
             for current_root, _dirs, _files in os.walk(expanded_root):
                 desired_paths.add(current_root)
+        return desired_paths
 
-        existing_paths = set(watcher.directories())
-        stale_paths = sorted(existing_paths - desired_paths)
-        new_paths = sorted(desired_paths - existing_paths)
-        if stale_paths:
-            watcher.removePaths(stale_paths)
-        if new_paths:
-            watcher.addPaths(new_paths)
+    def _document_library_files(self) -> set[str]:
+        """Return supported files currently present in managed libraries."""
+        library_files: set[str] = set()
+        for root in (self.documents_path, self.zim_path):
+            expanded_root = os.path.expanduser(root)
+            if not os.path.isdir(expanded_root):
+                continue
+            for current_root, _dirs, files in os.walk(expanded_root):
+                for filename in files:
+                    ext = os.path.splitext(filename)[1][1:].lower()
+                    if ext not in self.file_extensions:
+                        continue
+                    library_files.add(os.path.join(current_root, filename))
+        return library_files
+
+    def _sync_document_records_with_library(self) -> bool:
+        """Ensure on-disk library files have matching document records."""
+        current_files = self._document_library_files()
+        known_documents = {
+            doc.path: doc
+            for doc in Document.objects.all()
+            if getattr(doc, "path", None)
+        }
+        changed = False
+
+        for file_path in sorted(current_files):
+            if file_path in known_documents:
+                continue
+            Document.objects.create(
+                path=file_path,
+                active=False,
+                indexed=False,
+            )
+            changed = True
+
+        for file_path, document in known_documents.items():
+            if file_path in current_files:
+                continue
+            if not self._is_managed_document_path(file_path):
+                continue
+            Document.objects.delete(pk=document.id)
+            changed = True
+
+        return changed
+
+    @Slot(int, object)
+    def _apply_document_watch_paths(
+        self,
+        request_id: int,
+        desired_paths: object,
+    ) -> None:
+        """Queue watcher path updates back onto the GUI thread."""
+        watcher = getattr(self, "_document_fs_watcher", None)
+        if watcher is None:
+            self._document_watch_refresh_inflight = False
+            return
+        desired = set(desired_paths or [])
+        existing = set(watcher.directories())
+        self._document_watch_apply_request = request_id
+        self._document_watch_pending_removals = list(existing - desired)
+        self._document_watch_pending_additions = list(desired - existing)
+        self._apply_next_document_watch_batch()
+
+    def _apply_next_document_watch_batch(self) -> None:
+        """Apply watcher updates in small batches to keep the UI responsive."""
+        watcher = getattr(self, "_document_fs_watcher", None)
+        if watcher is None:
+            self._document_watch_refresh_inflight = False
+            return
+        batch_size = 128
+        if self._document_watch_pending_removals:
+            batch = self._document_watch_pending_removals[:batch_size]
+            del self._document_watch_pending_removals[:batch_size]
+            watcher.removePaths(batch)
+        elif self._document_watch_pending_additions:
+            batch = self._document_watch_pending_additions[:batch_size]
+            del self._document_watch_pending_additions[:batch_size]
+            watcher.addPaths(batch)
+        if self._document_watch_pending_removals:
+            QTimer.singleShot(0, self._apply_next_document_watch_batch)
+            return
+        if self._document_watch_pending_additions:
+            QTimer.singleShot(0, self._apply_next_document_watch_batch)
+            return
+        self._document_watch_refresh_inflight = False
+        if self._document_watch_apply_request < self._document_watch_refresh_request:
+            self._refresh_document_watch_paths()
 
     def _on_document_library_changed(self, _path: str) -> None:
         """Refresh document views when files are changed outside the app."""
@@ -1181,8 +1295,11 @@ class DocumentsWidget(BaseWidget):
 
     def refresh_documents_list(self):
         """Refresh the table-driven document state and watcher roots."""
+        changed = self._sync_document_records_with_library()
         self.refresh_active_documents_list()
         self._refresh_document_watch_paths()
+        if changed:
+            self.knowledgeBasePanelWidget._refresh_statistics()
 
     def _expand_available_document_sections(self, *items) -> None:
         """Expand populated document tree branches so imports are visible."""

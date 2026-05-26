@@ -276,7 +276,26 @@ class ZImagePipelineLoadingMixin:
         search_dir = companion_dir if companion_dir else (
             model_path.parent if model_path.is_file() else model_path
         )
-        missing_files = get_missing_files_for_mode(search_dir, load_mode)
+        bundle_probe_path = search_dir
+        if search_dir.is_dir() and model_path.is_file():
+            bundle_probe_path = search_dir / model_path.name
+
+        missing_files = get_missing_files_for_mode(
+            bundle_probe_path,
+            load_mode,
+        )
+
+        if (
+            bundle_probe_path != model_path
+            and model_path.exists()
+            and model_path.name in missing_files
+        ):
+            missing_files = [
+                file_name
+                for file_name in missing_files
+                if file_name != model_path.name
+            ]
+
         if not missing_files:
             self.logger.info(
                 "All Z-Image model files present for %s (checked %s)",

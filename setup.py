@@ -62,6 +62,7 @@ setup(
             "airunner=airunner.launcher:main",
             "airunner-build-ui=scripts.build_ui:main",
             "airunner-compile-translations=scripts.compile_translations:main",
+            "airunner-gui-probe=scripts.gui_probe:main",
             "airunner-tests=scripts.run_tests:main",
             "airunner-test-coverage-report=scripts.coverage_report:main",
             "airunner-mypy=scripts.mypy_shortcut:main",
