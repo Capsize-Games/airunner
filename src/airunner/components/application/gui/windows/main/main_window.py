@@ -2675,7 +2675,7 @@ class MainWindow(
             model_status = MainWindow._model_status_from_runtime_summary(
                 runtime
             )
-            model_id = MainWindow._resource_model_id_from_runtime(
+            model_id = self._resource_model_id_from_runtime(
                 runtime,
                 manager,
                 model_type,
@@ -2711,23 +2711,72 @@ class MainWindow(
         ]
 
     @staticmethod
+    def _runtime_metadata_model_id(
+        runtime_name: str,
+        metadata: dict,
+    ) -> Optional[str]:
+        """Return one non-generic model identifier from runtime metadata."""
+        for key in ("model_path", "model_id", "model_version"):
+            value = str(metadata.get(key, "") or "").strip()
+            if value:
+                return value
+
+        model_type = str(metadata.get("model_type", "") or "").strip()
+        if model_type and not MainWindow._is_generic_runtime_model_id(
+            model_type,
+            runtime_name,
+        ):
+            return model_type
+        return None
+
+    @staticmethod
+    def _is_generic_runtime_model_id(
+        value: str,
+        runtime_name: str,
+    ) -> bool:
+        """Return whether one runtime model identifier is too generic."""
+        normalized = str(value or "").strip().lower()
+        generic_ids = {
+            runtime_name,
+            f"{runtime_name} model",
+            "art",
+            "sd",
+            "sd model",
+            "llm",
+            "llm model",
+            "stt",
+            "stt model",
+            "text_to_image",
+            "tts",
+            "tts model",
+        }
+        return normalized in generic_ids
+
     def _resource_model_id_from_runtime(
+        self,
         runtime: dict,
         manager: ModelResourceManager,
         model_type: str,
     ) -> Optional[str]:
         """Resolve one daemon runtime summary to a stable model ID."""
+        runtime_name = str(runtime.get("runtime", "") or "").strip().lower()
         metadata = runtime.get("metadata") or {}
-        for key in ("model_path", "model_id", "model_version", "model_type"):
-            value = str(metadata.get(key, "")).strip()
-            if value:
-                return value
+        resolved = MainWindow._runtime_metadata_model_id(
+            runtime_name,
+            metadata,
+        )
+        if resolved:
+            return resolved
 
         active_ids = MainWindow._active_resource_model_ids(manager, model_type)
         if active_ids:
             return active_ids[0]
 
-        runtime_name = str(runtime.get("runtime", "")).strip().lower()
+        # Avoid GUI-thread settings/database lookups while reconciling the
+        # daemon status timer. Runtime metadata should supply specific IDs;
+        # otherwise fall back to stable generic labels.
+        if runtime_name == "art":
+            return "SD"
         if runtime_name in {"llm", "stt", "tts"}:
             return runtime_name.upper()
         return None
@@ -2761,12 +2810,58 @@ class MainWindow(
             return "Safety Checker"
         return ""
 
+    def _configured_runtime_resource_model_id(
+        self,
+        runtime_name: str,
+    ) -> str:
+        """Return the configured model identifier for one daemon runtime."""
+        if runtime_name == "art":
+            return MainWindow._configured_art_resource_model_id(self)
+        if runtime_name == "llm":
+            return MainWindow._configured_resource_model_id(
+                self,
+                ModelType.LLM,
+            )
+        if runtime_name == "stt":
+            return MainWindow._configured_stt_resource_model_id(self)
+        if runtime_name == "tts":
+            return MainWindow._configured_tts_resource_model_id(self)
+        return ""
+
+    def _configured_art_resource_model_id(self) -> str:
+        """Return the label used for one art runtime row."""
+        settings = getattr(self, "generator_settings", None)
+        aimodel = getattr(settings, "aimodel", None)
+
+        for value in (
+            getattr(aimodel, "path", ""),
+            getattr(settings, "custom_path", ""),
+            getattr(aimodel, "name", ""),
+            getattr(settings, "model_name", ""),
+        ):
+            resolved = str(value or "").strip()
+            if resolved:
+                return resolved
+        return "SD"
+
+    @staticmethod
+    def _display_tts_model_name(value: str) -> str:
+        """Return one user-facing TTS model name."""
+        normalized = str(value or "").strip().lower()
+        if normalized in {"openvoice", "tts_openvoice"}:
+            return "OpenVoice"
+        if normalized in {"espeak", "espeak-ng", "e-speak"}:
+            return "eSpeak"
+        if normalized == "tts":
+            return "TTS"
+        return str(value or "").strip()
+
     def _configured_tts_resource_model_id(self) -> str:
         """Return the label used for one TTS runtime row."""
         voice_settings = getattr(self, "chatbot_voice_settings", None)
         model_type = str(getattr(voice_settings, "model_type", "") or "")
         if model_type.strip():
-            return model_type.strip()
+            return MainWindow._display_tts_model_name(model_type)
 
         settings = getattr(self, "path_settings", None)
         value = str(getattr(settings, "tts_model_path", "") or "")
@@ -2922,7 +3017,7 @@ class MainWindow(
         model_type: ModelType,
     ) -> Optional[str]:
         """Return the preferred daemon route for one GUI model type."""
-        if model_type is ModelType.TTS:
+        if model_type in {ModelType.SD, ModelType.TTS}:
             return "sidecar"
         return None
 

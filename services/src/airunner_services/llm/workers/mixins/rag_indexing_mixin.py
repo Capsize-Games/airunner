@@ -5,6 +5,9 @@ import threading
 from typing import Dict, List
 
 from airunner_model.models.document import Document as DBDocument
+from airunner_services.llm.workers.rag_index_status import (
+    rag_index_status_tracker,
+)
 from airunner_model.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
@@ -44,6 +47,9 @@ class RAGIndexingMixin:
     def on_rag_index_all_documents_signal(self, data: Dict) -> None:
         """Start indexing all documents on a background thread."""
         self.logger.info("Received RAG_INDEX_ALL_DOCUMENTS signal")
+        rag_index_status_tracker.start(
+            message="Preparing to index documents...",
+        )
         indexing_thread = threading.Thread(
             target=self._index_all_documents_thread,
             args=(data,),
@@ -123,6 +129,10 @@ class RAGIndexingMixin:
                 "RAG_INDEX_SELECTED_DOCUMENTS called with no file paths"
             )
             return
+        rag_index_status_tracker.start(
+            total=len(file_paths),
+            message="Preparing to index documents...",
+        )
         self.logger.info(
             "Received RAG_INDEX_SELECTED_DOCUMENTS signal for "
             f"{len(file_paths)} documents"
@@ -239,6 +249,7 @@ class RAGIndexingMixin:
 
     def on_rag_index_cancel_signal(self, data: Dict) -> None:
         """Request cancellation of one in-flight indexing operation."""
+        rag_index_status_tracker.cancel_requested()
         try:
             if self.model_manager and hasattr(
                 self.model_manager,
@@ -263,6 +274,14 @@ class RAGIndexingMixin:
                     pass
         except Exception as exc:
             self.logger.error(f"Error during cancel indexing: {exc}")
+
+    def on_rag_indexing_progress_signal(self, data: Dict) -> None:
+        """Mirror one in-flight progress update into daemon status."""
+        rag_index_status_tracker.progress(data)
+
+    def on_rag_indexing_complete_signal(self, data: Dict) -> None:
+        """Mirror one terminal progress update into daemon status."""
+        rag_index_status_tracker.complete(data)
 
     def on_index_document_signal(self, data: Dict) -> None:
         """Index a single document path from one signal payload."""

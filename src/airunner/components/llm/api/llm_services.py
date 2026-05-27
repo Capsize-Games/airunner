@@ -114,6 +114,14 @@ class LLMAPIService(APIServiceBase):
             mediator = SignalMediator()
             mediator.register_pending_request(resolved_request_id, callback)
 
+        # Keep the daemon path aligned with the local request lifecycle so the
+        # conversation view can append the user prompt and initialize the chat
+        # surface before streamed daemon tokens arrive.
+        self.emit_signal(
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
+            data,
+        )
+
         if self._send_request_via_daemon(
             prompt,
             llm_request,
@@ -385,6 +393,9 @@ class LLMAPIService(APIServiceBase):
         llm_request: LLMRequest,
     ) -> None:
         """Start TTS load only for the active spoken request."""
+        if not bool(getattr(llm_request, "do_tts_reply", False)):
+            return
+
         worker_manager = self._worker_manager()
         if worker_manager is None:
             return

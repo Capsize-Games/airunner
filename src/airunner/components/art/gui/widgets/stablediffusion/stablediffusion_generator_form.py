@@ -735,7 +735,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
-        if not progressbar or not self.model_is_loaded:
+        if not progressbar:
+            return
+        if not self.model_is_loaded and not self._generation_in_progress:
             return
         if progressbar.maximum() == 0:
             progressbar.setRange(0, 100)

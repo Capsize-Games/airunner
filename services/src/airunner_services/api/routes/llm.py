@@ -15,6 +15,9 @@ from fastapi import (
 from pydantic import BaseModel
 
 from airunner_services.llm.provider_config import LLMProviderConfig
+from airunner_services.llm.workers.rag_index_status import (
+    rag_index_status_tracker,
+)
 from airunner_model.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
@@ -429,6 +432,12 @@ async def cancel_rag_index():
     """Request cancellation for the active service-owned indexing flow."""
     SignalMediator().emit_signal(SignalCode.RAG_INDEX_CANCEL, {})
     return {"status": "accepted"}
+
+
+@router.get("/rag/index/status")
+async def rag_index_status() -> dict[str, Any]:
+    """Return the current daemon-visible RAG indexing status."""
+    return rag_index_status_tracker.snapshot()
 
 
 @router.websocket("/stream")

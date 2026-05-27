@@ -1,8 +1,18 @@
-import sounddevice as sd
+from importlib import import_module
 from typing import Optional, Dict, Any
 import numpy as np
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+
+
+_SOUNDDEVICE = None
+
+
+def _sounddevice():
+    global _SOUNDDEVICE
+    if _SOUNDDEVICE is None:
+        _SOUNDDEVICE = import_module("sounddevice")
+    return _SOUNDDEVICE
 
 
 class SoundDeviceManager:
@@ -38,6 +48,7 @@ class SoundDeviceManager:
 
     def get_devices(self) -> Dict:
         """Get all available audio devices."""
+        sd = _sounddevice()
         return sd.query_devices()
 
     def get_input_device_index(self, device_name: str) -> Optional[int]:
@@ -52,6 +63,7 @@ class SoundDeviceManager:
         self, device_name: str, kind: str = None
     ) -> Optional[int]:
         """Get the index of a device by name and kind."""
+        sd = _sounddevice()
         try:
             devices = sd.query_devices()
             default_device = "pulse" if device_name == "" else device_name
@@ -97,6 +109,7 @@ class SoundDeviceManager:
         device_name: str = "pulse",
     ) -> bool:
         """Initialize the input (recording) stream."""
+        sd = _sounddevice()
         try:
             device_index = self.get_input_device_index(device_name)
             if device_index is None:
@@ -131,6 +144,7 @@ class SoundDeviceManager:
         device_name: str = "pulse",
     ) -> bool:
         """Initialize the output (playback) stream."""
+        sd = _sounddevice()
         try:
             device_index = self.get_output_device_index(device_name)
             if device_index is None:
@@ -160,6 +174,7 @@ class SoundDeviceManager:
 
     def write_to_output(self, data: Any) -> bool:
         """Write audio data to the output stream."""
+        sd = _sounddevice()
         if self._out_stream and self._out_stream.active:
             try:
                 # Make sure we're dealing with a numpy array
@@ -222,6 +237,7 @@ class SoundDeviceManager:
 
     def read_from_input(self, frames: int) -> tuple:
         """Read audio data from the input stream."""
+        sd = _sounddevice()
         if self._in_stream and self._in_stream.active:
             try:
                 return self._in_stream.read(frames)

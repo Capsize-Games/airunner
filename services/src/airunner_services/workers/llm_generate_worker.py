@@ -38,6 +38,8 @@ SignalCode = signal_code_proxy(
 		"RAG_INDEX_SELECTED_DOCUMENTS": (
 			"rag_index_selected_documents_signal"
 		),
+		"RAG_INDEXING_PROGRESS": "rag_indexing_progress_signal",
+		"RAG_INDEXING_COMPLETE": "rag_indexing_complete_signal",
 		"RAG_INDEX_CANCEL": "rag_index_cancel_signal",
 	}
 )
@@ -65,6 +67,12 @@ class LLMGenerateWorker(
 			),
 			SignalCode.RAG_INDEX_SELECTED_DOCUMENTS: (
 				self.on_rag_index_selected_documents_signal
+			),
+			SignalCode.RAG_INDEXING_PROGRESS: (
+				self.on_rag_indexing_progress_signal
+			),
+			SignalCode.RAG_INDEXING_COMPLETE: (
+				self.on_rag_indexing_complete_signal
 			),
 			SignalCode.RAG_INDEX_CANCEL: (
 				self.on_rag_index_cancel_signal

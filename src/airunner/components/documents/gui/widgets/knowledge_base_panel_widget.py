@@ -1,7 +1,7 @@
 import os
 from typing import Dict, List
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QTimer, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
 
@@ -41,12 +41,16 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self._current = 0
         self._document_name = ""
         self._daemon_client = GuiDaemonClient()
+        self._index_status_timer = None
         self.signal_handlers = {
             SignalCode.DOCUMENT_COLLECTION_CHANGED: self.on_document_collection_changed,
             SignalCode.RAG_INDEXING_PROGRESS: self.on_indexing_progress,
             SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
         }
         super().__init__(*args, **kwargs)
+        self._index_status_timer = QTimer(self)
+        self._index_status_timer.setInterval(500)
+        self._index_status_timer.timeout.connect(self._poll_index_status)
         self.setAcceptDrops(True)
         self._refresh_statistics()
 
@@ -174,6 +178,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
             self._daemon_client.start_rag_document_index(
                 file_paths=file_paths,
             )
+            self._start_index_status_polling()
             return True
         except Exception as exc:  # noqa: BLE001
             self.logger.error("Failed to start indexing: %s", exc)
@@ -187,26 +192,73 @@ class KnowledgeBasePanelWidget(BaseWidget):
             )
             return False
 
+    def _start_index_status_polling(self) -> None:
+        """Start polling daemon indexing status for cross-process updates."""
+        if self._index_status_timer is None:
+            return
+        if not self._index_status_timer.isActive():
+            self._index_status_timer.start()
+        self._poll_index_status()
+
+    def _stop_index_status_polling(self) -> None:
+        """Stop polling daemon indexing status."""
+        if self._index_status_timer is None:
+            return
+        self._index_status_timer.stop()
+
+    def _poll_index_status(self) -> None:
+        """Mirror daemon indexing status back into the local signal graph."""
+        try:
+            status = self._daemon_client.rag_document_index_status()
+        except Exception as exc:  # noqa: BLE001
+            self.logger.debug("Failed to poll indexing status: %s", exc)
+            return
+
+        payload = dict(status)
+        payload["documentName"] = str(
+            payload.get("document_name") or ""
+        ).strip()
+
+        if payload.get("active"):
+            self.emit_signal(SignalCode.RAG_INDEXING_PROGRESS, payload)
+            return
+
+        if payload.get("success") is None:
+            return
+
+        self.emit_signal(SignalCode.RAG_INDEXING_COMPLETE, payload)
+        self.emit_signal(SignalCode.DOCUMENT_COLLECTION_CHANGED, {})
+
     def on_indexing_progress(self, data: Dict):
         try:
             progress = int(data.get("progress", 0))
             current = int(data.get("current", 0))
             total = int(data.get("total", 0))
-            document_name = data.get("documentName", "")
+            document_name = data.get("documentName") or data.get(
+                "document_name",
+                "",
+            )
             self._current = current
             self._total = total
             self._document_name = document_name
-            if self.ui.progress_bar.maximum() == 0:
-                self.ui.progress_bar.setRange(0, 100)
-            self.ui.progress_bar.setValue(progress)
+            if total <= 0:
+                self.ui.progress_bar.setRange(0, 0)
+            else:
+                if self.ui.progress_bar.maximum() == 0:
+                    self.ui.progress_bar.setRange(0, 100)
+                self.ui.progress_bar.setValue(progress)
             self.ui.cancel_button.setEnabled(True)
         except Exception:
             pass
 
     def on_indexing_complete(self, data: Dict):
+        self._stop_index_status_polling()
         try:
             self.ui.progress_bar.setRange(0, 100)
-            self.ui.progress_bar.setValue(100)
+            if data.get("success", True):
+                self.ui.progress_bar.setValue(100)
+            else:
+                self.ui.progress_bar.setValue(0)
         except Exception:
             pass
         self.ui.cancel_button.setEnabled(False)

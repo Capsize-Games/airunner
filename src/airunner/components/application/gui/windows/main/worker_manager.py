@@ -1135,12 +1135,19 @@ class WorkerManager(Worker):
     def on_do_generate_signal(self, data: dict) -> None:
         """Route art generation through the daemon and emit result."""
         def _generate():
+            def _stop_progress(do_clear: bool) -> None:
+                self.emit_signal(
+                    SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
+                    {"do_clear": do_clear},
+                )
+
             try:
                 image_request = data.get("image_request")
                 if image_request is None:
                     self.logger.error(
                         "Art generation: no image_request in data"
                     )
+                    _stop_progress(True)
                     return
 
                 client = self._daemon_client()
@@ -1148,6 +1155,7 @@ class WorkerManager(Worker):
                     self.logger.error(
                         "Art generation: daemon unavailable"
                     )
+                    _stop_progress(True)
                     return
 
                 # Submit job to daemon
@@ -1177,6 +1185,7 @@ class WorkerManager(Worker):
 
                 if not job_id:
                     self.logger.error("Art generation: no job_id returned")
+                    _stop_progress(True)
                     return
 
                 # Poll until complete and retrieve image
@@ -1221,11 +1230,13 @@ class WorkerManager(Worker):
                     SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
                     {"image_response": response},
                 )
+                _stop_progress(False)
                 self.logger.info(
                     f"Image sent to canvas: "
                     f"{len(image_data)} bytes"
                 )
             except Exception as exc:
+                _stop_progress(True)
                 self.logger.error(
                     f"Art generation failed: {exc}"
                 )

@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLabel
 from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from llama_cloud import MessageRole
 
 from airunner.components.conversations.conversation_history_manager import (
@@ -86,32 +87,11 @@ class ConversationWidget(BaseWidget):
         self._page_ready = False  # Flag to prevent early template rendering
         self._template_rendered = False
         self._template_render_scheduled = False
+        self._interactive_template_loaded = False
+        self._startup_placeholder: Optional[QLabel] = None
         self._main_window_loaded = False
         self._shutdown_started = False
         super().__init__()
-
-        # Set the custom page immediately after super().__init__()
-        if hasattr(self, "ui") and hasattr(self.ui, "stage"):
-            custom_page = ConversationWebEnginePage(self.ui.stage, self)
-            self.ui.stage.setPage(custom_page)
-            if _LOG_CONVERSATION_WEBVIEW_PROGRESS:
-                self.ui.stage.loadStarted.connect(
-                    lambda: self.logger.debug(
-                        "[ConversationWidget] Load started"
-                    )
-                )
-                self.ui.stage.loadFinished.connect(
-                    lambda ok: self.logger.debug(
-                        f"[ConversationWidget] Load finished: {ok}"
-                    )
-                )
-                self.ui.stage.loadProgress.connect(
-                    lambda progress: self.logger.debug(
-                        f"[ConversationWidget] Load progress: {progress}%"
-                    )
-                )
-            # Mark page as ready and defer the initial template load until show.
-            self._page_ready = True
 
         self.token_buffer = []
         # Add a streaming buffer to ensure proper token ordering
@@ -129,11 +109,7 @@ class ConversationWidget(BaseWidget):
         self._js_ready = False
         self._chat_bridge_flush_pending = False
         self._pending_chat_bridge_calls = []
-        # prevent right click on self.ui.stage
-        self.ui.stage.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.PreventContextMenu
-        )
-        self._web_channel = QWebChannel(self.ui.stage.page())
+        self._web_channel: Optional[QWebChannel] = None
         self._chat_bridge = ChatBridge()
         self._chat_bridge.scrollRequested.connect(self._handle_scroll_request)
 
@@ -142,8 +118,81 @@ class ConversationWidget(BaseWidget):
             self._handle_copy_message
         )
         self._chat_bridge.copyTextRequested.connect(self._handle_copy_text)
+
+    def _get_view(self) -> Optional[QWebEngineView]:
+        """Return the live conversation web view when it exists."""
+        stage = self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
+        return stage if isinstance(stage, QWebEngineView) else None
+
+    def _initialize_web_engine_view(self, view: QWebEngineView) -> None:
+        """Attach the custom page and chat bridge once per web view."""
+        if getattr(view, "_airunner_initialized", False):
+            self._page_ready = True
+            return
+
+        custom_page = ConversationWebEnginePage(view, self)
+        view.setPage(custom_page)
+        if _LOG_CONVERSATION_WEBVIEW_PROGRESS:
+            view.loadStarted.connect(
+                lambda: self.logger.debug(
+                    "[ConversationWidget] Load started"
+                )
+            )
+            view.loadFinished.connect(
+                lambda ok: self.logger.debug(
+                    f"[ConversationWidget] Load finished: {ok}"
+                )
+            )
+            view.loadProgress.connect(
+                lambda progress: self.logger.debug(
+                    f"[ConversationWidget] Load progress: {progress}%"
+                )
+            )
+        view.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
+        self._web_channel = QWebChannel(view.page())
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
-        self.ui.stage.page().setWebChannel(self._web_channel)
+        view.page().setWebChannel(self._web_channel)
+        setattr(view, "_airunner_initialized", True)
+        self._page_ready = True
+
+    def _ensure_web_engine_view(self) -> Optional[QWebEngineView]:
+        """Create the conversation web view only when interactive HTML is needed."""
+        view = self._get_view()
+        if view is not None:
+            self._initialize_web_engine_view(view)
+            return view
+
+        if not self.ui or not hasattr(self.ui, "stage"):
+            return None
+
+        placeholder = self.ui.stage
+        layout = getattr(self.ui, "gridLayout", None)
+        min_size = placeholder.minimumSize()
+        object_name = placeholder.objectName() or "stage"
+        row = 0
+        column = 0
+        row_span = 1
+        column_span = 1
+        if layout is not None:
+            index = layout.indexOf(placeholder)
+            if index != -1:
+                row, column, row_span, column_span = (
+                    layout.getItemPosition(index)
+                )
+                layout.removeWidget(placeholder)
+
+        parent = placeholder.parentWidget() or self
+        placeholder.hide()
+        placeholder.deleteLater()
+
+        view = QWebEngineView(parent)
+        view.setObjectName(object_name)
+        view.setMinimumSize(min_size)
+        if layout is not None:
+            layout.addWidget(view, row, column, row_span, column_span)
+        self.ui.stage = view
+        self._initialize_web_engine_view(view)
+        return view
 
     def navigate(self, url: str):
         """Open a URL in the system's default browser."""
@@ -172,7 +221,7 @@ class ConversationWidget(BaseWidget):
         # Return None during initialization until custom page is set
         if not getattr(self, "_page_ready", False):
             return None
-        return self.ui.stage
+        return self._get_view()
 
     @property
     def template(self) -> Optional[str]:
@@ -197,6 +246,9 @@ class ConversationWidget(BaseWidget):
         if not self.registered:
             self.registered = True
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
     def on_main_window_loaded_signal(self, _data=None) -> None:
         """Render the initial conversation template after app startup."""
         self._main_window_loaded = True
@@ -214,11 +266,100 @@ class ConversationWidget(BaseWidget):
         if self._template_rendered:
             return
         self._template_rendered = True
+        if self._streamed_messages:
+            self._ensure_interactive_template()
+            return
         self.logger.debug(
-            "[ConversationWidget] Rendering template after first show"
+            "[ConversationWidget] Deferring empty startup render"
+        )
+        return
+
+    def _ensure_interactive_template(self) -> None:
+        """Load the full conversation webview only when chat content is needed."""
+        if self._interactive_template_loaded:
+            return
+        view = self._ensure_web_engine_view()
+        if view is None:
+            return
+        self._interactive_template_loaded = True
+        if self._startup_placeholder is not None:
+            self._startup_placeholder.hide()
+        self.logger.debug(
+            "[ConversationWidget] Rendering interactive conversation template"
         )
         self.render_template()
         self._schedule_chat_bridge_flush()
+
+    def _setup_startup_placeholder(self) -> None:
+        """Create one overlay placeholder for the empty startup state."""
+        if self._startup_placeholder is not None:
+            return
+        self.logger.debug(
+            "[ConversationWidget] Creating startup placeholder"
+        )
+        placeholder = QLabel(self)
+        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        placeholder.setObjectName("conversation_startup_placeholder")
+        placeholder.hide()
+        self._startup_placeholder = placeholder
+        self._sync_startup_placeholder_geometry()
+        self.logger.debug(
+            "[ConversationWidget] Startup placeholder created"
+        )
+
+    def _sync_startup_placeholder_geometry(self) -> None:
+        """Keep the empty-state overlay aligned with the hidden webview."""
+        if self._startup_placeholder is None or not hasattr(self.ui, "stage"):
+            return
+        self.logger.debug(
+            "[ConversationWidget] Syncing startup placeholder geometry"
+        )
+        self._startup_placeholder.setGeometry(self.ui.stage.geometry())
+        self._startup_placeholder.raise_()
+        self.logger.debug(
+            "[ConversationWidget] Startup placeholder geometry synced"
+        )
+
+    def _render_startup_placeholder(self) -> None:
+        """Show a lightweight empty-state shell to avoid blocking startup."""
+        if self._startup_placeholder is None:
+            self._setup_startup_placeholder()
+        self.logger.debug(
+            "[ConversationWidget] Preparing startup placeholder theme"
+        )
+        theme = self.template_context.get("theme", "dark")
+        is_dark = theme.startswith("dark")
+        background = "#161616" if is_dark else "#f5f5f5"
+        foreground = "#d2d2d2" if is_dark else "#4d4d4d"
+        border = "#2f2f2f" if is_dark else "#d8d8d8"
+        self.logger.debug(
+            "[ConversationWidget] Applying startup placeholder text"
+        )
+        self._startup_placeholder.setText("Start a conversation.")
+        self.logger.debug(
+            "[ConversationWidget] Applying startup placeholder stylesheet"
+        )
+        self._startup_placeholder.setStyleSheet(
+            "QLabel#conversation_startup_placeholder {"
+            f"background: {background};"
+            f"color: {foreground};"
+            f"border: 1px solid {border};"
+            "border-radius: 10px;"
+            "padding: 18px 20px;"
+            "font-size: 13px;"
+            "}"
+        )
+        self.logger.debug(
+            "[ConversationWidget] Syncing startup placeholder before show"
+        )
+        self._sync_startup_placeholder_geometry()
+        self.logger.debug(
+            "[ConversationWidget] Showing startup placeholder"
+        )
+        self._startup_placeholder.show()
+        self.logger.debug(
+            "[ConversationWidget] Startup placeholder shown"
+        )
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
@@ -359,6 +500,7 @@ class ConversationWidget(BaseWidget):
             callback: Function to call when JS is ready
             max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
         """
+        self._ensure_interactive_template()
         attempt_count = 0
 
         def check_ready():
@@ -366,13 +508,14 @@ class ConversationWidget(BaseWidget):
             attempt_count += 1
 
             try:
-                if not self.ui.stage or not self.ui.stage.page():
+                view = self._get_view()
+                if not view or not view.page():
                     self.logger.debug(
                         "ConversationWidget: Widget or page no longer available for JS ready check"
                     )
                     return
 
-                view_page = self.ui.stage.page()
+                view_page = view.page()
                 view_page.runJavaScript(
                     "window.isChatReady === true",
                     lambda ready: handle_result(ready),
@@ -455,6 +598,7 @@ class ConversationWidget(BaseWidget):
             callback: Function to call when DOM is ready
             max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
         """
+        self._ensure_interactive_template()
         attempt_count = 0
 
         def check_dom_ready():
@@ -462,13 +606,14 @@ class ConversationWidget(BaseWidget):
             attempt_count += 1
 
             try:
-                if not self.ui.stage or not self.ui.stage.page():
+                view = self._get_view()
+                if not view or not view.page():
                     self.logger.debug(
                         "ConversationWidget: Widget or page no longer available for DOM ready check"
                     )
                     return
 
-                view_page = self.ui.stage.page()
+                view_page = view.page()
                 view_page.runJavaScript(
                     "document.readyState === 'complete' && !!document.getElementById('conversation-container')",
                     lambda ready: handle_dom_result(ready),
@@ -688,13 +833,14 @@ class ConversationWidget(BaseWidget):
 
         def trigger_scroll():
             try:
-                if not self.ui.stage or not self.ui.stage.page():
+                view = self._get_view()
+                if not view or not view.page():
                     self.logger.debug(
                         "ConversationWidget: Widget or page no longer available for scroll"
                     )
                     return
 
-                view_page = self.ui.stage.page()
+                view_page = view.page()
                 view_page.runJavaScript(
                     """
                     if (window.chatBridge && window.chatBridge.request_scroll) {
@@ -739,17 +885,16 @@ class ConversationWidget(BaseWidget):
         self.set_conversation(self._streamed_messages)
 
     def _clear_conversation(self, skip_update: bool = False):
-        import traceback
-
         self.logger.debug(
-            f"[CONVERSATION] _clear_conversation called (skip_update={skip_update}) from:\n{''.join(traceback.format_stack()[-4:-1])}"
+            "[CONVERSATION] _clear_conversation called "
+            f"(skip_update={skip_update})"
         )
         self.conversation = None
         self.conversation_history = []
         self._streamed_messages = []
         self._rendered_request_ids.clear()
         # Use explicit clear signal instead of set_conversation([])
-        if not skip_update:
+        if not skip_update and self._interactive_template_loaded:
             self._chat_bridge.clear_messages()
         self._clear_conversation_widgets(skip_update=skip_update)
 
@@ -794,7 +939,7 @@ class ConversationWidget(BaseWidget):
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         """Clear the HTML conversation view."""
-        if not skip_update:
+        if not skip_update and self._interactive_template_loaded:
             self._chat_bridge.clear_messages()
 
     def on_clear_conversation(self):
@@ -1067,7 +1212,8 @@ class ConversationWidget(BaseWidget):
 
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
-        return self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
+        stage = self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
+        return stage if isinstance(stage, QWebEngineView) else None
 
     @property
     def _view(self):
@@ -1241,11 +1387,12 @@ class ConversationWidget(BaseWidget):
         Set the theme for the home widget by updating the CSS in the webEngineView.
         This will call the setTheme JS function in the loaded HTML.
         """
-        if hasattr(self.ui, "stage"):
+        view = self._get_view()
+        if view is not None and view.page():
             theme_name = data.get(
                 "template", TemplateName.SYSTEM_DEFAULT
             ).value.lower()
             # Set window.currentTheme before calling setTheme
             js = f"window.currentTheme = '{theme_name}'; window.setTheme && window.setTheme('{theme_name}');"
-            self.ui.stage.page().runJavaScript(js)
+            view.page().runJavaScript(js)
         super().on_theme_changed_signal(data)

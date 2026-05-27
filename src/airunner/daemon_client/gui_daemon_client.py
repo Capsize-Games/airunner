@@ -123,6 +123,14 @@ class GuiDaemonClient:
         )
         return response.json()
 
+    def rag_document_index_status(self) -> Dict[str, Any]:
+        """Return the current daemon-backed indexing status payload."""
+        response = self._request(
+            "GET",
+            "/api/v1/llm/rag/index/status",
+        )
+        return response.json()
+
     def stream_llm_request(
         self,
         prompt: str,
@@ -552,6 +560,24 @@ class GuiDaemonClient:
             timeout_seconds=30.0,
         )
         return response.json()
+
+    def fetch_civitai_image(
+        self,
+        *,
+        url: str,
+        max_bytes: Optional[int] = None,
+    ) -> bytes:
+        """Fetch one CivitAI preview image through the daemon."""
+        response = self._request(
+            "POST",
+            "/api/v1/downloads/civitai/image",
+            json_payload={
+                "url": url,
+                "max_bytes": max_bytes,
+            },
+            timeout_seconds=30.0,
+        )
+        return response.content
 
     def download_job_status(self, job_id: str) -> Dict[str, Any]:
         """Return the current daemon download-job status payload."""

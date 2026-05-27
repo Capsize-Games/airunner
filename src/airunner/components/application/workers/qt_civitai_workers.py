@@ -9,7 +9,6 @@ from typing import Optional
 from PySide6.QtCore import QObject, Signal
 
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
-from airunner_model.url_safety import safe_fetch_bytes
 
 _IMAGE_MAX_BYTES = 5_000_000
 
@@ -189,6 +188,7 @@ class ImageLoaderWorker(QObject):
         max_bytes: int = _IMAGE_MAX_BYTES,
     ) -> None:
         super().__init__()
+        self._client = GuiDaemonClient()
         self._key = key
         self._url = url
         self._cache_path = cache_path
@@ -202,8 +202,8 @@ class ImageLoaderWorker(QObject):
                     os.path.dirname(self._cache_path),
                     exist_ok=True,
                 )
-                payload = safe_fetch_bytes(
-                    self._url,
+                payload = self._client.fetch_civitai_image(
+                    url=self._url,
                     max_bytes=self._max_bytes,
                 )
                 with open(self._cache_path, "wb") as file_pointer:

@@ -1,11 +1,16 @@
+from importlib import import_module
+
 from PySide6.QtCore import Slot
-import sounddevice as sd
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner_model.models.sound_settings import SoundSettings
 from airunner.components.settings.gui.widgets.sound_settings.templates.sound_settings_ui import (
     Ui_SoundSettings,
 )
 from airunner.enums import SignalCode
+
+
+def _sounddevice():
+    return import_module("sounddevice")
 
 
 class SoundSettingsWidget(BaseWidget):
@@ -18,6 +23,7 @@ class SoundSettingsWidget(BaseWidget):
 
     def load_devices(self):
         # Populate comboboxes with available audio devices
+        sd = _sounddevice()
         devices = sd.query_devices()
         output_devices = filter(
             None,

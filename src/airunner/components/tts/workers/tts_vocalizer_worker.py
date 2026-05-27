@@ -1,5 +1,5 @@
-import sounddevice as sd
 import inspect
+from importlib import import_module
 from typing import Optional
 from queue import Queue
 import numpy as np
@@ -11,6 +11,10 @@ from airunner.enums import TTSModel
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.components.application.workers.worker import Worker
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
+
+
+def _sounddevice():
+    return import_module("sounddevice")
 
 
 class TTSVocalizerWorker(Worker):
@@ -253,6 +257,7 @@ class TTSVocalizerWorker(Worker):
             return
         self.logger.info("Starting TTS vocalizer stream...")
         manager = TTSVocalizerWorker._sounddevice_manager(self)
+        sd = _sounddevice()
 
         if manager is None:
             self.logger.error(
@@ -324,6 +329,7 @@ class TTSVocalizerWorker(Worker):
             f"Initializing TTS stream with samplerate: {samplerate}"
         )
         manager = TTSVocalizerWorker._sounddevice_manager(self)
+        sd = _sounddevice()
         if manager is None:
             self.logger.error(
                 "TTS vocalizer API is missing sounddevice_manager"

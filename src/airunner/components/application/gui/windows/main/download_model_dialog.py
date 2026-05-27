@@ -126,6 +126,8 @@ class DownloadModelDialog(QDialog):
         self._progress_dialog: Optional[QProgressDialog] = None
         self._image_threads: dict[str, QThread] = {}
         self._image_workers: dict[str, ImageLoaderWorker] = {}
+        self._pending_image_jobs: dict[str, str] = {}
+        self._max_image_threads = 4
         self._result_items: dict[str, QListWidgetItem] = {}
         self._sample_items: dict[str, QListWidgetItem] = {}
         self._model_cache: dict[str, dict[str, Any]] = {}
@@ -136,6 +138,7 @@ class DownloadModelDialog(QDialog):
         self._append_results = False
         self._requested_model_id: Optional[str] = None
         self._initialized = False
+        self._closing = False
 
         self._configure_ui()
 
@@ -149,6 +152,8 @@ class DownloadModelDialog(QDialog):
 
     def closeEvent(self, event) -> None:
         """Cancel one active download before the dialog closes."""
+        self._closing = True
+        self._pending_image_jobs.clear()
         if self._download_worker is not None:
             self._download_worker.cancel()
         self._stop_thread(self._search_thread)
@@ -523,7 +528,12 @@ class DownloadModelDialog(QDialog):
 
     def _start_image_worker(self, key: str, url: str) -> None:
         """Queue one safe thumbnail or sample-image fetch."""
-        if key in self._image_threads:
+        if self._closing:
+            return
+        if key in self._image_threads or key in self._pending_image_jobs:
+            return
+        if len(self._image_threads) >= self._max_image_threads:
+            self._pending_image_jobs[key] = url
             return
         worker = ImageLoaderWorker(
             key=key,
@@ -559,7 +569,18 @@ class DownloadModelDialog(QDialog):
 
     def _on_image_error(self, key: str, _message: str) -> None:
         """Ignore one image failure and keep browsing responsive."""
-        self._clear_image_worker(key)
+        return
+
+    def _start_next_image_worker(self) -> None:
+        """Start the next queued image fetch when capacity is available."""
+        if self._closing:
+            return
+        while self._pending_image_jobs:
+            if len(self._image_threads) >= self._max_image_threads:
+                return
+            key, url = next(iter(self._pending_image_jobs.items()))
+            self._pending_image_jobs.pop(key, None)
+            self._start_image_worker(key, url)
 
     def _set_result_icon(self, model_id: str, cache_path: str) -> None:
         """Apply one loaded thumbnail to the search-results row."""
@@ -754,8 +775,12 @@ class DownloadModelDialog(QDialog):
 
     def _clear_image_worker(self, key: str) -> None:
         """Drop one completed image worker reference."""
-        self._image_threads.pop(key, None)
+        thread = self._image_threads.pop(key, None)
         self._image_workers.pop(key, None)
+        self._pending_image_jobs.pop(key, None)
+        if thread is None:
+            return
+        self._start_next_image_worker()
 
     def _close_progress_dialog(self) -> None:
         """Close and forget the active progress dialog."""

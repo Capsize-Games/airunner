@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
+from airunner_model.url_safety import safe_fetch_bytes
 
 from airunner_services.downloads.service import (
     fetch_civitai_browser_model_info,
@@ -71,6 +72,13 @@ class CivitaiBrowserModelRequest(BaseModel):
     base_models: list[str] | None = None
     model_types: list[str] | None = None
     api_key: str | None = None
+
+
+class CivitaiImageRequest(BaseModel):
+    """Parameters for one proxied CivitAI preview image fetch."""
+
+    url: str
+    max_bytes: int = Field(default=5_000_000, ge=1, le=25_000_000)
 
 
 class UrlDownloadRequest(BaseModel):
@@ -251,6 +259,25 @@ async def fetch_civitai_browser_model_route(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.post("/civitai/image")
+async def fetch_civitai_image_route(
+    payload: CivitaiImageRequest,
+) -> Response:
+    """Return one CivitAI preview image through the daemon process."""
+    try:
+        image_bytes = await asyncio.to_thread(
+            safe_fetch_bytes,
+            payload.url,
+            max_bytes=payload.max_bytes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return Response(
+        content=image_bytes,
+        media_type="application/octet-stream",
+    )
+
+
 @router.get(
     "/status/{job_id}",
     response_model=DownloadJobStatusResponse,
@@ -289,6 +316,7 @@ async def cancel_download_job(
 
 
 __all__ = [
+    "CivitaiImageRequest",
     "CivitaiBrowserModelRequest",
     "CivitaiBrowserSearchRequest",
     "CivitaiFileDownloadRequest",
@@ -300,6 +328,7 @@ __all__ = [
     "NltkDownloadRequest",
     "UrlDownloadRequest",
     "cancel_download_job",
+    "fetch_civitai_image_route",
     "fetch_civitai_browser_model_route",
     "fetch_civitai_model_info_route",
     "get_download_job_service",
