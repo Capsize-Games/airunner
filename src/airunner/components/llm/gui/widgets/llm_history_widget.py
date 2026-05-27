@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
@@ -17,6 +18,11 @@ class LLMHistoryWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         """Initialize the lazily rendered history sidebar widget."""
+        self.signal_handlers = {
+            SignalCode.CONVERSATION_TITLE_UPDATED: (
+                self.on_conversation_title_updated
+            ),
+        }
         super(LLMHistoryWidget, self).__init__(*args, **kwargs)
         self._conversation_history_manager = ConversationHistoryManager(
             getattr(self.api, "daemon_client", None)
@@ -34,6 +40,11 @@ class LLMHistoryWidget(BaseWidget):
     def showEvent(self, event):
         super(LLMHistoryWidget, self).showEvent(event)
         self.load_conversations()
+
+    def on_conversation_title_updated(self, data) -> None:
+        """Refresh the history list when one title changes."""
+        del data
+        self.load_conversations(force=True)
 
     def load_conversations(self, force: bool = False) -> None:
         """Render the history list only when the conversation set changes."""

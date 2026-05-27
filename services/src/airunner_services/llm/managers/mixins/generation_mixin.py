@@ -15,9 +15,10 @@ import traceback
 from typing import Any, Dict, List, Optional
 
 import torch
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.errors import GraphRecursionError
 
+from airunner_services.database.models.conversation import Conversation
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.llm.managers.request_preparation import (
     WorkflowRequestSetup,
@@ -68,9 +69,108 @@ MUTATING_TASK_TOOLS = {
     "save_document",
 }
 
+TITLE_PASS_SYSTEM_PROMPT = (
+    "You generate short conversation titles for chat history. "
+    "Return only one concise title in 3 to 7 words. "
+    "Do not use quotes, markdown, emojis, or trailing punctuation. "
+    "If the exchange is just a greeting or opening pleasantry, return "
+    "'Greeting and introduction'."
+)
+
 
 class GenerationMixin:
     """Mixin for LLM text generation functionality."""
+
+    def _conversation_for_title_pass(self) -> Optional[Conversation]:
+        """Return one untitled conversation ready for the title pass."""
+        workflow_manager = getattr(self, "_workflow_manager", None)
+        conversation_id = getattr(workflow_manager, "_conversation_id", None)
+        if not conversation_id:
+            return None
+        try:
+            conversation = Conversation.objects.get(conversation_id)
+        except Exception:
+            self.logger.warning(
+                "Failed to load conversation %s for title pass",
+                conversation_id,
+            )
+            return None
+        if not conversation or str(getattr(conversation, "title", "") or "").strip():
+            return None
+        return conversation
+
+    def _title_pass_messages(
+        self,
+        conversation: Conversation,
+    ) -> list[dict[str, str]]:
+        """Return visible user and assistant messages for title generation."""
+        messages = []
+        for item in list(getattr(conversation, "value", None) or []):
+            role = str(item.get("role") or "").strip().lower()
+            if role not in {"user", "assistant", "bot"}:
+                continue
+            if item.get("metadata_type") in {"tool_calls", "tool_result"}:
+                continue
+            content = str(item.get("content") or "").strip()
+            if content:
+                messages.append({"role": role, "content": content})
+        return messages
+
+    def _build_title_pass_prompt(
+        self,
+        messages: list[dict[str, str]],
+    ) -> list[Any]:
+        """Build one short title-generation prompt from the visible exchange."""
+        exchange = "\n".join(
+            f"{item['role'].title()}: {item['content'][:500]}"
+            for item in messages[:6]
+        )
+        return [
+            SystemMessage(content=TITLE_PASS_SYSTEM_PROMPT),
+            HumanMessage(content=f"Conversation:\n{exchange}\n\nTitle:"),
+        ]
+
+    @staticmethod
+    def _sanitize_generated_title(raw_title: Any) -> str:
+        """Normalize one model-produced title into a single plain line."""
+        title = str(raw_title or "").strip()
+        if not title:
+            return ""
+        title = title.splitlines()[0].strip().strip('"\'` ')
+        title = title.rstrip(".!?:;,- ")
+        return title[:80].strip()
+
+    def _maybe_generate_conversation_title(self) -> None:
+        """Persist one LLM-generated title after the first assistant reply."""
+        conversation = self._conversation_for_title_pass()
+        if conversation is None or self._chat_model is None:
+            return
+        messages = self._title_pass_messages(conversation)
+        roles = {item["role"] for item in messages}
+        if "user" not in roles or not ({"assistant", "bot"} & roles):
+            return
+        try:
+            response = self._chat_model.invoke(
+                self._build_title_pass_prompt(messages)
+            )
+            title = self._sanitize_generated_title(
+                getattr(response, "content", response)
+            )
+            if not title:
+                return
+            Conversation.objects.update(conversation.id, title=title)
+            emit = getattr(self, "emit_signal", None)
+            if callable(emit):
+                emit(
+                    SignalCode.CONVERSATION_TITLE_UPDATED,
+                    {"conversation_id": conversation.id, "title": title},
+                )
+        except Exception as exc:
+            self.logger.warning(
+                "Failed to generate conversation title for %s: %s",
+                getattr(conversation, "id", None),
+                exc,
+            )
 
     def _current_assistant_turn_index(self) -> int:
         """Return the current workflow assistant-turn index."""
@@ -892,6 +992,8 @@ class GenerationMixin:
                 turn_index=self._current_assistant_turn_index(),
             )
         )
+
+        self._maybe_generate_conversation_title()
 
         return {
             "response": complete_response[0],

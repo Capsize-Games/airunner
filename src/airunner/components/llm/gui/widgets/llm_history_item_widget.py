@@ -36,12 +36,12 @@ class LLMHistoryItemWidget(BaseWidget):
 
     def _conversation_summary_text(self) -> str:
         """Return the persisted summary text for one conversation row."""
-        summary = getattr(self.conversation, "summary", None)
-        if isinstance(summary, str) and summary.strip():
-            return summary
         title = getattr(self.conversation, "title", None)
         if isinstance(title, str) and title.strip():
             return title
+        summary = getattr(self.conversation, "summary", None)
+        if isinstance(summary, str) and summary.strip():
+            return summary
         return "[Conversation]"
 
     def _chatbot_name_text(self) -> str:
