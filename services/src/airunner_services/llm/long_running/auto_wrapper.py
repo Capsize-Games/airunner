@@ -23,6 +23,9 @@ from airunner_services.llm.long_running.task_detector import (
     analyze_task,
 )
 from airunner_services.llm.long_running.project_manager import ProjectManager
+from airunner_services.llm.long_running.runtime_components import (
+    resolve_project_manager,
+)
 from airunner_services.utils.application.log_hygiene import summarize_text
 from airunner_services.llm.long_running.data.project_state import (
     ProjectState,
@@ -47,6 +50,7 @@ class AutoHarnessWrapper:
         self,
         chat_model: Any,
         on_progress: Optional[Callable[[str, str, float], None]] = None,
+        project_manager: Optional[ProjectManager] = None,
     ):
         """Initialize the auto-wrapper.
 
@@ -54,10 +58,11 @@ class AutoHarnessWrapper:
             chat_model: LangChain chat model instance
             on_progress: Optional callback for progress updates
                         Signature: (task_name, status, progress_pct)
+            project_manager: Optional shared project manager
         """
         self._chat_model = chat_model
         self._on_progress = on_progress
-        self._project_manager = ProjectManager()
+        self._project_manager = resolve_project_manager(project_manager)
         self._current_project_id: Optional[int] = None
 
     def should_wrap(self, prompt: str) -> bool:
@@ -439,14 +444,20 @@ class AutoHarnessWrapper:
 def create_auto_wrapper(
     chat_model: Any,
     on_progress: Optional[Callable[[str, str, float], None]] = None,
+    project_manager: Optional[ProjectManager] = None,
 ) -> AutoHarnessWrapper:
     """Factory function to create an AutoHarnessWrapper.
 
     Args:
         chat_model: LangChain chat model
         on_progress: Optional progress callback
+        project_manager: Optional shared project manager
 
     Returns:
         Configured AutoHarnessWrapper instance
     """
-    return AutoHarnessWrapper(chat_model, on_progress)
+    return AutoHarnessWrapper(
+        chat_model,
+        on_progress,
+        project_manager=project_manager,
+    )

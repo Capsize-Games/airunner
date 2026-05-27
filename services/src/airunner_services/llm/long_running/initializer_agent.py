@@ -87,8 +87,8 @@ EXAMPLE for a "Todo App":
 Be thorough but practical. Focus on features that matter for a working application."""
 
 
-class InitializerState(TypedDict):
-    """State schema for Initializer Agent.
+class InitializerWorkflowState(TypedDict):
+    """Workflow-state schema for the Initializer Agent.
 
     Attributes:
         messages: Conversation messages
@@ -148,7 +148,7 @@ class InitializerAgent:
 
     def _build_graph(self) -> Any:
         """Build the LangGraph workflow for initialization."""
-        workflow = StateGraph(InitializerState)
+        workflow = StateGraph(InitializerWorkflowState)
 
         # Add nodes
         workflow.add_node("analyze_requirements", self._analyze_requirements)
@@ -165,7 +165,10 @@ class InitializerAgent:
 
         return workflow.compile()
 
-    def _analyze_requirements(self, state: InitializerState) -> dict:
+    def _analyze_requirements(
+        self,
+        state: InitializerWorkflowState,
+    ) -> dict:
         """Analyze user requirements and prepare for feature generation.
 
         Args:
@@ -211,7 +214,10 @@ Then generate the full feature list in JSON format.""",
             "messages": formatted,
         }
 
-    def _generate_features(self, state: InitializerState) -> dict:
+    def _generate_features(
+        self,
+        state: InitializerWorkflowState,
+    ) -> dict:
         """Generate the feature list using LLM.
 
         Args:
@@ -277,7 +283,10 @@ Then generate the full feature list in JSON format.""",
 
         return None
 
-    def _create_project(self, state: InitializerState) -> dict:
+    def _create_project(
+        self,
+        state: InitializerWorkflowState,
+    ) -> dict:
         """Create the project and features in database.
 
         Args:
@@ -358,7 +367,10 @@ Then generate the full feature list in JSON format.""",
             logger.error(f"Project creation failed: {e}")
             return {"error": str(e)}
 
-    def _finalize(self, state: InitializerState) -> dict:
+    def _finalize(
+        self,
+        state: InitializerWorkflowState,
+    ) -> dict:
         """Finalize initialization and return results.
 
         Args:
@@ -394,7 +406,7 @@ Then generate the full feature list in JSON format.""",
         """
         logger.info(f"Starting project initialization: {name}")
 
-        initial_state: InitializerState = {
+        initial_state: InitializerWorkflowState = {
             "messages": [],
             "project_name": name,
             "project_description": description,

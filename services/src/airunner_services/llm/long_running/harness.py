@@ -35,6 +35,10 @@ from airunner_services.llm.long_running.initializer_agent import (
     InitializerAgent,
 )
 from airunner_services.llm.long_running.session_agent import SessionAgent
+from airunner_services.llm.long_running.runtime_components import (
+    build_runtime_components,
+    build_session_agent,
+)
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
@@ -100,21 +104,18 @@ class LongRunningHarness:
         """
         self._chat_model = chat_model
         self._tools = tools or []
-        self._project_manager = project_manager or ProjectManager()
-        self._sub_agents = sub_agents or {}
         self._on_progress = on_progress
 
-        # Create agents
-        self._initializer = InitializerAgent(
-            chat_model=self._chat_model,
-            project_manager=self._project_manager,
-        )
-        self._session_agent = SessionAgent(
-            chat_model=self._chat_model,
+        runtime = build_runtime_components(
+            self._chat_model,
             tools=self._tools,
-            project_manager=self._project_manager,
-            sub_agents=self._sub_agents,
+            project_manager=project_manager,
+            sub_agents=sub_agents,
         )
+        self._project_manager = runtime.project_manager
+        self._sub_agents = runtime.sub_agents
+        self._initializer = runtime.initializer
+        self._session_agent = runtime.session_agent
 
         logger.info("LongRunningHarness initialized")
 
@@ -135,9 +136,8 @@ class LongRunningHarness:
             agent: Agent instance with invoke() method
         """
         self._sub_agents[category] = agent
-        # Update session agent with new sub-agents
-        self._session_agent = SessionAgent(
-            chat_model=self._chat_model,
+        self._session_agent = build_session_agent(
+            self._chat_model,
             tools=self._tools,
             project_manager=self._project_manager,
             sub_agents=self._sub_agents,

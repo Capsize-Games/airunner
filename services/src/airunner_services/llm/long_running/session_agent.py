@@ -112,8 +112,8 @@ OUTCOME: Login/logout endpoints functional, tests passing
 NEXT: Implement password reset feature"""
 
 
-class SessionState(TypedDict):
-    """State schema for Session Agent.
+class SessionWorkflowState(TypedDict):
+    """Workflow-state schema for the Session Agent.
 
     Attributes:
         messages: Conversation messages
@@ -199,7 +199,7 @@ class SessionAgent:
 
     def _build_graph(self) -> Any:
         """Build the LangGraph workflow for session execution."""
-        workflow = StateGraph(SessionState)
+        workflow = StateGraph(SessionWorkflowState)
 
         # Add nodes
         workflow.add_node("orientation", self._orientation_node)
@@ -240,7 +240,10 @@ class SessionAgent:
 
         return workflow.compile()
 
-    def _orientation_node(self, state: SessionState) -> dict:
+    def _orientation_node(
+        self,
+        state: SessionWorkflowState,
+    ) -> dict:
         """Orient the agent to current project state.
 
         Reads progress log, git history, and feature list to understand
@@ -311,7 +314,10 @@ Analyze this context and prepare to select the next feature to work on."""
             "messages": [SystemMessage(content=SESSION_SYSTEM_PROMPT)],
         }
 
-    def _planning_node(self, state: SessionState) -> dict:
+    def _planning_node(
+        self,
+        state: SessionWorkflowState,
+    ) -> dict:
         """Plan what feature to work on.
 
         Selects the highest-priority feature with met dependencies
@@ -390,7 +396,10 @@ NEXT: Begin implementation"""
             "messages": [HumanMessage(content=planning_prompt)],
         }
 
-    def _implementation_node(self, state: SessionState) -> dict:
+    def _implementation_node(
+        self,
+        state: SessionWorkflowState,
+    ) -> dict:
         """Implement the selected feature.
 
         Uses tools to make code changes, create files, etc.
@@ -466,7 +475,10 @@ Report your progress after each significant action."""
             logger.error(f"Implementation error: {e}")
             return {"error": str(e), "should_continue": False}
 
-    def _verification_node(self, state: SessionState) -> dict:
+    def _verification_node(
+        self,
+        state: SessionWorkflowState,
+    ) -> dict:
         """Verify the implemented feature.
 
         Runs tests and checks that the feature works as expected
@@ -544,7 +556,10 @@ CRITICAL: Only mark as passing if you have ACTUALLY VERIFIED each step!"""
             logger.error(f"Verification error: {e}")
             return {"error": str(e), "should_continue": False}
 
-    def _cleanup_node(self, state: SessionState) -> dict:
+    def _cleanup_node(
+        self,
+        state: SessionWorkflowState,
+    ) -> dict:
         """Clean up session and prepare for next.
 
         Commits changes, logs progress, updates feature status,
@@ -617,7 +632,9 @@ CRITICAL: Only mark as passing if you have ACTUALLY VERIFIED each step!"""
         }
 
     def _delegate_to_sub_agent(
-        self, state: SessionState, feature: ProjectFeature
+        self,
+        state: SessionWorkflowState,
+        feature: ProjectFeature,
     ) -> dict:
         """Delegate implementation to a specialized sub-agent.
 
@@ -671,7 +688,10 @@ CRITICAL: Only mark as passing if you have ACTUALLY VERIFIED each step!"""
             logger.error(f"Sub-agent delegation failed: {e}")
             return {"error": f"Sub-agent failed: {e}"}
 
-    def _route_after_planning(self, state: SessionState) -> str:
+    def _route_after_planning(
+        self,
+        state: SessionWorkflowState,
+    ) -> str:
         """Route after planning phase.
 
         Args:
@@ -684,7 +704,10 @@ CRITICAL: Only mark as passing if you have ACTUALLY VERIFIED each step!"""
             return "end"
         return "implement"
 
-    def _route_after_implementation(self, state: SessionState) -> str:
+    def _route_after_implementation(
+        self,
+        state: SessionWorkflowState,
+    ) -> str:
         """Route after implementation phase.
 
         Args:
@@ -699,7 +722,10 @@ CRITICAL: Only mark as passing if you have ACTUALLY VERIFIED each step!"""
             return "continue"
         return "verify"
 
-    def _route_after_verification(self, state: SessionState) -> str:
+    def _route_after_verification(
+        self,
+        state: SessionWorkflowState,
+    ) -> str:
         """Route after verification phase.
 
         Args:
@@ -766,7 +792,7 @@ CRITICAL: Only mark as passing if you have ACTUALLY VERIFIED each step!"""
         """
         logger.info(f"Starting session for project {project_id}")
 
-        initial_state: SessionState = {
+        initial_state: SessionWorkflowState = {
             "messages": [],
             "project_id": project_id,
             "session_id": None,
