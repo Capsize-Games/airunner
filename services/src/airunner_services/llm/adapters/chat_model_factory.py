@@ -11,11 +11,8 @@ from airunner_services.llm.adapters.chat_gguf import (
     is_gguf_model,
 )
 from airunner_services.llm.adapters.chat_model_factory_helpers import (
-    get_chatbot_params,
+    build_local_runtime_config,
     get_db_settings,
-    get_enable_thinking,
-    get_quantization_bits,
-    get_reasoning_effort,
 )
 from airunner_services.llm.config.provider_access_policy import (
     is_openai_allowed,
@@ -322,7 +319,12 @@ class ChatModelFactory:
             ValueError: If settings are invalid or required components missing
         """
         db_settings = get_db_settings()
-        quantization_bits = get_quantization_bits(db_settings)
+        local_runtime = build_local_runtime_config(
+            db_settings,
+            llm_settings,
+            chatbot,
+        )
+        quantization_bits = local_runtime.quantization_bits
         optimizer = get_model_optimizer()
         resolved_model_id = ChatModelFactory._resolve_local_model_id(
             db_settings,
@@ -387,7 +389,6 @@ class ChatModelFactory:
                     )
                 )
                 if has_valid_gguf_path:
-                    params = get_chatbot_params(chatbot, local_mode=False)
                     resolved_model_id = (
                         resolved_model_id
                         or ChatModelFactory._resolve_local_model_id(
@@ -408,14 +409,6 @@ class ChatModelFactory:
                         )
                         or {}
                     )
-                    enable_thinking = get_enable_thinking(
-                        db_settings,
-                        llm_settings,
-                    )
-                    reasoning_effort = get_reasoning_effort(
-                        db_settings,
-                        llm_settings,
-                    )
 
                     try:
                         return ChatModelFactory.create_gguf_model(
@@ -424,13 +417,13 @@ class ChatModelFactory:
                                 "gguf_filename",
                             ),
                             gguf_runtime_profile=gguf_runtime_profile,
-                            enable_thinking=enable_thinking,
-                            reasoning_effort=reasoning_effort,
+                            enable_thinking=local_runtime.enable_thinking,
+                            reasoning_effort=local_runtime.reasoning_effort,
                             tool_calling_mode=model_info.get(
                                 "tool_calling_mode",
                                 "native",
                             ),
-                            **params
+                            **local_runtime.gguf_params,
                         )
                     except UnsupportedGGUFArchitectureError as e:
                         version_message = ""

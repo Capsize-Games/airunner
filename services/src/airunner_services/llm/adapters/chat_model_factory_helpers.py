@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
+
+
+@dataclass(frozen=True)
+class LocalRuntimeConfig:
+    """Resolved persisted runtime settings for local chat-model creation."""
+
+    quantization_bits: int
+    enable_thinking: bool
+    reasoning_effort: str
+    gguf_params: dict[str, Any]
 
 
 def get_db_settings() -> Any:
@@ -109,3 +120,17 @@ def get_chatbot_params(
         )
         / 100.0,
     }
+
+
+def build_local_runtime_config(
+    db_settings: Any,
+    llm_settings: Any,
+    chatbot: Any,
+) -> LocalRuntimeConfig:
+    """Return the resolved persisted runtime config for local/GGUF loads."""
+    return LocalRuntimeConfig(
+        quantization_bits=get_quantization_bits(db_settings),
+        enable_thinking=get_enable_thinking(db_settings, llm_settings),
+        reasoning_effort=get_reasoning_effort(db_settings, llm_settings),
+        gguf_params=get_chatbot_params(chatbot, local_mode=False),
+    )
