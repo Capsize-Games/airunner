@@ -21,6 +21,7 @@ from transformers.generation.streamers import TextIteratorStreamer
 from airunner_services.llm.managers.external_condition_stopping_criteria import (
     ExternalConditionStoppingCriteria,
 )
+from airunner_services.llm.tool_call_identity import tool_call_identity_key
 
 
 class GenerationMixin:
@@ -728,14 +729,7 @@ class GenerationMixin:
         seen = set()
         deduped = []
         for call in tool_calls:
-            # Use JSON serialization to create a hashable signature
-            # This handles nested lists/dicts in args that can't be directly hashed
-            try:
-                args_str = json.dumps(call.get("args", {}), sort_keys=True)
-                signature = (call.get("name"), args_str)
-            except (TypeError, ValueError):
-                # If JSON serialization fails, use repr as fallback
-                signature = (call.get("name"), repr(call.get("args", {})))
+            signature = tool_call_identity_key(call)
             if signature in seen:
                 continue
             seen.add(signature)

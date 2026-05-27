@@ -21,6 +21,7 @@ from airunner_services.llm.utils.gpt_oss_parser import (
     has_gpt_oss_markup,
     parse_gpt_oss_response,
 )
+from airunner_services.llm.tool_call_identity import tool_call_identity_set
 from airunner_services.utils.application.get_logger import get_logger
 
 
@@ -240,16 +241,37 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 incoming_tool_ids = set(
                     tc.get("id") for tc in message.tool_calls if tc.get("id")
                 )
-                if self._conversation.value and incoming_tool_ids:
+                incoming_identities = tool_call_identity_set(
+                    message.tool_calls
+                )
+                if self._conversation.value and (
+                    incoming_tool_ids or incoming_identities
+                ):
                     for existing in self._conversation.value:
                         if existing.get("metadata_type") == "tool_calls":
                             existing_tool_calls = existing.get("tool_calls", [])
-                            for tc in existing_tool_calls:
-                                if tc.get("id") in incoming_tool_ids:
-                                    self.logger.debug(
-                                        f"Skipping duplicate tool_calls - tool_call_id already exists: {tc.get('id')}"
-                                    )
-                                    return
+                            existing_tool_ids = {
+                                tc.get("id")
+                                for tc in existing_tool_calls
+                                if tc.get("id")
+                            }
+                            if incoming_tool_ids.intersection(existing_tool_ids):
+                                self.logger.debug(
+                                    "Skipping duplicate tool_calls - "
+                                    "tool_call_id already exists"
+                                )
+                                return
+                            existing_identities = tool_call_identity_set(
+                                existing_tool_calls
+                            )
+                            if incoming_identities.intersection(
+                                existing_identities
+                            ):
+                                self.logger.debug(
+                                    "Skipping duplicate tool_calls - canonical "
+                                    "tool identity already exists"
+                                )
+                                return
                 
                 # Extract thinking content from the AIMessage that has tool_calls
                 # This captures the "thinking before tool use" phase

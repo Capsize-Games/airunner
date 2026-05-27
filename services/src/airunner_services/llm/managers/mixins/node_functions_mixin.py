@@ -6,7 +6,7 @@ These are broken into focused helper methods for maintainability.
 
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import (
@@ -21,6 +21,7 @@ from airunner_services.llm.managers.response_synthesizer import (
     ResponseSynthesizer,
 )
 from airunner_services.llm.managers.route_policy import RoutePolicy
+from airunner_services.llm.tool_call_identity import tool_call_identity_key
 from airunner_services.llm.utils.thinking_parser import (
     strip_thinking_tags,
     detect_thinking_open_tag,
@@ -678,40 +679,18 @@ class NodeFunctionsMixin:
         """
         current_name = current_tc.get("name")
         current_args = current_tc.get("args", {})
-        current_normalized = self._normalize_args(current_args)
+        current_identity = tool_call_identity_key(current_tc)
 
         for prev_tc in previous_tool_calls:
-            if prev_tc["name"] == current_name:
-                prev_normalized = self._normalize_args(prev_tc["args"])
-
-                if current_normalized == prev_normalized:
-                    self._log_duplicate_detection(
-                        current_name, current_args, tool_messages
-                    )
-                    return True
+            if tool_call_identity_key(prev_tc) == current_identity:
+                self._log_duplicate_detection(
+                    current_name,
+                    current_args,
+                    tool_messages,
+                )
+                return True
 
         return False
-
-    def _normalize_args(self, args: Any) -> Tuple:
-        """Convert args dict to comparable format, handling nested structures.
-
-        Args:
-            args: Arguments to normalize
-
-        Returns:
-            Normalized tuple representation
-        """
-        if not isinstance(args, dict):
-            return str(args)
-
-        items = []
-        for k, v in sorted(args.items()):
-            if isinstance(v, dict):
-                v = self._normalize_args(v)
-            elif isinstance(v, list):
-                v = tuple(v)
-            items.append((k, v))
-        return tuple(items)
 
     def _log_duplicate_detection(
         self, tool_name: str, tool_args: Dict, tool_messages: List

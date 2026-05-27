@@ -5,6 +5,8 @@ import re
 import uuid
 from typing import List, Optional, Dict, Tuple
 
+from airunner_services.llm.tool_call_identity import build_tool_call_id
+
 
 class ToolCallingMixin:
     """Handles tool calling parsing and formatting for chat models.
@@ -159,11 +161,11 @@ class ToolCallingMixin:
                         if call.get("id"):
                             tool_id = call["id"]
                         else:
-                            import hashlib
                             args = call.get("arguments", {})
-                            args_str = json.dumps(args, sort_keys=True)
-                            content_hash = hashlib.sha256(f"{call['name']}:{args_str}".encode()).hexdigest()[:16]
-                            tool_id = f"tc-{content_hash}"
+                            tool_id = build_tool_call_id(
+                                call["name"],
+                                args,
+                            )
                         tool_calls.append(
                             {
                                 "name": call["name"],
@@ -369,18 +371,10 @@ class ToolCallingMixin:
         tool_name = normalized.get("tool") or normalized.get("name")
         tool_args = normalized.get("arguments") or normalized.get("args") or {}
         
-        # Generate a deterministic ID based on tool name and arguments
-        # This ensures identical tool calls get the same ID for deduplication
-        import hashlib
-        import json as json_module
-        args_str = json_module.dumps(tool_args or {}, sort_keys=True)
-        content_hash = hashlib.sha256(f"{tool_name}:{args_str}".encode()).hexdigest()[:16]
-        tool_call_id = f"tc-{content_hash}"
-        
         return {
             "name": tool_name,
             "args": tool_args or {},
-            "id": tool_call_id,
+            "id": build_tool_call_id(tool_name, tool_args),
         }
 
     def _is_tool_payload(self, data: dict) -> bool:
