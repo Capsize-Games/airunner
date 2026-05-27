@@ -47,7 +47,6 @@ python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -e ./model
-pip install -e ./api
 pip install -e ./services
 pip install -e ./native[development]
 ```
@@ -61,8 +60,8 @@ the daemon-backed functional suites that consume the built sidecars:
 ./scripts/install.sh --help
 ./deployment/install_distributed.sh --help
 ./scripts/build_runtime_sidecars.sh --target-platform linux
-./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 ```
 
 Use the package split contract in

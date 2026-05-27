@@ -47,7 +47,6 @@ python -m venv venv
 source venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -e ./model
-pip install -e ./api
 pip install -e './services[headless,development]'
 ```
 
@@ -70,20 +69,20 @@ by the repo test runner:
 The bootstrap sanity check for the server surface is:
 
 ```bash
-./venv/bin/python -m pytest api/tests/test_service_bootstrap.py -v
+./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
 ```
 
 When a change touches daemon routes, workers, or runtime coordination,
 pair those smoke checks with the relevant daemon-backed functional suites
-in `api/tests/`, especially:
+in `services/tests/`, especially:
 
 ```bash
-./venv/bin/python -m pytest api/tests/test_tts_synthesize_functional.py -v --timeout=120
-./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest api/tests/test_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 ```
 
-The functional tests live under `api/tests/` because they validate the
+The functional tests live under `services/tests/` because they validate the
 composed product boundary, even when the behavior under test is primarily
 owned by `services/`.

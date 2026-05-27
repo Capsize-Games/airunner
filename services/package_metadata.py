@@ -23,6 +23,7 @@ CORE_REQUIREMENTS = [
     "numpy==2.2.5",
     "packaging>=24.0",
     "pillow==12.2.0",
+    "pydantic>=2.7,<3.0",
     "nltk>=3.9.1",
     "alembic==1.13.2",
     "aiosqlite==0.21.0",
@@ -32,6 +33,9 @@ CORE_REQUIREMENTS = [
     "jinja2==3.1.6",
     "pyyaml==6.0.2",
     "python-dotenv==1.2.2",
+    "fastapi==0.115.0",
+    "python-multipart>=0.0.27",
+    "uvicorn[standard]==0.34.0",
 ]
 
 ML_RUNTIME_REQUIREMENTS = [
@@ -325,7 +329,6 @@ def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
     """Return the setuptools metadata for the service package surface."""
     install_requires = [
         f"airunner-model=={VERSION}",
-        f"airunner-api=={VERSION}",
         FACEHUGGERSHIELD_REQUIREMENT,
         *CORE_REQUIREMENTS,
     ]

@@ -9,8 +9,8 @@ from types import ModuleType
 
 @lru_cache(maxsize=1)
 def load_message_types() -> ModuleType:
-    """Return the API module that owns envelope types."""
-    return import_module("airunner_api.messages")
+    """Return the model-owned module that owns envelope types."""
+    return import_module("airunner_model.runtimes.messages")
 
 
 __all__ = ["load_message_types"]

@@ -609,24 +609,24 @@ mkcert -install
 ./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
 
 # API bootstrap and runtime wiring
-./venv/bin/python -m pytest api/tests/test_service_bootstrap.py -v
-./venv/bin/python -m pytest api/tests/test_tts_runtime_load.py -v
+./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
+./venv/bin/python -m pytest services/tests/test_tts_runtime_load.py -v
 
 # Real daemon-backed functional tests
-./venv/bin/python -m pytest api/tests/test_tts_synthesize_functional.py -v --timeout=120
-./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest api/tests/test_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 
 # Offscreen GUI end-to-end functional tests
-./venv/bin/python -m pytest api/tests/test_gui_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest api/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_gui_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
 
 # Service-owned agent evals
-AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest api/tests/eval --tb=short -ra
+AIRUNNER_TEST_NO_GUI_LAUNCH=1 ./venv/bin/python -m pytest services/tests/eval --tb=short -ra
 ```
 
-The functional suites under `api/tests/` use real local runtimes and skip
+The functional suites under `services/tests/` use real local runtimes and skip
 cleanly when required assets are missing. They cover API bootstrap,
 daemon-only LLM, daemon LLM plus TTS, standalone STT, standalone TTS,
 offscreen GUI LLM plus TTS, offscreen GUI STT plus LLM plus TTS, and the
@@ -655,7 +655,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github
 - [Document RAG Flow](docs/document-rag-flow.md)
 - [Systemd Distributed Deployment](deployment/systemd/README.md)
 - [API Service Layer](src/airunner/components/application/api/README.md)
-- [API Package README](api/README.md)
 - [Services Package README](services/README.md)
 - [Model Package README](model/README.md)
 - [Src Package README](src/README.md)

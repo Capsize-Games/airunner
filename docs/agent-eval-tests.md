@@ -1,6 +1,6 @@
 # Agent Eval Tests
 
-The suites under `api/tests/eval/` are service-owned, daemon-backed
+The suites under `services/tests/eval/` are service-owned, daemon-backed
 functional evals for the LLM agent path. They do not launch the GUI.
 Each case starts a temporary `airunner_services.daemon`, sends one
 request to `/llm/generate`, and asserts a stable workflow signal.
@@ -28,41 +28,41 @@ Recommended commands:
 ```bash
 # Run the full agent-eval directory.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval --tb=short -ra
+./venv/bin/python -m pytest services/tests/eval --tb=short -ra
 
 # Run only eval-marked cases from the agent-eval directory.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval -m eval --tb=short -ra
+./venv/bin/python -m pytest services/tests/eval -m eval --tb=short -ra
 
 # Run one suite.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval/test_agent_tool_eval.py \
+./venv/bin/python -m pytest services/tests/eval/test_agent_tool_eval.py \
   --tb=short -ra
 
 # Run non-forced tool-selection coverage.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
 ./venv/bin/python -m pytest \
-  api/tests/eval/test_agent_tool_selection_eval.py \
+  services/tests/eval/test_agent_tool_selection_eval.py \
   --tb=short -ra
 
 # Run the full attached-document eval suite.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval/test_agent_document_eval.py \
+./venv/bin/python -m pytest services/tests/eval/test_agent_document_eval.py \
   --tb=short -ra
 
 # Run the legacy markdown document-retrieval slice.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval/test_agent_document_eval.py \
+./venv/bin/python -m pytest services/tests/eval/test_agent_document_eval.py \
   -k 'codename or numeric' --tb=short -ra
 
 # Run the tri-format Time Machine document-retrieval slice.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval/test_agent_document_eval.py \
+./venv/bin/python -m pytest services/tests/eval/test_agent_document_eval.py \
   -k time_machine_results --tb=short -ra
 
 # Run only GPT-OSS-tagged cases across the eval directory.
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
-./venv/bin/python -m pytest api/tests/eval \
+./venv/bin/python -m pytest services/tests/eval \
   -k gpt-oss-20b --tb=short -ra
 
 # Run judged response evals with Groq as the external judge.
@@ -73,7 +73,7 @@ AIRUNNER_TEST_JUDGE_SERVICE=groq \
 AIRUNNER_TEST_JUDGE_MODEL=llama-3.3-70b-versatile \
 AIRUNNER_TEST_NO_GUI_LAUNCH=1 \
 ./venv/bin/python -m pytest \
-  api/tests/eval/test_agent_response_eval.py \
+  services/tests/eval/test_agent_response_eval.py \
   -k 'plain-chat' --tb=short -ra
 ```
 
@@ -97,10 +97,10 @@ coverage surface is now aligned.
 
 Shared harness files:
 
-- `api/tests/llm_functional_support.py` starts a real headless daemon on
+- `services/tests/llm_functional_support.py` starts a real headless daemon on
   an ephemeral port, waits for `/health`, and tears it down after the
   case finishes.
-- `api/tests/eval/agent_eval_support.py` builds stable request payloads,
+- `services/tests/eval/agent_eval_support.py` builds stable request payloads,
   posts them to `/llm/generate`, strips hidden thinking from the visible
   reply, and provides helper assertions.
 

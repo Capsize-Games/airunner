@@ -42,7 +42,6 @@ DEVELOPMENT_REQUIREMENTS = [
 
 NATIVE_BASE_REQUIREMENTS = [
     f"airunner-model=={VERSION}",
-    f"airunner-api=={VERSION}",
     f"airunner-services=={VERSION}",
     FACEHUGGERSHIELD_REQUIREMENT,
 ]

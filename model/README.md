@@ -44,7 +44,7 @@ pip install --upgrade pip setuptools wheel
 pip install -e ./model[development]
 ```
 
-Add `-e ./api`, `-e ./services`, `-e ./native`, or `-e .` on top of that
+Add `-e ./services`, `-e ./native`, or `-e .` on top of that
 when you need to exercise the model package through its consumers.
 
 ## Test Running
@@ -54,17 +54,17 @@ contracts and runtime helpers are exercised by the daemon and GUI layers.
 Start with the bootstrap import sanity check:
 
 ```bash
-./venv/bin/python -m pytest api/tests/test_service_bootstrap.py -v
+./venv/bin/python -m pytest services/tests/test_service_bootstrap.py -v
 ```
 
 Then use the composed functional suites that cover the runtime helpers this
 package feeds:
 
 ```bash
-./venv/bin/python -m pytest api/tests/test_tts_runtime_load.py -v
-./venv/bin/python -m pytest api/tests/test_tts_synthesize_functional.py -v --timeout=120
-./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
-./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_tts_runtime_load.py -v
+./venv/bin/python -m pytest services/tests/test_tts_synthesize_functional.py -v --timeout=120
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
 ```
 
 Those tests validate the same model-owned settings and runtime helper

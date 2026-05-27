@@ -7,9 +7,8 @@ how to validate changes without blurring those boundaries again.
 
 | Package | Primary ownership |
 |---------|-------------------|
-| `api/` | transport contracts, shared messages, bootstrap adapters |
-| `services/` | daemon routes, lifecycle, runtime orchestration, downloads, persistence |
-| `model/` | shared runtime contracts, settings, ORM models, runtime helpers |
+| `services/` | daemon routes, HTTP/WebSocket API surface, lifecycle, runtime orchestration, downloads, persistence |
+| `model/` | shared runtime contracts, transport-neutral envelopes, settings, ORM models, runtime helpers |
 | `src/` | desktop UI, daemon clients, user workflow surfaces |
 | `native/` | launcher, bundle assembly, install or distribution tooling |
 
@@ -24,16 +23,6 @@ how to validate changes without blurring those boundaries again.
 
 ## Validation Matrix
 
-### `api/`
-
-Use these when changing transport contracts, bootstrap code, or HTTP
-surface behavior.
-
-```bash
-./venv/bin/python -m pytest api/tests/test_service_bootstrap.py -v
-./venv/bin/python -m pytest api/tests/test_tts_runtime_load.py -v
-```
-
 ### `services/`
 
 Use these when changing daemon routes, workers, runtime routing, or
@@ -46,7 +35,7 @@ service-owned orchestration.
 ./venv/bin/python scripts/run_tests.py --tts-runtime-smoke
 ```
 
-Pair those with the relevant functional suite in `api/tests/` whenever the
+Pair those with the relevant functional suite in `services/tests/` whenever the
 change affects real daemon behavior.
 
 ### `model/`
@@ -55,9 +44,9 @@ Use consumer-facing validations because the model package is shared across
 all higher layers.
 
 ```bash
-./venv/bin/python -m pytest api/tests/test_tts_runtime_load.py -v
-./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
-./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_tts_runtime_load.py -v
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
 ```
 
 ### `src/`
@@ -67,8 +56,8 @@ for real desktop-to-daemon behavior.
 
 ```bash
 ./venv/bin/python scripts/run_tests.py --unit
-./venv/bin/python -m pytest api/tests/test_gui_llm_tts_functional.py -v --timeout=1200
-./venv/bin/python -m pytest api/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_gui_llm_tts_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_gui_stt_llm_tts_functional.py -v --timeout=1200
 ```
 
 ### `native/`
@@ -80,13 +69,13 @@ on bundled sidecars.
 ./scripts/install.sh --help
 ./deployment/install_distributed.sh --help
 ./scripts/build_runtime_sidecars.sh --target-platform linux
-./venv/bin/python -m pytest api/tests/test_llm_functional.py -v --timeout=900
-./venv/bin/python -m pytest api/tests/test_stt_transcribe_functional.py -v --timeout=1200
+./venv/bin/python -m pytest services/tests/test_llm_functional.py -v --timeout=900
+./venv/bin/python -m pytest services/tests/test_stt_transcribe_functional.py -v --timeout=1200
 ```
 
 ## Functional Test Placement
 
-Most real end-to-end tests live in `api/tests/` even when the primary code
+Most real end-to-end tests live in `services/tests/` even when the primary code
 under test belongs to `services/`, `model/`, `src/`, or `native/`.
 
 That is intentional. Those tests validate the composed product boundary:

@@ -48,11 +48,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def _get_airunner_api(req: Request):
-    api = getattr(req.app.state, "airunner_app", None)
-    if api is None:
+def _get_airunner_app(req: Request):
+    app = getattr(req.app.state, "airunner_app", None)
+    if app is None:
         raise HTTPException(status_code=503, detail="AI Runner app not available")
-    return api
+    return app
 
 
 def _queue_service_llm_unload(req: Request) -> bool:
@@ -246,7 +246,7 @@ def _build_llm_request(data: Dict[str, Any]) -> LLMRequest:
 
 @router.post("/llm/generate")
 def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
-    api = _get_airunner_api(req)
+    app = _get_airunner_app(req)
 
     # This route is used by headless/HTTP streaming clients.
     # Ensure the LLM streaming pipeline does not suppress JSON/tool-call markup in a
@@ -255,7 +255,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
 
     def _interrupt_llm_async() -> None:
         try:
-            threading.Thread(target=api.llm.interrupt, daemon=True).start()
+            threading.Thread(target=app.llm.interrupt, daemon=True).start()
         except Exception:
             pass
 
@@ -317,7 +317,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 done.set()
 
         try:
-            api.llm.send_request(
+            app.llm.send_request(
                 prompt=prompt,
                 action=action,
                 llm_request=llm_request,
@@ -439,7 +439,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
     def kickoff():
         try:
             logger.info("llm/generate kickoff send_request start request_id=%s", request_id)
-            api.llm.send_request(
+            app.llm.send_request(
                 prompt=prompt,
                 action=action,
                 llm_request=llm_request,
@@ -574,7 +574,7 @@ class LegacyArtRequest(BaseModel):
 
 @router.post("/art")
 def legacy_art_generate(body: LegacyArtRequest, req: Request):
-    _ = _get_airunner_api(req)  # Ensure app is available; actual work is signal-based.
+    _ = _get_airunner_app(req)  # Ensure app is available; actual work is signal-based.
 
     prompt = (body.prompt or "").strip()
     if not prompt:

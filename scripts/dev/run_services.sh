@@ -32,7 +32,7 @@ daemon_running() {
 }
 
 current_dev_build_token() {
-    PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/api/src:${ROOT_DIR}/model/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}" \
+    PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/model/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}" \
     DEV_ENV=1 \
     "${DEV_VENV_BIN}/python" - <<'PY'
 from airunner_services.dev_build_token import current_dev_build_token
@@ -139,7 +139,7 @@ start_services() {
     export AIRUNNER_SD_ON=1
     export AIRUNNER_LOG_LEVEL="${AIRUNNER_LOG_LEVEL:-INFO}"
     export AIRUNNER_DISABLE_STALE_DAEMON_CHECK=1
-    export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/api/src:${ROOT_DIR}/model/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
+    export PYTHONPATH="${ROOT_DIR}/services/src:${ROOT_DIR}/model/src:${ROOT_DIR}/src:${ROOT_DIR}/native/src${PYTHONPATH:+:${PYTHONPATH}}"
     export PATH="${DEV_VENV_BIN}:${SIDECAR_BIN_DIR}${PATH:+:${PATH}}"
 
     if [[ -x "${SIDECAR_BIN_DIR}/llama-server" ]]; then
