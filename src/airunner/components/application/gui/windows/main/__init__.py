@@ -13,7 +13,7 @@ def __getattr__(name):
         )
         return ModelLoadBalancer
     elif name == "LLMGeneratorSettings":
-        from airunner_model.models.llm_generator_settings import (
+        from airunner.models.llm_generator_settings import (
             LLMGeneratorSettings,
         )
         return LLMGeneratorSettings

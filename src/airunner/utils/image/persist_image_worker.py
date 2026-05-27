@@ -1,9 +1,9 @@
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image
-from airunner_model.models.controlnet_settings import ControlnetSettings
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
-from airunner_model.models.image_to_image_settings import ImageToImageSettings
-from airunner_model.models.outpaint_settings import OutpaintSettings
+from airunner.models.controlnet_settings import ControlnetSettings
+from airunner.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.image_to_image_settings import ImageToImageSettings
+from airunner.models.outpaint_settings import OutpaintSettings
 
 
 SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[type, bool]] = {
@@ -65,26 +65,22 @@ def persist_image_worker(
         return {"error": "empty_binary", "generation": generation}
 
     try:
-        with session_scope() as session:
-            if layer_scoped:
-                query = session.query(model_class)
-                if layer_id is not None:
-                    query = query.filter(model_class.layer_id == layer_id)
-                setting = query.first()
-                if setting is None:
-                    setting = model_class(layer_id=layer_id)
-                    session.add(setting)
-                setattr(setting, column_name, image_binary)
-            else:
-                setting = (
-                    session.query(model_class)
-                    .order_by(model_class.id.desc())
-                    .first()
-                )
-                if setting is None:
-                    setting = model_class()
-                    session.add(setting)
-                setattr(setting, column_name, image_binary)
+        if layer_scoped:
+            filters = {"layer_id": layer_id}
+            setting = model_class.objects.filter_by_first(**filters)
+            if setting is None:
+                setting = model_class.objects.create(**filters)
+        else:
+            records = model_class.objects.all()
+            setting = max(
+                records,
+                key=lambda record: getattr(record, "id", 0) or 0,
+                default=None,
+            )
+            if setting is None:
+                setting = model_class.objects.create()
+
+        model_class.objects.update(setting.id, **{column_name: image_binary})
     except Exception as exc:
         return {"error": f"db_error:{exc}", "generation": generation}
 

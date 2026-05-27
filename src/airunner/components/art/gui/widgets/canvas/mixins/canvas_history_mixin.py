@@ -5,7 +5,7 @@ from dataclasses import asdict, is_dataclass
 from PySide6.QtCore import QPointF, QTimer
 from PIL import ImageQt
 
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,

@@ -1,10 +1,9 @@
 """Mixin providing AI model, LoRA, and embedding management operations."""
 
 from typing import List, Optional
-from airunner_model.session import session_scope
-from airunner_model.models.ai_models import AIModels
-from airunner_model.models.lora import Lora
-from airunner_model.models.embedding import Embedding
+from airunner.models.ai_models import AIModels
+from airunner.models.lora import Lora
+from airunner.models.embedding import Embedding
 from airunner.components.application.data import table_to_class
 
 
@@ -114,8 +113,10 @@ class ModelManagementMixin:
             existing = self._find_existing_embedding(embedding)
 
             if existing:
-                self._copy_embedding_attributes(existing, embedding)
-                existing.save()
+                Embedding.objects.update(
+                    existing.id,
+                    **self._record_values(embedding),
+                )
             else:
                 self._create_new_embedding(embedding)
 
@@ -238,20 +239,13 @@ class ModelManagementMixin:
     def _update_existing_ai_model(
         self, existing: AIModels, model: AIModels
     ) -> None:
-        """Update existing AI model in database.
+        """Update one existing AI model through the daemon manager.
 
         Args:
             existing: Existing model dataclass.
             model: New model data.
         """
-        with session_scope() as session:
-            orm_instance = self._get_orm_instance(session, existing)
-
-            if orm_instance:
-                self._copy_model_attributes(orm_instance, model)
-                session.commit()
-            else:
-                self._create_ai_model_in_session(session, model)
+        AIModels.objects.update(existing.id, **self._record_values(model))
 
     def _create_new_ai_model(self, model: AIModels) -> None:
         """Create new AI model.
@@ -272,22 +266,6 @@ class ModelManagementMixin:
         )
         new_model.save()
 
-    def _get_orm_instance(
-        self, session, existing: AIModels
-    ) -> Optional[AIModels]:
-        """Get ORM instance from dataclass.
-
-        Args:
-            session: Database session.
-            existing: Existing dataclass instance.
-
-        Returns:
-            ORM instance or None.
-        """
-        return (
-            session.query(AIModels).filter(AIModels.id == existing.id).first()
-        )
-
     def _copy_model_attributes(
         self, target: AIModels, source: AIModels
     ) -> None:
@@ -300,27 +278,6 @@ class ModelManagementMixin:
         for key in source.__dict__.keys():
             if key not in ("_sa_instance_state", "id"):
                 setattr(target, key, getattr(source, key))
-
-    def _create_ai_model_in_session(self, session, model: AIModels) -> None:
-        """Create AI model in session.
-
-        Args:
-            session: Database session.
-            model: Model data.
-        """
-        new_model = AIModels(
-            name=model.name,
-            path=model.path,
-            branch=model.branch,
-            version=model.version,
-            category=model.category,
-            pipeline_action=model.pipeline_action,
-            enabled=model.enabled,
-            model_type=model.model_type,
-            is_default=model.is_default,
-        )
-        session.add(new_model)
-        session.commit()
 
     def _find_lora_by_name(self, name: str) -> Optional[Lora]:
         """Find LoRA by name.
@@ -340,8 +297,7 @@ class ModelManagementMixin:
             existing: Existing LoRA.
             lora: New LoRA data.
         """
-        self._copy_lora_attributes(existing, lora)
-        Lora.objects.update(existing.id, **existing.__dict__)
+        Lora.objects.update(existing.id, **self._record_values(lora))
 
     def _create_new_lora(self, lora: Lora) -> None:
         """Create new LoRA instance.
@@ -427,6 +383,14 @@ class ModelManagementMixin:
         for key in source.__dict__.keys():
             if key != "_sa_instance_state":
                 setattr(target, key, getattr(source, key))
+
+    @staticmethod
+    def _record_values(record) -> dict:
+        """Return serializable column values for one transient model."""
+        values = getattr(record, "to_dict", lambda: dict(record.__dict__))()
+        values.pop("id", None)
+        values.pop("_sa_instance_state", None)
+        return values
 
     def _get_latest_setting(self, model_class_):
         """Get latest setting for model class.

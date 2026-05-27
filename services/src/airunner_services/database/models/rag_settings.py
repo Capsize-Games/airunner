@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, Integer, String
 
-from airunner_model.contract_enums import ModelService
+from airunner_services.contract_enums import ModelService
 from airunner_services.database.base import BaseModel
 
 

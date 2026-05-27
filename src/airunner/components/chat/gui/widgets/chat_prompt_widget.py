@@ -30,14 +30,13 @@ from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
 from airunner.components.chat.gui.widgets.chat_attachment_pill_widget import (
     ChatAttachmentPillWidget,
 )
-from airunner_model.models.document import Document
+from airunner.models.document import Document
 from airunner.components.documents.document_import import (
     chat_image_suffixes,
     import_document_to_library,
     is_rag_document_path,
     rag_document_suffixes,
 )
-from airunner_model.models.conversation import Conversation
 from airunner.components.llm.managers.agent.document_loader import (
     extract_text_from_file,
 )
@@ -65,7 +64,7 @@ from airunner.settings import (
     SLASH_COMMANDS,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner_model.runtimes.file_policy import (
+from airunner.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
 )
@@ -194,7 +193,9 @@ class ChatPromptWidget(BaseWidget):
             LLMResponseWorker, sleep_time_in_ms=1
         )
         # Conversation history manager used to fetch conversation IDs and history
-        self._conversation_history_manager = ConversationHistoryManager()
+        self._conversation_history_manager = ConversationHistoryManager(
+            getattr(self.api, "daemon_client", None)
+        )
         self.loading = True
         self.conversation_id: int = None
         self.conversation = None
@@ -265,14 +266,12 @@ class ChatPromptWidget(BaseWidget):
         self._current_response_tokens = 0
         self._update_token_tracking_labels()
         
-        # Create a new conversation in the database
-        new_conversation = Conversation.create()
+        # Create a new daemon-backed conversation
+        new_conversation = self._conversation_history_manager.create_conversation()
         if new_conversation:
             self.logger.info(
                 f"Created new conversation with ID: {new_conversation.id}"
             )
-            # Make it the current conversation
-            Conversation.make_current(new_conversation.id)
             # Update GUI state
             self.conversation_id = new_conversation.id
             self.conversation = new_conversation
@@ -1678,14 +1677,26 @@ class ChatPromptWidget(BaseWidget):
         self.conversation_id = conversation_id
         self._set_api_conversation_id(conversation_id)
 
-        conversation = Conversation.objects.filter_by_first(id=conversation_id)
+        session = self._conversation_history_manager.get_conversation_session(
+            conversation_id=conversation_id,
+            max_messages=50,
+        )
+        conversation = session.get("conversation")
         self.conversation = conversation
+        if conversation is None:
+            if hasattr(self.ui, "conversation"):
+                self.ui.conversation.clear_conversation()
+            self.conversation_id = None
+            self._set_api_conversation_id(None)
+            return
         if hasattr(self.api, "llm") and hasattr(self.api.llm, "clear_history"):
             self.api.llm.clear_history(conversation_id=conversation_id)
-        messages = (
+        messages = session.get(
+            "messages",
             self._conversation_history_manager.load_conversation_history(
-                conversation_id=conversation_id, max_messages=50
-            )
+                conversation=conversation,
+                max_messages=50,
+            ),
         )
         self.logger.debug(
             f"Loaded {len(messages)} messages from conversation {conversation_id}"
@@ -1751,12 +1762,11 @@ class ChatPromptWidget(BaseWidget):
             self._set_api_conversation_id(conversation.id)
             return self.conversation_id
 
-        conversation = Conversation.create()
+        conversation = self._conversation_history_manager.create_conversation()
         if conversation is None:
             self.logger.error("Failed to create a new conversation")
             return None
 
-        Conversation.make_current(conversation.id)
         self.conversation = conversation
         self.conversation_id = conversation.id
         self._set_api_conversation_id(conversation.id)

@@ -25,7 +25,7 @@ from airunner.utils.application.signal_mediator import SignalMediator
 from airunner.components.llm.config.provider_config import (
     LLMProviderConfig,
 )
-from airunner_model.models.llm_generator_settings import (
+from airunner.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner.components.server.api.server import get_api

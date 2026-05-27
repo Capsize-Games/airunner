@@ -14,7 +14,7 @@ from airunner.components.downloader.gui.windows.setup_wizard.installation_settin
     QSpacerItem,
     Ui_install_success_page,
 )
-from airunner_model.bootstrap.controlnet_bootstrap_data import (
+from airunner.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
 from airunner.components.data.bootstrap.model_bootstrap_data import (
@@ -283,7 +283,7 @@ class ChooseModelsPage(BaseWizard):
 
         # Add Upscaler (x4) option (but place it outside the scroll area below the version groups)
         try:
-            from airunner_model.bootstrap.sd_file_bootstrap_data import (
+            from airunner.bootstrap.sd_file_bootstrap_data import (
                 SD_FILE_BOOTSTRAP_DATA,
             )
 
@@ -352,7 +352,7 @@ class ChooseModelsPage(BaseWizard):
         from airunner.components.llm.config.provider_config import (
             LLMProviderConfig,
         )
-        from airunner_model.bootstrap.llm_file_bootstrap_data import (
+        from airunner.bootstrap.llm_file_bootstrap_data import (
             LLM_FILE_BOOTSTRAP_DATA,
         )
 
@@ -378,7 +378,7 @@ class ChooseModelsPage(BaseWizard):
         embedding_model_size = 1.3 * 1024 * 1024
         zimage_core_sizes = {}
         try:
-            from airunner_model.bootstrap.sd_file_bootstrap_data import (
+            from airunner.bootstrap.sd_file_bootstrap_data import (
                 SD_FILE_BOOTSTRAP_DATA,
             )
 

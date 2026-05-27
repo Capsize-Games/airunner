@@ -22,9 +22,8 @@ from airunner.components.llm.gui.widgets.templates.llm_tool_manager_ui import (
 from airunner.components.llm.gui.widgets.llm_tool_editor_widget import (
     LLMToolEditorWidget,
 )
-from airunner_model.models.llm_tool import LLMTool
+from airunner.models.llm_tool import LLMTool
 from airunner.enums import SignalCode
-from airunner_model.session import session_scope
 
 
 
@@ -107,17 +106,9 @@ class LLMToolManagerWidget(BaseWidget):
     def load_tools(self):
         """Load and display all tools in the table"""
         self.ui.tools_table.setRowCount(0)
-        session = self.session_maker()
-        try:
-            tools = (
-                session.query(LLMTool)
-                .order_by(LLMTool.created_at.desc())
-                .all()
-            )
-            for tool in tools:
-                self._add_tool_row(tool)
-        finally:
-            session.close()
+        tools = LLMTool.objects.order_by(LLMTool.created_at.desc()).all()
+        for tool in tools:
+            self._add_tool_row(tool)
 
     def _add_tool_row(self, tool: LLMTool):
         """Add a tool to the table"""
@@ -186,16 +177,14 @@ class LLMToolManagerWidget(BaseWidget):
     def on_enabled_changed(self, tool: LLMTool, state: int):
         """Toggle tool enabled status"""
         enabled = state == Qt.CheckState.Checked.value
-        with session_scope() as session:
-            db_tool = session.query(LLMTool).filter_by(id=tool.id).first()
-            if db_tool:
-                db_tool.enabled = enabled
-                self.logger.info(
-                    f"Tool {tool.name} {'enabled' if enabled else 'disabled'}"
-                )
-                self.emit_signal(
-                    SignalCode.LLM_TOOL_UPDATED, {"tool": db_tool}
-                )
+        if LLMTool.objects.update(tool.id, enabled=enabled):
+            tool.enabled = enabled
+            self.logger.info(
+                f"Tool {tool.name} {'enabled' if enabled else 'disabled'}"
+            )
+            self.emit_signal(
+                SignalCode.LLM_TOOL_UPDATED, {"tool": tool}
+            )
 
     @Slot(object)
     def on_edit_tool(self, tool: LLMTool):
@@ -215,15 +204,12 @@ class LLMToolManagerWidget(BaseWidget):
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            with session_scope() as session:
-                db_tool = session.query(LLMTool).filter_by(id=tool.id).first()
-                if db_tool:
-                    session.delete(db_tool)
-                    self.logger.info(f"Deleted tool {tool.name}")
-                    self.emit_signal(
-                        SignalCode.LLM_TOOL_DELETED, {"tool_id": tool.id}
-                    )
-                    self.load_tools()
+            if LLMTool.objects.delete(tool.id):
+                self.logger.info(f"Deleted tool {tool.name}")
+                self.emit_signal(
+                    SignalCode.LLM_TOOL_DELETED, {"tool_id": tool.id}
+                )
+                self.load_tools()
 
     def on_tool_created(self, data: Dict):
         """Handle tool created signal"""

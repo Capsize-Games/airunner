@@ -1,10 +1,10 @@
 """Compatibility re-exports for long-running agent project state models.
 
-These models were consolidated into ``airunner_model.models.project_state``.
+These models were consolidated into ``airunner.models.project_state``.
 This module is kept as a backward-compatible shim.
 """
 
-from airunner_model.models.project_state import (
+from airunner.models.project_state import (
     DecisionMemory,
     DecisionOutcome,
     FeatureCategory,

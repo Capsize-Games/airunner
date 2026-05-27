@@ -21,7 +21,6 @@ from airunner_startup_env import (
 configure_early_torch_allocator_environment()
 
 from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
-from airunner_model.setup_database import setup_database
 from airunner.utils.application import get_logger
 from airunner.utils.application.logging_utils import (
     configure_noisy_loggers,
@@ -132,7 +131,7 @@ def _write_component_settings_cache(signature: str) -> None:
 
 def register_component_settings():
     """Register settings for each component with a data/settings.py Pydantic dataclass."""
-    from airunner_model.models.airunner_settings import (
+    from airunner.models.airunner_settings import (
         AIRunnerSettings,
     )
 
@@ -317,46 +316,34 @@ def _configure_test_mode():
     1. Creates default settings if they don't exist
     2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
     """
-    from airunner_model.session import _get_session
-    from airunner_model.models.llm_generator_settings import (
+    from airunner.models.llm_generator_settings import (
         LLMGeneratorSettings,
     )
-    from airunner_model.models.application_settings import (
+    from airunner.models.application_settings import (
         ApplicationSettings,
     )
-    from airunner_model.models.path_settings import PathSettings
+    from airunner.models.path_settings import PathSettings
 
-    Session = _get_session()
-    with Session() as session:
-        # Create default path settings if not exists
-        if not session.query(PathSettings).first():
-            path_settings = PathSettings()
-            session.add(path_settings)
+    PathSettings.objects.first() or PathSettings.objects.create()
+    ApplicationSettings.objects.first() or ApplicationSettings.objects.create()
 
-        # Create default application settings if not exists
-        if not session.query(ApplicationSettings).first():
-            app_settings = ApplicationSettings()
-            session.add(app_settings)
+    llm_settings = LLMGeneratorSettings.objects.first()
+    if llm_settings is None:
+        llm_settings = LLMGeneratorSettings.objects.create()
 
-        # Create or update LLM settings with test model path
-        llm_settings = session.query(LLMGeneratorSettings).first()
-        if not llm_settings:
-            llm_settings = LLMGeneratorSettings()
-            session.add(llm_settings)
-
-        # Set model path from environment variable if provided
-        test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
-        if test_model_path:
-            llm_settings.model_path = test_model_path
-            logger.info(f"Test mode: Using model path: {test_model_path}")
-        else:
-            logger.warning(
-                "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
-                "Tests requiring LLM will fail. "
-                "Use pytest --model=/path/to/model or set environment variable."
-            )
-
-        session.commit()
+    test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
+    if test_model_path:
+        LLMGeneratorSettings.objects.update(
+            llm_settings.id,
+            model_path=test_model_path,
+        )
+        logger.info(f"Test mode: Using model path: {test_model_path}")
+    else:
+        logger.warning(
+            "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
+            "Tests requiring LLM will fail. "
+            "Use pytest --model=/path/to/model or set environment variable."
+        )
 
 
 def _check_first_run_agreement():
@@ -486,15 +473,6 @@ def main():
         time.perf_counter() - build_ui_started_at,
     )
 
-    # --- Ensure database and tables are created before any DB access ---
-    _update_splash(splash, "Setting up database...")
-    database_started_at = time.perf_counter()
-    setup_database()
-    logger.info(
-        "Startup phase launcher_database_setup completed in %.2fs",
-        time.perf_counter() - database_started_at,
-    )
-
     # --- Configure test mode if running tests ---
     if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
         _configure_test_mode()
@@ -514,7 +492,7 @@ def main():
 
     # --- SSL certificate auto-generation ---
     _update_splash(splash, "Generating SSL certificates...")
-    from airunner_model.models.path_settings import PathSettings
+    from airunner.models.path_settings import PathSettings
 
     path_settings = PathSettings.objects.first()
     if not path_settings:

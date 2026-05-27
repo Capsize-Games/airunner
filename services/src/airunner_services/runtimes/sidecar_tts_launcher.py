@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional
 from urllib.error import URLError
 from urllib.request import urlopen
 
-from airunner_model.runtimes.daemon_config import DaemonConfig
+from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.runtimes.contracts import RuntimeHealthStatus
 from airunner_services.runtimes.tts_daemon_runtime_settings import (
     TTSDaemonRuntimeSettings,

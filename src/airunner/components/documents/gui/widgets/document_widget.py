@@ -2,7 +2,7 @@ import os
 from PySide6.QtCore import Slot, Qt, Signal
 from PySide6.QtWidgets import QMessageBox
 
-from airunner_model.models.document import Document
+from airunner.models.document import Document
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.gui.widgets.templates.document_ui import (
     Ui_document_widget,

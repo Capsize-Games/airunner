@@ -16,7 +16,7 @@ from airunner_services.tools.scrapy.spiders.llm_guided_spider import (
 from airunner_services.tools.scrapy.llm_crawler_controller import (
     LLMCrawlerController,
 )
-from airunner_model.url_safety import (
+from airunner_services.url_safety import (
     SSRFBlocked,
     validate_url_for_fetch,
 )

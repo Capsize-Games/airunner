@@ -1,11 +1,11 @@
-"""Service adapter for the model-owned loading mixin."""
+"""Service-specific loading mixin extensions."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
 
-from airunner_model.model_management.mixins.model_loading_mixin import (
+from airunner_services.model_management.mixins._base_model_loading_mixin import (
     ModelLoadingMixin as _ModelLoadingMixin,
 )
 from airunner_services.contract_enums import SignalCode

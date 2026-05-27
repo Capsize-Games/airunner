@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
-from airunner_model.conversation_history_formatter import (
+from airunner_services.conversation_history_formatter import (
     load_formatted_conversation_history,
 )
 from airunner_services.llm.gpt_oss_parser import (
@@ -113,7 +113,7 @@ class ConversationHistoryManager:
         conversation_id: int,
     ) -> Optional[Dict[str, Any]]:
         """Return one persisted or generated summary for a conversation."""
-        conversation = Conversation.objects.filter_by_first(id=conversation_id)
+        conversation = self._conversation_by_id(conversation_id)
         if conversation is None:
             return None
         return {
@@ -121,12 +121,55 @@ class ConversationHistoryManager:
             "summary": self._conversation_summary(conversation),
         }
 
+    def create_conversation(
+        self,
+        max_messages: int = 50,
+    ) -> Dict[str, Any]:
+        """Create one new current conversation and return its session."""
+        conversation = Conversation.create()
+        if conversation is None or getattr(conversation, "id", None) is None:
+            return {
+                "conversation": None,
+                "conversation_id": None,
+                "messages": [],
+            }
+        return self.get_conversation_session(
+            conversation_id=conversation.id,
+            max_messages=max_messages,
+            mark_current=True,
+        )
+
     def delete_conversation(self, conversation_id: int) -> bool:
         """Delete one conversation from persistent storage."""
-        conversation = Conversation.objects.filter_by_first(id=conversation_id)
+        conversation = self._conversation_by_id(conversation_id)
         if conversation is None:
             return False
         Conversation.delete(conversation_id)
+        return True
+
+    def update_conversation_messages(
+        self,
+        conversation_id: int,
+        messages: List[Dict[str, Any]],
+    ) -> bool:
+        """Persist one conversation's messages."""
+        if self._conversation_by_id(conversation_id) is None:
+            return False
+        Conversation.objects.update(pk=conversation_id, value=list(messages))
+        return True
+
+    def update_conversation_user_data(
+        self,
+        conversation_id: int,
+        user_data: Dict[str, Any],
+    ) -> bool:
+        """Persist one conversation's user-data payload."""
+        if self._conversation_by_id(conversation_id) is None:
+            return False
+        Conversation.objects.update(
+            pk=conversation_id,
+            user_data=dict(user_data or {}),
+        )
         return True
 
     def _resolve_conversation(
@@ -135,12 +178,19 @@ class ConversationHistoryManager:
     ) -> Optional[Conversation]:
         """Resolve one conversation by id or current/most-recent fallback."""
         if conversation_id is not None:
-            return Conversation.objects.filter_by_first(id=conversation_id)
+            return self._conversation_by_id(conversation_id)
 
         current = self.get_current_conversation()
         if current is not None:
             return current
         return Conversation.most_recent()
+
+    @staticmethod
+    def _conversation_by_id(
+        conversation_id: int,
+    ) -> Optional[Conversation]:
+        """Return one conversation by primary key."""
+        return Conversation.objects.filter_by_first(id=conversation_id)
 
     def _conversation_payload(
         self,

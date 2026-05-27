@@ -1,4 +1,4 @@
-from airunner_model.models.chatbot import Chatbot
+from airunner.models.chatbot import Chatbot
 from airunner.utils.application.get_logger import get_logger
 
 

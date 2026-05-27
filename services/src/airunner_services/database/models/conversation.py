@@ -21,7 +21,7 @@ from sumy.summarizers.lex_rank import LexRankSummarizer
 
 from airunner_services.database.base import BaseModel
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_model.utils.application.get_logger import get_logger
+from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.database.models.chatbot import Chatbot
 from airunner_services.database.models.summary import Summary
 from airunner_services.database.models.user import User

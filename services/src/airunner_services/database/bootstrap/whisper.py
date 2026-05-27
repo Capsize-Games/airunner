@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from airunner_model.settings import AIRUNNER_DEFAULT_STT_HF_PATH
-from airunner_model.settings import AIRUNNER_DEFAULT_STT_MODEL_FILENAME
+from airunner_services.settings import AIRUNNER_DEFAULT_STT_HF_PATH
+from airunner_services.settings import AIRUNNER_DEFAULT_STT_MODEL_FILENAME
 
 
 WHISPER_FILES = {

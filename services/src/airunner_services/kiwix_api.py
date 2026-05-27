@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 import xml.etree.ElementTree as ET
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_model.url_safety import safe_fetch_url
+from airunner_services.url_safety import safe_fetch_url
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

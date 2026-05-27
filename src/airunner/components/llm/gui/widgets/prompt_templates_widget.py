@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner_model.models.prompt_template import PromptTemplate
+from airunner.models.prompt_template import PromptTemplate
 from airunner.settings import (
     AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,

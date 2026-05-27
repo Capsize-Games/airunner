@@ -72,8 +72,8 @@ from airunner.utils.application.gui_probe import (
 )
 from airunner.utils.application.log_hygiene import summarize_mapping_keys
 from airunner.utils.settings import get_qsettings
-from airunner_model.models.shortcut_keys import ShortcutKeys
-from airunner_model.models.image_filter import ImageFilter
+from airunner.models.shortcut_keys import ShortcutKeys
+from airunner.models.image_filter import ImageFilter
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
@@ -2038,7 +2038,7 @@ class MainWindow(
         """
 
         try:
-            from airunner_model.models.saved_prompt import SavedPrompt
+            from airunner.models.saved_prompt import SavedPrompt
         except Exception as e:
             self.logger.error(f"Failed to import SavedPrompt: {e}")
             return

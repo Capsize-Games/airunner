@@ -14,7 +14,7 @@ from airunner.components.art.utils.canvas_position_manager import (
     ViewState,
 )
 from airunner.components.art.managers.stablediffusion.rect import Rect
-from airunner_model.models.canvas_layer import CanvasLayer
+from airunner.models.canvas_layer import CanvasLayer
 import time
 
 
@@ -301,7 +301,7 @@ class CanvasSceneManagementMixin(MediatorMixin, SettingsMixin):
         have been created for the drawing pad canvas yet.  This
         mirrors the logic in CanvasWidget._create_default_canvas_layer.
         """
-        from airunner_model.models.drawingpad_settings import (
+        from airunner.models.drawingpad_settings import (
             DrawingPadSettings,
         )
 

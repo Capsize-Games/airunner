@@ -9,8 +9,8 @@ import shutil
 from pathlib import Path
 from typing import Iterable
 
-from airunner_model.models.document import Document
-from airunner_model.runtimes.file_policy import (
+from airunner.models.document import Document
+from airunner.runtimes.file_policy import (
     normalize_local_path,
     resolve_existing_file,
 )

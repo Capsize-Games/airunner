@@ -1,8 +1,8 @@
 import os
 import threading
 
-from airunner_model.models.embedding import Embedding
-from airunner_model.models.lora import Lora
+from airunner.models.embedding import Embedding
+from airunner.models.lora import Lora
 
 
 # Thread locks to prevent concurrent scanning

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from airunner_model.models.conversation import Conversation
+from airunner_services.database.models.conversation import Conversation
 
 from agent_eval_support import build_agent_request
 from agent_eval_support import run_agent_eval_case

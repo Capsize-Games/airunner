@@ -32,7 +32,7 @@ from airunner.utils.image import convert_image_to_binary
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner_model.models.application_settings import (
+from airunner.models.application_settings import (
     ApplicationSettings,
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
@@ -46,7 +46,7 @@ from airunner.components.application.gui.dialogs.privacy_consent_dialog import (
 from airunner.components.tts.gui.dialogs.openvoice_language_dialog import (
     OpenVoiceLanguageDialog,
 )
-from airunner_model.bootstrap.openvoice_languages import (
+from airunner.bootstrap.openvoice_languages import (
     OPENVOICE_LANGUAGE_MODELS,
 )
 from airunner.components.tts.workers.tts_vocalizer_worker import (
@@ -67,10 +67,10 @@ from airunner.components.art.workers.image_export_worker import (
 from airunner.components.application.workers.model_scanner_worker import (
     ModelScannerWorker,
 )
-from airunner_model.models.drawingpad_settings import (
+from airunner.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner_model.models.canvas_layer import (
+from airunner.models.canvas_layer import (
     CanvasLayer,
 )
 

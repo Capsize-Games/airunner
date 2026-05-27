@@ -15,21 +15,20 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner_model.session import _get_session
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
-from airunner_model.models.canvas_layer import CanvasLayer
-from airunner_model.models.drawingpad_settings import (
+from airunner.models.canvas_layer import CanvasLayer
+from airunner.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner_model.models.controlnet_settings import (
+from airunner.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner_model.models.image_to_image_settings import (
+from airunner.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner_model.models.outpaint_settings import OutpaintSettings
+from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.dialogs.new_document_dialog import (
     NewDocumentConfig,
     NewDocumentDialog,
@@ -1093,16 +1092,6 @@ class CanvasWidget(BaseWidget):
         self._apply_document_size(document_config)
         self._reset_new_document_view_anchor(document_config)
 
-        # Ensure any previous scoped session state is cleared (e.g. after a
-        # rolled-back transaction). This prevents "Session's transaction has
-        # been rolled back" errors when creating new rows with UNIQUE
-        # constraints (e.g. layer names).
-        try:
-            _get_session().remove()
-        except Exception:
-            # Non-fatal; continue to begin operation regardless
-            pass
-
         self.api.art.canvas.begin_layer_operation("create")
         new_layer = None
         try:
@@ -1194,10 +1183,6 @@ class CanvasWidget(BaseWidget):
         created_layer_ids: List[int] = []
 
         if layers_data:
-            try:
-                _get_session().remove()
-            except Exception:
-                pass
             self.api.art.canvas.begin_layer_operation("create")
             try:
                 indexed_layers = list(enumerate(layers_data))
@@ -1221,10 +1206,6 @@ class CanvasWidget(BaseWidget):
                 self.api.art.canvas.cancel_layer_operation("create")
                 raise
         else:
-            try:
-                _get_session().remove()
-            except Exception:
-                pass
             self.api.art.canvas.begin_layer_operation("create")
             try:
                 default_layer = self._create_default_canvas_layer()
@@ -1394,12 +1375,6 @@ class CanvasWidget(BaseWidget):
         CanvasLayer.objects.delete(layer_id)
 
     def _create_default_canvas_layer(self) -> Optional[CanvasLayer]:
-        # Ensure any previous scoped session state is cleared
-        try:
-            _get_session().remove()
-        except Exception:
-            pass
-
         # Pick a non-conflicting default name (Layer 1, Layer 2, ...)
         base = "Layer"
         index = 1

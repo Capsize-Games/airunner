@@ -328,7 +328,6 @@ def build_extras_require() -> dict[str, list[str]]:
 def build_setup_kwargs(*, package_source_dir: str) -> dict[str, Any]:
     """Return the setuptools metadata for the service package surface."""
     install_requires = [
-        f"airunner-model=={VERSION}",
         FACEHUGGERSHIELD_REQUIREMENT,
         *CORE_REQUIREMENTS,
     ]

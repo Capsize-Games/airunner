@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QLabel, QCheckBox, QProgressBar
-from airunner_model.bootstrap.controlnet_bootstrap_data import (
+from airunner.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
 from airunner.components.downloader.gui.windows.download_wizard.download_thread import DownloadThread

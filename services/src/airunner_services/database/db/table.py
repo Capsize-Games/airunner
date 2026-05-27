@@ -7,8 +7,8 @@ from typing import Optional
 from alembic import op
 import sqlalchemy as sa
 
-from airunner_model.settings import AIRUNNER_LOG_LEVEL
-from airunner_model.utils.application import get_logger
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.utils.application import get_logger
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)

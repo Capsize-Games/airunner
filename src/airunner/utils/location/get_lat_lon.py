@@ -12,7 +12,7 @@ from typing import Optional, Any, Dict
 
 import pandas as pd
 
-from airunner_model.models.path_settings import PathSettings
+from airunner.models.path_settings import PathSettings
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 

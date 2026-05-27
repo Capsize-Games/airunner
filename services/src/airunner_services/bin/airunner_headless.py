@@ -409,7 +409,7 @@ def _service_description(
 
 def _prepare_daemon_config(args: argparse.Namespace, port: int) -> Path:
     """Clone daemon config with per-invocation host and port overrides."""
-    from airunner_model.runtimes.daemon_config import DaemonConfig
+    from airunner_services.runtimes.daemon_config import DaemonConfig
     from airunner_services.config.runtime_layout import (
         build_runtime_directory_layout,
     )

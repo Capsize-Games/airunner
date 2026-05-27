@@ -40,7 +40,12 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.utils.application.logging_utils import configure_headless_logging
 from airunner.daemon_client import GuiDaemonClient
+from airunner.daemon_client.gui_state_manager import GuiStateBaseManager
+from airunner.base import set_objects_factory
 # Runtime registry now managed by daemon; import removed
+
+
+set_objects_factory(GuiStateBaseManager)
 
 
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1

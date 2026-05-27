@@ -2,7 +2,7 @@ from typing import List, Type, Optional, Dict, Any
 
 
 from airunner.components.application.data import table_to_class
-from airunner_model.models.chatbot import Chatbot
+from airunner.models.chatbot import Chatbot
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 

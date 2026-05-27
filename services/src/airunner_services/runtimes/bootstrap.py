@@ -3,17 +3,17 @@
 import os
 from typing import Any, Optional
 
-from airunner_model.runtimes.registry import RuntimeRegistry
-from airunner_model.runtimes.sidecar_art_client import (
+from airunner_services.runtimes.registry import RuntimeRegistry
+from airunner_services.runtimes.sidecar_art_client import (
     register_sidecar_art_client,
 )
-from airunner_model.runtimes.sidecar_llm_client import (
+from airunner_services.runtimes.sidecar_llm_client import (
     register_sidecar_llm_client,
 )
-from airunner_model.runtimes.sidecar_stt_client import (
+from airunner_services.runtimes.sidecar_stt_client import (
     register_sidecar_stt_client,
 )
-from airunner_model.runtimes.sidecar_tts_client import (
+from airunner_services.runtimes.sidecar_tts_client import (
     register_sidecar_tts_client,
 )
 from airunner_services.runtimes.local_fallback import (

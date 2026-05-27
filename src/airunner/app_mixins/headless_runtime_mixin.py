@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 from PySide6.QtCore import QCoreApplication
 
-from airunner_model.session import session_scope
 from airunner.components.knowledge import get_knowledge_base
-from airunner_model.models.application_settings import (
+from airunner.models.application_settings import (
     ApplicationSettings,
 )
 # CoreLifecycleService moved to services package; headless mode removed from GUI
@@ -286,49 +285,36 @@ class HeadlessRuntimeMixin:
     def _run_knowledge_migration_if_needed(self):
         """Run one-time migration from JSON to markdown if needed."""
         try:
-            with session_scope() as session:
-                settings = (
-                    session.query(ApplicationSettings)
-                    .filter_by(id=1)
-                    .with_for_update()
-                    .first()
+            settings = ApplicationSettings.objects.filter_by_first(id=1)
+            if not settings:
+                self.logger.info("Creating default application settings")
+                settings = ApplicationSettings.objects.create(
+                    id=1,
+                    knowledge_migrated=False,
                 )
 
-                if not settings:
-                    self.logger.info("Creating default application settings")
-                    settings = ApplicationSettings(
-                        id=1,
-                        knowledge_migrated=False,
-                    )
-                    session.add(settings)
-                    session.commit()
-                    settings = (
-                        session.query(ApplicationSettings)
-                        .filter_by(id=1)
-                        .with_for_update()
-                        .first()
-                    )
+            if settings.knowledge_migrated:
+                self.logger.debug(
+                    "Knowledge migration already completed"
+                )
+                return
 
-                if settings.knowledge_migrated:
-                    self.logger.debug(
-                        "Knowledge migration already completed"
-                    )
-                    return
-
-                knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
-                json_path = knowledge_dir / "user_facts.json"
-                if not json_path.exists():
-                    self.logger.info(
-                        "No legacy knowledge data found, skipping migration"
-                    )
-                    settings.knowledge_migrated = True
-                    session.commit()
-                    return
-
+            knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
+            json_path = knowledge_dir / "user_facts.json"
+            if not json_path.exists():
                 self.logger.info(
-                    "Running one-time knowledge migration from JSON to "
-                    "markdown..."
+                    "No legacy knowledge data found, skipping migration"
                 )
+                ApplicationSettings.objects.update(
+                    settings.id,
+                    knowledge_migrated=True,
+                )
+                return
+
+            self.logger.info(
+                "Running one-time knowledge migration from JSON to "
+                "markdown..."
+            )
 
             self._migrate_json_to_markdown(json_path)
             self._mark_migration_complete()
@@ -403,13 +389,17 @@ class HeadlessRuntimeMixin:
     def _mark_migration_complete(self):
         """Mark knowledge migration as complete in settings."""
         try:
-            with session_scope() as session:
-                settings = (
-                    session.query(ApplicationSettings).filter_by(id=1).first()
+            settings = ApplicationSettings.objects.filter_by_first(id=1)
+            if settings is None:
+                ApplicationSettings.objects.create(
+                    id=1,
+                    knowledge_migrated=True,
                 )
-                if settings:
-                    settings.knowledge_migrated = True
-                    session.commit()
+                return
+            ApplicationSettings.objects.update(
+                settings.id,
+                knowledge_migrated=True,
+            )
         except Exception as exc:
             self.logger.error(
                 "Failed to mark migration complete: %s",

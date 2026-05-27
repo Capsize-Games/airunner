@@ -1,7 +1,5 @@
-"""Compatibility wrapper for the model-owned provider config."""
+"""Backward-compatible provider config import surface."""
 
-from importlib import import_module as _import_module
-import sys
+from airunner_services.llm.provider_config import LLMProviderConfig
 
-_module = _import_module("airunner_model.llm.provider_config")
-sys.modules[__name__] = _module
+__all__ = ["LLMProviderConfig"]

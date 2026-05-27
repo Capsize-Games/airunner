@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.sql import text  # Add import for text()
 
-from airunner_model.settings import AIRUNNER_BASE_PATH
+from airunner_services.settings import AIRUNNER_BASE_PATH
 from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.database.db import safe_alter_column
 

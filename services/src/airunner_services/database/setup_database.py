@@ -10,8 +10,8 @@ from pathlib import Path
 from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 
-from airunner_model.settings import AIRUNNER_BASE_PATH
-from airunner_model.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
+from airunner_services.settings import AIRUNNER_BASE_PATH
+from airunner_services.settings import AIRUNNER_DB_URL as DEFAULT_AIRUNNER_DB_URL
 from airunner_services.database.db.engine import create_configured_engine
 
 

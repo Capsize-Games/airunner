@@ -1,37 +1,78 @@
 # This module contains the base API service class for all API services.
 import os
+from typing import Any, Optional
 
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.get_logger import get_logger
 
-# Conditionally import Qt and SettingsMixin only if not in headless mode
+# Conditionally import Qt only if not in headless mode
 _HEADLESS = os.environ.get("AIRUNNER_HEADLESS", "").lower() in ("1", "true", "yes")
 
 if not _HEADLESS:
-    from airunner.components.application.gui.windows.main.settings_mixin import (
-        SettingsMixin,
-    )
-    from PySide6.QtCore import QObject
+    from PySide6.QtCore import QCoreApplication, QObject
 
-    class APIServiceBase(MediatorMixin, SettingsMixin, QObject):
+    class APIServiceBase(MediatorMixin, QObject):
         """Base class for all API services.
 
-        Provides signal-based communication via MediatorMixin and
-        settings access via SettingsMixin.
+        Provides signal-based communication via MediatorMixin and delegates
+        settings/image helper access to the live API singleton.
         """
 
         def __init__(self):
             super().__init__()
             self.logger = get_logger(self.__class__.__module__)
+            self.api = self._resolve_api_reference()
+
+        @staticmethod
+        def _resolve_api_reference() -> Optional[Any]:
+            qt_app = QCoreApplication.instance()
+            if qt_app is not None:
+                api = getattr(qt_app, "api", None)
+                if api is not None:
+                    return api
+            try:
+                from airunner.components.server.api.server import get_api
+
+                return get_api(create_if_missing=False)
+            except Exception:
+                return None
+
+        def __getattr__(self, name: str) -> Any:
+            api = self._resolve_api_reference()
+            if api is not None and hasattr(api, name):
+                self.api = api
+                return getattr(api, name)
+            raise AttributeError(
+                f"{self.__class__.__name__!s} has no attribute {name!r}"
+            )
 else:
     # Headless mode: no Qt dependencies
     class APIServiceBase(MediatorMixin):
         """Base class for all API services (headless mode).
 
-        Provides signal-based communication via MediatorMixin.
-        No Qt dependencies in headless mode.
+        Provides signal-based communication via MediatorMixin and delegates
+        settings/image helper access to the live API singleton.
         """
 
         def __init__(self):
             super().__init__()
             self.logger = get_logger(self.__class__.__module__)
+            self.api = self._resolve_api_reference()
+
+        @staticmethod
+        def _resolve_api_reference() -> Optional[Any]:
+            try:
+                from airunner.components.server.api.server import get_api
+
+                return get_api(create_if_missing=False)
+            except Exception:
+                return None
+
+        def __getattr__(self, name: str) -> Any:
+            api = self._resolve_api_reference()
+            if api is not None and hasattr(api, name):
+                self.api = api
+                return getattr(api, name)
+            raise AttributeError(
+                f"{self.__class__.__name__!s} has no attribute {name!r}"
+            )

@@ -1,26 +1,4 @@
-"""Canonical SQLAlchemy declarative base with lazy objects factory.
-
-The ``objects`` manager on every model subclass is created lazily on
-first access so that the same model definitions work for both the
-real ORM (api) and the HTTP bridge (services / src / GUI).  The
-factory is configured once at startup before any queries are issued.
-
-Usage::
-
-    # service (has direct database access)
-    from airunner_services.database.base_manager import RealBaseManager
-    from airunner_services.database.base import set_objects_factory
-    set_objects_factory(RealBaseManager)
-
-    # services / src (talks to api)
-    from airunner_model.bridge_manager import BridgeBaseManager
-    from airunner_services.database.base import set_objects_factory
-    set_objects_factory(BridgeBaseManager)
-
-Models are defined in ``airunner_services.database.models`` and inherit from
-``BaseModel``.  No changes are needed in individual model files when
-switching between real ORM and bridge mode.
-"""
+"""Canonical SQLAlchemy declarative base with a swappable objects factory."""
 
 from __future__ import annotations
 

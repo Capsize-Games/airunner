@@ -13,7 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from airunner_services.database.base import BaseModel
-from airunner_model.contract_enums import DEFAULT_ART_VERSION, DEFAULT_IMAGE_GENERATOR
+from airunner_services.contract_enums import DEFAULT_ART_VERSION, DEFAULT_IMAGE_GENERATOR
 from airunner_services.settings import (
     AIRUNNER_DEFAULT_SCHEDULER,
     AIRUNNER_SD_DEFAULT_VAE_PATH,

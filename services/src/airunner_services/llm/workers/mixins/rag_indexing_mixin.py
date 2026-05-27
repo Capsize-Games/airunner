@@ -8,7 +8,7 @@ from airunner_services.database.models.document import Document as DBDocument
 from airunner_services.llm.workers.rag_index_status import (
     rag_index_status_tracker,
 )
-from airunner_model.runtimes.file_policy import (
+from airunner_services.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_file,
 )

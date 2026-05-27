@@ -1,21 +1,20 @@
 """Mixin providing layer-specific settings update operations."""
 
 from typing import Any, Dict, Type, Optional
-from airunner_model.session import session_scope
-from airunner_model.models.controlnet_settings import (
+from airunner.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner_model.models.brush_settings import BrushSettings
-from airunner_model.models.image_to_image_settings import (
+from airunner.models.brush_settings import BrushSettings
+from airunner.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner_model.models.outpaint_settings import (
+from airunner.models.outpaint_settings import (
     OutpaintSettings,
 )
-from airunner_model.models.drawingpad_settings import (
+from airunner.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner_model.models.metadata_settings import (
+from airunner.models.metadata_settings import (
     MetadataSettings,
 )
 
@@ -149,7 +148,7 @@ class LayerSettingsUpdateMixin:
         updates: Dict[str, Any],
         layer_id: int,
     ) -> None:
-        """Update layer-specific settings in database.
+        """Update layer-specific settings through the daemon manager.
 
         Args:
             model_class_: SQLAlchemy model class.
@@ -157,85 +156,24 @@ class LayerSettingsUpdateMixin:
             layer_id: Layer ID to update.
         """
         try:
-            with session_scope() as session:
-                setting = self._get_or_create_layer_setting(
-                    session, model_class_, layer_id, updates
+            setting = model_class_.objects.filter_by_first(layer_id=layer_id)
+            if setting is None:
+                created = model_class_.objects.create(
+                    layer_id=layer_id,
+                    **updates,
                 )
-                self._apply_layer_updates(setting, model_class_, updates)
-                session.commit()
-                self._invalidate_layer_cache(model_class_, layer_id)
-                self._notify_layer_updates(model_class_, updates)
+                if created is None:
+                    raise RuntimeError("layer settings create failed")
+            else:
+                model_class_.objects.update(setting.id, **updates)
+
+            self._invalidate_layer_cache(model_class_, layer_id)
+            self._notify_layer_updates(model_class_, updates)
         except Exception as e:
             self.logger.error(
                 f"Failed to update layer-specific settings for "
                 f"{model_class_.__name__} layer {layer_id}: {e}"
             )
-
-    def _get_or_create_layer_setting(
-        self, session, model_class_: Type, layer_id: int, updates: Dict
-    ):
-        """Get or create layer-specific setting.
-
-        Args:
-            session: Database session.
-            model_class_: SQLAlchemy model class.
-            layer_id: Layer ID.
-            updates: Dictionary of updates.
-
-        Returns:
-            Setting instance.
-        """
-        setting = (
-            session.query(model_class_)
-            .filter(model_class_.layer_id == layer_id)
-            .first()
-        )
-
-        if setting is None:
-            setting = self._create_layer_setting(
-                model_class_, layer_id, updates
-            )
-            session.add(setting)
-
-        return setting
-
-    def _create_layer_setting(
-        self, model_class_: Type, layer_id: int, updates: Dict
-    ):
-        """Create new layer-specific setting.
-
-        Args:
-            model_class_: SQLAlchemy model class.
-            layer_id: Layer ID.
-            updates: Initial values.
-
-        Returns:
-            New setting instance.
-        """
-        self.logger.info(
-            f"Creating new layer-specific settings for "
-            f"{model_class_.__name__} layer {layer_id}"
-        )
-        return model_class_(layer_id=layer_id, **updates)
-
-    def _apply_layer_updates(
-        self, setting, model_class_: Type, updates: Dict[str, Any]
-    ) -> None:
-        """Apply updates to layer setting.
-
-        Args:
-            setting: Setting instance.
-            model_class_: SQLAlchemy model class.
-            updates: Dictionary of updates.
-        """
-        for key, value in updates.items():
-            if hasattr(setting, key):
-                setattr(setting, key, value)
-            else:
-                self.logger.warning(
-                    f"Field {key} does not exist on "
-                    f"{model_class_.__name__}"
-                )
 
     def _invalidate_layer_cache(
         self, model_class_: Type, layer_id: int

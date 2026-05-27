@@ -262,8 +262,8 @@ def create_app(
     )
     app.include_router(
         persistence.router,
-        prefix="/api/v1/persistence",
-        tags=["persistence"],
+        prefix="/api/v1/state",
+        tags=["state"],
     )
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
     app.include_router(

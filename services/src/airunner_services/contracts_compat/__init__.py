@@ -1,5 +1,5 @@
-"""Compatibility re-exports from airunner_model.contracts."""
-from airunner_model.contracts import (
+"""Compatibility re-exports from the service runtime contracts."""
+from airunner_services.runtimes.contracts import (
     ArtInvocationRequest,
     ArtInvocationResponse,
     ChatMessage,

@@ -7,7 +7,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
-from airunner_model.models.canvas_layer import CanvasLayer
+from airunner.models.canvas_layer import CanvasLayer
 from airunner.components.art.gui.widgets.canvas.templates.layer_item_ui import (
     Ui_layer_item,
 )

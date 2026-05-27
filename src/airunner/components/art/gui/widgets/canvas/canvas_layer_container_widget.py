@@ -6,13 +6,13 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
-from airunner_model.models.canvas_layer import CanvasLayer
-from airunner_model.models.controlnet_settings import ControlnetSettings
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
-from airunner_model.models.image_to_image_settings import (
+from airunner.models.canvas_layer import CanvasLayer
+from airunner.models.controlnet_settings import ControlnetSettings
+from airunner.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner_model.models.outpaint_settings import OutpaintSettings
+from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.widgets.canvas.layer_item_widget import (
     LayerItemWidget,
 )

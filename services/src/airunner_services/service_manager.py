@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional
 from enum import Enum
 
-from airunner_model.runtimes.runtime_layout import (
+from airunner_services.config.runtime_layout import (
     build_runtime_directory_layout,
 )
 from airunner_native.linux_bundle_layout import build_linux_bundle_layout

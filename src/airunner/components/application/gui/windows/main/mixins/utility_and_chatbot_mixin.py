@@ -2,42 +2,41 @@
 
 import os
 from typing import Optional
-from airunner_model.session import session_scope
-from airunner_model.models.chatbot import Chatbot
-from airunner_model.models.target_files import TargetFiles
-from airunner_model.models.path_settings import PathSettings
-from airunner_model.models.application_settings import (
+from airunner.models.chatbot import Chatbot
+from airunner.models.target_files import TargetFiles
+from airunner.models.path_settings import PathSettings
+from airunner.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_model.models.active_grid_settings import (
+from airunner.models.active_grid_settings import (
     ActiveGridSettings,
 )
-from airunner_model.models.controlnet_settings import (
+from airunner.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner_model.models.image_to_image_settings import (
+from airunner.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner_model.models.outpaint_settings import (
+from airunner.models.outpaint_settings import (
     OutpaintSettings,
 )
-from airunner_model.models.drawingpad_settings import (
+from airunner.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner_model.models.metadata_settings import (
+from airunner.models.metadata_settings import (
     MetadataSettings,
 )
-from airunner_model.models.generator_settings import (
+from airunner.models.generator_settings import (
     GeneratorSettings,
 )
-from airunner_model.models.llm_generator_settings import (
+from airunner.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner_model.models.espeak_settings import EspeakSettings
-from airunner_model.models.stt_settings import STTSettings
-from airunner_model.models.brush_settings import BrushSettings
-from airunner_model.models.grid_settings import GridSettings
-from airunner_model.models.memory_settings import MemorySettings
+from airunner.models.espeak_settings import EspeakSettings
+from airunner.models.stt_settings import STTSettings
+from airunner.models.brush_settings import BrushSettings
+from airunner.models.grid_settings import GridSettings
+from airunner.models.memory_settings import MemorySettings
 from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
     SettingsMixinSharedInstance,
 )
@@ -171,13 +170,7 @@ class UtilityAndChatbotMixin:
         Args:
             model_name_: Model class to set defaults for.
         """
-        with session_scope() as session:
-            default_values = {}
-            for column in model_name_.__table__.columns:
-                if column.default is not None:
-                    default_values[column.name] = column.default.arg
-            session.execute(model_name_.__table__.insert(), [default_values])
-            session.commit()
+        model_name_.objects.create()
 
     def _load_chatbot_with_relationships(
         self, chatbot_id: int

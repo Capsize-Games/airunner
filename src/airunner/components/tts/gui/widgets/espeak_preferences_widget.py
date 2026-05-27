@@ -3,12 +3,12 @@ import pyttsx3
 from airunner.components.tts.gui.widgets.templates.espeak_preferences_ui import (
     Ui_espeak_preferences,
 )
-from airunner_model.bootstrap.espeak_settings_data import (
+from airunner.bootstrap.espeak_settings_data import (
     ESPEAK_SETTINGS_DATA,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 import pycountry
-from airunner_model.models.espeak_settings import EspeakSettings
+from airunner.models.espeak_settings import EspeakSettings
 
 
 class EspeakPreferencesWidget(BaseWidget):

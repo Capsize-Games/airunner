@@ -46,7 +46,7 @@ class Logger:
         if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "0") == "1":
             try:
                 # Import locally to avoid circular dependency
-                from airunner_model.models.path_settings import (
+                from airunner.models.path_settings import (
                     PathSettings,
                 )
 

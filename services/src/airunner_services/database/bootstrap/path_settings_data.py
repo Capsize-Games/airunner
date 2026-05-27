@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from airunner_model.settings import AIRUNNER_ART_ENABLED
+from airunner_services.settings import AIRUNNER_ART_ENABLED
 
 
 PATH_SETTINGS_DATA = {

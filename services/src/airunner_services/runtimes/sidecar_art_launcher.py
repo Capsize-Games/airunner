@@ -14,7 +14,7 @@ from urllib.request import urlopen
 
 from airunner_native.linux_bundle_layout import LinuxBundleLayout
 from airunner_native.linux_bundle_layout import build_linux_bundle_layout
-from airunner_model.runtimes.daemon_config import DaemonConfig
+from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.runtimes.art_daemon_runtime_settings import (
     ArtDaemonRuntimeSettings,
 )

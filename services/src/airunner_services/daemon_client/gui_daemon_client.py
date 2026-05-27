@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 
 import requests
 
-from airunner_model.runtimes.daemon_config import DaemonConfig
+from airunner_services.runtimes.daemon_config import DaemonConfig
 from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.daemon_connection_state import (
     DaemonConnectionState,

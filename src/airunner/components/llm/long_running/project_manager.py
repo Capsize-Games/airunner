@@ -1,29 +1,26 @@
 """Project manager for long-running agent projects.
 
 Handles CRUD operations for projects, features, progress entries,
-and session state. Acts as the persistence layer for the harness.
+and session state through the daemon-backed workspace state API.
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
 from pathlib import Path
-import json
 import subprocess
-
-from sqlalchemy.orm import Session, make_transient
+from typing import Any, Dict, List, Optional
 
 from airunner.components.llm.long_running.data.project_state import (
-    ProjectState,
-    ProjectFeature,
-    ProgressEntry,
-    SessionState,
     DecisionMemory,
-    ProjectStatus,
-    FeatureStatus,
+    DecisionOutcome,
     FeatureCategory,
+    FeatureStatus,
+    ProgressEntry,
+    ProjectFeature,
+    ProjectState,
+    ProjectStatus,
+    SessionState,
     DecisionOutcome,
 )
-from airunner_model.session import session_scope
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
@@ -80,34 +77,23 @@ class ProjectManager:
         """Initialize project manager."""
         self._logger = logger
 
-    def _detach(self, db: Session, obj):
-        """Detach an object from the session so it can be used outside.
-        
-        Args:
-            db: The database session
-            obj: The ORM object to detach
-            
-        Returns:
-            The detached object
-        """
-        if obj is not None:
-            db.expunge(obj)
-            make_transient(obj)
-        return obj
-    
-    def _detach_all(self, db: Session, objects: List):
-        """Detach a list of objects from the session.
-        
-        Args:
-            db: The database session
-            objects: List of ORM objects to detach
-            
-        Returns:
-            List of detached objects
-        """
-        for obj in objects:
-            self._detach(db, obj)
-        return objects
+    @staticmethod
+    def _enum_value(value: Any) -> Any:
+        """Return the comparable primitive for enum-like values."""
+        return getattr(value, "value", value)
+
+    def _matches(self, value: Any, expected: Any) -> bool:
+        """Return True when two enum-like values represent the same state."""
+        return self._enum_value(value) == self._enum_value(expected)
+
+    @staticmethod
+    def _timestamp_key(value: Any) -> str:
+        """Return a stable sort key for datetime-like values."""
+        if value is None:
+            return ""
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+        return str(value)
 
     # =========================================================================
     # Project Operations
@@ -138,41 +124,28 @@ class ProjectManager:
         Raises:
             ValueError: If project with name already exists
         """
-        with session_scope() as db:
-            # Check for existing project
-            existing = (
-                db.query(ProjectState)
-                .filter(ProjectState.name == name)
-                .first()
-            )
-            if existing:
-                raise ValueError(f"Project '{name}' already exists")
+        existing = ProjectState.objects.filter_by_first(name=name)
+        if existing is not None:
+            raise ValueError(f"Project '{name}' already exists")
 
-            # Create working directory if specified
-            if working_directory:
-                work_dir = Path(working_directory)
-                work_dir.mkdir(parents=True, exist_ok=True)
+        git_path = None
+        if working_directory:
+            work_dir = Path(working_directory)
+            work_dir.mkdir(parents=True, exist_ok=True)
+            if init_git:
+                git_path = self._init_git_repo(work_dir)
 
-                # Initialize git if requested
-                git_path = None
-                if init_git:
-                    git_path = self._init_git_repo(work_dir)
-
-            project = ProjectState(
-                name=name,
-                description=description,
-                working_directory=working_directory,
-                git_repo_path=git_path if working_directory and init_git else None,
-                status=ProjectStatus.INITIALIZING,
-                system_prompt=system_prompt,
-                project_metadata=metadata or {},
-            )
-            db.add(project)
-            db.commit()
-            db.refresh(project)
-            
-            self._logger.info(f"Created project '{name}' (ID: {project.id})")
-            return self._detach(db, project)
+        project = ProjectState.objects.create(
+            name=name,
+            description=description,
+            working_directory=working_directory,
+            git_repo_path=git_path if working_directory and init_git else None,
+            status=ProjectStatus.INITIALIZING,
+            system_prompt=system_prompt,
+            project_metadata=metadata or {},
+        )
+        self._logger.info(f"Created project '{name}' (ID: {project.id})")
+        return project
 
     def get_project(self, project_id: int) -> Optional[ProjectState]:
         """Get project by ID.
@@ -183,9 +156,7 @@ class ProjectManager:
         Returns:
             ProjectState or None if not found
         """
-        with session_scope() as db:
-            project = db.query(ProjectState).filter(ProjectState.id == project_id).first()
-            return self._detach(db, project)
+        return ProjectState.objects.get(project_id)
 
     def get_project_by_name(self, name: str) -> Optional[ProjectState]:
         """Get project by name.
@@ -196,13 +167,7 @@ class ProjectManager:
         Returns:
             ProjectState or None if not found
         """
-        with session_scope() as db:
-            project = (
-                db.query(ProjectState)
-                .filter(ProjectState.name == name)
-                .first()
-            )
-            return self._detach(db, project)
+        return ProjectState.objects.filter_by_first(name=name)
 
     def list_projects(
         self, status: Optional[ProjectStatus] = None
@@ -215,12 +180,20 @@ class ProjectManager:
         Returns:
             List of ProjectState instances
         """
-        with session_scope() as db:
-            query = db.query(ProjectState)
-            if status:
-                query = query.filter(ProjectState.status == status)
-            projects = query.order_by(ProjectState.updated_at.desc()).all()
-            return self._detach_all(db, projects)
+        projects = ProjectState.objects.all()
+        if status is not None:
+            projects = [
+                project
+                for project in projects
+                if self._matches(project.status, status)
+            ]
+        return sorted(
+            projects,
+            key=lambda project: self._timestamp_key(
+                getattr(project, "updated_at", None)
+            ),
+            reverse=True,
+        )
 
     def update_project_status(
         self, project_id: int, status: ProjectStatus
@@ -231,15 +204,13 @@ class ProjectManager:
             project_id: Project ID
             status: New status
         """
-        with session_scope() as db:
-            project = db.query(ProjectState).filter(ProjectState.id == project_id).first()
-            if project:
-                project.status = status
-                project.updated_at = datetime.utcnow()
-                db.commit()
-                self._logger.info(
-                    f"Project {project_id} status updated to {status.value}"
-                )
+        project = self.get_project(project_id)
+        if project is None:
+            return
+        if ProjectState.objects.update(project_id, status=status):
+            self._logger.info(
+                f"Project {project_id} status updated to {status.value}"
+            )
 
     def delete_project(self, project_id: int) -> bool:
         """Delete a project and all related data.
@@ -250,12 +221,8 @@ class ProjectManager:
         Returns:
             True if deleted, False if not found
         """
-        with session_scope() as db:
-            project = db.query(ProjectState).filter(ProjectState.id == project_id).first()
-            if not project:
-                return False
-            db.delete(project)
-            db.commit()
+        if not ProjectState.objects.delete(project_id):
+            return False
             self._logger.info(f"Deleted project {project_id}")
             return True
 
@@ -287,29 +254,26 @@ class ProjectManager:
         Returns:
             Created ProjectFeature instance
         """
-        with session_scope() as db:
-            feature = ProjectFeature(
-                project_id=project_id,
-                name=name,
-                description=description,
-                category=category,
-                verification_steps=verification_steps or [],
-                priority=priority,
-                depends_on=depends_on or [],
-                status=FeatureStatus.NOT_STARTED,
+        feature = ProjectFeature.objects.create(
+            project_id=project_id,
+            name=name,
+            description=description,
+            category=category,
+            verification_steps=verification_steps or [],
+            priority=priority,
+            depends_on=depends_on or [],
+            status=FeatureStatus.NOT_STARTED,
+        )
+
+        project = self.get_project(project_id)
+        if project is not None:
+            ProjectState.objects.update(
+                project_id,
+                total_features=(project.total_features or 0) + 1,
             )
-            db.add(feature)
 
-            # Update project feature count
-            project = db.query(ProjectState).filter(ProjectState.id == project_id).first()
-            if project:
-                project.total_features = (project.total_features or 0) + 1
-
-            db.commit()
-            db.refresh(feature)
-
-            self._logger.info(f"Added feature '{name}' to project {project_id}")
-            return self._detach(db, feature)
+        self._logger.info(f"Added feature '{name}' to project {project_id}")
+        return feature
 
     def add_features_bulk(
         self, project_id: int, features: List[Dict[str, Any]]
@@ -330,32 +294,35 @@ class ProjectManager:
             List of created features
         """
         created = []
-        with session_scope() as db:
-            for f in features:
-                feature = ProjectFeature(
+        for feature_data in features:
+            created.append(
+                ProjectFeature.objects.create(
                     project_id=project_id,
-                    name=f["name"],
-                    description=f.get("description", ""),
-                    category=FeatureCategory(f.get("category", "functional")),
-                    verification_steps=f.get("verification_steps", []),
-                    priority=f.get("priority", 5),
-                    depends_on=f.get("depends_on", []),
+                    name=feature_data["name"],
+                    description=feature_data.get("description", ""),
+                    category=FeatureCategory(
+                        feature_data.get("category", "functional")
+                    ),
+                    verification_steps=feature_data.get(
+                        "verification_steps", []
+                    ),
+                    priority=feature_data.get("priority", 5),
+                    depends_on=feature_data.get("depends_on", []),
                     status=FeatureStatus.NOT_STARTED,
                 )
-                db.add(feature)
-                created.append(feature)
+            )
 
-            # Update project feature count
-            project = db.query(ProjectState).filter(ProjectState.id == project_id).first()
-            if project:
-                project.total_features = (project.total_features or 0) + len(features)
+        project = self.get_project(project_id)
+        if project is not None:
+            ProjectState.objects.update(
+                project_id,
+                total_features=(project.total_features or 0) + len(features),
+            )
 
-            db.commit()
-            for f in created:
-                db.refresh(f)
-
-            self._logger.info(f"Added {len(created)} features to project {project_id}")
-            return self._detach_all(db, created)
+        self._logger.info(
+            f"Added {len(created)} features to project {project_id}"
+        )
+        return created
 
     def get_feature(self, feature_id: int) -> Optional[ProjectFeature]:
         """Get feature by ID.
@@ -366,13 +333,7 @@ class ProjectManager:
         Returns:
             ProjectFeature or None
         """
-        with session_scope() as db:
-            feature = (
-                db.query(ProjectFeature)
-                .filter(ProjectFeature.id == feature_id)
-                .first()
-            )
-            return self._detach(db, feature)
+        return ProjectFeature.objects.get(feature_id)
 
     def get_project_features(
         self,
@@ -390,16 +351,24 @@ class ProjectManager:
         Returns:
             List of features
         """
-        with session_scope() as db:
-            query = db.query(ProjectFeature).filter(
-                ProjectFeature.project_id == project_id
-            )
-            if status:
-                query = query.filter(ProjectFeature.status == status)
-            if category:
-                query = query.filter(ProjectFeature.category == category)
-            features = query.order_by(ProjectFeature.priority.desc()).all()
-            return self._detach_all(db, features)
+        features = ProjectFeature.objects.filter_by(project_id=project_id)
+        if status is not None:
+            features = [
+                feature
+                for feature in features
+                if self._matches(feature.status, status)
+            ]
+        if category is not None:
+            features = [
+                feature
+                for feature in features
+                if self._matches(feature.category, category)
+            ]
+        return sorted(
+            features,
+            key=lambda feature: getattr(feature, "priority", 0) or 0,
+            reverse=True,
+        )
 
     def get_next_feature_to_work_on(
         self, project_id: int
@@ -417,55 +386,36 @@ class ProjectManager:
         Returns:
             Next feature to work on, or None if all passing
         """
-        with session_scope() as db:
-            # First check for in-progress features
-            in_progress = (
-                db.query(ProjectFeature)
-                .filter(
-                    ProjectFeature.project_id == project_id,
-                    ProjectFeature.status == FeatureStatus.IN_PROGRESS,
-                )
-                .first()
-            )
-            if in_progress:
-                return self._detach(db, in_progress)
+        all_features = self.get_project_features(project_id)
 
-            # Get all features for dependency checking
-            all_features = (
-                db.query(ProjectFeature)
-                .filter(ProjectFeature.project_id == project_id)
-                .all()
-            )
-            passing_ids = {
-                f.id for f in all_features if f.status == FeatureStatus.PASSING
-            }
+        for feature in all_features:
+            if self._matches(feature.status, FeatureStatus.IN_PROGRESS):
+                return feature
 
-            # Find not-started features with met dependencies
-            not_started = [
-                f
-                for f in all_features
-                if f.status == FeatureStatus.NOT_STARTED
-            ]
-            for feature in sorted(
-                not_started, key=lambda x: x.priority, reverse=True
-            ):
-                # Check dependencies
-                deps = feature.depends_on or []
-                if all(dep_id in passing_ids for dep_id in deps):
-                    return self._detach(db, feature)
+        passing_ids = {
+            feature.id
+            for feature in all_features
+            if self._matches(feature.status, FeatureStatus.PASSING)
+        }
+        not_started = [
+            feature
+            for feature in all_features
+            if self._matches(feature.status, FeatureStatus.NOT_STARTED)
+        ]
+        for feature in not_started:
+            deps = feature.depends_on or []
+            if all(dep_id in passing_ids for dep_id in deps):
+                return feature
 
-            # Fall back to failing features (retry)
-            failing = [
-                f
-                for f in all_features
-                if f.status == FeatureStatus.FAILING
-            ]
-            if failing:
-                # Return the one with fewest attempts
-                feature = min(failing, key=lambda x: x.attempts or 0)
-                return self._detach(db, feature)
+        failing = [
+            feature
+            for feature in all_features
+            if self._matches(feature.status, FeatureStatus.FAILING)
+        ]
+        if failing:
+            return min(failing, key=lambda feature: feature.attempts or 0)
 
-            return None
+        return None
 
     def update_feature_status(
         self,
@@ -480,57 +430,49 @@ class ProjectManager:
             status: New status
             error: Optional error message (for failing status)
         """
-        with session_scope() as db:
-            feature = (
-                db.query(ProjectFeature)
-                .filter(ProjectFeature.id == feature_id)
-                .first()
-            )
-            if not feature:
-                return
+        feature = self.get_feature(feature_id)
+        if feature is None:
+            return
 
-            old_status = feature.status
-            feature.status = status
-            feature.updated_at = datetime.utcnow()
+        old_status = feature.status
+        updates: Dict[str, Any] = {"status": status}
+        if self._matches(status, FeatureStatus.FAILING):
+            updates["attempts"] = (feature.attempts or 0) + 1
+            updates["last_error"] = error
+        elif self._matches(status, FeatureStatus.PASSING):
+            updates["last_error"] = None
 
-            if status == FeatureStatus.FAILING:
-                feature.attempts = (feature.attempts or 0) + 1
-                feature.last_error = error
-            elif status == FeatureStatus.PASSING:
-                feature.last_error = None
+        if not ProjectFeature.objects.update(feature_id, **updates):
+            return
 
-            # Update project passing count
-            project = (
-                db.query(ProjectState)
-                .filter(ProjectState.id == feature.project_id)
-                .first()
-            )
-            if project:
-                if (
-                    old_status != FeatureStatus.PASSING
-                    and status == FeatureStatus.PASSING
-                ):
-                    project.passing_features = (project.passing_features or 0) + 1
-                elif (
-                    old_status == FeatureStatus.PASSING
-                    and status != FeatureStatus.PASSING
-                ):
-                    project.passing_features = max(
-                        0, (project.passing_features or 0) - 1
-                    )
+        project = self.get_project(feature.project_id)
+        if project is not None:
+            passing_features = project.passing_features or 0
+            if (
+                not self._matches(old_status, FeatureStatus.PASSING)
+                and self._matches(status, FeatureStatus.PASSING)
+            ):
+                passing_features += 1
+            elif (
+                self._matches(old_status, FeatureStatus.PASSING)
+                and not self._matches(status, FeatureStatus.PASSING)
+            ):
+                passing_features = max(0, passing_features - 1)
 
-                # Check if all features passing
-                if (
-                    project.passing_features == project.total_features
-                    and project.total_features > 0
-                ):
-                    project.status = ProjectStatus.COMPLETED
-                    self._logger.info(
-                        f"Project {project.id} completed! All features passing."
-                    )
+            project_updates: Dict[str, Any] = {
+                "passing_features": passing_features,
+            }
+            if (
+                passing_features == project.total_features
+                and (project.total_features or 0) > 0
+            ):
+                project_updates["status"] = ProjectStatus.COMPLETED
+                self._logger.info(
+                    f"Project {project.id} completed! All features passing."
+                )
+            ProjectState.objects.update(project.id, **project_updates)
 
-            db.commit()
-            self._logger.info(f"Feature {feature_id} status: {status.value}")
+        self._logger.info(f"Feature {feature_id} status: {status.value}")
 
     # =========================================================================
     # Session Operations
@@ -552,43 +494,34 @@ class ProjectManager:
         Returns:
             Created SessionState
         """
-        with session_scope() as db:
-            # Auto-select feature if not specified
-            if feature_id is None:
-                feature = self.get_next_feature_to_work_on(project_id)
-                feature_id = feature.id if feature else None
+        if feature_id is None:
+            feature = self.get_next_feature_to_work_on(project_id)
+            feature_id = feature.id if feature else None
 
-            # Mark feature as in-progress
-            if feature_id:
-                feat = (
-                    db.query(ProjectFeature)
-                    .filter(ProjectFeature.id == feature_id)
-                    .first()
-                )
-                if feat:
-                    feat.status = FeatureStatus.IN_PROGRESS
-
-            session = SessionState(
-                project_id=project_id,
-                feature_id=feature_id,
-                context_snapshot=context_snapshot or {},
-                started_at=datetime.utcnow(),
+        if feature_id is not None:
+            ProjectFeature.objects.update(
+                feature_id,
+                status=FeatureStatus.IN_PROGRESS,
             )
-            db.add(session)
 
-            # Update project current feature
-            project = db.query(ProjectState).filter(ProjectState.id == project_id).first()
-            if project:
-                project.current_feature_id = feature_id
+        session = SessionState.objects.create(
+            project_id=project_id,
+            feature_id=feature_id,
+            context_snapshot=context_snapshot or {},
+        )
 
-            db.commit()
-            db.refresh(session)
-
-            self._logger.info(
-                f"Started session {session.id} for project {project_id}, "
-                f"feature {feature_id}"
+        project = self.get_project(project_id)
+        if project is not None:
+            ProjectState.objects.update(
+                project_id,
+                current_feature_id=feature_id,
             )
-            return self._detach(db, session)
+
+        self._logger.info(
+            f"Started session {session.id} for project {project_id}, "
+            f"feature {feature_id}"
+        )
+        return session
 
     def end_session(
         self,
@@ -607,23 +540,19 @@ class ProjectManager:
             error: Error that caused session to end
             tokens_consumed: Total tokens used
         """
-        with session_scope() as db:
-            session = (
-                db.query(SessionState)
-                .filter(SessionState.id == session_id)
-                .first()
-            )
-            if not session:
-                return
+        session = SessionState.objects.get(session_id)
+        if session is None:
+            return
 
-            session.ended_at = datetime.utcnow()
-            session.working_memory = working_memory or {}
-            session.next_recommended_action = next_action
-            session.error_state = error
-            session.tokens_consumed = tokens_consumed
-
-            db.commit()
-            self._logger.info(f"Ended session {session_id}")
+        SessionState.objects.update(
+            session_id,
+            ended_at=datetime.utcnow().isoformat(),
+            working_memory=working_memory or {},
+            next_recommended_action=next_action,
+            error_state=error,
+            tokens_consumed=tokens_consumed,
+        )
+        self._logger.info(f"Ended session {session_id}")
 
     def get_last_session(self, project_id: int) -> Optional[SessionState]:
         """Get the most recent session for a project.
@@ -634,14 +563,15 @@ class ProjectManager:
         Returns:
             Most recent SessionState or None
         """
-        with session_scope() as db:
-            session = (
-                db.query(SessionState)
-                .filter(SessionState.project_id == project_id)
-                .order_by(SessionState.started_at.desc())
-                .first()
-            )
-            return self._detach(db, session)
+        sessions = SessionState.objects.filter_by(project_id=project_id)
+        if not sessions:
+            return None
+        return max(
+            sessions,
+            key=lambda session: self._timestamp_key(
+                getattr(session, "started_at", None)
+            ),
+        )
 
     # =========================================================================
     # Progress Logging
@@ -673,38 +603,29 @@ class ProjectManager:
         Returns:
             Created ProgressEntry
         """
-        with session_scope() as db:
-            # Get git commit hash if committing
-            commit_hash = None
-            if git_commit:
-                project = (
-                    db.query(ProjectState)
-                    .filter(ProjectState.id == project_id)
-                    .first()
+        commit_hash = None
+        if git_commit:
+            project = self.get_project(project_id)
+            if project and project.git_repo_path:
+                commit_hash = self._git_commit(
+                    project.git_repo_path,
+                    f"{action}\n\n{outcome}",
+                    files_changed or [],
                 )
-                if project and project.git_repo_path:
-                    commit_hash = self._git_commit(
-                        project.git_repo_path,
-                        f"{action}\n\n{outcome}",
-                        files_changed or [],
-                    )
 
-            entry = ProgressEntry(
-                project_id=project_id,
-                session_id=session_id,
-                feature_id=feature_id,
-                action=action,
-                outcome=outcome,
-                files_changed=files_changed or [],
-                git_commit_hash=commit_hash,
-                tokens_used=tokens_used,
-            )
-            db.add(entry)
-            db.commit()
-            db.refresh(entry)
+        entry = ProgressEntry.objects.create(
+            project_id=project_id,
+            session_id=session_id,
+            feature_id=feature_id,
+            action=action,
+            outcome=outcome,
+            files_changed=files_changed or [],
+            git_commit_hash=commit_hash,
+            tokens_used=tokens_used,
+        )
 
-            self._logger.info(f"Logged progress: {action}")
-            return self._detach(db, entry)
+        self._logger.info(f"Logged progress: {action}")
+        return entry
 
     def get_progress_log(
         self, project_id: int, limit: int = 20
@@ -718,15 +639,15 @@ class ProjectManager:
         Returns:
             List of ProgressEntry instances
         """
-        with session_scope() as db:
-            entries = (
-                db.query(ProgressEntry)
-                .filter(ProgressEntry.project_id == project_id)
-                .order_by(ProgressEntry.timestamp.desc())
-                .limit(limit)
-                .all()
-            )
-            return self._detach_all(db, entries)
+        entries = ProgressEntry.objects.filter_by(project_id=project_id)
+        entries = sorted(
+            entries,
+            key=lambda entry: self._timestamp_key(
+                getattr(entry, "timestamp", None)
+            ),
+            reverse=True,
+        )
+        return entries[:limit]
 
     def get_progress_as_text(self, project_id: int, limit: int = 20) -> str:
         """Get progress log as human-readable text.
@@ -775,24 +696,20 @@ class ProjectManager:
         Returns:
             Created DecisionMemory
         """
-        with session_scope() as db:
-            memory = DecisionMemory(
-                project_id=project_id,
-                feature_id=feature_id,
-                decision_context=context,
-                decision_made=decision,
-                reasoning=reasoning,
-                tags=tags or [],
-            )
-            db.add(memory)
-            db.commit()
-            db.refresh(memory)
+        memory = DecisionMemory.objects.create(
+            project_id=project_id,
+            feature_id=feature_id,
+            decision_context=context,
+            decision_made=decision,
+            reasoning=reasoning,
+            tags=tags or [],
+        )
 
-            self._logger.info(
-                "Recorded decision (%s)",
-                summarize_text(decision, label="decision"),
-            )
-            return self._detach(db, memory)
+        self._logger.info(
+            "Recorded decision (%s)",
+            summarize_text(decision, label="decision"),
+        )
+        return memory
 
     def update_decision_outcome(
         self,
@@ -809,17 +726,14 @@ class ProjectManager:
             score: -1.0 to 1.0 success score
             lesson: What was learned
         """
-        with session_scope() as db:
-            memory = (
-                db.query(DecisionMemory)
-                .filter(DecisionMemory.id == decision_id)
-                .first()
-            )
-            if memory:
-                memory.outcome = outcome
-                memory.outcome_score = max(-1.0, min(1.0, score))
-                memory.lesson_learned = lesson
-                db.commit()
+        if DecisionMemory.objects.get(decision_id) is None:
+            return
+        DecisionMemory.objects.update(
+            decision_id,
+            outcome=outcome,
+            outcome_score=max(-1.0, min(1.0, score)),
+            lesson_learned=lesson,
+        )
 
     def get_relevant_decisions(
         self,
@@ -837,19 +751,23 @@ class ProjectManager:
         Returns:
             List of relevant decisions
         """
-        with session_scope() as db:
-            query = db.query(DecisionMemory).filter(
-                DecisionMemory.project_id == project_id
-            )
+        decisions = DecisionMemory.objects.filter_by(project_id=project_id)
+        if tags:
+            tag_set = set(tags)
+            decisions = [
+                decision
+                for decision in decisions
+                if tag_set.intersection(set(decision.tags or []))
+            ]
 
-            # Note: Full-text tag search would require more complex query
-            # For now, return recent decisions
-            decisions = (
-                query.order_by(DecisionMemory.timestamp.desc())
-                .limit(limit)
-                .all()
-            )
-            return self._detach_all(db, decisions)
+        decisions = sorted(
+            decisions,
+            key=lambda decision: self._timestamp_key(
+                getattr(decision, "timestamp", None)
+            ),
+            reverse=True,
+        )
+        return decisions[:limit]
 
     # =========================================================================
     # Git Operations

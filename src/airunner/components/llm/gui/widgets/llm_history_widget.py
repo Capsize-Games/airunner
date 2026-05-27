@@ -1,7 +1,9 @@
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner_model.models.conversation import Conversation
+from airunner.components.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
 from airunner.components.llm.gui.widgets.llm_history_item_widget import (
     LLMHistoryItemWidget,
 )
@@ -16,6 +18,9 @@ class LLMHistoryWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         """Initialize the lazily rendered history sidebar widget."""
         super(LLMHistoryWidget, self).__init__(*args, **kwargs)
+        self._conversation_history_manager = ConversationHistoryManager(
+            getattr(self.api, "daemon_client", None)
+        )
         self.spacer = QSpacerItem(
             20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
@@ -43,10 +48,7 @@ class LLMHistoryWidget(BaseWidget):
 
     def _ordered_conversations(self):
         """Return conversations sorted newest-first for display."""
-        conversations = Conversation.objects.filter(Conversation.id >= 1)
-        if not conversations:
-            return []
-        return sorted(conversations, key=lambda item: item.id, reverse=True)
+        return self._conversation_history_manager.list_conversations(limit=0)
 
     def _conversation_snapshot(self, conversations):
         """Return a cheap fingerprint for the visible conversation rows."""
@@ -75,7 +77,8 @@ class LLMHistoryWidget(BaseWidget):
         )
         for row, conversation in enumerate(conversations):
             llm_history_item_widget = LLMHistoryItemWidget(
-                conversation=conversation
+                conversation=conversation,
+                conversation_history_manager=self._conversation_history_manager,
             )
             layout.addWidget(llm_history_item_widget, row, 0, 1, 1)
         layout.addItem(self.spacer, len(conversations), 0, 1, 1)

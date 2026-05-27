@@ -1,20 +1,82 @@
-"""Generic persistence routes for the GUI compatibility bridge."""
+"""Domain-scoped state routes for daemon-backed GUI persistence."""
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import DateTime
 from sqlalchemy.inspection import inspect as sqlalchemy_inspect
 from sqlalchemy.orm import Query, subqueryload
 
-from airunner_services.application_data import classes as model_classes
+from airunner_services.database import models as database_models
 from airunner_services.database.session import session_scope
 
 
 router = APIRouter()
-_MODEL_BY_NAME = {model_cls.__name__: model_cls for model_cls in model_classes}
+_DOMAIN_MODELS = {
+    "settings": {
+        "AIRunnerSettings",
+        "ActiveGridSettings",
+        "ApplicationSettings",
+        "BrushSettings",
+        "CanvasLayer",
+        "Chatbot",
+        "ControlnetSettings",
+        "DrawingPadSettings",
+        "EspeakSettings",
+        "FontSetting",
+        "GeneratorSettings",
+        "GridSettings",
+        "ImageToImageSettings",
+        "LanguageSettings",
+        "LLMGeneratorSettings",
+        "MemorySettings",
+        "MetadataSettings",
+        "OpenVoiceSettings",
+        "OutpaintSettings",
+        "PathSettings",
+        "PromptTemplate",
+        "RAGSettings",
+        "SavedPrompt",
+        "ShortcutKeys",
+        "SoundSettings",
+        "STTSettings",
+        "TargetDirectories",
+        "TargetFiles",
+        "User",
+        "VoiceSettings",
+        "WhisperSettings",
+    },
+    "catalog": {
+        "AIModels",
+        "ControlnetModel",
+        "Embedding",
+        "FineTunedModel",
+        "ImageFilter",
+        "ImageFilterValue",
+        "Lora",
+        "PipelineModel",
+        "Schedulers",
+    },
+    "library": {"Document", "ZimFile"},
+    "workspace": {
+        "AgentConfig",
+        "DecisionMemory",
+        "LLMTool",
+        "ProgressEntry",
+        "ProjectFeature",
+        "ProjectState",
+        "SessionState",
+    },
+}
+_MODEL_BY_NAME = {
+    model_name: getattr(database_models, model_name)
+    for model_names in _DOMAIN_MODELS.values()
+    for model_name in model_names
+}
 
 
 class QueryCondition(BaseModel):
@@ -56,8 +118,10 @@ class PersistenceResponse(BaseModel):
     created: Optional[bool] = None
 
 
-def _model_class(model_name: str):
-    """Return one registered service model class."""
+def _model_class(domain: str, model_name: str):
+    """Return one registered service model class for a state domain."""
+    if model_name not in _DOMAIN_MODELS.get(domain, set()):
+        raise HTTPException(status_code=404, detail="Model not found")
     model_cls = _MODEL_BY_NAME.get(model_name)
     if model_cls is None:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -98,6 +162,29 @@ def _serialize_record(
     return payload
 
 
+def _normalized_values(
+    model_cls: type[Any],
+    values: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Convert serialized payload values into ORM-ready Python values."""
+    mapper = sqlalchemy_inspect(model_cls).mapper
+    column_types = {
+        column.key: column.columns[0].type
+        for column in mapper.column_attrs
+    }
+    normalized: Dict[str, Any] = {}
+    for key, value in values.items():
+        column_type = column_types.get(key)
+        if isinstance(value, str) and isinstance(column_type, DateTime):
+            try:
+                normalized[key] = datetime.fromisoformat(value)
+                continue
+            except ValueError:
+                pass
+        normalized[key] = value
+    return normalized
+
+
 def _apply_eager_load(
     query: Query,
     model_cls: type[Any],
@@ -131,11 +218,19 @@ def _apply_expressions(
             query = query.filter(column == value)
         elif operator == "ne":
             query = query.filter(column != value)
+        elif operator == "ge":
+            query = query.filter(column >= value)
+        elif operator == "gt":
+            query = query.filter(column > value)
+        elif operator == "le":
+            query = query.filter(column <= value)
+        elif operator == "lt":
+            query = query.filter(column < value)
         elif operator == "in":
             query = query.filter(column.in_(value or []))
-        elif operator == "is":
+        elif operator in ("is", "is_"):
             query = query.filter(column.is_(value))
-        elif operator == "is_not":
+        elif operator in ("is_not", "isnot"):
             query = query.filter(column.is_not(value))
         else:
             raise HTTPException(
@@ -203,7 +298,7 @@ def _create_record(
 ) -> PersistenceResponse:
     """Create one service-owned ORM record."""
     with session_scope() as session:
-        result = model_cls(**body.values)
+        result = model_cls(**_normalized_values(model_cls, body.values))
         session.add(result)
         session.flush()
         session.refresh(result)
@@ -228,7 +323,7 @@ def _get_or_create_record(
                 created=False,
             )
 
-        create_values = dict(body.defaults)
+        create_values = _normalized_values(model_cls, body.defaults)
         create_values.update(body.filters)
         result = model_cls(**create_values)
         session.add(result)
@@ -246,7 +341,9 @@ def _merge_record(
 ) -> PersistenceResponse:
     """Merge one detached ORM record into the service session."""
     with session_scope() as session:
-        result = session.merge(model_cls(**body.values))
+        result = session.merge(
+            model_cls(**_normalized_values(model_cls, body.values))
+        )
         session.flush()
         session.refresh(result)
         return PersistenceResponse(record=_serialize_record(result))
@@ -266,7 +363,7 @@ def _update_record(
         if result is None:
             return PersistenceResponse(success=False)
 
-        for key, value in body.values.items():
+        for key, value in _normalized_values(model_cls, body.values).items():
             setattr(result, key, value)
         session.add(result)
         session.flush()
@@ -279,10 +376,11 @@ def _update_by(
 ) -> PersistenceResponse:
     """Bulk-update records matching one filter dict."""
     with session_scope() as session:
+        values = _normalized_values(model_cls, body.values)
         count = (
             session.query(model_cls)
             .filter_by(**body.filters)
-            .update(body.values, synchronize_session=False)
+            .update(values, synchronize_session=False)
         )
         return PersistenceResponse(success=bool(count), count=int(count or 0))
 
@@ -312,13 +410,14 @@ def _delete_all(model_cls: type[Any]) -> PersistenceResponse:
         return PersistenceResponse(success=True, count=int(count or 0))
 
 
-@router.post("/models/{model_name}", response_model=PersistenceResponse)
-def execute_persistence_operation(
+@router.post("/{domain}/{model_name}", response_model=PersistenceResponse)
+def execute_state_operation(
+    domain: str,
     model_name: str,
     body: PersistenceRequest,
 ) -> PersistenceResponse:
-    """Execute one generic persistence operation on one service model."""
-    model_cls = _model_class(model_name)
+    """Execute one state operation on one service-owned domain model."""
+    model_cls = _model_class(domain, model_name)
     operation = body.operation.lower().strip()
 
     if operation == "query":

@@ -1,12 +1,12 @@
 from typing import Any, Dict, List
 from airunner.components.application.api.api_service_base import APIServiceBase
-from airunner_model.models.canvas_layer import CanvasLayer
-from airunner_model.models.controlnet_settings import ControlnetSettings
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
-from airunner_model.models.image_to_image_settings import (
+from airunner.models.canvas_layer import CanvasLayer
+from airunner.models.controlnet_settings import ControlnetSettings
+from airunner.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner_model.models.outpaint_settings import OutpaintSettings
+from airunner.models.outpaint_settings import OutpaintSettings
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
@@ -16,7 +16,7 @@ from PySide6.QtCore import QPoint
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
-from airunner_model.models.ai_models import AIModels
+from airunner.models.ai_models import AIModels
 from airunner.enums import SignalCode
 from airunner.utils.image.convert_binary_to_image import (
     convert_binary_to_image,

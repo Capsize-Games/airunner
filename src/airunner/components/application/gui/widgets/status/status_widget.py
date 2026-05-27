@@ -7,7 +7,7 @@ from airunner.components.application.gui.widgets.status.templates.status_ui impo
     Ui_status_widget,
 )
 from airunner.settings import AIRUNNER_ART_ENABLED
-from airunner_model.models.voice_settings import VoiceSettings
+from airunner.models.voice_settings import VoiceSettings
 
 
 class StatusWidget(BaseWidget):

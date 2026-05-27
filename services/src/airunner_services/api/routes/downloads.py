@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
-from airunner_model.url_safety import safe_fetch_bytes
+from airunner_services.url_safety import safe_fetch_bytes
 
 from airunner_services.downloads.service import (
     fetch_civitai_browser_model_info,

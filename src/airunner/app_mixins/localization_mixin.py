@@ -8,10 +8,10 @@ from typing import Dict, Optional
 from PySide6.QtCore import QLocale, QTranslator
 
 from airunner.app_installer import AppInstaller
-from airunner_model.models.application_settings import (
+from airunner.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_model.models.path_settings import PathSettings
+from airunner.models.path_settings import PathSettings
 from airunner.enums import AVAILABLE_LANGUAGES
 from airunner.enums import LANGUAGE_TO_LOCALE_MAP
 from airunner.enums import LOCALE_TO_LANGUAGE_MAP

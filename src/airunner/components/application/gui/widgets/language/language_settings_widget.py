@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtCore import QSignalBlocker
 
-from airunner_model.models.language_settings import LanguageSettings
+from airunner.models.language_settings import LanguageSettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 from airunner.components.application.gui.widgets.language.templates.language_settings_ui import (

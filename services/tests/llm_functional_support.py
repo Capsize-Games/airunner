@@ -26,15 +26,13 @@ _PROJECT_ROOT = _SERVICES_ROOT.parent
 
 for _path in (
     _PROJECT_ROOT / "services" / "src",
-    _PROJECT_ROOT / "model" / "src",
     _PROJECT_ROOT / "native" / "src",
 ):
     _path_str = str(_path)
     if _path_str not in sys.path:
         sys.path.append(_path_str)
 
-
-from airunner_model.llm.provider_config import LLMProviderConfig
+from airunner_services.llm.provider_config import LLMProviderConfig
 from airunner_services.settings import AIRUNNER_BASE_PATH
 
 

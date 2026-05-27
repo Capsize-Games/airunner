@@ -15,8 +15,8 @@ from typing import Any, List, Optional, TypeVar
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Query, joinedload, subqueryload
 
-from airunner_model.settings import AIRUNNER_LOG_LEVEL
-from airunner_model.utils.application.get_logger import get_logger
+from airunner_services.settings import AIRUNNER_LOG_LEVEL
+from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.database.session import session_scope
 
 _T = TypeVar("_T", bound=Any)

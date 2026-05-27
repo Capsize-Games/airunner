@@ -23,10 +23,10 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.utils.application.create_worker import create_worker
-from airunner_model.url_safety import safe_fetch_bytes
+from airunner.url_safety import safe_fetch_bytes
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.data.scan_zimfiles import scan_zimfiles
-from airunner_model.models.zimfile import ZimFile
+from airunner.models.zimfile import ZimFile
 from airunner.components.documents.kiwix_api import KiwixAPI
 
 

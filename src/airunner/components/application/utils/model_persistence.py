@@ -3,7 +3,6 @@
 import os
 from typing import Any, Dict
 
-from airunner_model.session import session_scope
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
@@ -69,28 +68,29 @@ def persist_trigger_words(
         file_type = (file_info.get("type") or "").strip().upper()
         file_name = file_info.get("name", "").lower()
 
-        with session_scope() as session:
-            if model_type_upper == "LORA":
-                _persist_lora_trigger_words(
-                    session, saved_file_path, trigger_words_str, version_data
-                )
-            elif (
-                model_type_upper
-                in ("TEXTUAL EMBEDDING", "EMBEDDING", "TEXTUALINVERSION")
-                or file_type == "EMBEDDING"
-                or file_name.endswith(".pt")
-            ):
-                _persist_embedding_trigger_words(
-                    session, saved_file_path, trigger_words_str, version_data
-                )
-            else:
-                # Persist trigger words for checkpoints / general models
-                _persist_model_trigger_words(
-                    session,
-                    saved_file_path,
-                    trigger_words_str,
-                    version_data,
-                )
+        if model_type_upper == "LORA":
+            _persist_lora_trigger_words(
+                saved_file_path,
+                trigger_words_str,
+                version_data,
+            )
+        elif (
+            model_type_upper
+            in ("TEXTUAL EMBEDDING", "EMBEDDING", "TEXTUALINVERSION")
+            or file_type == "EMBEDDING"
+            or file_name.endswith(".pt")
+        ):
+            _persist_embedding_trigger_words(
+                saved_file_path,
+                trigger_words_str,
+                version_data,
+            )
+        else:
+            _persist_model_trigger_words(
+                saved_file_path,
+                trigger_words_str,
+                version_data,
+            )
 
     except Exception as e:
         logger.error(
@@ -100,20 +100,18 @@ def persist_trigger_words(
 
 
 def _persist_lora_trigger_words(
-    session, file_path: str, trigger_words: str, version_data: Dict[str, Any]
+    file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for a LoRA model."""
-    from airunner_model.models.lora import Lora
+    from airunner.models.lora import Lora
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
 
     # Try to find existing LoRA by path or name
-    existing_lora = (
-        session.query(Lora)
-        .filter((Lora.path == file_path) | (Lora.name == name_without_ext))
-        .first()
-    )
+    existing_lora = Lora.objects.filter_by_first(path=file_path)
+    if existing_lora is None:
+        existing_lora = Lora.objects.filter_by_first(name=name_without_ext)
 
     version_str = _extract_base_model_from_path(file_path) or str(
         version_data.get("id", "")
@@ -121,12 +119,15 @@ def _persist_lora_trigger_words(
 
     if existing_lora:
         logger.debug(f"Updating existing LoRA: {existing_lora.name}")
-        existing_lora.trigger_word = trigger_words
-        existing_lora.path = file_path  # Update path in case it changed
-        existing_lora.version = version_str
+        Lora.objects.update(
+            existing_lora.id,
+            trigger_word=trigger_words,
+            path=file_path,
+            version=version_str,
+        )
     else:
         logger.debug(f"Creating new LoRA: {name_without_ext}")
-        new_lora = Lora(
+        Lora.objects.create(
             name=name_without_ext,
             path=file_path,
             trigger_word=trigger_words,
@@ -134,27 +135,23 @@ def _persist_lora_trigger_words(
             enabled=False,  # User can enable manually
             scale=0,
         )
-        session.add(new_lora)
 
 
 def _persist_embedding_trigger_words(
-    session, file_path: str, trigger_words: str, version_data: Dict[str, Any]
+    file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for an embedding."""
-    from airunner_model.models.embedding import Embedding
+    from airunner.models.embedding import Embedding
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
 
     # Try to find existing embedding by path or name
-    existing_embedding = (
-        session.query(Embedding)
-        .filter(
-            (Embedding.path == file_path)
-            | (Embedding.name == name_without_ext)
+    existing_embedding = Embedding.objects.filter_by_first(path=file_path)
+    if existing_embedding is None:
+        existing_embedding = Embedding.objects.filter_by_first(
+            name=name_without_ext
         )
-        .first()
-    )
 
     version_str = _extract_base_model_from_path(file_path) or str(
         version_data.get("id", "")
@@ -162,43 +159,43 @@ def _persist_embedding_trigger_words(
 
     if existing_embedding:
         logger.debug(f"Updating existing embedding: {existing_embedding.name}")
-        existing_embedding.trigger_word = trigger_words
-        existing_embedding.path = file_path  # Update path in case it changed
-        existing_embedding.version = version_str
+        Embedding.objects.update(
+            existing_embedding.id,
+            trigger_word=trigger_words,
+            path=file_path,
+            version=version_str,
+        )
     else:
         logger.debug(f"Creating new embedding: {name_without_ext}")
-        new_embedding = Embedding(
+        Embedding.objects.create(
             name=name_without_ext,
             path=file_path,
             trigger_word=trigger_words,
             version=version_str,
             active=False,  # User can activate manually
         )
-        session.add(new_embedding)
 
 
 def _persist_model_trigger_words(
-    session, file_path: str, trigger_words: str, version_data: Dict[str, Any]
+    file_path: str, trigger_words: str, version_data: Dict[str, Any]
 ) -> None:
     """Persist trigger words for a checkpoint/model."""
     # Ensure both ends of the relationship are registered before using AIModels
     # to avoid SQLAlchemy registry resolution errors.
-    from airunner_model.models.generator_settings import (
+    from airunner.models.generator_settings import (
         GeneratorSettings,  # noqa: F401 - imported for side-effect
     )
-    from airunner_model.models.ai_models import AIModels
+    from airunner.models.ai_models import AIModels
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]
 
     # Try to find existing model by path or name
-    existing_model = (
-        session.query(AIModels)
-        .filter(
-            (AIModels.path == file_path) | (AIModels.name == name_without_ext)
+    existing_model = AIModels.objects.filter_by_first(path=file_path)
+    if existing_model is None:
+        existing_model = AIModels.objects.filter_by_first(
+            name=name_without_ext
         )
-        .first()
-    )
 
     version_str = _extract_base_model_from_path(file_path) or str(
         version_data.get("id", "")
@@ -206,13 +203,15 @@ def _persist_model_trigger_words(
 
     if existing_model:
         logger.debug(f"Updating existing model: {existing_model.name}")
-        existing_model.trigger_words = trigger_words
-        existing_model.path = file_path  # Update path in case it changed
-        existing_model.version = version_str
+        AIModels.objects.update(
+            existing_model.id,
+            trigger_words=trigger_words,
+            path=file_path,
+            version=version_str,
+        )
     else:
         logger.debug(f"Creating new model: {name_without_ext}")
-        # Note: AIModels has more required fields, so we provide reasonable defaults
-        new_model = AIModels(
+        AIModels.objects.create(
             name=name_without_ext,
             path=file_path,
             trigger_words=trigger_words,
@@ -223,4 +222,3 @@ def _persist_model_trigger_words(
             model_type="checkpoint",  # Default type
             enabled=False,  # User can enable manually
         )
-        session.add(new_model)

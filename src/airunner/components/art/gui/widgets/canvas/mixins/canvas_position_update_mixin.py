@@ -2,7 +2,7 @@
 
 from typing import Optional, Dict
 from PySide6.QtCore import QPointF
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.utils.canvas_position_manager import CanvasPositionManager, ViewState
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (

@@ -29,7 +29,6 @@ from airunner_native.settings import AIRUNNER_BASE_PATH
 from airunner_native.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 from airunner_native.settings import AIRUNNER_LOG_LEVEL
 from airunner_native.settings import LOCAL_SERVER_HOST
-from airunner_model.setup_database import setup_database
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.logging_utils import (
     configure_noisy_loggers,
@@ -475,7 +474,6 @@ def _configure_test_mode():
     1. Creates default settings if they don't exist
     2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
     """
-    from airunner.components.data.session_manager import _get_session
     from airunner.components.llm.data.llm_generator_settings import (
         LLMGeneratorSettings,
     )
@@ -484,37 +482,26 @@ def _configure_test_mode():
     )
     from airunner.components.settings.data.path_settings import PathSettings
 
-    Session = _get_session()
-    with Session() as session:
-        # Create default path settings if not exists
-        if not session.query(PathSettings).first():
-            path_settings = PathSettings()
-            session.add(path_settings)
+    PathSettings.objects.first() or PathSettings.objects.create()
+    ApplicationSettings.objects.first() or ApplicationSettings.objects.create()
 
-        # Create default application settings if not exists
-        if not session.query(ApplicationSettings).first():
-            app_settings = ApplicationSettings()
-            session.add(app_settings)
+    llm_settings = LLMGeneratorSettings.objects.first()
+    if llm_settings is None:
+        llm_settings = LLMGeneratorSettings.objects.create()
 
-        # Create or update LLM settings with test model path
-        llm_settings = session.query(LLMGeneratorSettings).first()
-        if not llm_settings:
-            llm_settings = LLMGeneratorSettings()
-            session.add(llm_settings)
-
-        # Set model path from environment variable if provided
-        test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
-        if test_model_path:
-            llm_settings.model_path = test_model_path
-            logger.info(f"Test mode: Using model path: {test_model_path}")
-        else:
-            logger.warning(
-                "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
-                "Tests requiring LLM will fail. "
-                "Use pytest --model=/path/to/model or set environment variable."
-            )
-
-        session.commit()
+    test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
+    if test_model_path:
+        LLMGeneratorSettings.objects.update(
+            llm_settings.id,
+            model_path=test_model_path,
+        )
+        logger.info(f"Test mode: Using model path: {test_model_path}")
+    else:
+        logger.warning(
+            "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
+            "Tests requiring LLM will fail. "
+            "Use pytest --model=/path/to/model or set environment variable."
+        )
 
 
 def _check_first_run_agreement():
@@ -640,15 +627,6 @@ def _run_desktop_launcher(startup_started_at: float) -> int:
     logger.info(
         "Startup phase build_ui completed in %.2fs",
         time.perf_counter() - build_ui_started_at,
-    )
-
-    # --- Ensure database and tables are created before any DB access ---
-    _update_splash(splash, "Setting up database...")
-    database_started_at = time.perf_counter()
-    setup_database()
-    logger.info(
-        "Startup phase launcher_database_setup completed in %.2fs",
-        time.perf_counter() - database_started_at,
     )
 
     # --- Configure test mode if running tests ---

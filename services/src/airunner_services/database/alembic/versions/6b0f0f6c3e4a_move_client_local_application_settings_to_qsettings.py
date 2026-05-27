@@ -15,7 +15,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-from airunner_model.settings import AIRUNNER_BASE_PATH
+from airunner_services.settings import AIRUNNER_BASE_PATH
 
 
 revision: str = "6b0f0f6c3e4a"

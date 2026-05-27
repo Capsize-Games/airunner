@@ -1,30 +1,30 @@
 """Mixin providing basic settings update operations."""
 
 from typing import Any, Dict, Type, Optional
-from airunner_model.models.application_settings import (
+from airunner.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_model.models.espeak_settings import EspeakSettings
-from airunner_model.models.grid_settings import GridSettings
-from airunner_model.models.active_grid_settings import (
+from airunner.models.espeak_settings import EspeakSettings
+from airunner.models.grid_settings import GridSettings
+from airunner.models.active_grid_settings import (
     ActiveGridSettings,
 )
-from airunner_model.models.path_settings import PathSettings
-from airunner_model.models.memory_settings import MemorySettings
-from airunner_model.models.llm_generator_settings import (
+from airunner.models.path_settings import PathSettings
+from airunner.models.memory_settings import MemorySettings
+from airunner.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner_model.models.whisper_settings import (
+from airunner.models.whisper_settings import (
     WhisperSettings,
 )
-from airunner_model.models.generator_settings import (
+from airunner.models.generator_settings import (
     GeneratorSettings,
 )
-from airunner_model.models.controlnet_settings import (
+from airunner.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner_model.models.saved_prompt import SavedPrompt
-from airunner_model.models.font_setting import FontSetting
+from airunner.models.saved_prompt import SavedPrompt
+from airunner.models.font_setting import FontSetting
 
 
 class BasicSettingsUpdateMixin:

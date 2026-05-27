@@ -5,7 +5,7 @@ from PySide6.QtCore import QTimer, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton
 
-from airunner_model.models.document import Document
+from airunner.models.document import Document
 from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.components.documents.document_import import (
     import_documents_to_library,

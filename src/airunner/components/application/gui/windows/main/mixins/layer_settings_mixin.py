@@ -2,9 +2,6 @@
 
 from typing import Type, Any, Optional, List, Dict
 
-from sqlalchemy.orm import joinedload
-
-from airunner_model.session import session_scope
 from airunner.components.application.gui.windows.main.settings_model_factory import (
     get_settings_model,
 )
@@ -148,7 +145,7 @@ class LayerSettingsMixin:
         layer_id: int,
         eager_load: Optional[List[str]] = None,
     ) -> Any:
-        """Load layer-specific settings from database.
+        """Load layer-specific settings through the daemon manager.
 
         Args:
             model_class_: SQLAlchemy model class for the settings table.
@@ -159,131 +156,25 @@ class LayerSettingsMixin:
             Instance of the settings model for the specified layer.
         """
         try:
-            with session_scope() as session:
-                query = self._build_layer_query(
-                    session, model_class_, layer_id, eager_load
+            settings_instance = model_class_.objects.filter_by_first(
+                layer_id=layer_id,
+                eager_load=eager_load,
+            )
+            if settings_instance is None:
+                settings_instance = model_class_.objects.create(
+                    layer_id=layer_id,
                 )
-                settings_instance = query.first()
-
                 if settings_instance is None:
-                    settings_instance = self._create_layer_settings(
-                        session, model_class_, layer_id, eager_load
-                    )
-
-                if settings_instance:
-                    self._preload_attributes(settings_instance, model_class_)
-                    session.expunge(settings_instance)
-
-                return settings_instance
-
+                    settings_instance = model_class_(layer_id=layer_id)
+                elif eager_load:
+                    settings_instance = model_class_.objects.filter_by_first(
+                        layer_id=layer_id,
+                        eager_load=eager_load,
+                    ) or settings_instance
+            return settings_instance
         except Exception as e:
             self.logger.error(
                 f"Error loading layer settings for {model_class_.__name__} "
                 f"layer {layer_id}: {e}"
             )
             return model_class_(layer_id=layer_id)
-
-    def _build_layer_query(
-        self,
-        session: Any,
-        model_class_: Type[Any],
-        layer_id: int,
-        eager_load: Optional[List[str]],
-    ) -> Any:
-        """Build SQLAlchemy query for layer-specific settings.
-
-        Args:
-            session: Database session.
-            model_class_: Model class to query.
-            layer_id: Layer ID to filter by.
-            eager_load: Relationships to eager-load.
-
-        Returns:
-            Configured query object.
-        """
-        query = session.query(model_class_).filter(
-            model_class_.layer_id == layer_id
-        )
-
-        if eager_load:
-            for relation in eager_load:
-                query = self._add_eager_load(query, model_class_, relation)
-
-        return query
-
-    def _add_eager_load(
-        self, query: Any, model_class_: Type[Any], relation: str
-    ) -> Any:
-        """Add eager loading for a relationship to query.
-
-        Args:
-            query: Base query object.
-            model_class_: Model class being queried.
-            relation: Relationship name to eager-load.
-
-        Returns:
-            Query with eager loading added.
-        """
-        try:
-            relation_attr = getattr(model_class_, relation, None)
-            if relation_attr is not None:
-                return query.options(joinedload(relation_attr))
-        except Exception as e:
-            self.logger.warning(
-                f"Could not eager load {relation} for "
-                f"{model_class_.__name__}: {e}"
-            )
-        return query
-
-    def _create_layer_settings(
-        self,
-        session: Any,
-        model_class_: Type[Any],
-        layer_id: int,
-        eager_load: Optional[List[str]],
-    ) -> Any:
-        """Create new layer-specific settings instance.
-
-        Args:
-            session: Database session.
-            model_class_: Model class to create instance of.
-            layer_id: Layer ID for new instance.
-            eager_load: Relationships to load after creation.
-
-        Returns:
-            Created settings instance.
-        """
-        self.logger.info(
-            f"Creating new layer settings for {model_class_.__name__} "
-            f"layer {layer_id}"
-        )
-        settings_instance = model_class_(layer_id=layer_id)
-        session.add(settings_instance)
-        session.commit()
-
-        if eager_load:
-            query = self._build_layer_query(
-                session, model_class_, layer_id, eager_load
-            )
-            settings_instance = query.first()
-
-        return settings_instance
-
-    def _preload_attributes(
-        self, instance: Any, model_class_: Type[Any]
-    ) -> None:
-        """Pre-load commonly used attributes before session closes.
-
-        Args:
-            instance: Settings instance to pre-load.
-            model_class_: Model class for logging.
-        """
-        try:
-            for attr in ["x_pos", "y_pos", "strength", "scale"]:
-                if hasattr(instance, attr):
-                    _ = getattr(instance, attr)
-        except Exception as e:
-            self.logger.warning(
-                f"Could not pre-load attributes for "
-                f"{model_class_.__name__}: {e}"
-            )

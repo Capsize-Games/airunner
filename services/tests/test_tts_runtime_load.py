@@ -13,7 +13,6 @@ _PROJECT_ROOT = _SERVICES_ROOT.parent
 
 for _path in (
     _PROJECT_ROOT / "services" / "src",
-    _PROJECT_ROOT / "model" / "src",
     _PROJECT_ROOT / "native" / "src",
 ):
     _path_str = str(_path)
@@ -21,10 +20,10 @@ for _path in (
         sys.path.append(_path_str)
 
 
-from airunner_model.runtimes.registry import RuntimeRegistry, RuntimeRoute
 from airunner_services.contract_enums import ModelStatus
 from airunner_services.runtimes.contracts import RuntimeKind, RuntimeMode
 from airunner_services.runtimes.local_fallback import LocalFallbackTTSClient
+from airunner_services.runtimes.registry import RuntimeRegistry, RuntimeRoute
 
 
 class _FakeTTSWorker:

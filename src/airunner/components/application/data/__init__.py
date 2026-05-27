@@ -1,6 +1,6 @@
-"""Compatibility shim — re-exports canonical models from airunner_model."""
+"""GUI-owned model re-exports."""
 
-import airunner_model.models as _models
+import airunner.models as _models
 
 # Re-export every model class that used to live here.
 for _name in _models.__all__:

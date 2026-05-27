@@ -361,7 +361,7 @@ class RAGPropertiesMixin:
         Returns:
             True if model files exist, False if download was triggered
         """
-        from airunner_model.bootstrap.llm_file_bootstrap_data import (
+        from airunner.bootstrap.llm_file_bootstrap_data import (
             LLM_FILE_BOOTSTRAP_DATA,
         )
         from airunner.enums import SignalCode

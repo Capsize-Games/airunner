@@ -21,9 +21,9 @@ flowchart LR
 
 | Package | Owns | Does not own |
 |---------|------|--------------|
-| `services/` | daemon entry points, FastAPI server, WebSocket endpoints, runtime registry, downloads, persistence, modality orchestration | desktop-only widget behavior and client-local preferences |
-| `model/` | shared runtime contracts, transport-neutral runtime envelopes, settings, ORM models, runtime helpers | transport-specific HTTP route ownership and GUI surfaces |
-| `src/` | desktop app, daemon clients, widgets, GUI workflow surfaces | headless daemon ownership and bundle assembly |
+| `services/` | daemon entry points, FastAPI server, WebSocket endpoints, runtime registry, downloads, persistence, migrations, domain state routes, modality orchestration | desktop-only widget behavior and client-local preferences |
+| `model/` | shared runtime contracts, transport-neutral runtime envelopes, shared model classes, runtime helpers | transport-specific HTTP route ownership, persistence bridges, and GUI surfaces |
+| `src/` | desktop app, daemon clients, widgets, GUI workflow surfaces | headless daemon ownership, local database bootstrap, and bundle assembly |
 | `native/` | launcher, bundle layout, installer-facing tooling, sidecar build integration | modality orchestration and GUI widget logic |
 
 ## Runtime Paths
@@ -32,7 +32,7 @@ flowchart LR
 
 1. `native/` launches the packaged or checkout application.
 2. `src/` renders the GUI and talks to the daemon through the service-owned HTTP or WebSocket API surface.
-3. `services/` owns the headless daemon and runtime routing.
+3. `services/` owns the headless daemon, runtime routing, and service-backed state operations such as `/api/v1/state/<domain>/<ModelName>`.
 4. `model/` supplies shared contracts and runtime settings.
 5. Native sidecars such as `llama.cpp` and `whisper.cpp` are supervised
    from the daemon path.
@@ -58,6 +58,8 @@ The split is real, but not fully complete yet.
 - Some runtime helpers still straddle `services/` and `model/`.
 - GUI-to-daemon handoff code remains in `src/` while transport-neutral
    runtime contracts continue to consolidate under `model/`.
+- The old generic model bridge and GUI-side database bootstrap have been
+   removed in favor of domain-scoped daemon state clients.
 
 That transitional state is acceptable as long as new work respects the
 target boundaries above rather than moving more ownership back into the

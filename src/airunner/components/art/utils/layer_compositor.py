@@ -8,8 +8,8 @@ the active grid area) for AI generation operations like img2img, inpaint, and ou
 from typing import List, Optional, Tuple, Any
 from PIL import Image
 
-from airunner_model.models.canvas_layer import CanvasLayer
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.canvas_layer import CanvasLayer
+from airunner.models.drawingpad_settings import DrawingPadSettings
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.image import convert_binary_to_image
@@ -208,10 +208,10 @@ class LayerCompositor:
         # Try to use region-based composition with active grid area
         if use_active_grid_region:
             try:
-                from airunner_model.models.active_grid_settings import (
+                from airunner.models.active_grid_settings import (
                     ActiveGridSettings,
                 )
-                from airunner_model.models.application_settings import (
+                from airunner.models.application_settings import (
                     ApplicationSettings,
                 )
 

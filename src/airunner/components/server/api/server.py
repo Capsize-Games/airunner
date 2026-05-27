@@ -54,8 +54,7 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
 from airunner.components.application.api.api import API
-from airunner_model.session import session_scope
-from airunner_model.models.conversation import Conversation
+from airunner.models.conversation import Conversation
 from airunner.utils.application.get_logger import get_logger
 
 # Lazy import to avoid circular dependency
@@ -377,7 +376,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not art_model_path:
             # Try to get from settings
             try:
-                from airunner_model.models.generator_settings import GeneratorSettings
+                from airunner.models.generator_settings import GeneratorSettings
                 settings = GeneratorSettings.objects.first()
                 if settings:
                     art_model_path = settings.model
@@ -904,7 +903,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         quantization = "Q4_K_M"
         
         try:
-            from airunner_model.models.llm_generator_settings import LLMGeneratorSettings
+            from airunner.models.llm_generator_settings import LLMGeneratorSettings
             settings = LLMGeneratorSettings.objects.first()
             if settings and settings.model_version:
                 # Extract model name from path (e.g., "Qwen2.5-7B-Instruct-4bit")
@@ -976,7 +975,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Try to get actual model info
         model_name = "airunner:latest"
         try:
-            from airunner_model.models.llm_generator_settings import LLMGeneratorSettings
+            from airunner.models.llm_generator_settings import LLMGeneratorSettings
             settings = LLMGeneratorSettings.objects.first()
             if settings and settings.model_version:
                 import os
@@ -3125,11 +3124,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     status=403
                 )
                 return
-            deleted_counts = {}
-            with session_scope() as session:
-                conversation_count = session.query(Conversation).delete()
-                deleted_counts["conversations"] = conversation_count
-                session.commit()
+            deleted_counts = {
+                "conversations": Conversation.objects.delete_all(),
+            }
 
             self.logger.info(f"Test database cleared: {deleted_counts}")
 

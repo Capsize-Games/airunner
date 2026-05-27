@@ -46,6 +46,12 @@ class ConversationSessionResponse(BaseModel):
     messages: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class ConversationCreateRequest(BaseModel):
+    """Request payload for creating one new conversation."""
+
+    max_messages: int = 50
+
+
 class SelectConversationRequest(BaseModel):
     """Request payload for selecting one active conversation."""
 
@@ -65,6 +71,25 @@ class DeleteConversationResponse(BaseModel):
 
     conversation_id: int
     deleted: bool
+
+
+class ConversationMessagesUpdateRequest(BaseModel):
+    """Request payload for replacing one conversation's messages."""
+
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class ConversationUserDataUpdateRequest(BaseModel):
+    """Request payload for replacing one conversation's user data."""
+
+    user_data: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationMutationResponse(BaseModel):
+    """Envelope for one conversation mutation response."""
+
+    conversation_id: int
+    updated: bool
 
 
 def _manager() -> ConversationHistoryManager:
@@ -102,6 +127,26 @@ async def list_conversations(limit: int = 50) -> ConversationListResponse:
     return ConversationListResponse(
         conversations=_manager().list_conversations(limit=limit)
     )
+
+
+@router.post(
+    "/conversations",
+    response_model=ConversationSessionResponse,
+)
+async def create_conversation(
+    body: ConversationCreateRequest,
+    request: Request,
+) -> ConversationSessionResponse:
+    """Create one new current conversation through the service API."""
+    session = _manager().create_conversation(max_messages=body.max_messages)
+    conversation_id = session.get("conversation_id")
+    if conversation_id is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create conversation",
+        )
+    _sync_selected_conversation(request, conversation_id)
+    return ConversationSessionResponse(**session)
 
 
 @router.get(
@@ -172,4 +217,46 @@ async def delete_conversation(
     return DeleteConversationResponse(
         conversation_id=conversation_id,
         deleted=True,
+    )
+
+
+@router.put(
+    "/conversations/{conversation_id}/messages",
+    response_model=ConversationMutationResponse,
+)
+async def update_conversation_messages(
+    conversation_id: int,
+    body: ConversationMessagesUpdateRequest,
+) -> ConversationMutationResponse:
+    """Replace one conversation's stored messages through the API."""
+    updated = _manager().update_conversation_messages(
+        conversation_id,
+        body.messages,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return ConversationMutationResponse(
+        conversation_id=conversation_id,
+        updated=True,
+    )
+
+
+@router.put(
+    "/conversations/{conversation_id}/user-data",
+    response_model=ConversationMutationResponse,
+)
+async def update_conversation_user_data(
+    conversation_id: int,
+    body: ConversationUserDataUpdateRequest,
+) -> ConversationMutationResponse:
+    """Replace one conversation's stored user-data through the API."""
+    updated = _manager().update_conversation_user_data(
+        conversation_id,
+        body.user_data,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return ConversationMutationResponse(
+        conversation_id=conversation_id,
+        updated=True,
     )

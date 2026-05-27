@@ -14,13 +14,12 @@ from PySide6.QtGui import QFont
 from airunner.components.llm.gui.widgets.templates.llm_tool_editor_ui import (
     Ui_llm_tool_editor,
 )
-from airunner_model.models.llm_tool import LLMTool
+from airunner.models.llm_tool import LLMTool
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner_model.session import session_scope
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -155,52 +154,37 @@ class LLMToolEditorWidget(QDialog, MediatorMixin):
 
         # Save to database
         try:
-            with session_scope() as session:
-                if self.tool:
-                    # Update existing tool
-                    db_tool = (
-                        session.query(LLMTool)
-                        .filter_by(id=self.tool.id)
-                        .first()
+            values = {
+                "name": name,
+                "display_name": self.ui.display_name_input.text().strip()
+                or None,
+                "description": self.ui.description_input.toPlainText().strip()
+                or None,
+                "code": code,
+                "enabled": enabled,
+                "safety_validated": is_safe,
+            }
+            if self.tool:
+                values["version"] = int(getattr(self.tool, "version", 0) or 0) + 1
+                if LLMTool.objects.update(self.tool.id, **values):
+                    updated_tool = LLMTool.objects.get(self.tool.id) or self.tool
+                    logger.info(
+                        f"Updated tool: {updated_tool.name} (v{updated_tool.version})"
                     )
-                    if db_tool:
-                        db_tool.name = name
-                        db_tool.display_name = (
-                            self.ui.display_name_input.text().strip() or None
-                        )
-                        db_tool.description = (
-                            self.ui.description_input.toPlainText().strip()
-                            or None
-                        )
-                        db_tool.code = code
-                        db_tool.enabled = enabled
-                        db_tool.safety_validated = is_safe
-                        db_tool.version += 1
-                        logger.info(
-                            f"Updated tool: {db_tool.name} (v{db_tool.version})"
-                        )
-                        self.emit_signal(
-                            SignalCode.LLM_TOOL_UPDATED, {"tool": db_tool}
-                        )
-                else:
-                    # Create new tool
-                    new_tool = LLMTool(
-                        name=name,
-                        display_name=self.ui.display_name_input.text().strip()
-                        or None,
-                        description=self.ui.description_input.toPlainText().strip()
-                        or None,
-                        code=code,
-                        enabled=enabled,
-                        safety_validated=is_safe,
-                        created_by="user",
-                        version=1,
-                    )
-                    session.add(new_tool)
-                    logger.info(f"Created tool: {new_tool.name}")
                     self.emit_signal(
-                        SignalCode.LLM_TOOL_CREATED, {"tool": new_tool}
+                        SignalCode.LLM_TOOL_UPDATED, {"tool": updated_tool}
                     )
+            else:
+                new_tool = LLMTool(
+                    created_by="user",
+                    version=1,
+                    **values,
+                )
+                new_tool.save()
+                logger.info(f"Created tool: {new_tool.name}")
+                self.emit_signal(
+                    SignalCode.LLM_TOOL_CREATED, {"tool": new_tool}
+                )
 
             self.accept()
 

@@ -55,8 +55,10 @@ from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.enums import SignalCode
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.application.signal_mediator import SignalMediator
-from airunner_model.models.application_settings import ApplicationSettings
-from airunner_model.runtimes.whisper_cpp_runtime_settings import (
+from airunner_services.database.models.application_settings import (
+    ApplicationSettings,
+)
+from airunner_services.runtimes.whisper_cpp_runtime_settings import (
     resolve_whisper_cpp_runtime_settings,
 )
 from airunner_services.workers.tts_generator_worker import (

@@ -237,9 +237,8 @@ torch.hub.set_dir(
 from airunner.components.application.api.api import API
 
 ###############################################################
-# Import Alembic modules to run migrations.
+# GUI startup no longer owns database setup.
 ################################################################
-from airunner_model.setup_database import setup_database
 
 # These may be set by launcher.py for early splash screen
 _launcher_splash = None
@@ -311,13 +310,6 @@ def main():
     if args.watch:
         # Handled in launcher.py, but keep for help output and future use
         pass
-
-    database_started_at = time.perf_counter()
-    setup_database()
-    startup_logger.info(
-        "Startup phase database_setup completed in %.2fs",
-        time.perf_counter() - database_started_at,
-    )
 
     # Start the main application, passing launcher's splash if available
     api_started_at = time.perf_counter()

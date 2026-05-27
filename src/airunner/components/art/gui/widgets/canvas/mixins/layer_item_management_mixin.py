@@ -6,8 +6,8 @@ This mixin handles layer-specific image items, including removal and recentering
 from typing import Dict
 from PySide6.QtCore import QPointF
 
-from airunner_model.models.canvas_layer import CanvasLayer
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.canvas_layer import CanvasLayer
+from airunner.models.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
     LayerImageItem,
 )

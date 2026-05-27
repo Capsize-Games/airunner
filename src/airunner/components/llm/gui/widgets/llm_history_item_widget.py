@@ -2,7 +2,9 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner_model.models.conversation import Conversation
+from airunner.components.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
 from airunner.components.llm.gui.widgets.templates.llm_history_item_ui import (
     Ui_llm_history_item_widget,
 )
@@ -14,7 +16,15 @@ class LLMHistoryItemWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         """Initialize one lightweight row for the history sidebar."""
         self.conversation = kwargs.pop("conversation")
+        self._conversation_history_manager = kwargs.pop(
+            "conversation_history_manager",
+            None,
+        )
         super(LLMHistoryItemWidget, self).__init__(*args, **kwargs)
+        if self._conversation_history_manager is None:
+            self._conversation_history_manager = ConversationHistoryManager(
+                getattr(self.api, "daemon_client", None)
+            )
         self.spacer = QSpacerItem(
             20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
@@ -50,13 +60,21 @@ class LLMHistoryItemWidget(BaseWidget):
 
     @Slot()
     def action_load_conversation_clicked(self):
-        Conversation.make_current(self.conversation.id)
+        session = self._conversation_history_manager.select_conversation(
+            self.conversation.id
+        )
+        if session.get("conversation") is None:
+            return
         self.api.llm.load_conversation(conversation_id=self.conversation.id)
 
     @Slot()
     def action_delete_conversation_clicked(self):
         conversation_id = self.conversation.id
-        Conversation.delete(conversation_id)
+        deleted = self._conversation_history_manager.delete_conversation(
+            conversation_id
+        )
+        if not deleted:
+            return
         self.api.llm.converation_deleted(conversation_id)
         self.setParent(None)
         self.deleteLater()

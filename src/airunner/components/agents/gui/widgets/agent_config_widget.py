@@ -16,12 +16,11 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 from PySide6.QtCore import Signal, Qt
-from airunner_model.models.agent_config import AgentConfig
+from airunner.models.agent_config import AgentConfig
 from airunner.components.agents.templates import (
     list_templates,
     get_template,
 )
-from airunner_model.session import session_scope
 
 
 class AgentConfigWidget(QWidget):
@@ -148,20 +147,19 @@ class AgentConfigWidget(QWidget):
         """Load agents from database into list."""
         self.agent_list.clear()
 
-        with session_scope() as session:
-            agents = (
-                session.query(AgentConfig)
-                .filter(AgentConfig.is_active == 1)
-                .order_by(AgentConfig.created_at.desc())
-                .all()
-            )
+        agents = [
+            agent
+            for agent in AgentConfig.objects.order_by(
+                AgentConfig.created_at.desc()
+            ).all()
+            if getattr(agent, "is_active", True)
+        ]
 
-            for agent in agents:
-                item_text = f"{agent.name} ({agent.template})"
-                self.agent_list.addItem(item_text)
-                # Store agent ID in item data
-                item = self.agent_list.item(self.agent_list.count() - 1)
-                item.setData(Qt.ItemDataRole.UserRole, agent.id)
+        for agent in agents:
+            item_text = f"{agent.name} ({agent.template})"
+            self.agent_list.addItem(item_text)
+            item = self.agent_list.item(self.agent_list.count() - 1)
+            item.setData(Qt.ItemDataRole.UserRole, agent.id)
 
     def load_templates(self) -> None:
         """Load template options into combo box."""
@@ -188,27 +186,20 @@ class AgentConfigWidget(QWidget):
         item = self.agent_list.item(row)
         agent_id = item.data(Qt.ItemDataRole.UserRole)
 
-        with session_scope() as session:
-            agent = (
-                session.query(AgentConfig)
-                .filter(AgentConfig.id == agent_id)
-                .first()
-            )
+        agent = AgentConfig.objects.get(agent_id)
+        if agent:
+            self.current_agent_id = agent.id
+            self.name_edit.setText(agent.name)
+            self.description_edit.setPlainText(agent.description or "")
+            self.system_prompt_edit.setPlainText(agent.system_prompt)
+            self.tools_edit.setPlainText(",".join(agent.tool_list))
 
-            if agent:
-                self.current_agent_id = agent.id
-                self.name_edit.setText(agent.name)
-                self.description_edit.setPlainText(agent.description or "")
-                self.system_prompt_edit.setPlainText(agent.system_prompt)
-                self.tools_edit.setPlainText(",".join(agent.tool_list))
+            index = self.template_combo.findData(agent.template)
+            if index >= 0:
+                self.template_combo.setCurrentIndex(index)
 
-                # Set template
-                index = self.template_combo.findData(agent.template)
-                if index >= 0:
-                    self.template_combo.setCurrentIndex(index)
-
-                self.delete_button.setEnabled(True)
-                self.test_button.setEnabled(True)
+            self.delete_button.setEnabled(True)
+            self.test_button.setEnabled(True)
 
     def on_new_agent(self) -> None:
         """Handle new agent button click."""
@@ -273,58 +264,45 @@ class AgentConfigWidget(QWidget):
         template = self.template_combo.currentData()
 
         try:
-            with session_scope() as session:
-                if self.current_agent_id:
-                    # Update existing agent
-                    agent = (
-                        session.query(AgentConfig)
-                        .filter(AgentConfig.id == self.current_agent_id)
-                        .first()
-                    )
-                    if agent:
-                        agent.name = name
-                        agent.description = description
-                        agent.system_prompt = system_prompt
-                        agent.tool_list = tools
-                        agent.template = template
-                        session.flush()
-                        self.agent_updated.emit(agent.id)
-                        QMessageBox.information(
-                            self,
-                            "Success",
-                            f"Agent '{name}' updated successfully",
-                        )
-                else:
-                    # Create new agent
-                    # Check for duplicate name
-                    existing = (
-                        session.query(AgentConfig)
-                        .filter(AgentConfig.name == name)
-                        .first()
-                    )
-                    if existing:
-                        QMessageBox.warning(
-                            self,
-                            "Duplicate Name",
-                            f"Agent with name '{name}' already exists",
-                        )
-                        return
-
-                    agent = AgentConfig(
-                        name=name,
-                        description=description,
-                        system_prompt=system_prompt,
-                        template=template,
-                    )
+            if self.current_agent_id:
+                agent = AgentConfig.objects.get(self.current_agent_id)
+                if agent:
+                    agent.name = name
+                    agent.description = description
+                    agent.system_prompt = system_prompt
                     agent.tool_list = tools
-                    session.add(agent)
-                    session.flush()
-                    self.agent_created.emit(agent.id)
+                    agent.template = template
+                    agent.save()
+                    self.agent_updated.emit(agent.id)
                     QMessageBox.information(
                         self,
                         "Success",
-                        f"Agent '{name}' created successfully",
+                        f"Agent '{name}' updated successfully",
                     )
+            else:
+                existing = AgentConfig.objects.filter_by_first(name=name)
+                if existing:
+                    QMessageBox.warning(
+                        self,
+                        "Duplicate Name",
+                        f"Agent with name '{name}' already exists",
+                    )
+                    return
+
+                agent = AgentConfig(
+                    name=name,
+                    description=description,
+                    system_prompt=system_prompt,
+                    template=template,
+                )
+                agent.tool_list = tools
+                agent.save()
+                self.agent_created.emit(agent.id)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Agent '{name}' created successfully",
+                )
 
             self.load_agents()
             self.clear_form()
@@ -348,22 +326,16 @@ class AgentConfigWidget(QWidget):
 
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                with session_scope() as session:
-                    agent = (
-                        session.query(AgentConfig)
-                        .filter(AgentConfig.id == self.current_agent_id)
-                        .first()
+                agent = AgentConfig.objects.get(self.current_agent_id)
+                if agent:
+                    agent_name = agent.name
+                    AgentConfig.objects.delete(self.current_agent_id)
+                    self.agent_deleted.emit(self.current_agent_id)
+                    QMessageBox.information(
+                        self,
+                        "Success",
+                        f"Agent '{agent_name}' deleted successfully",
                     )
-                    if agent:
-                        agent_name = agent.name
-                        session.delete(agent)
-                        session.flush()
-                        self.agent_deleted.emit(self.current_agent_id)
-                        QMessageBox.information(
-                            self,
-                            "Success",
-                            f"Agent '{agent_name}' deleted successfully",
-                        )
 
                 self.load_agents()
                 self.clear_form()

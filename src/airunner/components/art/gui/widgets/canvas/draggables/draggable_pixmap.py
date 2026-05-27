@@ -12,7 +12,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
 from airunner.utils.settings import get_qsettings
-from airunner_model.models.drawingpad_settings import DrawingPadSettings
+from airunner.models.drawingpad_settings import DrawingPadSettings
 
 
 class DraggablePixmap(

@@ -12,7 +12,6 @@ from llama_cloud import MessageRole
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
-from airunner_model.models.conversation import Conversation
 from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
 from airunner.enums import SignalCode, TemplateName
 from airunner.components.llm.gui.widgets.contentwidgets import (
@@ -77,8 +76,8 @@ class ConversationWidget(BaseWidget):
         self.ui_update_timer.setInterval(50)
         self.ui_update_timer.timeout.connect(self.flush_token_buffer)
         self.ui_update_timer.start()
-        self._conversation_history_manager = ConversationHistoryManager()
-        self._conversation: Optional[Conversation] = None
+        self._conversation_history_manager = None
+        self._conversation: Optional[Any] = None
         self._conversation_id: Optional[int] = None
         self.conversation_history = []
         self._streamed_messages = []
@@ -92,6 +91,9 @@ class ConversationWidget(BaseWidget):
         self._main_window_loaded = False
         self._shutdown_started = False
         super().__init__()
+        self._conversation_history_manager = ConversationHistoryManager(
+            getattr(self.api, "daemon_client", None)
+        )
 
         self.token_buffer = []
         # Add a streaming buffer to ensure proper token ordering
@@ -200,11 +202,11 @@ class ConversationWidget(BaseWidget):
         webbrowser.open(url)
 
     @property
-    def conversation(self) -> Optional[Conversation]:
+    def conversation(self) -> Optional[Any]:
         return self._conversation
 
     @conversation.setter
-    def conversation(self, val: Optional[Conversation]):
+    def conversation(self, val: Optional[Any]):
         self._conversation = val
         self._conversation_id = val.id if val else None
 
@@ -371,25 +373,18 @@ class ConversationWidget(BaseWidget):
 
     def load_conversation(self, conversation_id: Optional[int] = None) -> None:
         """Load a conversation by ID, update state and UI."""
-        if conversation_id is None:
-            conversation = (
-                self._conversation_history_manager.get_current_conversation()
-            )
-        else:
-            conversation = Conversation.objects.filter_by_first(
-                id=conversation_id
-            )
+        session = self._conversation_history_manager.get_conversation_session(
+            conversation_id=conversation_id,
+            max_messages=50,
+        )
+        conversation = session.get("conversation")
         if conversation is None:
             self.clear_conversation()
             return
         self._conversation = conversation
         self._conversation_id = conversation.id
         self._rendered_request_ids.clear()
-        messages = (
-            self._conversation_history_manager.load_conversation_history(
-                conversation=conversation, max_messages=50
-            )
-        )
+        messages = session.get("messages", [])
         self.set_conversation_widgets(messages, skip_scroll=True)
         # Tool statuses are now attached to messages as tool_usage and rendered by JS
         # No need to restore separately - this was causing duplicate widgets
@@ -1144,8 +1139,9 @@ class ConversationWidget(BaseWidget):
 
             user_data["tool_statuses"] = tool_statuses
             self.conversation.user_data = user_data
-            Conversation.objects.update(
-                pk=self.conversation.id, user_data=user_data
+            self._conversation_history_manager.update_conversation_user_data(
+                self.conversation.id,
+                user_data,
             )
             self.logger.debug(
                 f"[TOOL STATUS] Saved to database: {len(tool_statuses)} total statuses"
@@ -1244,7 +1240,12 @@ class ConversationWidget(BaseWidget):
             return
         new_messages = messages[:idx]
         new_messages = self._assign_message_ids(new_messages)
-        Conversation.objects.update(pk=conversation.id, value=new_messages)
+        updated = self._conversation_history_manager.update_conversation_messages(
+            conversation.id,
+            new_messages,
+        )
+        if not updated:
+            return
         self._conversation.value = new_messages
         self.set_conversation_widgets(new_messages)
 

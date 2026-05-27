@@ -12,43 +12,43 @@ class GridService:
     """
 
     def get_state(self) -> SimpleNamespace:
-        with session_scope() as s:
-            settings = ActiveGridSettings.first(session=s)
-            # Map expected attributes into a simple DTO
-            return SimpleNamespace(
-                pos_x=getattr(settings, "pos_x", 0),
-                pos_y=getattr(settings, "pos_y", 0),
-                width=getattr(settings, "width", 0),
-                height=getattr(settings, "height", 0),
-            )
+        settings = ActiveGridSettings.objects.first()
+        if settings is None:
+            settings = ActiveGridSettings.objects.create()
+        return SimpleNamespace(
+            pos_x=getattr(settings, "pos_x", 0),
+            pos_y=getattr(settings, "pos_y", 0),
+            width=getattr(settings, "width", 0),
+            height=getattr(settings, "height", 0),
+        )
 
     def set_position(self, x: int, y: int) -> SimpleNamespace:
-        with session_scope() as s:
-            settings = ActiveGridSettings.first(session=s)
+        settings = ActiveGridSettings.objects.first()
+        if settings is None:
+            settings = ActiveGridSettings.objects.create()
+        if settings is not None:
+            ActiveGridSettings.objects.update(settings.id, pos_x=x, pos_y=y)
             settings.pos_x = x
             settings.pos_y = y
-            # Emit an application signal so callers can react
-            payload = {"state": settings}
-            self.send(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED, payload)
-            return SimpleNamespace(pos_x=settings.pos_x, pos_y=settings.pos_y)
+        payload = {"state": settings}
+        self.send(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED, payload)
+        return SimpleNamespace(pos_x=getattr(settings, "pos_x", x), pos_y=getattr(settings, "pos_y", y))
 
     # Default send implementation can be overridden in tests
     def send(self, signal: Any, payload: Any) -> None:
         pass
 
 
-# The real module imports session_scope and ActiveGridSettings from
-# persistence modules. Expose names here so tests can monkeypatch them.
+# The real module imports ActiveGridSettings from persistence modules.
+# Expose the name here so tests can monkeypatch it.
 def _missing():
     raise ImportError("persistence utilities not configured for GridService")
 
 
 try:
-    from airunner_model.session import session_scope  # type: ignore
-    from airunner_model.models.active_grid_settings import (
+    from airunner.models.active_grid_settings import (
         ActiveGridSettings,
     )
 except Exception:
     # Provide placeholders that tests will monkeypatch
-    session_scope = lambda: _missing()
     ActiveGridSettings = None

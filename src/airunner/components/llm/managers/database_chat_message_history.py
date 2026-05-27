@@ -1,4 +1,4 @@
-"""LangChain message history implementation that persists to the Conversation database."""
+"""LangChain message history implementation backed by daemon conversations."""
 
 from typing import List, Optional
 
@@ -10,7 +10,12 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
-from airunner_model.models.conversation import Conversation
+from airunner.components.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
+from airunner.components.conversations.conversation_record import (
+    ConversationRecord,
+)
 from airunner.components.llm.utils.thinking_parser import (
     extract_thinking_and_response,
     normalize_thinking_content,
@@ -57,31 +62,32 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         self.logger = get_logger(self.__class__.__name__)
         self.conversation_id = conversation_id
         self.ephemeral = ephemeral
-        self._conversation = None
+        self._history_manager = ConversationHistoryManager()
+        self._conversation: Optional[ConversationRecord] = None
         self._ephemeral_messages = []  # In-memory storage for ephemeral mode
 
         if not ephemeral:
             self._load_conversation()
 
     def _load_conversation(self) -> None:
-        """Load the conversation from database or create a new one."""
+        """Load the active conversation from the daemon or create one."""
         try:
             if self.conversation_id:
-                # Load specific conversation
-                self._conversation = Conversation.objects.get(
-                    self.conversation_id
+                session = self._history_manager.get_conversation_session(
+                    conversation_id=self.conversation_id,
+                    max_messages=0,
                 )
+                self._conversation = session.get("conversation")
             else:
-                # Get or create current conversation
-                conversations = Conversation.objects.filter_by(current=True)
-                if conversations:
-                    self._conversation = conversations[0]
-                else:
-                    # Create new conversation
-                    self._conversation = Conversation.create()
-                    if self._conversation:
-                        self.conversation_id = self._conversation.id
-                        Conversation.make_current(self.conversation_id)
+                self._conversation = (
+                    self._history_manager.get_current_conversation()
+                )
+                if self._conversation is None:
+                    self._conversation = (
+                        self._history_manager.create_conversation(
+                            max_messages=0,
+                        )
+                    )
 
             if self._conversation:
                 self.conversation_id = self._conversation.id
@@ -111,9 +117,8 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             return []
 
         try:
-            # Refresh conversation from database
-            self._conversation = Conversation.objects.get(self.conversation_id)
-            conversation_value = self._conversation.value or []
+            self._refresh_conversation(max_messages=0)
+            conversation_value = list(self._conversation.value or [])
 
             # Convert from database format to LangChain messages
             langchain_messages = []
@@ -188,10 +193,10 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
 
         try:
             import datetime
-            
+
             # CRITICAL: Reload conversation from database to get latest state
             # This ensures deduplication checks against the most current data
-            self._load_conversation()
+            self._refresh_conversation(max_messages=0)
 
             # Track tool calls and tool messages for debugging, but store them separately
             # These won't appear as regular conversation messages but will be logged
@@ -203,17 +208,19 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     f"Tool result: {message.content[:100]}... "
                     f"(tool_call_id: {tool_call_id or 'unknown'})"
                 )
-                
+
                 # DEDUPLICATION: Check if tool_result with same tool_call_id already exists
                 if self._conversation.value and tool_call_id:
                     for existing in self._conversation.value:
-                        if (existing.get("metadata_type") == "tool_result" and 
-                            existing.get("tool_call_id") == tool_call_id):
+                        if (
+                            existing.get("metadata_type") == "tool_result"
+                            and existing.get("tool_call_id") == tool_call_id
+                        ):
                             self.logger.debug(
                                 f"Skipping duplicate tool_result for tool_call_id: {tool_call_id}"
                             )
                             return
-                
+
                 # Store tool result in a separate metadata entry
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_result_dict = {
@@ -227,12 +234,9 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     "tool_call_id": tool_call_id,
                     "metadata_type": "tool_result",  # Mark as metadata for filtering
                 }
-                if self._conversation.value is None:
-                    self._conversation.value = []
-                self._conversation.value.append(tool_result_dict)
-                Conversation.objects.update(
-                    self.conversation_id, value=self._conversation.value
-                )
+                updated_messages = list(self._conversation.value or [])
+                updated_messages.append(tool_result_dict)
+                self._persist_messages(updated_messages)
                 return
 
             # Handle AIMessages with tool_calls (LLM requesting tool execution)
@@ -244,7 +248,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 self.logger.debug(
                     f"Tool calls requested: {[tc.get('name', 'unknown') for tc in message.tool_calls]}"
                 )
-                
+
                 # DEDUPLICATION: Check if tool_calls with same IDs already exist
                 # Get all tool_call IDs from the incoming message
                 incoming_tool_ids = set(
@@ -260,7 +264,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                                         f"Skipping duplicate tool_calls - tool_call_id already exists: {tc.get('id')}"
                                     )
                                     return
-                
+
                 # Extract thinking content from the AIMessage that has tool_calls
                 # This captures the "thinking before tool use" phase
                 thinking_content = None
@@ -268,7 +272,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     thinking_content = message.additional_kwargs.get("thinking_content")
                 if not thinking_content and message.content:
                     thinking_content, _ = extract_thinking_and_response(message.content)
-                
+
                 # Store tool call request in metadata
                 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
                 tool_calls_dict = {
@@ -291,7 +295,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                     "tool_calls": message.tool_calls,  # Store actual tool call data
                     "metadata_type": "tool_calls",  # Mark as metadata for filtering
                 }
-                
+
                 # Store thinking content if present (pre-tool thinking)
                 if thinking_content:
                     tool_calls_dict["thinking_content"] = thinking_content
@@ -309,13 +313,10 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                             "tool_status_metadata"
                         )
                     )
-                
-                if self._conversation.value is None:
-                    self._conversation.value = []
-                self._conversation.value.append(tool_calls_dict)
-                Conversation.objects.update(
-                    self.conversation_id, value=self._conversation.value
-                )
+
+                updated_messages = list(self._conversation.value or [])
+                updated_messages.append(tool_calls_dict)
+                self._persist_messages(updated_messages)
                 return
 
             # Convert LangChain message to database format
@@ -380,7 +381,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 "timestamp": now,
                 "blocks": [{"block_type": "text", "text": content}],
             }
-            
+
             # Add thinking content if present
             if thinking_content:
                 message_dict["thinking_content"] = thinking_content
@@ -407,15 +408,9 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                         # Only compare against the most recent message of this role
                         break
 
-            # Append to conversation
-            if self._conversation.value is None:
-                self._conversation.value = []
-            self._conversation.value.append(message_dict)
-
-            # Save to database
-            Conversation.objects.update(
-                self.conversation_id, value=self._conversation.value
-            )
+            updated_messages = list(self._conversation.value or [])
+            updated_messages.append(message_dict)
+            self._persist_messages(updated_messages)
 
         except Exception as e:
             self.logger.error(f"Error adding message: {e}", exc_info=True)
@@ -435,8 +430,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             return
 
         try:
-            self._conversation.value = []
-            Conversation.objects.update(self.conversation_id, value=[])
+            self._persist_messages([])
             self.logger.info(f"Cleared conversation {self.conversation_id}")
 
         except Exception as e:
@@ -454,8 +448,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             return []
 
         try:
-            # Refresh conversation from database
-            self._conversation = Conversation.objects.get(self.conversation_id)
+            self._refresh_conversation(max_messages=0)
             conversation_value = self._conversation.value or []
 
             # Extract only metadata entries
@@ -471,3 +464,33 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 f"Error retrieving tool call metadata: {e}", exc_info=True
             )
             return []
+
+    def _refresh_conversation(self, *, max_messages: int) -> None:
+        """Refresh the cached conversation DTO from the daemon."""
+        if self.conversation_id is None:
+            self._load_conversation()
+            return
+
+        session = self._history_manager.get_conversation_session(
+            conversation_id=self.conversation_id,
+            max_messages=max_messages,
+        )
+        conversation = session.get("conversation")
+        if conversation is not None:
+            self._conversation = conversation
+
+    def _persist_messages(self, messages: List[dict]) -> None:
+        """Persist one updated conversation message list through the daemon."""
+        if self.conversation_id is None:
+            raise RuntimeError("Conversation id is required for persistence")
+
+        updated = self._history_manager.update_conversation_messages(
+            self.conversation_id,
+            messages,
+        )
+        if not updated:
+            raise RuntimeError("Failed to persist conversation messages")
+
+        if self._conversation is None:
+            return
+        self._conversation.value = list(messages)

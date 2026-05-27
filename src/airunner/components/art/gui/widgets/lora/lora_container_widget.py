@@ -3,7 +3,7 @@ from typing import List, Type
 from PySide6.QtCore import Slot, QSize, QThread, QTimer, Qt
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
-from airunner_model.models.lora import Lora
+from airunner.models.lora import Lora
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models import scan_path_for_lora
 from airunner.components.application.gui.widgets.base_widget import BaseWidget

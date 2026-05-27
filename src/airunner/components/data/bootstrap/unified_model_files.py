@@ -1,16 +1,16 @@
 """Unified model file requirements for all AI Runner model types."""
 
-from airunner_model.bootstrap.sd_file_bootstrap_data import (
+from airunner.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner_model.bootstrap.llm_file_bootstrap_data import (
+from airunner.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
-from airunner_model.bootstrap.rmbg_bootstrap_data import (
+from airunner.bootstrap.rmbg_bootstrap_data import (
     RMBG_FILES,
 )
-from airunner_model.bootstrap.whisper import WHISPER_FILES
-from airunner_model.bootstrap.openvoice_bootstrap_data import (
+from airunner.bootstrap.whisper import WHISPER_FILES
+from airunner.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
 

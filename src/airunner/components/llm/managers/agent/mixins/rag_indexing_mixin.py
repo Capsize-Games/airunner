@@ -12,7 +12,7 @@ from airunner.components.llm.managers.agent.document_loader import (
 from airunner.components.llm.managers.agent.vector_index import (
     DocumentVectorIndex,
 )
-from airunner_model.models.document import (
+from airunner.models.document import (
     Document as DBDocument,
 )
 from airunner.enums import SignalCode

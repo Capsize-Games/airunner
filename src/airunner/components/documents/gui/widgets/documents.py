@@ -30,8 +30,8 @@ from PySide6.QtWidgets import (
 from airunner.enums import SignalCode
 from airunner.utils.settings import get_qsettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner_model.models.document import Document
-from airunner_model.models.zimfile import ZimFile
+from airunner.models.document import Document
+from airunner.models.zimfile import ZimFile
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
@@ -39,7 +39,7 @@ from airunner.components.documents.gui.widgets.kiwix_widget import KiwixWidget
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
     FileExplorerWidget,
 )
-from airunner_model.runtimes.file_policy import (
+from airunner.runtimes.file_policy import (
     PathPolicyError,
     resolve_existing_directory,
     resolve_existing_file,

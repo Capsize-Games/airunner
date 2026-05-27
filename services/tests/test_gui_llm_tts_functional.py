@@ -44,16 +44,19 @@ from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 from airunner.enums import SignalCode
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.application.signal_mediator import SignalMediator
-from airunner_model.models.application_settings import ApplicationSettings
-from airunner_model.models.chatbot import Chatbot
-from airunner_model.models.llm_generator_settings import (
+from airunner_services.database import reset_engine, setup_database
+from airunner_services.database.models.application_settings import (
+    ApplicationSettings,
+)
+from airunner_services.database.models.chatbot import Chatbot
+from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner_model.models.openvoice_settings import OpenVoiceSettings
-from airunner_model.models.path_settings import PathSettings
-from airunner_model.models.voice_settings import VoiceSettings
-from airunner_model.session import reset_engine
-from airunner_model.setup_database import setup_database
+from airunner_services.database.models.openvoice_settings import (
+    OpenVoiceSettings,
+)
+from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.database.models.voice_settings import VoiceSettings
 from airunner_services.workers.tts_generator_worker import (
     TTSGeneratorWorker,
 )

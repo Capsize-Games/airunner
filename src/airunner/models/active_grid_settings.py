@@ -1,0 +1,34 @@
+"""Service-owned active grid settings model."""
+
+from sqlalchemy import Boolean, Column, Integer, String
+
+from airunner.base import BaseModel
+
+
+class ActiveGridSettings(BaseModel):
+    """Persist active grid overlay settings for the canvas."""
+
+    __tablename__ = "active_grid_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    enabled = Column(Boolean, default=True)
+    render_border = Column(Boolean, default=True)
+    render_fill = Column(Boolean, default=False)
+    border_opacity = Column(Integer, default=50)
+    fill_opacity = Column(Integer, default=50)
+    border_color = Column(String, default="#00FF00")
+    fill_color = Column(String, default="#FF0000")
+    pos_x = Column(Integer, default=0)
+    pos_y = Column(Integer, default=0)
+    width = Column(Integer, default=1024)
+    height = Column(Integer, default=1024)
+
+    @property
+    def pos(self) -> tuple[int, int]:
+        """Return the persisted grid origin as an `(x, y)` tuple."""
+        x = self.pos_x if self.pos_x is not None else 0
+        y = self.pos_y if self.pos_y is not None else 0
+        return x, y
+
+
+__all__ = ["ActiveGridSettings"]

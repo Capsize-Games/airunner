@@ -13,18 +13,17 @@ from pathlib import Path
 import pytest
 
 
-# Ensure the services/src, model/src, and native/src directories
+# Ensure the services/src and native/src directories
 # are on the path for the service-owned API imports.
 _SERVICES_ROOT = Path(__file__).resolve().parents[1]
 _PROJECT_ROOT = _SERVICES_ROOT.parent
 _SERVICES_SRC = _PROJECT_ROOT / "services" / "src"
-_MODEL_SRC = _PROJECT_ROOT / "model" / "src"
 _NATIVE_SRC = _PROJECT_ROOT / "native" / "src"
 
 # Append paths (not prepend) to avoid shadowing site-packages.
 # The services/src directory contains a 'requests/' package that would
 # shadow the real requests library if placed earlier in sys.path.
-for _path in (_SERVICES_SRC, _MODEL_SRC, _NATIVE_SRC):
+for _path in (_SERVICES_SRC, _NATIVE_SRC):
     _path_str = str(_path)
     if _path_str not in sys.path:
         sys.path.append(_path_str)
@@ -37,12 +36,14 @@ class TestImportChain:
         """The removed top-level api package stays absent."""
         assert importlib.util.find_spec("airunner_api") is None
 
-    def test_service_and_model_share_message_owner(self):
-        """Services and model import the same runtime envelope classes."""
-        from airunner_model.runtimes.messages import EnvelopeStatus as ModelStatus
+    def test_service_message_envelopes_are_self_owned(self):
+        """Services resolve runtime envelope classes from their own module."""
         from airunner_services.ipc.messages import EnvelopeStatus as ServiceStatus
+        from airunner_services.runtimes.message_envelopes import (
+            load_message_types,
+        )
 
-        assert ServiceStatus is ModelStatus
+        assert ServiceStatus is load_message_types().EnvelopeStatus
 
     def test_import_service_api_server(self):
         """The service-owned API server module resolves."""
