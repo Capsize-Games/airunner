@@ -1,6 +1,6 @@
 """Mixin providing list and collection properties for GUI resources."""
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Type
 
 
 class SettingsListPropertyMixin:

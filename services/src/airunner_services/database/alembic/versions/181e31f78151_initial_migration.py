@@ -11,7 +11,7 @@ from typing import Sequence, Union
 from alembic import op
 
 from airunner_services.database.base import Base
-from airunner_services.database.db.bootstrap import (
+from airunner_model.db.bootstrap import (
     set_default_ai_models,
     set_default_schedulers,
     set_default_shortcut_keys,

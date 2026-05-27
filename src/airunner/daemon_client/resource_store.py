@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional
 
 from airunner.contract_enums import AvailableLanguage, CanvasToolName
 from airunner.contract_enums import GeneratorSection
-from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
+
+if TYPE_CHECKING:
+    from airunner.daemon_client.gui_daemon_client import GuiDaemonClient
 
 
 RESOURCE_DOMAINS = {
@@ -420,7 +422,13 @@ class GuiResourceStore:
     """Domain-aware resource store for GUI persistence consumers."""
 
     def __init__(self, daemon_client: Optional[GuiDaemonClient] = None) -> None:
-        shared_client = daemon_client or GuiDaemonClient()
+        shared_client = daemon_client
+        if shared_client is None:
+            from airunner.daemon_client.gui_daemon_client import (
+                GuiDaemonClient,
+            )
+
+            shared_client = GuiDaemonClient()
         self._clients = {
             "settings": DomainResourceClient(shared_client, "settings"),
             "catalog": DomainResourceClient(shared_client, "catalog"),

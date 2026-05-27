@@ -37,9 +37,6 @@ from airunner_services.utils.application.platform_info import is_darwin
 from airunner_services.utils.application.platform_info import is_linux
 from airunner_services.utils.application.platform_info import is_windows
 from airunner_services.utils.application.random_seed import random_seed
-from airunner_services.utils.application.runtime_context_mixin import (
-    RuntimeContextMixin,
-)
 from airunner_services.utils.application.signal_mediator import (
     SignalMediator,
 )
@@ -68,3 +65,14 @@ __all__ = [
     "signal_code_proxy",
     "SignalMediator",
 ]
+
+
+def __getattr__(name: str):
+    """Resolve cycle-prone application exports lazily."""
+    if name == "RuntimeContextMixin":
+        from airunner_services.utils.application.runtime_context_mixin import (
+            RuntimeContextMixin,
+        )
+
+        return RuntimeContextMixin
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
