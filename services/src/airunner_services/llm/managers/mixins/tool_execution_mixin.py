@@ -18,7 +18,7 @@ from airunner_services.llm_workflow_events import (
 )
 
 if TYPE_CHECKING:
-    from airunner_services.llm.managers.workflow_manager import WorkflowState
+    from airunner_services.llm.workflow_manager import WorkflowState
 
 
 class ToolExecutionMixin:

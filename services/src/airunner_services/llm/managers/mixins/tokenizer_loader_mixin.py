@@ -13,7 +13,7 @@ from transformers import AutoTokenizer, AutoConfig
 from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
 
 if TYPE_CHECKING:
-    from airunner_services.llm.managers.llm_model_manager import (
+    from airunner_services.model_management.llm_model_manager import (
         LLMModelManager,
     )
 

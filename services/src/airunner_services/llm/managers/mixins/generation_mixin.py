@@ -18,19 +18,19 @@ import torch
 from langchain_core.messages import AIMessage
 from langgraph.errors import GraphRecursionError
 
-from airunner_services.llm.managers.llm_request import LLMRequest
+from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.llm.managers.request_preparation import (
     WorkflowRequestSetup,
     build_workflow_request_setup,
     extract_request_images,
 )
-from airunner_services.llm.managers.llm_response import LLMResponse
-from airunner_services.llm.utils.gpt_oss_parser import (
+from airunner_services.llm.llm_response import LLMResponse
+from airunner_services.llm.gpt_oss_parser import (
     has_gpt_oss_markup,
     looks_like_tool_argument_payload,
     parse_gpt_oss_response,
 )
-from airunner_services.llm.utils.stream_text import prepare_stream_chunk
+from airunner_services.llm.stream_text import prepare_stream_chunk
 from airunner_services.contract_enums import LLMActionType, ModelStatus, ModelType, SignalCode
 
 

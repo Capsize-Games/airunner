@@ -1,4 +1,4 @@
-"""Service-owned request and response compatibility modules."""
+"""Service-owned request and response exports."""
 
 __all__ = [
 	"ImageRequest",
@@ -19,7 +19,7 @@ def __getattr__(name: str):
 
 		return ImageResponse
 	if name == "LLMRequest":
-		from .llm_request import LLMRequest
+		from ..llm.llm_request import LLMRequest
 
 		return LLMRequest
 	if name == "OpenVoiceTTSRequest":

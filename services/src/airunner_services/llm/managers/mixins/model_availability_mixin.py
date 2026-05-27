@@ -10,7 +10,7 @@ from airunner_services.llm.config.provider_config import LLMProviderConfig
 from airunner_services.contract_enums import ModelType, ModelStatus, SignalCode
 
 if TYPE_CHECKING:
-    from airunner_services.llm.managers.llm_model_manager import (
+    from airunner_services.model_management.llm_model_manager import (
         LLMModelManager,
     )
 

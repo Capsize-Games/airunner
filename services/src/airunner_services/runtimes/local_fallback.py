@@ -212,7 +212,7 @@ def _resolve_art_operation(metadata: dict[str, Any]) -> str:
 
 def _build_llm_request(invocation: LLMInvocationRequest) -> Any:
     """Create an LLM request object for the legacy signal path."""
-    from airunner_services.requests.llm_request import LLMRequest
+    from airunner_services.llm.llm_request import LLMRequest
 
     request = LLMRequest()
     request.temperature = invocation.temperature

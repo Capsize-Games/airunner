@@ -27,7 +27,7 @@ from airunner_services.llm.long_running.runtime_components import (
     resolve_project_manager,
 )
 from airunner_services.utils.application.log_hygiene import summarize_text
-from airunner_services.llm.long_running.data.project_state import (
+from airunner_services.database.models.project_state import (
     ProjectState,
     FeatureStatus,
 )

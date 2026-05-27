@@ -117,7 +117,7 @@ def get_project_status(project_id: int) -> str:
     from airunner_services.llm.long_running.project_manager import (
         ProjectManager,
     )
-    from airunner_services.llm.long_running.data.project_state import (
+    from airunner_services.database.models.project_state import (
         FeatureStatus,
     )
 
@@ -175,7 +175,7 @@ def list_project_features(
     from airunner_services.llm.long_running.project_manager import (
         ProjectManager,
     )
-    from airunner_services.llm.long_running.data.project_state import (
+    from airunner_services.database.models.project_state import (
         FeatureStatus,
     )
 
@@ -274,7 +274,7 @@ def list_long_running_projects(
     from airunner_services.llm.long_running.project_manager import (
         ProjectManager,
     )
-    from airunner_services.llm.long_running.data.project_state import (
+    from airunner_services.database.models.project_state import (
         ProjectStatus,
     )
 
@@ -340,7 +340,7 @@ def add_project_feature(
     from airunner_services.llm.long_running.project_manager import (
         ProjectManager,
     )
-    from airunner_services.llm.long_running.data.project_state import (
+    from airunner_services.database.models.project_state import (
         FeatureCategory,
     )
 
@@ -400,7 +400,7 @@ def update_feature_status(
     from airunner_services.llm.long_running.project_manager import (
         ProjectManager,
     )
-    from airunner_services.llm.long_running.data.project_state import (
+    from airunner_services.database.models.project_state import (
         FeatureStatus,
     )
 

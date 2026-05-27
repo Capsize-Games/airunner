@@ -34,7 +34,7 @@ Usage:
     ```
 """
 
-from airunner_services.llm.long_running.data.project_state import (
+from airunner_services.database.models.project_state import (
     ProjectState,
     ProjectFeature,
     ProgressEntry,

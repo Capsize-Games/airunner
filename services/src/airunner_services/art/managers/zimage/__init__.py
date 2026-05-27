@@ -5,7 +5,7 @@ __all__ = ["ZImageModelManager"]
 
 def __getattr__(name):
     if name == "ZImageModelManager":
-        from airunner_services.art.managers.zimage.zimage_model_manager import (
+        from airunner_services.model_management.zimage_model_manager import (
             ZImageModelManager,
         )
 

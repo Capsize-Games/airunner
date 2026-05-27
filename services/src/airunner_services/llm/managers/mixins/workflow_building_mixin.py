@@ -11,7 +11,7 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 
 if TYPE_CHECKING:
-    from airunner_services.llm.managers.workflow_manager import WorkflowState
+    from airunner_services.llm.workflow_manager import WorkflowState
 
 
 class WorkflowBuildingMixin:
@@ -30,7 +30,7 @@ class WorkflowBuildingMixin:
         """Build and compile the LangGraph workflow."""
         # CRITICAL: Inject WorkflowState into function globals for LangGraph's get_type_hints()
         # This is needed because LangGraph introspects type hints at runtime
-        from airunner_services.llm.managers.workflow_manager import (
+        from airunner_services.llm.workflow_manager import (
             WorkflowState,
         )
 
@@ -50,7 +50,7 @@ class WorkflowBuildingMixin:
         Returns:
             Constructed StateGraph
         """
-        from airunner_services.llm.managers.workflow_manager import (
+        from airunner_services.llm.workflow_manager import (
             WorkflowState,
         )
 

@@ -12,7 +12,7 @@ Handles the complete lifecycle of an LLM request:
 from typing import Optional, Any
 from dataclasses import replace
 
-from airunner_services.llm.managers.llm_request import LLMRequest
+from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.contract_enums import LLMActionType
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger

@@ -22,7 +22,7 @@ from airunner_services.llm.managers.response_synthesizer import (
 )
 from airunner_services.llm.managers.route_policy import RoutePolicy
 from airunner_services.llm.tool_call_identity import tool_call_identity_key
-from airunner_services.llm.utils.thinking_parser import (
+from airunner_services.llm.thinking_parser import (
     strip_thinking_tags,
     detect_thinking_open_tag,
     detect_thinking_close_tag,
@@ -33,7 +33,7 @@ from airunner_services.llm.managers.workflow_response_prompts import (
     extract_next_workflow_action,
 )
 from airunner_services.llm.utils.stream_debug import print_stream_debug
-from airunner_services.llm.utils.stream_text import combine_stream_chunks
+from airunner_services.llm.stream_text import combine_stream_chunks
 from airunner_services.settings import (
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_LLM_DUPLICATE_TOOL_CALL_WINDOW,
@@ -44,7 +44,7 @@ from airunner_services.llm_workflow_events import (
 )
 
 if TYPE_CHECKING:
-    from airunner_services.llm.managers.workflow_manager import WorkflowState
+    from airunner_services.llm.workflow_manager import WorkflowState
 
 
 class NodeFunctionsMixin:

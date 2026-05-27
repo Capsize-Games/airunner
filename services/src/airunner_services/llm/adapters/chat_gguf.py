@@ -52,7 +52,7 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_services.llm.utils.gpt_oss_parser import (
+from airunner_services.llm.gpt_oss_parser import (
     CALL_TOKEN,
     CHANNEL_TOKEN,
     CONSTRAIN_TOKEN,

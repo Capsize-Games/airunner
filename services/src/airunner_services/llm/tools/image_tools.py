@@ -54,7 +54,7 @@ def enhance_prompt_with_specialized_model(
 
     """
     try:
-        from airunner_services.llm.managers.llm_model_manager import (
+        from airunner_services.model_management.llm_model_manager import (
             LLMModelManager,
         )
 

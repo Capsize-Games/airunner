@@ -8,7 +8,7 @@ from typing import Any, List, Optional, Tuple
 from langchain_core.messages import HumanMessage
 
 from airunner_services.llm.core.tool_registry import ToolCategory
-from airunner_services.llm.utils.thinking_parser import (
+from airunner_services.llm.thinking_parser import (
     detect_thinking_close_tag,
     detect_thinking_open_tag,
     extract_thinking_and_response,

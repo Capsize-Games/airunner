@@ -5,7 +5,7 @@ from retry_requests import retry
 import openmeteo_requests
 from openmeteo_sdk.VariablesWithTime import VariablesWithTime
 
-from airunner_services.llm.config.provider_access_policy import (
+from airunner_services.downloads.policy import (
     is_openmeteo_allowed,
 )
 

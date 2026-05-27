@@ -100,7 +100,7 @@ def intelligent_crawl(
             """Invoke LLM with a prompt and return response."""
             try:
                 import uuid
-                from airunner_services.llm.managers.llm_request import (
+                from airunner_services.llm.llm_request import (
                     LLMRequest,
                 )
                 from airunner_services.contract_enums import LLMActionType

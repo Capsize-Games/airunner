@@ -15,7 +15,7 @@ from airunner_services.llm.adapters.chat_model_factory_helpers import (
     build_provider_runtime_config,
     get_db_settings,
 )
-from airunner_services.llm.config.provider_access_policy import (
+from airunner_services.downloads.policy import (
     is_openai_allowed,
     is_openrouter_allowed,
 )

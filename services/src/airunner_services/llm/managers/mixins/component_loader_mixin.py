@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import torch
 
 from airunner_services.llm.adapters import ChatModelFactory
-from airunner_services.llm.managers.tool_manager import ToolManager
+from airunner_services.llm.tool_manager import ToolManager
 from airunner_services.llm_workflow_events import (
     build_llm_tool_action_handler,
     build_llm_workflow_event_sink,
@@ -186,7 +186,7 @@ class ComponentLoaderMixin:
                     )
 
             # Runtime import to avoid circular dependency
-            from airunner_services.llm.managers.workflow_manager import (
+            from airunner_services.llm.workflow_manager import (
                 WorkflowManager,
             )
 

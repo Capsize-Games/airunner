@@ -287,7 +287,7 @@ class ToolRegistry:
                 "airunner_services.llm.tools.conversation_tools",
                 "airunner_services.llm.tools.math_tools",
                 "airunner_services.llm.tools.reasoning_tools",
-                "airunner_services.llm.tools.web_tools",
+                "airunner_services.tools.web_tools",
                 "airunner_services.llm.tools.rag_tools",
                 "airunner_services.llm.tools.knowledge_tools",
                 "airunner_services.llm.tools.user_data_tools",

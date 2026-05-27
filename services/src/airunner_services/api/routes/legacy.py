@@ -29,7 +29,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 from airunner_services.model_management.model_registry import ModelRegistry
-from airunner_services.requests.llm_request import LLMRequest
+from airunner_services.llm.llm_request import LLMRequest
 from airunner_services.contract_enums import LLMActionType, SignalCode
 from airunner_services.api.models.runtime_route_request import (
     RuntimeRouteRequest,

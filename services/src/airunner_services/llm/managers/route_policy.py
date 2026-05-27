@@ -7,7 +7,7 @@ from typing import Any, TYPE_CHECKING
 from langchain_core.messages import AIMessage
 
 if TYPE_CHECKING:
-    from airunner_services.llm.managers.workflow_manager import WorkflowState
+    from airunner_services.llm.workflow_manager import WorkflowState
 
 
 class RoutePolicy:
