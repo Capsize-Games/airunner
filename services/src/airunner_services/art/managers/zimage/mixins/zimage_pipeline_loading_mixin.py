@@ -237,8 +237,8 @@ class ZImagePipelineLoadingMixin:
         version-specific and should be loaded from the canonical
         Z-Image Turbo model directory.
         """
-        from airunner_model.models.path_settings import PathSettings
-        from airunner_model.session import session_scope
+        from airunner_services.database.models.path_settings import PathSettings
+        from airunner_services.database.session import session_scope
 
         try:
             with session_scope() as session:

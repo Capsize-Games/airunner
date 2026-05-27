@@ -36,15 +36,15 @@ for path in (
         sys.path.append(path_str)
 
 
-from airunner_model.models.application_settings import ApplicationSettings
-from airunner_model.models.generator_settings import GeneratorSettings
-from airunner_model.models.path_settings import PathSettings
-from airunner_model.setup_database import setup_database
+from airunner_services.database.models.application_settings import ApplicationSettings
+from airunner_services.database.models.generator_settings import GeneratorSettings
+from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.database.setup_database import setup_database
 from airunner_services.art.managers.zimage.zimage_bundle_requirements import (
     get_active_zimage_load_mode,
     get_missing_files_for_mode,
 )
-from airunner_model.session import reset_engine
+from airunner_services.database.session import reset_engine
 from airunner_services.app.service_app import ServiceApp
 from airunner_services.ipc.messages import EnvelopeStatus, RequestEnvelope
 from airunner_services.model_management.zimage_model_manager import (

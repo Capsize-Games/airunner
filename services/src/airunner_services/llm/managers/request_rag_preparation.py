@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from airunner_model.models.document import Document
-from airunner_model.session import session_scope
+from airunner_services.database.models.document import Document
+from airunner_services.database.session import session_scope
 
 
 def prepare_request_rag(

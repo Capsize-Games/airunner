@@ -191,7 +191,7 @@ class ToolManager(
     def _load_custom_tools(self) -> List[Callable]:
         """Load custom tools created by the agent from the database."""
         try:
-            from airunner_model.models.llm_tool import LLMTool
+            from airunner_services.database.models.llm_tool import LLMTool
 
             custom_tools = []
             enabled_tools = LLMTool.objects.filter_by(enabled=True) or []

@@ -22,7 +22,7 @@ from diffusers import (
 )
 from PIL.Image import Image
 
-from airunner_model.models.controlnet_model import ControlnetModel
+from airunner_services.database.models.controlnet_model import ControlnetModel
 from airunner_services.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
@@ -65,7 +65,7 @@ class SDPropertiesMixin:
     @property
     def active_grid_settings(self) -> Any:
         """Return active grid configuration from persisted settings."""
-        from airunner_model.models.active_grid_settings import (
+        from airunner_services.database.models.active_grid_settings import (
             ActiveGridSettings,
         )
         return self._load_settings(ActiveGridSettings)
@@ -73,7 +73,7 @@ class SDPropertiesMixin:
     @property
     def drawing_pad_settings(self) -> Any:
         """Return drawing pad configuration from persisted settings."""
-        from airunner_model.models.drawingpad_settings import (
+        from airunner_services.database.models.drawingpad_settings import (
             DrawingPadSettings,
         )
         return self._load_settings(DrawingPadSettings)

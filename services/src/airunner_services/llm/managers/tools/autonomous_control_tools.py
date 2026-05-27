@@ -254,10 +254,10 @@ class AutonomousControlTools(BaseTool):
                 analyze_user_behavior(days_back=7)
             """
             try:
-                from airunner_model.session import (
+                from airunner_services.database.session import (
                     session_scope,
                 )
-                from airunner_model.models.conversation import (
+                from airunner_services.database.models.conversation import (
                     Conversation,
                 )
                 from datetime import datetime, timedelta

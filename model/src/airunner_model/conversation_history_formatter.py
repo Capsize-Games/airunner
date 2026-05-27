@@ -5,8 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any, Callable, Optional
 
-from airunner_model.models.conversation import Conversation
-
 
 NormalizeThinking = Callable[[Any], Optional[str]]
 StripStoredThinking = Callable[[str, Optional[str]], str]
@@ -40,7 +38,7 @@ def _extract_query_from_tool_call(tool_call: dict[str, Any]) -> str:
 def load_formatted_conversation_history(
     *,
     logger: Any,
-    conversation: Optional[Conversation],
+    conversation: Optional[Any],
     max_messages: int,
     normalize_thinking_content: NormalizeThinking,
     strip_stored_thinking_prefix: StripStoredThinking,

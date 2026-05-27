@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from diffusers import SchedulerMixin
 
-from airunner_model.models.schedulers import Schedulers
+from airunner_services.database.models.schedulers import Schedulers
 from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
 

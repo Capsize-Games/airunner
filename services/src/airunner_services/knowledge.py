@@ -394,8 +394,8 @@ class KnowledgeBase:
 
 	def _register_knowledge_documents(self, files: List[str]) -> None:
 		try:
-			from airunner_model.models.document import Document
-			from airunner_model.session import session_scope
+			from airunner_services.database.models.document import Document
+			from airunner_services.database.session import session_scope
 
 			with session_scope() as session:
 				for file_path in files:

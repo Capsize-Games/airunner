@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from airunner_services.contract_enums import ModelStatus, ModelType, SignalCode
-from airunner_model.models.drawingpad_settings import (
+from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
 )
 from airunner_services.model_management import ModelResourceManager

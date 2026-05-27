@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from airunner_model.models.llm_generator_settings import (
+from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
 from airunner_services.llm.managers.request_preparation import (

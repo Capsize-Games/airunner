@@ -16,7 +16,7 @@ from airunner_services.settings import (
     AIRUNNER_LOG_LEVEL,
     AIRUNNER_SCRAPER_BLACKLIST,
 )
-from airunner_model.models.path_settings import PathSettings
+from airunner_services.database.models.path_settings import PathSettings
 from airunner_model.url_safety import (
     SSRFBlocked,
     safe_fetch_url,

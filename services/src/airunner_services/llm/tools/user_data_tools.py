@@ -19,7 +19,7 @@ Examples:
 """
 
 from airunner_services.llm.core.tool_registry import tool, ToolCategory
-from airunner_model.models.user import User
+from airunner_services.database.models.user import User
 
 
 @tool(

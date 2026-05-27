@@ -11,7 +11,7 @@ from airunner_services.contract_enums import AvailableLanguage
 from airunner_services.contract_enums import Gender
 from airunner_services.contract_enums import ModelStatus
 from airunner_services.contract_enums import ModelType
-from airunner_model.models.espeak_settings import EspeakSettings
+from airunner_services.database.models.espeak_settings import EspeakSettings
 from airunner_services.requests.tts_request import TTSRequest
 from airunner_services.runtimes.tts_model_manager import TTSModelManager
 

@@ -42,7 +42,7 @@ def _tenant_key() -> str:
     if _tenancy_mode() == "single":
         return "default"
     # Lazy import to avoid circular deps
-    from airunner_services.data.tenant import (
+    from airunner_model.tenant import (
         get_tenant_key,
         tenant_schema_for_key,
     )

@@ -9,21 +9,21 @@ from typing import Optional
 
 from airunner_services.api.api_service_base import APIServiceBase
 from airunner_services.api.services._art_signal_code import get_art_signal_code
-from airunner_model.models.brush_settings import BrushSettings
-from airunner_model.models.canvas_layer import CanvasLayer
-from airunner_model.models.controlnet_settings import (
+from airunner_services.database.models.brush_settings import BrushSettings
+from airunner_services.database.models.canvas_layer import CanvasLayer
+from airunner_services.database.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner_model.models.drawingpad_settings import (
+from airunner_services.database.models.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner_model.models.image_to_image_settings import (
+from airunner_services.database.models.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner_model.models.metadata_settings import (
+from airunner_services.database.models.metadata_settings import (
     MetadataSettings,
 )
-from airunner_model.models.outpaint_settings import (
+from airunner_services.database.models.outpaint_settings import (
     OutpaintSettings,
 )
 from airunner_services.art.managers.stablediffusion.image_request import ImageRequest

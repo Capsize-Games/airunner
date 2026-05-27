@@ -8,16 +8,16 @@ from typing import Optional
 from airunner_services.contract_enums import ModelStatus
 from airunner_services.contract_enums import ModelType
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_model.models.application_settings import (
+from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_model.models.language_settings import (
+from airunner_services.database.models.language_settings import (
     LanguageSettings,
 )
-from airunner_model.models.openvoice_settings import (
+from airunner_services.database.models.openvoice_settings import (
     OpenVoiceSettings,
 )
-from airunner_model.models.path_settings import PathSettings
+from airunner_services.database.models.path_settings import PathSettings
 from airunner_services.utils.application.api_reference import (
     peek_registered_api,
 )

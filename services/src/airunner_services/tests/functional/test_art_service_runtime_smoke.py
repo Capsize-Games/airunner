@@ -29,11 +29,11 @@ for _path in (
         sys.path.append(_path_str)
 
 
-from airunner_model.session import reset_engine
-from airunner_model.models.application_settings import ApplicationSettings
-from airunner_model.models.generator_settings import GeneratorSettings
-from airunner_model.models.path_settings import PathSettings
-from airunner_model.setup_database import setup_database
+from airunner_services.database.session import reset_engine
+from airunner_services.database.models.application_settings import ApplicationSettings
+from airunner_services.database.models.generator_settings import GeneratorSettings
+from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.database.setup_database import setup_database
 from airunner_services.app.service_app import ServiceApp
 from airunner_services.contract_enums import Scheduler, StableDiffusionVersion
 from airunner_services.runtimes.local_fallback import LocalFallbackArtClient

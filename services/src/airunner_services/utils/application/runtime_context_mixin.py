@@ -5,39 +5,39 @@ from __future__ import annotations
 from typing import Any, Optional, TypeVar
 
 from airunner_services.contract_enums import SignalCode
-from airunner_model.models.application_settings import (
+from airunner_services.database.models.application_settings import (
     ApplicationSettings,
 )
-from airunner_model.models.chatbot import Chatbot
-from airunner_model.models.controlnet_settings import (
+from airunner_services.database.models.chatbot import Chatbot
+from airunner_services.database.models.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner_model.models.espeak_settings import (
+from airunner_services.database.models.espeak_settings import (
     EspeakSettings,
 )
-from airunner_model.models.generator_settings import (
+from airunner_services.database.models.generator_settings import (
     GeneratorSettings,
 )
-from airunner_model.models.language_settings import (
+from airunner_services.database.models.language_settings import (
     LanguageSettings,
 )
-from airunner_model.models.llm_generator_settings import (
+from airunner_services.database.models.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner_model.models.memory_settings import (
+from airunner_services.database.models.memory_settings import (
     MemorySettings,
 )
-from airunner_model.models.metadata_settings import (
+from airunner_services.database.models.metadata_settings import (
     MetadataSettings,
 )
-from airunner_model.models.openvoice_settings import (
+from airunner_services.database.models.openvoice_settings import (
     OpenVoiceSettings,
 )
-from airunner_model.models.path_settings import PathSettings
-from airunner_model.models.sound_settings import SoundSettings
-from airunner_model.models.stt_settings import STTSettings
-from airunner_model.models.voice_settings import VoiceSettings
-from airunner_model.models.whisper_settings import (
+from airunner_services.database.models.path_settings import PathSettings
+from airunner_services.database.models.sound_settings import SoundSettings
+from airunner_services.database.models.stt_settings import STTSettings
+from airunner_services.database.models.voice_settings import VoiceSettings
+from airunner_services.database.models.whisper_settings import (
     WhisperSettings,
 )
 from airunner_services.llm.get_chatbot import get_chatbot

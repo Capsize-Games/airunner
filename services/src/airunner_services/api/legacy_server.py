@@ -54,8 +54,8 @@ from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.app.service_app import ServiceApp
 from airunner_services.utils.application.get_logger import get_logger
 from airunner_services.utils.application.log_hygiene import summarize_text
-from airunner_model.session import session_scope
-from airunner_model.models.conversation import Conversation
+from airunner_services.database.session import session_scope
+from airunner_services.database.models.conversation import Conversation
 from airunner_services.utils.application.get_logger import get_logger
 
 # Lazy import to avoid circular dependency
@@ -382,7 +382,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         if not art_model_path:
             # Try to get from settings
             try:
-                from airunner_model.models.generator_settings import (
+                from airunner_services.database.models.generator_settings import (
                     GeneratorSettings,
                 )
                 settings = GeneratorSettings.objects.first()
@@ -911,7 +911,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         quantization = "Q4_K_M"
         
         try:
-            from airunner_model.models.llm_generator_settings import (
+            from airunner_services.database.models.llm_generator_settings import (
                 LLMGeneratorSettings,
             )
             settings = LLMGeneratorSettings.objects.first()
@@ -985,7 +985,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Try to get actual model info
         model_name = "airunner:latest"
         try:
-            from airunner_model.models.llm_generator_settings import (
+            from airunner_services.database.models.llm_generator_settings import (
                 LLMGeneratorSettings,
             )
             settings = LLMGeneratorSettings.objects.first()

@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict
 
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
-from airunner_model.session import session_scope
+from airunner_services.database.session import session_scope
 from airunner_services.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -109,10 +109,10 @@ def _persist_model_trigger_words(
     """Persist trigger words for a checkpoint/model."""
     # Ensure both ends of the relationship are registered before using AIModels
     # to avoid SQLAlchemy registry resolution errors.
-    from airunner_model.models.generator_settings import (
+    from airunner_services.database.models.generator_settings import (
         GeneratorSettings,  # noqa: F401 - imported for side-effect
     )
-    from airunner_model.models.ai_models import AIModels
+    from airunner_services.database.models.ai_models import AIModels
 
     file_name = os.path.basename(file_path)
     name_without_ext = os.path.splitext(file_name)[0]

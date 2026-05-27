@@ -4,7 +4,7 @@ import os
 import threading
 from typing import Dict, List
 
-from airunner_model.models.document import Document as DBDocument
+from airunner_services.database.models.document import Document as DBDocument
 from airunner_services.llm.workers.rag_index_status import (
     rag_index_status_tracker,
 )

@@ -15,7 +15,7 @@ from airunner_services.llm.thinking_parser import (
 )
 from airunner_services.settings import AIRUNNER_LOG_LEVEL
 from airunner_services.utils.application import get_logger
-from airunner_model.models.conversation import Conversation
+from airunner_services.database.models.conversation import Conversation
 
 
 class ConversationHistoryManager:

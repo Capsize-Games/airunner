@@ -296,7 +296,7 @@ def setup_database(db_url: str | None = None):
                     else schema
                 )
                 try:
-                    from airunner.components.data.tenant import set_tenant_key
+                    from airunner_model.tenant import set_tenant_key
 
                     tenant_token = set_tenant_key(raw_tenant)
                 except Exception:
@@ -307,7 +307,7 @@ def setup_database(db_url: str | None = None):
         finally:
             if tenant_token is not None:
                 try:
-                    from airunner.components.data.tenant import reset_tenant_key
+                    from airunner_model.tenant import reset_tenant_key
 
                     reset_tenant_key(tenant_token)
                 except Exception:
