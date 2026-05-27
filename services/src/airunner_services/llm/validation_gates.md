@@ -35,13 +35,15 @@ when the narrower checks are already green.
 
 ## Optional analysis tools
 
-`ruff`, `radon`, `xenon`, and `pyright` are not wired into the current
-repository metadata or entry points. Treat them as optional dev-only
-tooling:
+`radon` and `xenon` now power the broader services discovery workflow via:
 
-- do not assume they are available
-- do not add them implicitly during refactor slices
-- only adopt them through explicit approval and separate repo wiring
+```bash
+python scripts/services_complexity_report.py
+airunner-services-complexity-report
+```
+
+Use that workflow for directory-wide hotspot discovery and issue drafting.
+Do not replace slice-scoped compile, quality-report, or `mypy` gates with it.
 
 ## Verification note template
 

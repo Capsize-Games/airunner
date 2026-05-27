@@ -18,6 +18,11 @@ GUI_REQUIREMENTS = [
     FACEHUGGERSHIELD_REQUIREMENT,
 ]
 
+ANALYSIS_REQUIREMENTS = [
+    "radon>=6.0.1,<7",
+    "xenon>=0.9.3,<1",
+]
+
 
 def unique_requirements(*groups):
     dependencies = []
@@ -42,7 +47,7 @@ setup(
     packages=find_packages("src") + ["scripts"],
     python_requires=">=3.13.3",
     install_requires=GUI_REQUIREMENTS,
-    extras_require={},
+    extras_require={"analysis": ANALYSIS_REQUIREMENTS},
     package_data={
         "airunner": [
             # GUI resources
@@ -73,6 +78,7 @@ setup(
             "airunner-test-coverage-report=scripts.coverage_report:main",
             "airunner-mypy=scripts.mypy_shortcut:main",
             "airunner-quality-report=scripts.code_quality_report:main",
+            "airunner-services-complexity-report=scripts.services_complexity_report:main",
             "airunner-remove-unused-imports=scripts.remove_unused_imports:main",
         ],
     },
