@@ -8,7 +8,6 @@ without diffusers dependency, supporting FP8 scaled checkpoints.
 from __future__ import annotations
 
 import gc
-import os
 import numpy as np
 from PIL import Image
 import logging
@@ -38,6 +37,12 @@ from airunner_services.art.managers.zimage.native.nextdit_model import (
 from airunner_services.art.managers.zimage.native.zimage_text_encoder import (
     ZImageTextEncoder,
     ZImageTokenizer,
+)
+from airunner_services.art.managers.zimage.native.zimage_native_pipeline_prompt_helper import (
+    ZImageNativePipelinePromptHelper,
+)
+from airunner_services.art.managers.zimage.native.zimage_native_pipeline_generation_helper import (
+    ZImageNativePipelineGenerationHelper,
 )
 from airunner_services.art.runtime_memory import clear_memory
 # We still rely on diffusers AutoencoderKL until a native VAE is available.
@@ -179,6 +184,34 @@ class ZImageNativePipeline:
         # State
         self.is_fp8 = False
         self._loaded_components: List[str] = []
+
+    def _get_prompt_helper(self) -> ZImageNativePipelinePromptHelper:
+        """Return the cached prompt-conditioning helper."""
+        helper = getattr(self, "_prompt_helper", None)
+        if helper is None:
+            helper = ZImageNativePipelinePromptHelper(self)
+            self._prompt_helper = helper
+        return helper
+
+    def _get_generation_helper(self) -> ZImageNativePipelineGenerationHelper:
+        """Return the cached generation helper."""
+        helper = getattr(self, "_generation_helper", None)
+        if helper is None:
+            helper = ZImageNativePipelineGenerationHelper(self)
+            self._generation_helper = helper
+        return helper
+
+    def _ensure_image_processor(self) -> None:
+        """Create the lightweight VAE image processor on first use."""
+        if self.image_processor is not None:
+            return
+        try:
+            vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+        except Exception:
+            vae_scale_factor = 8
+        self.image_processor = _NativeVaeImageProcessor(
+            vae_scale_factor=vae_scale_factor
+        )
 
     @property
     def components(self) -> Dict[str, Any]:
@@ -665,127 +698,29 @@ class ZImageNativePipeline:
         tokenizer_path: Optional[str] = None,
         use_4bit: bool = False,
     ) -> None:
-        """
-        Load the text encoder.
-        
-        Args:
-            model_path: Path to text encoder model
-            tokenizer_path: Path to tokenizer (defaults to model_path)
-            use_4bit: Enable 4-bit quantization for memory efficiency
-        """
-        path = model_path or self.text_encoder_path
-        if path is None:
-            raise ValueError("No text encoder path provided")
-        
-        # Use tokenizer_path if provided, else use sibling 'tokenizer' directory if exists
-        tok_path = tokenizer_path
-        if tok_path is None:
-            sibling_tokenizer = os.path.join(os.path.dirname(path), "tokenizer")
-            if os.path.isdir(sibling_tokenizer):
-                tok_path = sibling_tokenizer
-            else:
-                tok_path = path  # Fall back to model path
-        
-        logger.info(f"Loading text encoder from {path}")
-        
-        # Override quantization if use_4bit is specified
-        quantization = "4bit" if use_4bit else self.text_encoder_quantization
-        plan = self._build_text_encoder_load_plan(quantization)
-
-        self.text_encoder = ZImageTextEncoder(
-            model_path=path,
-            tokenizer_path=tok_path,
-            device=plan["device"],
-            dtype=self.dtype,
-            quantization=plan["quantization"],
-            device_map=plan["device_map"],
-            max_memory=plan["max_memory"],
-            enable_cpu_offload=plan["enable_cpu_offload"],
+        """Load the text encoder."""
+        self._get_prompt_helper().load_text_encoder(
+            model_path,
+            tokenizer_path,
+            use_4bit,
         )
-        
-        self.tokenizer = self.text_encoder.tokenizer
-        
-        self._loaded_components.append("text_encoder")
-        logger.info("Text encoder loaded successfully")
 
     def _build_text_encoder_load_plan(
         self,
         quantization: Optional[str],
     ) -> Dict[str, Any]:
         """Choose a text-encoder loading strategy for current free VRAM."""
-        plan = {
-            "quantization": quantization,
-            "device": self.device,
-            "device_map": None,
-            "max_memory": None,
-            "enable_cpu_offload": False,
-        }
-        if not torch.cuda.is_available():
-            return plan
-
-        free_vram_gb = torch.cuda.mem_get_info()[0] / (1024**3)
-        total_vram_gb = (
-            torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        return self._get_prompt_helper().build_text_encoder_load_plan(
+            quantization
         )
-        cpu_budget = "32GiB"
-        if quantization in {"4bit", "8bit"} and free_vram_gb < 4.0:
-            logger.info(
-                "Low free VRAM after transformer load (%.2f GiB). "
-                "Loading text encoder on CPU to avoid prompt-encoding OOMs.",
-                free_vram_gb,
-            )
-            plan.update(
-                {
-                    "quantization": None,
-                    "device": torch.device("cpu"),
-                    "device_map": None,
-                    "max_memory": None,
-                    "enable_cpu_offload": False,
-                }
-            )
-            return plan
-
-        gpu_budget = max(
-            int(max(min(total_vram_gb - 8.0, free_vram_gb - 1.0), 2.0)),
-            2,
-        )
-        logger.info(
-            "Text encoder load budget: free_vram=%.2f GiB, total_vram=%.2f GiB, gpu_budget=%sGiB.",
-            free_vram_gb,
-            total_vram_gb,
-            gpu_budget,
-        )
-        plan.update(
-            {
-                "device_map": "auto",
-                "max_memory": {0: f"{gpu_budget}GiB", "cpu": cpu_budget},
-            }
-        )
-        return plan
 
     def _ensure_text_encoder_ready(self) -> None:
         """Load text encoder weights on demand before prompt encoding."""
-        if self.text_encoder is None:
-            raise RuntimeError("Text encoder not loaded")
-        if self.text_encoder.model is None and self.text_encoder.model_path:
-            logger.info("Reloading text encoder for prompt encoding")
-            self.text_encoder.load_model(self.text_encoder.model_path)
+        self._get_prompt_helper().ensure_text_encoder_ready()
 
     def _prepare_text_encoder_for_encoding(self) -> None:
         """Move fully GPU-resident encoders back to the active device."""
-        self._ensure_text_encoder_ready()
-        if self.text_encoder is None or self.text_encoder.model is None:
-            return
-        if self.text_encoder.prefer_cpu_execution:
-            logger.debug("Keeping text encoder on CPU for prompt encoding")
-            return
-        if self.text_encoder.uses_accelerate_offload:
-            logger.debug("Using accelerate-managed text encoder placement")
-            return
-        current_device = next(self.text_encoder.model.parameters()).device
-        if current_device.type == "cpu":
-            logger.debug("Moving text encoder back to GPU for encoding")
-            self.text_encoder.model.to(self.device)
+        self._get_prompt_helper().prepare_text_encoder_for_encoding()
 
     def _ensure_vae_on_device(self) -> None:
         """Move the VAE to the active device before encode/decode."""
@@ -798,19 +733,7 @@ class ZImageNativePipeline:
 
     def _release_text_encoder_after_encoding(self) -> None:
         """Free text-encoder GPU memory once prompt embeddings are ready."""
-        if self.text_encoder is None or self.text_encoder.model is None:
-            return
-        if self.text_encoder.prefer_cpu_execution:
-            logger.debug("Keeping CPU-resident text encoder loaded")
-            return
-        if self.text_encoder.uses_accelerate_offload:
-            self.text_encoder.unload_model()
-            logger.debug("Released accelerate-managed text encoder after encoding")
-            return
-        self.text_encoder.model.to("cpu")
-        gc.collect()
-        torch.cuda.empty_cache()
-        logger.debug("Offloaded text encoder to CPU")
+        self._get_prompt_helper().release_text_encoder_after_encoding()
 
     def _move_prompt_conditioning_to_device(
         self,
@@ -819,18 +742,11 @@ class ZImageNativePipeline:
         attention_mask: Optional[torch.Tensor],
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
         """Move prompt-conditioning tensors to the transformer device."""
-        prompt_embeds = prompt_embeds.to(
-            device=self.device,
-            dtype=self.dtype,
+        return self._get_prompt_helper().move_prompt_conditioning_to_device(
+            prompt_embeds,
+            negative_embeds,
+            attention_mask,
         )
-        if negative_embeds is not None:
-            negative_embeds = negative_embeds.to(
-                device=self.device,
-                dtype=self.dtype,
-            )
-        if attention_mask is not None:
-            attention_mask = attention_mask.to(self.device)
-        return prompt_embeds, negative_embeds, attention_mask
     
     def load_vae(
         self,
@@ -899,32 +815,11 @@ class ZImageNativePipeline:
         prompt: Union[str, List[str]],
         negative_prompt: Optional[Union[str, List[str]]] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
-        """
-        Encode text prompt to embeddings.
-        
-        Args:
-            prompt: Text prompt or list of prompts
-            negative_prompt: Optional negative prompt
-            
-        Returns:
-            Tuple of (prompt_embeds, negative_embeds, attention_mask)
-        """
-        if self.text_encoder is None:
-            raise RuntimeError("Text encoder not loaded")
-        
-        # Encode positive prompt
-        prompt_embeds, attention_mask = self.text_encoder.encode(
-            prompt, return_attention_mask=True
+        """Encode text prompt to embeddings."""
+        return self._get_prompt_helper().encode_prompt(
+            prompt,
+            negative_prompt,
         )
-        
-        # Encode negative prompt if provided
-        negative_embeds = None
-        if negative_prompt is not None:
-            negative_embeds, _ = self.text_encoder.encode(
-                negative_prompt, return_attention_mask=False
-            )
-        
-        return prompt_embeds, negative_embeds, attention_mask
     
     @torch.no_grad()
     def generate(
@@ -944,306 +839,23 @@ class ZImageNativePipeline:
         callback: Optional[Callable[[int, torch.Tensor], None]] = None,
         callback_steps: int = 1,
     ) -> Union[torch.Tensor, List["Image.Image"]]:
-        """
-        Generate images from text prompts.
-        
-        Args:
-            prompt: Text prompt or list of prompts
-            negative_prompt: Optional negative prompt
-            height: Output image height
-            width: Output image width
-            num_inference_steps: Number of denoising steps
-            guidance_scale: CFG scale (0 for Turbo models)
-            num_images_per_prompt: Number of images per prompt
-            generator: Random generator for reproducibility
-            latents: Optional pre-generated latents
-            output_type: Output type ("pil", "pt", "latent")
-            callback: Optional callback(step, latents)
-            callback_steps: Steps between callbacks
-            
-        Returns:
-            Generated images (PIL or tensor depending on output_type)
-        """
-        # Validate components
-        if self.transformer is None:
-            raise RuntimeError("Transformer not loaded")
-        if self.scheduler is None:
-            self.setup_scheduler(num_inference_steps)
-        is_img2img = image is not None
-        if is_img2img and (strength < 0 or strength > 1):
-            raise ValueError("Img2img strength must be between 0 and 1")
-        
-        # Handle batch
-        if isinstance(prompt, str):
-            prompt_batch_size = 1
-            prompt = [prompt]
-        else:
-            prompt_batch_size = len(prompt)
-        
-        # Total batch size = prompts * images per prompt
-        batch_size = prompt_batch_size * num_images_per_prompt
-        
-        # Encode prompts
-        if self.text_encoder is not None:
-            self._prepare_text_encoder_for_encoding()
-            prompt_embeds, negative_embeds, attention_mask = self.encode_prompt(
-                prompt, negative_prompt
-            )
-            # Repeat for num_images_per_prompt
-            if num_images_per_prompt > 1:
-                prompt_embeds = prompt_embeds.repeat(num_images_per_prompt, 1, 1)
-                if negative_embeds is not None:
-                    negative_embeds = negative_embeds.repeat(num_images_per_prompt, 1, 1)
-                if attention_mask is not None:
-                    attention_mask = attention_mask.repeat(num_images_per_prompt, 1)
-
-            prompt_embeds, negative_embeds, attention_mask = (
-                self._move_prompt_conditioning_to_device(
-                    prompt_embeds,
-                    negative_embeds,
-                    attention_mask,
-                )
-            )
-
-            self._release_text_encoder_after_encoding()
-        else:
-            # Dummy embeddings for testing
-            prompt_embeds = torch.randn(
-                batch_size, 77, 2560,
-                device=self.device, dtype=self.dtype
-            )
-            negative_embeds = None
-            attention_mask = None
-
-        # Setup scheduler timesteps and handle img2img strength
-        self.scheduler.set_timesteps(num_inference_steps, device=self.device)
-        timesteps = self.scheduler.timesteps
-        sigmas = self.scheduler.sigmas
-        t_start = 0
-        if is_img2img:
-            init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
-            init_timestep = max(init_timestep, 1)
-            t_start = max(num_inference_steps - init_timestep, 0)
-            timesteps = timesteps[t_start:]
-            sigmas = sigmas[t_start:]
-            if timesteps.numel() == 0 or sigmas.numel() <= 1:
-                raise ValueError("Strength setting removed all timesteps; choose lower strength or increase steps.")
-        # Reset scheduler view to the truncated window and restart at step 0
-        self.scheduler.timesteps = timesteps
-        self.scheduler.sigmas = sigmas
-        if hasattr(self.scheduler, "_step_index"):
-            self.scheduler._step_index = 0
-        self.scheduler.num_inference_steps = num_inference_steps
-        num_inference_steps = timesteps.shape[0]
-
-        def _randn(shape: Tuple[int, ...], dtype: torch.dtype = torch.float32) -> torch.Tensor:
-            if generator is not None and self.device.type == "cuda":
-                gen_device = getattr(generator, "device", torch.device("cpu"))
-                if getattr(gen_device, "type", "cpu") == "cpu":
-                    return torch.randn(
-                        shape,
-                        device="cpu",
-                        dtype=dtype,
-                        generator=generator,
-                    ).to(self.device)
-            return torch.randn(shape, device=self.device, dtype=dtype, generator=generator)
-
-        # Setup latents
-        latent_channels = ZIMAGE_CONFIG['in_channels']
-
-        if is_img2img:
-            if self.vae is None:
-                raise RuntimeError("VAE must be loaded for img2img generation")
-
-            if self.image_processor is None:
-                try:
-                    vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
-                except Exception:
-                    vae_scale_factor = 8
-                self.image_processor = _NativeVaeImageProcessor(vae_scale_factor=vae_scale_factor)
-
-            # Derive target size from the input image when not provided
-            if height is None or width is None:
-                if hasattr(image, "height") and hasattr(image, "width"):
-                    height = height or image.height
-                    width = width or image.width
-                elif isinstance(image, torch.Tensor):
-                    height = height or int(image.shape[-2])
-                    width = width or int(image.shape[-1])
-            height = int(height)
-            width = int(width)
-
-            self._ensure_vae_on_device()
-            init_image = self.image_processor.preprocess(
-                image,
-                height=height,
-                width=width,
-            ).to(device=self.device, dtype=self.vae.dtype)
-
-            image_latents = self.vae.encode(init_image).latent_dist.sample(generator)
-            shift_factor = getattr(self.vae.config, "shift_factor", 0.0)
-            scaling_factor = getattr(self.vae.config, "scaling_factor", 1.0)
-            image_latents = (image_latents - shift_factor) * scaling_factor
-
-            if batch_size > image_latents.shape[0]:
-                if batch_size % image_latents.shape[0] != 0:
-                    raise ValueError(
-                        f"Cannot duplicate image latents of batch size {image_latents.shape[0]} to {batch_size}"
-                    )
-                repeat_count = batch_size // image_latents.shape[0]
-                image_latents = torch.cat([image_latents] * repeat_count, dim=0)
-            else:
-                image_latents = image_latents[:batch_size]
-
-            image_latents = image_latents.to(device=self.device, dtype=torch.float32)
-
-            if latents is None:
-                noise = _randn(tuple(image_latents.shape), dtype=torch.float32)
-                # Mirror diffusers img2img init: blend by normalized timestep fraction
-                timestep_value = float(timesteps[0].item()) if timesteps.numel() > 0 else 0.0
-                timestep_ratio = timestep_value / max(self.scheduler.config.num_train_timesteps, 1)
-                logger.debug(
-                    "[IMG2IMG] strength=%s, t_start=%s, first_timestep=%s, timestep_ratio=%.4f",
-                    strength,
-                    t_start,
-                    timestep_value,
-                    timestep_ratio,
-                )
-                logger.debug(
-                    "[IMG2IMG] image_latents std=%.4f, noise std=%.4f",
-                    image_latents.std().item(),
-                    noise.std().item(),
-                )
-                latents = (1.0 - timestep_ratio) * image_latents + timestep_ratio * noise
-                logger.debug(
-                    "[IMG2IMG] blended latents std=%.4f (image_weight=%.4f, noise_weight=%.4f)",
-                    latents.std().item(),
-                    1.0 - timestep_ratio,
-                    timestep_ratio,
-                )
-            else:
-                latents = latents.to(device=self.device, dtype=torch.float32)
-        else:
-            latent_height = height // 8
-            latent_width = width // 8
-            if latents is None:
-                latents = _randn(
-                    (batch_size, latent_channels, latent_height, latent_width),
-                    dtype=self.dtype,
-                )
-            else:
-                latents = latents.to(device=self.device, dtype=self.dtype)
-
-            if hasattr(self.scheduler, 'init_noise_sigma'):
-                latents = latents * self.scheduler.init_noise_sigma
-        
-        # Denoising loop
-        num_tokens = prompt_embeds.shape[1] if prompt_embeds is not None else 77
-        
-        # Determine if CFG should be used
-        # CFG is applied when guidance_scale > 1.0 and we have negative embeddings
-        use_cfg = guidance_scale > 1.0 and negative_embeds is not None
-
-        for i, t in enumerate(timesteps):
-            # Expand timestep and normalize to [0, 1] like diffusers pipeline
-            timestep = t.expand(batch_size)
-            timestep = (self.scheduler.num_train_timesteps - timestep) / max(self.scheduler.num_train_timesteps, 1)
-            
-            # Prepare conditioning
-            if use_cfg:
-                # CFG: concat negative and positive
-                latent_model_input = torch.cat([latents, latents], dim=0)
-                prompt_embeds_input = torch.cat([negative_embeds, prompt_embeds], dim=0)
-                timestep_input = timestep.repeat(2)
-            else:
-                latent_model_input = latents
-                prompt_embeds_input = prompt_embeds
-                timestep_input = timestep
-            
-            # Model prediction
-            noise_pred = self.transformer(
-                latent_model_input,
-                timestep_input,
-                prompt_embeds_input,
-                num_tokens=num_tokens,
-                attention_mask=attention_mask,
-            )
-            
-            # CRITICAL: Negate the model output (official Z-Image does this!)
-            # Official code: noise_pred = -noise_pred.squeeze(2)
-            noise_pred = -noise_pred
-            
-            # Debug logging for all steps
-            logger.debug(
-                "[DEBUG] Step %s: t=%.2f, latents std=%.4f, noise_pred std=%.4f",
-                i,
-                t.item(),
-                latents.std().item(),
-                noise_pred.std().item(),
-            )
-            
-            # Apply CFG
-            if use_cfg:
-                noise_pred_neg, noise_pred_pos = noise_pred.chunk(2)
-                noise_pred = noise_pred_neg + guidance_scale * (noise_pred_pos - noise_pred_neg)
-            
-            # Convert to float32 for scheduler step (official does this)
-            noise_pred = noise_pred.to(torch.float32)
-            latents = latents.to(torch.float32)
-            
-            # Scheduler step - extract prev_sample from output
-            scheduler_output = self.scheduler.step(noise_pred, t, latents)
-            latents = scheduler_output.prev_sample if hasattr(scheduler_output, "prev_sample") else scheduler_output
-            
-            # Debug: check latents after scheduler step
-            logger.debug(
-                "[DEBUG] Step %s after: latents std=%.4f",
-                i,
-                latents.std().item(),
-            )
-            
-            # Callback
-            if callback is not None and (i + 1) % callback_steps == 0:
-                try:
-                    callback(self, i, t, {"latents": latents})
-                except TypeError:
-                    # Fallback for simpler callbacks that expect only step
-                    callback(i)
-        
-        # Return latents if requested
-        if output_type == "latent":
-            return latents
-        
-        # Decode latents on GPU
-        if self.vae is not None:
-            self._ensure_vae_on_device()
-            # Scale latents for VAE
-            latents = latents / self.vae.config.scaling_factor
-            latents = latents.to(dtype=self.vae.dtype, device=self.device)
-
-            images = self.vae.decode(latents).sample
-            images = (images / 2 + 0.5).clamp(0, 1)
-        else:
-            # Return raw latents if no VAE
-            images = latents
-        
-        # Convert to PIL if requested
-        if output_type == "pil":
-            # Convert to uint8 before the device hop to avoid an extra CPU float copy.
-            images_np = (
-                images.mul(255)
-                .clamp(0, 255)
-                .to(torch.uint8)
-                .permute(0, 2, 3, 1)
-                .contiguous()
-                .cpu()
-                .numpy()
-            )
-            
-            pil_images = [Image.fromarray(img) for img in images_np]
-            return pil_images
-        
-        return images
+        """Generate images from text prompts."""
+        return self._get_generation_helper().generate(
+            prompt,
+            negative_prompt,
+            height,
+            width,
+            num_inference_steps,
+            guidance_scale,
+            num_images_per_prompt,
+            generator,
+            latents,
+            image,
+            strength,
+            output_type,
+            callback,
+            callback_steps,
+        )
     
     def unload(self, components: Optional[List[str]] = None) -> None:
         """
