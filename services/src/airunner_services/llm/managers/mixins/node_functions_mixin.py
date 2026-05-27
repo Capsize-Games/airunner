@@ -17,13 +17,16 @@ from langchain_core.messages import (
 )
 
 from langchain_core.messages import SystemMessage
+from airunner_services.llm.managers.response_synthesizer import (
+    ResponseSynthesizer,
+)
+from airunner_services.llm.managers.route_policy import RoutePolicy
 from airunner_services.llm.utils.thinking_parser import (
     strip_thinking_tags,
     detect_thinking_open_tag,
     detect_thinking_close_tag,
 )
 from airunner_services.llm.managers.workflow_response_prompts import (
-    build_tool_result_response_prompt,
     build_workflow_continuation_prompt,
     build_workflow_correction_prompt,
     extract_next_workflow_action,
@@ -49,6 +52,22 @@ class NodeFunctionsMixin:
     # Class-level set to track workflow tools that need special handling
     WORKFLOW_TOOLS = {"start_workflow", "transition_phase", "add_todo_item", 
                      "start_todo_item", "complete_todo_item", "get_workflow_status"}
+
+    def _get_route_policy(self) -> RoutePolicy:
+        """Return the cached route-policy helper."""
+        helper = getattr(self, "_route_policy_helper", None)
+        if helper is None:
+            helper = RoutePolicy(self)
+            self._route_policy_helper = helper
+        return helper
+
+    def _get_response_synthesizer(self) -> ResponseSynthesizer:
+        """Return the cached response-synthesis helper."""
+        helper = getattr(self, "_response_synthesizer", None)
+        if helper is None:
+            helper = ResponseSynthesizer(self)
+            self._response_synthesizer = helper
+        return helper
 
     def _force_response_node(self, state: "WorkflowState") -> Dict[str, Any]:
         """Node that generates forced response when redundancy detected.
@@ -242,20 +261,12 @@ class NodeFunctionsMixin:
         Returns:
             Complete AIMessage with content and additional_kwargs
         """
-        try:
-            response_message = self._generate_response_message_from_results(
-                tool_content, tool_name, user_question, generation_kwargs
-            )
-            if response_message:
-                return response_message
-        except Exception as e:
-            self.logger.error(f"Failed to generate forced response: {e}")
-        
-        # Fallback
-        fallback = "I found some information but encountered an issue generating a complete response."
-        if self._token_callback:
-            self._token_callback(fallback)
-        return AIMessage(content=fallback, tool_calls=[])
+        return self._get_response_synthesizer().generate_forced_response_message(
+            tool_content,
+            tool_name,
+            user_question,
+            generation_kwargs,
+        )
 
     def _create_workflow_continuation_message(
         self,
@@ -364,16 +375,12 @@ class NodeFunctionsMixin:
         Returns:
             Response text
         """
-        try:
-            return self._generate_response_from_results(
-                tool_content, tool_name, user_question, generation_kwargs
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to generate forced response: {e}")
-            fallback = "I found some information but encountered an issue generating a complete response."
-            if self._token_callback:
-                self._token_callback(fallback)
-            return fallback
+        return self._get_response_synthesizer().generate_forced_response_text(
+            tool_content,
+            tool_name,
+            user_question,
+            generation_kwargs,
+        )
 
     def _generate_response_message_from_results(
         self,
@@ -393,38 +400,12 @@ class NodeFunctionsMixin:
         Returns:
             Complete AIMessage with content and additional_kwargs, or None on error
         """
-        self.logger.info(
-            f"Forcing model to answer based on {tool_name} results (preserving thinking)..."
+        return self._get_response_synthesizer().generate_response_message_from_results(
+            all_tool_content,
+            tool_name,
+            user_question,
+            generation_kwargs,
         )
-
-        try:
-            simple_prompt = [
-                HumanMessage(
-                    content=build_tool_result_response_prompt(
-                        all_tool_content=all_tool_content,
-                        user_question=user_question,
-                    )
-                )
-            ]
-
-            # Stream response - returns full AIMessage with thinking_content
-            response_message = self._stream_model_response(
-                simple_prompt, generation_kwargs
-            )
-
-            if response_message:
-                # Ensure tool_calls is empty
-                return AIMessage(
-                    content=response_message.content or "",
-                    additional_kwargs=getattr(response_message, "additional_kwargs", {}),
-                    tool_calls=[],
-                )
-
-            return None
-
-        except Exception as e:
-            self.logger.error(f"Failed to generate forced response message: {e}")
-            return None
 
     def _generate_response_from_results(
         self,
@@ -444,42 +425,12 @@ class NodeFunctionsMixin:
         Returns:
             Generated response content
         """
-        self.logger.info(
-            f"Forcing model to answer based on {tool_name} results..."
+        return self._get_response_synthesizer().generate_response_text_from_results(
+            all_tool_content,
+            tool_name,
+            user_question,
+            generation_kwargs,
         )
-
-        try:
-            simple_prompt = [
-                HumanMessage(
-                    content=build_tool_result_response_prompt(
-                        all_tool_content=all_tool_content,
-                        user_question=user_question,
-                    )
-                )
-            ]
-
-            # Stream response with generation kwargs for token-by-token streaming
-            response_message = self._stream_model_response(
-                simple_prompt, generation_kwargs
-            )
-
-            # Extract content from the response message
-            response_content = ""
-            if response_message and hasattr(response_message, "content"):
-                response_content = response_message.content or ""
-
-            self.logger.info(
-                f"Model streamed {len(response_content)} char answer"
-            )
-            return response_content
-
-        except Exception as e:
-            self.logger.error(f"Failed to generate forced response: {e}")
-            fallback = "I found some information but encountered an issue generating a complete response. Let me try to help with what I found."
-            # Stream fallback message through callback
-            if self._token_callback:
-                self._token_callback(fallback)
-            return fallback
 
     def _stream_model_response(
         self,
@@ -581,40 +532,7 @@ class NodeFunctionsMixin:
         Returns:
             Routing decision: "tools", "force_response", or "end"
         """
-        last_message = state["messages"][-1]
-        has_tool_calls = self._has_tool_calls(last_message)
-
-        # Debug logging
-        self._log_routing_debug(last_message, state["messages"])
-
-        if has_tool_calls:
-            # Check for duplicate tool calls
-            if self._is_duplicate_tool_call(last_message, state["messages"]):
-                return "force_response"
-
-            # Log tool call information
-            self._log_tool_call_info(last_message, state["messages"])
-            return "tools"
-
-        # Check if the model is responding after a tool error without fixing it
-        # This catches cases where the model hallucinates success instead of following error guidance
-        tool_messages = self._get_tool_messages(state["messages"])
-        if tool_messages:
-            last_tool_msg = tool_messages[-1]
-            tool_content = str(getattr(last_tool_msg, 'content', ''))
-            
-            # Check if last tool result was an ERROR that requires action
-            if tool_content.startswith('ERROR:') and 'Cannot use' in tool_content:
-                # Model responded with text instead of calling a corrective tool
-                # Log the issue - this is a model behavior problem
-                response_content = getattr(last_message, 'content', '')
-                self.logger.warning(
-                    f"[ROUTE DEBUG] Model ignored tool ERROR and responded with text: {response_content[:200]}"
-                )
-                # We can't easily force the model to retry, so we log and let it through
-                # The error instructions in post-tool should help, but some models may still ignore them
-
-        return "end"
+        return self._get_route_policy().after_model(state)
 
     def _route_after_tools(self, state: "WorkflowState") -> str:
         """Route after tools execute - decide if model needs to respond.
@@ -632,124 +550,7 @@ class NodeFunctionsMixin:
         Returns:
             Routing decision: "model", "force_response", or "end"
         """
-        # Get the last tool messages to check what tools executed
-        tool_messages = self._get_tool_messages(state["messages"])
-
-        if not tool_messages:
-            return "end"
-
-        # Tools that don't need a follow-up response (status/action tools)
-        # NOTE: update_mood removed - we want the model to provide a conversational response after updating mood
-        NO_RESPONSE_TOOLS = {
-            "clear_conversation",
-            "emit_signal",
-            "toggle_tts",
-            "clear_canvas",
-            "quit_application",
-            "clear_chat_history",
-            "delete_conversation",
-            "switch_conversation",
-            "create_new_conversation",
-            "update_conversation_title",
-        }
-        
-        # Task-completing tools - route to force_response, not model
-        # This prevents the model from making more tool calls after the task is done
-        TASK_COMPLETING_TOOLS = {
-            "write_file",          # File was written - present result
-            "complete_todo_item",  # Workflow item completed
-        }
-
-        # Check the most recent tool message to see what tool was called
-        last_tool_msg = tool_messages[-1]
-
-        # Get the corresponding AI message with tool_calls
-        ai_messages = [
-            msg for msg in state["messages"] if isinstance(msg, AIMessage)
-        ]
-        if not ai_messages:
-            return "end"
-
-        last_ai_msg = ai_messages[-1]
-        if (
-            not hasattr(last_ai_msg, "tool_calls")
-            or not last_ai_msg.tool_calls
-        ):
-            return "end"
-
-        force_tool = getattr(self, "_force_tool", None)
-
-        # Check if any of the called tools need a response
-        for tool_call in last_ai_msg.tool_calls:
-            tool_name = tool_call.get("name", "")
-            self.logger.info(f"[ROUTE DEBUG] Checking tool: {tool_name}")
-            
-            if tool_name in NO_RESPONSE_TOOLS:
-                continue
-
-            if self._should_return_tool_direct(tool_name):
-                self.logger.info(
-                    f"[ROUTE DEBUG] Tool '{tool_name}' is return_direct - routing to force_response"
-                )
-                return "force_response"
-
-            if (
-                force_tool
-                and force_tool != "search_web"
-                and tool_name == force_tool
-            ):
-                self.logger.info(
-                    "[ROUTE DEBUG] Forced tool '%s' completed - routing to "
-                    "force_response",
-                    tool_name,
-                )
-                return "force_response"
-            
-            # Check if tool result indicates success for task-completing tools
-            last_tool_content = str(getattr(last_tool_msg, 'content', ''))
-            tool_succeeded = any(
-                indicator in last_tool_content.lower() 
-                for indicator in ['created', 'successfully', 'written', '✓', 'complete', 'done']
-            )
-            
-            if tool_name in TASK_COMPLETING_TOOLS and tool_succeeded:
-                # Task completed successfully - force response, don't allow more tool calls
-                self.logger.info(
-                    f"[ROUTE DEBUG] Task-completing tool '{tool_name}' succeeded - "
-                    "forcing response to prevent unnecessary tool calls"
-                )
-                return "force_response"
-            
-            # For other tools, enable agentic multi-tool workflows
-            # The model can decide to call more tools (e.g., search -> scrape -> create_document)
-            # or respond with the results. Infinite loops are prevented by:
-            # 1. _is_duplicate_tool_call() check in _route_after_model
-            # 2. Max iterations guard based on tool call count
-            
-            # Check if we've hit max iterations (prevent runaway loops)
-            max_tool_iterations = 10  # Safety limit
-            tool_call_count = len([
-                m for m in state["messages"] 
-                if hasattr(m, 'tool_calls') and m.tool_calls
-            ])
-            
-            if tool_call_count >= max_tool_iterations:
-                self.logger.warning(
-                    f"[ROUTE DEBUG] Max tool iterations ({max_tool_iterations}) reached - forcing response"
-                )
-                return "force_response"
-
-            # Route back to model to allow continuous tool calling
-            self.logger.info(
-                f"[ROUTE DEBUG] Tool '{tool_name}' completed - routing back to model for next action"
-            )
-            return "model"
-
-        # All tools were status-only
-        self.logger.info(
-            "[ROUTE DEBUG] All tools were status-only - ending workflow"
-        )
-        return "end"
+        return self._get_route_policy().after_tools(state)
 
     def _log_routing_debug(
         self, last_message: BaseMessage, messages: List[BaseMessage]
