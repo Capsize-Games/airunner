@@ -65,6 +65,7 @@ from airunner_services.llm.utils.gpt_oss_parser import (
     looks_like_tool_argument_payload,
     parse_gpt_oss_response,
 )
+from airunner_services.llm.utils.stream_debug import print_stream_debug
 from airunner_services.utils.application import get_logger
 from packaging.version import InvalidVersion, Version
 
@@ -2219,6 +2220,13 @@ For each function call, return a json object with function name and arguments wi
                 break
 
             delta = chunk.get("choices", [{}])[0].get("delta", {})
+            print_stream_debug(
+                "chat_gguf.delta",
+                chunk_index=chunk_count,
+                content=delta.get("content"),
+                reasoning_content=delta.get("reasoning_content"),
+                tool_calls=delta.get("tool_calls"),
+            )
 
             if "tool_calls" in delta and delta["tool_calls"]:
                 self._merge_native_tool_call_deltas(
@@ -2256,6 +2264,12 @@ For each function call, return a json object with function name and arguments wi
                         additional_kwargs=additional_kwargs,
                     )
                 )
+                print_stream_debug(
+                    "chat_gguf.yield",
+                    chunk_index=chunk_count,
+                    content=text,
+                    reasoning_content=reasoning_text,
+                )
                 
                 if run_manager:
                     run_manager.on_llm_new_token(text, chunk=chunk_msg)
@@ -2266,6 +2280,11 @@ For each function call, return a json object with function name and arguments wi
                 if reasoning_text:
                     additional_kwargs["reasoning_content"] = reasoning_text
             if not ("content" in delta and delta["content"]) and additional_kwargs:
+                print_stream_debug(
+                    "chat_gguf.yield_reasoning",
+                    chunk_index=chunk_count,
+                    reasoning_content=reasoning_text,
+                )
                 yield ChatGenerationChunk(
                     message=AIMessageChunk(
                         content="",
@@ -2276,6 +2295,10 @@ For each function call, return a json object with function name and arguments wi
         if gpt_oss_parser is not None:
             parsed_tail = gpt_oss_parser.finish()
             if parsed_tail.analysis_text:
+                print_stream_debug(
+                    "chat_gguf.tail_reasoning",
+                    reasoning_content=parsed_tail.analysis_text,
+                )
                 yield ChatGenerationChunk(
                     message=AIMessageChunk(
                         content="",
@@ -2285,6 +2308,10 @@ For each function call, return a json object with function name and arguments wi
                     )
                 )
             if parsed_tail.final_text:
+                print_stream_debug(
+                    "chat_gguf.tail_final",
+                    content=parsed_tail.final_text,
+                )
                 tail_chunk = ChatGenerationChunk(
                     message=AIMessageChunk(content=parsed_tail.final_text)
                 )

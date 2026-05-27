@@ -23,6 +23,7 @@ from airunner_services.llm.utils.thinking_parser import (
     detect_thinking_open_tag,
     detect_thinking_close_tag,
 )
+from airunner_services.llm.utils.stream_debug import print_stream_debug
 from airunner_services.llm.utils.stream_text import combine_stream_chunks
 from airunner_services.settings import (
     AIRUNNER_LOG_LEVEL,
@@ -1758,6 +1759,12 @@ Based on the search results above, provide a clear, conversational answer to the
 
         def emit_thinking_signal(status: str, content: str) -> None:
             """Emit one request-scoped thinking update to the GUI."""
+            print_stream_debug(
+                "node_functions.thinking",
+                request_id=request_id,
+                status=status,
+                content=content,
+            )
             event_sink.emit_thinking(
                 {
                     "status": status,
@@ -1765,11 +1772,26 @@ Based on the search results above, provide a clear, conversational answer to the
                     "request_id": request_id,
                 }
             )
+            thinking_callback = getattr(self, "_thinking_callback", None)
+            if callable(thinking_callback):
+                try:
+                    thinking_callback(status, content or "")
+                except Exception as callback_error:
+                    self.logger.error(
+                        "Thinking callback failed: %s",
+                        callback_error,
+                        exc_info=True,
+                    )
 
         def forward_stream_text(text_to_stream: str) -> None:
             """Forward one raw chunk to the streaming callback."""
             if not self._token_callback or not text_to_stream:
                 return
+            print_stream_debug(
+                "node_functions.visible",
+                request_id=request_id,
+                content=text_to_stream,
+            )
             try:
                 self._token_callback(text_to_stream)
             except Exception as callback_error:
@@ -1795,16 +1817,12 @@ Based on the search results above, provide a clear, conversational answer to the
             has_streamed_content = True
             if forward_to_callback:
                 forward_stream_text(text_to_stream)
-        # In headless/HTTP mode (e.g. legacy /llm/generate NDJSON streaming) we must not
-        # suppress/buffer tokens. Some models can emit the *entire* answer inside <think> blocks;
-        # suppressing thinking would then swallow all output for NDJSON clients.
-        is_headless = os.environ.get("AIRUNNER_HEADLESS", "").strip().lower() in (
-            "1",
-            "true",
-            "yes",
-        )
-        suppress_thinking_blocks = bool(has_event_sink) and not is_headless
-        suppress_tool_call_markup = bool(has_event_sink) and not is_headless
+        # Thinking and tool-call markup is always emitted through typed
+        # channels (thinking_callback / tool_status events) so the visible
+        # stream stays free of `<think>` and `<tool_call>` text. The GUI
+        # bridge no longer needs to strip these tags from assistant chunks.
+        suppress_thinking_blocks = True
+        suppress_tool_call_markup = True
         # self.logger.debug(f"[THINKING] Starting streaming response generation (has_signal_emitter={has_emitter})")
 
         try:
@@ -1833,11 +1851,20 @@ Based on the search results above, provide a clear, conversational answer to the
                     or additional_kwargs.get("reasoning_content")
                 )
 
+                # Collect tool_calls from ANY chunk that has them.
+                chunk_tool_calls = getattr(chunk_message, "tool_calls", None)
+                print_stream_debug(
+                    "node_functions.chunk",
+                    request_id=request_id,
+                    content=text,
+                    reasoning_content=reasoning_delta,
+                    tool_calls=chunk_tool_calls,
+                    in_thinking_block=in_thinking_block,
+                )
+
                 # Always capture last chunk (might have tool_calls with no content)
                 last_chunk_message = chunk_message
 
-                # Collect tool_calls from ANY chunk that has them
-                chunk_tool_calls = getattr(chunk_message, "tool_calls", None)
                 if chunk_tool_calls:
                     collected_tool_calls.extend(chunk_tool_calls)
 

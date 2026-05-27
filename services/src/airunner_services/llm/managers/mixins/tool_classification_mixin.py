@@ -3,7 +3,19 @@
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
+
+from langchain_core.messages import HumanMessage
+
+from airunner_services.llm.utils.thinking_parser import (
+    detect_thinking_close_tag,
+    detect_thinking_open_tag,
+    extract_thinking_and_response,
+)
+from airunner_services.llm.utils.stream_debug import print_stream_debug
+from airunner_services.llm_workflow_events import (
+    resolve_llm_workflow_event_sink,
+)
 
 
 class ToolClassificationMixin:
@@ -117,7 +129,189 @@ class ToolClassificationMixin:
             return True
         return False
 
-    def _classify_prompt_for_tools(self, prompt: str) -> list:
+    @staticmethod
+    def _split_classification_response(
+        response_text: str,
+        additional_kwargs: Optional[dict] = None,
+    ) -> Tuple[Optional[str], str]:
+        """Return classifier thinking text and visible category text."""
+        reasoning_text = ""
+        if additional_kwargs:
+            reasoning_text = additional_kwargs.get("reasoning_content") or ""
+        tagged_thinking, visible_text = extract_thinking_and_response(
+            response_text
+        )
+        if tagged_thinking and not reasoning_text:
+            reasoning_text = tagged_thinking
+        cleaned_thinking = reasoning_text.strip() or None
+        return cleaned_thinking, visible_text
+
+    def _emit_classification_thinking_event(
+        self,
+        status: str,
+        content: str,
+        request_id: Optional[str],
+    ) -> None:
+        """Emit one live classification-thinking update."""
+        event_sink = resolve_llm_workflow_event_sink(self)
+        if not getattr(event_sink, "active", False):
+            return
+        event_sink.emit_thinking(
+            {
+                "status": status,
+                "content": content,
+                "request_id": request_id,
+            }
+        )
+
+    def _append_classification_thinking(
+        self,
+        state: dict[str, Any],
+        content: str,
+        allow_thinking: bool,
+        request_id: Optional[str],
+    ) -> None:
+        """Accumulate and optionally stream one classification delta."""
+        if not content:
+            return
+        state["thinking_parts"].append(content)
+        if not allow_thinking:
+            return
+        if not state["thinking_started"]:
+            self._emit_classification_thinking_event(
+                "started",
+                "",
+                request_id,
+            )
+            state["thinking_started"] = True
+        self._emit_classification_thinking_event(
+            "streaming",
+            content,
+            request_id,
+        )
+
+    def _finish_classification_thinking(
+        self,
+        state: dict[str, Any],
+        allow_thinking: bool,
+        request_id: Optional[str],
+    ) -> None:
+        """Finish one streamed classification-thinking block."""
+        if not state["in_thinking_block"]:
+            return
+        state["in_thinking_block"] = False
+        state["thinking_tag_format"] = ""
+        if not allow_thinking or not state["thinking_started"]:
+            return
+        self._emit_classification_thinking_event(
+            "completed",
+            "".join(state["thinking_parts"]),
+            request_id,
+        )
+
+    def _consume_classification_stream_text(
+        self,
+        state: dict[str, Any],
+        text: str,
+        allow_thinking: bool,
+        request_id: Optional[str],
+    ) -> None:
+        """Split one streamed classification chunk into thinking and text."""
+        remaining = text
+        while remaining:
+            if state["in_thinking_block"]:
+                found_close, before_close, after_close = detect_thinking_close_tag(
+                    remaining,
+                    state["thinking_tag_format"],
+                )
+                if not found_close:
+                    self._append_classification_thinking(
+                        state,
+                        remaining,
+                        allow_thinking,
+                        request_id,
+                    )
+                    return
+                self._append_classification_thinking(
+                    state,
+                    before_close,
+                    allow_thinking,
+                    request_id,
+                )
+                self._finish_classification_thinking(
+                    state,
+                    allow_thinking,
+                    request_id,
+                )
+                remaining = after_close
+                continue
+
+            found_open, tag_format, before_open, after_open = (
+                detect_thinking_open_tag(remaining)
+            )
+            if not found_open:
+                state["visible_parts"].append(remaining)
+                return
+            if before_open:
+                state["visible_parts"].append(before_open)
+            state["in_thinking_block"] = True
+            state["thinking_tag_format"] = tag_format
+            remaining = after_open
+
+    def _stream_classification_response(
+        self,
+        chat_model: Any,
+        classification_prompt: str,
+        allow_thinking: bool,
+    ) -> Tuple[Optional[str], str]:
+        """Return streamed classification thinking and visible text."""
+        request_id = getattr(self, "_current_request_id", None)
+        state = {
+            "in_thinking_block": False,
+            "thinking_started": False,
+            "thinking_tag_format": "",
+            "thinking_parts": [],
+            "visible_parts": [],
+        }
+        for chunk in chat_model.stream([HumanMessage(content=classification_prompt)]):
+            chunk_message = getattr(chunk, "message", chunk)
+            text = getattr(chunk_message, "content", "") or ""
+            additional_kwargs = (
+                getattr(chunk_message, "additional_kwargs", {}) or {}
+            )
+            reasoning_delta = (
+                additional_kwargs.get("thinking_content")
+                or additional_kwargs.get("reasoning_content")
+            )
+            self._append_classification_thinking(
+                state,
+                reasoning_delta or "",
+                allow_thinking,
+                request_id,
+            )
+            if text:
+                self._consume_classification_stream_text(
+                    state,
+                    text,
+                    allow_thinking,
+                    request_id,
+                )
+        self._finish_classification_thinking(
+            state,
+            allow_thinking,
+            request_id,
+        )
+        thinking_text = "".join(state["thinking_parts"]).strip() or None
+        response_text = "".join(state["visible_parts"])
+        if thinking_text or not response_text:
+            return thinking_text, response_text
+        return self._split_classification_response(response_text)
+
+    def _classify_prompt_for_tools(
+        self,
+        prompt: str,
+        allow_thinking: bool = True,
+    ) -> list:
         """Use direct heuristics or the active model to classify tool needs."""
         direct_categories, _ = self._detect_simple_tool_route(prompt)
         if direct_categories is not None:
@@ -165,7 +359,8 @@ class ToolClassificationMixin:
         from airunner_services.llm.core.tool_registry import ToolCategory
 
         available_categories = [cat.value for cat in ToolCategory]
-        classification_prompt = f"""/no_think
+        prompt_directive = "" if allow_thinking else "/no_think\n"
+        classification_prompt = f"""{prompt_directive}
 Classify which tool categories are needed for this user message.
 
 Categories: {', '.join(available_categories)}
@@ -181,15 +376,13 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
             ):
                 chat_model = self._workflow_manager._original_chat_model
                 if chat_model:
-                    from langchain_core.messages import HumanMessage
-
                     original_thinking = getattr(
                         chat_model,
                         "enable_thinking",
                         True,
                     )
                     if hasattr(chat_model, "enable_thinking"):
-                        chat_model.enable_thinking = False
+                        chat_model.enable_thinking = allow_thinking
 
                     original_temp = getattr(chat_model, "temperature", 0.7)
                     if hasattr(chat_model, "temperature"):
@@ -204,8 +397,12 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
                         chat_model.tool_choice = "none"
 
                     try:
-                        response = chat_model.invoke(
-                            [HumanMessage(content=classification_prompt)]
+                        thinking_text, response_text = (
+                            self._stream_classification_response(
+                                chat_model,
+                                classification_prompt,
+                                allow_thinking,
+                            )
                         )
                     finally:
                         if hasattr(chat_model, "enable_thinking"):
@@ -215,25 +412,14 @@ Reply with ONLY category names (comma-separated) or \"none\":"""
                         if hasattr(chat_model, "tool_choice"):
                             chat_model.tool_choice = original_tool_choice
 
-                    response_text = getattr(response, "content", str(response))
-                    if "<think>" in response_text:
-                        if "</think>" in response_text:
-                            response_text = response_text.split("</think>")[-1]
-                        else:
-                            response_text = response_text.split("<think>")[0]
-                    elif "[THINK]" in response_text.upper():
-                        response_text = re.sub(
-                            r"\[THINK\].*?\[/THINK\]",
-                            "",
-                            response_text,
-                            flags=re.DOTALL | re.IGNORECASE,
-                        )
-                        response_text = re.sub(
-                            r"\[/?THINK\]",
-                            "",
-                            response_text,
-                            flags=re.IGNORECASE,
-                        )
+                    print_stream_debug(
+                        "tool_classification.response",
+                        original_enable_thinking=original_thinking,
+                        requested_enable_thinking=allow_thinking,
+                        prompt_no_think=not allow_thinking,
+                        content=response_text,
+                        reasoning_content=thinking_text,
+                    )
 
                     response_text = response_text.strip().lower()
                     response_text = re.sub(

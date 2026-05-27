@@ -135,6 +135,81 @@ def _parse_action(action_str: str) -> LLMActionType:
         return LLMActionType.CHAT
 
 
+def _terminal_stream_message(response: Any) -> bool:
+    """Return whether one callback should terminate the HTTP LLM stream."""
+    if not bool(getattr(response, "is_end_of_message", False)):
+        return False
+
+    message_type = getattr(response, "message_type", None)
+    if isinstance(message_type, str):
+        normalized = message_type.strip().lower()
+        if normalized in {
+            "thinking",
+            "tool_call",
+            "tool_result",
+            "tool_status",
+        }:
+            return False
+
+    return True
+
+
+def _tool_status_stream_payload(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Convert one request-scoped tool status event into NDJSON payload."""
+    tool_id = data.get("tool_id")
+    tool_name = data.get("tool_name")
+    query = data.get("query")
+    status = data.get("status")
+    if not all([tool_id, tool_name, query, status]):
+        return None
+
+    return {
+        "message": data.get("details") or "",
+        "is_first_message": False,
+        "is_end_of_message": status == "completed",
+        "done": False,
+        "sequence_number": 0,
+        "turn_index": 0,
+        "message_type": "tool_status",
+        "tool_status": status,
+        "tool_id": tool_id,
+        "tool_name": tool_name,
+        "query": query,
+        "details": data.get("details") or "",
+        "metadata": data.get("metadata"),
+        "conversation_id": data.get("conversation_id"),
+        "request_id": data.get("request_id"),
+        "timestamp": data.get("timestamp"),
+        "error": False,
+        "is_system_message": False,
+    }
+
+
+def _thinking_stream_payload(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Convert one request-scoped thinking event into NDJSON payload."""
+    status = data.get("status")
+    request_id = data.get("request_id")
+    if status not in {"started", "streaming", "completed"}:
+        return None
+    if not request_id:
+        return None
+
+    content = data.get("content") or ""
+    return {
+        "message": content,
+        "thinking_content": content,
+        "is_first_message": status == "started",
+        "is_end_of_message": status == "completed",
+        "done": False,
+        "sequence_number": 0,
+        "turn_index": 0,
+        "message_type": "thinking",
+        "request_id": request_id,
+        "error": False,
+        "is_system_message": False,
+    }
+
+
 def _build_llm_request(data: Dict[str, Any]) -> LLMRequest:
     llm_request = LLMRequest()
 
@@ -230,7 +305,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
             if (
                 message
                 and not getattr(response, "is_system_message", False)
-                and message_type != "system"
+                and message_type == "assistant"
             ):
                 complete_by_turn.setdefault(turn_index, []).append(message)
 
@@ -238,7 +313,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
             if isinstance(tools, (list, tuple, set)):
                 executed_tools.extend(str(tool) for tool in tools if tool)
 
-            if getattr(response, "is_end_of_message", False):
+            if _terminal_stream_message(response):
                 done.set()
 
         try:
@@ -277,6 +352,13 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
     def stream_cb(data: dict):
         response = data.get("response")
         if not response:
+            tool_status_payload = _tool_status_stream_payload(data)
+            thinking_payload = _thinking_stream_payload(data)
+            payload = tool_status_payload or thinking_payload
+            if payload is None:
+                return
+            last_callback_at[0] = time.monotonic()
+            q.put((JSONResponse(content=payload).body or b"") + b"\n")
             return
 
         # System/status messages are useful for GUI, but some NDJSON clients
@@ -293,8 +375,6 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
         # Only treat callbacks that we actually forward to the client as
         # progress for the purposes of the idle timeout.
         last_callback_at[0] = time.monotonic()
-        conversation_id=body.conversation_id,
-        node_id=body.node_id,
 
         action_val = getattr(response, "action", None)
         if action_val is None:
@@ -349,7 +429,7 @@ def legacy_llm_generate(body: LegacyLLMGenerateRequest, req: Request):
                 len(payload.get("message") or ""),
             )
 
-        if payload["is_end_of_message"]:
+        if _terminal_stream_message(response):
             done.set()
             try:
                 SignalMediator().unregister_pending_request(request_id)

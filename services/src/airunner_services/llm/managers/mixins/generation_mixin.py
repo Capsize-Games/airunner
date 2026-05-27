@@ -352,6 +352,40 @@ class GenerationMixin:
 
         return handle_streaming_token
 
+    def _create_thinking_callback(
+        self,
+        llm_request: Optional[Any],
+        sequence_counter: List[int],
+    ):
+        """Create a callback that emits typed thinking chunks to the GUI.
+
+        The daemon needs to surface thinking/reasoning content over the
+        NDJSON stream without leaking ``<think>`` markup into the visible
+        assistant chunks. This callback wraps each fragment in an
+        ``LLMResponse`` with ``message_type='thinking'`` so the GUI bridge
+        can render it through the unified thinking widget path.
+        """
+
+        def handle_thinking_event(status: str, content: str) -> None:
+            """Forward one thinking event to the streaming consumer."""
+            sequence_counter[0] += 1
+            is_end = status == "completed"
+            payload_message = content or ""
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    node_id=llm_request.node_id if llm_request else None,
+                    message=payload_message,
+                    is_end_of_message=is_end,
+                    is_first_message=(status == "started"),
+                    sequence_number=sequence_counter[0],
+                    request_id=getattr(self, "_current_request_id", None),
+                    message_type="thinking",
+                    turn_index=self._current_assistant_turn_index(),
+                )
+            )
+
+        return handle_thinking_event
+
     def _handle_interrupted_generation(
         self, llm_request: Optional[Any], sequence_counter: int
     ) -> str:
@@ -676,6 +710,11 @@ class GenerationMixin:
             llm_request, complete_response, sequence_counter
         )
         self._workflow_manager.set_token_callback(callback)
+        thinking_callback = self._create_thinking_callback(
+            llm_request, sequence_counter
+        )
+        if hasattr(self._workflow_manager, "set_thinking_callback"):
+            self._workflow_manager.set_thinking_callback(thinking_callback)
 
         # Reset workflow manager's interrupted flag before generation
         if hasattr(self._workflow_manager, "set_interrupted"):
@@ -777,6 +816,8 @@ class GenerationMixin:
             result = {"messages": []}
         finally:
             self._workflow_manager.set_token_callback(None)
+            if hasattr(self._workflow_manager, "set_thinking_callback"):
+                self._workflow_manager.set_thinking_callback(None)
             self._interrupted = False
             if hasattr(self._workflow_manager, "set_interrupted"):
                 self._workflow_manager.set_interrupted(False)

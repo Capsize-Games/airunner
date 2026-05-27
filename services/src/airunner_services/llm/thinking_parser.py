@@ -142,27 +142,8 @@ def extract_thinking_and_response(
 	tag_format: str = "auto",
 ) -> Tuple[Optional[str], str]:
 	"""Extract thinking content and the visible response separately."""
-	if not response:
-		return None, ""
-
-	if tag_format == "angle":
-		patterns = [(ANGLE_THINK_PATTERN, "angle")]
-	elif tag_format == "brackets":
-		patterns = [(BRACKET_THINK_PATTERN, "brackets")]
-	else:
-		patterns = [
-			(ANGLE_THINK_PATTERN, "angle"),
-			(BRACKET_THINK_PATTERN, "brackets"),
-		]
-
-	for pattern, _ in patterns:
-		match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
-		if match:
-			thinking_content = match.group(1).strip()
-			main_content = response[match.end() :].strip()
-			return thinking_content, main_content
-
-	return None, response.strip()
+	parsed = parse_thinking_response(response, tag_format=tag_format)
+	return parsed.thinking_content, parsed.content
 
 
 def _compact_text(text: str) -> str:

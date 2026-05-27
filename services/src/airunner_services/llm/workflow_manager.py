@@ -96,6 +96,7 @@ class WorkflowManager(
         self._workflow = None
         self._compiled_workflow = None
         self._token_callback: Optional[Callable[[str], None]] = None
+        self._thinking_callback: Optional[Callable[[str, str], None]] = None
         self._interrupted = False
         self._executed_tools: list[str] = []
 
@@ -150,6 +151,18 @@ class WorkflowManager(
     ) -> None:
         """Register a callback for streaming tokens during execution."""
         self._token_callback = callback
+
+    def set_thinking_callback(
+        self,
+        callback: Optional[Callable[[str, str], None]],
+    ) -> None:
+        """Register a callback for streaming thinking events.
+
+        The callback receives ``(status, content)`` where ``status`` is one of
+        ``"started"``, ``"streaming"``, or ``"completed"``. It is used by the
+        daemon NDJSON path to publish typed ``message_type='thinking'`` chunks.
+        """
+        self._thinking_callback = callback
 
     def set_request_id(self, request_id: Optional[str]) -> None:
         """Set the active request ID for request-scoped UI signals."""

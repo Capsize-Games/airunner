@@ -21,6 +21,7 @@ class _DaemonStreamState:
     """Track one daemon-backed GUI stream."""
 
     in_thinking_block: bool = False
+    thinking_signal_started: bool = False
     thinking_tag_format: str = ""
     thinking_content: list[str] = field(default_factory=list)
     visible_sequence_number: int = 0
@@ -276,6 +277,13 @@ class LLMAPIService(APIServiceBase):
             SignalCode.LLM_THINKING_SIGNAL,
             self._thinking_signal_payload(status, content, request_id),
         )
+
+    def send_llm_tool_status_signal(
+        self,
+        data: dict,
+    ) -> None:
+        """Emit one tool-status update for the chat UI."""
+        self.emit_signal(SignalCode.LLM_TOOL_STATUS_SIGNAL, data)
 
     def _thinking_signal_payload(
         self,
@@ -653,7 +661,16 @@ class LLMAPIService(APIServiceBase):
                 node_id=node_id,
             )
             return True
-        if message_type in {"tool_call", "tool_result", "tool_status"}:
+        if message_type == "tool_status":
+            self._forward_structured_tool_status_chunk(
+                chunk,
+                request_id=request_id,
+            )
+            self._reset_structured_hidden_output(state)
+            if bool(chunk.get("is_end_of_message", False)):
+                self._finish_daemon_thinking(state, request_id=request_id)
+            return True
+        if message_type in {"tool_call", "tool_result"}:
             self._reset_structured_hidden_output(state)
             if bool(chunk.get("is_end_of_message", False)):
                 self._finish_daemon_thinking(state, request_id=request_id)
@@ -711,6 +728,34 @@ class LLMAPIService(APIServiceBase):
         if bool(chunk.get("is_end_of_message", False)):
             self._finish_daemon_thinking(state, request_id=request_id)
 
+    def _forward_structured_tool_status_chunk(
+        self,
+        chunk: dict,
+        *,
+        request_id: str,
+    ) -> None:
+        """Forward one typed tool-status chunk to the unified status widget."""
+        tool_id = chunk.get("tool_id") or ""
+        tool_name = chunk.get("tool_name") or ""
+        query = chunk.get("query") or ""
+        status = chunk.get("tool_status") or ""
+        if not all([tool_id, tool_name, query, status]):
+            return
+
+        self.send_llm_tool_status_signal(
+            {
+                "tool_id": tool_id,
+                "tool_name": tool_name,
+                "query": query,
+                "status": status,
+                "details": chunk.get("details") or chunk.get("message", "") or "",
+                "conversation_id": chunk.get("conversation_id"),
+                "request_id": chunk.get("request_id") or request_id,
+                "metadata": chunk.get("metadata"),
+                "timestamp": chunk.get("timestamp"),
+            }
+        )
+
     def _forward_structured_assistant_chunk(
         self,
         chunk: dict,
@@ -721,23 +766,32 @@ class LLMAPIService(APIServiceBase):
         node_id: Optional[str],
     ) -> None:
         """Forward one typed assistant chunk without legacy heuristics."""
+        message = chunk.get("message", "") or ""
+
+        # The daemon now publishes thinking content as typed
+        # `message_type='thinking'` chunks, so any in-flight thinking block
+        # is finalized as soon as the first assistant content arrives.
         if state.in_thinking_block:
             self._finish_daemon_thinking(state, request_id=request_id)
         self._reset_structured_hidden_output(state)
-        message = chunk.get("message", "") or ""
+
+        chunk_done = bool(chunk.get("is_end_of_message", False))
         if message:
-            self._emit_visible_daemon_parts(
-                [message],
-                chunk=chunk,
-                state=state,
-                request_id=request_id,
-                action=action,
-                node_id=node_id,
+            state.visible_text += message
+            self.send_llm_text_streamed_signal(
+                self._build_visible_daemon_response(
+                    chunk,
+                    state=state,
+                    message=message,
+                    is_end_of_message=chunk_done,
+                    request_id=request_id,
+                    action=action,
+                    node_id=node_id,
+                )
             )
             return
-        if state.visible_sequence_number > 0 and bool(
-            chunk.get("is_end_of_message", False)
-        ):
+
+        if state.visible_sequence_number > 0 and chunk_done:
             self.send_llm_text_streamed_signal(
                 self._build_visible_daemon_response(
                     chunk,
@@ -876,9 +930,9 @@ class LLMAPIService(APIServiceBase):
     ) -> None:
         """Mark one daemon stream as being inside a thinking block."""
         state.in_thinking_block = True
+        state.thinking_signal_started = False
         state.thinking_tag_format = tag_format
         state.thinking_content = []
-        self.send_llm_thinking_signal("started", "", request_id)
 
     def _append_daemon_thinking(
         self,
@@ -891,6 +945,18 @@ class LLMAPIService(APIServiceBase):
         if not content:
             return
         state.thinking_content.append(content)
+        accumulated_content = "".join(state.thinking_content)
+        if not state.thinking_signal_started:
+            if not accumulated_content.strip():
+                return
+            state.thinking_signal_started = True
+            self.send_llm_thinking_signal("started", "", request_id)
+            self.send_llm_thinking_signal(
+                "streaming",
+                accumulated_content,
+                request_id,
+            )
+            return
         self.send_llm_thinking_signal("streaming", content, request_id)
 
     def _finish_daemon_thinking(
@@ -902,12 +968,17 @@ class LLMAPIService(APIServiceBase):
         """Complete one thinking block if the daemon stream is inside one."""
         if not state.in_thinking_block:
             return
-        self.send_llm_thinking_signal(
-            "completed",
-            "".join(state.thinking_content),
-            request_id,
-        )
+        accumulated_content = "".join(state.thinking_content)
+        if accumulated_content.strip():
+            if not state.thinking_signal_started:
+                self.send_llm_thinking_signal("started", "", request_id)
+            self.send_llm_thinking_signal(
+                "completed",
+                accumulated_content,
+                request_id,
+            )
         state.in_thinking_block = False
+        state.thinking_signal_started = False
         state.thinking_tag_format = ""
         state.thinking_content = []
 

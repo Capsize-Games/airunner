@@ -303,7 +303,13 @@ class RequestHandlingMixin:
                 prompt[:100],
             )
         else:
-            selected_categories = self._classify_prompt_for_tools(prompt)
+            allow_thinking = getattr(llm_request, "enable_thinking", None)
+            if allow_thinking is None:
+                allow_thinking = True
+            selected_categories = self._classify_prompt_for_tools(
+                prompt,
+                allow_thinking=allow_thinking,
+            )
 
         llm_request.tool_categories = selected_categories
         llm_request.force_tool = force_tool
