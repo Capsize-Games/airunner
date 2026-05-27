@@ -11,6 +11,10 @@ from transformers.utils.quantization_config import (
 )
 
 from airunner_services.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner_services.llm.quantization_policy import (
+    create_bitsandbytes_config,
+    resolve_quantization_dtype,
+)
 from airunner_services.model_management.hardware_profiler import (
     HardwareProfiler,
 )
@@ -151,21 +155,20 @@ class QuantizationMixin:
 
     def _create_8bit_config(self) -> BitsAndBytesConfig:
         """Create an 8-bit BitsAndBytes quantization config."""
-        return BitsAndBytesConfig(
-            load_in_8bit=True,
-            llm_int8_threshold=6.0,
-            llm_int8_has_fp16_weight=False,
-            llm_int8_enable_fp32_cpu_offload=True,
-        )
+        config = create_bitsandbytes_config("8bit")
+        if config is None:
+            raise RuntimeError("Failed to build 8-bit quantization config")
+        return config
 
     def _create_4bit_config(self) -> BitsAndBytesConfig:
         """Create a 4-bit BitsAndBytes quantization config."""
-        return BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
+        config = create_bitsandbytes_config(
+            "4bit",
+            four_bit_compute_dtype=torch.float16,
         )
+        if config is None:
+            raise RuntimeError("Failed to build 4-bit quantization config")
+        return config
 
     def _create_2bit_config(self) -> GPTQConfig:
         """Create a 2-bit GPTQ quantization config."""
@@ -368,8 +371,11 @@ class QuantizationMixin:
         dtype = self.llm_dtype
         self.logger.info(f"Current dtype setting: {dtype}")
 
-        if not dtype or dtype == "auto":
-            dtype = self._auto_select_quantization()
+        dtype, auto_selected = resolve_quantization_dtype(
+            dtype,
+            self._auto_select_quantization,
+        )
+        if auto_selected:
             self.logger.info(f"Auto-selected quantization: {dtype}")
             self.llm_generator_settings.dtype = dtype
 

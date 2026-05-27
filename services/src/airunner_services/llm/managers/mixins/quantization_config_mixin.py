@@ -15,6 +15,12 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 import torch
 from transformers import BitsAndBytesConfig
 
+from airunner_services.llm.quantization_policy import (
+    build_quantization_config_dict,
+    create_bitsandbytes_config,
+    resolve_quantization_dtype,
+)
+
 if TYPE_CHECKING:
     pass
 
@@ -34,8 +40,11 @@ class QuantizationConfigMixin:
         dtype = self.llm_dtype
         self.logger.info(f"Current dtype setting: {dtype}")
 
-        if not dtype or dtype == "auto":
-            dtype = self._auto_select_quantization()
+        dtype, auto_selected = resolve_quantization_dtype(
+            dtype,
+            self._auto_select_quantization,
+        )
+        if auto_selected:
             self.llm_generator_settings.dtype = dtype
             self.logger.info(f"✓ Auto-selected quantization: {dtype}")
         else:
@@ -76,12 +85,9 @@ class QuantizationConfigMixin:
         Returns:
             BitsAndBytesConfig for 8-bit quantization with CPU offload
         """
-        config = BitsAndBytesConfig(
-            load_in_8bit=True,
-            llm_int8_threshold=6.0,
-            llm_int8_has_fp16_weight=False,
-            llm_int8_enable_fp32_cpu_offload=True,
-        )
+        config = create_bitsandbytes_config("8bit")
+        if config is None:
+            raise RuntimeError("Failed to build 8-bit quantization config")
         self.logger.info("Created 8-bit BitsAndBytes config with CPU offload")
         return config
 
@@ -100,12 +106,12 @@ class QuantizationConfigMixin:
             )
             self.logger.warning("Falling back to 4-bit BitsAndBytes")
 
-        config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,  # bfloat16 is faster and more stable than float16
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
+        config = create_bitsandbytes_config(
+            dtype,
+            four_bit_compute_dtype=torch.bfloat16,
         )
+        if config is None:
+            raise RuntimeError("Failed to build 4-bit quantization config")
         self.logger.info("Created 4-bit BitsAndBytes config with bfloat16 compute")
         return config
 
@@ -288,16 +294,7 @@ class QuantizationConfigMixin:
         Returns:
             Dictionary with quantization configuration
         """
-        return {
-            "load_in_4bit": dtype == "4bit",
-            "load_in_8bit": dtype == "8bit",
-            "llm_int8_threshold": 6.0,
-            "llm_int8_has_fp16_weight": False,
-            "bnb_4bit_compute_dtype": "float16",
-            "bnb_4bit_use_double_quant": True,
-            "bnb_4bit_quant_type": "nf4",
-            "quant_method": "bitsandbytes",
-        }
+        return build_quantization_config_dict(dtype)
 
     def _copy_tokenizer_files(
         self, original_path: str, quantized_path: str

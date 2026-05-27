@@ -12,6 +12,7 @@ from airunner_services.llm.adapters.chat_gguf import (
 )
 from airunner_services.llm.adapters.chat_model_factory_helpers import (
     build_local_runtime_config,
+    build_provider_runtime_config,
     get_db_settings,
 )
 from airunner_services.llm.config.provider_access_policy import (
@@ -318,21 +319,27 @@ class ChatModelFactory:
         Raises:
             ValueError: If settings are invalid or required components missing
         """
-        db_settings = get_db_settings()
-        local_runtime = build_local_runtime_config(
-            db_settings,
+        provider_runtime = build_provider_runtime_config(
             llm_settings,
             chatbot,
         )
-        quantization_bits = local_runtime.quantization_bits
-        optimizer = get_model_optimizer()
-        resolved_model_id = ChatModelFactory._resolve_local_model_id(
-            db_settings,
-            model_path,
-        )
         
         # Check for GGUF model - either explicitly requested or already available
-        if model_path:
+        if provider_runtime.provider == "local" and model_path:
+            db_settings = get_db_settings()
+            local_runtime = build_local_runtime_config(
+                db_settings,
+                llm_settings,
+                chatbot,
+            )
+            quantization_bits = local_runtime.quantization_bits
+            optimizer = get_model_optimizer()
+            resolved_model_id = ChatModelFactory._resolve_local_model_id(
+                db_settings,
+                model_path,
+            )
+            gguf_params = dict(local_runtime.gguf_params)
+
             # User explicitly wants GGUF (quantization_bits=0)
             use_gguf = quantization_bits == 0
 
@@ -396,7 +403,7 @@ class ChatModelFactory:
                             gguf_path,
                         )
                     )
-                    params.update(
+                    gguf_params.update(
                         ChatModelFactory._get_local_gguf_runtime_params(
                             resolved_model_id,
                             profile_name=gguf_runtime_profile,
@@ -423,7 +430,7 @@ class ChatModelFactory:
                                 "tool_calling_mode",
                                 "native",
                             ),
-                            **local_runtime.gguf_params,
+                            **gguf_params,
                         )
                     except UnsupportedGGUFArchitectureError as e:
                         version_message = ""
@@ -440,72 +447,46 @@ class ChatModelFactory:
                             "or a different GGUF build."
                         ) from e
 
-        if getattr(llm_settings, "use_local_llm", True):
+        if provider_runtime.provider == "local":
             raise ValueError(ChatModelFactory._LOCAL_GGUF_ONLY_MESSAGE)
 
-        # OpenRouter
-        if getattr(llm_settings, "use_openrouter", False):
-            api_key = os.getenv("OPENROUTER_API_KEY")
-            if not api_key:
+        if provider_runtime.provider == "openrouter":
+            if not provider_runtime.api_key:
                 raise ValueError(
                     "OPENROUTER_API_KEY environment variable required for OpenRouter"
                 )
 
-            model_name = getattr(
-                llm_settings, "model", "mistralai/mistral-7b-instruct"
-            )
-            temperature = 0.7
-            max_tokens = 500
-
-            if chatbot:
-                temperature = getattr(chatbot, "temperature", 700) / 10000.0
-                max_tokens = getattr(chatbot, "max_new_tokens", 500)
-
             return ChatModelFactory.create_openrouter_model(
-                api_key=api_key,
-                model_name=model_name,
-                temperature=temperature,
-                max_tokens=max_tokens,
+                api_key=provider_runtime.api_key,
+                model_name=(
+                    provider_runtime.model_name
+                    or "mistralai/mistral-7b-instruct"
+                ),
+                temperature=provider_runtime.temperature,
+                max_tokens=provider_runtime.max_tokens,
             )
 
-        # Ollama
-        if getattr(llm_settings, "use_ollama", False):
-            model_name = getattr(llm_settings, "ollama_model", "llama2")
-            base_url = getattr(
-                llm_settings, "ollama_base_url", "http://localhost:11434"
-            )
-            temperature = 0.7
-
-            if chatbot:
-                temperature = getattr(chatbot, "temperature", 700) / 10000.0
-
+        if provider_runtime.provider == "ollama":
             return ChatModelFactory.create_ollama_model(
-                model_name=model_name,
-                base_url=base_url,
-                temperature=temperature,
+                model_name=provider_runtime.model_name or "llama2",
+                base_url=(
+                    provider_runtime.base_url
+                    or "http://localhost:11434"
+                ),
+                temperature=provider_runtime.temperature,
             )
 
-        # OpenAI (future)
-        if getattr(llm_settings, "use_openai", False):
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
+        if provider_runtime.provider == "openai":
+            if not provider_runtime.api_key:
                 raise ValueError(
                     "OPENAI_API_KEY environment variable required for OpenAI"
                 )
 
-            model_name = getattr(llm_settings, "openai_model", "gpt-4")
-            temperature = 0.7
-            max_tokens = 500
-
-            if chatbot:
-                temperature = getattr(chatbot, "temperature", 700) / 10000.0
-                max_tokens = getattr(chatbot, "max_new_tokens", 500)
-
             return ChatModelFactory.create_openai_model(
-                api_key=api_key,
-                model_name=model_name,
-                temperature=temperature,
-                max_tokens=max_tokens,
+                api_key=provider_runtime.api_key,
+                model_name=provider_runtime.model_name or "gpt-4",
+                temperature=provider_runtime.temperature,
+                max_tokens=provider_runtime.max_tokens,
             )
 
         raise ValueError(
