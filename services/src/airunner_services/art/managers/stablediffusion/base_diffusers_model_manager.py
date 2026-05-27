@@ -257,73 +257,88 @@ class BaseDiffusersModelManager(
             f"model_status={self.model_status}, model_type={self.model_type}"
         )
         self.do_interrupt_image_generation = False
-        if self.sd_is_loading or self.model_is_loaded:
-            self.logger.debug("[LOAD ENTRY] Returning early - already loading or loaded")
+        if self._should_abort_load():
             return
-        if self.model_path is None or self.model_path == "":
-            self.logger.error("No model selected")
-            self.change_model_status(self.model_type, ModelStatus.FAILED)
-            return
-
-        # Check for missing files and trigger download if needed
-        should_download, download_info = self._check_and_trigger_download()
-        if should_download:
-            # Download in progress, will retry load after completion
-            return
-
         resource_manager = ModelResourceManager()
-        prepare_result = resource_manager.prepare_model_loading(
-            model_id=self.model_path,
-            model_type="text_to_image",
-        )
-
-        if not prepare_result["can_load"]:
-            self.logger.error(
-                f"Cannot load SD model: {prepare_result.get('reason', 'Unknown reason')}"
-            )
-            self.change_model_status(self.model_type, ModelStatus.FAILED)
+        if not self._prepare_for_load(resource_manager):
             return
-
-        if self.use_safety_checker:
-            safety_ready = self._load_safety_checker()
-            if not safety_ready:
-                safety_status = self.model_status.get(
-                    ModelType.SAFETY_CHECKER,
-                )
-                next_status = ModelStatus.UNLOADED
-                if safety_status == ModelStatus.FAILED:
-                    next_status = ModelStatus.FAILED
-                self.change_model_status(self.model_type, next_status)
-                return
-
-        if (
-            self.controlnet_enabled
-            and not self.controlnet_is_loading
-            and self._pipe
-            and not self._controlnet_model
-        ):
-            self.unload()
-
         self.load_controlnet()
 
         self.logger.debug("[LOAD] About to call _load_pipe()")
         if self._load_pipe():
-            self.logger.debug("[LOAD] _load_pipe() returned True, continuing load sequence")
-            self._send_pipeline_loaded_signal()
-            self._move_pipe_to_device()
-            self._load_scheduler()
-            self._load_compel()
-            # DeepCache disabled: incompatible with torch.compile() and provides
-            # only 15% speedup vs torch.compile's 2-3x speedup
-            # self._load_deep_cache()
-            self._make_memory_efficient()
-            self._finalize_load_stable_diffusion()
+            self._finalize_loaded_pipe(resource_manager)
 
-            # Mark model as loaded
-            resource_manager.model_loaded(
-                self.model_path,
-                "text_to_image",
+    def _should_abort_load(self) -> bool:
+        """Return True when the SD load should stop before preparation."""
+        if self.sd_is_loading or self.model_is_loaded:
+            self.logger.debug(
+                "[LOAD ENTRY] Returning early - already loading or loaded"
             )
+            return True
+        if self.model_path is None or self.model_path == "":
+            self.logger.error("No model selected")
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return True
+        should_download, _ = self._check_and_trigger_download()
+        return should_download
+
+    def _prepare_for_load(
+        self,
+        resource_manager: ModelResourceManager,
+    ) -> bool:
+        """Prepare shared prerequisites before the main SD pipeline load."""
+        prepare_result = resource_manager.prepare_model_loading(
+            model_id=self.model_path,
+            model_type="text_to_image",
+        )
+        if not prepare_result["can_load"]:
+            reason = prepare_result.get("reason", "Unknown reason")
+            self.logger.error(f"Cannot load SD model: {reason}")
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return False
+        if not self._ensure_safety_checker_ready():
+            return False
+        if self._should_reset_pipe_for_controlnet():
+            self.unload()
+        return True
+
+    def _ensure_safety_checker_ready(self) -> bool:
+        """Load the safety checker when configured and update failure state."""
+        if not self.use_safety_checker:
+            return True
+        if self._load_safety_checker():
+            return True
+        safety_status = self.model_status.get(ModelType.SAFETY_CHECKER)
+        next_status = ModelStatus.FAILED
+        if safety_status != ModelStatus.FAILED:
+            next_status = ModelStatus.UNLOADED
+        self.change_model_status(self.model_type, next_status)
+        return False
+
+    def _should_reset_pipe_for_controlnet(self) -> bool:
+        """Return True when ControlNet loading requires a pipeline reset."""
+        return (
+            self.controlnet_enabled
+            and not self.controlnet_is_loading
+            and self._pipe
+            and not self._controlnet_model
+        )
+
+    def _finalize_loaded_pipe(
+        self,
+        resource_manager: ModelResourceManager,
+    ) -> None:
+        """Finalize the loaded pipeline and mark the model as ready."""
+        self.logger.debug(
+            "[LOAD] _load_pipe() returned True, continuing load sequence"
+        )
+        self._send_pipeline_loaded_signal()
+        self._move_pipe_to_device()
+        self._load_scheduler()
+        self._load_compel()
+        self._make_memory_efficient()
+        self._finalize_load_stable_diffusion()
+        resource_manager.model_loaded(self.model_path, "text_to_image")
 
     def load_controlnet(self):
         """

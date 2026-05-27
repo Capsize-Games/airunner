@@ -102,6 +102,7 @@ class ZImageNativePipelineGenerationHelper:
         Optional[torch.Tensor],
     ]:
         """Prepare prompt embeddings and attention masks for sampling."""
+        prompt_helper = self._owner._get_prompt_helper()
         prompt_list = [prompt] if isinstance(prompt, str) else prompt
         batch_size = len(prompt_list) * num_images_per_prompt
         if self._owner.text_encoder is None:
@@ -113,8 +114,8 @@ class ZImageNativePipelineGenerationHelper:
                 dtype=self._owner.dtype,
             )
             return batch_size, prompt_embeds, None, None
-        self._owner._prepare_text_encoder_for_encoding()
-        prompt_embeds, negative_embeds, attention_mask = self._owner.encode_prompt(
+        prompt_helper.prepare_text_encoder_for_encoding()
+        prompt_embeds, negative_embeds, attention_mask = prompt_helper.encode_prompt(
             prompt_list,
             negative_prompt,
         )
@@ -129,11 +130,11 @@ class ZImageNativePipelineGenerationHelper:
             if attention_mask is not None:
                 attention_mask = attention_mask.repeat(num_images_per_prompt, 1)
         prompt_embeds, negative_embeds, attention_mask = (
-            self._owner._move_prompt_conditioning_to_device(
+            prompt_helper.move_prompt_conditioning_to_device(
                 prompt_embeds,
                 negative_embeds,
                 attention_mask,
             )
         )
-        self._owner._release_text_encoder_after_encoding()
+        prompt_helper.release_text_encoder_after_encoding()
         return batch_size, prompt_embeds, negative_embeds, attention_mask

@@ -59,6 +59,7 @@ class ZImageNativePipelineSamplingHelper:
         strength: float,
     ) -> torch.Tensor:
         """Prepare text2img or img2img latents for the denoising loop."""
+        vae_helper = self._owner._get_vae_helper()
         if not is_img2img:
             return self._prepare_text2img_latents(
                 height,
@@ -69,9 +70,9 @@ class ZImageNativePipelineSamplingHelper:
             )
         if self._owner.vae is None:
             raise RuntimeError("VAE must be loaded for img2img generation")
-        self._owner._ensure_image_processor()
+        vae_helper.ensure_image_processor()
         height, width = self._resolve_image_size(image, height, width)
-        self._owner._ensure_vae_on_device()
+        vae_helper.ensure_vae_on_device()
         init_image = self._owner.image_processor.preprocess(
             image,
             height=height,
@@ -267,11 +268,12 @@ class ZImageNativePipelineSamplingHelper:
 
     def decode_output(self, latents: torch.Tensor, output_type: str) -> Union[torch.Tensor, List[Image.Image]]:
         """Decode the final latent tensor into the requested output type."""
+        vae_helper = self._owner._get_vae_helper()
         if output_type == "latent":
             return latents
         images = latents
         if self._owner.vae is not None:
-            self._owner._ensure_vae_on_device()
+            vae_helper.ensure_vae_on_device()
             latents = latents / self._owner.vae.config.scaling_factor
             latents = latents.to(
                 dtype=self._owner.vae.dtype,
