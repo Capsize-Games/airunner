@@ -54,7 +54,9 @@ from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
 from airunner.utils.application.log_hygiene import summarize_text
 from airunner.components.application.api.api import API
-from airunner.models.conversation import Conversation
+from airunner.components.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
 from airunner.utils.application.get_logger import get_logger
 
 # Lazy import to avoid circular dependency
@@ -3053,15 +3055,15 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             api = get_api()
             self.logger.info(f"API: {api}")
             sys.stdout.flush()
+            conversation_manager = ConversationHistoryManager()
 
             try:
-                # Mark all conversations as non-current
-                Conversation.objects.update_by(
-                    {"current": True}, current=False
-                )
-
                 # Create a completely fresh conversation
-                new_convo = Conversation.create()
+                new_convo = conversation_manager.create_conversation(
+                    max_messages=0,
+                )
+                if new_convo is None or new_convo.id is None:
+                    raise RuntimeError("Failed to create a fresh conversation")
                 new_conv_id = new_convo.id
 
                 self.logger.info(
@@ -3124,8 +3126,11 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     status=403
                 )
                 return
+            conversation_manager = ConversationHistoryManager()
             deleted_counts = {
-                "conversations": Conversation.objects.delete_all(),
+                "conversations": (
+                    conversation_manager.delete_all_conversations()
+                ),
             }
 
             self.logger.info(f"Test database cleared: {deleted_counts}")

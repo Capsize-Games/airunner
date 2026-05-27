@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -71,6 +72,12 @@ class DeleteConversationResponse(BaseModel):
 
     conversation_id: int
     deleted: bool
+
+
+class DeleteAllConversationsResponse(BaseModel):
+    """Envelope for deleting all conversations in test environments."""
+
+    deleted: int
 
 
 class ConversationMessagesUpdateRequest(BaseModel):
@@ -217,6 +224,22 @@ async def delete_conversation(
     return DeleteConversationResponse(
         conversation_id=conversation_id,
         deleted=True,
+    )
+
+
+@router.delete(
+    "/conversations",
+    response_model=DeleteAllConversationsResponse,
+)
+async def delete_all_conversations() -> DeleteAllConversationsResponse:
+    """Delete all conversations through the service API in tests only."""
+    if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
+        raise HTTPException(
+            status_code=403,
+            detail="delete_all_conversations only allowed in test environment",
+        )
+    return DeleteAllConversationsResponse(
+        deleted=_manager().delete_all_conversations(),
     )
 
 

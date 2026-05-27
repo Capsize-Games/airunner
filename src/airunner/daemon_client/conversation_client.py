@@ -77,6 +77,14 @@ class ConversationDaemonClient:
         )
         return response.json()
 
+    def delete_all_conversations(self) -> Dict[str, Any]:
+        """Delete all conversations through the daemon in tests only."""
+        response = self._client._request(
+            "DELETE",
+            "/api/v1/conversations",
+        )
+        return response.json()
+
     def update_conversation_messages(
         self,
         conversation_id: int,

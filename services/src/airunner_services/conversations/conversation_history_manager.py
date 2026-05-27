@@ -147,6 +147,10 @@ class ConversationHistoryManager:
         Conversation.delete(conversation_id)
         return True
 
+    def delete_all_conversations(self) -> int:
+        """Delete all conversations from persistent storage."""
+        return int(Conversation.objects.delete_all() or 0)
+
     def update_conversation_messages(
         self,
         conversation_id: int,

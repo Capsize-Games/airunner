@@ -108,6 +108,15 @@ class ConversationHistoryManager:
             return False
         return bool(payload.get("deleted"))
 
+    def delete_all_conversations(self) -> int:
+        """Delete all conversations through the daemon API in tests only."""
+        try:
+            payload = self._client.delete_all_conversations()
+        except RuntimeError as exc:
+            self._log_client_failure("delete all conversations", exc)
+            return 0
+        return int(payload.get("deleted") or 0)
+
     def update_conversation_messages(
         self,
         conversation_id: int,
